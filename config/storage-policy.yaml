@@ -1,0 +1,545 @@
+{
+  "version": 1,
+  "status": "CURRENT",
+  "last_verified": "2026-09-24",
+  "owner": "BabyPark",
+  "notes": [
+    "Thresholds marked estimate must be replaced by measured baselines before automatic production cleanup is enabled.",
+    "Durable identity and Viber session state are never deleted merely because of age.",
+    "No integration-owned writable path is allowed inside the Drupal website tree."
+  ],
+  "objects": [
+    {
+      "id": "gateway_bridge_db",
+      "host_role": "integration",
+      "status": "CURRENT",
+      "scope": "file",
+      "location": "/var/lib/babypark-integration/bridge.sqlite",
+      "owner": "www-data:www-data",
+      "purpose": "Durable Viber/Chatwoot session, idempotency and delivery state.",
+      "state_class": "durable",
+      "thresholds": {
+        "metric": "bytes",
+        "basis": "initial conservative estimate; current file is much smaller",
+        "expected": 67108864,
+        "warning": 134217728,
+        "critical": 268435456
+      },
+      "retention": {
+        "mode": "durable_business_cardinality",
+        "ttl_days": null
+      },
+      "cleanup": {
+        "automatic": false,
+        "mechanism": "Never delete the DB. Only bounded table-level retention is allowed.",
+        "dry_run_required": true,
+        "delete_guard": "sessions and unresolved recovery issues are not TTL-pruned"
+      },
+      "recovery": "Verified SQLite backup plus Chatwoot session rebuild tooling.",
+      "backup": {
+        "required": true,
+        "off_host": true,
+        "status": "REQUIRED_NOT_CONFIGURED"
+      },
+      "pii": "pseudonymous_external_identifiers"
+    },
+    {
+      "id": "gateway_sqlite_sidecars",
+      "host_role": "integration",
+      "status": "CURRENT",
+      "scope": "file_pattern",
+      "location": "/var/lib/babypark-integration/bridge.sqlite-{wal,shm}",
+      "owner": "www-data:www-data",
+      "purpose": "SQLite WAL runtime sidecars for the live gateway DB.",
+      "state_class": "transient",
+      "thresholds": {
+        "metric": "bytes_total",
+        "basis": "initial conservative estimate",
+        "expected": 67108864,
+        "warning": 134217728,
+        "critical": 268435456
+      },
+      "retention": {
+        "mode": "sqlite_runtime_managed",
+        "ttl_days": null
+      },
+      "cleanup": {
+        "automatic": false,
+        "mechanism": "SQLite checkpoint/runtime lifecycle only; never unlink while DB is live.",
+        "dry_run_required": true,
+        "delete_guard": "No direct sidecar deletion against a running database."
+      },
+      "recovery": "Recreated by SQLite after verified main DB recovery.",
+      "backup": {
+        "required": false,
+        "off_host": false,
+        "status": "NOT_REQUIRED"
+      },
+      "pii": "may_contain_gateway_state"
+    },
+    {
+      "id": "gateway_event_rows",
+      "host_role": "integration",
+      "status": "CURRENT",
+      "scope": "tables",
+      "location": "bridge.sqlite:{processed_viber,processed_chatwoot,outgoing_viber,session_recovery_issues(resolved rows)}",
+      "owner": "gateway runtime",
+      "purpose": "Bounded event idempotency, delivery and resolved recovery metadata.",
+      "state_class": "rebuildable",
+      "thresholds": {
+        "metric": "rows_total",
+        "basis": "estimate pending observed production traffic",
+        "expected": 100000,
+        "warning": 250000,
+        "critical": 500000
+      },
+      "retention": {
+        "mode": "ttl",
+        "ttl_days": 90
+      },
+      "cleanup": {
+        "automatic": false,
+        "mechanism": "gateway retention command; table-specific TTLs are authoritative",
+        "dry_run_required": true,
+        "delete_guard": "sessions and unresolved recovery issues excluded"
+      },
+      "recovery": "Event rows may be reconstructed only where provider/Chatwoot history permits; primary purpose is bounded idempotency.",
+      "backup": {
+        "required": false,
+        "off_host": false,
+        "status": "COVERED_BY_BRIDGE_BACKUP"
+      },
+      "pii": "message_ids_and_external_tokens_only"
+    },
+    {
+      "id": "gateway_local_backups",
+      "host_role": "integration",
+      "status": "CURRENT",
+      "scope": "directory",
+      "location": "/var/backups/babypark-integration",
+      "owner": "root:root",
+      "purpose": "Verified standalone local recovery copies of durable integration SQLite state.",
+      "state_class": "durable",
+      "thresholds": {
+        "metric": "bytes_total",
+        "basis": "initial estimate; backup count is intentionally small",
+        "expected": 268435456,
+        "warning": 536870912,
+        "critical": 1073741824
+      },
+      "retention": {
+        "mode": "manual_until_offhost_configured",
+        "ttl_days": null
+      },
+      "cleanup": {
+        "automatic": false,
+        "mechanism": "Manual only after verified off-host copy and retention decision.",
+        "dry_run_required": true,
+        "delete_guard": "Never delete the only verified recovery copy."
+      },
+      "recovery": "Restore through documented integrity-checked SQLite recovery procedure.",
+      "backup": {
+        "required": true,
+        "off_host": true,
+        "status": "REQUIRED_NOT_CONFIGURED"
+      },
+      "pii": "inherits_source_database"
+    },
+    {
+      "id": "identity_db",
+      "host_role": "integration",
+      "status": "PLANNED",
+      "scope": "file",
+      "location": "/var/lib/babypark-integration/identity.sqlite",
+      "owner": "integration runtime",
+      "purpose": "Durable BabyPark product/variant identities and provider xrefs.",
+      "state_class": "durable",
+      "thresholds": {
+        "metric": "bytes",
+        "basis": "initial estimate; validate after bootstrap",
+        "expected": 16777216,
+        "warning": 67108864,
+        "critical": 134217728
+      },
+      "retention": {
+        "mode": "durable_forever",
+        "ttl_days": null
+      },
+      "cleanup": {
+        "automatic": false,
+        "mechanism": "No age-based identity deletion.",
+        "dry_run_required": true,
+        "delete_guard": "Stable IDs/tombstones/xrefs must survive provider cutover."
+      },
+      "recovery": "Fail closed; restore verified backup and reconcile against accepted catalog before ingest resumes.",
+      "backup": {
+        "required": true,
+        "off_host": true,
+        "status": "REQUIRED_BEFORE_DEPLOY"
+      },
+      "pii": "none_expected"
+    },
+    {
+      "id": "identity_backups",
+      "host_role": "integration",
+      "status": "PLANNED",
+      "scope": "directory",
+      "location": "/var/backups/babypark-integration/identity",
+      "owner": "root:root",
+      "purpose": "Verified identity.sqlite recovery copies.",
+      "state_class": "durable",
+      "thresholds": {
+        "metric": "count",
+        "basis": "initial retention target",
+        "expected": 5,
+        "warning": 10,
+        "critical": 20
+      },
+      "retention": {
+        "mode": "retain_verified_generations",
+        "ttl_days": null
+      },
+      "cleanup": {
+        "automatic": false,
+        "mechanism": "Manual/verified rotation only after off-host copy.",
+        "dry_run_required": true,
+        "delete_guard": "Never remove last verified backup."
+      },
+      "recovery": "Select backup by integrity/revision and reconcile with catalog references.",
+      "backup": {
+        "required": true,
+        "off_host": true,
+        "status": "REQUIRED_BEFORE_DEPLOY"
+      },
+      "pii": "none_expected"
+    },
+    {
+      "id": "catalog_generations",
+      "host_role": "integration",
+      "status": "PLANNED",
+      "scope": "directory",
+      "location": "/var/lib/babypark-integration/catalog",
+      "owner": "integration runtime",
+      "purpose": "Active and previous-good rebuildable canonical catalog generations.",
+      "state_class": "rebuildable",
+      "thresholds": {
+        "metric": "bytes_total",
+        "basis": "estimate; replace after real Drupal dry-run/build measurement",
+        "expected": 536870912,
+        "warning": 1073741824,
+        "critical": 2147483648
+      },
+      "retention": {
+        "mode": "current_plus_previous",
+        "ttl_days": null
+      },
+      "cleanup": {
+        "automatic": true,
+        "mechanism": "Safe catalog janitor using generation registry/pointers.",
+        "dry_run_required": true,
+        "delete_guard": "CURRENT, PREVIOUS and active build can never be deleted."
+      },
+      "recovery": "Rebuild from source/identity or rollback to validated PREVIOUS.",
+      "backup": {
+        "required": false,
+        "off_host": false,
+        "status": "REBUILDABLE"
+      },
+      "pii": "none_expected"
+    },
+    {
+      "id": "catalog_building_generations",
+      "host_role": "integration",
+      "status": "PLANNED",
+      "scope": "file_pattern",
+      "location": "/var/lib/babypark-integration/catalog/catalog.*.building.sqlite",
+      "owner": "catalog build worker",
+      "purpose": "Run-scoped temporary full catalog builds before validation/publication.",
+      "state_class": "transient",
+      "thresholds": {
+        "metric": "bytes_total",
+        "basis": "estimate; replace after real source build measurement",
+        "expected": 536870912,
+        "warning": 1073741824,
+        "critical": 2147483648
+      },
+      "retention": {
+        "mode": "run_state_plus_ttl",
+        "ttl_days": 2
+      },
+      "cleanup": {
+        "automatic": true,
+        "mechanism": "Safe janitor only after run is terminal failed/abandoned or provably orphaned.",
+        "dry_run_required": true,
+        "delete_guard": "Never age-only delete; active/current/previous references excluded."
+      },
+      "recovery": "Discard safe failed build and rebuild from source.",
+      "backup": {
+        "required": false,
+        "off_host": false,
+        "status": "NOT_REQUIRED"
+      },
+      "pii": "none_expected"
+    },
+    {
+      "id": "ingest_staging",
+      "host_role": "integration",
+      "status": "PLANNED",
+      "scope": "directory_or_tables",
+      "location": "/var/lib/babypark-integration/ingest",
+      "owner": "catalog ingest service",
+      "purpose": "Bounded run/chunk staging metadata until final validation and ACK.",
+      "state_class": "transient",
+      "thresholds": {
+        "metric": "bytes_total",
+        "basis": "initial hard budget; refine during Phase E load tests",
+        "expected": 134217728,
+        "warning": 268435456,
+        "critical": 536870912
+      },
+      "retention": {
+        "mode": "lease_plus_abandoned_ttl",
+        "ttl_days": 2
+      },
+      "cleanup": {
+        "automatic": true,
+        "mechanism": "Run-aware janitor after lease expiry/terminal state.",
+        "dry_run_required": true,
+        "delete_guard": "Active run cannot be deleted."
+      },
+      "recovery": "Abandon incomplete run without moving accepted watermark; source retries from authoritative /state.",
+      "backup": {
+        "required": false,
+        "off_host": false,
+        "status": "NOT_REQUIRED"
+      },
+      "pii": "catalog_data_no_customer_pii"
+    },
+    {
+      "id": "copilot_jobs",
+      "host_role": "integration",
+      "status": "PLANNED",
+      "scope": "database_or_table",
+      "location": "/var/lib/babypark-integration/copilot.sqlite:jobs",
+      "owner": "copilot worker",
+      "purpose": "Bounded ID-only webhook work queue.",
+      "state_class": "transient",
+      "thresholds": {
+        "metric": "rows",
+        "basis": "initial safety budget",
+        "expected": 10000,
+        "warning": 25000,
+        "critical": 50000
+      },
+      "retention": {
+        "mode": "terminal_ttl",
+        "ttl_days": 14
+      },
+      "cleanup": {
+        "automatic": true,
+        "mechanism": "Terminal-job TTL; unresolved jobs protected by attempt/lease state.",
+        "dry_run_required": true,
+        "delete_guard": "Active leased jobs excluded."
+      },
+      "recovery": "Jobs reference Chatwoot IDs only; worker can refetch current source message.",
+      "backup": {
+        "required": false,
+        "off_host": false,
+        "status": "REBUILDABLE_FROM_CHATWOOT_WHERE_AVAILABLE"
+      },
+      "pii": "identifiers_only_no_message_body"
+    },
+    {
+      "id": "ai_trace_metadata",
+      "host_role": "integration",
+      "status": "PLANNED",
+      "scope": "database_or_table",
+      "location": "/var/lib/babypark-integration/copilot.sqlite:ai_trace_metadata",
+      "owner": "copilot worker",
+      "purpose": "Redacted evaluation/tool/latency metadata; no routine raw customer message body.",
+      "state_class": "rebuildable",
+      "thresholds": {
+        "metric": "rows",
+        "basis": "initial pilot budget",
+        "expected": 100000,
+        "warning": 250000,
+        "critical": 500000
+      },
+      "retention": {
+        "mode": "ttl",
+        "ttl_days": 30
+      },
+      "cleanup": {
+        "automatic": true,
+        "mechanism": "Redacted trace TTL.",
+        "dry_run_required": true,
+        "delete_guard": "Evaluation holds require explicit operator override."
+      },
+      "recovery": "Not required for customer operations.",
+      "backup": {
+        "required": false,
+        "off_host": false,
+        "status": "NOT_REQUIRED"
+      },
+      "pii": "redacted_metadata_only"
+    },
+    {
+      "id": "integration_releases",
+      "host_role": "integration",
+      "status": "CURRENT",
+      "scope": "directory",
+      "location": "/opt/babypark-integration/releases",
+      "owner": "root:root",
+      "purpose": "Immutable application releases and immediate rollback versions.",
+      "state_class": "rebuildable",
+      "thresholds": {
+        "metric": "count",
+        "basis": "operational retention target",
+        "expected": 5,
+        "warning": 10,
+        "critical": 20
+      },
+      "retention": {
+        "mode": "keep_recent_and_rollback",
+        "ttl_days": null
+      },
+      "cleanup": {
+        "automatic": false,
+        "mechanism": "Remove only releases not referenced by current/rollback and already present in Git.",
+        "dry_run_required": true,
+        "delete_guard": "current symlink target and rollback release protected"
+      },
+      "recovery": "Recreate release from canonical Git commit.",
+      "backup": {
+        "required": false,
+        "off_host": false,
+        "status": "SOURCE_IS_GIT"
+      },
+      "pii": "none"
+    },
+    {
+      "id": "exporter_state",
+      "host_role": "drupal",
+      "status": "PLANNED",
+      "scope": "directory",
+      "location": "/var/lib/babypark-exporter",
+      "owner": "bpexport",
+      "purpose": "Tiny non-authoritative exporter cache/diagnostic state only; no payload spool.",
+      "state_class": "rebuildable",
+      "thresholds": {
+        "metric": "bytes_total",
+        "basis": "hard design budget",
+        "expected": 1048576,
+        "warning": 4194304,
+        "critical": 16777216
+      },
+      "retention": {
+        "mode": "current_state_only",
+        "ttl_days": null
+      },
+      "cleanup": {
+        "automatic": false,
+        "mechanism": "No payload archives; replace small state atomically.",
+        "dry_run_required": true,
+        "delete_guard": "Authoritative cursor always comes from Integration /state, not this cache."
+      },
+      "recovery": "Delete/recreate cache only through explicit exporter recovery; Integration /state is authoritative.",
+      "backup": {
+        "required": false,
+        "off_host": false,
+        "status": "REBUILDABLE"
+      },
+      "pii": "none_expected"
+    },
+    {
+      "id": "exporter_releases",
+      "host_role": "drupal",
+      "status": "PLANNED",
+      "scope": "directory",
+      "location": "/opt/babypark-exporter/releases",
+      "owner": "root:root",
+      "purpose": "Small immutable exporter releases outside Drupal webroot.",
+      "state_class": "rebuildable",
+      "thresholds": {
+        "metric": "count",
+        "basis": "operational retention target",
+        "expected": 3,
+        "warning": 5,
+        "critical": 10
+      },
+      "retention": {
+        "mode": "keep_recent_and_rollback",
+        "ttl_days": null
+      },
+      "cleanup": {
+        "automatic": false,
+        "mechanism": "Remove only unreferenced releases already present in Git.",
+        "dry_run_required": true,
+        "delete_guard": "current and rollback releases protected"
+      },
+      "recovery": "Recreate from canonical Git commit.",
+      "backup": {
+        "required": false,
+        "off_host": false,
+        "status": "SOURCE_IS_GIT"
+      },
+      "pii": "none"
+    },
+    {
+      "id": "operations_packages",
+      "host_role": "integration",
+      "status": "PLANNED",
+      "scope": "directory",
+      "location": "/var/backups/babypark-integration/operations",
+      "owner": "root:root",
+      "purpose": "Portable owner operations/manual/checksum packages.",
+      "state_class": "rebuildable",
+      "thresholds": {
+        "metric": "count",
+        "basis": "small versioned documentation set",
+        "expected": 3,
+        "warning": 5,
+        "critical": 10
+      },
+      "retention": {
+        "mode": "keep_recent_versions",
+        "ttl_days": null
+      },
+      "cleanup": {
+        "automatic": false,
+        "mechanism": "Manual version rotation after canonical Git copy verified.",
+        "dry_run_required": true,
+        "delete_guard": "latest owner package protected"
+      },
+      "recovery": "Regenerate from canonical Git documentation.",
+      "backup": {
+        "required": false,
+        "off_host": false,
+        "status": "SOURCE_IS_GIT"
+      },
+      "pii": "none"
+    }
+  ],
+  "shared_or_legacy": [
+    {
+      "id": "journald",
+      "managed_by_this_policy": false,
+      "reason": "Shared host infrastructure; no global retention change by this project."
+    },
+    {
+      "id": "nginx_logs",
+      "managed_by_this_policy": false,
+      "reason": "Shared Nginx logrotate policy already exists."
+    },
+    {
+      "id": "drupal_price_archive",
+      "managed_by_this_policy": false,
+      "reason": "Legacy Drupal storage is documented/monitored but never auto-cleaned by integration."
+    },
+    {
+      "id": "drupal_backup_tree",
+      "managed_by_this_policy": false,
+      "reason": "Legacy site backup storage is outside this integration cleanup authority."
+    }
+  ]
+}
