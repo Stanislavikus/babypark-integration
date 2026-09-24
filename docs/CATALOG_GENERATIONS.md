@@ -38,12 +38,13 @@ Allowed generation IDs:
 Path separators, spaces, leading dots and traversal forms are rejected before any
 file is created.
 
-## Catalog schema v1
+## Catalog schema v3
 
 Core state:
 - catalog_meta
 - sync_state
 - ingest_runs
+- run_chunks (hash authority for staged full-build chunks)
 
 Domain data:
 - products
@@ -88,6 +89,8 @@ Each layer can carry:
 - freshness state
 - need_reconcile
 - need_full
+
+Accepted watermarks are canonical unsigned decimal strings of at most 20 digits without leading zeros.
 
 The active catalog generation owns the authoritative accepted layer state.
 
@@ -220,9 +223,13 @@ Before switching back, the rollback target is marked:
 for every catalog layer.
 
 Then:
-- PREVIOUS <- generation being rolled back from;
 - CURRENT <- older generation;
+- PREVIOUS <- generation being rolled back from;
 - readers reopen the older generation synchronously.
+
+If the process stops between the pointer writes, CURRENT already refers to the
+rollback target. PREVIOUS may temporarily equal CURRENT; the target remains
+reachable and readers can reopen it.
 
 Because accepted watermarks live inside each catalog generation, rollback also
 restores the older authoritative watermark instead of leaving an exporter cursor

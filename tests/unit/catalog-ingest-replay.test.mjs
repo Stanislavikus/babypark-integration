@@ -1,100 +1,373 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { ReplayStore } from '../../src/catalog/ingest/replay-store.mjs';
+import { spawn } from 'node:child_process';
+import { once } from 'node:events';
+import {
+  ReplayStore, computeRunDigest, canonicalJson,
+} from '../../src/catalog/ingest/replay-store.mjs';
+import {
+  CatalogGenerationBuilder, CatalogPublisher, CatalogReader,
+} from '../../src/catalog/sqlite/generation.mjs';
 
-const hashA = 'a'.repeat(64);
-const hashB = 'b'.repeat(64);
-const evidence = { generationId: 'g_1', runDigest: 'c'.repeat(64), accepted: true };
-const key = { kid: 'k1', runId: 'run_1', layer: 'content',
-  seq: 0, bodySha256: hashA, final: true, contentEncoding: 'identity' };
+const createStore = (file, options = {}) => ReplayStore.createNew(file, {
+  catalogStorageDir: path.dirname(file), ...options,
+});
+const openStore = (file, options = {}) => ReplayStore.openExisting(file, {
+  catalogStorageDir: path.dirname(file), ...options,
+});
+const hash = bytes => crypto.createHash('sha256').update(bytes).digest('hex');
+const digest = 'c'.repeat(64);
+const trailer = {
+  run_digest: digest, base_generation_id: 'g_1', base_watermark: '10',
+  count: 1, final_seq: 1,
+};
+const body = Buffer.from(canonicalJson({ trailer }));
+const key = { kid: 'k1', runId: 'run_1', layer: 'content', seq: 1,
+  bodySha256: hash(body), final: true, contentEncoding: 'identity' };
 function fixture(t) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'bp-ingest-replay-'));
   t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
-  return path.join(dir, 'ingest-replay.sqlite');
+  const builder = CatalogGenerationBuilder.create({
+    storageDir: dir, generationId: 'g_1', sourceEpoch: 'epoch-1',
+    identityRevision: 0,
+  });
+  builder.seal();
+  new CatalogPublisher(dir).publish('g_1');
+  const reader = new CatalogReader(dir);
+  t.after(() => reader.close());
+  return { file: path.join(dir, 'ingest-replay.sqlite'), reader, dir };
 }
 function code(value) {
   return error => error?.name === 'ReplayStoreError' && error.code === value;
 }
+function claim(store, reader, target = key, verifiedBody = body, time = 100) {
+  return store.claim(target, time, { verifiedBody, reader });
+}
 
-test('claim and ACK survive restart; duplicate returns exact saved ACK', t => {
-  const file = fixture(t);
-  assert.throws(() => ReplayStore.openExisting(file),
-    code('INGEST_REPLAY_MISSING'));
-  const store = ReplayStore.createNew(file);
+test('final trailer is immutable and claim generation comes from CURRENT', t => {
+  const { file, reader } = fixture(t);
+  assert.throws(() => openStore(file), code('INGEST_REPLAY_MISSING'));
+  let store = createStore(file);
   assert.equal(fs.statSync(file).mode & 0o777, 0o600);
-  assert.deepEqual(store.claim(key, 1780000000), { status: 'NEW' });
-  assert.deepEqual(store.claim(key, 1780000001), { status: 'PENDING' });
-  const ack = { accepted: true, generation: 'g_1', watermark: 42 };
-  assert.deepEqual(store.complete(key, ack, evidence), ack);
+  assert.equal(claim(store, reader).status, 'NEW');
+  assert.deepEqual(claim(store, reader, key, body, 101),
+    { status: 'PENDING', leaseUntil: 160 });
+  assert.deepEqual(store.getClaimedFinal(key), {
+    runDigest: digest, count: 1, baseGenerationId: 'g_1',
+    baseWatermark: '10', claimGenerationId: 'g_1',
+  });
+  assert.equal(typeof store.complete, 'undefined');
+  assert.equal(typeof store.resolveAck, 'undefined');
+  assert.equal(typeof store.finishFromCurrentEvidence, 'undefined');
   store.close();
+  store = openStore(file);
+  assert.deepEqual(claim(store, reader), { status: 'PENDING', leaseUntil: 160 });
+  store.close();
+});
 
-  const reopened = ReplayStore.openExisting(file);
-  assert.deepEqual(reopened.claim(key), { status: 'ACK_RECORDED' });
-  assert.deepEqual(reopened.resolveAck(key, evidence), { status: 'ACKED', ack });
-  assert.deepEqual(reopened.resolveAck(key, null), { status: 'RUN_SUPERSEDED' });
-  assert.deepEqual(reopened.resolveAck(key, { ...evidence, generationId: 'g_0' }),
-    { status: 'RUN_SUPERSEDED' });
-  assert.deepEqual(reopened.complete(key, { watermark: 42, generation: 'g_1', accepted: true }, evidence), ack);
-  assert.throws(() => reopened.complete(key, { accepted: false }, evidence),
-    code('INGEST_REPLAY_ACK_CONFLICT'));
+test('noncanonical, duplicate, surplus and nondecimal trailers fail closed', t => {
+  const { file, reader } = fixture(t);
+  const store = createStore(file);
+  t.after(() => store.close());
+  const bad = [
+    JSON.stringify({ trailer }),
+    '{"trailer":{"base_generation_id":"g_1","base_watermark":"10","count":1,"final_seq":1,"run_digest":"' + digest + '","rows":[]}}',
+    '{"trailer":{"base_generation_id":"g_1","base_watermark":"10","count":1,"final_seq":1,"run_digest":"' + digest + '","run_digest":"' + digest + '"}}',
+    canonicalJson({ trailer: { ...trailer, base_watermark: '010' } }),
+    canonicalJson({ trailer: { ...trailer, base_watermark: '1'.repeat(21) } }),
+  ];
+  for (const [i, raw] of bad.entries()) {
+    const bytes = Buffer.from(raw);
+    assert.throws(() => claim(store, reader, { ...key, seq: 1,
+      runId: 'bad_' + i, bodySha256: hash(bytes) }, bytes),
+    code('INGEST_REPLAY_TRAILER_INVALID'));
+  }
+  assert.throws(() => claim(store, reader, key, Buffer.from('changed')),
+    code('INGEST_REPLAY_TRAILER_INVALID'));
+  assert.throws(() => store.claim(key, 100, { verifiedBody: body,
+    claimGenerationId: 'not-the-current-generation' }),
+  code('INGEST_REPLAY_STATE_REQUIRED'));
+});
+
+test('a run_id cannot cross kid or layer; final takeover fails closed', t => {
+  const { file, reader } = fixture(t);
+  const store = createStore(file);
+  t.after(() => store.close());
+  claim(store, reader);
+  assert.throws(() => claim(store, reader, { ...key, kid: 'k2' }),
+    code('INGEST_REPLAY_CONFLICT'));
+  assert.throws(() => claim(store, reader, { ...key, layer: 'stock' }),
+    code('INGEST_REPLAY_CONFLICT'));
+  assert.throws(() => store.takeover(key, { now: 161, expectedLeaseUntil: 160 }),
+    code('INGEST_REPLAY_STATE_REQUIRED'));
+});
+
+test('nonfinal staging survives restart and owner token is fenced', t => {
+  const { file } = fixture(t);
+  const chunk = Buffer.from('{"rows":[{"id":"one"}]}');
+  const nonfinal = { ...key, seq: 0, final: false, bodySha256: hash(chunk) };
+  let store = createStore(file);
+  const first = store.claim(nonfinal, 100);
+  store.close();
+  store = openStore(file);
+  assert.deepEqual(store.takeover(nonfinal, { now: 160, expectedLeaseUntil: 160 }),
+    { status: 'PENDING', leaseUntil: 160 });
+  const second = store.takeover(nonfinal, { now: 161, expectedLeaseUntil: 160 });
+  assert.equal(second.status, 'TAKEN_OVER');
+  assert.throws(() => store.stage(nonfinal, chunk, first.claimToken),
+    code('INGEST_REPLAY_OWNER_LOST'));
+  const stagedAck = { staged: true, run_id: 'run_1', layer: 'content',
+    seq: 0, body_sha256: hash(chunk) };
+  assert.deepEqual(store.stage(nonfinal, chunk, second.claimToken),
+    { status: 'STAGED', ack: stagedAck });
+  assert.deepEqual(store.stage(nonfinal, chunk, second.claimToken),
+    { status: 'STAGED', ack: stagedAck });
+  store.close();
+  store = openStore(file);
+  assert.deepEqual(store.claim(nonfinal), { status: 'STAGED_RECORDED' });
+  assert.deepEqual(store.resolveStagedAck(nonfinal),
+    { status: 'STAGED', ack: stagedAck });
+  store.close();
+});
+
+test('digest uses only exact kid and returns PKs for apply', t => {
+  const { file, reader } = fixture(t);
+  const store = createStore(file);
+  t.after(() => store.close());
+  const chunk = Buffer.from('{"rows":[{"id":"one"}]}');
+  const stagedKey = { ...key, seq: 0, final: false, bodySha256: hash(chunk) };
+  const first = store.claim(stagedKey);
+  store.stage(stagedKey, chunk, first.claimToken);
+  const runDigest = computeRunDigest({
+    runId: key.runId, layer: key.layer, baseGenerationId: 'g_1',
+    baseWatermark: '10', count: 1, chunkHashes: [hash(chunk)],
+  });
+  const finalBody = Buffer.from(canonicalJson({ trailer: {
+    ...trailer, run_digest: runDigest,
+  } }));
+  const finalKey = { ...key, bodySha256: hash(finalBody) };
+  claim(store, reader, finalKey, finalBody);
+  assert.deepEqual(store.verifyClaimedRunDigest(finalKey), {
+    runDigest, chunkKeys: [{ kid: 'k1', runId: 'run_1', layer: 'content', seq: 0 }],
+  });
+  // Even a manually inserted row under another kid cannot affect this proof.
+  store.db.prepare(
+    "INSERT INTO receipts(kid,run_id,layer,seq,body_sha256,final,content_encoding,status,ack_json,staged_body,created_at) " +
+    "VALUES('k2','run_1','content',0,?,0,'identity','staged','{}',?,1)"
+  ).run('e'.repeat(64), Buffer.from('other'));
+  assert.equal(store.verifyClaimedRunDigest(finalKey).runDigest, runDigest);
+});
+
+test('incremental byte budget rejects before storing the next chunk', t => {
+  const { file } = fixture(t);
+  const store = createStore(file);
+  t.after(() => store.close());
+  for (let seq = 0; seq < 9; seq += 1) {
+    const bytes = Buffer.alloc(1024 * 1024, seq);
+    const chunk = { ...key, seq, final: false, bodySha256: hash(bytes) };
+    const c = store.claim(chunk);
+    if (seq < 8) store.stage(chunk, bytes, c.claimToken);
+    else assert.throws(() => store.stage(chunk, bytes, c.claimToken),
+      code('INGEST_REPLAY_STAGING_CAPACITY'));
+  }
+  assert.equal(store.db.prepare(
+    "SELECT COALESCE(SUM(length(staged_body)),0) AS bytes FROM receipts"
+  ).get().bytes, 8 * 1024 * 1024);
+});
+
+test('full staged receipt stores hash only after building-file authority', t => {
+  const { file, reader, dir } = fixture(t);
+  const builder = CatalogGenerationBuilder.create({
+    storageDir: dir, generationId: 'g_2', sourceEpoch: 'epoch-1',
+    identityRevision: 0,
+  });
+  t.after(() => { try { builder.db.close(); } catch {} });
+  const bytes = Buffer.from('{"rows":[{"id":"one"}]}');
+  const chunk = { ...key, layer: 'full', seq: 0, final: false, bodySha256: hash(bytes) };
+  const store = createStore(file);
+  t.after(() => store.close());
+  const c = store.claim(chunk);
+  assert.throws(() => store.stage(chunk, bytes, c.claimToken),
+    code('INGEST_REPLAY_AUTHORITY_REQUIRED'));
+  assert.throws(() => store.stage(chunk, bytes, c.claimToken, { fullBuildDb: {} }),
+    code('INGEST_REPLAY_AUTHORITY_REQUIRED'));
+  assert.throws(() => store.stage(chunk, bytes, c.claimToken, { fullBuildDb: builder.db }),
+    code('INGEST_REPLAY_RUN_LOST'));
+  builder.db.exec('BEGIN IMMEDIATE');
+  builder.db.prepare(
+    'INSERT INTO run_chunks(run_id,kid,seq,body_sha256) VALUES(?,?,?,?)'
+  ).run(chunk.runId, chunk.kid, chunk.seq, chunk.bodySha256);
+  assert.throws(() => store.stage(chunk, bytes, c.claimToken, { fullBuildDb: builder.db }),
+    code('INGEST_REPLAY_RUN_LOST'));
+  builder.db.exec('COMMIT');
+  assert.equal(store.stage(chunk, bytes, c.claimToken, { fullBuildDb: builder.db }).status,
+    'STAGED');
+  assert.equal(store.db.prepare(
+    "SELECT staged_body IS NULL AS absent FROM receipts WHERE run_id=?"
+  ).get(chunk.runId).absent, 1);
+  assert.equal(store.resolveStagedAck(chunk, { fullBuildDb: builder.db }).status,
+    'STAGED');
+  assert.throws(() => store.resolveStagedAck(chunk),
+    code('INGEST_REPLAY_AUTHORITY_REQUIRED'));
+  assert.throws(() => store.resolveStagedAck(chunk, { fullBuildDb: {} }),
+    code('INGEST_REPLAY_AUTHORITY_REQUIRED'));
+  assert.deepEqual(store.claim(chunk), { status: 'STAGED_UNVERIFIED' });
+  assert.deepEqual(store.takeover(chunk, { now: 999, expectedLeaseUntil: 160 }),
+    { status: 'STAGED_UNVERIFIED' });
+  const other = CatalogGenerationBuilder.create({
+    storageDir: dir, generationId: 'g_3', sourceEpoch: 'epoch-1',
+    identityRevision: 0,
+  });
+  t.after(() => { try { other.db.close(); } catch {} });
+  other.db.prepare(
+    'INSERT INTO run_chunks(run_id,kid,seq,body_sha256) VALUES(?,?,?,?)'
+  ).run(chunk.runId, chunk.kid, chunk.seq, chunk.bodySha256);
+  assert.deepEqual(store.resolveStagedAck(chunk, { fullBuildDb: other.db }),
+    { status: 'RUN_LOST' });
+  const runDigest = computeRunDigest({
+    runId: key.runId, layer: 'full', baseGenerationId: 'g_1',
+    baseWatermark: '10', count: 1, chunkHashes: [hash(bytes)],
+  });
+  const finalBody = Buffer.from(canonicalJson({ trailer: {
+    ...trailer, run_digest: runDigest,
+  } }));
+  const final = { ...key, layer: 'full', bodySha256: hash(finalBody) };
+  claim(store, reader, final, finalBody);
+  assert.equal(store.verifyClaimedRunDigest(final, { fullBuildDb: builder.db }).runDigest,
+    runDigest);
+  assert.throws(() => store.verifyClaimedRunDigest(final, { fullBuildDb: other.db }),
+    code('INGEST_REPLAY_DIGEST_CONFLICT'));
+  assert.throws(() => store.verifyClaimedRunDigest(final, { fullBuildDb: {} }),
+    code('INGEST_REPLAY_AUTHORITY_REQUIRED'));
+  builder.db.exec('DROP TABLE run_chunks');
+  assert.throws(() => store.resolveStagedAck(chunk, { fullBuildDb: builder.db }),
+    code('INGEST_REPLAY_AUTHORITY_UNAVAILABLE'));
+  fs.renameSync(builder.buildingPath, builder.buildingPath + '.lost');
+  assert.deepEqual(store.resolveStagedAck(chunk, { fullBuildDb: builder.db }),
+    { status: 'RUN_LOST' });
+});
+
+test('catalog directory is required at bootstrap and after restart', t => {
+  const { file, dir } = fixture(t);
+  assert.throws(() => ReplayStore.createNew(file), code('INGEST_REPLAY_CONFIG_INVALID'));
+  assert.equal(fs.existsSync(file), false);
+  const store = createStore(file);
+  store.close();
+  assert.throws(() => ReplayStore.openExisting(file), code('INGEST_REPLAY_CONFIG_INVALID'));
+  assert.throws(() => openStore(file, { catalogStorageDir: path.join(dir, 'missing') }),
+    code('INGEST_REPLAY_CONFIG_INVALID'));
+  const reopened = openStore(file);
   reopened.close();
 });
 
-test('same key with different signed body fails even after ACK', t => {
-  const file = fixture(t);
-  const store = ReplayStore.createNew(file);
-  assert.deepEqual(store.claim(key), { status: 'NEW' });
-  assert.throws(() => store.claim({ ...key, bodySha256: hashB }),
-    code('INGEST_REPLAY_CONFLICT'));
-  assert.throws(() => store.claim({ ...key, final: false }),
-    code('INGEST_REPLAY_CONFLICT'));
-  store.complete(key, { accepted: true }, evidence);
-  assert.throws(() => store.claim({ ...key, bodySha256: hashB }),
-    code('INGEST_REPLAY_CONFLICT'));
+test('full stage rejects another generation of the same run before final claim', t => {
+  const { file, dir } = fixture(t);
+  const store = createStore(file);
+  t.after(() => store.close());
+  const bytes = Buffer.from('{"rows":[{"id":"one"}]}');
+  for (const [seq, generationId] of [[0, 'g_2'], [1, 'g_3']]) {
+    const builder = CatalogGenerationBuilder.create({
+      storageDir: dir, generationId, sourceEpoch: 'epoch-1', identityRevision: 0,
+    });
+    t.after(() => { try { builder.db.close(); } catch {} });
+    const chunk = { ...key, runId: 'run_two', layer: 'full', seq, final: false,
+      bodySha256: hash(bytes) };
+    const owner = store.claim(chunk);
+    builder.db.prepare(
+      'INSERT INTO run_chunks(run_id,kid,seq,body_sha256) VALUES(?,?,?,?)'
+    ).run(chunk.runId, chunk.kid, seq, chunk.bodySha256);
+    if (seq === 0) {
+      assert.equal(store.stage(chunk, bytes, owner.claimToken,
+        { fullBuildDb: builder.db }).status, 'STAGED');
+    } else {
+      assert.throws(() => store.stage(chunk, bytes, owner.claimToken,
+        { fullBuildDb: builder.db }), code('INGEST_REPLAY_RUN_LOST'));
+      assert.equal(store.db.prepare(
+        'SELECT status FROM receipts WHERE run_id=? AND seq=?'
+      ).get(chunk.runId, seq).status, 'pending');
+    }
+  }
+});
+
+test('publication journal is monotonic and records history', t => {
+  const { file } = fixture(t);
+  let store = createStore(file);
+  store.recordPublication('g_2', 'run_1', 'intent', 1);
+  store.close();
+  store = openStore(file);
+  assert.deepEqual(store.publication('g_2'), { runId: 'run_1', state: 'intent' });
+  store.recordPublication('g_2', 'run_1', 'switched', 2);
+  store.recordPublication('g_2', 'run_1', 'rolled_back', 3);
+  assert.throws(() => store.recordPublication('g_2', 'run_1', 'switched', 4),
+    code('INGEST_REPLAY_PUBLICATION_CONFLICT'));
+  store.recordPublication('g_3', 'run_2', 'intent', 1);
+  store.recordPublication('g_3', 'run_2', 'rolled_back', 2);
   store.close();
 });
 
-test('interrupted pending claim stays pending instead of executing twice', t => {
-  const file = fixture(t);
-  let store = ReplayStore.createNew(file);
-  store.claim(key);
-  store.close();
-  store = ReplayStore.openExisting(file);
-  assert.deepEqual(store.claim(key), { status: 'PENDING' });
-  assert.throws(() => store.complete({ ...key, bodySha256: hashB },
-    { accepted: true }, evidence), code('INGEST_REPLAY_CONFLICT'));
-  assert.deepEqual(store.claim({ ...key, seq: 1 }), { status: 'NEW' });
-  store.close();
-});
+async function killAtFailpoint(mode, file, key) {
+  const child = spawn(process.execPath, [
+    new URL('../fixtures/catalog-replay-crash-worker.mjs', import.meta.url).pathname,
+    mode, file, JSON.stringify(key),
+  ], { stdio: ['ignore', 'pipe', 'pipe'] });
+  let stderr = '';
+  child.stderr.setEncoding('utf8');
+  child.stderr.on('data', data => { stderr += data; });
+  let timer;
+  try {
+    const marker = await Promise.race([
+      new Promise((resolve, reject) => {
+        child.stdout.setEncoding('utf8');
+        child.stdout.on('data', data => {
+          if (data.includes('FAILPOINT:' + mode)) resolve(true);
+        });
+        child.on('error', reject);
+        child.on('exit', code => reject(new Error('Worker exited ' + code + ': ' + stderr)));
+      }),
+      new Promise((_, reject) => {
+        timer = setTimeout(() => reject(new Error('Failpoint timeout')), 5000);
+      }),
+    ]);
+    assert.equal(marker, true);
+  } finally {
+    clearTimeout(timer);
+  }
+  child.kill('SIGKILL');
+  const [code, signal] = await once(child, 'exit');
+  assert.equal(code, null);
+  assert.equal(signal, 'SIGKILL');
+}
 
-test('invalid receipts and permissive file mode fail closed', t => {
-  const file = fixture(t);
-  const store = ReplayStore.createNew(file);
-  assert.throws(() => store.claim({ ...key, runId: '../bad' }),
-    code('INGEST_REPLAY_KEY_INVALID'));
-  assert.throws(() => store.complete(key, { accepted: true }, evidence),
-    code('INGEST_REPLAY_UNCLAIMED'));
-  store.claim(key);
-  assert.throws(() => store.complete(key, { data: 'x'.repeat(4096) }, evidence),
-    code('INGEST_REPLAY_ACK_INVALID'));
+test('SIGKILL releases claim owner; restarted boot ID and lease fence survive', async t => {
+  const { file } = fixture(t);
+  const bytes = Buffer.from('{"rows":[{"id":"one"}]}');
+  const nonfinal = { ...key, final: false, seq: 0, bodySha256: hash(bytes) };
+  let store = createStore(file);
   store.close();
-  fs.chmodSync(file, 0o644);
-  assert.throws(() => ReplayStore.openExisting(file),
-    code('INGEST_REPLAY_PERMISSIONS'));
-});
-
-test('bounded ledger fails closed while preserving duplicate ACKs', t => {
-  const file = fixture(t);
-  const store = ReplayStore.createNew(file, { maxReceipts: 1 });
-  store.claim(key);
-  store.complete(key, { accepted: true }, evidence);
-  assert.throws(() => store.claim({ ...key, seq: 1 }),
-    code('INGEST_REPLAY_CAPACITY'));
-  assert.deepEqual(store.claim(key), { status: 'ACK_RECORDED' });
-  assert.deepEqual(store.resolveAck(key, evidence),
-    { status: 'ACKED', ack: { accepted: true } });
+  await killAtFailpoint('after_claim', file, nonfinal);
+  store = openStore(file);
+  const firstBoot = store.db.prepare(
+    'SELECT owner_boot_id FROM receipts WHERE run_id=?'
+  ).get(nonfinal.runId).owner_boot_id;
+  store.close();
+  await killAtFailpoint('after_takeover', file, nonfinal);
+  store = openStore(file);
+  const row = store.db.prepare(
+    'SELECT owner_boot_id, lease_until FROM receipts WHERE run_id=?'
+  ).get(nonfinal.runId);
+  assert.notEqual(row.owner_boot_id, firstBoot);
+  assert.equal(row.lease_until, 221);
+  const finalOwner = store.takeover(nonfinal, {
+    now: 222, expectedLeaseUntil: 221,
+  });
+  assert.equal(finalOwner.status, 'TAKEN_OVER');
+  store.stage(nonfinal, bytes, finalOwner.claimToken);
+  store.close();
+  store = openStore(file);
+  assert.equal(store.resolveStagedAck(nonfinal).status, 'STAGED');
   store.close();
 });

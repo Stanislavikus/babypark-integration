@@ -479,7 +479,7 @@ function buildFixture(storageDir) {
     'stock',
   ]) {
     builder.setLayerState(layer, {
-      accepted_watermark: layer + '-42',
+      accepted_watermark: '42',
       accepted_source_fingerprint: 'fp-' + layer,
       source_updated_at: '2026-09-24T00:00:00.000Z',
       provider_completed_at:

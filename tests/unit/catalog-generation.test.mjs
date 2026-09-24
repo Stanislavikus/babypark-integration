@@ -712,7 +712,7 @@ test('extra manifest data cannot override canonical generation fields', t => {
   });
 
   assert.equal(result.manifest.generation_id, 'manifest1');
-  assert.equal(result.manifest.schema_version, 1);
+  assert.equal(result.manifest.schema_version, 3);
   assert.equal(result.manifest.counts.products, 1);
   assert.equal(result.manifest.extra.generation_id, 'evil');
   assert.equal(result.manifest.extra.note, 'source-extra');

@@ -1,4 +1,4 @@
-export const CATALOG_SCHEMA_VERSION = 1;
+export const CATALOG_SCHEMA_VERSION = 3;
 
 export const CATALOG_LAYERS = Object.freeze([
   'taxonomy',
@@ -24,12 +24,13 @@ export const CATALOG_REQUIRED_TABLES = Object.freeze([
   'images',
   'kit_components',
   'ingest_runs',
+  'run_chunks',
 ]);
 
 const SCHEMA_SQL = `
   PRAGMA foreign_keys=ON;
   PRAGMA journal_mode=WAL;
-  PRAGMA synchronous=NORMAL;
+  PRAGMA synchronous=FULL;
 
   CREATE TABLE catalog_meta (
     singleton INTEGER PRIMARY KEY CHECK(singleton = 1),
@@ -48,7 +49,12 @@ const SCHEMA_SQL = `
   CREATE TABLE sync_state (
     layer TEXT PRIMARY KEY
       CHECK(layer IN ('taxonomy','content','commercial','stock')),
-    accepted_watermark TEXT,
+    accepted_watermark TEXT CHECK(
+      accepted_watermark IS NULL OR
+      (length(accepted_watermark) BETWEEN 1 AND 20 AND
+       accepted_watermark NOT GLOB '*[^0-9]*' AND
+       (accepted_watermark='0' OR substr(accepted_watermark,1,1)<>'0'))
+    ),
     accepted_source_fingerprint TEXT,
     source_updated_at TEXT,
     provider_completed_at TEXT,
@@ -276,6 +282,11 @@ const SCHEMA_SQL = `
     run_id TEXT PRIMARY KEY,
     layer TEXT NOT NULL
       CHECK(layer IN ('taxonomy','content','commercial','stock','full')),
+    run_kind TEXT NOT NULL
+      CHECK((run_kind='full' AND layer='full') OR
+            (run_kind='incremental' AND layer IN ('taxonomy','content','commercial','stock'))),
+    run_digest TEXT CHECK(run_digest IS NULL OR (length(run_digest)=64 AND run_digest NOT GLOB '*[^0-9a-f]*')),
+    final_seq INTEGER CHECK(final_seq IS NULL OR final_seq >= 0),
     status TEXT NOT NULL
       CHECK(status IN (
         'STAGING',
@@ -284,12 +295,28 @@ const SCHEMA_SQL = `
         'FAILED',
         'ABANDONED'
       )),
-    source_watermark TEXT,
+    source_watermark TEXT CHECK(
+      source_watermark IS NULL OR
+      (length(source_watermark) BETWEEN 1 AND 20 AND
+       source_watermark NOT GLOB '*[^0-9]*' AND
+       (source_watermark='0' OR substr(source_watermark,1,1)<>'0'))
+    ),
     started_at TEXT NOT NULL,
     terminal_at TEXT,
-    manifest_sha256 TEXT,
     error_code TEXT,
-    metadata_json TEXT NOT NULL DEFAULT '{}'
+    metadata_json TEXT NOT NULL DEFAULT '{}',
+    CHECK(status <> 'ACCEPTED' OR
+          (run_digest IS NOT NULL AND final_seq IS NOT NULL AND terminal_at IS NOT NULL AND
+           (run_kind='full' OR source_watermark IS NOT NULL)))
+  );
+
+  CREATE TABLE run_chunks (
+    run_id TEXT NOT NULL,
+    kid TEXT NOT NULL,
+    seq INTEGER NOT NULL CHECK(seq >= 0),
+    body_sha256 TEXT NOT NULL
+      CHECK(length(body_sha256)=64 AND body_sha256 NOT GLOB '*[^0-9a-f]*'),
+    PRIMARY KEY(run_id,kid,seq)
   );
 
   CREATE VIRTUAL TABLE fts_words USING fts5(
@@ -310,7 +337,7 @@ const SCHEMA_SQL = `
     tokenize='trigram'
   );
 
-  PRAGMA user_version=1;
+  PRAGMA user_version=3;
 `;
 
 export function initializeCatalogSchema(db, {
