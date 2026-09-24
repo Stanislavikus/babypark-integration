@@ -11,7 +11,7 @@ function tempDir() {
   return mkdtempSync(path.join(os.tmpdir(), 'bp-gateway-backup-'));
 }
 
-test('backup is consistent, verified and mode 0600', async t => {
+test('backup is standalone, consistent, verified and mode 0600', async t => {
   const dir = tempDir();
   t.after(() => rmSync(dir, { recursive: true, force: true }));
 
@@ -20,6 +20,7 @@ test('backup is consistent, verified and mode 0600', async t => {
 
   const db = new DatabaseSync(source);
   db.exec(`
+    PRAGMA journal_mode=WAL;
     CREATE TABLE sessions (
       viber_user_id TEXT PRIMARY KEY,
       contact_id INTEGER NOT NULL,
@@ -40,18 +41,29 @@ test('backup is consistent, verified and mode 0600', async t => {
   assert.equal(result.integrity, 'ok');
   assert.equal(result.user_version, 2);
   assert.equal(result.row_counts.sessions, 1);
+  assert.equal(result.journal_mode, 'delete');
+  assert.equal(result.standalone, true);
   assert.ok(result.bytes > 0);
   assert.match(result.sha256, /^[a-f0-9]{64}$/);
 
   const mode = fs.statSync(destination).mode & 0o777;
   assert.equal(mode, 0o600);
+  assert.equal(fs.existsSync(destination + '-wal'), false);
+  assert.equal(fs.existsSync(destination + '-shm'), false);
 
   const copy = new DatabaseSync(destination, { readOnly: true });
   assert.equal(
     copy.prepare('SELECT viber_user_id FROM sessions').get().viber_user_id,
     'u1'
   );
+  assert.equal(
+    String(copy.prepare('PRAGMA journal_mode').get().journal_mode).toLowerCase(),
+    'delete'
+  );
   copy.close();
+
+  assert.equal(fs.existsSync(destination + '-wal'), false);
+  assert.equal(fs.existsSync(destination + '-shm'), false);
 });
 
 test('backup never overwrites an existing destination', async t => {
@@ -76,6 +88,34 @@ test('backup never overwrites an existing destination', async t => {
   );
 
   assert.equal(fs.readFileSync(destination, 'utf8'), 'keep-me');
+});
+
+test('backup refuses a destination with pre-existing WAL/SHM sidecar', async t => {
+  const dir = tempDir();
+  t.after(() => rmSync(dir, { recursive: true, force: true }));
+
+  const source = path.join(dir, 'bridge.sqlite');
+  const destination = path.join(dir, 'backup.sqlite');
+
+  const db = new DatabaseSync(source);
+  db.exec('CREATE TABLE t(x); INSERT INTO t VALUES (1);');
+  db.close();
+
+  fs.writeFileSync(destination + '-shm', 'unrelated');
+
+  await assert.rejects(
+    backupGatewayDb({
+      sourcePath: source,
+      destinationPath: destination,
+    }),
+    /backup_destination_sidecar_exists/
+  );
+
+  assert.equal(fs.existsSync(destination), false);
+  assert.equal(
+    fs.readFileSync(destination + '-shm', 'utf8'),
+    'unrelated'
+  );
 });
 
 test('source and destination cannot be the same file', async t => {

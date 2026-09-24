@@ -46,6 +46,61 @@ function sha256File(filePath) {
   return hash.digest('hex');
 }
 
+function fsyncFile(filePath) {
+  const fd = fs.openSync(filePath, 'r');
+  try {
+    fs.fsyncSync(fd);
+  } finally {
+    fs.closeSync(fd);
+  }
+}
+
+function backupSidecars(destination) {
+  return [`${destination}-wal`, `${destination}-shm`];
+}
+
+function removeCreatedBackupArtifacts(destination) {
+  for (const filePath of [destination, ...backupSidecars(destination)]) {
+    try {
+      if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+    } catch {
+      // Preserve the original failure; cleanup is best effort.
+    }
+  }
+}
+
+function assertDestinationUnused(destination) {
+  if (fs.existsSync(destination)) {
+    throw new Error('backup_destination_exists');
+  }
+  if (backupSidecars(destination).some(filePath => fs.existsSync(filePath))) {
+    throw new Error('backup_destination_sidecar_exists');
+  }
+}
+
+function normalizeBackupToSingleFile(destination) {
+  const db = new DatabaseSync(destination);
+  try {
+    db.exec('PRAGMA wal_checkpoint(TRUNCATE);');
+    const row = db.prepare('PRAGMA journal_mode=DELETE').get();
+    const mode = String(row?.journal_mode || '').toLowerCase();
+    if (mode !== 'delete') {
+      throw new Error(`backup_journal_mode_not_delete:${mode}`);
+    }
+  } finally {
+    db.close();
+  }
+
+  // After every connection is closed and journal mode is DELETE,
+  // WAL/SHM sidecars are not part of the backup artifact.
+  for (const sidecar of backupSidecars(destination)) {
+    if (fs.existsSync(sidecar)) fs.unlinkSync(sidecar);
+  }
+
+  fs.chmodSync(destination, 0o600);
+  fsyncFile(destination);
+}
+
 export async function backupGatewayDb({
   sourcePath,
   destinationPath,
@@ -63,9 +118,8 @@ export async function backupGatewayDb({
   if (!fs.existsSync(source)) {
     throw new Error('backup_source_missing');
   }
-  if (fs.existsSync(destination)) {
-    throw new Error('backup_destination_exists');
-  }
+
+  assertDestinationUnused(destination);
 
   const parent = path.dirname(destination);
   const parentStat = fs.statSync(parent);
@@ -79,7 +133,8 @@ export async function backupGatewayDb({
     sourceDb = new DatabaseSync(source, { readOnly: true });
     await sqliteBackup(sourceDb, destination);
     createdDestination = true;
-    fs.chmodSync(destination, 0o600);
+
+    normalizeBackupToSingleFile(destination);
 
     const backupDb = new DatabaseSync(destination, { readOnly: true });
     try {
@@ -92,7 +147,21 @@ export async function backupGatewayDb({
         );
       }
 
-      const result = {
+      const journalMode = String(
+        backupDb.prepare('PRAGMA journal_mode').get()?.journal_mode || ''
+      ).toLowerCase();
+
+      if (journalMode !== 'delete') {
+        throw new Error(
+          `backup_journal_mode_verification_failed:${journalMode}`
+        );
+      }
+
+      if (backupSidecars(destination).some(filePath => fs.existsSync(filePath))) {
+        throw new Error('backup_sidecar_present_after_normalization');
+      }
+
+      return {
         source,
         destination,
         user_version: Number(
@@ -102,14 +171,15 @@ export async function backupGatewayDb({
         bytes: fs.statSync(destination).size,
         sha256: sha256File(destination),
         integrity: 'ok',
+        journal_mode: 'delete',
+        standalone: true,
       };
-      return result;
     } finally {
       backupDb.close();
     }
   } catch (error) {
-    if (createdDestination && fs.existsSync(destination)) {
-      fs.unlinkSync(destination);
+    if (createdDestination) {
+      removeCreatedBackupArtifacts(destination);
     }
     throw error;
   } finally {

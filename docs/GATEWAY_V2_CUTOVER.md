@@ -118,6 +118,9 @@ Use a unique timestamped destination under the approved backup directory:
 Require:
 - ok=true;
 - integrity=ok;
+- standalone=true;
+- journal_mode=delete;
+- no sibling -wal/-shm files;
 - expected row counts;
 - mode 0600.
 D. Start v2 on 3102
@@ -194,3 +197,9 @@ It must have:
 - retention decision after stabilization.
 
 No automatic deletion is part of this cutover.
+
+## Pre-cutover finding 2026-09-24
+
+The first isolated candidate attempt exposed a backup-artifact bug before production cutover: native node:sqlite backup inherited WAL mode and verification created root-owned WAL/SHM sidecars. A www-data candidate could not open that copied DB.
+
+Correction: backup helper now normalizes every backup to a single-file DELETE-journal artifact, fsyncs it, verifies integrity/journal mode, rejects pre-existing destination sidecars and regression-tests the standalone guarantee. Production bridge.sqlite was not changed by the failed candidate attempt.
