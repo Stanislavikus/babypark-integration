@@ -282,6 +282,40 @@
       "pii": "none_expected"
     },
     {
+      "id": "ingest_replay_db",
+      "host_role": "integration",
+      "status": "PLANNED",
+      "scope": "file",
+      "location": "/var/lib/babypark-integration/ingest/replay.sqlite",
+      "owner": "catalog ingest service",
+      "purpose": "Durable signed-chunk claims and immutable ACK receipts across restart.",
+      "state_class": "durable",
+      "thresholds": {
+        "metric": "bytes",
+        "basis": "20,000 receipt hard cap; measure during E.2",
+        "expected": 16777216,
+        "warning": 67108864,
+        "critical": 134217728
+      },
+      "retention": {
+        "mode": "no_pruning_until_recovery_contract",
+        "ttl_days": null
+      },
+      "cleanup": {
+        "automatic": false,
+        "mechanism": "No file deletion or receipt pruning in E.1.",
+        "dry_run_required": true,
+        "delete_guard": "PENDING and ACKed receipts survive restart."
+      },
+      "recovery": "Fail closed; restore verified ledger and reconcile pending claims against accepted catalog state.",
+      "backup": {
+        "required": true,
+        "off_host": true,
+        "status": "REQUIRED_BEFORE_DEPLOY"
+      },
+      "pii": "request_ids_and_body_hashes_only"
+    },
+    {
       "id": "ingest_staging",
       "host_role": "integration",
       "status": "PLANNED",
