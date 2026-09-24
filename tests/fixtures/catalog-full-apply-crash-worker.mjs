@@ -16,10 +16,8 @@ const mutex = new CatalogPublicationLock(dir);
 writeFullChunk({
   mutex, store, builder, key: JSON.parse(encodedKey), verifiedBody: Buffer.from(encodedBody, 'base64'),
   claimToken,
-  writeRows(db, rows) {
-    for (const row of rows) db.prepare(
-      'INSERT INTO brands(brand_id,name) VALUES(?,?)'
-    ).run(row.id, row.name);
+  writeRows(writer, rows) {
+    for (const row of rows) writer.insertBrand(row);
     return rows.length;
   },
   afterBuildCommit() {

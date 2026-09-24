@@ -245,7 +245,7 @@ test('full staged receipt stores hash only after building-file authority', t => 
     code('INGEST_REPLAY_AUTHORITY_REQUIRED'));
   builder.db.exec('DROP TABLE run_chunks');
   assert.throws(() => store.resolveStagedAck(chunk, { fullBuildDb: builder.db }),
-    code('INGEST_REPLAY_AUTHORITY_UNAVAILABLE'));
+    code('INGEST_REPLAY_AUTHORITY_CORRUPT'));
   fs.renameSync(builder.buildingPath, builder.buildingPath + '.lost');
   assert.deepEqual(store.resolveStagedAck(chunk, { fullBuildDb: builder.db }),
     { status: 'RUN_LOST' });

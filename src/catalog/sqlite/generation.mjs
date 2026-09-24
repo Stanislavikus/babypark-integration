@@ -1153,28 +1153,70 @@ export class CatalogPublisher {
     inspectCatalogGeneration(this.storageDir, id);
     const next = generationFilename(id);
     const before = this.state();
-    if (expectedCurrent !== undefined && before.current_generation !== expectedCurrent) {
-      throw catalogError('CATALOG_CURRENT_MOVED', 'CURRENT changed before publication');
-    }
-    if (runId !== null && (!replayStore || typeof replayStore.recordPublication !== 'function')) {
+    if (runId !== null && (
+      !replayStore ||
+      typeof replayStore.recordPublication !== 'function' ||
+      typeof replayStore.publication !== 'function'
+    )) {
       throw new TypeError('Full publication needs a replay store');
     }
 
     if (before.current_filename === next) {
-      reloadReaders(this.readers, id);
+      let entry = null;
       if (runId !== null) {
-        const entry = replayStore.publication(id);
-        if (!entry || entry.runId !== runId) {
-          throw catalogError('CATALOG_PUBLICATION_CONFLICT', 'CURRENT belongs to another run');
+        entry = replayStore.publication(id);
+        if (
+          !entry ||
+          entry.runId !== runId ||
+          entry.state === 'rolled_back'
+        ) {
+          throw catalogError(
+            'CATALOG_PUBLICATION_CONFLICT',
+            'CURRENT belongs to another publication'
+          );
         }
-        if (entry.state === 'intent') {
-          replayStore.recordPublication(id, runId, 'switched');
+      }
+
+      if (
+        expectedCurrent !== undefined &&
+        before.current_generation !== expectedCurrent
+      ) {
+        const ownRecoveredSwitch = (
+          runId !== null &&
+          before.previous_generation === expectedCurrent &&
+          entry &&
+          ['intent', 'switched'].includes(entry.state)
+        );
+        if (!ownRecoveredSwitch) {
+          throw catalogError(
+            'CATALOG_CURRENT_MOVED',
+            'CURRENT changed before publication'
+          );
         }
+      }
+
+      reloadReaders(this.readers, id);
+      if (entry?.state === 'intent') {
+        replayStore.recordPublication(
+          id,
+          runId,
+          'switched'
+        );
       }
       return {
         changed: false,
         ...this.state(),
       };
+    }
+
+    if (
+      expectedCurrent !== undefined &&
+      before.current_generation !== expectedCurrent
+    ) {
+      throw catalogError(
+        'CATALOG_CURRENT_MOVED',
+        'CURRENT changed before publication'
+      );
     }
 
     if (runId !== null) replayStore.recordPublication(id, runId, 'intent');

@@ -118,8 +118,14 @@ test('CURRENT after switch takes precedence over an intent marker', t => {
   }), /before_switched/);
   assert.equal(f.publisher.state().current_generation, 'g2');
   assert.equal(f.store.publication('g2').state, 'intent');
+  assert.throws(() => f.publisher.publish('g2', {
+    expectedCurrent: 'g1', runId: 'other', replayStore: f.store,
+  }), code('CATALOG_PUBLICATION_CONFLICT'));
+  assert.throws(() => f.publisher.publish('g2', {
+    expectedCurrent: 'wrong', runId: 'r1', replayStore: f.store,
+  }), code('CATALOG_CURRENT_MOVED'));
   assert.equal(f.publisher.publish('g2', {
-    expectedCurrent: 'g2', runId: 'r1', replayStore: f.store,
+    expectedCurrent: 'g1', runId: 'r1', replayStore: f.store,
   }).changed, false);
   assert.equal(f.store.publication('g2').state, 'switched');
 });
@@ -158,4 +164,99 @@ test('SIGKILL releases the cross-process publication mutex', async t => {
   const second = new CatalogPublicationLock(f.dir);
   assert.equal(second.withLock(() => f.publisher.state().current_generation), 'g1');
   second.close();
+});
+
+
+test('lock constructor does not contend with an existing held lock', async t => {
+  const f = fixture(t);
+  const holder = spawn(process.execPath, [
+    new URL('../fixtures/catalog-lock-crash-worker.mjs', import.meta.url).pathname,
+    f.dir,
+  ], { stdio: ['ignore', 'pipe', 'pipe'] });
+  let holderError = '';
+  holder.stderr.setEncoding('utf8');
+  holder.stderr.on('data', value => { holderError += value; });
+  let timer;
+  try {
+    await Promise.race([
+      new Promise((resolve, reject) => {
+        holder.stdout.setEncoding('utf8');
+        holder.stdout.on('data', value => {
+          if (value.includes('FAILPOINT:lock_held')) resolve();
+        });
+        holder.on('error', reject);
+        holder.on('exit', code => reject(
+          new Error('Holder exited ' + code + ': ' + holderError)
+        ));
+      }),
+      new Promise((_, reject) => {
+        timer = setTimeout(
+          () => reject(new Error('Holder timeout: ' + holderError)),
+          5000
+        );
+      }),
+    ]);
+  } finally {
+    clearTimeout(timer);
+  }
+
+  const constructor = spawn(process.execPath, [
+    new URL('../fixtures/catalog-lock-constructor-worker.mjs', import.meta.url).pathname,
+    f.dir,
+  ], { stdio: ['ignore', 'pipe', 'pipe'] });
+  let out = '';
+  let err = '';
+  constructor.stdout.setEncoding('utf8');
+  constructor.stderr.setEncoding('utf8');
+  constructor.stdout.on('data', value => { out += value; });
+  constructor.stderr.on('data', value => { err += value; });
+  const started = Date.now();
+  const [exitCode, signal] = await once(constructor, 'exit');
+  const elapsed = Date.now() - started;
+
+  holder.kill('SIGKILL');
+  await once(holder, 'exit');
+
+  assert.equal(signal, null);
+  assert.equal(exitCode, 0, err);
+  assert.ok(elapsed < 1500, 'constructor blocked for ' + elapsed + 'ms');
+  const payload = JSON.parse(out.trim());
+  assert.equal(payload.ok, true);
+  assert.ok(payload.elapsed_ms < 1500);
+});
+
+test('first lock initialization race succeeds in both processes', async t => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'bp-e3-lock-init-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const worker = new URL(
+    '../fixtures/catalog-lock-constructor-worker.mjs',
+    import.meta.url
+  ).pathname;
+
+  const run = () => new Promise((resolve, reject) => {
+    const child = spawn(process.execPath, [worker, root], {
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
+    let stdout = '';
+    let stderr = '';
+    child.stdout.setEncoding('utf8');
+    child.stderr.setEncoding('utf8');
+    child.stdout.on('data', value => { stdout += value; });
+    child.stderr.on('data', value => { stderr += value; });
+    child.on('error', reject);
+    child.on('exit', (code, signal) => resolve({
+      code, signal, stdout, stderr,
+    }));
+  });
+
+  const results = await Promise.all([run(), run()]);
+  for (const result of results) {
+    assert.equal(result.signal, null);
+    assert.equal(result.code, 0, result.stderr);
+    assert.equal(JSON.parse(result.stdout.trim()).ok, true);
+  }
+
+  const lock = new CatalogPublicationLock(root);
+  assert.equal(lock.withLock(() => 'ok'), 'ok');
+  lock.close();
 });

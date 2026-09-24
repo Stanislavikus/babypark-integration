@@ -57,10 +57,8 @@ function fixture(t) {
     },
   };
 }
-function writeRows(db, rows) {
-  for (const row of rows) db.prepare(
-    'INSERT INTO brands(brand_id,name) VALUES(?,?)'
-  ).run(row.id, row.name);
+function writeRows(writer, rows) {
+  for (const row of rows) writer.insertBrand(row);
   return rows.length;
 }
 function finalClaim(f, count) {
@@ -80,7 +78,7 @@ function finalClaim(f, count) {
 test('full data and hash commit together; retry skips the writer', t => {
   const f = fixture(t);
   let calls = 0;
-  const writer = (db, rows) => { calls++; return writeRows(db, rows); };
+  const writer = (writer, rows) => { calls++; return writeRows(writer, rows); };
   assert.throws(() => writeFullChunk({
     store: f.store, builder: f.builder, key: chunk, verifiedBody: body,
     claimToken: f.owner.claimToken, writeRows: writer,
@@ -113,7 +111,7 @@ test('writer failure rolls back both data and hash; final count mismatch fails',
   assert.throws(() => writeFullChunk({
     mutex: f.mutex, store: f.store, builder: f.builder, key: chunk, verifiedBody: body,
     claimToken: f.owner.claimToken,
-    writeRows(db, rows) { writeRows(db, rows); throw new Error('failpoint'); },
+    writeRows(writer, rows) { writeRows(writer, rows); throw new Error('failpoint'); },
   }), /failpoint/);
   assert.equal(f.builder.db.prepare('SELECT COUNT(*) AS n FROM brands').get().n, 0);
   assert.equal(f.builder.db.prepare('SELECT COUNT(*) AS n FROM run_chunks').get().n, 0);
@@ -202,4 +200,117 @@ test('SIGKILL after building commit allows exactly one data write after restart'
   assert.equal(f.store.resolveStagedAck(chunk, {
     fullBuildDb: f.builder.db,
   }).status, 'STAGED');
+});
+
+
+test('fixture writer cannot commit the outer transaction; retry remains clean', t => {
+  const f = fixture(t);
+  assert.throws(() => writeFullChunk({
+    mutex: f.mutex,
+    store: f.store,
+    builder: f.builder,
+    key: chunk,
+    verifiedBody: body,
+    claimToken: f.owner.claimToken,
+    writeRows(writer, rows) {
+      assert.equal(writer.prepare, undefined);
+      assert.equal(writer.exec, undefined);
+      for (const row of rows) writer.insertBrand(row);
+      writer.commit();
+    },
+  }), code('FULL_APPLY_TRANSACTION_CONTROL_FORBIDDEN'));
+
+  assert.equal(
+    f.builder.db.prepare('SELECT COUNT(*) AS n FROM brands').get().n,
+    0
+  );
+  assert.equal(
+    f.builder.db.prepare('SELECT COUNT(*) AS n FROM run_chunks').get().n,
+    0
+  );
+  assert.equal(
+    f.store.db.prepare(
+      'SELECT status FROM receipts WHERE run_id=? AND seq=0'
+    ).get(chunk.runId).status,
+    'pending'
+  );
+
+  const retry = writeFullChunk({
+    mutex: f.mutex,
+    store: f.store,
+    builder: f.builder,
+    key: chunk,
+    verifiedBody: body,
+    claimToken: f.owner.claimToken,
+    writeRows,
+  });
+  assert.equal(retry.status, 'COMMITTED');
+  assert.equal(
+    f.builder.db.prepare('SELECT COUNT(*) AS n FROM brands').get().n,
+    1
+  );
+  assert.equal(
+    f.builder.db.prepare('SELECT COUNT(*) AS n FROM run_chunks').get().n,
+    1
+  );
+});
+
+test('one building generation rejects another run on write and verify', t => {
+  const f = fixture(t);
+  writeFullChunk({
+    mutex: f.mutex,
+    store: f.store,
+    builder: f.builder,
+    key: chunk,
+    verifiedBody: body,
+    claimToken: f.owner.claimToken,
+    writeRows,
+  });
+
+  const bodyB = Buffer.from(canonicalJson({
+    rows: [{ id: 'b2', name: 'Brand 2' }],
+  }));
+  const chunkB = {
+    ...chunk,
+    runId: 'run_2',
+    bodySha256: hash(bodyB),
+  };
+  const ownerB = f.store.claim(chunkB, 100);
+
+  assert.throws(() => writeFullChunk({
+    mutex: f.mutex,
+    store: f.store,
+    builder: f.builder,
+    key: chunkB,
+    verifiedBody: bodyB,
+    claimToken: ownerB.claimToken,
+    writeRows,
+  }), code('FULL_APPLY_GENERATION_MIXED'));
+
+  assert.equal(
+    f.builder.db.prepare('SELECT COUNT(*) AS n FROM brands').get().n,
+    1
+  );
+  assert.equal(
+    f.builder.db.prepare('SELECT COUNT(*) AS n FROM run_chunks').get().n,
+    1
+  );
+
+  // Simulate a previously corrupted/mixed generation to exercise verify too.
+  f.builder.db.prepare(
+    'INSERT INTO run_chunks(run_id,kid,seq,body_sha256,rows) VALUES(?,?,?,?,1)'
+  ).run(
+    chunkB.runId,
+    chunkB.kid,
+    chunkB.seq,
+    chunkB.bodySha256
+  );
+
+  const final = finalClaim(f, 1);
+  assert.throws(() => verifyFullRunForApply({
+    mutex: f.mutex,
+    store: f.store,
+    builder: f.builder,
+    finalKey: final,
+  }), code('FULL_APPLY_GENERATION_MIXED'));
 });

@@ -37,22 +37,44 @@ retryable read error and must alert operators without starting a fresh export.
 Errors and statuses must be mapped explicitly in a future HTTP handler.
 No handler may serialize an exception object as a staged ACK.
 
+Zero-length catalog files, missing authority tables/columns and incompatible
+catalog schema are deterministic INGEST_REPLAY_AUTHORITY_CORRUPT outcomes.
+Missing directories/files, access/I/O failures and SQLite busy/locked failures
+remain retryable authority-unavailable/lost distinctions as applicable.
+
+A staged ACK proves that matching durable chunk evidence existed; it is not an
+ownership token. After lease takeover, an old owner can observe already-staged
+evidence on retry, while a new write attempt must still be fenced by
+INGEST_REPLAY_OWNER_LOST. OWNER_LOST after a durable building commit is never
+authorization to delete committed data.
+
 ## Full chunk writer and verification
 
 Catalog schema v4 adds a nonnegative rows count to run_chunks. The fixture-only
 writeFullChunk accepts a previously claimed key and its verified canonical JSON
 body ({rows:[...]}). It and verifyFullRunForApply require CatalogPublicationLock.
-A synchronous, trusted row writer and run_chunks insert share
+A synchronous, trusted fixture row mapper and run_chunks insert share
 BEGIN IMMEDIATE/COMMIT on a building-file connection with synchronous=FULL.
-On a retry, the existing PK must match signed body hash and decoded row count;
-the writer does not run again. The ledger staged ACK is resolved after that
-commit. A crash in between is retried from a reopened building file and ledger.
+The mapper receives a narrow row API, never the SQLite handle; it has no
+prepare/exec capability and explicit transaction-control attempts fail with
+FULL_APPLY_TRANSACTION_CONTROL_FORBIDDEN. On a retry, the existing PK must
+match signed body hash and decoded row count; the mapper does not run again.
+The ledger staged ACK is resolved after that commit. A crash in between is
+retried from a reopened building file and ledger.
+
+writeFullChunk and verifyFullRunForApply both reject
+FULL_APPLY_GENERATION_MIXED when run_chunks contains another run_id. The check
+runs under the same building-file write transaction as chunk commit/verify, so
+two writers using this path cannot claim the same building generation for
+different runs.
 
 verifyFullRunForApply holds a building-file write transaction while verifying
 exact staged PKs and digest against committed chunks, then sums rows for the
 same PKs and compares with signed trailer.count. It returns a proof, not an
-ACCEPTED run or published generation. The writer callback is fixture code;
-the production mapping and source header remain undefined.
+ACCEPTED run or published generation. run_chunks exclusivity proves ownership
+of this fixture apply path; it does not prove provenance of arbitrary catalog
+rows written outside that path. The production mapping, signed source header
+and final semantic/full-manifest certification remain undefined.
 
 ## Apply slice gates
 
@@ -88,3 +110,41 @@ The future Drupal exporter should send diagnostics to /report, retain only a
 small local checkpoint and host-managed error logs, with no fixed daily
 source refresh interval. Configure Drupal's unrelated log retention after
 inspecting its actual logging setup.
+
+
+## Next implementation slice after E.3a corrections
+
+The five E.3a blockers above do not complete final apply. The next slice must
+freeze the signed run header in chunk 0 before any live receiver work:
+
+- canonical source interval t_low/t_high;
+- signed base generation/base watermark and output watermark;
+- full-run per-layer watermarks/state;
+- contiguity and numeric comparison rules;
+- the exact digest contract plus golden vectors shared by Node and PHP 7.0.
+
+Then add one crash-resumable final coordinator that derives base CAS from the
+signed header, records ingest_runs by PK(run_id) and the computed digest,
+verifies count/digest, seals, journals, publishes under the required lock, and
+renders the response only from CURRENT evidence. Incremental apply remains
+blocked on the read-only CURRENT reader versus in-place SQLite journal/rollback
+invariant.
+
+Before the publisher is used behind HTTP, replace long synchronous event-loop
+waiting with bounded acquisition and a stable PUBLICATION_LOCK_BUSY outcome;
+prove that separate lock instances in one process do not self-deadlock; add the
+publication lock database/artifacts to storage-policy protection; and exercise
+reader reload failure during rollback as well as CURRENT/journal consistency at
+named crash windows.
+
+Before live ingest, implement rollback-aware final takeover, heartbeat/lease
+handling, receipt/staging retention under the apply/publisher lock, capacity and
+lag limits/alerts, authenticated /state and /report, and verified replay-ledger
+backup/recovery. OWNER_LOST after durable commit must reconcile evidence, never
+delete committed building data.
+
+The later Drupal exporter remains read-only. Its schedule must be configurable
+per source/layer rather than assuming one full run per day. Keep only a small
+state.json locally, use host-managed rotated error logging, send bounded
+diagnostics to /report, and add operator alerts by email or administrative chat.
+Magento may use a different source schedule behind the same ingest contract.

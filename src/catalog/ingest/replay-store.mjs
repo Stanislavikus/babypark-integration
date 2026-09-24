@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { CatalogReader } from '../sqlite/generation.mjs';
+import { CATALOG_SCHEMA_VERSION } from '../sqlite/schema.mjs';
 
 const LAYERS = new Set(['content', 'commercial', 'stock', 'taxonomy', 'full']);
 const ID_RE = /^[A-Za-z0-9_-]{1,64}$/;
@@ -314,20 +315,44 @@ export class ReplayStore {
       [path.join(this.catalogStorageDir, 'catalog.' + generationId + '.sqlite'), 'ready'],
     ];
     for (const [candidate, fileState] of candidates) {
+      let candidateStat;
       try {
-        fs.statSync(candidate);
+        candidateStat = fs.statSync(candidate);
       } catch (error) {
         if (error.code === 'ENOENT') continue;
         fail('INGEST_REPLAY_AUTHORITY_UNAVAILABLE', 'Cannot inspect catalog file');
+      }
+      if (!candidateStat.isFile() || candidateStat.size === 0) {
+        fail('INGEST_REPLAY_AUTHORITY_CORRUPT', 'Catalog file is structurally invalid');
       }
       let committed;
       try {
         // A separate read-only connection sees only committed data and run_chunks.
         committed = new DatabaseSync(candidate, { readOnly: true, create: false });
+        const tables = new Set(committed.prepare(
+          "SELECT name FROM sqlite_master WHERE type='table' " +
+          "AND name IN ('catalog_meta','run_chunks')"
+        ).all().map(row => row.name));
+        if (!tables.has('catalog_meta') || !tables.has('run_chunks')) {
+          fail('INGEST_REPLAY_AUTHORITY_CORRUPT', 'Catalog authority tables are missing');
+        }
+        const metaColumns = new Set(
+          committed.prepare('PRAGMA table_info(catalog_meta)').all().map(row => row.name)
+        );
+        const chunkColumns = new Set(
+          committed.prepare('PRAGMA table_info(run_chunks)').all().map(row => row.name)
+        );
+        if (
+          !['schema_version', 'generation_id', 'state'].every(name => metaColumns.has(name)) ||
+          !['run_id', 'kid', 'seq', 'body_sha256', 'rows'].every(name => chunkColumns.has(name))
+        ) {
+          fail('INGEST_REPLAY_AUTHORITY_CORRUPT', 'Catalog authority schema is incomplete');
+        }
         const meta = committed.prepare(
-          'SELECT generation_id, state FROM catalog_meta WHERE singleton=1'
+          'SELECT schema_version, generation_id, state FROM catalog_meta WHERE singleton=1'
         ).get();
-        if (!meta || !['building', 'ready'].includes(meta.state) ||
+        if (!meta || meta.schema_version !== CATALOG_SCHEMA_VERSION ||
+            !['building', 'ready'].includes(meta.state) ||
             (fileState === 'ready' && meta.state !== 'ready')) {
           fail('INGEST_REPLAY_AUTHORITY_CORRUPT', 'Catalog metadata is invalid');
         }

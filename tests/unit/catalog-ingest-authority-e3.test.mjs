@@ -6,6 +6,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { CatalogGenerationBuilder } from '../../src/catalog/sqlite/generation.mjs';
+import { CATALOG_SCHEMA_VERSION } from '../../src/catalog/sqlite/schema.mjs';
 import { ReplayStore } from '../../src/catalog/ingest/replay-store.mjs';
 
 const hash = bytes => crypto.createHash('sha256').update(bytes).digest('hex');
@@ -101,4 +102,63 @@ test('recreated building file with same generation cannot stage a later chunk', 
   assert.equal(store.db.prepare(
     'SELECT status FROM receipts WHERE run_id=? AND seq=?'
   ).get(next.runId, 1).status, 'pending');
+});
+
+
+test('zero-byte building file is deterministic authority corruption', t => {
+  const { builder, store, chunk } = setup(t);
+  builder.db.close();
+  fs.truncateSync(builder.buildingPath, 0);
+  const zero = new DatabaseSync(
+    builder.buildingPath,
+    { readOnly: true, create: false }
+  );
+  t.after(() => zero.close());
+
+  assert.throws(
+    () => store.resolveStagedAck(
+      chunk,
+      { fullBuildDb: zero }
+    ),
+    code('INGEST_REPLAY_AUTHORITY_CORRUPT')
+  );
+});
+
+test('catalog without run_chunks is deterministic authority corruption', t => {
+  const { builder, store, chunk } = setup(t);
+  builder.db.close();
+  fs.rmSync(builder.buildingPath);
+
+  const incomplete = new DatabaseSync(builder.buildingPath);
+  incomplete.exec(
+    'CREATE TABLE catalog_meta (' +
+    'singleton INTEGER PRIMARY KEY, ' +
+    'schema_version INTEGER NOT NULL, ' +
+    'generation_id TEXT NOT NULL, ' +
+    'state TEXT NOT NULL)'
+  );
+  incomplete.prepare(
+    'INSERT INTO catalog_meta(' +
+    'singleton,schema_version,generation_id,state' +
+    ') VALUES(1,?,?,?)'
+  ).run(
+    CATALOG_SCHEMA_VERSION,
+    'gA',
+    'building'
+  );
+  incomplete.close();
+
+  const handle = new DatabaseSync(
+    builder.buildingPath,
+    { readOnly: true, create: false }
+  );
+  t.after(() => handle.close());
+
+  assert.throws(
+    () => store.resolveStagedAck(
+      chunk,
+      { fullBuildDb: handle }
+    ),
+    code('INGEST_REPLAY_AUTHORITY_CORRUPT')
+  );
 });
