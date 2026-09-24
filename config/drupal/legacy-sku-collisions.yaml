@@ -1,0 +1,9 @@
+version: 1
+# Reviewed Drupal legacy SKU collision overrides belong here.
+#
+# This file is intentionally empty during Phase D1. No collision is approved
+# merely because it already exists in Drupal.
+#
+# Future entries must be produced from the read-only collision report and
+# reviewed before bootstrap/certification.
+mappings: []

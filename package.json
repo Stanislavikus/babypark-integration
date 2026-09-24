@@ -10,6 +10,8 @@
     "test": "npm run test:unit && npm run test:legacy && npm run test:refactor",
     "gateway:retention": "node src/gateway/ops.mjs retention",
     "gateway:sessions-rebuild": "node src/gateway/ops.mjs sessions rebuild",
-    "gateway:backup": "node scripts/backup-bridge.mjs"
+    "gateway:backup": "node scripts/backup-bridge.mjs",
+    "identity:bootstrap": "node scripts/identity-bootstrap.mjs",
+    "identity:status": "node scripts/identity-status.mjs"
   }
 }
