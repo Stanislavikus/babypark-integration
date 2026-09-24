@@ -128,9 +128,13 @@ and layer; no fixed daily interval is assumed. Normally send changed data from
 a saved watermark. On a true RUN_LOST, require a new run, but distinguish that
 from retryable authority/configuration failures. Bound automated repeated full
 exports with an operator override so a fault cannot repeatedly scan live Drupal.
-Do not write to or purge unrelated Drupal application logs. The exporter should
-rotate/expire its own bounded diagnostic logs and expose run ID, source range,
-attempts, checkpoint and failure reason without storing secrets or full bodies.
+Do not write to or purge unrelated Drupal application logs. The future
+exporter should send bounded diagnostics to an authenticated ingest /report
+endpoint, keep only a small local state.json checkpoint and error events in the
+host's managed journal. Configure journal retention and Drupal's own log
+retention separately after inspecting the deployed logging setup. Reports
+must expose run ID, source range, attempts, checkpoint and failure reason
+without storing secrets or full bodies.
 
 Before enabling HTTP ingest, expose staged ledger bytes and receipt occupancy;
 alert an administrator when staged bytes reach 75% of the 32 MiB limit and

@@ -1,4 +1,4 @@
-export const CATALOG_SCHEMA_VERSION = 3;
+export const CATALOG_SCHEMA_VERSION = 4;
 
 export const CATALOG_LAYERS = Object.freeze([
   'taxonomy',
@@ -316,6 +316,7 @@ const SCHEMA_SQL = `
     seq INTEGER NOT NULL CHECK(seq >= 0),
     body_sha256 TEXT NOT NULL
       CHECK(length(body_sha256)=64 AND body_sha256 NOT GLOB '*[^0-9a-f]*'),
+    rows INTEGER NOT NULL CHECK(rows >= 0),
     PRIMARY KEY(run_id,kid,seq)
   );
 
@@ -337,7 +338,7 @@ const SCHEMA_SQL = `
     tokenize='trigram'
   );
 
-  PRAGMA user_version=3;
+  PRAGMA user_version=4;
 `;
 
 export function initializeCatalogSchema(db, {

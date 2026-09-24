@@ -199,7 +199,7 @@ test('full staged receipt stores hash only after building-file authority', t => 
     code('INGEST_REPLAY_RUN_LOST'));
   builder.db.exec('BEGIN IMMEDIATE');
   builder.db.prepare(
-    'INSERT INTO run_chunks(run_id,kid,seq,body_sha256) VALUES(?,?,?,?)'
+    'INSERT INTO run_chunks(run_id,kid,seq,body_sha256,rows) VALUES(?,?,?,?,1)'
   ).run(chunk.runId, chunk.kid, chunk.seq, chunk.bodySha256);
   assert.throws(() => store.stage(chunk, bytes, c.claimToken, { fullBuildDb: builder.db }),
     code('INGEST_REPLAY_RUN_LOST'));
@@ -224,10 +224,10 @@ test('full staged receipt stores hash only after building-file authority', t => 
   });
   t.after(() => { try { other.db.close(); } catch {} });
   other.db.prepare(
-    'INSERT INTO run_chunks(run_id,kid,seq,body_sha256) VALUES(?,?,?,?)'
+    'INSERT INTO run_chunks(run_id,kid,seq,body_sha256,rows) VALUES(?,?,?,?,1)'
   ).run(chunk.runId, chunk.kid, chunk.seq, chunk.bodySha256);
-  assert.deepEqual(store.resolveStagedAck(chunk, { fullBuildDb: other.db }),
-    { status: 'RUN_LOST' });
+  assert.throws(() => store.resolveStagedAck(chunk, { fullBuildDb: other.db }),
+    code('INGEST_REPLAY_AUTHORITY_REQUIRED'));
   const runDigest = computeRunDigest({
     runId: key.runId, layer: 'full', baseGenerationId: 'g_1',
     baseWatermark: '10', count: 1, chunkHashes: [hash(bytes)],
@@ -240,12 +240,12 @@ test('full staged receipt stores hash only after building-file authority', t => 
   assert.equal(store.verifyClaimedRunDigest(final, { fullBuildDb: builder.db }).runDigest,
     runDigest);
   assert.throws(() => store.verifyClaimedRunDigest(final, { fullBuildDb: other.db }),
-    code('INGEST_REPLAY_DIGEST_CONFLICT'));
+    code('INGEST_REPLAY_AUTHORITY_REQUIRED'));
   assert.throws(() => store.verifyClaimedRunDigest(final, { fullBuildDb: {} }),
     code('INGEST_REPLAY_AUTHORITY_REQUIRED'));
   builder.db.exec('DROP TABLE run_chunks');
   assert.throws(() => store.resolveStagedAck(chunk, { fullBuildDb: builder.db }),
-    code('INGEST_REPLAY_AUTHORITY_UNAVAILABLE'));
+    code('INGEST_REPLAY_AUTHORITY_CORRUPT'));
   fs.renameSync(builder.buildingPath, builder.buildingPath + '.lost');
   assert.deepEqual(store.resolveStagedAck(chunk, { fullBuildDb: builder.db }),
     { status: 'RUN_LOST' });
@@ -278,14 +278,14 @@ test('full stage rejects another generation of the same run before final claim',
       bodySha256: hash(bytes) };
     const owner = store.claim(chunk);
     builder.db.prepare(
-      'INSERT INTO run_chunks(run_id,kid,seq,body_sha256) VALUES(?,?,?,?)'
+      'INSERT INTO run_chunks(run_id,kid,seq,body_sha256,rows) VALUES(?,?,?,?,1)'
     ).run(chunk.runId, chunk.kid, seq, chunk.bodySha256);
     if (seq === 0) {
       assert.equal(store.stage(chunk, bytes, owner.claimToken,
         { fullBuildDb: builder.db }).status, 'STAGED');
     } else {
       assert.throws(() => store.stage(chunk, bytes, owner.claimToken,
-        { fullBuildDb: builder.db }), code('INGEST_REPLAY_RUN_LOST'));
+        { fullBuildDb: builder.db }), code('INGEST_REPLAY_AUTHORITY_REQUIRED'));
       assert.equal(store.db.prepare(
         'SELECT status FROM receipts WHERE run_id=? AND seq=?'
       ).get(chunk.runId, seq).status, 'pending');
