@@ -108,6 +108,25 @@ test('v2 full verification counts only data and revalidates CURRENT', t => {
     chunkKeys:[{ kid:'k1', runId:'r1', layer:'full', seq:1 }] });
 });
 
+test('bootstrap final claim accepts an actually missing CURRENT through CatalogReader', t => {
+  const f = fixture(t, false);
+  const reader = new CatalogReader(f.catalog);
+  t.after(() => reader.close());
+  const h = stageFullHeader(f, 'reader_boot', null);
+  const digest = computeRunDigestV2({
+    headerHash:hash(h.body), chunkHashes:[], finalSeq:1, count:0,
+  });
+  const trailer = bytes({ trailer:{
+    count:0, final_seq:1, run_digest:digest,
+    run_header_sha256:hash(h.body), schema:'bp.catalog.trailer/2',
+  } });
+  const final = key('reader_boot','full',1,trailer,true);
+  assert.equal(f.store.claim(final, 100, {
+    verifiedBody:trailer, reader,
+  }).status, 'NEW');
+  assert.equal(f.store.getClaimedFinal(final).claimGenerationId, null);
+});
+
 test('bootstrap nullable claim succeeds then moving CURRENT fails verification', t => {
   const f = fixture(t, false); const h = stageFullHeader(f, 'boot', null);
   const digest = computeRunDigestV2({ headerHash:hash(h.body), chunkHashes:[], finalSeq:1, count:0 });

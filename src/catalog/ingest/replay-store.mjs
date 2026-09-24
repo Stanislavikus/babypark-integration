@@ -94,16 +94,21 @@ function readCurrent(context) {
     return value;
   }
   if (context?.reader instanceof CatalogReader) {
-    return context.reader.withDb((db, generationId) => {
-      const sourceEpoch = db.prepare(
-        'SELECT source_epoch FROM catalog_meta WHERE singleton=1'
-      ).get()?.source_epoch;
-      const rows = db.prepare(
-        'SELECT layer,accepted_watermark FROM sync_state ORDER BY layer'
-      ).all();
-      return { generationId, sourceEpoch,
-        layers: Object.fromEntries(rows.map(row => [row.layer, row.accepted_watermark])) };
-    });
+    try {
+      return context.reader.withDb((db, generationId) => {
+        const sourceEpoch = db.prepare(
+          'SELECT source_epoch FROM catalog_meta WHERE singleton=1'
+        ).get()?.source_epoch;
+        const rows = db.prepare(
+          'SELECT layer,accepted_watermark FROM sync_state ORDER BY layer'
+        ).all();
+        return { generationId, sourceEpoch,
+          layers: Object.fromEntries(rows.map(row => [row.layer, row.accepted_watermark])) };
+      });
+    } catch (error) {
+      if (error?.code === 'CATALOG_CURRENT_MISSING') return null;
+      throw error;
+    }
   }
   fail('INGEST_REPLAY_STATE_REQUIRED', 'Final claim requires authoritative CURRENT resolver');
 }
