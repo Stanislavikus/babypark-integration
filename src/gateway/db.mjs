@@ -1,4 +1,5 @@
 import { DatabaseSync } from 'node:sqlite';
+import { migrateGatewayDb } from './migrations.mjs';
 
 export class GatewayDb {
   constructor(dbPath) {
@@ -69,6 +70,40 @@ export class GatewayDb {
     this.updateOutgoingViberStmt = this.db.prepare(
       'UPDATE outgoing_viber SET status = ?, updated_at = ? WHERE message_token = ?'
     );
+
+    this.countOldProcessedViberStmt = this.db.prepare(
+      'SELECT COUNT(*) c FROM processed_viber WHERE created_at < ?'
+    );
+    this.countOldProcessedChatwootStmt = this.db.prepare(
+      'SELECT COUNT(*) c FROM processed_chatwoot WHERE created_at < ?'
+    );
+    this.countOldOutgoingViberStmt = this.db.prepare(
+      'SELECT COUNT(*) c FROM outgoing_viber WHERE updated_at < ?'
+    );
+
+    this.deleteOldProcessedViberStmt = this.db.prepare(`
+      DELETE FROM processed_viber
+      WHERE rowid IN (
+        SELECT rowid FROM processed_viber
+        WHERE created_at < ? ORDER BY created_at LIMIT ?
+      )
+    `);
+    this.deleteOldProcessedChatwootStmt = this.db.prepare(`
+      DELETE FROM processed_chatwoot
+      WHERE rowid IN (
+        SELECT rowid FROM processed_chatwoot
+        WHERE created_at < ? ORDER BY created_at LIMIT ?
+      )
+    `);
+    this.deleteOldOutgoingViberStmt = this.db.prepare(`
+      DELETE FROM outgoing_viber
+      WHERE rowid IN (
+        SELECT rowid FROM outgoing_viber
+        WHERE updated_at < ? ORDER BY updated_at LIMIT ?
+      )
+    `);
+
+    this.schemaVersion = migrateGatewayDb(this.db);
   }
 
   getSessionByUser(id) {
@@ -81,7 +116,11 @@ export class GatewayDb {
 
   upsertSession(viberUserId, contactId, sourceId, conversationId, updatedAt) {
     return this.upsertSessionStmt.run(
-      viberUserId, contactId, sourceId, conversationId, updatedAt
+      viberUserId,
+      contactId,
+      sourceId,
+      conversationId,
+      updatedAt
     );
   }
 
@@ -103,7 +142,12 @@ export class GatewayDb {
 
   insertOutgoingViber(token, chatwootMessageId, conversationId, status, now) {
     return this.insertOutgoingViberStmt.run(
-      token, chatwootMessageId, conversationId, status, now, now
+      token,
+      chatwootMessageId,
+      conversationId,
+      status,
+      now,
+      now
     );
   }
 
@@ -113,6 +157,40 @@ export class GatewayDb {
 
   updateOutgoingViber(status, updatedAt, token) {
     return this.updateOutgoingViberStmt.run(status, updatedAt, token);
+  }
+
+  retentionCounts(cutoffs) {
+    return {
+      processed_viber: Number(
+        this.countOldProcessedViberStmt
+          .get(cutoffs.processedViberBefore).c
+      ),
+      processed_chatwoot: Number(
+        this.countOldProcessedChatwootStmt
+          .get(cutoffs.processedChatwootBefore).c
+      ),
+      outgoing_viber: Number(
+        this.countOldOutgoingViberStmt
+          .get(cutoffs.outgoingViberBefore).c
+      ),
+    };
+  }
+
+  pruneRetentionBatch(cutoffs, limit = 5000) {
+    return {
+      processed_viber: Number(
+        this.deleteOldProcessedViberStmt
+          .run(cutoffs.processedViberBefore, limit).changes
+      ),
+      processed_chatwoot: Number(
+        this.deleteOldProcessedChatwootStmt
+          .run(cutoffs.processedChatwootBefore, limit).changes
+      ),
+      outgoing_viber: Number(
+        this.deleteOldOutgoingViberStmt
+          .run(cutoffs.outgoingViberBefore, limit).changes
+      ),
+    };
   }
 
   close() {
