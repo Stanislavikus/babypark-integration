@@ -3,60 +3,38 @@
 Status: DRAFT / FIXTURE TESTS ONLY. No HTTP receiver, apply handler, or Drupal exporter is enabled.
 Base: Phase E.1 signed request and replay foundation.
 
-## Wire format and digest
+## Wire format and digest v2
 
-The receiver first verifies BP1 against the exact transmitted body bytes.
-Only identity encoding is supported here. A final body is UTF-8 canonical JSON
-with exactly one `trailer` object containing exactly these five keys:
-`run_digest`, `base_generation_id`, `base_watermark`, `count`,
-`final_seq`. Canonical JSON recursively sorts object keys, has no whitespace
-outside strings, uses JSON escaping, and preserves array order. Comparing
-re-serialized bytes with the original rejects duplicate keys and alternative
-parses. The body SHA-256 must equal the signed key's body hash.
+BP1 remains version 1 and authenticates exact transmitted bytes. Sequence zero is the
+canonical signed run header, sequences `1..F-1` are unchanged `{"rows":[...]}`
+data bodies, and sequence `F` is canonical trailer `bp.catalog.trailer/2`. The
+trailer owns `count`, `final_seq`, `run_digest`, and `run_header_sha256`; signed
+base state exists only in sequence zero. Digest v2 uses the `BP-RUN-v2\0`,
+`BP-CHUNK-v2\0`, and `BP-FINAL-v2\0` domains and excludes the trailer hash.
+The replay verifier rechecks the exact retained header, trusted CURRENT/source epoch,
+contiguity, hashes, catalog authority for full runs, and data-row count. It returns
+proof only and does not accept, seal, publish, or move CURRENT.
 
-`base_watermark` is null or an unsigned decimal string of at most 20 digits with
-no leading zero (except "0"). Catalog schema v3 applies the same form to accepted and
-source watermarks. Future base CAS compares these values numerically
-without converting them through floating point. `count` and `final_seq` are nonnegative safe integers; the
-latter must equal the signed sequence header. The final body contains no rows.
-The first claim stores the immutable trailer and reads
-`claim_generation_id` through CatalogReader from CURRENT itself. The ledger
-does not authenticate HMAC signatures; a future handler must call BP1 first.
-Publication locking around this claim is not wired yet.
-
-The v1 digest chain covers transmitted nonfinal chunk hashes in sequence order.
-`uint64be` is an eight-byte unsigned integer. ASCII labels ending in `\0`
-contain one NUL byte:
-
-```text
-H0 = SHA256("BP-RUN-v1\0" || UTF8(canonicalJson({
-  run_id, layer, base_generation_id, base_watermark
-})))
-H(i+1) = SHA256("BP-CHUNK-v1\0" || H(i) || uint64be(i) ||
-                hexDecode(body_sha256[i]))
-run_digest = hex(SHA256("BP-FINAL-v1\0" || H(final_seq) ||
-                        UTF8(canonicalJson({final_seq, count}))))
-```
-
-The final body hash is excluded to avoid circularity. `verifyClaimedRunDigest`
-uses only receipts with the final receipt's `kid`, checks each sequence by
-exact primary key, and returns both computed digest and ordered chunk PKs for
-the future apply. No key rotation inside a run is supported: the ledger also
-rejects reuse of a run ID under another KID or layer. The future apply must
-read precisely these PKs, compare `count` with decoded rows, and record the
-computed digest in the same transaction as data and watermark.
+The trusted CURRENT read also supplies all four `sync_state.accepted_watermark`
+cursors atomically. Delta base watermarks must equal the non-null authoritative
+cursor. Replace base watermarks may be null; a non-null replace base must equal
+CURRENT. When CURRENT has a replace cursor, replacement output must be non-null
+and must not regress below it. Bootstrap requires no CURRENT, a null generation
+base, and null base watermarks for all four layers. The checked-in shared corpus
+executes canonical JSON, DEC20, uint64be, and digest-v2 records in Node and PHP;
+real PHP 7.0 certification remains an external gate.
 
 ## Staging and storage
 
-Replay ledger schema v6 has pending, staged nonfinal, and accepted final
+Replay ledger schema v7 has pending, staged nonfinal, and accepted final
 receipts. Incremental `stage` stores the exact body and deterministic ACK in
 one transaction. Hard limits are 1 MiB per transmitted chunk, 8 MiB staged
 per run, and 32 MiB staged globally; an over-budget stage fails before its
 update. Digest verification fetches one PK at a time, keeping one body in
 memory instead of loading all bodies with `.all()`.
 
-For `layer=full`, a staged receipt stores only a hash and its building generation
-ID. A staged ACK requires a matching committed `run_chunks` row in the configured
+For `layer=full`, sequence zero retains the exact canonical header body and its hash;
+sequences greater than zero store only a hash. Every full receipt also records its building generation ID. A staged ACK requires a matching committed `run_chunks` row in the configured
 catalog directory and matching catalog_meta generation. Stage accepts only a
 building file; replay rechecks authority before returning the ACK and reports
 RUN_LOST if it disappeared. Claim/takeover return STAGED_UNVERIFIED until this
@@ -146,10 +124,6 @@ Neither alert transport nor Drupal exporter exists in this fixture-only PR.
 
 ## Remaining gates before live ingest
 
-- Freeze a signed run header in chunk 0. It must cover `t_low`, `t_high`,
-  a new accepted watermark, run kind and base state; full runs require
-  per-layer watermarks. The existing digest chain already includes the
-  transmitted bytes of chunk 0. Define contiguity and numeric comparisons.
 - Implement atomic apply of decoded data, sync_state and ingest_runs with
   PK(run_id), base CAS, row-count validation and full building-file
   `run_chunks` writes. Keep the chunk PK list from digest verification.
@@ -164,7 +138,7 @@ Neither alert transport nor Drupal exporter exists in this fixture-only PR.
   safe terminal abandonment, receipt and journal retention, backups without
   long-lived payloads, and monitored capacity.
 - Add a bounded authenticated HTTP receiver and /state from CURRENT.
-- Before the later Drupal exporter, add Node/PHP 7.0 golden digest vectors
-  covering canonical JSON, 64-bit index bytes and all three domain labels.
+- A real 64-bit PHP 7.0.x execution remains required for cross-runtime certification;
+  arbitrary PHP row serialization remains outside this control-only reference.
 
 No code in this slice contacts Drupal or changes the live Viber gateway.

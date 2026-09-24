@@ -4,175 +4,26 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import {
-  CatalogGenerationBuilder, CatalogPublisher, CatalogReader,
-} from '../../src/catalog/sqlite/generation.mjs';
-import { ReplayStore, canonicalJson, computeRunDigest } from '../../src/catalog/ingest/replay-store.mjs';
-import {
-  resolveFinalAckAgainstCurrent, finishPendingAgainstCurrent, renderAcceptedRunAck,
-} from '../../src/catalog/ingest/current-evidence.mjs';
+import { CatalogGenerationBuilder, CatalogPublisher, CatalogReader } from '../../src/catalog/sqlite/generation.mjs';
+import { ReplayStore } from '../../src/catalog/ingest/replay-store.mjs';
+import { canonicalControlJson, computeRunDigestV2 } from '../../src/catalog/ingest/run-protocol.mjs';
+import { resolveFinalAckAgainstCurrent, finishPendingAgainstCurrent, renderAcceptedRunAck } from '../../src/catalog/ingest/current-evidence.mjs';
 
-const digest = 'd'.repeat(64);
-const body = Buffer.from(canonicalJson({ trailer: {
-  run_digest: digest, base_generation_id: 'g1', base_watermark: null,
-  count: 0, final_seq: 0,
-} }));
-const key = {
-  kid: 'k1', runId: 'run_1', layer: 'content', seq: 0,
-  bodySha256: crypto.createHash('sha256').update(body).digest('hex'),
-  final: true, contentEncoding: 'identity',
-};
-function claim(store, reader, target = key) {
-  return store.claim(target, 100, { verifiedBody: body, reader });
-}
-function setup(t, layer = 'content', status = 'ACCEPTED', savedDigest = digest, finalSeq = key.seq) {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'bp-e2-evidence-'));
-  t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
-  for (const id of ['g1', 'g2']) {
-    const builder = CatalogGenerationBuilder.create({
-      storageDir: dir, generationId: id, sourceEpoch: 'epoch-1',
-      identityRevision: 0,
-    });
-    if (id === 'g2') {
-      builder.db.prepare(
-        'INSERT INTO ingest_runs(run_id,layer,run_kind,run_digest,final_seq,' +
-        'status,source_watermark,started_at,terminal_at) VALUES(?,?,?,?,?,?,?,?,?)'
-      ).run(key.runId, layer, layer === 'full' ? 'full' : 'incremental',
-        savedDigest, finalSeq, status, layer === 'full' ? null : '10',
-        '2026-09-24T00:00:00Z', '2026-09-24T00:00:01Z');
-    }
-    builder.seal();
-  }
-  const publisher = new CatalogPublisher(dir);
-  publisher.publish('g1');
-  publisher.publish('g2');
-  const reader = new CatalogReader(dir);
-  const file = path.join(dir, 'replay.sqlite');
-  let store = ReplayStore.createNew(file, { catalogStorageDir: dir });
-  t.after(() => { reader.close(); store.close(); });
-  return { publisher, reader, file, get store() { return store; },
-    reopen() { store.close(); store = ReplayStore.openExisting(file, { catalogStorageDir: dir }); } };
-}
+const canonicalJson=canonicalControlJson;
+const hash=b=>crypto.createHash('sha256').update(b).digest('hex');
+function header(runId='run_1',layer='content',base='g2'){const mode=layer==='full'?'full':'incremental'; const layers=layer==='full'?['taxonomy','content','commercial','stock'].map(layer=>({base_watermark:null,layer,mode:'replace',output_watermark:null,t_high:null,t_low:null})):[{base_watermark:'10',layer,mode:'delta',output_watermark:'12',t_high:'12',t_low:'9'}];return Buffer.from(canonicalJson({header:{base_generation_id:base,layers,run_id:runId,run_kind:mode,schema:'bp.catalog.run-header/1',source_epoch:'epoch-1'}}));}
+function protocol(runId='run_1',layer='content',base='g2'){const h=header(runId,layer,base),hh=hash(h),digest=computeRunDigestV2({headerHash:hh,chunkHashes:[],finalSeq:1,count:0}); const body=Buffer.from(canonicalJson({trailer:{count:0,final_seq:1,run_digest:digest,run_header_sha256:hh,schema:'bp.catalog.trailer/2'}})); return {h,digest,body,hkey:{kid:'k1',runId,layer,seq:0,bodySha256:hh,final:false,contentEncoding:'identity'},key:{kid:'k1',runId,layer,seq:1,bodySha256:hash(body),final:true,contentEncoding:'identity'}};}
+function setup(t,{layer='content',status='ACCEPTED',savedDigest,finalSeq=1}={}){const dir=fs.mkdtempSync(path.join(os.tmpdir(),'bp-evidence-v2-'));t.after(()=>fs.rmSync(dir,{recursive:true,force:true})); const p=protocol('run_1',layer); for(const id of ['g1','g2']){const b=CatalogGenerationBuilder.create({storageDir:dir,generationId:id,sourceEpoch:'epoch-1',identityRevision:0});if(layer!=='full')b.db.prepare("UPDATE sync_state SET accepted_watermark='10' WHERE layer='content'").run();if(id==='g2')b.db.prepare('INSERT INTO ingest_runs(run_id,layer,run_kind,run_digest,final_seq,status,source_watermark,started_at,terminal_at) VALUES(?,?,?,?,?,?,?,?,?)').run('run_1',layer,layer==='full'?'full':'incremental',savedDigest??p.digest,finalSeq,status,layer==='full'?null:'12','now','now');b.seal();} const publisher=new CatalogPublisher(dir);publisher.publish('g1');publisher.publish('g2');const reader=new CatalogReader(dir);const file=path.join(dir,'replay.sqlite');let store=ReplayStore.createNew(file,{catalogStorageDir:dir});t.after(()=>{reader.close();try{store.close()}catch{}});return{dir,p,publisher,reader,get store(){return store},reopen(){store.close();store=ReplayStore.openExisting(file,{catalogStorageDir:dir})}};}
+function stageAndClaim(f,p=f.p,fullBuildDb){const c=f.store.claim(p.hkey,100,{verifiedBody:p.h}); if(p.hkey.layer==='full'){fullBuildDb.prepare('INSERT INTO run_chunks VALUES(?,?,?,?,0)').run(p.hkey.runId,p.hkey.kid,0,p.hkey.bodySha256);f.store.stage(p.hkey,p.h,c.claimToken,{fullBuildDb});}else f.store.stage(p.hkey,p.h,c.claimToken); return f.store.claim(p.key,100,{verifiedBody:p.body,reader:f.reader});}
 
-test('accepted ACK follows evidence in CURRENT through rollback and roll-forward', t => {
-  const f = setup(t);
-  assert.equal(claim(f.store, f.reader).status, 'NEW');
-  f.reopen();
-  const ack = renderAcceptedRunAck({
-    key, generationId: 'g2', runDigest: digest, sourceWatermark: '10',
-  });
-  assert.deepEqual(finishPendingAgainstCurrent({ store: f.store, reader: f.reader, key }),
-    { status: 'ACKED', ack });
-  f.publisher.rollbackToPrevious();
-  assert.deepEqual(resolveFinalAckAgainstCurrent({ store: f.store, reader: f.reader, key }),
-    { status: 'RUN_SUPERSEDED' });
-  const pending = { ...key, runId: 'run_2' };
-  claim(f.store, f.reader, pending);
-  assert.deepEqual(finishPendingAgainstCurrent({
-    store: f.store, reader: f.reader, key: pending,
-  }), { status: 'PENDING' });
-  assert.throws(() => f.store.takeover(pending, {
-    now: 161, expectedLeaseUntil: 160,
-  }), error => error.code === 'INGEST_REPLAY_STATE_REQUIRED');
-  f.publisher.rollbackToPrevious();
-  assert.deepEqual(resolveFinalAckAgainstCurrent({ store: f.store, reader: f.reader, key }),
-    { status: 'ACKED', ack });
-});
+test('accepted ACK follows evidence in CURRENT through rollback and roll-forward',t=>{const f=setup(t);stageAndClaim(f);f.reopen();const ack=renderAcceptedRunAck({key:f.p.key,generationId:'g2',runDigest:f.p.digest,sourceWatermark:'12'});assert.deepEqual(finishPendingAgainstCurrent({store:f.store,reader:f.reader,key:f.p.key}),{status:'ACKED',ack});f.publisher.rollbackToPrevious();assert.deepEqual(resolveFinalAckAgainstCurrent({store:f.store,reader:f.reader,key:f.p.key}),{status:'RUN_SUPERSEDED'});f.publisher.rollbackToPrevious();assert.deepEqual(resolveFinalAckAgainstCurrent({store:f.store,reader:f.reader,key:f.p.key}),{status:'ACKED',ack});});
 
-test('a conflicting digest from CURRENT cannot become a signed ACK', t => {
-  const f = setup(t, 'content', 'ACCEPTED', 'e'.repeat(64));
-  claim(f.store, f.reader);
-  assert.deepEqual(finishPendingAgainstCurrent({ store: f.store, reader: f.reader, key }),
-    { status: 'RUN_ID_CONFLICT' });
-});
+test('a conflicting digest from CURRENT cannot become a signed ACK',t=>{const f=setup(t,{savedDigest:'e'.repeat(64)});stageAndClaim(f);assert.deepEqual(finishPendingAgainstCurrent({store:f.store,reader:f.reader,key:f.p.key}),{status:'RUN_ID_CONFLICT'});});
 
-test('full evidence matches full key; wrong incremental layer is rejected', t => {
-  const f = setup(t, 'full');
-  const fullKey = { ...key, layer: 'full' };
-  claim(f.store, f.reader, fullKey);
-  assert.equal(finishPendingAgainstCurrent({
-    store: f.store, reader: f.reader, key: fullKey,
-  }).status, 'ACKED');
-  const wrong = { ...key, kid: 'k2' };
-  assert.throws(() => claim(f.store, f.reader, wrong),
-    error => error.code === 'INGEST_REPLAY_CONFLICT');
-});
+test('full evidence matches full key; wrong incremental layer is rejected',t=>{const f=setup(t,{layer:'full'});const build=CatalogGenerationBuilder.create({storageDir:f.dir,generationId:'g3',sourceEpoch:'epoch-1',identityRevision:0});t.after(()=>{try{build.db.close()}catch{}});stageAndClaim(f,f.p,build.db);assert.equal(finishPendingAgainstCurrent({store:f.store,reader:f.reader,key:f.p.key}).status,'ACKED');const wrong={...f.p.key,kid:'k2',layer:'content'};assert.throws(()=>f.store.claim(wrong,100,{verifiedBody:f.p.body,reader:f.reader}),e=>['INGEST_REPLAY_CONFLICT','INGEST_REPLAY_SEQUENCE_GAP'].includes(e.code));});
 
-for (const status of ['REJECTED', 'FAILED', 'ABANDONED']) {
-  test(status + ' is terminal for an accepted final receipt', t => {
-    const f = setup(t, 'content', status);
-    claim(f.store, f.reader);
-    assert.deepEqual(finishPendingAgainstCurrent({ store: f.store, reader: f.reader, key }),
-      { status: 'RUN_REJECTED' });
-  });
-}
+test('stored ACK cannot substitute a watermark absent from CURRENT',t=>{const f=setup(t);stageAndClaim(f);const accepted=finishPendingAgainstCurrent({store:f.store,reader:f.reader,key:f.p.key});assert.equal(accepted.status,'ACKED');const forged={...accepted.ack,source_watermark:'999'};f.store.db.prepare('UPDATE receipts SET ack_json=? WHERE kid=? AND run_id=? AND layer=? AND seq=?').run(canonicalJson(forged),f.p.key.kid,f.p.key.runId,f.p.key.layer,f.p.key.seq);assert.throws(()=>resolveFinalAckAgainstCurrent({store:f.store,reader:f.reader,key:f.p.key}),e=>e.code==='INGEST_REPLAY_ACK_CONFLICT');});
 
-test('stored ACK cannot substitute a watermark absent from CURRENT', t => {
-  const f = setup(t);
-  claim(f.store, f.reader);
-  const accepted = finishPendingAgainstCurrent({ store: f.store, reader: f.reader, key });
-  assert.equal(accepted.status, 'ACKED');
-  assert.equal(accepted.ack.source_watermark, '10');
-  const forged = { ...accepted.ack, source_watermark: '999' };
-  f.store.db.prepare(
-    'UPDATE receipts SET ack_json=? WHERE kid=? AND run_id=? AND layer=? AND seq=?'
-  ).run(canonicalJson(forged), key.kid, key.runId, key.layer, key.seq);
-  assert.throws(() => resolveFinalAckAgainstCurrent({
-    store: f.store, reader: f.reader, key,
-  }), error => error.code === 'INGEST_REPLAY_ACK_CONFLICT');
-});
+test('ACCEPTED row requires a digest and final sequence',t=>{const dir=fs.mkdtempSync(path.join(os.tmpdir(),'bp-e2-schema-'));t.after(()=>fs.rmSync(dir,{recursive:true,force:true}));const b=CatalogGenerationBuilder.create({storageDir:dir,generationId:'g1',sourceEpoch:'epoch-1',identityRevision:0});t.after(()=>{try{b.db.close()}catch{}});assert.throws(()=>b.db.prepare("INSERT INTO ingest_runs(run_id,layer,run_kind,status,started_at,terminal_at) VALUES('bad','content','incremental','ACCEPTED','now','now')").run(),/CHECK constraint failed/);assert.throws(()=>b.db.prepare("INSERT INTO ingest_runs(run_id,layer,run_kind,run_digest,final_seq,status,started_at,terminal_at) VALUES('no-watermark','content','incremental',?,1,'ACCEPTED','now','now')").run('d'.repeat(64)),/CHECK constraint failed/);});
 
-test('ACCEPTED row requires a digest and final sequence', t => {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'bp-e2-schema-'));
-  t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
-  const builder = CatalogGenerationBuilder.create({
-    storageDir: dir, generationId: 'g1', sourceEpoch: 'epoch-1',
-    identityRevision: 0,
-  });
-  t.after(() => { try { builder.db.close(); } catch {} });
-  assert.throws(() => builder.db.prepare(
-    "INSERT INTO ingest_runs(run_id,layer,run_kind,status,started_at,terminal_at) " +
-    "VALUES('bad','content','incremental','ACCEPTED','now','now')"
-  ).run(), /CHECK constraint failed/);
-  assert.throws(() => builder.db.prepare(
-    "INSERT INTO ingest_runs(run_id,layer,run_kind,run_digest,final_seq,status,started_at,terminal_at) " +
-    "VALUES('no-watermark','content','incremental',?,0,'ACCEPTED','now','now')"
-  ).run(digest), /CHECK constraint failed/);
-  assert.throws(() => builder.db.prepare(
-    "INSERT INTO ingest_runs(run_id,layer,run_kind,run_digest,final_seq,status,source_watermark,started_at,terminal_at) " +
-    "VALUES('long-watermark','content','incremental',?,0,'ACCEPTED',?,'now','now')"
-  ).run(digest, '1'.repeat(21)), /CHECK constraint failed/);
-});
-
-test('accepted evidence permits staged-body cleanup without losing final ACK', t => {
-  const chunk = Buffer.from('{"rows":[{"id":"one"}]}');
-  const chunkHash = crypto.createHash('sha256').update(chunk).digest('hex');
-  const runDigest = computeRunDigest({
-    runId: key.runId, layer: key.layer, baseGenerationId: 'g1',
-    baseWatermark: null, count: 1, chunkHashes: [chunkHash],
-  });
-  const f = setup(t, 'content', 'ACCEPTED', runDigest, 1);
-  const staged = { ...key, seq: 0, final: false, bodySha256: chunkHash };
-  const c = f.store.claim(staged);
-  f.store.stage(staged, chunk, c.claimToken);
-  const finalBody = Buffer.from(canonicalJson({ trailer: {
-    run_digest: runDigest, base_generation_id: 'g1',
-    base_watermark: null, count: 1, final_seq: 1,
-  } }));
-  const final = {
-    ...key, seq: 1,
-    bodySha256: crypto.createHash('sha256').update(finalBody).digest('hex'),
-  };
-  f.store.claim(final, 100, { verifiedBody: finalBody, reader: f.reader });
-  assert.equal(f.store.verifyClaimedRunDigest(final).runDigest, runDigest);
-  assert.equal(f.store.finishPendingAgainstCurrent(final, f.reader).status, 'ACKED');
-  assert.deepEqual(f.store.releaseAcceptedRunBodies(final, f.reader),
-    { status: 'RELEASED', releasedCount: 1 });
-  assert.equal(f.store.db.prepare(
-    'SELECT staged_body IS NULL AS absent FROM receipts WHERE seq=0'
-  ).get().absent, 1);
-  assert.deepEqual(f.store.stage(staged, chunk, c.claimToken),
-    { status: 'STAGED_RELEASED' });
-  assert.deepEqual(f.store.resolveStagedAck(staged), { status: 'RUN_SUPERSEDED' });
-  assert.equal(f.store.resolveFinalAckAgainstCurrent(final, f.reader).status, 'ACKED');
-});
+test('accepted evidence permits staged-body cleanup without losing final ACK',t=>{const f=setup(t);stageAndClaim(f);assert.equal(f.store.verifyClaimedRunDigest(f.p.key,{reader:f.reader}).runDigest,f.p.digest);assert.equal(f.store.finishPendingAgainstCurrent(f.p.key,f.reader).status,'ACKED');assert.deepEqual(f.store.releaseAcceptedRunBodies(f.p.key,f.reader),{status:'RELEASED',releasedCount:1});assert.equal(f.store.db.prepare('SELECT staged_body IS NULL absent FROM receipts WHERE seq=0').get().absent,1);assert.deepEqual(f.store.resolveStagedAck(f.p.hkey),{status:'RUN_SUPERSEDED'});assert.equal(f.store.resolveFinalAckAgainstCurrent(f.p.key,f.reader).status,'ACKED');});

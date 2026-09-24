@@ -10,14 +10,19 @@ import {
   CatalogGenerationBuilder, CatalogPublisher, CatalogReader,
 } from '../../src/catalog/sqlite/generation.mjs';
 import { CatalogPublicationLock } from '../../src/catalog/sqlite/publication-lock.mjs';
-import { ReplayStore, canonicalJson, computeRunDigest } from '../../src/catalog/ingest/replay-store.mjs';
+import { ReplayStore, canonicalJson } from '../../src/catalog/ingest/replay-store.mjs';
+import { computeRunDigestV2 } from '../../src/catalog/ingest/run-protocol.mjs';
 import { writeFullChunk, verifyFullRunForApply } from '../../src/catalog/ingest/full-apply.mjs';
 
 const hash = bytes => crypto.createHash('sha256').update(bytes).digest('hex');
 const code = expected => error => error?.code === expected;
 const body = Buffer.from(canonicalJson({ rows: [{ id: 'b1', name: 'Brand 1' }] }));
+const headerBody = Buffer.from(canonicalJson({ header:{ base_generation_id:'g1',
+  layers:['taxonomy','content','commercial','stock'].map(layer => ({ base_watermark:null,
+    layer, mode:'replace', output_watermark:null, t_high:null, t_low:null })),
+  run_id:'run_1', run_kind:'full', schema:'bp.catalog.run-header/1', source_epoch:'epoch-1' } }));
 const chunk = {
-  kid: 'k1', runId: 'run_1', layer: 'full', seq: 0, final: false,
+  kid: 'k1', runId: 'run_1', layer: 'full', seq: 1, final: false,
   contentEncoding: 'identity', bodySha256: hash(body),
 };
 function fixture(t) {
@@ -42,6 +47,10 @@ function fixture(t) {
     catalogStorageDir: dir,
   });
   t.after(() => { try { store.close(); } catch {} });
+  const headerKey = { ...chunk, seq:0, bodySha256:hash(headerBody) };
+  const headerOwner = store.claim(headerKey, 99, { verifiedBody:headerBody });
+  writeFullChunk({ mutex, store, builder, key:headerKey, verifiedBody:headerBody,
+    claimToken:headerOwner.claimToken });
   const owner = store.claim(chunk, 100);
   return { root, dir, reader, owner, mutex,
     get store() { return store; }, get builder() { return builder; },
@@ -62,15 +71,14 @@ function writeRows(writer, rows) {
   return rows.length;
 }
 function finalClaim(f, count) {
-  const runDigest = computeRunDigest({
-    runId: chunk.runId, layer: 'full', baseGenerationId: 'g1',
-    baseWatermark: null, count, chunkHashes: [chunk.bodySha256],
+  const runDigest = computeRunDigestV2({
+    headerHash: hash(headerBody), count, finalSeq:2, chunkHashes: [chunk.bodySha256],
   });
   const finalBody = Buffer.from(canonicalJson({ trailer: {
-    run_digest: runDigest, base_generation_id: 'g1', base_watermark: null,
-    count, final_seq: 1,
+    run_digest: runDigest, run_header_sha256:hash(headerBody), schema:'bp.catalog.trailer/2',
+    count, final_seq: 2,
   } }));
-  const final = { ...chunk, seq: 1, final: true, bodySha256: hash(finalBody) };
+  const final = { ...chunk, seq: 2, final: true, bodySha256: hash(finalBody) };
   f.store.claim(final, 100, { verifiedBody: finalBody, reader: f.reader });
   return final;
 }
@@ -97,13 +105,13 @@ test('full data and hash commit together; retry skips the writer', t => {
   assert.equal(calls, 1);
   assert.equal(f.builder.db.prepare('SELECT COUNT(*) AS n FROM brands').get().n, 1);
   assert.equal(f.builder.db.prepare(
-    'SELECT rows FROM run_chunks WHERE run_id=? AND seq=0'
+    'SELECT rows FROM run_chunks WHERE run_id=? AND seq=1'
   ).get(chunk.runId).rows, 1);
   const final = finalClaim(f, 1);
   assert.deepEqual(verifyFullRunForApply({
-    mutex: f.mutex, store: f.store, builder: f.builder, finalKey: final,
+    mutex: f.mutex, store: f.store, builder: f.builder, finalKey: final, reader: f.reader,
   }), { status: 'VERIFIED', runDigest: f.store.getClaimedFinal(final).runDigest,
-    count: 1, chunkKeys: [{ kid: 'k1', runId: 'run_1', layer: 'full', seq: 0 }] });
+    count: 1, chunkKeys: [{ kid: 'k1', runId: 'run_1', layer: 'full', seq: 1 }] });
 });
 
 test('writer failure rolls back both data and hash; final count mismatch fails', t => {
@@ -114,13 +122,13 @@ test('writer failure rolls back both data and hash; final count mismatch fails',
     writeRows(writer, rows) { writeRows(writer, rows); throw new Error('failpoint'); },
   }), /failpoint/);
   assert.equal(f.builder.db.prepare('SELECT COUNT(*) AS n FROM brands').get().n, 0);
-  assert.equal(f.builder.db.prepare('SELECT COUNT(*) AS n FROM run_chunks').get().n, 0);
+  assert.equal(f.builder.db.prepare('SELECT COUNT(*) AS n FROM run_chunks').get().n, 1);
   writeFullChunk({ mutex: f.mutex, store: f.store, builder: f.builder, key: chunk,
     verifiedBody: body, claimToken: f.owner.claimToken, writeRows });
   const wrongFinal = finalClaim(f, 2);
   assert.throws(() => verifyFullRunForApply({
-    mutex: f.mutex, store: f.store, builder: f.builder, finalKey: wrongFinal,
-  }), code('FULL_APPLY_COUNT_INVALID'));
+    mutex: f.mutex, store: f.store, builder: f.builder, finalKey: wrongFinal, reader: f.reader,
+  }), code('INGEST_REPLAY_COUNT_MISMATCH'));
 });
 
 test('existing run_chunks PK with another hash refuses a retry before data write', t => {
@@ -137,7 +145,7 @@ test('existing run_chunks PK with another hash refuses a retry before data write
   }), code('FULL_APPLY_CHUNK_CONFLICT'));
   assert.equal(f.builder.db.prepare('SELECT COUNT(*) AS n FROM brands').get().n, 0);
   assert.equal(f.store.db.prepare(
-    'SELECT status FROM receipts WHERE run_id=? AND seq=0'
+    'SELECT status FROM receipts WHERE run_id=? AND seq=1'
   ).get(chunk.runId).status, 'pending');
 });
 
@@ -150,7 +158,7 @@ test('fenced owner cannot write full data after lease takeover', t => {
     claimToken: f.owner.claimToken, writeRows,
   }), code('INGEST_REPLAY_OWNER_LOST'));
   assert.equal(f.builder.db.prepare('SELECT COUNT(*) AS n FROM brands').get().n, 0);
-  assert.equal(f.builder.db.prepare('SELECT COUNT(*) AS n FROM run_chunks').get().n, 0);
+  assert.equal(f.builder.db.prepare('SELECT COUNT(*) AS n FROM run_chunks').get().n, 1);
 });
 
 test('SIGKILL after building commit allows exactly one data write after restart', async t => {
@@ -189,7 +197,7 @@ test('SIGKILL after building commit allows exactly one data write after restart'
   f.reopen();
   assert.equal(f.builder.db.prepare('PRAGMA synchronous').get().synchronous, 2);
   assert.equal(f.store.db.prepare(
-    'SELECT status FROM receipts WHERE run_id=? AND seq=0'
+    'SELECT status FROM receipts WHERE run_id=? AND seq=1'
   ).get(chunk.runId).status, 'pending');
   const outcome = writeFullChunk({
     mutex: f.mutex, store: f.store, builder: f.builder, key: chunk, verifiedBody: body,
@@ -226,11 +234,11 @@ test('fixture writer cannot commit the outer transaction; retry remains clean', 
   );
   assert.equal(
     f.builder.db.prepare('SELECT COUNT(*) AS n FROM run_chunks').get().n,
-    0
+    1
   );
   assert.equal(
     f.store.db.prepare(
-      'SELECT status FROM receipts WHERE run_id=? AND seq=0'
+      'SELECT status FROM receipts WHERE run_id=? AND seq=1'
     ).get(chunk.runId).status,
     'pending'
   );
@@ -251,7 +259,7 @@ test('fixture writer cannot commit the outer transaction; retry remains clean', 
   );
   assert.equal(
     f.builder.db.prepare('SELECT COUNT(*) AS n FROM run_chunks').get().n,
-    1
+    2
   );
 });
 
@@ -270,19 +278,16 @@ test('one building generation rejects another run on write and verify', t => {
   const bodyB = Buffer.from(canonicalJson({
     rows: [{ id: 'b2', name: 'Brand 2' }],
   }));
-  const chunkB = {
-    ...chunk,
-    runId: 'run_2',
-    bodySha256: hash(bodyB),
-  };
-  const ownerB = f.store.claim(chunkB, 100);
+  const headerB = Buffer.from(headerBody.toString().replaceAll('run_1', 'run_2'));
+  const chunkB = { ...chunk, runId:'run_2', seq:0, bodySha256:hash(headerB) };
+  const ownerB = f.store.claim(chunkB, 100, { verifiedBody:headerB });
 
   assert.throws(() => writeFullChunk({
     mutex: f.mutex,
     store: f.store,
     builder: f.builder,
     key: chunkB,
-    verifiedBody: bodyB,
+    verifiedBody: headerB,
     claimToken: ownerB.claimToken,
     writeRows,
   }), code('FULL_APPLY_GENERATION_MIXED'));
@@ -293,7 +298,7 @@ test('one building generation rejects another run on write and verify', t => {
   );
   assert.equal(
     f.builder.db.prepare('SELECT COUNT(*) AS n FROM run_chunks').get().n,
-    1
+    2
   );
 
   // Simulate a previously corrupted/mixed generation to exercise verify too.
@@ -302,8 +307,8 @@ test('one building generation rejects another run on write and verify', t => {
   ).run(
     chunkB.runId,
     chunkB.kid,
-    chunkB.seq,
-    chunkB.bodySha256
+    1,
+    hash(bodyB)
   );
 
   const final = finalClaim(f, 1);
@@ -311,6 +316,6 @@ test('one building generation rejects another run on write and verify', t => {
     mutex: f.mutex,
     store: f.store,
     builder: f.builder,
-    finalKey: final,
+    finalKey: final, reader: f.reader,
   }), code('FULL_APPLY_GENERATION_MIXED'));
 });
