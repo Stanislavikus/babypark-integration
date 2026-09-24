@@ -3,31 +3,30 @@
 Status: DRAFT / FIXTURE TESTS ONLY. No HTTP receiver, apply handler, or Drupal exporter is enabled.
 Base: Phase E.1 signed request and replay foundation.
 
-## Signed final trailer and run digest
+## Wire format and digest
 
-After BP1 verifies the exact transmitted body bytes and signed headers, the
-receiver passes those bytes to `ReplayStore.claim`. In this slice only identity
-encoding is supported. The final body is a JSON object with exactly one
-`trailer` member:
+The receiver first verifies BP1 against the exact transmitted body bytes.
+Only identity encoding is supported here. A final body is UTF-8 canonical JSON
+with exactly one `trailer` object containing exactly these five keys:
+`run_digest`, `base_generation_id`, `base_watermark`, `count`,
+`final_seq`. Canonical JSON recursively sorts object keys, has no whitespace
+outside strings, uses JSON escaping, and preserves array order. Comparing
+re-serialized bytes with the original rejects duplicate keys and alternative
+parses. The body SHA-256 must equal the signed key's body hash.
 
-```json
-{"trailer":{"run_digest":"<64 lowercase hex>","base_generation_id":"<id>","base_watermark":null,"count":0,"final_seq":0}}
-```
+`base_watermark` is null or an unsigned decimal string with no leading zero
+(except "0"). Catalog schema v2 applies the same form to accepted and
+source watermarks. Future base CAS compares these values numerically
+without converting them through floating point. `count` and `final_seq` are nonnegative safe integers; the
+latter must equal the signed sequence header. The final body contains no rows.
+The first claim stores the immutable trailer and reads
+`claim_generation_id` through CatalogReader from CURRENT itself. The ledger
+does not authenticate HMAC signatures; a future handler must call BP1 first.
+Publication locking around this claim is not wired yet.
 
-`base_watermark` can be a string; `count` is a nonnegative integer and
-`final_seq` equals the signed sequence header. The final body is trailer
-only; all rows are carried by preceding nonfinal chunks. The ledger checks
-SHA-256 of the exact final body bytes against the verified signed key, parses
-the trailer, and stores its fields together with `claim_generation_id`
-(the observed CURRENT at first claim). Later retries cannot replace those
-fields because the receipt key and body hash are immutable. `claim` itself
-does not authenticate requests: callers must perform BP1 verification first.
-
-The version 1 run digest is computed from the transmitted nonfinal body hashes
-in sequence order, before the final body. `canonicalJson` sorts object keys
-recursively, uses JSON string escaping and leaves array order unchanged.
-All concatenations below are byte concatenations; ASCII strings ending in
-`\0` contain one NUL byte; `seq` is an unsigned 64-bit big-endian integer:
+The v1 digest chain covers transmitted nonfinal chunk hashes in sequence order.
+`uint64be` is an eight-byte unsigned integer. ASCII labels ending in `\0`
+contain one NUL byte:
 
 ```text
 H0 = SHA256("BP-RUN-v1\0" || UTF8(canonicalJson({
@@ -39,79 +38,94 @@ run_digest = hex(SHA256("BP-FINAL-v1\0" || H(final_seq) ||
                         UTF8(canonicalJson({final_seq, count}))))
 ```
 
-The final body hash is excluded, avoiding a circular hash dependency.
-`verifyClaimedRunDigest` requires staged chunks at every sequence from zero
-to `final_seq - 1`, verifies their stored bytes and rejects conflicting
-hashes, then compares the chain with the immutable signed trailer. The later
-apply must also validate `count` against decoded rows before commit. No
-apply exists yet.
+The final body hash is excluded to avoid circularity. `verifyClaimedRunDigest`
+uses only receipts with the final receipt's `kid`, checks each sequence by
+exact primary key, and returns both computed digest and ordered chunk PKs for
+the future apply. No key rotation inside a run is supported: the ledger also
+rejects reuse of a run ID under another KID or layer. The future apply must
+read precisely these PKs, compare `count` with decoded rows, and record the
+computed digest in the same transaction as data and watermark.
 
-## Durable receipts and accepted-run authority
+## Staging and storage
 
-Replay ledger schema v4 records pending, staged nonfinal and accepted final
-receipts. `stage` saves the exact nonfinal body and its deterministic ACK in
-one SQLite transaction; its recorded ACK survives reopening and is independent
-of CURRENT. Only the current owner token can stage a pending chunk.
+Replay ledger schema v5 has pending, staged nonfinal, and accepted final
+receipts. Incremental `stage` stores the exact body and deterministic ACK in
+one transaction. Hard limits are 1 MiB per transmitted chunk, 8 MiB staged
+per run, and 32 MiB staged globally; an over-budget stage fails before its
+update. Digest verification fetches one PK at a time, keeping one body in
+memory instead of loading all bodies with `.all()`.
 
-A final ACK requires an ACCEPTED `ingest_runs` row in CURRENT whose
-`run_kind`, `layer`, `final_seq` and `run_digest` match the claimed
-receipt. A full run uses `run_kind=full, layer=full`; incremental runs use
-`run_kind=incremental` and one of the four content layers. `run_digest` is
-distinct from the catalog manifest hash. The accepted row and data must
-eventually be written in the same apply transaction. The ledger checks the
-canonical ACK fields against the receipt and accepted evidence, then checks
-CURRENT again before returning an ACK. A stored final ACK alone is not
-authority after rollback. `REJECTED`, `FAILED` and `ABANDONED` produce
-`RUN_REJECTED`; only `STAGING` produces `IN_PROGRESS`.
+For `layer=full`, a staged receipt stores only a hash. A staged ACK
+requires an equal `run_chunks` row in a generation whose catalog_meta state
+is `building`. Catalog schema v2 adds this table and also requires
+`run_digest`, `final_seq`, and `terminal_at` for ACCEPTED ingest_runs;
+the ambiguous ingest_runs.manifest_sha256 column is removed. No catalog ingest
+or catalog generations are deployed; existing development fixtures must be
+rebuilt for schema v2. There is no full-run writer yet: it must commit
+`run_chunks` with its decoded building-file data before issuing a staged ACK.
+A fixture inserting only run_chunks proves the ledger gate, not full apply.
 
-`CatalogReader.withDb` can repeat a callback after a pointer change.
-Evidence reads are pure; ledger writes happen outside its callback. CURRENT
-can still change between evidence read and ledger commit, so the result is
-resolved against CURRENT again. A later pointer change before the network
-response remains possible; an HTTP handler must run under the publication
-lock and recheck CURRENT at its response boundary.
+Incremental bodies are still in the durable ledger. Storage policy now
+identifies them as catalog data and budgets the 32 MiB cap.
+`releaseAcceptedRunBodies` deletes them only after matching ACCEPTED
+evidence in CURRENT and marks the nonfinal receipts `staged_released`.
+It preserves the final ACK; a replay of a released chunk requires /state and
+cannot claim that its body is still staged. Apply must invoke cleanup after
+commit and repeat it after crashes. Before live ingest, define a
+backup/recovery plan that does not retain body payloads indefinitely; a
+backup of the current ledger would contain them. A lost staging authority
+must fail closed and require a new run, never reuse an ACK as proof that
+missing data still exists.
 
-## Recovery gate still required
+## Accepted evidence and publication history
 
-The v4 `takeover` primitive refuses **all final receipts** with
-`INGEST_REPLAY_STATE_REQUIRED`. A missing run in CURRENT still yields PENDING.
-This deliberately prevents reapplying an accepted run after rollback, but
-does not yet resume a genuinely unapplied final chunk. An HTTP handler must
-not treat PENDING as permission to apply.
+A final ACK requires an ACCEPTED ingest_runs row in CURRENT with matching
+`run_kind`, layer, `final_seq`, and `run_digest`. Full uses layer and kind
+`full`; incremental uses one of four layers. Only the store's read of
+CatalogReader produces evidence. There is no public completion or ACK
+resolution method accepting caller-supplied evidence. The store writes the
+ledger outside the retryable `withDb` callback, then reads CURRENT again.
+It reconstructs the response ACK from CURRENT, including its
+`source_watermark`, and rejects a different ACK stored in the ledger.
+Rejected, failed, and abandoned runs yield RUN_REJECTED; only staging yields
+IN_PROGRESS. Roll-forward can restore an ACK because RUN_SUPERSEDED is derived,
+not stored in the receipt.
 
-The v4 ledger defines a durable
-`publications(generation_id PRIMARY KEY, run_id, state, updated_at)` journal
-with monotonic transitions. Before final takeover can be enabled, integrate
-it with pointer changes under publish/rollback mutex and CAS, and check the
-following in the same recovery path:
+`publications(generation_id PRIMARY KEY, run_id, state, updated_at)` is
+historical evidence, not a description of CURRENT. After rollback its
+`rolled_back` marker stays even if an operator rolls the pointer forward.
+`intent → rolled_back` is valid after a pointer switch but before
+`switched` was recorded. Evidence in CURRENT takes precedence over journal
+history. The journal is not connected to publisher/rollback yet.
 
-1. Trailer base generation and watermark equal CURRENT and its layer watermark.
-2. Claim generation equals CURRENT.
-3. For full runs whose generation is no longer CURRENT, reject a publication
-   marked `switched` or `rolled_back`; `intent` can resume. Evidence in
-   CURRENT takes precedence over the journal.
+All final takeover attempts fail with INGEST_REPLAY_STATE_REQUIRED. A
+genuinely unapplied final claim can remain PENDING after a crash, requiring a
+new run and full export. This is acceptable for fixture tests and forbids live
+Drupal ingest. Before enabling takeover, lock publish, rollback, apply, and
+claim; use pointer CAS, trailer base generation and numerically compared
+watermark, claim generation, and full publication history. Write intent
+before CURRENT, switched afterward, and rolled_back before rollback CURRENT.
 
-Write `intent` before switching CURRENT, `switched` afterward, and
-`rolled_back` before switching CURRENT back. A rollback marker written
-before its pointer switch must not suppress ACK evidence still in CURRENT.
-`RUN_SUPERSEDED` is derived from CURRENT and journal; do not persist it in
-the receipt, so roll-forward can restore the ACK.
+## Remaining gates before live ingest
 
-Apply also needs a durable heartbeat or a proved upper bound shorter than the
-lease. The existing boot ID records ownership but is not yet used to fence
-the catalog apply. The apply transaction must use the `ingest_runs` primary
-key and base CAS to prevent a paused old owner from writing after takeover.
-
-## Remaining gates before enabling ingest
-
-- Authenticated HTTP receiver, bounded streaming and transport encoding check.
-- Atomic apply of data, sync_state and ingest_runs; full seal and publication CAS.
-- Publication journal, rollback-aware final resume and pointer recovery.
-- Incremental strategy that preserves read-only readers and standalone manifest
-  invariants; publisher mutex/CAS.
-- Lease renewal, bounded receipt/staged-body retention, backup policy and alerts.
-- Child-process SIGKILL/SIGSTOP tests for every apply, pointer and ACK window.
-- /state from CURRENT and fixture-only end-to-end checks.
-- Read-only Drupal exporter in a later phase.
+- Freeze a signed run header in chunk 0. It must cover `t_low`, `t_high`,
+  a new accepted watermark, run kind and base state; full runs require
+  per-layer watermarks. The existing digest chain already includes the
+  transmitted bytes of chunk 0. Define contiguity and numeric comparisons.
+- Implement atomic apply of decoded data, sync_state and ingest_runs with
+  PK(run_id), base CAS, row-count validation and full building-file
+  `run_chunks` writes. Keep the chunk PK list from digest verification.
+- Add publisher mutex/CAS and wire the publication journal to pointer writes.
+  Resolve the read-only reader versus in-place incremental SQLite update and
+  rollback/manifest sidecar invariants.
+- Add heartbeat or prove apply completes before lease expiry, then implement
+  rollback-aware final takeover. A child-process SIGKILL test now covers
+  claim/takeover with different boot IDs; pointer, apply and ACK windows still
+  need SIGKILL/SIGSTOP tests at named failpoints.
+- Call accepted-run body cleanup from apply; define receipt and journal
+  retention, backups without long-lived payloads, and monitored capacity.
+- Add a bounded authenticated HTTP receiver and /state from CURRENT.
+- Before the later Drupal exporter, add Node/PHP 7.0 golden digest vectors
+  covering canonical JSON, 64-bit index bytes and all three domain labels.
 
 No code in this slice contacts Drupal or changes the live Viber gateway.

@@ -38,12 +38,13 @@ Allowed generation IDs:
 Path separators, spaces, leading dots and traversal forms are rejected before any
 file is created.
 
-## Catalog schema v1
+## Catalog schema v2
 
 Core state:
 - catalog_meta
 - sync_state
 - ingest_runs
+- run_chunks (hash authority for staged full-build chunks)
 
 Domain data:
 - products
@@ -88,6 +89,8 @@ Each layer can carry:
 - freshness state
 - need_reconcile
 - need_full
+
+Accepted watermarks are canonical unsigned decimal strings without leading zeros.
 
 The active catalog generation owns the authoritative accepted layer state.
 

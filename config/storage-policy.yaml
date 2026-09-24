@@ -288,13 +288,13 @@
       "scope": "file",
       "location": "/var/lib/babypark-integration/ingest/replay.sqlite",
       "owner": "catalog ingest service",
-      "purpose": "Durable signed-chunk claims and immutable ACK receipts across restart.",
+      "purpose": "Durable signed-chunk claims, ACK receipts and bounded incremental bodies until accepted apply.",
       "state_class": "durable",
       "thresholds": {
         "metric": "bytes",
-        "basis": "20,000 receipt hard cap; measure during E.2",
-        "expected": 16777216,
-        "warning": 67108864,
+        "basis": "20,000 receipts plus hard global 32 MiB incremental staging body cap; remeasure before deployment",
+        "expected": 50331648,
+        "warning": 100663296,
         "critical": 134217728
       },
       "retention": {
@@ -313,7 +313,7 @@
         "off_host": true,
         "status": "REQUIRED_BEFORE_DEPLOY"
       },
-      "pii": "request_ids_and_body_hashes_only"
+      "pii": "catalog_chunk_bodies_until_accepted_apply; backup and retention contract required before deployment"
     },
     {
       "id": "ingest_staging",
