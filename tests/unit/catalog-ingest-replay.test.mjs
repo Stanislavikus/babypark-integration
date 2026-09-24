@@ -29,7 +29,7 @@ function fullHeaderBody(runId='run_1', base='g_1') { return Buffer.from(canonica
 function key(runId, layer, seq, body, final=false) { return {kid:'k1',runId,layer,seq,
   bodySha256:hash(body),final,contentEncoding:'identity'}; }
 function fixture(t) { const dir=fs.mkdtempSync(path.join(os.tmpdir(),'bp-ingest-replay-')); t.after(()=>fs.rmSync(dir,{recursive:true,force:true}));
-  const b=CatalogGenerationBuilder.create({storageDir:dir,generationId:'g_1',sourceEpoch:'epoch-1',identityRevision:0}); b.seal(); new CatalogPublisher(dir).publish('g_1');
+  const b=CatalogGenerationBuilder.create({storageDir:dir,generationId:'g_1',sourceEpoch:'epoch-1',identityRevision:0}); b.db.prepare("UPDATE sync_state SET accepted_watermark='10' WHERE layer='content'").run(); b.seal(); new CatalogPublisher(dir).publish('g_1');
   const reader=new CatalogReader(dir); t.after(()=>reader.close()); return {dir,file:path.join(dir,'ingest-replay.sqlite'),reader}; }
 const createStore=(file,opts={})=>ReplayStore.createNew(file,{catalogStorageDir:path.dirname(file),...opts});
 const openStore=(file,opts={})=>ReplayStore.openExisting(file,{catalogStorageDir:path.dirname(file),...opts});

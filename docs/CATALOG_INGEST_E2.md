@@ -15,6 +15,15 @@ The replay verifier rechecks the exact retained header, trusted CURRENT/source e
 contiguity, hashes, catalog authority for full runs, and data-row count. It returns
 proof only and does not accept, seal, publish, or move CURRENT.
 
+The trusted CURRENT read also supplies all four `sync_state.accepted_watermark`
+cursors atomically. Delta base watermarks must equal the non-null authoritative
+cursor. Replace base watermarks may be null; a non-null replace base must equal
+CURRENT. When CURRENT has a replace cursor, replacement output must be non-null
+and must not regress below it. Bootstrap requires no CURRENT, a null generation
+base, and null base watermarks for all four layers. The checked-in shared corpus
+executes canonical JSON, DEC20, uint64be, and digest-v2 records in Node and PHP;
+real PHP 7.0 certification remains an external gate.
+
 ## Staging and storage
 
 Replay ledger schema v7 has pending, staged nonfinal, and accepted final

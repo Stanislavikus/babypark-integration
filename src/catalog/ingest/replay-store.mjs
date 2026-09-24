@@ -94,10 +94,16 @@ function readCurrent(context) {
     return value;
   }
   if (context?.reader instanceof CatalogReader) {
-    return context.reader.withDb((db, generationId) => ({
-      generationId,
-      sourceEpoch: db.prepare('SELECT source_epoch FROM catalog_meta WHERE singleton=1').get()?.source_epoch,
-    }));
+    return context.reader.withDb((db, generationId) => {
+      const sourceEpoch = db.prepare(
+        'SELECT source_epoch FROM catalog_meta WHERE singleton=1'
+      ).get()?.source_epoch;
+      const rows = db.prepare(
+        'SELECT layer,accepted_watermark FROM sync_state ORDER BY layer'
+      ).all();
+      return { generationId, sourceEpoch,
+        layers: Object.fromEntries(rows.map(row => [row.layer, row.accepted_watermark])) };
+    });
   }
   fail('INGEST_REPLAY_STATE_REQUIRED', 'Final claim requires authoritative CURRENT resolver');
 }
@@ -105,8 +111,10 @@ function readCurrent(context) {
 function validateState(header, current) {
   try { return validateAuthoritativeState(header, current); }
   catch (error) {
+    if (error.code === 'INGEST_RUN_STATE_INVALID') fail('INGEST_REPLAY_STATE_INVALID', error.message);
     if (error.code === 'INGEST_RUN_STATE_MOVED') fail('INGEST_REPLAY_STATE_MOVED', error.message);
     if (error.code === 'INGEST_RUN_SOURCE_EPOCH_CHANGED') fail('INGEST_REPLAY_SOURCE_EPOCH_CHANGED', error.message);
+    if (error.code === 'INGEST_RUN_WATERMARK_REGRESSION') fail('INGEST_REPLAY_WATERMARK_REGRESSION', error.message);
     throw error;
   }
 }

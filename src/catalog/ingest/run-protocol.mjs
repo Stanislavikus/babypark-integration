@@ -48,7 +48,7 @@ function decodeCanonical(body, maxBytes, code) {
 }
 function nullableDec20(value) { return value === null || isDec20(value); }
 
-function validateLayer(entry, baseGenerationId, sourceEpochUnchanged = false) {
+function validateLayer(entry, baseGenerationId) {
   if (!exactKeys(entry, LAYER_KEYS) || !nullableDec20(entry.base_watermark) ||
       !nullableDec20(entry.t_low) || !nullableDec20(entry.t_high) ||
       !nullableDec20(entry.output_watermark)) fail('INGEST_RUN_HEADER_INVALID', 'Invalid layer entry');
@@ -61,9 +61,7 @@ function validateLayer(entry, baseGenerationId, sourceEpochUnchanged = false) {
     }
   } else if (entry.mode === 'replace') {
     if (entry.t_low !== null || !((entry.t_high === null && entry.output_watermark === null) ||
-        (isDec20(entry.t_high) && entry.output_watermark === entry.t_high)) ||
-        (sourceEpochUnchanged && entry.base_watermark !== null && entry.output_watermark !== null &&
-         compareDec20(entry.output_watermark, entry.base_watermark) < 0)) {
+        (isDec20(entry.t_high) && entry.output_watermark === entry.t_high))) {
       fail('INGEST_RUN_HEADER_INVALID', 'Invalid replacement range');
     }
   } else fail('INGEST_RUN_HEADER_INVALID', 'Invalid layer mode');
@@ -97,7 +95,7 @@ export function parseTrailerV2(body, { seq, final = true } = {}) {
   return t;
 }
 
-function u64(value) {
+export function uint64be(value) {
   if (!Number.isSafeInteger(value) || value < 0) fail('INGEST_RUN_DIGEST_INVALID', 'uint64 input must be a non-negative safe integer');
   const out = Buffer.alloc(8); out.writeBigUInt64BE(BigInt(value)); return out;
 }
@@ -106,19 +104,32 @@ export function computeRunDigestV2({ headerHash, chunkHashes, finalSeq, count })
       finalSeq !== chunkHashes.length + 1 || finalSeq < 1 || !Number.isSafeInteger(count) || count < 0) fail('INGEST_RUN_DIGEST_INVALID', 'Invalid digest inputs');
   const sha = value => crypto.createHash('sha256').update(value).digest();
   let chain = sha(Buffer.concat([Buffer.from('BP-RUN-v2\0'), Buffer.from(headerHash, 'hex')]));
-  chunkHashes.forEach((hash, index) => { chain = sha(Buffer.concat([Buffer.from('BP-CHUNK-v2\0'), chain, u64(index + 1), Buffer.from(hash, 'hex')])); });
-  return sha(Buffer.concat([Buffer.from('BP-FINAL-v2\0'), chain, u64(finalSeq), u64(count)])).toString('hex');
+  chunkHashes.forEach((hash, index) => { chain = sha(Buffer.concat([Buffer.from('BP-CHUNK-v2\0'), chain, uint64be(index + 1), Buffer.from(hash, 'hex')])); });
+  return sha(Buffer.concat([Buffer.from('BP-FINAL-v2\0'), chain, uint64be(finalSeq), uint64be(count)])).toString('hex');
 }
 
 export function validateAuthoritativeState(header, current) {
-  if (current !== null && (!ID.test(current?.generationId || '') || !ID.test(current?.sourceEpoch || ''))) fail('INGEST_RUN_STATE_INVALID', 'Invalid authoritative CURRENT');
+  if (current !== null && (!ID.test(current?.generationId || '') || !ID.test(current?.sourceEpoch || '') ||
+      !exactKeys(current?.layers, FULL_LAYERS) ||
+      FULL_LAYERS.some(layer => !nullableDec20(current.layers[layer])))) {
+    fail('INGEST_RUN_STATE_INVALID', 'Invalid authoritative CURRENT');
+  }
   if (header.base_generation_id !== (current?.generationId ?? null)) fail('INGEST_RUN_STATE_MOVED', 'CURRENT differs from signed base');
+  if (current === null) {
+    if (header.layers.some(entry => entry.base_watermark !== null))
+      fail('INGEST_RUN_STATE_MOVED', 'Bootstrap layer base watermark must be null');
+    return { claimGenerationId: null };
+  }
   if (current && header.source_epoch !== current.sourceEpoch) fail('INGEST_RUN_SOURCE_EPOCH_CHANGED', 'Source epoch differs from CURRENT');
-  if (current) header.layers.forEach(entry => {
-    if (entry.mode === 'replace' && entry.base_watermark !== null && entry.output_watermark !== null &&
-        compareDec20(entry.output_watermark, entry.base_watermark) < 0) {
-      fail('INGEST_RUN_HEADER_INVALID', 'Replacement watermark regresses');
-    }
+  header.layers.forEach(entry => {
+    const authoritative = current.layers[entry.layer];
+    if (entry.mode === 'delta' && (authoritative === null || entry.base_watermark !== authoritative))
+      fail('INGEST_RUN_STATE_MOVED', 'Delta base watermark differs from CURRENT');
+    if (entry.mode === 'replace' && entry.base_watermark !== null && entry.base_watermark !== authoritative)
+      fail('INGEST_RUN_STATE_MOVED', 'Replacement base watermark differs from CURRENT');
+    if (entry.mode === 'replace' && authoritative !== null &&
+        (entry.output_watermark === null || compareDec20(entry.output_watermark, authoritative) < 0))
+      fail('INGEST_RUN_WATERMARK_REGRESSION', 'Replacement output regresses authoritative CURRENT');
   });
   return { claimGenerationId: current?.generationId ?? null };
 }

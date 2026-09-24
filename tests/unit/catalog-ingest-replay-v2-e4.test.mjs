@@ -119,6 +119,31 @@ test('bootstrap nullable claim succeeds then moving CURRENT fails verification',
   assert.equal(f.store.verifyClaimedRunDigest(final, { fullBuildDb:f.builder.db,
     resolveCurrent:() => null }).count, 0);
   assert.throws(() => f.store.verifyClaimedRunDigest(final, { fullBuildDb:f.builder.db,
-    resolveCurrent:() => ({ generationId:'g1', sourceEpoch:'epoch-1' }) }),
+    resolveCurrent:() => ({ generationId:'g1', sourceEpoch:'epoch-1', layers:{taxonomy:null,content:null,commercial:null,stock:null} }) }),
   code('INGEST_REPLAY_STATE_MOVED'));
+});
+
+test('final claim and verification revalidate authoritative layer watermarks', t => {
+  const f = fixture(t); const current = watermark => ({ generationId:'g1', sourceEpoch:'epoch-1',
+    layers:{taxonomy:null,content:watermark,commercial:'7',stock:'1000'} });
+  const contentHeader = base => bytes({header:{base_generation_id:'g1',layers:[{
+    base_watermark:base,layer:'content',mode:'delta',output_watermark:'12',t_high:'12',t_low:'9'}],
+    run_id:'cursor',run_kind:'incremental',schema:'bp.catalog.run-header/1',source_epoch:'epoch-1'}});
+  const bad = contentHeader('11'); const badKey = key('cursor','content',0,bad);
+  const badClaim = f.store.claim(badKey,100,{verifiedBody:bad}); f.store.stage(badKey,bad,badClaim.claimToken);
+  const badDigest = computeRunDigestV2({headerHash:hash(bad),chunkHashes:[],finalSeq:1,count:0});
+  const badTrailer = bytes({trailer:{count:0,final_seq:1,run_digest:badDigest,
+    run_header_sha256:hash(bad),schema:'bp.catalog.trailer/2'}});
+  assert.throws(() => f.store.claim(key('cursor','content',1,badTrailer,true),100,
+    {verifiedBody:badTrailer,resolveCurrent:()=>current('10')}), code('INGEST_REPLAY_STATE_MOVED'));
+
+  const good = contentHeader('10'); const goodKey = key('race','content',0,
+    Buffer.from(good.toString().replaceAll('cursor','race'))); const goodBody = Buffer.from(good.toString().replaceAll('cursor','race'));
+  const claim = f.store.claim(goodKey,100,{verifiedBody:goodBody}); f.store.stage(goodKey,goodBody,claim.claimToken);
+  const digest = computeRunDigestV2({headerHash:hash(goodBody),chunkHashes:[],finalSeq:1,count:0});
+  const trailer = bytes({trailer:{count:0,final_seq:1,run_digest:digest,run_header_sha256:hash(goodBody),schema:'bp.catalog.trailer/2'}});
+  const final = key('race','content',1,trailer,true);
+  assert.equal(f.store.claim(final,100,{verifiedBody:trailer,resolveCurrent:()=>current('10')}).status,'NEW');
+  assert.throws(() => f.store.verifyClaimedRunDigest(final,{resolveCurrent:()=>current('11')}),
+    code('INGEST_REPLAY_STATE_MOVED'));
 });

@@ -2,6 +2,7 @@
 /* PHP 7.0 reference for control-object canonicalization and digest v2 only. */
 function bp_canonical($value) {
     if (is_array($value)) {
+        if (count($value) === 0) { throw new InvalidArgumentException('ambiguous empty PHP array'); }
         $keys = array_keys($value);
         $list = ($keys === range(0, count($value) - 1));
         if (!$list) { ksort($value, SORT_STRING); }
@@ -44,10 +45,28 @@ function bp_digest_v2($headerHash, $chunkHashes, $finalSeq, $count) {
 if (isset($argv) && realpath($argv[0]) === __FILE__ && isset($argv[1])) {
     $raw = file_get_contents($argv[1]);
     $vectors = json_decode($raw, true);
-    if (!is_array($vectors) || !isset($vectors['accepted_digests'])) { throw new RuntimeException('invalid vector file'); }
-    foreach ($vectors['accepted_digests'] as $vector) {
-        $actual = bp_digest_v2($vector['header_sha256'], $vector['chunk_hashes'], $vector['final_seq'], $vector['count']);
-        if (!hash_equals($vector['run_digest'], $actual)) { throw new RuntimeException('digest vector mismatch: '.$vector['name']); }
+    if (!is_array($vectors) || !isset($vectors['records'])) { throw new RuntimeException('invalid vector file'); }
+    $executed = 0;
+    foreach ($vectors['records'] as $vector) {
+        $kind = $vector['kind'];
+        if ($kind === 'canonical') {
+            $actual = bp_canonical($vector['structured']);
+            if ($actual !== $vector['expected_utf8'] || hash('sha256', $actual) !== $vector['sha256']) throw new RuntimeException('canonical mismatch');
+        } elseif ($kind === 'dec20-valid') {
+            if (bp_dec20($vector['value']) !== $vector['valid']) throw new RuntimeException('DEC20 mismatch');
+        } elseif ($kind === 'dec20-compare') {
+            $actual = bp_dec20_compare($vector['left'], $vector['right']); $actual = $actual < 0 ? -1 : ($actual > 0 ? 1 : 0);
+            if ($actual !== $vector['expected']) throw new RuntimeException('DEC20 comparison mismatch');
+        } elseif ($kind === 'uint64be') {
+            try { $actual = bin2hex(bp_u64be($vector['value'])); if (!$vector['valid'] || $actual !== $vector['expected_hex']) throw new RuntimeException('uint64 mismatch'); }
+            catch (InvalidArgumentException $error) { if ($vector['valid']) throw $error; }
+        } elseif ($kind === 'digest-v2') {
+            $actual = bp_digest_v2($vector['header_sha256'], $vector['chunk_hashes'], $vector['final_seq'], $vector['count']);
+            if (!hash_equals($vector['run_digest'], $actual)) throw new RuntimeException('digest mismatch');
+        } elseif ($kind === 'canonical-empty-array-reject') {
+            try { bp_canonical(array()); throw new RuntimeException('empty array accepted'); } catch (InvalidArgumentException $expected) {}
+        } else { throw new RuntimeException('unknown vector kind: '.$kind); }
+        $executed++;
     }
-    echo count($vectors['accepted_digests'])." digest vectors OK\n";
+    echo $executed." vectors OK\n";
 }

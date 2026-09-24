@@ -1,70 +1,371 @@
 {
-  "schema": "bp.catalog.run-vectors/1",
+  "schema": "bp.catalog.run-vectors/2",
   "domain_labels": [
     "BP-RUN-v2\\0",
     "BP-CHUNK-v2\\0",
     "BP-FINAL-v2\\0"
   ],
-  "canonical_header": "{\"header\":{\"base_generation_id\":\"g1\",\"layers\":[{\"base_watermark\":\"100\",\"layer\":\"content\",\"mode\":\"delta\",\"output_watermark\":\"150\",\"t_high\":\"150\",\"t_low\":\"95\"}],\"run_id\":\"vector\",\"run_kind\":\"incremental\",\"schema\":\"bp.catalog.run-header/1\",\"source_epoch\":\"epoch-1\"}}",
-  "accepted_digests": [
+  "records": [
     {
-      "name": "zero-data",
-      "header_sha256": "22776d9f2b821892c6d1d85ad4ccbc5e7281fd6db95ad122d207668348d295f1",
+      "kind": "canonical",
+      "name": "content-delta",
+      "structured": {
+        "header": {
+          "base_generation_id": "g1",
+          "layers": [
+            {
+              "base_watermark": "10",
+              "layer": "content",
+              "mode": "delta",
+              "output_watermark": "12",
+              "t_high": "12",
+              "t_low": "9"
+            }
+          ],
+          "run_id": "content",
+          "run_kind": "incremental",
+          "schema": "bp.catalog.run-header/1",
+          "source_epoch": "epoch-1"
+        }
+      },
+      "expected_utf8": "{\"header\":{\"base_generation_id\":\"g1\",\"layers\":[{\"base_watermark\":\"10\",\"layer\":\"content\",\"mode\":\"delta\",\"output_watermark\":\"12\",\"t_high\":\"12\",\"t_low\":\"9\"}],\"run_id\":\"content\",\"run_kind\":\"incremental\",\"schema\":\"bp.catalog.run-header/1\",\"source_epoch\":\"epoch-1\"}}",
+      "sha256": "af3b0d27753099cd0adefd7e78b590816d63991478daf6a9a9ba85c78d3f1a7f"
+    },
+    {
+      "kind": "canonical",
+      "name": "commercial-delta",
+      "structured": {
+        "header": {
+          "base_generation_id": "g1",
+          "layers": [
+            {
+              "base_watermark": "7",
+              "layer": "commercial",
+              "mode": "delta",
+              "output_watermark": "12",
+              "t_high": "12",
+              "t_low": "9"
+            }
+          ],
+          "run_id": "commercial",
+          "run_kind": "incremental",
+          "schema": "bp.catalog.run-header/1",
+          "source_epoch": "epoch-1"
+        }
+      },
+      "expected_utf8": "{\"header\":{\"base_generation_id\":\"g1\",\"layers\":[{\"base_watermark\":\"7\",\"layer\":\"commercial\",\"mode\":\"delta\",\"output_watermark\":\"12\",\"t_high\":\"12\",\"t_low\":\"9\"}],\"run_id\":\"commercial\",\"run_kind\":\"incremental\",\"schema\":\"bp.catalog.run-header/1\",\"source_epoch\":\"epoch-1\"}}",
+      "sha256": "a59fc09a9d3fe8c22bf8d204090e3679cd5b6e3d1020ab2255c43b09dbb053f3"
+    },
+    {
+      "kind": "canonical",
+      "name": "taxonomy-replace",
+      "structured": {
+        "header": {
+          "base_generation_id": "g1",
+          "layers": [
+            {
+              "base_watermark": null,
+              "layer": "taxonomy",
+              "mode": "replace",
+              "output_watermark": null,
+              "t_high": null,
+              "t_low": null
+            }
+          ],
+          "run_id": "taxonomy",
+          "run_kind": "incremental",
+          "schema": "bp.catalog.run-header/1",
+          "source_epoch": "epoch-1"
+        }
+      },
+      "expected_utf8": "{\"header\":{\"base_generation_id\":\"g1\",\"layers\":[{\"base_watermark\":null,\"layer\":\"taxonomy\",\"mode\":\"replace\",\"output_watermark\":null,\"t_high\":null,\"t_low\":null}],\"run_id\":\"taxonomy\",\"run_kind\":\"incremental\",\"schema\":\"bp.catalog.run-header/1\",\"source_epoch\":\"epoch-1\"}}",
+      "sha256": "842b99ade8e4908f71473c2d39bbc1a6697ce862227677d43b47e75f50069d02"
+    },
+    {
+      "kind": "canonical",
+      "name": "stock-replace",
+      "structured": {
+        "header": {
+          "base_generation_id": "g1",
+          "layers": [
+            {
+              "base_watermark": null,
+              "layer": "stock",
+              "mode": "replace",
+              "output_watermark": null,
+              "t_high": null,
+              "t_low": null
+            }
+          ],
+          "run_id": "stock",
+          "run_kind": "incremental",
+          "schema": "bp.catalog.run-header/1",
+          "source_epoch": "epoch-1"
+        }
+      },
+      "expected_utf8": "{\"header\":{\"base_generation_id\":\"g1\",\"layers\":[{\"base_watermark\":null,\"layer\":\"stock\",\"mode\":\"replace\",\"output_watermark\":null,\"t_high\":null,\"t_low\":null}],\"run_id\":\"stock\",\"run_kind\":\"incremental\",\"schema\":\"bp.catalog.run-header/1\",\"source_epoch\":\"epoch-1\"}}",
+      "sha256": "d4072890292b1bd44aede1cbba55c6f4745f19e36d30ab3f7b885290750b0f7e"
+    },
+    {
+      "kind": "canonical",
+      "name": "full",
+      "structured": {
+        "header": {
+          "base_generation_id": "g1",
+          "layers": [
+            {
+              "base_watermark": null,
+              "layer": "taxonomy",
+              "mode": "replace",
+              "output_watermark": null,
+              "t_high": null,
+              "t_low": null
+            },
+            {
+              "base_watermark": null,
+              "layer": "content",
+              "mode": "replace",
+              "output_watermark": null,
+              "t_high": null,
+              "t_low": null
+            },
+            {
+              "base_watermark": null,
+              "layer": "commercial",
+              "mode": "replace",
+              "output_watermark": null,
+              "t_high": null,
+              "t_low": null
+            },
+            {
+              "base_watermark": null,
+              "layer": "stock",
+              "mode": "replace",
+              "output_watermark": null,
+              "t_high": null,
+              "t_low": null
+            }
+          ],
+          "run_id": "full",
+          "run_kind": "full",
+          "schema": "bp.catalog.run-header/1",
+          "source_epoch": "epoch-1"
+        }
+      },
+      "expected_utf8": "{\"header\":{\"base_generation_id\":\"g1\",\"layers\":[{\"base_watermark\":null,\"layer\":\"taxonomy\",\"mode\":\"replace\",\"output_watermark\":null,\"t_high\":null,\"t_low\":null},{\"base_watermark\":null,\"layer\":\"content\",\"mode\":\"replace\",\"output_watermark\":null,\"t_high\":null,\"t_low\":null},{\"base_watermark\":null,\"layer\":\"commercial\",\"mode\":\"replace\",\"output_watermark\":null,\"t_high\":null,\"t_low\":null},{\"base_watermark\":null,\"layer\":\"stock\",\"mode\":\"replace\",\"output_watermark\":null,\"t_high\":null,\"t_low\":null}],\"run_id\":\"full\",\"run_kind\":\"full\",\"schema\":\"bp.catalog.run-header/1\",\"source_epoch\":\"epoch-1\"}}",
+      "sha256": "e83b37478d4497dd8e79fc7eef5a4ce273f965185e399281d2470bdba62d6fea"
+    },
+    {
+      "kind": "canonical",
+      "name": "bootstrap",
+      "structured": {
+        "header": {
+          "base_generation_id": null,
+          "layers": [
+            {
+              "base_watermark": null,
+              "layer": "taxonomy",
+              "mode": "replace",
+              "output_watermark": null,
+              "t_high": null,
+              "t_low": null
+            },
+            {
+              "base_watermark": null,
+              "layer": "content",
+              "mode": "replace",
+              "output_watermark": null,
+              "t_high": null,
+              "t_low": null
+            },
+            {
+              "base_watermark": null,
+              "layer": "commercial",
+              "mode": "replace",
+              "output_watermark": null,
+              "t_high": null,
+              "t_low": null
+            },
+            {
+              "base_watermark": null,
+              "layer": "stock",
+              "mode": "replace",
+              "output_watermark": null,
+              "t_high": null,
+              "t_low": null
+            }
+          ],
+          "run_id": "boot",
+          "run_kind": "full",
+          "schema": "bp.catalog.run-header/1",
+          "source_epoch": "epoch-1"
+        }
+      },
+      "expected_utf8": "{\"header\":{\"base_generation_id\":null,\"layers\":[{\"base_watermark\":null,\"layer\":\"taxonomy\",\"mode\":\"replace\",\"output_watermark\":null,\"t_high\":null,\"t_low\":null},{\"base_watermark\":null,\"layer\":\"content\",\"mode\":\"replace\",\"output_watermark\":null,\"t_high\":null,\"t_low\":null},{\"base_watermark\":null,\"layer\":\"commercial\",\"mode\":\"replace\",\"output_watermark\":null,\"t_high\":null,\"t_low\":null},{\"base_watermark\":null,\"layer\":\"stock\",\"mode\":\"replace\",\"output_watermark\":null,\"t_high\":null,\"t_low\":null}],\"run_id\":\"boot\",\"run_kind\":\"full\",\"schema\":\"bp.catalog.run-header/1\",\"source_epoch\":\"epoch-1\"}}",
+      "sha256": "7b9d5c04cd8447d63a1238bab48c731775fcf5983135e68168540e8a409c5b5d"
+    },
+    {
+      "kind": "canonical",
+      "name": "schema-slash",
+      "structured": {
+        "schema": "a/b",
+        "value": "x"
+      },
+      "expected_utf8": "{\"schema\":\"a/b\",\"value\":\"x\"}",
+      "sha256": "36c79ef7655be9f883abe6f305883b9375eccaa50def0a1247b0cc804ec142b5"
+    },
+    {
+      "kind": "canonical",
+      "name": "nested-arrays",
+      "structured": {
+        "z": [
+          3,
+          1,
+          2
+        ],
+        "a": {
+          "z": "last",
+          "a": "first"
+        }
+      },
+      "expected_utf8": "{\"a\":{\"a\":\"first\",\"z\":\"last\"},\"z\":[3,1,2]}",
+      "sha256": "909baf6ff5d42f485201fff7406da7defab82d9b4ba8c6de2dfc3e237504ecc0"
+    },
+    {
+      "kind": "dec20-valid",
+      "name": "zero",
+      "value": "0",
+      "valid": true
+    },
+    {
+      "kind": "dec20-valid",
+      "name": "one",
+      "value": "1",
+      "valid": true
+    },
+    {
+      "kind": "dec20-valid",
+      "name": "max20",
+      "value": "99999999999999999999",
+      "valid": true
+    },
+    {
+      "kind": "dec20-valid",
+      "name": "leading-zero",
+      "value": "01",
+      "valid": false
+    },
+    {
+      "kind": "dec20-valid",
+      "name": "21-digit",
+      "value": "100000000000000000000",
+      "valid": false
+    },
+    {
+      "kind": "dec20-valid",
+      "name": "non-digit",
+      "value": "1x",
+      "valid": false
+    },
+    {
+      "kind": "dec20-compare",
+      "name": "equal",
+      "left": "10",
+      "right": "10",
+      "expected": 0
+    },
+    {
+      "kind": "dec20-compare",
+      "name": "shorter",
+      "left": "9",
+      "right": "10",
+      "expected": -1
+    },
+    {
+      "kind": "dec20-compare",
+      "name": "longer",
+      "left": "10",
+      "right": "9",
+      "expected": 1
+    },
+    {
+      "kind": "dec20-compare",
+      "name": "lexical",
+      "left": "10",
+      "right": "11",
+      "expected": -1
+    },
+    {
+      "kind": "uint64be",
+      "value": 0,
+      "expected_hex": "0000000000000000",
+      "valid": true
+    },
+    {
+      "kind": "uint64be",
+      "value": 1,
+      "expected_hex": "0000000000000001",
+      "valid": true
+    },
+    {
+      "kind": "uint64be",
+      "value": 4294967296,
+      "expected_hex": "0000000100000000",
+      "valid": true
+    },
+    {
+      "kind": "uint64be",
+      "value": 9007199254740991,
+      "expected_hex": "001fffffffffffff",
+      "valid": true
+    },
+    {
+      "kind": "uint64be",
+      "value": -1,
+      "expected_hex": null,
+      "valid": false
+    },
+    {
+      "kind": "uint64be",
+      "value": 9007199254740992,
+      "expected_hex": null,
+      "valid": false
+    },
+    {
+      "kind": "digest-v2",
+      "name": "zero",
+      "header_sha256": "af3b0d27753099cd0adefd7e78b590816d63991478daf6a9a9ba85c78d3f1a7f",
       "chunk_hashes": [],
       "final_seq": 1,
       "count": 0,
-      "run_digest": "bdb619152f9aacc366581c187efd7e40d3f1e7a13f8ddc545cff2c1a3bf587af"
+      "run_digest": "833645dc7103b658cc390a5a2b4b2a02741489b8c02e34e9fafd271dc0157392"
     },
     {
-      "name": "one-data",
-      "header_sha256": "22776d9f2b821892c6d1d85ad4ccbc5e7281fd6db95ad122d207668348d295f1",
+      "kind": "digest-v2",
+      "name": "one",
+      "header_sha256": "af3b0d27753099cd0adefd7e78b590816d63991478daf6a9a9ba85c78d3f1a7f",
       "chunk_hashes": [
         "1633902c6cbba5e7770dbed172df754a25078bb76efe1f23474edc87f1a47655"
       ],
       "final_seq": 2,
       "count": 0,
-      "run_digest": "3f8bbe8104aeb155058848a1c91f9e59193bbfb3293f1c71dc65fbf75c8ff26c"
+      "run_digest": "e354d40d59061caecd9472a52579454b171cbdff4d6f7735d4b11b7b4acc2e0b"
     },
     {
-      "name": "multiple-data",
-      "header_sha256": "22776d9f2b821892c6d1d85ad4ccbc5e7281fd6db95ad122d207668348d295f1",
+      "kind": "digest-v2",
+      "name": "multiple",
+      "header_sha256": "af3b0d27753099cd0adefd7e78b590816d63991478daf6a9a9ba85c78d3f1a7f",
       "chunk_hashes": [
         "1633902c6cbba5e7770dbed172df754a25078bb76efe1f23474edc87f1a47655",
         "04a9ea2dd3a938dffdb0b8ce8f9d4ad37216a67b193209d521cb364f30db33be"
       ],
       "final_seq": 3,
       "count": 1,
-      "run_digest": "92fb669de8b1d05dfd530ef8ef011324674295218e6423aeaaa056887972c596"
+      "run_digest": "227f9b3b550a5b67470bce391a1b08313cd6e3d0a96ecc2571b47275e00e69a8"
+    },
+    {
+      "kind": "canonical-empty-array-reject",
+      "name": "ambiguous-empty-array"
     }
-  ],
-  "cases": [
-    "content-delta",
-    "commercial-delta",
-    "taxonomy-replace-null-base-watermark",
-    "stock-replace-null-base-watermark",
-    "full-four-layer",
-    "full-bootstrap",
-    "dec20-20-digit",
-    "reject-dec20-21-digit",
-    "reject-leading-zero",
-    "reject-reordered-keys",
-    "reject-duplicate-key",
-    "reject-bom",
-    "reject-trailing-lf",
-    "schema-slash",
-    "wrong-run-id",
-    "invalid-layer-mode",
-    "missing-full-layer",
-    "duplicate-full-layer",
-    "reordered-full-layer",
-    "source-epoch-mismatch",
-    "watermark-regression",
-    "header-hash-mismatch",
-    "missing-sequence",
-    "extra-sequence",
-    "swapped-chunk-hashes",
-    "count-mismatch",
-    "final-seq-mismatch",
-    "final-seq-zero"
   ]
 }
