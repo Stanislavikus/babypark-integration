@@ -38,7 +38,7 @@ Allowed generation IDs:
 Path separators, spaces, leading dots and traversal forms are rejected before any
 file is created.
 
-## Catalog schema v3
+## Catalog schema v4
 
 Core state:
 - catalog_meta
@@ -163,6 +163,12 @@ It atomically writes pointer files using:
 - fsync temp;
 - rename to CURRENT/PREVIOUS;
 - fsync directory.
+
+E.3 fixture code supports an injected CatalogPublicationLock and expectedCurrent
+CAS for ingest publication. With runId and replayStore, journal intent is
+recorded before CURRENT, switched afterward, and rollback records rolled_back
+before changing CURRENT. A future ingest coordinator must supply the same
+mutex to claim, apply, publish and rollback; this code is not deployed.
 
 Normal publication order:
 1. validate new final generation;

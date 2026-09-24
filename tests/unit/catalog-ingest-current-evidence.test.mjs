@@ -166,7 +166,8 @@ test('accepted evidence permits staged-body cleanup without losing final ACK', t
   f.store.claim(final, 100, { verifiedBody: finalBody, reader: f.reader });
   assert.equal(f.store.verifyClaimedRunDigest(final).runDigest, runDigest);
   assert.equal(f.store.finishPendingAgainstCurrent(final, f.reader).status, 'ACKED');
-  assert.equal(f.store.releaseAcceptedRunBodies(final, f.reader), 1);
+  assert.deepEqual(f.store.releaseAcceptedRunBodies(final, f.reader),
+    { status: 'RELEASED', releasedCount: 1 });
   assert.equal(f.store.db.prepare(
     'SELECT staged_body IS NULL AS absent FROM receipts WHERE seq=0'
   ).get().absent, 1);

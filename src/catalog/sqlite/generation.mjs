@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
+import { CatalogPublicationLock } from './publication-lock.mjs';
 import {
   CATALOG_LAYERS,
   CATALOG_REQUIRED_TABLES,
@@ -551,6 +552,33 @@ export function inspectCatalogGeneration(
 }
 
 export class CatalogGenerationBuilder {
+  static openExisting({ storageDir, generationId, now = () => new Date().toISOString() }) {
+    const dir = requireStorageDir(storageDir);
+    const id = validateGenerationId(generationId);
+    const buildingPath = path.join(dir, buildingFilename(id));
+    const finalPath = finalPathFor(dir, id);
+    if (!fs.existsSync(buildingPath) || fs.existsSync(finalPath)) {
+      throw catalogError('CATALOG_BUILD_MISSING', 'Building generation cannot be resumed');
+    }
+    const db = new DatabaseSync(buildingPath, { create: false });
+    try {
+      db.exec('PRAGMA foreign_keys=ON; PRAGMA synchronous=FULL; PRAGMA busy_timeout=5000;');
+      if (String(db.prepare('PRAGMA journal_mode').get().journal_mode).toLowerCase() !== 'wal') {
+        throw catalogError('CATALOG_BUILD_JOURNAL_INVALID', 'Building file must use WAL');
+      }
+      validateDbHandle(db, { expectedGenerationId: id });
+      if (catalogMeta(db).state !== 'building') {
+        throw catalogError('CATALOG_BUILD_SEALED', 'Only a building generation may resume');
+      }
+      return new CatalogGenerationBuilder({
+        storageDir: dir, generationId: id, buildingPath, finalPath, db, now,
+      });
+    } catch (error) {
+      db.close();
+      throw error;
+    }
+  }
+
   static create({
     storageDir,
     generationId,
@@ -1080,9 +1108,13 @@ function markGenerationNeedsRecovery(storageDir, filename) {
 }
 
 export class CatalogPublisher {
-  constructor(storageDir, { readers = [] } = {}) {
+  constructor(storageDir, { readers = [], mutex = null } = {}) {
     this.storageDir = requireStorageDir(storageDir);
     this.readers = [...readers];
+    if (mutex !== null && !(mutex instanceof CatalogPublicationLock)) {
+      throw new TypeError('CatalogPublicationLock is required');
+    }
+    this.mutex = mutex;
   }
 
   state() {
@@ -1106,19 +1138,46 @@ export class CatalogPublisher {
     };
   }
 
-  publish(generationId) {
+  publish(generationId, options = {}) {
+    if ((options.runId !== undefined || options.expectedCurrent !== undefined) && !this.mutex) {
+      throw new TypeError('Ingest publication requires CatalogPublicationLock');
+    }
+    const work = () => this.#publishUnlocked(generationId, options);
+    return this.mutex ? this.mutex.withLock(work) : work();
+  }
+
+  #publishUnlocked(generationId, {
+    expectedCurrent = undefined, runId = null, replayStore = null,
+  } = {}) {
     const id = validateGenerationId(generationId);
     inspectCatalogGeneration(this.storageDir, id);
     const next = generationFilename(id);
     const before = this.state();
+    if (expectedCurrent !== undefined && before.current_generation !== expectedCurrent) {
+      throw catalogError('CATALOG_CURRENT_MOVED', 'CURRENT changed before publication');
+    }
+    if (runId !== null && (!replayStore || typeof replayStore.recordPublication !== 'function')) {
+      throw new TypeError('Full publication needs a replay store');
+    }
 
     if (before.current_filename === next) {
       reloadReaders(this.readers, id);
+      if (runId !== null) {
+        const entry = replayStore.publication(id);
+        if (!entry || entry.runId !== runId) {
+          throw catalogError('CATALOG_PUBLICATION_CONFLICT', 'CURRENT belongs to another run');
+        }
+        if (entry.state === 'intent') {
+          replayStore.recordPublication(id, runId, 'switched');
+        }
+      }
       return {
         changed: false,
         ...this.state(),
       };
     }
+
+    if (runId !== null) replayStore.recordPublication(id, runId, 'intent');
 
     if (before.current_filename) {
       atomicWritePointer(
@@ -1151,14 +1210,27 @@ export class CatalogPublisher {
       throw error;
     }
 
+    if (runId !== null) replayStore.recordPublication(id, runId, 'switched');
     return {
       changed: true,
       ...this.state(),
     };
   }
 
-  rollbackToPrevious() {
+  rollbackToPrevious(options = {}) {
+    if ((options.replayStore !== undefined || options.expectedCurrent !== undefined) &&
+        !this.mutex) {
+      throw new TypeError('Ingest rollback requires CatalogPublicationLock');
+    }
+    const work = () => this.#rollbackUnlocked(options);
+    return this.mutex ? this.mutex.withLock(work) : work();
+  }
+
+  #rollbackUnlocked({ expectedCurrent = undefined, replayStore = null } = {}) {
     const before = this.state();
+    if (expectedCurrent !== undefined && before.current_generation !== expectedCurrent) {
+      throw catalogError('CATALOG_CURRENT_MOVED', 'CURRENT changed before rollback');
+    }
     if (
       !before.current_filename ||
       !before.previous_filename
@@ -1185,6 +1257,13 @@ export class CatalogPublisher {
       this.storageDir,
       before.previous_filename
     );
+
+    if (replayStore) {
+      const entry = replayStore.publication(before.current_generation);
+      if (entry) replayStore.recordPublication(
+        before.current_generation, entry.runId, 'rolled_back'
+      );
+    }
 
     // Make the recovery target CURRENT first. A crash between pointer writes
     // then leaves the good generation reachable, even if PREVIOUS == CURRENT.
