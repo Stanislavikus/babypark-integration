@@ -276,6 +276,11 @@ const SCHEMA_SQL = `
     run_id TEXT PRIMARY KEY,
     layer TEXT NOT NULL
       CHECK(layer IN ('taxonomy','content','commercial','stock','full')),
+    run_kind TEXT NOT NULL
+      CHECK((run_kind='full' AND layer='full') OR
+            (run_kind='incremental' AND layer IN ('taxonomy','content','commercial','stock'))),
+    run_digest TEXT CHECK(run_digest IS NULL OR (length(run_digest)=64 AND run_digest NOT GLOB '*[^0-9a-f]*')),
+    final_seq INTEGER CHECK(final_seq IS NULL OR final_seq >= 0),
     status TEXT NOT NULL
       CHECK(status IN (
         'STAGING',
