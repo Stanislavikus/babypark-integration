@@ -1,0 +1,27 @@
+[Unit]
+Description=BabyPark Integration Service
+After=network-online.target chatwoot-web.1.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+EnvironmentFile=/etc/babypark-integration.env
+ExecStart=/usr/bin/node /opt/babypark-integration/index.mjs
+Restart=always
+RestartSec=3
+TimeoutStopSec=10
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/babypark-integration
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+LockPersonality=true
+RestrictSUIDSGID=true
+
+[Install]
+WantedBy=multi-user.target

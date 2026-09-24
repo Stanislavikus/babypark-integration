@@ -1,0 +1,2 @@
+Node: v24.20.0
+Chatwoot package version: 4.17.1
