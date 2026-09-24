@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
@@ -5,7 +6,8 @@ import { DatabaseSync } from 'node:sqlite';
 const LAYERS = new Set(['content', 'commercial', 'stock', 'taxonomy']);
 const ID_RE = /^[A-Za-z0-9_-]{1,64}$/;
 const HASH_RE = /^[a-f0-9]{64}$/;
-const SCHEMA_VERSION = 2;
+const SCHEMA_VERSION = 3;
+const PROCESS_BOOT_ID = crypto.randomUUID();
 
 export class ReplayStoreError extends Error {
   constructor(code, message) {
@@ -60,7 +62,7 @@ function transact(db, work) {
 }
 
 export class ReplayStore {
-  static createNew(filePath, { maxReceipts = 20000 } = {}) {
+  static createNew(filePath, { maxReceipts = 20000, leaseSeconds = 60 } = {}) {
     const resolved = path.resolve(filePath);
     if (!fs.existsSync(path.dirname(resolved))) {
       fail('INGEST_REPLAY_PARENT_MISSING', 'Parent directory does not exist');
@@ -86,14 +88,17 @@ export class ReplayStore {
           ack_json TEXT,
           ack_generation_id TEXT,
           ack_run_digest TEXT,
+          owner_boot_id TEXT,
+          owner_token TEXT,
+          lease_until INTEGER,
           created_at INTEGER NOT NULL,
           PRIMARY KEY(kid, run_id, layer, seq),
-          CHECK((status='pending' AND ack_json IS NULL AND ack_generation_id IS NULL AND ack_run_digest IS NULL) OR
-                (status='acked' AND ack_json IS NOT NULL AND ack_generation_id IS NOT NULL AND ack_run_digest IS NOT NULL))
+          CHECK((status='pending' AND ack_json IS NULL AND ack_generation_id IS NULL AND ack_run_digest IS NULL AND owner_boot_id IS NOT NULL AND owner_token IS NOT NULL AND lease_until IS NOT NULL) OR
+                (status='acked' AND ack_json IS NOT NULL AND ack_generation_id IS NOT NULL AND ack_run_digest IS NOT NULL AND owner_boot_id IS NULL AND owner_token IS NULL AND lease_until IS NULL))
         );
-        PRAGMA user_version=2;
+        PRAGMA user_version=3;
       `);
-      return new ReplayStore(db, maxReceipts);
+      return new ReplayStore(db, maxReceipts, leaseSeconds);
     } catch (error) {
       db?.close();
       fs.rmSync(resolved, { force: true });
@@ -101,7 +106,7 @@ export class ReplayStore {
     }
   }
 
-  static openExisting(filePath, { maxReceipts = 20000 } = {}) {
+  static openExisting(filePath, { maxReceipts = 20000, leaseSeconds = 60 } = {}) {
     const resolved = path.resolve(filePath);
     if (!fs.existsSync(resolved) || !fs.statSync(resolved).isFile()) {
       fail('INGEST_REPLAY_MISSING', 'Replay database must be bootstrapped');
@@ -124,19 +129,23 @@ export class ReplayStore {
         fail('INGEST_REPLAY_SCHEMA_INVALID', 'Replay database journal mode must be DELETE');
       }
       db.exec('PRAGMA synchronous=FULL; PRAGMA busy_timeout=5000;');
-      return new ReplayStore(db, maxReceipts);
+      return new ReplayStore(db, maxReceipts, leaseSeconds);
     } catch (error) {
       db.close();
       throw error;
     }
   }
 
-  constructor(db, maxReceipts) {
+  constructor(db, maxReceipts, leaseSeconds) {
     if (!Number.isSafeInteger(maxReceipts) || maxReceipts < 1) {
       fail('INGEST_REPLAY_CONFIG_INVALID', 'maxReceipts must be positive');
     }
+    if (!Number.isSafeInteger(leaseSeconds) || leaseSeconds < 1 || leaseSeconds > 3600) {
+      fail('INGEST_REPLAY_CONFIG_INVALID', 'leaseSeconds must be in 1..3600');
+    }
     this.db = db;
     this.maxReceipts = maxReceipts;
+    this.leaseSeconds = leaseSeconds;
   }
 
   claim(key, createdAt = Math.floor(Date.now() / 1000)) {
@@ -146,7 +155,7 @@ export class ReplayStore {
     }
     return transact(this.db, () => {
       const row = this.db.prepare(
-        'SELECT body_sha256, final, content_encoding, status, ack_json FROM receipts ' +
+        'SELECT body_sha256, final, content_encoding, status, lease_until FROM receipts ' +
         'WHERE kid=? AND run_id=? AND layer=? AND seq=?'
       ).get(kid, runId, layer, seq);
       if (row) {
@@ -156,21 +165,72 @@ export class ReplayStore {
         }
         return row.status === 'acked'
           ? { status: 'ACK_RECORDED' }
-          : { status: 'PENDING' };
+          : { status: 'PENDING', leaseUntil: row.lease_until };
       }
       const count = this.db.prepare('SELECT COUNT(*) AS n FROM receipts').get().n;
       if (count >= this.maxReceipts) {
         fail('INGEST_REPLAY_CAPACITY', 'Replay ledger is full');
       }
+      const claimToken = crypto.randomUUID();
+      const leaseUntil = createdAt + this.leaseSeconds;
+      if (!Number.isSafeInteger(leaseUntil)) {
+        fail('INGEST_REPLAY_TIME_INVALID', 'Lease time exceeds safe integer range');
+      }
       this.db.prepare(
-        'INSERT INTO receipts(kid,run_id,layer,seq,body_sha256,final,content_encoding,status,ack_json,created_at) ' +
-        "VALUES (?,?,?,?,?,?,?,'pending',NULL,?)"
-      ).run(kid, runId, layer, seq, bodySha256, Number(final), contentEncoding, createdAt);
-      return { status: 'NEW' };
+        'INSERT INTO receipts(kid,run_id,layer,seq,body_sha256,final,content_encoding,status,ack_json,owner_boot_id,owner_token,lease_until,created_at) ' +
+        "VALUES (?,?,?,?,?,?,?,'pending',NULL,?,?,?,?)"
+      ).run(kid, runId, layer, seq, bodySha256, Number(final), contentEncoding,
+        PROCESS_BOOT_ID, claimToken, leaseUntil, createdAt);
+      return { status: 'NEW', claimToken, leaseUntil };
     });
   }
 
-  complete(key, ack, evidence) {
+  // Caller must inspect CURRENT for committed evidence before takeover.
+  // Expiry alone only permits a fenced retry; it does not prove absence of apply.
+  takeover(key, { now, expectedLeaseUntil }) {
+    const { kid, runId, layer, seq, bodySha256, final, contentEncoding } = validateKey(key);
+    if (!Number.isSafeInteger(now) || now < 0 ||
+        !Number.isSafeInteger(expectedLeaseUntil) || expectedLeaseUntil < 0) {
+      fail('INGEST_REPLAY_TIME_INVALID', 'Invalid takeover time');
+    }
+    return transact(this.db, () => {
+      const row = this.db.prepare(
+        'SELECT body_sha256, final, content_encoding, status, lease_until FROM receipts ' +
+        'WHERE kid=? AND run_id=? AND layer=? AND seq=?'
+      ).get(kid, runId, layer, seq);
+      if (!row) fail('INGEST_REPLAY_UNCLAIMED', 'Claim does not exist');
+      if (row.body_sha256 !== bodySha256 || row.final !== Number(final) ||
+          row.content_encoding !== contentEncoding) {
+        fail('INGEST_REPLAY_CONFLICT', 'Takeover body hash differs from claim');
+      }
+      if (row.status === 'acked') return { status: 'ACK_RECORDED' };
+      if (row.lease_until !== expectedLeaseUntil || now <= row.lease_until) {
+        return { status: 'PENDING', leaseUntil: row.lease_until };
+      }
+      const claimToken = crypto.randomUUID();
+      const leaseUntil = now + this.leaseSeconds;
+      if (!Number.isSafeInteger(leaseUntil)) {
+        fail('INGEST_REPLAY_TIME_INVALID', 'Lease time exceeds safe integer range');
+      }
+      this.db.prepare(
+        'UPDATE receipts SET owner_boot_id=?, owner_token=?, lease_until=? ' +
+        'WHERE kid=? AND run_id=? AND layer=? AND seq=?'
+      ).run(PROCESS_BOOT_ID, claimToken, leaseUntil, kid, runId, layer, seq);
+      return { status: 'TAKEN_OVER', claimToken, leaseUntil };
+    });
+  }
+
+  complete(key, ack, evidence, claimToken) {
+    return this.#finish(key, ack, evidence, claimToken, false);
+  }
+
+  // Call only after a synchronous check of accepted evidence in CURRENT.
+  finishFromCurrentEvidence(key, ack, evidence) {
+    if (!key?.final) fail('INGEST_REPLAY_KEY_INVALID', 'Recovery requires a final chunk');
+    return this.#finish(key, ack, evidence, null, true);
+  }
+
+  #finish(key, ack, evidence, claimToken, fromCurrentEvidence) {
     const { generationId, runDigest } = validateEvidence(evidence);
     const { kid, runId, layer, seq, bodySha256, final, contentEncoding } = validateKey(key);
     if (ack === null || typeof ack !== 'object' || Array.isArray(ack)) {
@@ -183,7 +243,7 @@ export class ReplayStore {
     return transact(this.db, () => {
       const row = this.db.prepare(
         'SELECT body_sha256, final, content_encoding, status, ack_json, ' +
-        'ack_generation_id, ack_run_digest FROM receipts ' +
+        'ack_generation_id, ack_run_digest, owner_token FROM receipts ' +
         'WHERE kid=? AND run_id=? AND layer=? AND seq=?'
       ).get(kid, runId, layer, seq);
       if (!row) fail('INGEST_REPLAY_UNCLAIMED', 'ACK has no claim');
@@ -198,8 +258,12 @@ export class ReplayStore {
         }
         return JSON.parse(row.ack_json);
       }
+      if (!fromCurrentEvidence && row.owner_token !== claimToken) {
+        fail('INGEST_REPLAY_OWNER_LOST', 'Only the current claim owner may complete');
+      }
       this.db.prepare(
-        "UPDATE receipts SET status='acked', ack_json=?, ack_generation_id=?, ack_run_digest=? " +
+        "UPDATE receipts SET status='acked', ack_json=?, ack_generation_id=?, ack_run_digest=?, " +
+        'owner_boot_id=NULL, owner_token=NULL, lease_until=NULL ' +
         'WHERE kid=? AND run_id=? AND layer=? AND seq=?'
       ).run(ackJson, generationId, runDigest, kid, runId, layer, seq);
       return JSON.parse(ackJson);
@@ -219,9 +283,13 @@ export class ReplayStore {
       fail('INGEST_REPLAY_CONFLICT', 'ACK body hash differs from claim');
     }
     if (row.status !== 'acked') return { status: 'PENDING' };
-    if (!evidence || evidence.accepted !== true ||
-        evidence.generationId !== row.ack_generation_id ||
+    if (evidence?.accepted === true &&
+        evidence.generationId === row.ack_generation_id &&
         evidence.runDigest !== row.ack_run_digest) {
+      fail('INGEST_REPLAY_CONFLICT', 'CURRENT run digest conflicts with recorded ACK');
+    }
+    if (!evidence || evidence.accepted !== true ||
+        evidence.generationId !== row.ack_generation_id) {
       return { status: 'RUN_SUPERSEDED' };
     }
     return { status: 'ACKED', ack: JSON.parse(row.ack_json) };

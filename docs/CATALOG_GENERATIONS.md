@@ -220,9 +220,13 @@ Before switching back, the rollback target is marked:
 for every catalog layer.
 
 Then:
-- PREVIOUS <- generation being rolled back from;
 - CURRENT <- older generation;
+- PREVIOUS <- generation being rolled back from;
 - readers reopen the older generation synchronously.
+
+If the process stops between the pointer writes, CURRENT already refers to the
+rollback target. PREVIOUS may temporarily equal CURRENT; the target remains
+reachable and readers can reopen it.
 
 Because accepted watermarks live inside each catalog generation, rollback also
 restores the older authoritative watermark instead of leaving an exporter cursor
