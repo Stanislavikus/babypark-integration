@@ -36,10 +36,10 @@ function setup(t, layer = 'content', status = 'ACCEPTED', savedDigest = digest, 
     if (id === 'g2') {
       builder.db.prepare(
         'INSERT INTO ingest_runs(run_id,layer,run_kind,run_digest,final_seq,' +
-        'status,started_at,terminal_at) VALUES(?,?,?,?,?,?,?,?)'
+        'status,source_watermark,started_at,terminal_at) VALUES(?,?,?,?,?,?,?,?,?)'
       ).run(key.runId, layer, layer === 'full' ? 'full' : 'incremental',
-        savedDigest, finalSeq, status, '2026-09-24T00:00:00Z',
-        '2026-09-24T00:00:01Z');
+        savedDigest, finalSeq, status, layer === 'full' ? null : '10',
+        '2026-09-24T00:00:00Z', '2026-09-24T00:00:01Z');
     }
     builder.seal();
   }
@@ -59,7 +59,7 @@ test('accepted ACK follows evidence in CURRENT through rollback and roll-forward
   assert.equal(claim(f.store, f.reader).status, 'NEW');
   f.reopen();
   const ack = renderAcceptedRunAck({
-    key, generationId: 'g2', runDigest: digest, sourceWatermark: null,
+    key, generationId: 'g2', runDigest: digest, sourceWatermark: '10',
   });
   assert.deepEqual(finishPendingAgainstCurrent({ store: f.store, reader: f.reader, key }),
     { status: 'ACKED', ack });
@@ -112,7 +112,7 @@ test('stored ACK cannot substitute a watermark absent from CURRENT', t => {
   claim(f.store, f.reader);
   const accepted = finishPendingAgainstCurrent({ store: f.store, reader: f.reader, key });
   assert.equal(accepted.status, 'ACKED');
-  assert.equal(accepted.ack.source_watermark, null);
+  assert.equal(accepted.ack.source_watermark, '10');
   const forged = { ...accepted.ack, source_watermark: '999' };
   f.store.db.prepare(
     'UPDATE receipts SET ack_json=? WHERE kid=? AND run_id=? AND layer=? AND seq=?'
@@ -134,6 +134,14 @@ test('ACCEPTED row requires a digest and final sequence', t => {
     "INSERT INTO ingest_runs(run_id,layer,run_kind,status,started_at,terminal_at) " +
     "VALUES('bad','content','incremental','ACCEPTED','now','now')"
   ).run(), /CHECK constraint failed/);
+  assert.throws(() => builder.db.prepare(
+    "INSERT INTO ingest_runs(run_id,layer,run_kind,run_digest,final_seq,status,started_at,terminal_at) " +
+    "VALUES('no-watermark','content','incremental',?,0,'ACCEPTED','now','now')"
+  ).run(digest), /CHECK constraint failed/);
+  assert.throws(() => builder.db.prepare(
+    "INSERT INTO ingest_runs(run_id,layer,run_kind,run_digest,final_seq,status,source_watermark,started_at,terminal_at) " +
+    "VALUES('long-watermark','content','incremental',?,0,'ACCEPTED',?,'now','now')"
+  ).run(digest, '1'.repeat(21)), /CHECK constraint failed/);
 });
 
 test('accepted evidence permits staged-body cleanup without losing final ACK', t => {

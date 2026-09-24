@@ -7,8 +7,8 @@ import { CatalogReader } from '../sqlite/generation.mjs';
 const LAYERS = new Set(['content', 'commercial', 'stock', 'taxonomy', 'full']);
 const ID_RE = /^[A-Za-z0-9_-]{1,64}$/;
 const HASH_RE = /^[a-f0-9]{64}$/;
-const WATERMARK_RE = /^(0|[1-9][0-9]*)$/;
-const SCHEMA_VERSION = 5;
+const WATERMARK_RE = /^(0|[1-9][0-9]{0,19})$/;
+const SCHEMA_VERSION = 6;
 const MAX_RUN_STAGED_BYTES = 8 * 1024 * 1024;
 const MAX_LEDGER_STAGED_BYTES = 32 * 1024 * 1024;
 const PROCESS_BOOT_ID = crypto.randomUUID();
@@ -147,7 +147,7 @@ function transact(db, work) {
 }
 
 export class ReplayStore {
-  static createNew(filePath, { maxReceipts = 20000, leaseSeconds = 60 } = {}) {
+  static createNew(filePath, { maxReceipts = 20000, leaseSeconds = 60, catalogStorageDir = null } = {}) {
     const resolved = path.resolve(filePath);
     if (!fs.existsSync(path.dirname(resolved))) {
       fail('INGEST_REPLAY_PARENT_MISSING', 'Parent directory does not exist');
@@ -175,6 +175,7 @@ export class ReplayStore {
           trailer_base_generation_id TEXT,
           trailer_base_watermark TEXT,
           claim_generation_id TEXT,
+          building_generation_id TEXT,
           ack_json TEXT,
           staged_body BLOB,
           ack_generation_id TEXT,
@@ -184,6 +185,8 @@ export class ReplayStore {
           lease_until INTEGER,
           created_at INTEGER NOT NULL,
           PRIMARY KEY(kid, run_id, layer, seq),
+          CHECK(layer='full' OR building_generation_id IS NULL),
+          CHECK(status NOT IN ('staged','staged_released') OR layer<>'full' OR building_generation_id IS NOT NULL),
           CHECK((final=0 AND trailer_run_digest IS NULL AND trailer_count IS NULL AND trailer_base_generation_id IS NULL AND claim_generation_id IS NULL) OR
                 (final=1 AND trailer_run_digest IS NOT NULL AND trailer_count >= 0 AND trailer_base_generation_id IS NOT NULL AND claim_generation_id IS NOT NULL)),
           CHECK((status='pending' AND ack_json IS NULL AND staged_body IS NULL AND ack_generation_id IS NULL AND ack_run_digest IS NULL AND owner_boot_id IS NOT NULL AND owner_token IS NOT NULL AND lease_until IS NOT NULL) OR
@@ -198,15 +201,16 @@ export class ReplayStore {
                  owner_token IS NULL AND lease_until IS NULL) OR
                 (status='acked' AND final=1 AND ack_json IS NOT NULL AND staged_body IS NULL AND ack_generation_id IS NOT NULL AND ack_run_digest IS NOT NULL AND owner_boot_id IS NULL AND owner_token IS NULL AND lease_until IS NULL))
         );
+        CREATE INDEX receipts_run_id_idx ON receipts(run_id);
         CREATE TABLE publications (
           generation_id TEXT PRIMARY KEY,
           run_id TEXT NOT NULL,
           state TEXT NOT NULL CHECK(state IN ('intent','switched','rolled_back')),
           updated_at INTEGER NOT NULL
         );
-        PRAGMA user_version=5;
+        PRAGMA user_version=6;
       `);
-      return new ReplayStore(db, maxReceipts, leaseSeconds);
+      return new ReplayStore(db, maxReceipts, leaseSeconds, catalogStorageDir);
     } catch (error) {
       db?.close();
       fs.rmSync(resolved, { force: true });
@@ -214,7 +218,7 @@ export class ReplayStore {
     }
   }
 
-  static openExisting(filePath, { maxReceipts = 20000, leaseSeconds = 60 } = {}) {
+  static openExisting(filePath, { maxReceipts = 20000, leaseSeconds = 60, catalogStorageDir = null } = {}) {
     const resolved = path.resolve(filePath);
     if (!fs.existsSync(resolved) || !fs.statSync(resolved).isFile()) {
       fail('INGEST_REPLAY_MISSING', 'Replay database must be bootstrapped');
@@ -240,14 +244,14 @@ export class ReplayStore {
         fail('INGEST_REPLAY_SCHEMA_INVALID', 'Replay database journal mode must be DELETE');
       }
       db.exec('PRAGMA synchronous=FULL; PRAGMA busy_timeout=5000;');
-      return new ReplayStore(db, maxReceipts, leaseSeconds);
+      return new ReplayStore(db, maxReceipts, leaseSeconds, catalogStorageDir);
     } catch (error) {
       db.close();
       throw error;
     }
   }
 
-  constructor(db, maxReceipts, leaseSeconds) {
+  constructor(db, maxReceipts, leaseSeconds, catalogStorageDir) {
     if (!Number.isSafeInteger(maxReceipts) || maxReceipts < 1) {
       fail('INGEST_REPLAY_CONFIG_INVALID', 'maxReceipts must be positive');
     }
@@ -257,6 +261,39 @@ export class ReplayStore {
     this.db = db;
     this.maxReceipts = maxReceipts;
     this.leaseSeconds = leaseSeconds;
+    this.catalogStorageDir = catalogStorageDir === null ? null : fs.realpathSync(catalogStorageDir);
+  }
+
+  #fullAuthority(db, key, expectedGenerationId = null, requireBuilding = false) {
+    if (!(db instanceof DatabaseSync) || !this.catalogStorageDir) return null;
+    try {
+      const filename = db.prepare('PRAGMA database_list').all()
+        .find(row => row.name === 'main')?.file;
+      const match = /^catalog\.([A-Za-z0-9][A-Za-z0-9_-]{0,63})\.(building\.)?sqlite$/
+        .exec(path.basename(filename || ''));
+      if (!match || path.dirname(filename) !== this.catalogStorageDir ||
+          (requireBuilding && !match[2]) ||
+          (expectedGenerationId !== null && match[1] !== expectedGenerationId)) return null;
+      // Separate read-only handle cannot see uncommitted run_chunks.
+      const committed = new DatabaseSync(filename, { readOnly: true, create: false });
+      try {
+        const meta = committed.prepare(
+          'SELECT generation_id, state FROM catalog_meta WHERE singleton=1'
+        ).get();
+        const chunk = committed.prepare(
+          'SELECT body_sha256 FROM run_chunks WHERE run_id=? AND kid=? AND seq=?'
+        ).get(key.runId, key.kid, key.seq);
+        if (meta?.generation_id !== match[1] ||
+            !['building', 'ready'].includes(meta.state) ||
+            (match[2] ? meta.state !== 'building' : meta.state !== 'ready') ||
+            chunk?.body_sha256 !== key.bodySha256) return null;
+        return meta.generation_id;
+      } finally {
+        committed.close();
+      }
+    } catch {
+      return null;
+    }
   }
 
   claim(key, createdAt = Math.floor(Date.now() / 1000), context) {
@@ -285,7 +322,7 @@ export class ReplayStore {
           fail('INGEST_REPLAY_CONFLICT', 'Same ingest key with different body hash');
         }
         if (row.status === 'acked') return { status: 'ACK_RECORDED' };
-        if (row.status === 'staged') return { status: 'STAGED_RECORDED' };
+        if (row.status === 'staged') return { status: layer === 'full' ? 'STAGED_UNVERIFIED' : 'STAGED_RECORDED' };
         if (row.status === 'staged_released') return { status: 'STAGED_RELEASED' };
         return { status: 'PENDING', leaseUntil: row.lease_until };
       }
@@ -382,26 +419,30 @@ export class ReplayStore {
   verifyClaimedRunDigest(key, { fullBuildDb } = {}) {
     const { kid, runId, layer, seq } = validateKey(key);
     const trailer = this.getClaimedFinal(key);
-    if (layer === 'full' && !(fullBuildDb instanceof DatabaseSync)) {
-      fail('INGEST_REPLAY_STAGING_INVALID', 'Full digest requires building-file authority');
+    if (layer === 'full' && !this.catalogStorageDir) {
+      fail('INGEST_REPLAY_STAGING_INVALID', 'Full digest requires catalog storage directory');
     }
     const staged = this.db.prepare(
-      "SELECT body_sha256, staged_body FROM receipts " +
+      "SELECT body_sha256, staged_body, building_generation_id FROM receipts " +
       "WHERE kid=? AND run_id=? AND layer=? AND seq=? AND status='staged'"
     );
-    const fullChunk = layer === 'full' ? fullBuildDb.prepare(
-      'SELECT body_sha256 FROM run_chunks WHERE run_id=? AND kid=? AND seq=?'
-    ) : null;
     const hashes = [];
+    let expectedBuildGeneration = null;
     const chunkKeys = [];
     for (let i = 0; i < seq; i += 1) {
       const row = staged.get(kid, runId, layer, i);
       if (!row) fail('INGEST_REPLAY_DIGEST_INCOMPLETE', 'Missing staged chunk');
       if (layer === 'full') {
-        const authority = fullChunk.get(runId, kid, i);
-        if (row.staged_body !== null || authority?.body_sha256 !== row.body_sha256) {
+        const chunkKey = { ...key, seq: i, bodySha256: row.body_sha256 };
+        const generationId = this.#fullAuthority(
+          fullBuildDb, chunkKey, row.building_generation_id
+        );
+        if (row.staged_body !== null || !generationId ||
+            (expectedBuildGeneration !== null &&
+             expectedBuildGeneration !== generationId)) {
           fail('INGEST_REPLAY_DIGEST_CONFLICT', 'Full building chunk differs from receipt');
         }
+        expectedBuildGeneration = generationId;
       } else if (row.staged_body === null ||
           crypto.createHash('sha256').update(row.staged_body).digest('hex') !== row.body_sha256) {
         fail('INGEST_REPLAY_DIGEST_CONFLICT', 'Staged body differs from receipt');
@@ -438,7 +479,7 @@ export class ReplayStore {
         fail('INGEST_REPLAY_CONFLICT', 'Takeover body hash differs from claim');
       }
       if (row.status === 'acked') return { status: 'ACK_RECORDED' };
-      if (row.status === 'staged') return { status: 'STAGED_RECORDED' };
+      if (row.status === 'staged') return { status: layer === 'full' ? 'STAGED_UNVERIFIED' : 'STAGED_RECORDED' };
       if (row.status === 'staged_released') return { status: 'STAGED_RELEASED' };
       if (final) fail('INGEST_REPLAY_STATE_REQUIRED', 'Final takeover needs CURRENT and publication gate');
       if (row.lease_until !== expectedLeaseUntil || now <= row.lease_until) {
@@ -464,20 +505,16 @@ export class ReplayStore {
         crypto.createHash('sha256').update(verifiedBody).digest('hex') !== bodySha256) {
       fail('INGEST_REPLAY_STAGING_INVALID', 'Staging needs the verified nonfinal body');
     }
-    if (layer === 'full') {
-      if (!(fullBuildDb instanceof DatabaseSync) ||
-          fullBuildDb.prepare('SELECT state FROM catalog_meta WHERE singleton=1').get()?.state !== 'building' ||
-          fullBuildDb.prepare(
-            'SELECT body_sha256 FROM run_chunks WHERE run_id=? AND kid=? AND seq=?'
-          ).get(runId, kid, seq)?.body_sha256 !== bodySha256) {
-        fail('INGEST_REPLAY_STAGING_INVALID', 'Full chunk needs durable building-file authority');
-      }
+    const buildingGenerationId = layer === 'full'
+      ? this.#fullAuthority(fullBuildDb, key, null, true) : null;
+    if (layer === 'full' && !buildingGenerationId) {
+      fail('INGEST_REPLAY_STAGING_INVALID', 'Full chunk needs committed building-file authority');
     }
     const ack = { staged: true, run_id: runId, layer, seq, body_sha256: bodySha256 };
     const ackJson = canonicalJson(ack);
     return transact(this.db, () => {
       const row = this.db.prepare(
-        'SELECT body_sha256, final, content_encoding, status, ack_json, owner_token ' +
+        'SELECT body_sha256, final, content_encoding, status, ack_json, owner_token, building_generation_id ' +
         'FROM receipts WHERE kid=? AND run_id=? AND layer=? AND seq=?'
       ).get(kid, runId, layer, seq);
       if (!row) fail('INGEST_REPLAY_UNCLAIMED', 'Staged chunk has no claim');
@@ -485,7 +522,13 @@ export class ReplayStore {
           row.content_encoding !== contentEncoding) {
         fail('INGEST_REPLAY_CONFLICT', 'Staged body differs from claim');
       }
-      if (row.status === 'staged') return JSON.parse(row.ack_json);
+      if (row.status === 'staged_released') return { status: 'STAGED_RELEASED' };
+      if (row.status === 'staged') {
+        if (layer === 'full' && row.building_generation_id !== buildingGenerationId) {
+          fail('INGEST_REPLAY_STAGING_INVALID', 'Full chunk belongs to another generation');
+        }
+        return JSON.parse(row.ack_json);
+      }
       if (row.status !== 'pending' || row.owner_token !== claimToken) {
         fail('INGEST_REPLAY_OWNER_LOST', 'Only the current owner may stage');
       }
@@ -503,10 +546,11 @@ export class ReplayStore {
         }
       }
       this.db.prepare(
-        "UPDATE receipts SET status='staged', staged_body=?, ack_json=?, " +
+        "UPDATE receipts SET status='staged', staged_body=?, ack_json=?, building_generation_id=?, " +
         'owner_boot_id=NULL, owner_token=NULL, lease_until=NULL ' +
         'WHERE kid=? AND run_id=? AND layer=? AND seq=?'
-      ).run(layer === 'full' ? null : verifiedBody, ackJson, kid, runId, layer, seq);
+      ).run(layer === 'full' ? null : verifiedBody, ackJson,
+        buildingGenerationId, kid, runId, layer, seq);
       return ack;
     });
   }
@@ -515,7 +559,7 @@ export class ReplayStore {
     const { kid, runId, layer, seq, bodySha256, final, contentEncoding } = validateKey(key);
     if (final) fail('INGEST_REPLAY_KEY_INVALID', 'Staged ACK needs a nonfinal key');
     const row = this.db.prepare(
-      'SELECT body_sha256, content_encoding, status, ack_json FROM receipts ' +
+      'SELECT body_sha256, content_encoding, status, ack_json, building_generation_id FROM receipts ' +
       'WHERE kid=? AND run_id=? AND layer=? AND seq=?'
     ).get(kid, runId, layer, seq);
     if (!row) fail('INGEST_REPLAY_UNCLAIMED', 'Staged chunk has no claim');
@@ -525,11 +569,8 @@ export class ReplayStore {
     if (row.status === 'staged_released') return { status: 'RUN_SUPERSEDED' };
     if (row.status !== 'staged') return { status: 'PENDING' };
     if (layer === 'full' &&
-        (!(fullBuildDb instanceof DatabaseSync) ||
-         fullBuildDb.prepare(
-           'SELECT body_sha256 FROM run_chunks WHERE run_id=? AND kid=? AND seq=?'
-         ).get(runId, kid, seq)?.body_sha256 !== bodySha256)) {
-      fail('INGEST_REPLAY_STAGING_INVALID', 'Full building-file authority is missing');
+        !this.#fullAuthority(fullBuildDb, key, row.building_generation_id)) {
+      return { status: 'RUN_LOST' };
     }
     return { status: 'STAGED', ack: JSON.parse(row.ack_json) };
   }

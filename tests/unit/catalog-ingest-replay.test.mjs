@@ -72,6 +72,7 @@ test('noncanonical, duplicate, surplus and nondecimal trailers fail closed', t =
     '{"trailer":{"base_generation_id":"g_1","base_watermark":"10","count":1,"final_seq":1,"run_digest":"' + digest + '","rows":[]}}',
     '{"trailer":{"base_generation_id":"g_1","base_watermark":"10","count":1,"final_seq":1,"run_digest":"' + digest + '","run_digest":"' + digest + '"}}',
     canonicalJson({ trailer: { ...trailer, base_watermark: '010' } }),
+    canonicalJson({ trailer: { ...trailer, base_watermark: '1'.repeat(21) } }),
   ];
   for (const [i, raw] of bad.entries()) {
     const bytes = Buffer.from(raw);
@@ -178,22 +179,38 @@ test('full staged receipt stores hash only after building-file authority', t => 
   t.after(() => { try { builder.db.close(); } catch {} });
   const bytes = Buffer.from('{"rows":[{"id":"one"}]}');
   const chunk = { ...key, layer: 'full', seq: 0, final: false, bodySha256: hash(bytes) };
-  const store = ReplayStore.createNew(file);
+  const store = ReplayStore.createNew(file, { catalogStorageDir: dir });
   t.after(() => store.close());
   const c = store.claim(chunk);
   assert.throws(() => store.stage(chunk, bytes, c.claimToken, { fullBuildDb: builder.db }),
     code('INGEST_REPLAY_STAGING_INVALID'));
+  builder.db.exec('BEGIN IMMEDIATE');
   builder.db.prepare(
     'INSERT INTO run_chunks(run_id,kid,seq,body_sha256) VALUES(?,?,?,?)'
   ).run(chunk.runId, chunk.kid, chunk.seq, chunk.bodySha256);
+  assert.throws(() => store.stage(chunk, bytes, c.claimToken, { fullBuildDb: builder.db }),
+    code('INGEST_REPLAY_STAGING_INVALID'));
+  builder.db.exec('COMMIT');
   store.stage(chunk, bytes, c.claimToken, { fullBuildDb: builder.db });
   assert.equal(store.db.prepare(
     "SELECT staged_body IS NULL AS absent FROM receipts WHERE run_id=?"
   ).get(chunk.runId).absent, 1);
   assert.equal(store.resolveStagedAck(chunk, { fullBuildDb: builder.db }).status,
     'STAGED');
-  assert.throws(() => store.resolveStagedAck(chunk),
-    code('INGEST_REPLAY_STAGING_INVALID'));
+  assert.deepEqual(store.resolveStagedAck(chunk), { status: 'RUN_LOST' });
+  assert.deepEqual(store.claim(chunk), { status: 'STAGED_UNVERIFIED' });
+  assert.deepEqual(store.takeover(chunk, { now: 999, expectedLeaseUntil: 160 }),
+    { status: 'STAGED_UNVERIFIED' });
+  const other = CatalogGenerationBuilder.create({
+    storageDir: dir, generationId: 'g_3', sourceEpoch: 'epoch-1',
+    identityRevision: 0,
+  });
+  t.after(() => { try { other.db.close(); } catch {} });
+  other.db.prepare(
+    'INSERT INTO run_chunks(run_id,kid,seq,body_sha256) VALUES(?,?,?,?)'
+  ).run(chunk.runId, chunk.kid, chunk.seq, chunk.bodySha256);
+  assert.deepEqual(store.resolveStagedAck(chunk, { fullBuildDb: other.db }),
+    { status: 'RUN_LOST' });
   const runDigest = computeRunDigest({
     runId: key.runId, layer: 'full', baseGenerationId: 'g_1',
     baseWatermark: '10', count: 1, chunkHashes: [hash(bytes)],
@@ -205,6 +222,11 @@ test('full staged receipt stores hash only after building-file authority', t => 
   claim(store, reader, final, finalBody);
   assert.equal(store.verifyClaimedRunDigest(final, { fullBuildDb: builder.db }).runDigest,
     runDigest);
+  assert.throws(() => store.verifyClaimedRunDigest(final, { fullBuildDb: other.db }),
+    code('INGEST_REPLAY_DIGEST_CONFLICT'));
+  fs.renameSync(builder.buildingPath, builder.buildingPath + '.lost');
+  assert.deepEqual(store.resolveStagedAck(chunk, { fullBuildDb: builder.db }),
+    { status: 'RUN_LOST' });
 });
 
 test('publication journal is monotonic and records history', t => {

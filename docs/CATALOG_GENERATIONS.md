@@ -38,7 +38,7 @@ Allowed generation IDs:
 Path separators, spaces, leading dots and traversal forms are rejected before any
 file is created.
 
-## Catalog schema v2
+## Catalog schema v3
 
 Core state:
 - catalog_meta
@@ -90,7 +90,7 @@ Each layer can carry:
 - need_reconcile
 - need_full
 
-Accepted watermarks are canonical unsigned decimal strings without leading zeros.
+Accepted watermarks are canonical unsigned decimal strings of at most 20 digits without leading zeros.
 
 The active catalog generation owns the authoritative accepted layer state.
 

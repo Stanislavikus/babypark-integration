@@ -1,4 +1,4 @@
-export const CATALOG_SCHEMA_VERSION = 2;
+export const CATALOG_SCHEMA_VERSION = 3;
 
 export const CATALOG_LAYERS = Object.freeze([
   'taxonomy',
@@ -30,7 +30,7 @@ export const CATALOG_REQUIRED_TABLES = Object.freeze([
 const SCHEMA_SQL = `
   PRAGMA foreign_keys=ON;
   PRAGMA journal_mode=WAL;
-  PRAGMA synchronous=NORMAL;
+  PRAGMA synchronous=FULL;
 
   CREATE TABLE catalog_meta (
     singleton INTEGER PRIMARY KEY CHECK(singleton = 1),
@@ -51,7 +51,8 @@ const SCHEMA_SQL = `
       CHECK(layer IN ('taxonomy','content','commercial','stock')),
     accepted_watermark TEXT CHECK(
       accepted_watermark IS NULL OR
-      (length(accepted_watermark)>0 AND accepted_watermark NOT GLOB '*[^0-9]*' AND
+      (length(accepted_watermark) BETWEEN 1 AND 20 AND
+       accepted_watermark NOT GLOB '*[^0-9]*' AND
        (accepted_watermark='0' OR substr(accepted_watermark,1,1)<>'0'))
     ),
     accepted_source_fingerprint TEXT,
@@ -296,7 +297,8 @@ const SCHEMA_SQL = `
       )),
     source_watermark TEXT CHECK(
       source_watermark IS NULL OR
-      (length(source_watermark)>0 AND source_watermark NOT GLOB '*[^0-9]*' AND
+      (length(source_watermark) BETWEEN 1 AND 20 AND
+       source_watermark NOT GLOB '*[^0-9]*' AND
        (source_watermark='0' OR substr(source_watermark,1,1)<>'0'))
     ),
     started_at TEXT NOT NULL,
@@ -304,7 +306,8 @@ const SCHEMA_SQL = `
     error_code TEXT,
     metadata_json TEXT NOT NULL DEFAULT '{}',
     CHECK(status <> 'ACCEPTED' OR
-          (run_digest IS NOT NULL AND final_seq IS NOT NULL AND terminal_at IS NOT NULL))
+          (run_digest IS NOT NULL AND final_seq IS NOT NULL AND terminal_at IS NOT NULL AND
+           (run_kind='full' OR source_watermark IS NOT NULL)))
   );
 
   CREATE TABLE run_chunks (
@@ -334,7 +337,7 @@ const SCHEMA_SQL = `
     tokenize='trigram'
   );
 
-  PRAGMA user_version=2;
+  PRAGMA user_version=3;
 `;
 
 export function initializeCatalogSchema(db, {
