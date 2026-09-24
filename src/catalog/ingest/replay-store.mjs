@@ -147,7 +147,7 @@ function transact(db, work) {
 }
 
 export class ReplayStore {
-  static createNew(filePath, { maxReceipts = 20000, leaseSeconds = 60, catalogStorageDir = null } = {}) {
+  static createNew(filePath, { maxReceipts = 20000, leaseSeconds = 60, catalogStorageDir } = {}) {
     const resolved = path.resolve(filePath);
     if (!fs.existsSync(path.dirname(resolved))) {
       fail('INGEST_REPLAY_PARENT_MISSING', 'Parent directory does not exist');
@@ -218,7 +218,7 @@ export class ReplayStore {
     }
   }
 
-  static openExisting(filePath, { maxReceipts = 20000, leaseSeconds = 60, catalogStorageDir = null } = {}) {
+  static openExisting(filePath, { maxReceipts = 20000, leaseSeconds = 60, catalogStorageDir } = {}) {
     const resolved = path.resolve(filePath);
     if (!fs.existsSync(resolved) || !fs.statSync(resolved).isFile()) {
       fail('INGEST_REPLAY_MISSING', 'Replay database must be bootstrapped');
@@ -258,41 +258,77 @@ export class ReplayStore {
     if (!Number.isSafeInteger(leaseSeconds) || leaseSeconds < 1 || leaseSeconds > 3600) {
       fail('INGEST_REPLAY_CONFIG_INVALID', 'leaseSeconds must be in 1..3600');
     }
+    if (typeof catalogStorageDir !== 'string' || !catalogStorageDir) {
+      fail('INGEST_REPLAY_CONFIG_INVALID', 'catalogStorageDir is required');
+    }
+    let realDir;
+    try {
+      realDir = fs.realpathSync(catalogStorageDir);
+      if (!fs.statSync(realDir).isDirectory()) {
+        fail('INGEST_REPLAY_CONFIG_INVALID', 'catalogStorageDir must be a directory');
+      }
+    } catch (error) {
+      if (error instanceof ReplayStoreError) throw error;
+      fail('INGEST_REPLAY_CONFIG_INVALID', 'catalogStorageDir must exist');
+    }
     this.db = db;
     this.maxReceipts = maxReceipts;
     this.leaseSeconds = leaseSeconds;
-    this.catalogStorageDir = catalogStorageDir === null ? null : fs.realpathSync(catalogStorageDir);
+    this.catalogStorageDir = realDir;
   }
 
   #fullAuthority(db, key, expectedGenerationId = null, requireBuilding = false) {
-    if (!(db instanceof DatabaseSync) || !this.catalogStorageDir) return null;
+    if (!(db instanceof DatabaseSync)) {
+      fail('INGEST_REPLAY_AUTHORITY_REQUIRED', 'Full run requires a catalog database handle');
+    }
+    let filename;
     try {
-      const filename = db.prepare('PRAGMA database_list').all()
+      filename = db.prepare('PRAGMA database_list').all()
         .find(row => row.name === 'main')?.file;
-      const match = /^catalog\.([A-Za-z0-9][A-Za-z0-9_-]{0,63})\.(building\.)?sqlite$/
-        .exec(path.basename(filename || ''));
-      if (!match || path.dirname(filename) !== this.catalogStorageDir ||
-          (requireBuilding && !match[2]) ||
-          (expectedGenerationId !== null && match[1] !== expectedGenerationId)) return null;
-      // Separate read-only handle cannot see uncommitted run_chunks.
-      const committed = new DatabaseSync(filename, { readOnly: true, create: false });
-      try {
-        const meta = committed.prepare(
-          'SELECT generation_id, state FROM catalog_meta WHERE singleton=1'
-        ).get();
-        const chunk = committed.prepare(
-          'SELECT body_sha256 FROM run_chunks WHERE run_id=? AND kid=? AND seq=?'
-        ).get(key.runId, key.kid, key.seq);
-        if (meta?.generation_id !== match[1] ||
-            !['building', 'ready'].includes(meta.state) ||
-            (match[2] ? meta.state !== 'building' : meta.state !== 'ready') ||
-            chunk?.body_sha256 !== key.bodySha256) return null;
-        return meta.generation_id;
-      } finally {
-        committed.close();
-      }
     } catch {
-      return null;
+      fail('INGEST_REPLAY_AUTHORITY_UNAVAILABLE', 'Cannot inspect catalog database handle');
+    }
+    if (!filename) {
+      fail('INGEST_REPLAY_AUTHORITY_REQUIRED', 'Full run requires a file-backed catalog database');
+    }
+    const match = /^catalog\.([A-Za-z0-9][A-Za-z0-9_-]{0,63})\.(building\.)?sqlite$/
+      .exec(path.basename(filename));
+    if (!match || path.dirname(filename) !== this.catalogStorageDir) {
+      fail('INGEST_REPLAY_AUTHORITY_REQUIRED', 'Catalog handle is outside the configured directory');
+    }
+    if (requireBuilding && !match[2]) {
+      fail('INGEST_REPLAY_AUTHORITY_UNAVAILABLE', 'Full staging needs a building generation');
+    }
+    if (expectedGenerationId !== null && match[1] !== expectedGenerationId) {
+      return { status: 'ABSENT' };
+    }
+    let committed;
+    try {
+      // A separate read-only connection sees only committed run_chunks.
+      committed = new DatabaseSync(filename, { readOnly: true, create: false });
+      const meta = committed.prepare(
+        'SELECT generation_id, state FROM catalog_meta WHERE singleton=1'
+      ).get();
+      const chunk = committed.prepare(
+        'SELECT body_sha256 FROM run_chunks WHERE run_id=? AND kid=? AND seq=?'
+      ).get(key.runId, key.kid, key.seq);
+      if (!meta || !['building', 'ready'].includes(meta.state) ||
+          (match[2] ? meta.state !== 'building' : meta.state !== 'ready')) {
+        fail('INGEST_REPLAY_AUTHORITY_UNAVAILABLE', 'Catalog generation is not in the expected state');
+      }
+      if (meta.generation_id !== match[1] ||
+          chunk?.body_sha256 !== key.bodySha256) return { status: 'ABSENT' };
+      return { status: 'MATCH', generationId: match[1] };
+    } catch (error) {
+      if (error instanceof ReplayStoreError) throw error;
+      try {
+        fs.statSync(filename);
+      } catch (statError) {
+        if (statError.code === 'ENOENT') return { status: 'ABSENT' };
+      }
+      fail('INGEST_REPLAY_AUTHORITY_UNAVAILABLE', 'Cannot read committed catalog authority');
+    } finally {
+      if (committed) committed.close();
     }
   }
 
@@ -419,9 +455,6 @@ export class ReplayStore {
   verifyClaimedRunDigest(key, { fullBuildDb } = {}) {
     const { kid, runId, layer, seq } = validateKey(key);
     const trailer = this.getClaimedFinal(key);
-    if (layer === 'full' && !this.catalogStorageDir) {
-      fail('INGEST_REPLAY_STAGING_INVALID', 'Full digest requires catalog storage directory');
-    }
     const staged = this.db.prepare(
       "SELECT body_sha256, staged_body, building_generation_id FROM receipts " +
       "WHERE kid=? AND run_id=? AND layer=? AND seq=? AND status='staged'"
@@ -434,15 +467,15 @@ export class ReplayStore {
       if (!row) fail('INGEST_REPLAY_DIGEST_INCOMPLETE', 'Missing staged chunk');
       if (layer === 'full') {
         const chunkKey = { ...key, seq: i, bodySha256: row.body_sha256 };
-        const generationId = this.#fullAuthority(
+        const authority = this.#fullAuthority(
           fullBuildDb, chunkKey, row.building_generation_id
         );
-        if (row.staged_body !== null || !generationId ||
+        if (row.staged_body !== null || authority.status !== 'MATCH' ||
             (expectedBuildGeneration !== null &&
-             expectedBuildGeneration !== generationId)) {
+             expectedBuildGeneration !== authority.generationId)) {
           fail('INGEST_REPLAY_DIGEST_CONFLICT', 'Full building chunk differs from receipt');
         }
-        expectedBuildGeneration = generationId;
+        expectedBuildGeneration = authority.generationId;
       } else if (row.staged_body === null ||
           crypto.createHash('sha256').update(row.staged_body).digest('hex') !== row.body_sha256) {
         fail('INGEST_REPLAY_DIGEST_CONFLICT', 'Staged body differs from receipt');
@@ -505,11 +538,12 @@ export class ReplayStore {
         crypto.createHash('sha256').update(verifiedBody).digest('hex') !== bodySha256) {
       fail('INGEST_REPLAY_STAGING_INVALID', 'Staging needs the verified nonfinal body');
     }
-    const buildingGenerationId = layer === 'full'
+    const authority = layer === 'full'
       ? this.#fullAuthority(fullBuildDb, key, null, true) : null;
-    if (layer === 'full' && !buildingGenerationId) {
-      fail('INGEST_REPLAY_STAGING_INVALID', 'Full chunk needs committed building-file authority');
+    if (authority?.status === 'ABSENT') {
+      fail('INGEST_REPLAY_RUN_LOST', 'Full chunk has no committed building-file authority');
     }
+    const buildingGenerationId = authority?.generationId ?? null;
     const ack = { staged: true, run_id: runId, layer, seq, body_sha256: bodySha256 };
     const ackJson = canonicalJson(ack);
     return transact(this.db, () => {
@@ -523,12 +557,18 @@ export class ReplayStore {
         fail('INGEST_REPLAY_CONFLICT', 'Staged body differs from claim');
       }
       if (row.status === 'staged_released') return { status: 'STAGED_RELEASED' };
-      if (row.status === 'staged') {
-        if (layer === 'full' && row.building_generation_id !== buildingGenerationId) {
-          fail('INGEST_REPLAY_STAGING_INVALID', 'Full chunk belongs to another generation');
+      if (layer === 'full') {
+        const otherGeneration = this.db.prepare(
+          "SELECT 1 FROM receipts WHERE run_id=? AND layer='full' " +
+          "AND status IN ('staged','staged_released') " +
+          'AND building_generation_id<>? LIMIT 1'
+        ).get(runId, buildingGenerationId);
+        if (otherGeneration || (row.status === 'staged' &&
+            row.building_generation_id !== buildingGenerationId)) {
+          fail('INGEST_REPLAY_RUN_LOST', 'Full run already belongs to another generation');
         }
-        return JSON.parse(row.ack_json);
       }
+      if (row.status === 'staged') return { status: 'STAGED', ack: JSON.parse(row.ack_json) };
       if (row.status !== 'pending' || row.owner_token !== claimToken) {
         fail('INGEST_REPLAY_OWNER_LOST', 'Only the current owner may stage');
       }
@@ -551,7 +591,7 @@ export class ReplayStore {
         'WHERE kid=? AND run_id=? AND layer=? AND seq=?'
       ).run(layer === 'full' ? null : verifiedBody, ackJson,
         buildingGenerationId, kid, runId, layer, seq);
-      return ack;
+      return { status: 'STAGED', ack };
     });
   }
 
@@ -569,7 +609,7 @@ export class ReplayStore {
     if (row.status === 'staged_released') return { status: 'RUN_SUPERSEDED' };
     if (row.status !== 'staged') return { status: 'PENDING' };
     if (layer === 'full' &&
-        !this.#fullAuthority(fullBuildDb, key, row.building_generation_id)) {
+        this.#fullAuthority(fullBuildDb, key, row.building_generation_id).status === 'ABSENT') {
       return { status: 'RUN_LOST' };
     }
     return { status: 'STAGED', ack: JSON.parse(row.ack_json) };

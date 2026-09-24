@@ -48,10 +48,10 @@ function setup(t, layer = 'content', status = 'ACCEPTED', savedDigest = digest, 
   publisher.publish('g2');
   const reader = new CatalogReader(dir);
   const file = path.join(dir, 'replay.sqlite');
-  let store = ReplayStore.createNew(file);
+  let store = ReplayStore.createNew(file, { catalogStorageDir: dir });
   t.after(() => { reader.close(); store.close(); });
   return { publisher, reader, file, get store() { return store; },
-    reopen() { store.close(); store = ReplayStore.openExisting(file); } };
+    reopen() { store.close(); store = ReplayStore.openExisting(file, { catalogStorageDir: dir }); } };
 }
 
 test('accepted ACK follows evidence in CURRENT through rollback and roll-forward', t => {
@@ -170,6 +170,8 @@ test('accepted evidence permits staged-body cleanup without losing final ACK', t
   assert.equal(f.store.db.prepare(
     'SELECT staged_body IS NULL AS absent FROM receipts WHERE seq=0'
   ).get().absent, 1);
+  assert.deepEqual(f.store.stage(staged, chunk, c.claimToken),
+    { status: 'STAGED_RELEASED' });
   assert.deepEqual(f.store.resolveStagedAck(staged), { status: 'RUN_SUPERSEDED' });
   assert.equal(f.store.resolveFinalAckAgainstCurrent(final, f.reader).status, 'ACKED');
 });

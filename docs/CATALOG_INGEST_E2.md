@@ -61,7 +61,13 @@ catalog directory and matching catalog_meta generation. Stage accepts only a
 building file; replay rechecks authority before returning the ACK and reports
 RUN_LOST if it disappeared. Claim/takeover return STAGED_UNVERIFIED until this
 check. The builder uses SQLite synchronous=FULL; the separate read-only check
-cannot see uncommitted writes. Catalog schema v3 adds run_chunks and also requires
+cannot see uncommitted writes. A missing file or mismatched generation/hash
+yields RUN_LOST; absent configuration/handle and read failures raise distinct
+errors so transient faults do not trigger a new Drupal export. The catalog
+directory is required when creating and reopening the ledger. Full stage checks
+that all staged chunks of a run share one building generation and always
+returns {status, ack?}; a released receipt never returns an ACK.
+Catalog schema v3 adds run_chunks and also requires
 `run_digest`, `final_seq`, and `terminal_at` for ACCEPTED ingest_runs;
 the ambiguous ingest_runs.manifest_sha256 column is removed. No catalog ingest
 or catalog generations are deployed; existing development fixtures must be
@@ -114,6 +120,25 @@ Drupal ingest. Before enabling takeover, lock publish, rollback, apply, and
 claim; use pointer CAS, trailer base generation and numerically compared
 watermark, claim generation, and full publication history. Write intent
 before CURRENT, switched afterward, and rolled_back before rollback CURRENT.
+
+## Operations and future Drupal exporter
+
+The ingest schedule and allowed full-export rate must be configurable by source
+and layer; no fixed daily interval is assumed. Normally send changed data from
+a saved watermark. On a true RUN_LOST, require a new run, but distinguish that
+from retryable authority/configuration failures. Bound automated repeated full
+exports with an operator override so a fault cannot repeatedly scan live Drupal.
+Do not write to or purge unrelated Drupal application logs. The exporter should
+rotate/expire its own bounded diagnostic logs and expose run ID, source range,
+attempts, checkpoint and failure reason without storing secrets or full bodies.
+
+Before enabling HTTP ingest, expose staged ledger bytes and receipt occupancy;
+alert an administrator when staged bytes reach 75% of the 32 MiB limit and
+report hard-cap refusals. Count RUN_LOST separately from retryable authority
+errors. The final operations slice must deliver an administrator status view and
+email or admin-chat alerts for stalled runs, failures, rollback, capacity and
+source lag, with a configurable summary cadence and bounded log retention.
+Neither alert transport nor Drupal exporter exists in this fixture-only PR.
 
 ## Remaining gates before live ingest
 
