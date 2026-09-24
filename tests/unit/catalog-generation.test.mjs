@@ -556,6 +556,37 @@ test('rollback restores older watermark and forces full/reconcile on target', t 
   reader.close();
 });
 
+test('rollback interruption after CURRENT switch keeps target reachable', t => {
+  const f = fixture();
+  t.after(() => f.cleanup());
+  buildReady(f, 'g1', { watermark: '100' });
+  buildReady(f, 'g2', { watermark: '200' });
+  const publisher = new CatalogPublisher(f.dir);
+  publisher.publish('g1');
+  publisher.publish('g2');
+
+  const rename = fs.renameSync;
+  fs.renameSync = (source, destination) => {
+    rename(source, destination);
+    if (destination === path.join(f.dir, 'CURRENT')) {
+      throw new Error('simulated interruption after CURRENT rename');
+    }
+  };
+  try {
+    assert.throws(() => publisher.rollbackToPrevious(),
+      /simulated interruption/);
+  } finally {
+    fs.renameSync = rename;
+  }
+
+  const state = publisher.state();
+  assert.equal(state.current_generation, 'g1');
+  assert.equal(state.previous_generation, 'g1');
+  const restartedReader = new CatalogReader(f.dir);
+  assert.equal(restartedReader.reloadExpected().generation_id, 'g1');
+  restartedReader.close();
+});
+
 test('pointer filename and generation metadata mismatch fails closed', t => {
   const f = fixture();
   t.after(() => f.cleanup());

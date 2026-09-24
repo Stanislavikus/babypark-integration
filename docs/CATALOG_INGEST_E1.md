@@ -44,14 +44,22 @@ the transmitted body hash, final flag and encoding. Claim outcomes:
 
 - NEW: one worker may begin applying this chunk.
 - PENDING: a prior claim has no committed ACK; do not apply it again.
-- ACKED: return the stored ACK exactly.
+- ACK_RECORDED: an ACK exists in the ledger, but it is not returned by claim.
+  The receiver must read accepted run evidence from the current catalog generation,
+  then use resolveAck with the matching generation and run digest.
+  If CURRENT no longer contains that evidence, return RUN_SUPERSEDED and obtain
+  fresh producer state; do not replay the old run.
 - A different body or semantic flags for the same key: conflict.
 
-The ACK is immutable after commit. The file requires mode 0600,
+The ACK is stored in canonical JSON form with its generation ID and run digest.
+A pending claim has no takeover or lease in E.1; E.2 must add recovery before
+an HTTP receiver uses it. The file requires mode 0600,
 SQLite FULL synchronization, schema and integrity checks on open.
 The provisional upper bound is 20,000 receipts; new claims fail closed
 at capacity while existing ACKs remain readable. No age-based pruning
-is enabled. The E.2 receiver must resolve a PENDING receipt against
+is enabled in E.1. E.2 must implement bounded retention and capacity alerts
+before enabling ingest. Pruning must preserve live pending claims and remain
+consistent with signed-request expiry and authoritative run retention. The E.2 receiver must resolve a PENDING receipt against
 authoritative generation/run state after a crash before it can issue
 a final ACK; ledger and catalog publication are not yet atomic.
 

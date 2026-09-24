@@ -1186,15 +1186,17 @@ export class CatalogPublisher {
       before.previous_filename
     );
 
-    atomicWritePointer(
-      this.storageDir,
-      'PREVIOUS',
-      before.current_filename
-    );
+    // Make the recovery target CURRENT first. A crash between pointer writes
+    // then leaves the good generation reachable, even if PREVIOUS == CURRENT.
     atomicWritePointer(
       this.storageDir,
       'CURRENT',
       before.previous_filename
+    );
+    atomicWritePointer(
+      this.storageDir,
+      'PREVIOUS',
+      before.current_filename
     );
 
     try {
