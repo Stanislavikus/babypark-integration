@@ -1,6 +1,6 @@
 # Gateway v2 Cutover Runbook
 
-Status: PLANNED
+Status: CURRENT
 Last verified: 2026-09-24
 Owner: BabyPark
 Source of truth: deploy/chatwoot-host/, src/gateway/, scripts/backup-bridge.mjs
@@ -203,3 +203,44 @@ No automatic deletion is part of this cutover.
 The first isolated candidate attempt exposed a backup-artifact bug before production cutover: native node:sqlite backup inherited WAL mode and verification created root-owned WAL/SHM sidecars. A www-data candidate could not open that copied DB.
 
 Correction: backup helper now normalizes every backup to a single-file DELETE-journal artifact, fsyncs it, verifies integrity/journal mode, rejects pre-existing destination sidecars and regression-tests the standalone guarantee. Production bridge.sqlite was not changed by the failed candidate attempt.
+
+## Executed cutover result — 2026-09-24
+
+Production cutover completed successfully.
+
+Final state:
+- release: /opt/babypark-integration/releases/20260924-1809c564
+- current symlink points to that release
+- v2 service: babypark-integration-v2.service
+- v2 listener: 127.0.0.1:3102
+- v2 boot state: enabled
+- legacy service: inactive + disabled, retained for manual rollback
+- Nginx Viber/Chatwoot routes: 3102
+- bridge user_version: 2
+- bridge integrity_check: ok
+
+Preserved row counts immediately after migration:
+- sessions: 1
+- processed_viber: 1
+- processed_chatwoot: 2
+- outgoing_viber: 1
+- session_recovery_issues: 0
+
+Pre-cutover bridge backup:
+- path: /var/backups/babypark-integration/bridge.pre-v2.20260924T062925Z.sqlite
+- sha256: d3f63edc60bdaa2a1af6f3b4cdeba3c17924be47293923b9d8efbd52136f7509
+- integrity: ok
+- standalone: true
+- journal_mode: delete
+- mode: 0600
+
+Pre-cutover Nginx snapshot:
+- /var/backups/babypark-integration/nginx_chatwoot.pre-v2.20260924T062925Z.conf
+
+Public safe probes after Nginx reload:
+- invalid Viber signature -> HTTP 401
+- invalid Chatwoot signature -> HTTP 401
+
+No synthetic customer message was injected into production.
+No production Viber recipient was contacted for certification.
+No Drupal service/database was touched by this cutover.
