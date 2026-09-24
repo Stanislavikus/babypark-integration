@@ -4,6 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node --test --test-concurrency=1"
+    "test:legacy": "node --test --test-concurrency=1 tests/characterization/gateway-current.test.mjs",
+    "test:refactor": "GATEWAY_TARGET=src/gateway/index.mjs node --test --test-concurrency=1 tests/characterization/gateway-current.test.mjs",
+    "test": "npm run test:legacy && npm run test:refactor"
   }
 }
