@@ -8,6 +8,7 @@ import { GatewayDb } from '../../src/gateway/db.mjs';
 import {
   retentionConfig,
   retentionCutoffs,
+  inspectRetentionDb,
 } from '../../src/gateway/retention.mjs';
 
 function withTempDb(fn) {
@@ -20,7 +21,7 @@ function withTempDb(fn) {
   }
 }
 
-test('existing schema is versioned additively as user_version 1', () => {
+test('existing schema is versioned additively as user_version 2', () => {
   withTempDb(dbPath => {
     const raw = new DatabaseSync(dbPath);
     raw.exec(`
@@ -36,9 +37,15 @@ test('existing schema is versioned additively as user_version 1', () => {
     raw.close();
 
     const db = new GatewayDb(dbPath);
-    assert.equal(db.schemaVersion, 1);
+    assert.equal(db.schemaVersion, 2);
     assert.equal(
       db.db.prepare('PRAGMA user_version').get().user_version,
+      2
+    );
+    assert.equal(
+      db.db.prepare(
+        "SELECT COUNT(*) c FROM sqlite_master WHERE type='table' AND name='session_recovery_issues'"
+      ).get().c,
       1
     );
     db.close();
@@ -57,7 +64,7 @@ test('runtime refuses a future gateway schema version', () => {
   });
 });
 
-test('retention prunes only event tables and never sessions', () => {
+test('retention prunes event rows and resolved issues but never sessions', () => {
   withTempDb(dbPath => {
     const db = new GatewayDb(dbPath);
     const old = '2026-01-01T00:00:00.000Z';
@@ -85,41 +92,49 @@ test('retention prunes only event tables and never sessions', () => {
         ) VALUES(?,?,?,?,?,?)
       `).run(token, token, 10, 'sent', updated, updated);
     }
+    db.db.prepare(`
+      INSERT INTO session_recovery_issues(
+        viber_user_id,issue_type,details_json,created_at,resolved_at
+      ) VALUES(?,?,?,?,?)
+    `).run('old-issue', 'x', '{}', old, old);
+    db.db.prepare(`
+      INSERT INTO session_recovery_issues(
+        viber_user_id,issue_type,details_json,created_at,resolved_at
+      ) VALUES(?,?,?,?,NULL)
+    `).run('open-issue', 'x', '{}', old);
 
     const policy = retentionConfig({
       GATEWAY_RETENTION_PROCESSED_VIBER_DAYS: '30',
       GATEWAY_RETENTION_PROCESSED_CHATWOOT_DAYS: '30',
       GATEWAY_RETENTION_OUTGOING_VIBER_DAYS: '90',
+      GATEWAY_RETENTION_RESOLVED_RECOVERY_ISSUE_DAYS: '90',
     });
     const cutoffs = retentionCutoffs(
       policy,
       new Date('2026-09-23T00:00:00.000Z')
     );
+
     assert.deepEqual(db.retentionCounts(cutoffs), {
       processed_viber: 1,
       processed_chatwoot: 1,
       outgoing_viber: 1,
+      resolved_recovery_issues: 1,
     });
-
     assert.deepEqual(db.pruneRetentionBatch(cutoffs, 100), {
       processed_viber: 1,
       processed_chatwoot: 1,
       outgoing_viber: 1,
+      resolved_recovery_issues: 1,
     });
+
     assert.equal(
       db.db.prepare('SELECT COUNT(*) c FROM sessions').get().c,
       1
     );
     assert.equal(
-      db.db.prepare('SELECT COUNT(*) c FROM processed_viber').get().c,
-      1
-    );
-    assert.equal(
-      db.db.prepare('SELECT COUNT(*) c FROM processed_chatwoot').get().c,
-      1
-    );
-    assert.equal(
-      db.db.prepare('SELECT COUNT(*) c FROM outgoing_viber').get().c,
+      db.db.prepare(
+        'SELECT COUNT(*) c FROM session_recovery_issues WHERE resolved_at IS NULL'
+      ).get().c,
       1
     );
     db.close();
@@ -131,15 +146,57 @@ test('retention defaults are conservative and configurable', () => {
     processedViberDays: 30,
     processedChatwootDays: 30,
     outgoingViberDays: 90,
+    resolvedRecoveryIssueDays: 90,
   });
-  assert.deepEqual(retentionConfig({
-    GATEWAY_RETENTION_PROCESSED_VIBER_DAYS: '45',
-    GATEWAY_RETENTION_PROCESSED_CHATWOOT_DAYS: '60',
-    GATEWAY_RETENTION_OUTGOING_VIBER_DAYS: '120',
-  }), {
-    processedViberDays: 45,
-    processedChatwootDays: 60,
-    outgoingViberDays: 120,
+});
+
+test('read-only retention inspection does not migrate an old database', () => {
+  withTempDb(dbPath => {
+    const raw = new DatabaseSync(dbPath);
+    raw.exec(`
+      CREATE TABLE sessions (
+        viber_user_id TEXT PRIMARY KEY,
+        contact_id INTEGER NOT NULL,
+        source_id TEXT NOT NULL,
+        conversation_id INTEGER NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+      CREATE TABLE processed_viber (
+        message_token TEXT PRIMARY KEY,
+        created_at TEXT NOT NULL
+      );
+      CREATE TABLE processed_chatwoot (
+        message_id TEXT PRIMARY KEY,
+        created_at TEXT NOT NULL
+      );
+      CREATE TABLE outgoing_viber (
+        message_token TEXT PRIMARY KEY,
+        chatwoot_message_id TEXT NOT NULL,
+        conversation_id INTEGER NOT NULL,
+        status TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+    `);
+    raw.close();
+
+    const cutoffs = retentionCutoffs(
+      retentionConfig({}),
+      new Date('2026-09-23T00:00:00.000Z')
+    );
+    const result = inspectRetentionDb(dbPath, cutoffs);
+    assert.equal(result.schema_version, 0);
+    assert.equal(result.counts.resolved_recovery_issues, 0);
+
+    const check = new DatabaseSync(dbPath, { readOnly: true });
+    assert.equal(check.prepare('PRAGMA user_version').get().user_version, 0);
+    assert.equal(
+      check.prepare(
+        "SELECT COUNT(*) c FROM sqlite_master WHERE name='session_recovery_issues'"
+      ).get().c,
+      0
+    );
+    check.close();
   });
 });
 

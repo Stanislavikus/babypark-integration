@@ -84,7 +84,27 @@ export function createChatwootClient(cfg) {
     );
   }
 
-  async function updateMessageStatus(conversationId, messageId, status, externalError) {
+  async function createPrivateNote(conversationId, content) {
+    return cw(
+      `/api/v1/accounts/${cfg.chatwootAccountId}/conversations/${conversationId}/messages`,
+      {
+        method: 'POST',
+        body: {
+          content,
+          message_type: 'outgoing',
+          private: true,
+          content_type: 'text',
+        },
+      }
+    );
+  }
+
+  async function updateMessageStatus(
+    conversationId,
+    messageId,
+    status,
+    externalError
+  ) {
     const body = { status };
     if (externalError) body.external_error = externalError;
     return cw(
@@ -93,12 +113,32 @@ export function createChatwootClient(cfg) {
     );
   }
 
+  async function searchContacts(query, page = 1) {
+    const params = new URLSearchParams({
+      q: query,
+      page: String(page),
+      include_contact_inboxes: 'true',
+    });
+    return cw(
+      `/api/v1/accounts/${cfg.chatwootAccountId}/contacts/search?${params}`
+    );
+  }
+
+  async function listContactConversations(contactId) {
+    return cw(
+      `/api/v1/accounts/${cfg.chatwootAccountId}/contacts/${contactId}/conversations`
+    );
+  }
+
   return {
     createContact,
     createConversation,
     getConversation,
     createIncomingMessage,
+    createPrivateNote,
     updateMessageStatus,
+    searchContacts,
+    listContactConversations,
   };
 }
 

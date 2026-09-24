@@ -8,6 +8,7 @@
     "test:legacy": "node --test --test-concurrency=1 tests/characterization/gateway-current.test.mjs",
     "test:refactor": "GATEWAY_TARGET=src/gateway/index.mjs node --test --test-concurrency=1 tests/characterization/gateway-current.test.mjs",
     "test": "npm run test:unit && npm run test:legacy && npm run test:refactor",
-    "gateway:retention": "node src/gateway/ops.mjs retention"
+    "gateway:retention": "node src/gateway/ops.mjs retention",
+    "gateway:sessions-rebuild": "node src/gateway/ops.mjs sessions rebuild"
   }
 }

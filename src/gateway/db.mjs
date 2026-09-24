@@ -1,9 +1,14 @@
 import { DatabaseSync } from 'node:sqlite';
-import { migrateGatewayDb } from './migrations.mjs';
+import {
+  assertGatewaySchemaCompatible,
+  migrateGatewayDb,
+} from './migrations.mjs';
 
 export class GatewayDb {
   constructor(dbPath) {
     this.db = new DatabaseSync(dbPath);
+    assertGatewaySchemaCompatible(this.db);
+
     this.db.exec(`
       PRAGMA journal_mode=WAL;
       PRAGMA synchronous=NORMAL;
@@ -32,6 +37,8 @@ export class GatewayDb {
       );
     `);
 
+    this.schemaVersion = migrateGatewayDb(this.db);
+
     this.getSessionByUserStmt = this.db.prepare(
       'SELECT * FROM sessions WHERE viber_user_id = ?'
     );
@@ -47,6 +54,24 @@ export class GatewayDb {
         conversation_id = excluded.conversation_id,
         updated_at = excluded.updated_at
     `);
+
+    this.getRecoveryIssueStmt = this.db.prepare(
+      'SELECT * FROM session_recovery_issues WHERE viber_user_id = ?'
+    );
+    this.upsertRecoveryIssueStmt = this.db.prepare(`
+      INSERT INTO session_recovery_issues(
+        viber_user_id, issue_type, details_json, created_at, resolved_at
+      ) VALUES (?, ?, ?, ?, NULL)
+      ON CONFLICT(viber_user_id) DO UPDATE SET
+        issue_type = excluded.issue_type,
+        details_json = excluded.details_json,
+        created_at = excluded.created_at,
+        resolved_at = NULL
+    `);
+    this.resolveRecoveryIssueStmt = this.db.prepare(
+      'UPDATE session_recovery_issues SET resolved_at = ? WHERE viber_user_id = ?'
+    );
+
     this.markViberStmt = this.db.prepare(
       'INSERT OR IGNORE INTO processed_viber(message_token, created_at) VALUES (?, ?)'
     );
@@ -80,6 +105,9 @@ export class GatewayDb {
     this.countOldOutgoingViberStmt = this.db.prepare(
       'SELECT COUNT(*) c FROM outgoing_viber WHERE updated_at < ?'
     );
+    this.countResolvedRecoveryIssuesStmt = this.db.prepare(
+      'SELECT COUNT(*) c FROM session_recovery_issues WHERE resolved_at IS NOT NULL AND resolved_at < ?'
+    );
 
     this.deleteOldProcessedViberStmt = this.db.prepare(`
       DELETE FROM processed_viber
@@ -102,8 +130,14 @@ export class GatewayDb {
         WHERE updated_at < ? ORDER BY updated_at LIMIT ?
       )
     `);
-
-    this.schemaVersion = migrateGatewayDb(this.db);
+    this.deleteResolvedRecoveryIssuesStmt = this.db.prepare(`
+      DELETE FROM session_recovery_issues
+      WHERE rowid IN (
+        SELECT rowid FROM session_recovery_issues
+        WHERE resolved_at IS NOT NULL AND resolved_at < ?
+        ORDER BY resolved_at LIMIT ?
+      )
+    `);
   }
 
   getSessionByUser(id) {
@@ -122,6 +156,23 @@ export class GatewayDb {
       conversationId,
       updatedAt
     );
+  }
+
+  getRecoveryIssue(viberUserId) {
+    return this.getRecoveryIssueStmt.get(viberUserId);
+  }
+
+  upsertRecoveryIssue(viberUserId, issueType, details, createdAt) {
+    return this.upsertRecoveryIssueStmt.run(
+      viberUserId,
+      issueType,
+      JSON.stringify(details || {}),
+      createdAt
+    );
+  }
+
+  resolveRecoveryIssue(viberUserId, resolvedAt) {
+    return this.resolveRecoveryIssueStmt.run(resolvedAt, viberUserId);
   }
 
   markViber(token, createdAt) {
@@ -173,6 +224,10 @@ export class GatewayDb {
         this.countOldOutgoingViberStmt
           .get(cutoffs.outgoingViberBefore).c
       ),
+      resolved_recovery_issues: Number(
+        this.countResolvedRecoveryIssuesStmt
+          .get(cutoffs.resolvedRecoveryIssueBefore).c
+      ),
     };
   }
 
@@ -189,6 +244,10 @@ export class GatewayDb {
       outgoing_viber: Number(
         this.deleteOldOutgoingViberStmt
           .run(cutoffs.outgoingViberBefore, limit).changes
+      ),
+      resolved_recovery_issues: Number(
+        this.deleteResolvedRecoveryIssuesStmt
+          .run(cutoffs.resolvedRecoveryIssueBefore, limit).changes
       ),
     };
   }

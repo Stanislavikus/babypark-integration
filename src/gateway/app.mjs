@@ -5,11 +5,47 @@ import { readRaw, sendJson } from './http-utils.mjs';
 import { renderViberMessage } from './render.mjs';
 
 export function createGatewayApp({ cfg, db, chatwoot, viber, log }) {
+  async function finalizeRecoveryIssue(viberUserId, conversationId) {
+    const issue = db.getRecoveryIssue(viberUserId);
+    if (!issue || issue.resolved_at) return;
+
+    if (issue.issue_type === 'ambiguous_active_conversations') {
+      try {
+        await chatwoot.createPrivateNote(
+          conversationId,
+          '⚠️ Системне відновлення Viber: локальна сесія була неоднозначною. Створено новий діалог замість автоматичного вибору старого.'
+        );
+      } catch (error) {
+        log('error', 'viber_session_recovery_note_failed', {
+          error: error.message,
+          status: error.status,
+          conversation_id: conversationId,
+          viber_user_id: viberUserId,
+        });
+        return;
+      }
+    }
+
+    db.resolveRecoveryIssue(viberUserId, new Date().toISOString());
+    log('info', 'viber_session_recovery_resolved', {
+      issue_type: issue.issue_type,
+      conversation_id: conversationId,
+      viber_user_id: viberUserId,
+    });
+  }
+
   async function ensureSession(sender) {
     let session = db.getSessionByUser(sender.id);
     if (session) {
-      const conversation = await chatwoot.getConversation(session.conversation_id);
-      if (conversation && conversation.status !== 'resolved') return session;
+      const conversation = Number(session.conversation_id) > 0
+        ? await chatwoot.getConversation(session.conversation_id)
+        : null;
+
+      if (conversation && conversation.status !== 'resolved') {
+        await finalizeRecoveryIssue(sender.id, session.conversation_id);
+        return session;
+      }
+
       const conversationId = await chatwoot.createConversation(
         session.contact_id,
         session.source_id
@@ -21,6 +57,7 @@ export function createGatewayApp({ cfg, db, chatwoot, viber, log }) {
         conversationId,
         new Date().toISOString()
       );
+      await finalizeRecoveryIssue(sender.id, conversationId);
       return db.getSessionByUser(sender.id);
     }
 
