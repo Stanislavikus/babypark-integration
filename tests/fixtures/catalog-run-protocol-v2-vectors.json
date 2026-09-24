@@ -1,0 +1,70 @@
+{
+  "schema": "bp.catalog.run-vectors/1",
+  "domain_labels": [
+    "BP-RUN-v2\\0",
+    "BP-CHUNK-v2\\0",
+    "BP-FINAL-v2\\0"
+  ],
+  "canonical_header": "{\"header\":{\"base_generation_id\":\"g1\",\"layers\":[{\"base_watermark\":\"100\",\"layer\":\"content\",\"mode\":\"delta\",\"output_watermark\":\"150\",\"t_high\":\"150\",\"t_low\":\"95\"}],\"run_id\":\"vector\",\"run_kind\":\"incremental\",\"schema\":\"bp.catalog.run-header/1\",\"source_epoch\":\"epoch-1\"}}",
+  "accepted_digests": [
+    {
+      "name": "zero-data",
+      "header_sha256": "22776d9f2b821892c6d1d85ad4ccbc5e7281fd6db95ad122d207668348d295f1",
+      "chunk_hashes": [],
+      "final_seq": 1,
+      "count": 0,
+      "run_digest": "bdb619152f9aacc366581c187efd7e40d3f1e7a13f8ddc545cff2c1a3bf587af"
+    },
+    {
+      "name": "one-data",
+      "header_sha256": "22776d9f2b821892c6d1d85ad4ccbc5e7281fd6db95ad122d207668348d295f1",
+      "chunk_hashes": [
+        "1633902c6cbba5e7770dbed172df754a25078bb76efe1f23474edc87f1a47655"
+      ],
+      "final_seq": 2,
+      "count": 0,
+      "run_digest": "3f8bbe8104aeb155058848a1c91f9e59193bbfb3293f1c71dc65fbf75c8ff26c"
+    },
+    {
+      "name": "multiple-data",
+      "header_sha256": "22776d9f2b821892c6d1d85ad4ccbc5e7281fd6db95ad122d207668348d295f1",
+      "chunk_hashes": [
+        "1633902c6cbba5e7770dbed172df754a25078bb76efe1f23474edc87f1a47655",
+        "04a9ea2dd3a938dffdb0b8ce8f9d4ad37216a67b193209d521cb364f30db33be"
+      ],
+      "final_seq": 3,
+      "count": 1,
+      "run_digest": "92fb669de8b1d05dfd530ef8ef011324674295218e6423aeaaa056887972c596"
+    }
+  ],
+  "cases": [
+    "content-delta",
+    "commercial-delta",
+    "taxonomy-replace-null-base-watermark",
+    "stock-replace-null-base-watermark",
+    "full-four-layer",
+    "full-bootstrap",
+    "dec20-20-digit",
+    "reject-dec20-21-digit",
+    "reject-leading-zero",
+    "reject-reordered-keys",
+    "reject-duplicate-key",
+    "reject-bom",
+    "reject-trailing-lf",
+    "schema-slash",
+    "wrong-run-id",
+    "invalid-layer-mode",
+    "missing-full-layer",
+    "duplicate-full-layer",
+    "reordered-full-layer",
+    "source-epoch-mismatch",
+    "watermark-regression",
+    "header-hash-mismatch",
+    "missing-sequence",
+    "extra-sequence",
+    "swapped-chunk-hashes",
+    "count-mismatch",
+    "final-seq-mismatch",
+    "final-seq-zero"
+  ]
+}

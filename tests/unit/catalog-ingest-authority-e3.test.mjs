@@ -7,10 +7,13 @@ import path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { CatalogGenerationBuilder } from '../../src/catalog/sqlite/generation.mjs';
 import { CATALOG_SCHEMA_VERSION } from '../../src/catalog/sqlite/schema.mjs';
-import { ReplayStore } from '../../src/catalog/ingest/replay-store.mjs';
+import { ReplayStore, canonicalJson } from '../../src/catalog/ingest/replay-store.mjs';
 
 const hash = bytes => crypto.createHash('sha256').update(bytes).digest('hex');
-const bytes = Buffer.from('{"rows":[{"id":"one"}]}');
+const bytes = Buffer.from(canonicalJson({ header:{ base_generation_id:'g0',
+  layers:['taxonomy','content','commercial','stock'].map(layer => ({ base_watermark:null,
+    layer, mode:'replace', output_watermark:null, t_high:null, t_low:null })), run_id:'r1',
+  run_kind:'full', schema:'bp.catalog.run-header/1', source_epoch:'epoch-1' } }));
 const code = value => error => error?.code === value;
 function setup(t) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'bp-e3-authority-'));
@@ -27,9 +30,9 @@ function setup(t) {
   t.after(() => store.close());
   const chunk = { kid: 'k1', runId: 'r1', layer: 'full', seq: 0, final: false,
     contentEncoding: 'identity', bodySha256: hash(bytes) };
-  const claimed = store.claim(chunk);
+  const claimed = store.claim(chunk, 100, { verifiedBody:bytes });
   builder.db.prepare(
-    'INSERT INTO run_chunks(run_id,kid,seq,body_sha256,rows) VALUES(?,?,?,?,1)'
+    'INSERT INTO run_chunks(run_id,kid,seq,body_sha256,rows) VALUES(?,?,?,?,0)'
   ).run(chunk.runId, chunk.kid, chunk.seq, chunk.bodySha256);
   assert.equal(store.stage(chunk, bytes, claimed.claimToken,
     { fullBuildDb: builder.db }).status, 'STAGED');
@@ -43,7 +46,7 @@ test('foreign handle cannot convert a healthy staged receipt into RUN_LOST', t =
   });
   t.after(() => { try { other.db.close(); } catch {} });
   other.db.prepare(
-    'INSERT INTO run_chunks(run_id,kid,seq,body_sha256,rows) VALUES(?,?,?,?,1)'
+    'INSERT INTO run_chunks(run_id,kid,seq,body_sha256,rows) VALUES(?,?,?,?,0)'
   ).run(chunk.runId, chunk.kid, chunk.seq, chunk.bodySha256);
   assert.throws(() => store.resolveStagedAck(chunk, { fullBuildDb: other.db }),
     code('INGEST_REPLAY_AUTHORITY_REQUIRED'));

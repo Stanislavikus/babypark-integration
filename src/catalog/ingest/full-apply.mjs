@@ -5,6 +5,7 @@ import {
   ReplayStore,
   canonicalJson,
 } from './replay-store.mjs';
+import { parseRunHeader } from './run-protocol.mjs';
 
 export class FullApplyError extends Error {
   constructor(code, message) {
@@ -35,6 +36,18 @@ function decodeChunk(key, verifiedBody) {
     );
   }
 
+  if (key.seq === 0) {
+    try {
+      const header = parseRunHeader(verifiedBody, {
+        runId: key.runId, seq: key.seq, final: key.final,
+      });
+      if (header.run_kind !== 'full') throw new Error('not full');
+      return { header: true, rows: [] };
+    } catch {
+      fail('FULL_APPLY_BODY_INVALID', 'Sequence zero must be a valid full run header');
+    }
+  }
+
   let parsed;
   let text;
   try {
@@ -63,7 +76,7 @@ function decodeChunk(key, verifiedBody) {
       'Chunk must be canonical JSON with one rows array'
     );
   }
-  return parsed.rows;
+  return { header: false, rows: parsed.rows };
 }
 
 function assertGenerationRun(db, runId) {
@@ -157,7 +170,7 @@ function writeFullChunkLocked({
   if (
     !(store instanceof ReplayStore) ||
     !(builder instanceof CatalogGenerationBuilder) ||
-    typeof writeRows !== 'function' ||
+    (key?.seq !== 0 && typeof writeRows !== 'function') ||
     builder.closed ||
     (
       afterBuildCommit !== undefined &&
@@ -170,7 +183,8 @@ function writeFullChunkLocked({
     );
   }
 
-  const rows = decodeChunk(key, verifiedBody);
+  const decoded = decodeChunk(key, verifiedBody);
+  const rows = decoded.rows;
   store.assertPendingOwner(
     key,
     claimToken,
@@ -214,10 +228,7 @@ function writeFullChunkLocked({
       };
     } else {
       const fixtureWriter = createFixtureRowApi(db);
-      const callbackResult = writeRows(
-        fixtureWriter.api,
-        rows
-      );
+      const callbackResult = decoded.header ? undefined : writeRows(fixtureWriter.api, rows);
 
       if (callbackResult instanceof Promise) {
         fail(
@@ -295,6 +306,8 @@ function verifyFullRunLocked({
   store,
   builder,
   finalKey,
+  reader,
+  resolveCurrent,
 }) {
   if (
     !(store instanceof ReplayStore) ||
@@ -318,7 +331,7 @@ function verifyFullRunLocked({
 
     const proof = store.verifyClaimedRunDigest(
       finalKey,
-      { fullBuildDb: db }
+      { fullBuildDb: db, reader, resolveCurrent }
     );
     const row = db.prepare(
       'SELECT body_sha256, rows FROM run_chunks ' +
@@ -351,7 +364,7 @@ function verifyFullRunLocked({
       }
     }
 
-    if (count !== trailer.count) {
+    if (count !== trailer.count || count !== proof.count) {
       fail(
         'FULL_APPLY_COUNT_INVALID',
         'Decoded row count differs from signed trailer'

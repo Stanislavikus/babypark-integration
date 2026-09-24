@@ -148,3 +148,11 @@ per source/layer rather than assuming one full run per day. Keep only a small
 state.json locally, use host-managed rotated error logging, send bounded
 diagnostics to /report, and add operator alerts by email or administrative chat.
 Magento may use a different source schedule behind the same ingest contract.
+# E.4 interaction
+
+E.4 leaves E.3 publication behavior unchanged. Full sequence zero is committed
+as a zero-row `run_chunks` authority record under the existing building/apply
+mutex, while its exact canonical bytes are retained in the replay receipt.
+Bootstrap verification accepts a null signed base only when authoritative
+CURRENT is absent, records a null claim generation, and produces verification
+proof only: it does not accept, seal, journal, publish, or move CURRENT.

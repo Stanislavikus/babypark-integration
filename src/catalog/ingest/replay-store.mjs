@@ -4,12 +4,16 @@ import path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { CatalogReader } from '../sqlite/generation.mjs';
 import { CATALOG_SCHEMA_VERSION } from '../sqlite/schema.mjs';
+import {
+  canonicalControlJson, computeRunDigestV2, parseRunHeader, parseTrailerV2,
+  validateAuthoritativeState,
+} from './run-protocol.mjs';
+export { computeRunDigestV2, computeRunDigestV2 as computeRunDigest } from './run-protocol.mjs';
 
 const LAYERS = new Set(['content', 'commercial', 'stock', 'taxonomy', 'full']);
 const ID_RE = /^[A-Za-z0-9_-]{1,64}$/;
 const HASH_RE = /^[a-f0-9]{64}$/;
-const WATERMARK_RE = /^(0|[1-9][0-9]{0,19})$/;
-const SCHEMA_VERSION = 6;
+const SCHEMA_VERSION = 7;
 const MAX_RUN_STAGED_BYTES = 8 * 1024 * 1024;
 const MAX_LEDGER_STAGED_BYTES = 32 * 1024 * 1024;
 const PROCESS_BOOT_ID = crypto.randomUUID();
@@ -37,45 +41,7 @@ function validateKey({ kid, runId, layer, seq, bodySha256, final, contentEncodin
 }
 
 export function canonicalJson(value) {
-  if (Array.isArray(value)) return '[' + value.map(canonicalJson).join(',') + ']';
-  if (value && typeof value === 'object') {
-    return '{' + Object.keys(value).sort().map(key =>
-      JSON.stringify(key) + ':' + canonicalJson(value[key])
-    ).join(',') + '}';
-  }
-  return JSON.stringify(value);
-}
-
-export function computeRunDigest({
-  runId, layer, baseGenerationId, baseWatermark, count, chunkHashes,
-}) {
-  if (!ID_RE.test(runId || '') || !LAYERS.has(layer) ||
-      !ID_RE.test(baseGenerationId || '') ||
-      !(baseWatermark === null || WATERMARK_RE.test(baseWatermark)) ||
-      !Number.isSafeInteger(count) || count < 0 ||
-      !Array.isArray(chunkHashes) ||
-      !chunkHashes.every(hash => HASH_RE.test(hash))) {
-    fail('INGEST_REPLAY_DIGEST_INVALID', 'Invalid run digest inputs');
-  }
-  const sha = bytes => crypto.createHash('sha256').update(bytes).digest();
-  let chain = sha(Buffer.concat([
-    Buffer.from('BP-RUN-v1\0'),
-    Buffer.from(canonicalJson({
-      run_id: runId, layer, base_generation_id: baseGenerationId,
-      base_watermark: baseWatermark,
-    })),
-  ]));
-  for (const [seq, hash] of chunkHashes.entries()) {
-    const index = Buffer.alloc(8);
-    index.writeBigUInt64BE(BigInt(seq));
-    chain = sha(Buffer.concat([
-      Buffer.from('BP-CHUNK-v1\0'), chain, index, Buffer.from(hash, 'hex'),
-    ]));
-  }
-  return sha(Buffer.concat([
-    Buffer.from('BP-FINAL-v1\0'), chain,
-    Buffer.from(canonicalJson({ final_seq: chunkHashes.length, count })),
-  ])).toString('hex');
+  return canonicalControlJson(value);
 }
 
 function validateEvidence(evidence) {
@@ -94,34 +60,55 @@ function parseFinalTrailer(key, verifiedBody) {
       crypto.createHash('sha256').update(verifiedBody).digest('hex') !== key.bodySha256) {
     fail('INGEST_REPLAY_TRAILER_INVALID', 'Final claim needs verified body and CURRENT generation');
   }
-  let body;
-  let json;
   try {
-    json = new TextDecoder('utf-8', { fatal: true }).decode(verifiedBody);
-    body = JSON.parse(json);
-  } catch {
-    fail('INGEST_REPLAY_TRAILER_INVALID', 'Final trailer must be UTF-8 JSON');
-  }
-  const trailer = body?.trailer;
-  if (!body || Object.keys(body).length !== 1 ||
-      !trailer || typeof trailer !== 'object' || Array.isArray(trailer) ||
-      Object.keys(trailer).sort().join(',') !==
-        'base_generation_id,base_watermark,count,final_seq,run_digest' ||
-      json !== canonicalJson(body) ||
-      !HASH_RE.test(trailer.run_digest || '') ||
-      !ID_RE.test(trailer.base_generation_id || '') ||
-      !(trailer.base_watermark === null ||
-        WATERMARK_RE.test(trailer.base_watermark)) ||
-      !Number.isSafeInteger(trailer.count) || trailer.count < 0 ||
-      trailer.final_seq !== key.seq) {
+    const trailer = parseTrailerV2(verifiedBody, { seq: key.seq, final: key.final });
+    return { runDigest: trailer.run_digest, count: trailer.count,
+      runHeaderSha256: trailer.run_header_sha256 };
+  } catch (error) {
+    if (error?.code !== 'INGEST_RUN_TRAILER_INVALID') throw error;
     fail('INGEST_REPLAY_TRAILER_INVALID', 'Invalid trailer in verified final body');
   }
-  return {
-    runDigest: trailer.run_digest,
-    count: trailer.count,
-    baseGenerationId: trailer.base_generation_id,
-    baseWatermark: trailer.base_watermark,
-  };
+}
+
+function parseHeaderForKey(key, body) {
+  if (body instanceof Uint8Array && !Buffer.isBuffer(body)) body = Buffer.from(body);
+  if (!Buffer.isBuffer(body) || key.contentEncoding !== 'identity' ||
+      crypto.createHash('sha256').update(body).digest('hex') !== key.bodySha256) {
+    fail('INGEST_REPLAY_HEADER_INVALID', 'Header requires exact verified identity bytes');
+  }
+  try {
+    const header = parseRunHeader(body, { runId: key.runId, seq: key.seq, final: key.final });
+    const signedLayer = header.run_kind === 'full' ? 'full' : header.layers[0].layer;
+    if (signedLayer !== key.layer) fail('INGEST_REPLAY_HEADER_INVALID', 'Signed header layer differs from replay key');
+    return header;
+  } catch (error) {
+    if (error instanceof ReplayStoreError) throw error;
+    fail('INGEST_REPLAY_HEADER_INVALID', error.message);
+  }
+}
+
+function readCurrent(context) {
+  if (typeof context?.resolveCurrent === 'function') {
+    const value = context.resolveCurrent();
+    if (value === null) return null;
+    return value;
+  }
+  if (context?.reader instanceof CatalogReader) {
+    return context.reader.withDb((db, generationId) => ({
+      generationId,
+      sourceEpoch: db.prepare('SELECT source_epoch FROM catalog_meta WHERE singleton=1').get()?.source_epoch,
+    }));
+  }
+  fail('INGEST_REPLAY_STATE_REQUIRED', 'Final claim requires authoritative CURRENT resolver');
+}
+
+function validateState(header, current) {
+  try { return validateAuthoritativeState(header, current); }
+  catch (error) {
+    if (error.code === 'INGEST_RUN_STATE_MOVED') fail('INGEST_REPLAY_STATE_MOVED', error.message);
+    if (error.code === 'INGEST_RUN_SOURCE_EPOCH_CHANGED') fail('INGEST_REPLAY_SOURCE_EPOCH_CHANGED', error.message);
+    throw error;
+  }
 }
 
 export function renderAcceptedRunAck(key, evidence) {
@@ -173,8 +160,7 @@ export class ReplayStore {
           status TEXT NOT NULL CHECK(status IN ('pending','acked','staged','staged_released')),
           trailer_run_digest TEXT,
           trailer_count INTEGER,
-          trailer_base_generation_id TEXT,
-          trailer_base_watermark TEXT,
+          trailer_run_header_sha256 TEXT,
           claim_generation_id TEXT,
           building_generation_id TEXT,
           ack_json TEXT,
@@ -188,11 +174,12 @@ export class ReplayStore {
           PRIMARY KEY(kid, run_id, layer, seq),
           CHECK(layer='full' OR building_generation_id IS NULL),
           CHECK(status NOT IN ('staged','staged_released') OR layer<>'full' OR building_generation_id IS NOT NULL),
-          CHECK((final=0 AND trailer_run_digest IS NULL AND trailer_count IS NULL AND trailer_base_generation_id IS NULL AND claim_generation_id IS NULL) OR
-                (final=1 AND trailer_run_digest IS NOT NULL AND trailer_count >= 0 AND trailer_base_generation_id IS NOT NULL AND claim_generation_id IS NOT NULL)),
+          CHECK((final=0 AND trailer_run_digest IS NULL AND trailer_count IS NULL AND trailer_run_header_sha256 IS NULL AND claim_generation_id IS NULL) OR
+                (final=1 AND trailer_run_digest IS NOT NULL AND trailer_count >= 0 AND trailer_run_header_sha256 IS NOT NULL)),
           CHECK((status='pending' AND ack_json IS NULL AND staged_body IS NULL AND ack_generation_id IS NULL AND ack_run_digest IS NULL AND owner_boot_id IS NOT NULL AND owner_token IS NOT NULL AND lease_until IS NOT NULL) OR
                 (status='staged' AND final=0 AND ack_json IS NOT NULL AND
-                 ((layer='full' AND staged_body IS NULL) OR
+                 ((layer='full' AND seq=0 AND staged_body IS NOT NULL) OR
+                  (layer='full' AND seq>0 AND staged_body IS NULL) OR
                   (layer<>'full' AND staged_body IS NOT NULL)) AND
                  ack_generation_id IS NULL AND ack_run_digest IS NULL AND
                  owner_boot_id IS NULL AND owner_token IS NULL AND lease_until IS NULL) OR
@@ -209,7 +196,7 @@ export class ReplayStore {
           state TEXT NOT NULL CHECK(state IN ('intent','switched','rolled_back')),
           updated_at INTEGER NOT NULL
         );
-        PRAGMA user_version=6;
+        PRAGMA user_version=7;
       `);
       return new ReplayStore(db, maxReceipts, leaseSeconds, catalogStorageDir);
     } catch (error) {
@@ -363,6 +350,10 @@ export class ReplayStore {
             chunk.get(key.runId, key.kid, key.seq)?.body_sha256 !== key.bodySha256) {
           return { status: 'ABSENT' };
         }
+        const authorityRow = committed.prepare(
+          'SELECT rows FROM run_chunks WHERE run_id=? AND kid=? AND seq=?'
+        ).get(key.runId, key.kid, key.seq);
+        if (key.seq === 0 && authorityRow?.rows !== 0) return { status: 'ABSENT' };
         for (const prior of priorChunks) {
           if (chunk.get(key.runId, key.kid, prior.seq)?.body_sha256 !== prior.body_sha256) {
             return { status: 'ABSENT' };
@@ -401,9 +392,8 @@ export class ReplayStore {
   claim(key, createdAt = Math.floor(Date.now() / 1000), context) {
     const { kid, runId, layer, seq, bodySha256, final, contentEncoding } = validateKey(key);
     const trailer = final ? parseFinalTrailer(key, context?.verifiedBody) : null;
-    if (final && !(context?.reader instanceof CatalogReader)) {
-      fail('INGEST_REPLAY_STATE_REQUIRED', 'Final claim requires CURRENT reader');
-    }
+    const claimedHeader = !final && seq === 0
+      ? parseHeaderForKey(key, context?.verifiedBody) : null;
     if (!Number.isSafeInteger(createdAt) || createdAt < 0) {
       fail('INGEST_REPLAY_TIME_INVALID', 'createdAt must be Unix seconds');
     }
@@ -432,23 +422,35 @@ export class ReplayStore {
       if (count >= this.maxReceipts) {
         fail('INGEST_REPLAY_CAPACITY', 'Replay ledger is full');
       }
+      const prior = this.db.prepare(
+        "SELECT seq,status FROM receipts WHERE kid=? AND run_id=? AND layer=? AND seq<? ORDER BY seq"
+      ).all(kid, runId, layer, seq);
+      if (prior.length !== seq || prior.some((entry, index) =>
+        entry.seq !== index || entry.status !== 'staged')) {
+        fail('INGEST_REPLAY_SEQUENCE_GAP', 'Every preceding sequence must be durably staged');
+      }
       const claimToken = crypto.randomUUID();
-      const claimGenerationId = final
-        ? context.reader.withDb((_db, generationId) => generationId)
-        : null;
+      let claimGenerationId = null;
+      if (final) {
+        const headerRow = this.db.prepare(
+          "SELECT staged_body FROM receipts WHERE kid=? AND run_id=? AND layer=? AND seq=0 AND status='staged'"
+        ).get(kid, runId, layer);
+        const header = parseHeaderForKey({ ...key, seq: 0, final: false,
+          bodySha256: trailer.runHeaderSha256 }, headerRow?.staged_body);
+        claimGenerationId = validateState(header, readCurrent(context)).claimGenerationId;
+      }
       const leaseUntil = createdAt + this.leaseSeconds;
       if (!Number.isSafeInteger(leaseUntil)) {
         fail('INGEST_REPLAY_TIME_INVALID', 'Lease time exceeds safe integer range');
       }
       this.db.prepare(
         'INSERT INTO receipts(kid,run_id,layer,seq,body_sha256,final,content_encoding,status,' +
-        'trailer_run_digest,trailer_count,trailer_base_generation_id,trailer_base_watermark,claim_generation_id,' +
+        'trailer_run_digest,trailer_count,trailer_run_header_sha256,claim_generation_id,' +
         'ack_json,owner_boot_id,owner_token,lease_until,created_at) ' +
-        "VALUES (?,?,?,?,?,?,?,'pending',?,?,?,?,?,NULL,?,?,?,?)"
+        "VALUES (?,?,?,?,?,?,?,'pending',?,?,?,?,NULL,?,?,?,?)"
       ).run(kid, runId, layer, seq, bodySha256, Number(final), contentEncoding,
         trailer?.runDigest ?? null, trailer?.count ?? null,
-        trailer?.baseGenerationId ?? null, trailer?.baseWatermark ?? null,
-        claimGenerationId,
+        trailer?.runHeaderSha256 ?? null, claimGenerationId,
         PROCESS_BOOT_ID, claimToken, leaseUntil, createdAt);
       return { status: 'NEW', claimToken, leaseUntil };
     });
@@ -542,7 +544,7 @@ export class ReplayStore {
     if (!final) fail('INGEST_REPLAY_KEY_INVALID', 'Final claim is required');
     const row = this.db.prepare(
       'SELECT body_sha256, final, content_encoding, trailer_run_digest, trailer_count, ' +
-      'trailer_base_generation_id, trailer_base_watermark, claim_generation_id ' +
+      'trailer_run_header_sha256, claim_generation_id ' +
       'FROM receipts WHERE kid=? AND run_id=? AND layer=? AND seq=?'
     ).get(kid, runId, layer, seq);
     if (!row) fail('INGEST_REPLAY_UNCLAIMED', 'Claim does not exist');
@@ -553,13 +555,12 @@ export class ReplayStore {
     return {
       runDigest: row.trailer_run_digest,
       count: row.trailer_count,
-      baseGenerationId: row.trailer_base_generation_id,
-      baseWatermark: row.trailer_base_watermark,
+      runHeaderSha256: row.trailer_run_header_sha256,
       claimGenerationId: row.claim_generation_id,
     };
   }
 
-  verifyClaimedRunDigest(key, { fullBuildDb } = {}) {
+  verifyClaimedRunDigest(key, { fullBuildDb, reader, resolveCurrent } = {}) {
     const { kid, runId, layer, seq } = validateKey(key);
     const trailer = this.getClaimedFinal(key);
     const staged = this.db.prepare(
@@ -569,9 +570,14 @@ export class ReplayStore {
     const hashes = [];
     let expectedBuildGeneration = null;
     const chunkKeys = [];
+    let header;
+    let totalRows = 0;
     for (let i = 0; i < seq; i += 1) {
       const row = staged.get(kid, runId, layer, i);
       if (!row) fail('INGEST_REPLAY_DIGEST_INCOMPLETE', 'Missing staged chunk');
+      if (row.staged_body instanceof Uint8Array && !Buffer.isBuffer(row.staged_body)) {
+        row.staged_body = Buffer.from(row.staged_body);
+      }
       if (layer === 'full') {
         const chunkKey = { ...key, seq: i, bodySha256: row.body_sha256 };
         const authority = this.#fullAuthority(
@@ -580,7 +586,7 @@ export class ReplayStore {
         if (authority.status === 'SEALED') {
           fail('INGEST_REPLAY_AUTHORITY_SEALED', 'Finish sealing the building file before apply');
         }
-        if (row.staged_body !== null || authority.status !== 'MATCH' ||
+        if ((i === 0 ? row.staged_body === null : row.staged_body !== null) || authority.status !== 'MATCH' ||
             (expectedBuildGeneration !== null &&
              expectedBuildGeneration !== authority.generationId)) {
           fail('INGEST_REPLAY_DIGEST_CONFLICT', 'Full building chunk differs from receipt');
@@ -590,18 +596,45 @@ export class ReplayStore {
           crypto.createHash('sha256').update(row.staged_body).digest('hex') !== row.body_sha256) {
         fail('INGEST_REPLAY_DIGEST_CONFLICT', 'Staged body differs from receipt');
       }
-      hashes.push(row.body_sha256);
-      chunkKeys.push({ kid, runId, layer, seq: i });
+      if (i === 0) {
+        if (row.body_sha256 !== trailer.runHeaderSha256) {
+          fail('INGEST_REPLAY_HEADER_HASH_MISMATCH', 'Trailer header hash differs from staged header');
+        }
+        header = parseHeaderForKey({ ...key, seq: 0, final: false,
+          bodySha256: row.body_sha256 }, row.staged_body);
+      } else {
+        hashes.push(row.body_sha256);
+        chunkKeys.push({ kid, runId, layer, seq: i });
+        if (layer === 'full') {
+          const countRow = fullBuildDb.prepare(
+            'SELECT rows FROM run_chunks WHERE run_id=? AND kid=? AND seq=?'
+          ).get(runId, kid, i);
+          if (!Number.isSafeInteger(countRow?.rows) || countRow.rows < 0) {
+            fail('INGEST_REPLAY_COUNT_INVALID', 'Catalog row count is invalid');
+          }
+          totalRows += countRow.rows;
+        } else {
+          let parsed;
+          try { parsed = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(row.staged_body)); } catch {}
+          if (!parsed || Object.keys(parsed).length !== 1 || !Array.isArray(parsed.rows) ||
+              canonicalJson(parsed) !== row.staged_body.toString()) {
+            fail('INGEST_REPLAY_COUNT_INVALID', 'Data chunk is not canonical rows JSON');
+          }
+          totalRows += parsed.rows.length;
+        }
+        if (!Number.isSafeInteger(totalRows)) fail('INGEST_REPLAY_COUNT_INVALID', 'Run count exceeds safe integer range');
+      }
     }
-    const computed = computeRunDigest({
-      runId, layer, baseGenerationId: trailer.baseGenerationId,
-      baseWatermark: trailer.baseWatermark, count: trailer.count,
-      chunkHashes: hashes,
+    validateState(header, readCurrent({ reader, resolveCurrent }));
+    const computed = computeRunDigestV2({
+      headerHash: trailer.runHeaderSha256, count: trailer.count,
+      finalSeq: seq, chunkHashes: hashes,
     });
     if (computed !== trailer.runDigest) {
       fail('INGEST_REPLAY_DIGEST_MISMATCH', 'Signed run digest differs from staged chunks');
     }
-    return { runDigest: computed, chunkKeys };
+    if (totalRows !== trailer.count) fail('INGEST_REPLAY_COUNT_MISMATCH', 'Signed count differs from data rows');
+    return { runDigest: computed, count: totalRows, header, chunkKeys };
   }
 
   // Final takeover requires the publication/rollback gate, which is not wired yet.
@@ -648,6 +681,7 @@ export class ReplayStore {
         crypto.createHash('sha256').update(verifiedBody).digest('hex') !== bodySha256) {
       fail('INGEST_REPLAY_STAGING_INVALID', 'Staging needs the verified nonfinal body');
     }
+    if (seq === 0) parseHeaderForKey(key, verifiedBody);
     const ack = { staged: true, run_id: runId, layer, seq, body_sha256: bodySha256 };
     const ackJson = canonicalJson(ack);
     return transact(this.db, () => {
@@ -696,7 +730,7 @@ export class ReplayStore {
       if (row.status !== 'pending' || row.owner_token !== claimToken) {
         fail('INGEST_REPLAY_OWNER_LOST', 'Only the current owner may stage');
       }
-      if (layer !== 'full') {
+      if (layer !== 'full' || seq === 0) {
         const runBytes = this.db.prepare(
           "SELECT COALESCE(SUM(length(staged_body)),0) AS bytes FROM receipts " +
           "WHERE kid=? AND run_id=? AND layer=? AND status='staged'"
@@ -713,7 +747,7 @@ export class ReplayStore {
         "UPDATE receipts SET status='staged', staged_body=?, ack_json=?, building_generation_id=?, " +
         'owner_boot_id=NULL, owner_token=NULL, lease_until=NULL ' +
         'WHERE kid=? AND run_id=? AND layer=? AND seq=?'
-      ).run(layer === 'full' ? null : verifiedBody, ackJson,
+      ).run(layer === 'full' && seq > 0 ? null : verifiedBody, ackJson,
         buildingGenerationId, kid, runId, layer, seq);
       return { status: 'STAGED', ack };
     });
