@@ -279,7 +279,7 @@ export class ReplayStore {
   }
 
   #fullAuthority(db, key, expectedGenerationId = null, requireBuilding = false,
-    priorChunks = []) {
+    priorChunks = [], expectations = {}) {
     if (!(db instanceof DatabaseSync)) {
       fail('INGEST_REPLAY_AUTHORITY_REQUIRED', 'Full run requires a catalog database handle');
     }
@@ -344,7 +344,7 @@ export class ReplayStore {
         );
         if (
           !['schema_version', 'generation_id', 'state'].every(name => metaColumns.has(name)) ||
-          !['run_id', 'kid', 'seq', 'body_sha256', 'rows'].every(name => chunkColumns.has(name))
+          !['run_id', 'kid', 'seq', 'body_sha256', 'rows', 'phase'].every(name => chunkColumns.has(name))
         ) {
           fail('INGEST_REPLAY_AUTHORITY_CORRUPT', 'Catalog authority schema is incomplete');
         }
@@ -357,15 +357,14 @@ export class ReplayStore {
           fail('INGEST_REPLAY_AUTHORITY_CORRUPT', 'Catalog metadata is invalid');
         }
         const chunk = committed.prepare(
-          'SELECT body_sha256 FROM run_chunks WHERE run_id=? AND kid=? AND seq=?'
+          'SELECT body_sha256,rows,phase FROM run_chunks WHERE run_id=? AND kid=? AND seq=?'
         );
-        if (meta.generation_id !== generationId ||
-            chunk.get(key.runId, key.kid, key.seq)?.body_sha256 !== key.bodySha256) {
+        const authorityRow = chunk.get(key.runId, key.kid, key.seq);
+        if (meta.generation_id !== generationId || authorityRow?.body_sha256 !== key.bodySha256 ||
+            (Object.hasOwn(expectations, 'expectedRows') && authorityRow?.rows !== expectations.expectedRows) ||
+            (Object.hasOwn(expectations, 'expectedPhase') && authorityRow?.phase !== expectations.expectedPhase)) {
           return { status: 'ABSENT' };
         }
-        const authorityRow = committed.prepare(
-          'SELECT rows FROM run_chunks WHERE run_id=? AND kid=? AND seq=?'
-        ).get(key.runId, key.kid, key.seq);
         if (key.seq === 0 && authorityRow?.rows !== 0) return { status: 'ABSENT' };
         for (const prior of priorChunks) {
           if (chunk.get(key.runId, key.kid, prior.seq)?.body_sha256 !== prior.body_sha256) {
@@ -467,6 +466,15 @@ export class ReplayStore {
         PROCESS_BOOT_ID, claimToken, leaseUntil, createdAt);
       return { status: 'NEW', claimToken, leaseUntil };
     });
+  }
+
+  hasExactReceipt(key) {
+    const { kid, runId, layer, seq, bodySha256, final, contentEncoding } = validateKey(key);
+    const row = this.db.prepare(
+      'SELECT body_sha256,final,content_encoding FROM receipts WHERE kid=? AND run_id=? AND layer=? AND seq=?'
+    ).get(kid, runId, layer, seq);
+    return Boolean(row && row.body_sha256 === bodySha256 && row.final === Number(final) &&
+      row.content_encoding === contentEncoding);
   }
 
   recordPublication(generationId, runId, state, updatedAt = Math.floor(Date.now() / 1000)) {
@@ -836,7 +844,8 @@ export class ReplayStore {
     });
   }
 
-  resolveStagedAck(key, { fullBuildDb } = {}) {
+  resolveStagedAck(key, options = {}) {
+    const { fullBuildDb, expectedRows, expectedPhase } = options;
     const { kid, runId, layer, seq, bodySha256, final, contentEncoding } = validateKey(key);
     if (final) fail('INGEST_REPLAY_KEY_INVALID', 'Staged ACK needs a nonfinal key');
     const row = this.db.prepare(
@@ -850,7 +859,13 @@ export class ReplayStore {
     if (row.status === 'staged_released') return { status: 'RUN_SUPERSEDED' };
     if (row.status !== 'staged') return { status: 'PENDING' };
     if (layer === 'full') {
-      const authority = this.#fullAuthority(fullBuildDb, key, row.building_generation_id);
+      const expectations = {};
+      if (expectedRows !== undefined) expectations.expectedRows = expectedRows;
+      if (Object.hasOwn(options, 'expectedPhase')) {
+        expectations.expectedPhase = expectedPhase;
+      }
+      const authority = this.#fullAuthority(fullBuildDb, key, row.building_generation_id,
+        false, [], expectations);
       if (authority.status === 'ABSENT') return { status: 'RUN_LOST' };
       if (authority.status === 'SEALED') return { status: 'SEALED' };
     }

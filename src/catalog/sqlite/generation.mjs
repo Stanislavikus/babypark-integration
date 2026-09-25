@@ -536,6 +536,16 @@ export function classifyGenerationArtifacts(storageDir, generationId) {
   } finally { db.close(); }
 }
 
+export function openGenerationAuthority(storageDir, generationId) {
+  const artifacts = classifyGenerationArtifacts(storageDir, generationId);
+  const filePath = artifacts.state === 'final' ? artifacts.finalPath
+    : ['building', 'ready'].includes(artifacts.state) ? artifacts.buildingPath : null;
+  if (!filePath || artifacts.state === 'both') {
+    throw catalogError('CATALOG_GENERATION_MISSING', 'Exact generation authority is unavailable');
+  }
+  return new DatabaseSync(filePath, { readOnly: true, create: false });
+}
+
 export function inspectCatalogGeneration(
   storageDir,
   generationId,

@@ -1,6 +1,7 @@
 import { IdentityStore } from '../identity/store.mjs';
 import {
   CatalogGenerationBuilder, CatalogPublisher, CatalogReader, classifyGenerationArtifacts,
+  openGenerationAuthority,
 } from '../sqlite/generation.mjs';
 import { CatalogPublicationLock } from '../sqlite/publication-lock.mjs';
 import { ReplayStore } from './replay-store.mjs';
@@ -119,23 +120,30 @@ export function processProductionFullChunk(args = {}) {
   const now = timestamp(args.now);
   return mutex.withLock(() => {
     let generationId, header, headerSha256;
+    let exactReceipt = false;
     if (key.seq === 0) {
       header = decoded.headerValue; headerSha256 = key.bodySha256;
-      validateAuthoritativeState(header, currentState(reader));
       generationId = productionGenerationId({ kid: key.kid, runId: key.runId, seq0BodySha256: headerSha256 });
+      exactReceipt = store.hasExactReceipt(key);
+      if (!exactReceipt) validateAuthoritativeState(header, currentState(reader));
     }
     let state = store.claim(key, now.seconds, key.seq === 0 ? { verifiedBody } : undefined);
     for (;;) {
       if (state.status === 'PENDING') {
         if (now.seconds <= state.leaseUntil) return state;
+        if (key.seq === 0) validateAuthoritativeState(header, currentState(reader));
         state = store.takeover(key, { now: now.seconds, expectedLeaseUntil: state.leaseUntil });
         continue;
       }
       if (state.status === 'STAGED_RELEASED') return { status: 'RUN_SUPERSEDED' };
       if (state.status === 'ACK_RECORDED') fail('FULL_GENERATION_AUTHORITY_LOST', 'Nonfinal receipt cannot be ACKED');
       if (state.status === 'STAGED_UNVERIFIED') {
-        if (key.seq > 0) contextForData(store, key);
-        return store.resolveStagedAck(key);
+        if (key.seq > 0) ({ generationId } = contextForData(store, key));
+        const authority = openGenerationAuthority(publisher.storageDir, generationId);
+        try {
+          return store.resolveStagedAck(key, { fullBuildDb: authority,
+            expectedRows: decoded.rows.length, expectedPhase: phase });
+        } finally { authority.close(); }
       }
       if (!['NEW', 'TAKEN_OVER'].includes(state.status)) fail('FULL_GENERATION_AUTHORITY_LOST', 'Unsupported replay state');
       break;

@@ -4,6 +4,7 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { DatabaseSync } from 'node:sqlite';
 import { IdentityStore } from '../../src/catalog/identity/store.mjs';
 import { CatalogPublisher, CatalogReader } from '../../src/catalog/sqlite/generation.mjs';
 import { CatalogPublicationLock } from '../../src/catalog/sqlite/publication-lock.mjs';
@@ -49,6 +50,20 @@ test('coordinator owns seq0, all production phases and E5a finalization', t => {
   const phases = [null, 0, 1, 2];
   const building = path.join(catalog, `catalog.${generation}.building.sqlite`);
   assert.ok(fs.existsSync(building));
+  for (const seq of [0, 1]) {
+    const replay = processProductionFullChunk({ store, publisher, mutex, reader, identityStore: identity,
+      key: { ...base, seq, bodySha256: hash(bodies[seq]) }, verifiedBody: bodies[seq], now: 110 });
+    assert.equal(replay.status, 'STAGED');
+  }
+  const authority = new DatabaseSync(building);
+  authority.prepare('UPDATE run_chunks SET phase=2 WHERE seq=1').run();
+  assert.equal(processProductionFullChunk({ store, publisher, mutex, reader, identityStore: identity,
+    key: { ...base, seq: 1, bodySha256: hash(bodies[1]) }, verifiedBody: bodies[1], now: 111 }).status, 'RUN_LOST');
+  authority.prepare('UPDATE run_chunks SET phase=0,rows=999 WHERE seq=1').run();
+  assert.equal(processProductionFullChunk({ store, publisher, mutex, reader, identityStore: identity,
+    key: { ...base, seq: 1, bodySha256: hash(bodies[1]) }, verifiedBody: bodies[1], now: 112 }).status, 'RUN_LOST');
+  authority.prepare('UPDATE run_chunks SET rows=? WHERE seq=1').run(phase0Records().length);
+  authority.close();
   const count = phase0Records().length + phase1Records().length + phase2Records().length;
   const digest = computeRunDigestV2({ headerHash: hash(header), chunkHashes: bodies.slice(1).map(hash), finalSeq: 4, count });
   const finalBody = bytes({ trailer: { count, final_seq: 4, run_digest: digest, run_header_sha256: hash(header), schema: 'bp.catalog.trailer/2' } });
@@ -58,4 +73,7 @@ test('coordinator owns seq0, all production phases and E5a finalization', t => {
   assert.equal(final.ack.generation_id, generation);
   assert.equal(publisher.state().current_generation, generation);
   reader.withDb(db => assert.deepEqual(db.prepare('SELECT phase FROM run_chunks ORDER BY seq').all().map(row => row.phase), phases));
+  const lateSeq0 = processProductionFullChunk({ store, publisher, mutex, reader, identityStore: identity,
+    key: { ...base, seq: 0, bodySha256: hash(header) }, verifiedBody: header, now: 201 });
+  assert.equal(lateSeq0.status, 'RUN_SUPERSEDED');
 });
