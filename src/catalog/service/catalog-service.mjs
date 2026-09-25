@@ -1,4 +1,5 @@
 import { skuKey } from '../domain/sku.mjs';
+import { normalizeLanguageTag } from '../domain/language.mjs';
 import { serviceError } from './errors.mjs';
 import {
   ALL_AVAILABILITY,
@@ -47,17 +48,15 @@ function validateMoney(value, name) {
 
 function validateLanguage(language) {
   if (language === undefined || language === null) return 'uk';
-  if (
-    typeof language !== 'string' ||
-    !/^[A-Za-z]{2,8}(?:-[A-Za-z0-9]{1,8})?$/.test(language)
-  ) {
+  const normalized = normalizeLanguageTag(language);
+  if (normalized === null) {
     throw serviceError(
       'CATALOG_LANGUAGE_INVALID',
       'language must be a short language tag',
       { language }
     );
   }
-  return language.toLowerCase();
+  return normalized;
 }
 
 function normalizeIds(values, name, max = MAX_BATCH_SIZE) {
@@ -1161,4 +1160,3 @@ export class CatalogService {
     });
   }
 }
-

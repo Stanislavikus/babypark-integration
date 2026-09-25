@@ -7,6 +7,12 @@ Because JSON cannot use `type` simultaneously as a discriminator and attribute
 value type, attribute definitions use `type: "attribute_definition"` plus
 `value_type: "TEXT" | "NUMBER" | "BOOL" | "ENUM"`.
 
+Every structured v1 object has an explicit field allow-list. Unknown keys and
+incorrect scalar/container types are rejected during whole-chunk validation,
+before identity mutation. Only `metadata`, `provenance`, and `options` are
+provider-controlled JSON objects; canonical source identity is stored outside
+those objects and cannot be overwritten.
+
 Localized maps are non-empty, normalize short language tags to lowercase, and
 never invent translations. Categories in one chunk are topologically ordered;
 an external parent must already exist.
@@ -39,3 +45,10 @@ apply, E5a finalization, CURRENT publication, and a fresh reader/service. This
 does not claim HTTP, live ingest, Drupal export, or incremental readiness.
 E6a-2 still owns generation coordination, durable cross-restart phase ordering,
 and process-death orchestration.
+
+`npm run catalog:e6a1-benchmark` characterizes the real `writeFullChunk` plus
+production mapper path. Every timed sample uses a clean identity, replay ledger,
+publication lock, and building generation; phase-0 prerequisites are prepared
+before timing. The deterministic fixture reports byte and canonical-row shape
+alongside median and maximum duration and deliberately has no generic-test time
+threshold.
