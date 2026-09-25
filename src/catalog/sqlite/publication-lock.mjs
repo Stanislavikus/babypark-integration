@@ -86,6 +86,7 @@ export class CatalogPublicationLock {
     if (this.active) {
       const result = work();
       if (result instanceof Promise) {
+        result.catch(() => {});
         throw new TypeError(
           'Publication lock cannot cross await'
         );
@@ -120,6 +121,7 @@ export class CatalogPublicationLock {
       this.active = true;
       const result = work();
       if (result instanceof Promise) {
+        result.catch(() => {});
         throw new TypeError(
           'Publication lock cannot cross await'
         );

@@ -51,6 +51,23 @@ async function heldWorker(t, dir) {
   return child;
 }
 
+function promiseWorker(mode) {
+  return new Promise((resolve, reject) => {
+    const child = spawn(process.execPath, [
+      new URL('../fixtures/catalog-lock-promise-worker.mjs', import.meta.url).pathname,
+      mode,
+    ], { stdio: ['ignore', 'pipe', 'pipe'] });
+    let stdout = '';
+    let stderr = '';
+    child.stdout.setEncoding('utf8');
+    child.stderr.setEncoding('utf8');
+    child.stdout.on('data', value => { stdout += value; });
+    child.stderr.on('data', value => { stderr += value; });
+    child.on('error', reject);
+    child.on('exit', (code, signal) => resolve({ code, signal, stdout, stderr }));
+  });
+}
+
 test('L1/L2: reentrancy is synchronous and another local instance is immediately busy', t => {
   const dir = directory(t);
   const first = new CatalogPublicationLock(dir);
@@ -109,6 +126,15 @@ test('L5/L6: callback failure and await rejection clear local ownership', t => {
   assert.equal(first.withLock(() => 'same'), 'same');
   assert.equal(second.withLock(() => 'other'), 'other');
 });
+
+for (const mode of ['outer', 'reentrant']) {
+  test(`rejected Promise in ${mode} callback cannot terminate the process`, async () => {
+    const result = await promiseWorker(mode);
+    assert.equal(result.signal, null, result.stderr);
+    assert.equal(result.code, 0, result.stderr);
+    assert.equal(result.stdout, 'SYNC_TYPEERROR\nSURVIVED\nREACQUIRED\n');
+  });
+}
 
 test('timeout options validate synchronously and apply per phase', t => {
   const dir = directory(t);
