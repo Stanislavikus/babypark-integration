@@ -21,6 +21,9 @@ test('malformed offer and unknown fields fail before identity or catalog mutatio
   assert.equal(fixture.builder.db.prepare('SELECT count(*) n FROM products').get().n, 0); assert.equal(fixture.builder.db.prepare('SELECT count(*) n FROM run_chunks WHERE seq=1').get().n, 0);
   const typoLocalized = product(); typoLocalized.localized.uk.short_descriptiom = 'typo'; assert.throws(() => validateFullRecords([typoLocalized]), code('FULL_RECORD_INVALID'));
   const typoProduct = product(); typoProduct.product_typo = true; assert.throws(() => validateFullRecords([typoProduct]), code('FULL_RECORD_INVALID'));
+  for (const field of ['categories', 'images']) { const invalid = product(); invalid[field] = null; assert.throws(() => validateFullRecords([invalid]), code('FULL_RECORD_INVALID')); }
+  const nullStock = product(); nullStock.variants[0].stock = null; assert.throws(() => validateFullRecords([nullStock]), code('FULL_RECORD_INVALID'));
+  const badImageVariant = product(); badImageVariant.images = [{ native_image_id: 'bad-ref', url: 'https://example.invalid/bad.jpg', variant_native_id: 'missing' }]; assert.throws(() => validateFullRecords([badImageVariant]), code('FULL_RECORD_INVALID'));
   assert.throws(() => validateFullRecords([{ schema: 'bp.catalog.full-record/1', type: 'attribute_definition', phase: 0, provider: 'fixture', native_attribute_id: 'a', code: 'a', attribute_type: 'TEXT', localized_labels: { uk: 'A' } }]), code('FULL_RECORD_INVALID'));
 });
 test('SQLite constraints translate FK and dimension conflicts', t => {
