@@ -62,7 +62,7 @@ function certification(db, context) {
   return { status: 'CERTIFIED', terminalAt: run.terminal_at, meta };
 }
 
-function certify(builder, context, terminalAt, failpoint) {
+function certify(builder, context, terminalAt, failpoint, prepareCertification) {
   const db = builder.db;
   const existing = certification(db, context);
   if (existing.status === 'CERTIFIED') return existing;
@@ -73,6 +73,13 @@ function certify(builder, context, terminalAt, failpoint) {
   const watermarks = expectedWatermarks(context.header);
   db.exec('BEGIN IMMEDIATE');
   try {
+    if (prepareCertification) {
+      const prepared = prepareCertification({ db, builder, context });
+      if (prepared instanceof Promise) {
+        prepared.catch(() => {});
+        fail('FULL_FINALIZE_CONFIG_INVALID', 'Certification preparation must be synchronous');
+      }
+    }
     db.prepare('INSERT INTO ingest_runs(run_id,layer,run_kind,run_digest,final_seq,status,' +
       'source_watermark,started_at,terminal_at,metadata_json) VALUES(?,?,?,?,?,\'ACCEPTED\',NULL,?,?,\'{}\')')
       .run(context.header.run_id, 'full', 'full', context.runDigest, context.finalSeq, startedAt, terminalAt);
@@ -129,7 +136,8 @@ export function finalizeFullRun(args = {}) {
       !(mutex instanceof CatalogPublicationLock) || publisher.mutex !== mutex ||
       !(reader instanceof CatalogReader) || finalKey?.layer !== 'full' || finalKey.final !== true ||
       !Buffer.isBuffer(verifiedFinalBody) || (failpoint !== undefined && typeof failpoint !== 'function') ||
-      (args.now !== undefined && typeof args.now !== 'function')) {
+      (args.now !== undefined && typeof args.now !== 'function') ||
+      (args.prepareCertification !== undefined && typeof args.prepareCertification !== 'function')) {
     fail('FULL_FINALIZE_CONFIG_INVALID', 'Exact full final inputs and shared publication lock are required');
   }
   return mutex.withLock(() => {
@@ -190,7 +198,7 @@ export function finalizeFullRun(args = {}) {
             JSON.stringify(proof.header) !== JSON.stringify(context.header)) {
           fail('FULL_FINALIZE_CERTIFICATION_CONFLICT', 'Proof differs from recovery context');
         }
-        certify(builder, context, timestamp.iso, failpoint);
+        certify(builder, context, timestamp.iso, failpoint, args.prepareCertification);
       } finally { builder.close(); }
     }
   });

@@ -321,6 +321,26 @@ export class IdentityStore {
     };
   }
 
+  lookupProductBySource({ provider, nativeProductId }) {
+    requireText('provider', provider);
+    requireText('nativeProductId', nativeProductId);
+    return this.db.prepare(`
+      SELECT sp.product_id, p.lifecycle
+      FROM source_products sp JOIN products p ON p.product_id=sp.product_id
+      WHERE sp.provider=? AND sp.native_product_id=?
+    `).get(provider, nativeProductId);
+  }
+
+  lookupVariantBySource({ provider, nativeVariantId }) {
+    requireText('provider', provider);
+    requireText('nativeVariantId', nativeVariantId);
+    return this.db.prepare(`
+      SELECT v.variant_id,v.product_id,v.sku,v.sku_key,v.lifecycle
+      FROM source_variants sv JOIN variants v ON v.variant_id=sv.variant_id
+      WHERE sv.provider=? AND sv.native_variant_id=?
+    `).get(provider, nativeVariantId);
+  }
+
   ensureProduct({
     provider,
     nativeProductId,

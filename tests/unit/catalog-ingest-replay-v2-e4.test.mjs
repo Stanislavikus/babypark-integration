@@ -97,7 +97,7 @@ test('v2 full verification counts only data and revalidates CURRENT', t => {
   const f = fixture(t); const h = stageFullHeader(f); const data = bytes({ rows:[{ id:'b1', name:'Brand' }] });
   const dkey = key('r1','full',1,data); const dc = f.store.claim(dkey);
   writeFullChunk({ mutex:f.mutex, store:f.store, builder:f.builder, key:dkey, verifiedBody:data,
-    claimToken:dc.claimToken, writeRows(api, rows){ rows.forEach(row => api.insertBrand(row)); } });
+    claimToken:dc.claimToken, writeRows(api, rows){ rows.forEach(row => api.insertBrand(row)); return rows.length; } });
   const digest = computeRunDigestV2({ headerHash:hash(h.body), chunkHashes:[hash(data)], finalSeq:2, count:1 });
   const trailer = bytes({ trailer:{ count:1, final_seq:2, run_digest:digest,
     run_header_sha256:hash(h.body), schema:'bp.catalog.trailer/2' } });
