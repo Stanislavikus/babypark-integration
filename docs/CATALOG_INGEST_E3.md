@@ -130,12 +130,10 @@ renders the response only from CURRENT evidence. Incremental apply remains
 blocked on the read-only CURRENT reader versus in-place SQLite journal/rollback
 invariant.
 
-Before the publisher is used behind HTTP, replace long synchronous event-loop
-waiting with bounded acquisition and a stable PUBLICATION_LOCK_BUSY outcome;
-prove that separate lock instances in one process do not self-deadlock; add the
-publication lock database/artifacts to storage-policy protection; and exercise
-reader reload failure during rollback as well as CURRENT/journal consistency at
-named crash windows.
+E5b now provides bounded synchronous acquisition, stable
+PUBLICATION_LOCK_BUSY, same-process different-instance fencing, storage-policy
+protection for lock artifacts, and rollback crash-window certification. These
+are pre-HTTP guarantees only and do not enable a receiver or live ingest.
 
 Before live ingest, implement rollback-aware final takeover, heartbeat/lease
 handling, receipt/staging retention under the apply/publisher lock, capacity and

@@ -70,6 +70,45 @@ test('required storage class cannot disappear silently', () => {
   );
 });
 
+for (const id of [
+  'catalog_publication_lock_db',
+  'catalog_publication_lock_sidecars',
+]) {
+  test(`${id} cannot disappear silently`, () => {
+    const policy = clone(loadStoragePolicy(POLICY));
+    policy.objects = policy.objects.filter(entry => entry.id !== id);
+    assert.throws(
+      () => validateStoragePolicy(policy),
+      policyError('STORAGE_POLICY_REQUIRED_OBJECT_MISSING')
+    );
+  });
+}
+
+test('publication lock policy forbids live cleanup and excludes lock artifacts from janitor', () => {
+  const policy = loadStoragePolicy(POLICY);
+  const lock = policy.objects.find(entry => entry.id === 'catalog_publication_lock_db');
+  const sidecars = policy.objects.find(entry => entry.id === 'catalog_publication_lock_sidecars');
+  assert.equal(lock.cleanup.automatic, false);
+  assert.equal(lock.backup.required, false);
+  assert.equal(lock.backup.off_host, false);
+  assert.match(lock.cleanup.delete_guard, /Never unlink, replace or recreate/);
+  assert.match(lock.recovery, /controlled downtime/);
+  assert.equal(sidecars.cleanup.automatic, false);
+  assert.equal(sidecars.backup.required, false);
+  assert.match(sidecars.cleanup.delete_guard, /Never manually unlink/);
+  assert.match(sidecars.cleanup.mechanism, /SQLite lifecycle/);
+  for (const id of ['catalog_generations', 'catalog_building_generations']) {
+    const entry = policy.objects.find(item => item.id === id);
+    assert.match(entry.cleanup.mechanism, /only (for )?valid catalog\./);
+    for (const artifact of [
+      'catalog-publication-lock.sqlite',
+      'catalog-publication-lock.sqlite-journal',
+      'catalog-publication-lock.sqlite-wal',
+      'catalog-publication-lock.sqlite-shm',
+    ]) assert.match(entry.cleanup.delete_guard, new RegExp(artifact.replaceAll('.', '\\.')));
+  }
+});
+
 test('automatic cleanup requires dry-run and a delete guard', () => {
   const policy = clone(loadStoragePolicy(POLICY));
   const entry = policy.objects.find(

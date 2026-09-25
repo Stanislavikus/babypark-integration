@@ -272,23 +272,36 @@ test('K: reader reload failure restores bootstrap pointer and retry reuses targe
   ));
 });
 
-test('M: two real coordinator processes serialize on the publication lock', async t => {
+test('M: busy coordinator exits bounded and a fresh process retry reaches ACKED', async t => {
   const f = fixture(t);
   const first = startWorker(f, 'lock-proof');
   await message(first, 'started');
   await message(first, 'lock-proof');
   const second = startWorker(f, 'observe-proof');
   await message(second, 'started');
-  let entered = false;
-  const enteredMessage = message(second, 'proof-entered').then(value => { entered = true; return value; });
-  await new Promise(resolve => setTimeout(resolve, 250));
-  assert.equal(entered, false, 'second coordinator entered proof while lock was held');
+  const started = performance.now();
+  const rejected = await message(second, 'error');
+  const elapsed = performance.now() - started;
+  assert.equal(rejected.detail.code, 'PUBLICATION_LOCK_BUSY');
+  assert.ok(elapsed < 1500, 'busy response took ' + elapsed + 'ms');
+  assert.deepEqual(await once(second, 'exit'), [1, null]);
+  assert.equal(fs.existsSync(path.join(f.dir, 'catalog.target.sqlite')), false);
+  assert.equal(f.store.publication('target'), null);
+  const building = new DatabaseSync(path.join(f.dir, 'catalog.target.building.sqlite'));
+  assert.equal(building.prepare(
+    'SELECT COUNT(*) n FROM ingest_runs WHERE run_id=?'
+  ).get(f.runId).n, 0);
+  building.close();
   first.kill('SIGKILL');
   assert.deepEqual(await once(first, 'exit'), [null, 'SIGKILL']);
-  await enteredMessage;
-  const done = await message(second, 'done');
+  const retry = startWorker(f, 'observe-proof');
+  const entered = message(retry, 'proof-entered');
+  const completed = message(retry, 'done');
+  await message(retry, 'started');
+  await entered;
+  const done = await completed;
   assert.equal(done.detail.status, 'ACKED');
-  assert.deepEqual(await once(second, 'exit'), [0, null]);
+  assert.deepEqual(await once(retry, 'exit'), [0, null]);
   f.reader.reloadExpected('target');
   f.reader.withDb(db => assert.equal(
     db.prepare('SELECT COUNT(*) n FROM ingest_runs WHERE run_id=?').get(f.runId).n, 1
