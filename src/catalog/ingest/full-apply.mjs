@@ -20,7 +20,7 @@ function fail(code, message) {
   throw new FullApplyError(code, message);
 }
 
-function decodeChunk(key, verifiedBody) {
+export function decodeFullChunkForApply(key, verifiedBody) {
   if (
     key?.layer !== 'full' ||
     key.final !== false ||
@@ -43,7 +43,9 @@ function decodeChunk(key, verifiedBody) {
         runId: key.runId, seq: key.seq, final: key.final,
       });
       if (header.run_kind !== 'full') throw new Error('not full');
-      return { header: true, rows: [] };
+      return { header: true, headerValue: parseRunHeader(verifiedBody, {
+        runId: key.runId, seq: key.seq, final: key.final,
+      }), rows: [] };
     } catch {
       fail('FULL_APPLY_BODY_INVALID', 'Sequence zero must be a valid full run header');
     }
@@ -168,6 +170,7 @@ function writeFullChunkLocked({
   claimToken,
   writeRows,
   afterBuildCommit,
+  phase = null,
 }) {
   if (
     !(store instanceof ReplayStore) ||
@@ -185,8 +188,12 @@ function writeFullChunkLocked({
     );
   }
 
-  const decoded = decodeChunk(key, verifiedBody);
+  const decoded = decodeFullChunkForApply(key, verifiedBody);
   const rows = decoded.rows;
+  if (phase !== null && (!Number.isInteger(phase) || phase < 0 || phase > 2 ||
+      rows.length === 0 || rows.some(row => row?.phase !== phase))) {
+    fail('FULL_APPLY_ROWS_INVALID', 'Production phase does not match decoded rows');
+  }
   store.assertPendingOwner(
     key,
     claimToken,
@@ -210,14 +217,14 @@ function writeFullChunkLocked({
     assertGenerationRun(db, key.runId);
 
     const existing = db.prepare(
-      'SELECT body_sha256, rows FROM run_chunks ' +
+      'SELECT body_sha256, rows, phase FROM run_chunks ' +
       'WHERE run_id=? AND kid=? AND seq=?'
     ).get(key.runId, key.kid, key.seq);
 
     if (existing) {
       if (
         existing.body_sha256 !== key.bodySha256 ||
-        existing.rows !== rows.length
+        existing.rows !== rows.length || existing.phase !== phase
       ) {
         fail(
           'FULL_APPLY_CHUNK_CONFLICT',
@@ -250,14 +257,15 @@ function writeFullChunkLocked({
 
       db.prepare(
         'INSERT INTO run_chunks(' +
-        'run_id,kid,seq,body_sha256,rows' +
-        ') VALUES(?,?,?,?,?)'
+        'run_id,kid,seq,body_sha256,rows,phase' +
+        ') VALUES(?,?,?,?,?,?)'
       ).run(
         key.runId,
         key.kid,
         key.seq,
         key.bodySha256,
-        processed
+        processed,
+        phase
       );
 
       result = {

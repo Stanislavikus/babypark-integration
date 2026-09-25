@@ -91,7 +91,9 @@ historical evidence, not a description of CURRENT. After rollback its
 `switched` was recorded. Evidence in CURRENT takes precedence over journal
 history. The journal is not connected to publisher/rollback yet.
 
-All final takeover attempts fail with INGEST_REPLAY_STATE_REQUIRED. A
+All final takeover attempts fail with INGEST_REPLAY_STATE_REQUIRED. This remains the
+intentional FULL rule: E5a performs exact final recovery under the shared publication
+lock and does not permit generic final takeover. A
 genuinely unapplied final claim can remain PENDING after a crash, requiring a
 new run and full export. This is acceptable for fixture tests and forbids live
 Drupal ingest. Before enabling takeover, lock publish, rollback, apply, and
@@ -131,7 +133,7 @@ Neither alert transport nor Drupal exporter exists in this fixture-only PR.
   Resolve the read-only reader versus in-place incremental SQLite update and
   rollback/manifest sidecar invariants.
 - Add heartbeat or prove apply completes before lease expiry, then implement
-  rollback-aware final takeover. A child-process SIGKILL test now covers
+  evidence-driven E5a final recovery (not generic final takeover). A child-process SIGKILL test now covers
   claim/takeover with different boot IDs; pointer, apply and ACK windows still
   need SIGKILL/SIGSTOP tests at named failpoints.
 - Call accepted-run body cleanup from apply; under the publisher/apply lock add

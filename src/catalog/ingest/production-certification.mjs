@@ -89,7 +89,15 @@ function certifyIdentityAndKits(db, identityStore) {
     if (!identity || identity.lifecycle !== 'active' || identity.product_id !== component.component_product_id || identity.sku_key !== component.sku_key || normalizeSku(component.sku).sku_key !== identity.sku_key) fail('FULL_SEMANTIC_CERTIFICATION_FAILED', 'KIT component identity mismatch');
   }
 }
-export function prepareProductionCertification({ db, identityStore, dependencyFingerprint = productionDependencyFingerprint(identityStore) }) {
+export function prepareProductionCertification({ db, identityStore, runId, dependencyFingerprint = productionDependencyFingerprint(identityStore) }) {
+  if (typeof runId !== 'string' || runId === '') fail('FULL_SEMANTIC_CERTIFICATION_FAILED', 'Production run identity is required');
+  const chunks = db.prepare('SELECT seq,rows,phase FROM run_chunks WHERE run_id=? ORDER BY seq').all(runId);
+  if (!chunks.length || chunks[0].seq !== 0 || chunks[0].rows !== 0 || chunks[0].phase !== null ||
+      chunks.some((row, index) => row.seq !== index) ||
+      chunks.slice(1).some((row, index) => ![0, 1, 2].includes(row.phase) ||
+        (index > 0 && row.phase < chunks[index].phase))) {
+    fail('FULL_RECORD_PHASE_REGRESSION', 'Production chunk phase authority is invalid');
+  }
   const metadata = db.prepare('SELECT dependency_fingerprint FROM catalog_meta WHERE singleton=1').get();
   if (metadata.dependency_fingerprint !== dependencyFingerprint) fail('FULL_DEPENDENCY_MISMATCH', 'Production dependency fingerprint differs');
   const docs = rebuildProductionFts(db); certifyCategoryGraph(db); certifyAttributes(db); certifyImages(db); certifyIdentityAndKits(db, identityStore); certifyProductionFts(db, docs);
