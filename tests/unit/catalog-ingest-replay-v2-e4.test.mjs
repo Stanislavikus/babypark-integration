@@ -103,8 +103,11 @@ test('v2 full verification counts only data and revalidates CURRENT', t => {
     run_header_sha256:hash(h.body), schema:'bp.catalog.trailer/2' } });
   const final = key('r1','full',2,trailer,true);
   f.store.claim(final, 100, { verifiedBody:trailer, reader:f.reader });
-  assert.deepEqual(verifyFullRunForApply({ mutex:f.mutex, store:f.store, builder:f.builder,
-    finalKey:final, reader:f.reader }), { status:'VERIFIED', runDigest:digest, count:1,
+  const proof = verifyFullRunForApply({ mutex:f.mutex, store:f.store, builder:f.builder,
+    finalKey:final, reader:f.reader });
+  assert.equal(proof.header.run_id, 'r1');
+  assert.deepEqual({ ...proof, header:undefined }, { status:'VERIFIED', runDigest:digest, count:1,
+    header:undefined,
     chunkKeys:[{ kid:'k1', runId:'r1', layer:'full', seq:1 }] });
 });
 

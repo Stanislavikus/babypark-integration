@@ -502,6 +502,39 @@ function finalPathFor(storageDir, generationId) {
   return path.join(storageDir, generationFilename(generationId));
 }
 
+function regularArtifact(filePath) {
+  try {
+    const stat = fs.lstatSync(filePath);
+    if (!stat.isFile() || stat.isSymbolicLink()) {
+      throw catalogError('CATALOG_GENERATION_UNSAFE', 'Catalog artifact must be a regular file', { path: filePath });
+    }
+    return true;
+  } catch (error) {
+    if (error?.code === 'ENOENT') return false;
+    throw error;
+  }
+}
+
+export function classifyGenerationArtifacts(storageDir, generationId) {
+  const dir = requireStorageDir(storageDir);
+  const id = validateGenerationId(generationId);
+  const buildingPath = path.join(dir, buildingFilename(id));
+  const finalPath = finalPathFor(dir, id);
+  const building = regularArtifact(buildingPath);
+  const final = regularArtifact(finalPath);
+  if (building && final) return { state: 'both', buildingPath, finalPath };
+  if (final) return { state: 'final', buildingPath, finalPath };
+  if (!building) return { state: 'neither', buildingPath, finalPath };
+  const db = new DatabaseSync(buildingPath, { readOnly: true, create: false });
+  try {
+    const meta = catalogMeta(db);
+    if (!meta || meta.generation_id !== id || !['building', 'ready'].includes(meta.state)) {
+      throw catalogError('CATALOG_META_MISSING', 'Building artifact metadata is invalid');
+    }
+    return { state: meta.state, buildingPath, finalPath };
+  } finally { db.close(); }
+}
+
 export function inspectCatalogGeneration(
   storageDir,
   generationId,
@@ -552,6 +585,49 @@ export function inspectCatalogGeneration(
 }
 
 export class CatalogGenerationBuilder {
+  static recoverSeal({ storageDir, generationId, expectedRunId,
+    expectedRunDigest, expectedFinalSeq, failpoint } = {}) {
+    const artifacts = classifyGenerationArtifacts(storageDir, generationId);
+    if (artifacts.state === 'both') throw catalogError('CATALOG_ARTIFACT_CONFLICT', 'Both building and final artifacts exist');
+    if (artifacts.state !== 'ready') throw catalogError('CATALOG_BUILD_SEALED', 'Ready building generation is required');
+    if (!GENERATION_ID_RE.test(expectedRunId || '') || !/^[a-f0-9]{64}$/.test(expectedRunDigest || '') ||
+        !Number.isSafeInteger(expectedFinalSeq) || expectedFinalSeq < 1 ||
+        (failpoint !== undefined && typeof failpoint !== 'function')) {
+      throw catalogError('CATALOG_INVALID_ARGUMENT', 'Exact certification tuple is required');
+    }
+    const hit = name => {
+      const value = failpoint?.(name);
+      if (value instanceof Promise) throw new TypeError('Seal failpoint must be synchronous');
+    };
+    const db = new DatabaseSync(artifacts.buildingPath, { create: false });
+    try {
+      db.exec('PRAGMA foreign_keys=ON; PRAGMA synchronous=FULL; PRAGMA busy_timeout=5000;');
+      validateDbHandle(db, { expectedGenerationId: generationId, requireReady: true });
+      ftsIntegrityCheck(db);
+      const run = db.prepare('SELECT layer,run_kind,run_digest,final_seq,status FROM ingest_runs WHERE run_id=?').get(expectedRunId);
+      if (!run || run.layer !== 'full' || run.run_kind !== 'full' || run.status !== 'ACCEPTED' ||
+          run.run_digest !== expectedRunDigest || run.final_seq !== expectedFinalSeq) {
+        throw catalogError('CATALOG_CERTIFICATION_CONFLICT', 'Ready generation certification differs');
+      }
+      hit('recoverSeal.beforeCheckpoint');
+      db.exec('PRAGMA wal_checkpoint(TRUNCATE);');
+      hit('recoverSeal.afterCheckpoint');
+      const mode = String(db.prepare('PRAGMA journal_mode=DELETE').get()?.journal_mode || '').toLowerCase();
+      if (mode !== 'delete') throw catalogError('CATALOG_SEAL_JOURNAL_MODE_FAILED', 'Could not normalize sealed catalog');
+      db.exec('PRAGMA synchronous=FULL;');
+      hit('recoverSeal.afterDeleteJournal');
+    } finally { db.close(); }
+    if (fileSidecars(artifacts.buildingPath).some(regularArtifact)) {
+      throw catalogError('CATALOG_BUILD_SIDECAR_PRESENT', 'Recovered build still has sidecars');
+    }
+    fs.chmodSync(artifacts.buildingPath, 0o600);
+    fsyncFile(artifacts.buildingPath);
+    if (regularArtifact(artifacts.finalPath)) throw catalogError('CATALOG_FINAL_EXISTS', 'Final generation already exists');
+    fs.renameSync(artifacts.buildingPath, artifacts.finalPath);
+    fsyncDirectory(path.resolve(storageDir));
+    hit('recoverSeal.afterRename');
+    return inspectCatalogGeneration(storageDir, generationId);
+  }
   static openExisting({ storageDir, generationId, now = () => new Date().toISOString() }) {
     const dir = requireStorageDir(storageDir);
     const id = validateGenerationId(generationId);
@@ -786,7 +862,7 @@ export class CatalogGenerationBuilder {
     });
   }
 
-  seal({ extraManifest = {} } = {}) {
+  seal({ extraManifest = {}, failpoint } = {}) {
     this.assertOpen();
     if (this.sealed) {
       throw catalogError(
@@ -814,6 +890,11 @@ export class CatalogGenerationBuilder {
       'state=\'ready\', sealed_at=?, manifest_sha256=?, manifest_json=? ' +
       'WHERE singleton=1'
     ).run(sealedAt, manifestSha, manifestJson);
+    const hit = name => {
+      const value = failpoint?.(name);
+      if (value instanceof Promise) throw new TypeError('Seal failpoint must be synchronous');
+    };
+    hit('seal.afterReady');
 
     validateDbHandle(this.db, {
       expectedGenerationId: this.generationId,
@@ -823,6 +904,7 @@ export class CatalogGenerationBuilder {
     ftsIntegrityCheck(this.db);
 
     this.db.exec('PRAGMA wal_checkpoint(TRUNCATE);');
+    hit('seal.afterCheckpoint');
     const journalMode = String(
       this.db.prepare('PRAGMA journal_mode=DELETE').get()?.journal_mode || ''
     ).toLowerCase();
@@ -834,6 +916,7 @@ export class CatalogGenerationBuilder {
       );
     }
     this.db.exec('PRAGMA synchronous=FULL;');
+    hit('seal.afterDeleteJournal');
 
     this.db.close();
     this.closed = true;
@@ -861,6 +944,7 @@ export class CatalogGenerationBuilder {
 
     fs.renameSync(this.buildingPath, this.finalPath);
     fsyncDirectory(this.storageDir);
+    hit('seal.afterRename');
     this.sealed = true;
 
     const inspected = inspectCatalogGeneration(

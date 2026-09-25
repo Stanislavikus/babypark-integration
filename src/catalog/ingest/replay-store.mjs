@@ -573,6 +573,48 @@ export class ReplayStore {
     };
   }
 
+  recoverFullRunContext(key) {
+    const { kid, runId, layer, seq } = validateKey(key);
+    if (layer !== 'full' || key.final !== true) {
+      fail('INGEST_REPLAY_KEY_INVALID', 'Full final claim is required');
+    }
+    const trailer = this.getClaimedFinal(key);
+    const rows = this.db.prepare(
+      "SELECT seq,body_sha256,status,building_generation_id,staged_body,created_at " +
+      "FROM receipts WHERE kid=? AND run_id=? AND layer='full' AND final=0 ORDER BY seq"
+    ).all(kid, runId);
+    if (rows.length !== seq || rows.some((row, index) => row.seq !== index)) {
+      fail('INGEST_REPLAY_DIGEST_INCOMPLETE', 'Full recovery receipts are not contiguous');
+    }
+    if (rows.some(row => !['staged', 'staged_released'].includes(row.status))) {
+      fail('INGEST_REPLAY_DIGEST_INCOMPLETE', 'Full recovery receipts are not durably staged');
+    }
+    const targetGenerationId = rows[0]?.building_generation_id;
+    if (!ID_RE.test(targetGenerationId || '') ||
+        rows.some(row => row.building_generation_id !== targetGenerationId)) {
+      fail('INGEST_REPLAY_RUN_LOST', 'Full run spans invalid building generations');
+    }
+    const first = rows[0];
+    if (!(first.staged_body instanceof Uint8Array)) {
+      fail('INGEST_REPLAY_CONTEXT_UNAVAILABLE', 'Retained full run header is unavailable');
+    }
+    const body = Buffer.isBuffer(first.staged_body)
+      ? first.staged_body : Buffer.from(first.staged_body);
+    if (first.body_sha256 !== trailer.runHeaderSha256 ||
+        crypto.createHash('sha256').update(body).digest('hex') !== trailer.runHeaderSha256) {
+      fail('INGEST_REPLAY_HEADER_HASH_MISMATCH', 'Retained full run header hash differs');
+    }
+    const header = parseHeaderForKey({ ...key, seq: 0, final: false,
+      bodySha256: first.body_sha256 }, body);
+    if (header.run_kind !== 'full' || header.run_id !== runId ||
+        !Number.isSafeInteger(seq) || !Number.isSafeInteger(trailer.count) ||
+        !Number.isSafeInteger(first.created_at)) {
+      fail('INGEST_REPLAY_CONTEXT_UNAVAILABLE', 'Full recovery context is invalid');
+    }
+    return { targetGenerationId, header, runDigest: trailer.runDigest,
+      count: trailer.count, finalSeq: seq, startedAtSeconds: first.created_at };
+  }
+
   verifyClaimedRunDigest(key, { fullBuildDb, reader, resolveCurrent } = {}) {
     const { kid, runId, layer, seq } = validateKey(key);
     const trailer = this.getClaimedFinal(key);
@@ -805,13 +847,19 @@ export class ReplayStore {
       throw new TypeError('Final key and CURRENT reader are required');
     }
     const receipt = this.getClaimedFinal(key);
-    const { generationId, run } = reader.withDb((db, id) => ({
-      generationId: id,
-      run: db.prepare(
-        'SELECT layer, run_kind, status, run_digest, final_seq, source_watermark ' +
-        'FROM ingest_runs WHERE run_id=?'
-      ).get(key.runId),
-    }));
+    let generationId, run;
+    try {
+      ({ generationId, run } = reader.withDb((db, id) => ({
+        generationId: id,
+        run: db.prepare(
+          'SELECT layer, run_kind, status, run_digest, final_seq, source_watermark ' +
+          'FROM ingest_runs WHERE run_id=?'
+        ).get(key.runId),
+      })));
+    } catch (error) {
+      if (error?.code === 'CATALOG_CURRENT_MISSING') return { status: 'ABSENT' };
+      throw error;
+    }
     if (!run) return { status: 'ABSENT' };
     if (run.layer !== key.layer ||
         run.run_kind !== (key.layer === 'full' ? 'full' : 'incremental') ||
