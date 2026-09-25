@@ -41,7 +41,7 @@ function fixture(t, { runId = 'run1' } = {}) {
   const dataKey = { ...headerKey, seq:1, bodySha256:hash(data) };
   const dataOwner = store.claim(dataKey, 101);
   writeFullChunk({ mutex, store, builder, key:dataKey, verifiedBody:data,
-    claimToken:dataOwner.claimToken, writeRows(api, rows) { rows.forEach(row => api.insertBrand(row)); } });
+    claimToken:dataOwner.claimToken, writeRows(api, rows) { rows.forEach(row => api.insertBrand(row)); return rows.length; } });
   builder.close();
   const digest = computeRunDigestV2({ headerHash:hash(headerBody), chunkHashes:[hash(data)], finalSeq:2, count:1 });
   const finalBody = Buffer.from(canonicalJson({ trailer:{ count:1, final_seq:2, run_digest:digest,

@@ -6,6 +6,7 @@ import {
   canonicalJson,
 } from './replay-store.mjs';
 import { parseRunHeader } from './run-protocol.mjs';
+import { createCanonicalWriter } from './canonical-writer.mjs';
 
 export class FullApplyError extends Error {
   constructor(code, message) {
@@ -140,10 +141,11 @@ function createFixtureRowApi(db) {
     },
   });
 
-  return {
-    api: Object.freeze(api),
-    rowsWritten: () => written,
-  };
+  const production = createCanonicalWriter(db);
+  for (const [name, descriptor] of Object.entries(Object.getOwnPropertyDescriptors(production))) {
+    Object.defineProperty(api, name, descriptor);
+  }
+  return { api: Object.freeze(api), rowsWritten: () => written };
 }
 
 export function writeFullChunk(args) {
@@ -231,17 +233,18 @@ function writeFullChunkLocked({
       const callbackResult = decoded.header ? undefined : writeRows(fixtureWriter.api, rows);
 
       if (callbackResult instanceof Promise) {
+        callbackResult.catch(() => {});
         fail(
           'FULL_APPLY_ROWS_INVALID',
           'Writer must be synchronous'
         );
       }
 
-      const written = fixtureWriter.rowsWritten();
-      if (written !== rows.length) {
+      const processed = decoded.header ? 0 : callbackResult;
+      if (!Number.isSafeInteger(processed) || processed < 0 || processed !== rows.length) {
         fail(
           'FULL_APPLY_ROWS_INVALID',
-          'Writer must write each decoded row exactly once'
+          'Writer must return the decoded source-record count'
         );
       }
 
@@ -254,12 +257,12 @@ function writeFullChunkLocked({
         key.kid,
         key.seq,
         key.bodySha256,
-        written
+        processed
       );
 
       result = {
         status: 'COMMITTED',
-        rows: written,
+        rows: processed,
       };
     }
 

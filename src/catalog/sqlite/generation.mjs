@@ -878,6 +878,7 @@ export class CatalogGenerationBuilder {
       schema_version: CATALOG_SCHEMA_VERSION,
       source_epoch: before.source_epoch,
       identity_revision: before.identity_revision,
+      dependency_fingerprint: before.dependency_fingerprint,
       counts: before.counts,
       layers: before.layers,
       extra: extraManifest,

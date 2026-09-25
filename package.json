@@ -13,6 +13,7 @@
     "gateway:backup": "node scripts/backup-bridge.mjs",
     "identity:bootstrap": "node scripts/identity-bootstrap.mjs",
     "identity:status": "node scripts/identity-status.mjs",
+    "catalog:e6a1-benchmark": "node scripts/catalog-e6a1-benchmark.mjs",
     "storage:validate": "node scripts/validate-storage-policy.mjs"
   }
 }

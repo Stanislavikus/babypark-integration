@@ -314,3 +314,7 @@ It does NOT:
 - change Drupal;
 - enable catalog ingest;
 - change Chatwoot/Viber runtime.
+# Manifest dependency fingerprint
+
+Sealed manifests carry `dependency_fingerprint` as first-class top-level
+metadata beside `identity_revision`; it is covered by `manifest_sha256`.
