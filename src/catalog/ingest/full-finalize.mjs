@@ -96,8 +96,16 @@ function inspectCertification(filePath, context) {
 }
 
 function currentReconciliation(store, finalKey, reader, failpoint) {
+  const reconcilePublication = result => {
+    if (result.status !== 'ACKED') return;
+    const entry = store.publication(result.ack.generation_id);
+    if (entry?.runId === finalKey.runId && entry.state === 'intent') {
+      store.recordPublication(result.ack.generation_id, finalKey.runId, 'switched');
+    }
+  };
   let result = store.resolveFinalAckAgainstCurrent(finalKey, reader);
   if (result.status === 'ACKED') {
+    reconcilePublication(result);
     invoke(failpoint, 'ack.beforeCleanup');
     store.releaseAcceptedRunBodies(finalKey, reader);
     invoke(failpoint, 'ack.afterCleanup');
@@ -106,6 +114,7 @@ function currentReconciliation(store, finalKey, reader, failpoint) {
   if (result.status !== 'PENDING') return result;
   result = store.finishPendingAgainstCurrent(finalKey, reader);
   if (result.status === 'ACKED') {
+    reconcilePublication(result);
     invoke(failpoint, 'ack.beforeCleanup');
     store.releaseAcceptedRunBodies(finalKey, reader);
     invoke(failpoint, 'ack.afterCleanup');

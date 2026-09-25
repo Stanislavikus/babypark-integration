@@ -12,6 +12,7 @@ import {
 import { catalogError } from './errors.mjs';
 
 const GENERATION_ID_RE = /^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/;
+const RUN_ID_RE = /^[A-Za-z0-9_-]{1,64}$/;
 const POINTER_NAMES = new Set(['CURRENT', 'PREVIOUS']);
 let pointerNonce = 0;
 
@@ -590,7 +591,7 @@ export class CatalogGenerationBuilder {
     const artifacts = classifyGenerationArtifacts(storageDir, generationId);
     if (artifacts.state === 'both') throw catalogError('CATALOG_ARTIFACT_CONFLICT', 'Both building and final artifacts exist');
     if (artifacts.state !== 'ready') throw catalogError('CATALOG_BUILD_SEALED', 'Ready building generation is required');
-    if (!GENERATION_ID_RE.test(expectedRunId || '') || !/^[a-f0-9]{64}$/.test(expectedRunDigest || '') ||
+    if (!RUN_ID_RE.test(expectedRunId || '') || !/^[a-f0-9]{64}$/.test(expectedRunDigest || '') ||
         !Number.isSafeInteger(expectedFinalSeq) || expectedFinalSeq < 1 ||
         (failpoint !== undefined && typeof failpoint !== 'function')) {
       throw catalogError('CATALOG_INVALID_ARGUMENT', 'Exact certification tuple is required');
