@@ -235,9 +235,9 @@
       },
       "cleanup": {
         "automatic": true,
-        "mechanism": "Safe catalog janitor using generation registry/pointers.",
+        "mechanism": "Safe catalog janitor using generation registry/pointers and only valid catalog.<generation-id>.sqlite filenames.",
         "dry_run_required": true,
-        "delete_guard": "CURRENT, PREVIOUS and active build can never be deleted."
+        "delete_guard": "CURRENT, PREVIOUS and active build can never be deleted. Generation cleanup only targets valid generation filename patterns and must never treat catalog-publication-lock.sqlite, catalog-publication-lock.sqlite-journal, catalog-publication-lock.sqlite-wal, and catalog-publication-lock.sqlite-shm as a generation or orphan."
       },
       "recovery": "Rebuild from source/identity or rollback to validated PREVIOUS.",
       "backup": {
@@ -269,9 +269,9 @@
       },
       "cleanup": {
         "automatic": true,
-        "mechanism": "Safe janitor only after run is terminal failed/abandoned or provably orphaned.",
+        "mechanism": "Safe janitor only after run is terminal failed/abandoned or provably orphaned, and only for valid catalog.<generation-id>.building.sqlite filenames.",
         "dry_run_required": true,
-        "delete_guard": "Never age-only delete; active/current/previous references excluded."
+        "delete_guard": "Never age-only delete; active/current/previous references excluded. Generation cleanup only targets valid generation filename patterns and must never treat catalog-publication-lock.sqlite, catalog-publication-lock.sqlite-journal, catalog-publication-lock.sqlite-wal, and catalog-publication-lock.sqlite-shm as a generation or orphan."
       },
       "recovery": "Discard safe failed build and rebuild from source.",
       "backup": {
@@ -280,6 +280,74 @@
         "status": "NOT_REQUIRED"
       },
       "pii": "none_expected"
+    },
+    {
+      "host_role": "integration",
+      "status": "PLANNED",
+      "owner": "catalog integration runtime",
+      "thresholds": {
+        "metric": "bytes",
+        "basis": "small SQLite mutex database and runtime sidecars; remeasure before deployment",
+        "expected": 65536,
+        "warning": 1048576,
+        "critical": 16777216
+      },
+      "retention": {
+        "mode": "sqlite_runtime_managed",
+        "ttl_days": null
+      },
+      "pii": "none",
+      "id": "catalog_publication_lock_db",
+      "scope": "file",
+      "location": "/var/lib/babypark-integration/catalog/catalog-publication-lock.sqlite",
+      "purpose": "Cross-process catalog publication/apply mutex; it contains no business state.",
+      "state_class": "rebuildable",
+      "cleanup": {
+        "automatic": false,
+        "mechanism": "Controlled downtime recreation only; no runtime unlink, replacement, or automatic cleanup.",
+        "dry_run_required": true,
+        "delete_guard": "Never unlink, replace or recreate while any integration/catalog process may have this database open or may hold its lock."
+      },
+      "recovery": "May be recreated only during controlled downtime after all integration/catalog processes are stopped and absence of holders is established.",
+      "backup": {
+        "required": false,
+        "off_host": false,
+        "status": "NOT_REQUIRED_NO_BUSINESS_STATE"
+      }
+    },
+    {
+      "host_role": "integration",
+      "status": "PLANNED",
+      "owner": "catalog integration runtime",
+      "thresholds": {
+        "metric": "bytes",
+        "basis": "small SQLite mutex database and runtime sidecars; remeasure before deployment",
+        "expected": 65536,
+        "warning": 1048576,
+        "critical": 16777216
+      },
+      "retention": {
+        "mode": "sqlite_runtime_managed",
+        "ttl_days": null
+      },
+      "pii": "none",
+      "id": "catalog_publication_lock_sidecars",
+      "scope": "file_pattern",
+      "location": "/var/lib/babypark-integration/catalog/catalog-publication-lock.sqlite-{journal,wal,shm}",
+      "purpose": "SQLite runtime sidecars owned by the cross-process catalog publication/apply mutex lifecycle.",
+      "state_class": "transient",
+      "cleanup": {
+        "automatic": false,
+        "mechanism": "SQLite lifecycle only; never manually unlink SQLite runtime sidecars while the database may be live.",
+        "dry_run_required": true,
+        "delete_guard": "Never manually unlink SQLite runtime sidecars while the database may be live; SQLite lifecycle owns them."
+      },
+      "recovery": "SQLite recreates runtime sidecars after controlled main database recovery while all processes are stopped.",
+      "backup": {
+        "required": false,
+        "off_host": false,
+        "status": "NOT_REQUIRED"
+      }
     },
     {
       "id": "ingest_replay_db",

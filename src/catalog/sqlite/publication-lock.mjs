@@ -1,6 +1,18 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
+import { catalogError } from './errors.mjs';
+
+const heldPaths = new Map();
+
+function timeout(name, value, maximum) {
+  if (!Number.isSafeInteger(value) || value < 0 || value > maximum) {
+    throw new TypeError(
+      name + ' must be a non-negative safe integer no greater than ' + maximum
+    );
+  }
+  return value;
+}
 
 function lockMarkerExists(db) {
   const table = db.prepare(
@@ -35,23 +47,33 @@ function initializeLockMarker(db) {
 }
 
 export class CatalogPublicationLock {
-  constructor(storageDir) {
+  constructor(storageDir, {
+    acquireTimeoutMs = 100,
+    initTimeoutMs = 1000,
+  } = {}) {
+    this.acquireTimeoutMs = timeout(
+      'acquireTimeoutMs', acquireTimeoutMs, 1000
+    );
+    this.initTimeoutMs = timeout(
+      'initTimeoutMs', initTimeoutMs, 5000
+    );
     const dir = fs.realpathSync(storageDir);
     if (!fs.statSync(dir).isDirectory()) {
       throw new TypeError('Catalog directory is required');
     }
-    const lockPath = path.join(
+    this.lockPath = path.join(
       dir,
       'catalog-publication-lock.sqlite'
     );
-    this.db = new DatabaseSync(lockPath);
-    fs.chmodSync(lockPath, 0o600);
+    this.db = new DatabaseSync(this.lockPath);
+    fs.chmodSync(this.lockPath, 0o600);
 
     // Do not issue journal-mode/schema/INSERT writes on every constructor.
     // An existing initialized lock must remain constructible while another
     // process holds BEGIN IMMEDIATE on the same database.
     this.db.exec(
-      'PRAGMA busy_timeout=5000; PRAGMA synchronous=FULL;'
+      'PRAGMA busy_timeout=' + this.initTimeoutMs +
+      '; PRAGMA synchronous=FULL;'
     );
     initializeLockMarker(this.db);
     this.active = false;
@@ -70,9 +92,32 @@ export class CatalogPublicationLock {
       }
       return result;
     }
-    this.db.exec('BEGIN IMMEDIATE');
-    this.active = true;
+    if (heldPaths.has(this.lockPath)) {
+      throw catalogError(
+        'PUBLICATION_LOCK_BUSY',
+        'Catalog publication lock is busy',
+        { phase: 'same_process', timeout_ms: 0 }
+      );
+    }
+    heldPaths.set(this.lockPath, this);
     try {
+      this.db.exec('PRAGMA busy_timeout=' + this.acquireTimeoutMs);
+      try {
+        this.db.exec('BEGIN IMMEDIATE');
+      } catch (error) {
+        if (error?.errcode === 5 || error?.errcode === 6) {
+          throw catalogError(
+            'PUBLICATION_LOCK_BUSY',
+            'Catalog publication lock is busy',
+            {
+              phase: 'cross_process',
+              timeout_ms: this.acquireTimeoutMs,
+            }
+          );
+        }
+        throw error;
+      }
+      this.active = true;
       const result = work();
       if (result instanceof Promise) {
         throw new TypeError(
@@ -86,6 +131,9 @@ export class CatalogPublicationLock {
       throw error;
     } finally {
       this.active = false;
+      if (heldPaths.get(this.lockPath) === this) {
+        heldPaths.delete(this.lockPath);
+      }
     }
   }
 

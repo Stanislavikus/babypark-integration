@@ -171,10 +171,11 @@ and replayStore, journal intent is recorded before CURRENT, switched afterward,
 and rollback records rolled_back before changing CURRENT. Recovery of a switch
 that already reached CURRENT may reuse the original base CAS only when the same
 run owns durable journal intent/switched evidence and PREVIOUS matches that
-base. Lock acquisition is still synchronous; HTTP-safe bounded busy handling
-and storage-policy coverage of the lock artifact remain future gates. A future
-ingest coordinator must supply the same mutex to claim, apply, publish and
-rollback; this code is not deployed.
+base. Lock acquisition remains synchronous, while E5b bounds contention and returns
+stable PUBLICATION_LOCK_BUSY. It also protects the lock database and sidecars in
+storage policy. The E5a FULL coordinator supplies the same mutex across final
+claim, proof, certification, publish, and ACK reconciliation; none of this adds
+HTTP or enables live ingest.
 
 Normal publication order:
 1. validate new final generation;

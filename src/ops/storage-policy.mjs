@@ -19,6 +19,8 @@ const REQUIRED_IDS = Object.freeze([
   'identity_backups',
   'catalog_generations',
   'catalog_building_generations',
+  'catalog_publication_lock_db',
+  'catalog_publication_lock_sidecars',
   'ingest_staging',
   'copilot_jobs',
   'ai_trace_metadata',
