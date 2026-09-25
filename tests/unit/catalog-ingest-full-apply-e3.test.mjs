@@ -108,9 +108,12 @@ test('full data and hash commit together; retry skips the writer', t => {
     'SELECT rows FROM run_chunks WHERE run_id=? AND seq=1'
   ).get(chunk.runId).rows, 1);
   const final = finalClaim(f, 1);
-  assert.deepEqual(verifyFullRunForApply({
+  const proof = verifyFullRunForApply({
     mutex: f.mutex, store: f.store, builder: f.builder, finalKey: final, reader: f.reader,
-  }), { status: 'VERIFIED', runDigest: f.store.getClaimedFinal(final).runDigest,
+  });
+  assert.equal(proof.header.run_id, 'run_1');
+  assert.deepEqual({ ...proof, header: undefined }, { status: 'VERIFIED', runDigest: f.store.getClaimedFinal(final).runDigest,
+    header: undefined,
     count: 1, chunkKeys: [{ kid: 'k1', runId: 'run_1', layer: 'full', seq: 1 }] });
 });
 

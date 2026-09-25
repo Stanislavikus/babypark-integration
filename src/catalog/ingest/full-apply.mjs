@@ -377,6 +377,7 @@ function verifyFullRunLocked({
       runDigest: proof.runDigest,
       count,
       chunkKeys: proof.chunkKeys,
+      header: proof.header,
     };
   } catch (error) {
     try { db.exec('ROLLBACK'); } catch {}
