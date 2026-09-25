@@ -15,18 +15,20 @@ const publisher = new CatalogPublisher(catalog, { mutex, readers: [reader] });
 const store = ReplayStore.openExisting(path.join(config.root, 'replay.sqlite'), {
   catalogStorageDir: catalog, leaseSeconds: config.leaseSeconds,
 });
-const body = Buffer.from(config.body, 'base64');
 try {
-  const result = processProductionFullChunk({ store, publisher, mutex, reader,
-    identityStore: identity, key: config.key, verifiedBody: body, now: config.now,
+  const actions = config.actions ?? [{ key: config.key, body: config.body, now: config.now }];
+  const results = actions.map(action => processProductionFullChunk({ store, publisher, mutex, reader,
+    identityStore: identity, key: action.key, verifiedBody: Buffer.from(action.body, 'base64'), now: action.now,
     failpoint(name, detail) {
       if (config.blockAt === name) {
         process.send?.({ type: 'ready', pid: process.pid, name, detail });
         Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0);
       }
       if (config.forbidMapper && name === 'mapper.before') throw new Error('MAPPER_SENTINEL');
-    } });
-  process.send?.({ type: 'result', pid: process.pid, result });
+    } }));
+  process.send?.({ type: 'result', pid: process.pid,
+    result: results.length === 1 ? results[0] : undefined, results,
+    current: publisher.state().current_generation });
 } catch (error) {
   process.send?.({ type: 'error', pid: process.pid, code: error?.code, message: error?.message });
   process.exitCode = 1;
