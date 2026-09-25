@@ -105,7 +105,7 @@ function validateProduct(record) {
   if (has(record, 'product_type')) text(record.product_type, 'product_type');
   if (has(record, 'brand_native_id')) text(record.brand_native_id, 'brand_native_id');
   optionalObject(record, 'provenance'); record.localized = localized(record.localized, true); record.updated_at = timestamp(record.updated_at, 'updated_at');
-  record.categories = list(record.categories ?? [], 'categories', FULL_RECORD_LIMITS.categories);
+  record.categories = list(has(record, 'categories') ? record.categories : [], 'categories', FULL_RECORD_LIMITS.categories);
   for (const row of record.categories) { keys(row, ['native_category_id', 'is_primary'], 'category membership'); required(row, ['native_category_id'], 'category membership'); text(row.native_category_id, 'native_category_id'); if (has(row, 'is_primary')) bool(row.is_primary, 'is_primary'); }
   unique(record.categories, row => row.native_category_id, 'duplicate category membership');
   if (record.categories.filter(row => row.is_primary === true).length > 1) fail('FULL_RECORD_DUPLICATE', 'multiple primary categories');
@@ -118,15 +118,15 @@ function validateProduct(record) {
     text(variant.native_variant_id, 'native_variant_id'); text(variant.sku, 'sku'); bool(variant.is_default, 'is_default'); variant.updated_at = timestamp(variant.updated_at, 'variant.updated_at');
     if (has(variant, 'gtin')) text(variant.gtin, 'gtin'); optionalObject(variant, 'options'); variant.attributes = attributeReferences(variant.attributes);
     if (has(variant, 'offer')) validateOffer(variant.offer);
-    variant.stock = list(variant.stock ?? [], 'stock', FULL_RECORD_LIMITS.stock);
+    variant.stock = list(has(variant, 'stock') ? variant.stock : [], 'stock', FULL_RECORD_LIMITS.stock);
     for (const stock of variant.stock) { keys(stock, ['store_native_id', 'quantity', 'source_updated_at'], 'stock'); required(stock, ['store_native_id', 'quantity'], 'stock'); text(stock.store_native_id, 'store_native_id'); integer(stock.quantity, 'quantity'); if (has(stock, 'source_updated_at')) stock.source_updated_at = timestamp(stock.source_updated_at, 'source_updated_at'); }
     unique(variant.stock, row => row.store_native_id, 'duplicate stock store');
   }
   unique(record.variants, row => row.native_variant_id, 'duplicate native variant');
   unique(record.variants, row => normalizedSku(row.sku), 'duplicate normalized SKU');
   if (record.variants.filter(row => row.is_default).length !== 1) fail('FULL_RECORD_INVALID', 'exactly one default variant required');
-  record.images = list(record.images ?? [], 'images', FULL_RECORD_LIMITS.images);
-  for (const image of record.images) { keys(image, ['native_image_id', 'url', 'variant_native_id', 'role', 'position', 'metadata'], 'image'); required(image, ['native_image_id', 'url'], 'image'); text(image.native_image_id, 'native_image_id'); text(image.url, 'url', 4096); if (has(image, 'variant_native_id')) text(image.variant_native_id, 'variant_native_id'); if (has(image, 'role')) text(image.role, 'role', 512, true); if (has(image, 'position')) integer(image.position, 'position'); optionalObject(image, 'metadata'); if (image.variant_native_id && !record.variants.some(row => row.native_variant_id === image.variant_native_id)) fail('FULL_MAPPER_REFERENCE_MISSING', 'image variant is not in product'); }
+  record.images = list(has(record, 'images') ? record.images : [], 'images', FULL_RECORD_LIMITS.images);
+  for (const image of record.images) { keys(image, ['native_image_id', 'url', 'variant_native_id', 'role', 'position', 'metadata'], 'image'); required(image, ['native_image_id', 'url'], 'image'); text(image.native_image_id, 'native_image_id'); text(image.url, 'url', 4096); if (has(image, 'variant_native_id')) text(image.variant_native_id, 'variant_native_id'); if (has(image, 'role')) text(image.role, 'role', 512, true); if (has(image, 'position')) integer(image.position, 'position'); optionalObject(image, 'metadata'); if (image.variant_native_id && !record.variants.some(row => row.native_variant_id === image.variant_native_id)) fail('FULL_RECORD_INVALID', 'image variant is not in product'); }
   unique(record.images, row => row.native_image_id, 'duplicate image');
 }
 const CONTRACT = {
