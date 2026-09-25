@@ -615,6 +615,34 @@ export class ReplayStore {
       count: trailer.count, finalSeq: seq, startedAtSeconds: first.created_at };
   }
 
+  recoverFullNonfinalContext(key) {
+    const { kid, runId, layer, seq } = validateKey(key);
+    if (layer !== 'full' || key.final !== false || seq < 1) {
+      fail('INGEST_REPLAY_KEY_INVALID', 'Full nonfinal data key is required');
+    }
+    const rows = this.db.prepare(
+      "SELECT seq,body_sha256,status,building_generation_id,staged_body FROM receipts " +
+      "WHERE kid=? AND run_id=? AND layer='full' AND final=0 AND seq<? ORDER BY seq"
+    ).all(kid, runId, seq);
+    if (!rows.length) return { status: 'SEQ0_MISSING' };
+    if (rows.length !== seq || rows.some((row, index) => row.seq !== index || row.status !== 'staged')) {
+      if (rows.some(row => row.status === 'staged_released')) return { status: 'RUN_SUPERSEDED' };
+      return { status: 'SEQ0_NOT_STAGED' };
+    }
+    const targetGenerationId = rows[0].building_generation_id;
+    if (!ID_RE.test(targetGenerationId || '') || rows.some(row => row.building_generation_id !== targetGenerationId)) {
+      fail('INGEST_REPLAY_RUN_LOST', 'Full run has inconsistent generation binding');
+    }
+    const first = rows[0];
+    const body = first.staged_body instanceof Uint8Array ? Buffer.from(first.staged_body) : null;
+    if (!body || crypto.createHash('sha256').update(body).digest('hex') !== first.body_sha256) {
+      fail('INGEST_REPLAY_CONTEXT_UNAVAILABLE', 'Retained full run header is unavailable');
+    }
+    const header = parseHeaderForKey({ ...key, seq: 0, final: false, bodySha256: first.body_sha256 }, body);
+    if (header.run_kind !== 'full' || header.run_id !== runId) fail('INGEST_REPLAY_CONTEXT_UNAVAILABLE', 'Full header binding is invalid');
+    return { status: 'BOUND', targetGenerationId, header, headerSha256: first.body_sha256 };
+  }
+
   verifyClaimedRunDigest(key, { fullBuildDb, reader, resolveCurrent } = {}) {
     const { kid, runId, layer, seq } = validateKey(key);
     const trailer = this.getClaimedFinal(key);

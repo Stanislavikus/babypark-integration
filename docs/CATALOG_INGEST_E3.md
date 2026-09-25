@@ -105,7 +105,8 @@ ACK in that order with named SIGKILL windows.
 
 Operations before live ingest: bounded authority-error count and escalation,
 receipt occupancy and staged-byte alarms, terminal retention, lease heartbeat,
-rollback-aware final takeover, /state and an authenticated /report endpoint.
+E5a final recovery, /state and an authenticated /report endpoint. Generic FULL final
+takeover is intentionally not part of readiness; lease takeover applies to nonfinal chunks.
 The future Drupal exporter should send diagnostics to /report, retain only a
 small local checkpoint and host-managed error logs, with no fixed daily
 source refresh interval. Configure Drupal's unrelated log retention after
@@ -135,7 +136,8 @@ PUBLICATION_LOCK_BUSY, same-process different-instance fencing, storage-policy
 protection for lock artifacts, and rollback crash-window certification. These
 are pre-HTTP guarantees only and do not enable a receiver or live ingest.
 
-Before live ingest, implement rollback-aware final takeover, heartbeat/lease
+Before live ingest, retain E5a evidence-driven final recovery (without generic final
+takeover) and evaluate heartbeat/lease
 handling, receipt/staging retention under the apply/publisher lock, capacity and
 lag limits/alerts, authenticated /state and /report, and verified replay-ledger
 backup/recovery. OWNER_LOST after durable commit must reconcile evidence, never
