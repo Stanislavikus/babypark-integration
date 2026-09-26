@@ -17,7 +17,7 @@ test('dependency fingerprint versions, config ordering, builder and manifest are
   const root=fs.mkdtempSync(path.join(os.tmpdir(),'e6a-fp-'));t.after(()=>fs.rmSync(root,{recursive:true,force:true}));
   const a=IdentityStore.createNew(path.join(root,'a.sqlite')),b=IdentityStore.createNew(path.join(root,'b.sqlite'));
   const empty=productionDependencyFingerprint(a);assert.equal(empty,productionDependencyFingerprint(a));
-  for(const name of ['record_validator_version','production_mapper_version','fts_builder_version','sku_normalizer_version'])assert.notEqual(empty,productionDependencyFingerprint(a,{[name]:2}),name);
+  for(const name of ['record_validator_version','production_mapper_version','fts_builder_version','sku_normalizer_version'])assert.notEqual(empty,productionDependencyFingerprint(a,{[name]:99}),name);
   a.setConfigHash('z','a'.repeat(64));a.setConfigHash('a','b'.repeat(64));b.setConfigHash('a','b'.repeat(64));b.setConfigHash('z','a'.repeat(64));assert.equal(identityConfigStateSha256(a),identityConfigStateSha256(b));assert.notEqual(empty,productionDependencyFingerprint(a));
   const catalog=path.join(root,'catalog');fs.mkdirSync(catalog);const fp=productionDependencyFingerprint(a);const builder=CatalogGenerationBuilder.create({storageDir:catalog,generationId:'fp',sourceEpoch:'epoch',identityRevision:a.metadata().revision,dependencyFingerprint:fp,now:()=> '2026-01-01T00:00:00.000Z'});assert.equal(builder.metadata().dependency_fingerprint,fp);const sealed=builder.seal();assert.equal(sealed.manifest.dependency_fingerprint,fp);assert.equal(crypto.createHash('sha256').update(JSON.stringify(sealed.manifest)).digest('hex'),sealed.manifest_sha256);a.close();b.close();
 });

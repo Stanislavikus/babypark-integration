@@ -3,9 +3,18 @@ import { normalizeLanguageTag } from '../domain/language.mjs';
 
 export const FULL_RECORD_SCHEMA = 'bp.catalog.full-record/1';
 export const FULL_RECORD_CONTRACT_VERSION = 1;
-export const RECORD_VALIDATOR_VERSION = 1;
-export const FULL_RECORD_LIMITS = Object.freeze({ rows: 500, variants: 50, languages: 8,
-  images: 30, attributes: 100, stock: 200, categories: 20, kitComponents: 100, depth: 8 });
+export const RECORD_VALIDATOR_VERSION = 2;
+export const FULL_RECORD_LIMITS = Object.freeze({
+  rows: 500,
+  variants: 512,
+  languages: 8,
+  images: 1024,
+  attributes: 100,
+  stock: 200,
+  categories: 20,
+  kitComponents: 100,
+  depth: 8,
+});
 export class FullRecordError extends Error {
   constructor(code, message) { super(message); this.name = 'FullRecordError'; this.code = code; }
 }

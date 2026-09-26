@@ -52,3 +52,8 @@ publication lock, and building generation; phase-0 prerequisites are prepared
 before timing. The deterministic fixture reports byte and canonical-row shape
 alongside median and maximum duration and deliberately has no generic-test time
 threshold.
+
+Validator profile v2 uses 512 variants and 1024 images per product. Those
+structural limits remain independent of the existing 1 MiB per-request /
+per-chunk body ceiling. `categories` is a per-product membership bound, not a
+global taxonomy-size bound.
