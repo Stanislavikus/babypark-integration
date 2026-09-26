@@ -107,15 +107,15 @@ test('D0 validator profile participates in the production dependency fingerprint
 });
 
 test('D0 accepts exactly 512 unique variants and rejects 513 with FULL_RECORD_LIMIT_EXCEEDED', () => {
-  const accepted = minimalProduct({ variantCount: 512 });
-  assert.equal(accepted.variants.length, 512);
-  assert.equal(accepted.variants.filter(row => row.is_default).length, 1);
-  assert.equal(new Set(accepted.variants.map(row => row.native_variant_id)).size, 512);
-  assert.equal(new Set(accepted.variants.map(row => row.sku.toLowerCase())).size, 512);
-  assert.equal(validateFullRecords([accepted]), accepted);
+  const accepted = [minimalProduct({ variantCount: 512 })];
+  assert.equal(accepted[0].variants.length, 512);
+  assert.equal(accepted[0].variants.filter(row => row.is_default).length, 1);
+  assert.equal(new Set(accepted[0].variants.map(row => row.native_variant_id)).size, 512);
+  assert.equal(new Set(accepted[0].variants.map(row => row.sku.toLowerCase())).size, 512);
+  assert.equal(validateFullRecords(accepted), accepted);
 
-  const rejected = minimalProduct({ variantCount: 513 });
-  assert.throws(() => validateFullRecords([rejected]), error => {
+  const rejected = [minimalProduct({ variantCount: 513 })];
+  assert.throws(() => validateFullRecords(rejected), error => {
     assert.equal(error.code, LIMIT_CODE);
     assert.match(error.message, /^variants exceeds limit$/);
     return true;
@@ -123,15 +123,15 @@ test('D0 accepts exactly 512 unique variants and rejects 513 with FULL_RECORD_LI
 });
 
 test('D0 accepts exactly 1024 unique images and rejects 1025 with FULL_RECORD_LIMIT_EXCEEDED', () => {
-  const accepted = minimalProduct({ imageCount: 1024 });
-  assert.equal(accepted.variants.length, 1);
-  assert.equal(accepted.images.length, 1024);
-  assert.equal(new Set(accepted.images.map(row => row.native_image_id)).size, 1024);
-  assert.equal(new Set(accepted.images.map(row => row.url)).size, 1024);
-  assert.equal(validateFullRecords([accepted]), accepted);
+  const accepted = [minimalProduct({ imageCount: 1024 })];
+  assert.equal(accepted[0].variants.length, 1);
+  assert.equal(accepted[0].images.length, 1024);
+  assert.equal(new Set(accepted[0].images.map(row => row.native_image_id)).size, 1024);
+  assert.equal(new Set(accepted[0].images.map(row => row.url)).size, 1024);
+  assert.equal(validateFullRecords(accepted), accepted);
 
-  const rejected = minimalProduct({ imageCount: 1025 });
-  assert.throws(() => validateFullRecords([rejected]), error => {
+  const rejected = [minimalProduct({ imageCount: 1025 })];
+  assert.throws(() => validateFullRecords(rejected), error => {
     assert.equal(error.code, LIMIT_CODE);
     assert.match(error.message, /^images exceeds limit$/);
     return true;
@@ -151,7 +151,8 @@ test('D0 preserves image-reference validation at the new cardinality', () => {
   for (const image of live.images) {
     assert.ok(live.variants.some(row => row.native_variant_id === image.variant_native_id));
   }
-  assert.equal(validateFullRecords([live]), live);
+  const rows = [live];
+  assert.equal(validateFullRecords(rows), rows);
 });
 
 test('D0 live-shape 203 variants and 658 images write through the production mapper', t => {
