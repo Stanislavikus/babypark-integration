@@ -130,7 +130,10 @@ deploy its working tree.
 1. Fetch and verify:
 
 ```sh
+set -euo pipefail
+
 APPROVED_SHA=<approved-exact-sha>
+
 git -C /path/to/babypark-integration fetch origin
 test "$(git -C /path/to/babypark-integration rev-parse origin/main)" = "$APPROVED_SHA"
 ```
@@ -139,6 +142,8 @@ test "$(git -C /path/to/babypark-integration rev-parse origin/main)" = "$APPROVE
    already exists):
 
 ```sh
+set -euo pipefail
+
 SHORT_SHA=$(git -C /path/to/babypark-integration rev-parse --short "$APPROVED_SHA")
 RELEASE_DIR=/opt/babypark-integration/releases/$(date -u +%Y%m%dT%H%M%SZ)-${SHORT_SHA}
 
@@ -162,6 +167,8 @@ Requirements:
    before rename leaves the old `catalog-current` intact):
 
 ```sh
+set -euo pipefail
+
 CATALOG_LINK=/opt/babypark-integration/catalog-current
 CATALOG_LINK_NEW=/opt/babypark-integration/.catalog-current.new
 
@@ -181,6 +188,8 @@ Do not modify `/opt/babypark-integration/current`.
 3. Create system user/group if absent:
 
 ```sh
+set -euo pipefail
+
 getent group babypark-catalog >/dev/null || groupadd --system babypark-catalog
 getent passwd babypark-catalog >/dev/null || useradd --system --gid babypark-catalog \
   --home-dir /var/lib/babypark-catalog --shell /usr/sbin/nologin babypark-catalog
@@ -256,6 +265,11 @@ Drupal exporter credential provisioning is D2 scope.
 Before first service start, as `babypark-catalog`:
 
 ```sh
+set -euo pipefail
+
+CATALOG_RELEASE=/opt/babypark-integration/catalog-current
+CATALOG_DATA=/var/lib/babypark-catalog
+
 runuser -u babypark-catalog -- \
   /usr/bin/node "$CATALOG_RELEASE/scripts/catalog-ops.mjs" bootstrap \
   --identity="$CATALOG_DATA/identity.sqlite" \
@@ -290,21 +304,22 @@ Obtain the exact completed covering set ID from either command:
 - `backup` → `set_id` (capture from `BACKUP_JSON`), or
 - `backup-status` → `covering_set` (capture from `STATUS_JSON`).
 
-They must match for a fresh BOOTSTRAP backup. Example extraction:
+They must match for a fresh BOOTSTRAP backup. Extract the covering set ID and validate
+the BOOTSTRAP recovery set (mandatory `--set-id`; omit `--generation`):
 
 ```sh
+set -euo pipefail
+
+CATALOG_RELEASE=/opt/babypark-integration/catalog-current
+CATALOG_DATA=/var/lib/babypark-catalog
+
 COVERING_SET_ID=$(printf '%s\n' "$BACKUP_JSON" | /usr/bin/node -e '
   const input = require("fs").readFileSync(0, "utf8");
   const value = JSON.parse(input).set_id;
   if (!value) { console.error("missing set_id"); process.exit(1); }
   process.stdout.write(value);
 ')
-```
 
-Then validate the BOOTSTRAP recovery set with explicit evidence selection (mandatory
-`--set-id`; omit `--generation`):
-
-```sh
 runuser -u babypark-catalog -- \
   /usr/bin/node "$CATALOG_RELEASE/scripts/catalog-ops.mjs" validate-restore \
   --identity="$CATALOG_DATA/identity.sqlite" \
@@ -339,6 +354,8 @@ cp deploy/catalog-host/systemd/babypark-catalog-ingest.service \
 While `CATALOG_INGEST_ENABLED=false`:
 
 ```sh
+set -euo pipefail
+
 systemd-analyze verify /etc/systemd/system/babypark-catalog-ingest.service
 systemctl daemon-reload
 systemctl enable --now babypark-catalog-ingest.service
@@ -384,6 +401,8 @@ an HMAC signature; sends a loopback GET; does not modify Catalog durable state; 
 not echo the secret or place it in shell history):
 
 ```sh
+set -euo pipefail
+
 CATALOG_RELEASE=/opt/babypark-integration/catalog-current
 
 env CATALOG_RELEASE="$CATALOG_RELEASE" \
@@ -485,6 +504,8 @@ Do not add the include to unrelated server blocks.
 4. Test and reload:
 
 ```sh
+set -euo pipefail
+
 nginx -t
 systemctl reload nginx
 ```
@@ -496,6 +517,8 @@ Do not restart Nginx.
 If Catalog Nginx changes must be reverted:
 
 ```sh
+set -euo pipefail
+
 # remove or comment out the Catalog include
 # restore timestamped Nginx site config if needed
 nginx -t
@@ -509,6 +532,8 @@ systemctl reload nginx
 Without valid BP1, capture both status and body (do not discard the response):
 
 ```sh
+set -euo pipefail
+
 curl -sS -D /tmp/catalog-state.headers \
   -o /tmp/catalog-state.json \
   https://chat.babypark.ua/api/catalog/ingest/v1/state
@@ -548,6 +573,8 @@ Expected: `HTTP 200` and `{"status":"woot"}` (Chatwoot, not CatalogService).
 Before Catalog deployment, record:
 
 ```sh
+set -euo pipefail
+
 systemctl show -p MainPID babypark-integration-v2.service
 readlink /opt/babypark-integration/current
 ```
@@ -629,6 +656,11 @@ Stop or disable ingest (`CATALOG_INGEST_ENABLED=false` and restart CatalogServic
 Inspect status as `babypark-catalog`:
 
 ```sh
+set -euo pipefail
+
+CATALOG_RELEASE=/opt/babypark-integration/catalog-current
+CATALOG_DATA=/var/lib/babypark-catalog
+
 runuser -u babypark-catalog -- \
   /usr/bin/node "$CATALOG_RELEASE/scripts/catalog-ops.mjs" status \
   --identity="$CATALOG_DATA/identity.sqlite" \
@@ -687,6 +719,8 @@ installed Catalog unit/env/snippet state
 If CatalogService deployment fails:
 
 ```sh
+set -euo pipefail
+
 systemctl disable --now babypark-catalog-ingest.service
 # restore/remove Catalog Nginx include
 # restore timestamped Nginx config if needed
