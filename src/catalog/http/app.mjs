@@ -22,7 +22,8 @@ function transportEncoding(req) {
   return value[0];
 }
 
-export function createCatalogHttpRuntime({ config, identityStore, replayStore, mutex, reader, publisher, logger = { log() {} }, now = () => Math.floor(Date.now() / 1000), coordinator = processProductionFullChunk }) {
+export function createCatalogHttpRuntime({ config, identityStore, replayStore, mutex, reader, publisher, recoveryGate, logger = { log() {} }, now = () => Math.floor(Date.now() / 1000), coordinator = processProductionFullChunk }) {
+  const stateOptions = { ingestEnabled: config.ingestEnabled, recoveryGate };
   const handler = async (req, res) => {
     const requestId = crypto.randomUUID(); const started = Date.now();
     let verified; let publicCode; let publicAction;
@@ -32,7 +33,7 @@ export function createCatalogHttpRuntime({ config, identityStore, replayStore, m
       if (!expectedMethod) { const e = publicError('ROUTE_INVALID', requestId); e.status = 404; e.body.status = 404; e.body.code = 'ROUTE_INVALID'; e.body.action = 'fix_request'; publicCode=e.body.code; publicAction=e.body.action; send(res,e.status,e.body); return finishLog(e.status); }
       if (req.method !== expectedMethod) { const e = publicError('METHOD_NOT_ALLOWED',requestId); e.status=405; e.body.status=405; e.body.code='METHOD_NOT_ALLOWED'; e.body.action='fix_request'; publicCode=e.body.code; publicAction=e.body.action; send(res,405,e.body,{ Allow: expectedMethod }); return finishLog(405); }
       if (req.url === '/health') {
-        try { const state = readCatalogState(reader, config); send(res,200,{ ok:true, service:'babypark-catalog-ingest', state:state.state, accepting_ingest:state.accepting_ingest, blockers:state.blockers },{'Cache-Control':'no-store'}); finishLog(200); }
+        try { const state = readCatalogState(reader, stateOptions); send(res,200,{ ok:true, service:'babypark-catalog-ingest', state:state.state, accepting_ingest:state.accepting_ingest, blockers:state.blockers },{'Cache-Control':'no-store'}); finishLog(200); }
         catch { publicCode='INTERNAL_INVARIANT'; publicAction='operator'; send(res,500,{ ok:false, service:'babypark-catalog-ingest', state:'INVALID', accepting_ingest:false, blockers:['INTERNAL_INVARIANT'] },{'Cache-Control':'no-store'}); finishLog(500); }
         return;
       }
@@ -44,10 +45,17 @@ export function createCatalogHttpRuntime({ config, identityStore, replayStore, m
       if (req.url.endsWith('/full') && !config.ingestEnabled) throw Object.assign(new Error('disabled'), { code:'INGEST_DISABLED' });
       if (req.url.endsWith('/state')) {
         if (verified.run_id !== 'state' || verified.seq !== 0 || verified.final !== false || verified.content_encoding !== 'identity') throw Object.assign(new Error('state tuple'), { code:'INGEST_AUTH_HEADER_INVALID' });
-        const state = readCatalogState(reader, config); send(res,200,state,{'Cache-Control':'no-store'}); return finishLog(200);
+        const state = readCatalogState(reader, stateOptions); send(res,200,state,{'Cache-Control':'no-store'}); return finishLog(200);
       }
       const key = { kid:verified.kid, runId:verified.run_id, layer:'full', seq:verified.seq, final:verified.final, contentEncoding:verified.content_encoding, bodySha256:verified.body_sha256 };
-      const result = coordinator({ store:replayStore, publisher, mutex, reader, identityStore, key, verifiedBody:body });
+      if (recoveryGate) {
+        if (recoveryGate.shouldCapacityBlockNewSeq0(key)) throw Object.assign(new Error('capacity'), { code:'INGEST_REPLAY_CAPACITY' });
+        if (recoveryGate.shouldBackupBlock(key)) throw Object.assign(new Error('backup required'), { code:'BACKUP_REQUIRED' });
+      }
+      let result = coordinator({ store:replayStore, publisher, mutex, reader, identityStore, key, verifiedBody:body });
+      if (result?.status === 'ACKED' && recoveryGate) {
+        result = recoveryGate.ensureFinalRecoveryPoint({ key, result, publicationLock: mutex });
+      }
       const translated = translateResult(result, Number(now()));
       publicCode=translated.body.code; publicAction=translated.body.action;
       send(res,translated.status,translated.body,translated.retryAfter ? {'Retry-After':String(translated.retryAfter)} : {}); finishLog(translated.status);

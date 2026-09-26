@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 
 const ERROR_MAP = new Map([
   ['INGEST_DISABLED', [503, 'INGEST_DISABLED', 'operator']], ['PUBLICATION_LOCK_BUSY', [503, 'TEMPORARILY_BUSY', 'retry_same', 2]],
+  ['BACKUP_REQUIRED', [503, 'BACKUP_REQUIRED', 'operator']], ['BACKUP_REQUIRED_RETRY_FINAL', [503, 'BACKUP_REQUIRED', 'retry_final', 2]],
   ['INGEST_REPLAY_CAPACITY', [503, 'CAPACITY_BLOCKED', 'operator']], ['INGEST_REPLAY_STAGING_CAPACITY', [503, 'CAPACITY_BLOCKED', 'operator']],
   ['INGEST_RUN_STATE_MOVED', [409, 'STATE_MOVED', 'fetch_state_new_run']], ['INGEST_REPLAY_STATE_MOVED', [409, 'STATE_MOVED', 'fetch_state_new_run']], ['CATALOG_CURRENT_MOVED', [409, 'STATE_MOVED', 'fetch_state_new_run']],
   ['INGEST_RUN_SOURCE_EPOCH_CHANGED', [409, 'SOURCE_EPOCH_CHANGED', 'operator']], ['INGEST_REPLAY_SOURCE_EPOCH_CHANGED', [409, 'SOURCE_EPOCH_CHANGED', 'operator']],

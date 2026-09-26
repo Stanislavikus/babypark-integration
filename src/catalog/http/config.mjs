@@ -1,3 +1,7 @@
+import path from 'node:path';
+import { validateBackupRoot } from '../recovery/core.mjs';
+import { parseBackupRoot } from './recovery-gate.mjs';
+
 const KID_RE = /^[A-Za-z0-9_-]{1,64}$/;
 
 function integer(name, value, fallback, { min, max }) {
@@ -34,15 +38,21 @@ export function parseCatalogHttpConfig(env = process.env) {
   if (host !== '127.0.0.1') {
     throw new Error('CATALOG_INGEST_HOST must be exactly 127.0.0.1');
   }
+  const ingestEnabled = env.CATALOG_INGEST_ENABLED === 'true' ? true
+    : env.CATALOG_INGEST_ENABLED === undefined || env.CATALOG_INGEST_ENABLED === 'false' ? false
+      : (() => { throw new Error('CATALOG_INGEST_ENABLED must be true or false'); })();
+  const backupRootRaw = parseBackupRoot(env, ingestEnabled);
+  const backupRoot = backupRootRaw ? validateBackupRoot(backupRootRaw) : null;
   return {
     host,
     port: integer('CATALOG_INGEST_PORT', env.CATALOG_INGEST_PORT, 8081, { min: 1, max: 65535 }),
-    ingestEnabled: env.CATALOG_INGEST_ENABLED === 'true' ? true : env.CATALOG_INGEST_ENABLED === undefined || env.CATALOG_INGEST_ENABLED === 'false' ? false : (() => { throw new Error('CATALOG_INGEST_ENABLED must be true or false'); })(),
+    ingestEnabled,
     audience: required('CATALOG_BP1_AUDIENCE', env.CATALOG_BP1_AUDIENCE),
     secrets: parseBp1Keys(env.CATALOG_BP1_KEYS_JSON),
     maxAgeSec: integer('CATALOG_BP1_MAX_AGE_SEC', env.CATALOG_BP1_MAX_AGE_SEC, 300, { min: 0, max: 86400 }),
     identityPath: required('CATALOG_IDENTITY_PATH', env.CATALOG_IDENTITY_PATH),
     replayPath: required('CATALOG_REPLAY_PATH', env.CATALOG_REPLAY_PATH),
     storageDir: required('CATALOG_STORAGE_DIR', env.CATALOG_STORAGE_DIR),
+    backupRoot,
   };
 }

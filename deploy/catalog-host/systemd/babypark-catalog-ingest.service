@@ -1,0 +1,24 @@
+[Unit]
+Description=BabyPark Catalog Ingest Service
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=babypark-catalog
+Group=babypark-catalog
+EnvironmentFile=/etc/babypark-catalog-ingest.env
+ExecStart=/usr/bin/node /opt/babypark-integration/current/src/catalog/http/index.mjs
+Restart=on-failure
+RestartSec=3
+TimeoutStopSec=30
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/babypark-catalog
+LockPersonality=true
+RestrictSUIDSGID=true
+
+[Install]
+WantedBy=multi-user.target
