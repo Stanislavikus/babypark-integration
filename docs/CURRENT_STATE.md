@@ -1,7 +1,7 @@
 # CURRENT_STATE
 
 Status: CURRENT
-Last verified: 2026-09-24
+Last verified: 2026-09-26
 Owner: BabyPark
 Source of truth: production runtime + this repository
 
@@ -45,9 +45,12 @@ Public routes:
 
 Nginx routes both public endpoints to port 3102.
 
-Safe public-route verification on 2026-09-24:
-- invalid Viber signature -> HTTP 401
-- invalid Chatwoot signature -> HTTP 401
+Safe public-route verification:
+- 2026-09-24: invalid Viber signature -> HTTP 401
+- 2026-09-24: invalid Chatwoot signature -> HTTP 401
+- 2026-09-26 after CatalogService deployment: both invalid-signature checks still -> HTTP 401
+- gateway process was not restarted during CatalogService deployment
+- `/opt/babypark-integration/current` remained on the 20260924 Viber release
 
 Production bridge integrity after migration:
 `PRAGMA integrity_check = ok`
@@ -59,12 +62,86 @@ Current row-count baseline immediately after cutover:
 - outgoing_viber: 1
 - session_recovery_issues: 0
 
+## CatalogService production
+
+D1 deployment completed on 2026-09-26.
+
+Merged deployment source:
+`1956aba235f1771262235881701186cbc5bd884d`
+
+Production release:
+`/opt/babypark-integration/releases/20260926T205420Z-1956aba`
+
+Catalog release symlink:
+`/opt/babypark-integration/catalog-current`
+
+Systemd:
+`babypark-catalog-ingest.service`
+
+Runtime state:
+- enabled + active
+- service identity: `babypark-catalog`
+- local listener: `127.0.0.1:8081`
+- observed idle RSS after enable: about 20 MiB
+- `CATALOG_INGEST_ENABLED=true`
+
+Durable state:
+- parent: `/var/lib/babypark-catalog`
+- owner: `babypark-catalog:babypark-catalog`
+- mode: `0700`
+- identity: `/var/lib/babypark-catalog/identity.sqlite`
+- replay: `/var/lib/babypark-catalog/replay.sqlite`
+- catalog generations: `/var/lib/babypark-catalog/catalog`
+- recovery sets: `/var/lib/babypark-catalog/backup`
+
+Environment:
+`/etc/babypark-catalog-ingest.env`
+- owner: `root:root`
+- mode: `0600`
+- secret values are NOT in Git
+
+Current authenticated state:
+- schema: `bp.catalog.state/1`
+- state: `BOOTSTRAP`
+- accepting_ingest: `true`
+- blockers: `[]`
+- current_generation: `null`
+- accepted_run: `null`
+
+No Drupal FULL has been sent yet.
+
+Recovery:
+- authority: `BOOTSTRAP`
+- identity revision: `0`
+- replay schema: `7`
+- covering recovery set: `set-20260926T205746Z-35f3395efc6f8994`
+- coverage: `COVERED`
+- BOOTSTRAP `validate-restore`: PASS
+
+Public Catalog ingress on `https://chat.babypark.ua`:
+- `/api/catalog/ingest/v1/full`
+- `/api/catalog/ingest/v1/state`
+
+Ingress controls:
+- Nginx exact locations only
+- source allowlist: Drupal outbound IP `77.83.102.249`
+- BP1 authentication remains mandatory
+- Catalog `/health` is not exposed by a Catalog-specific public route
+- public `https://chat.babypark.ua/health` remains Chatwoot and returns `{"status":"woot"}`
+
+Production ingress verification on 2026-09-26:
+- allowed Drupal host + unsigned Catalog state request -> HTTP 401 `AUTH_FAILED`
+- different BabyPark host + same request -> HTTP 403 from Nginx
+- `nginx -t` -> PASS
+- Chatwoot root -> HTTP 200
+- Chatwoot public health -> `{"status":"woot"}`
+
 ## Rollback assets
 
-Legacy runtime remains:
+Legacy Viber runtime remains:
 `/opt/babypark-integration/index.mjs`
 
-Legacy unit remains installed:
+Legacy Viber unit remains installed:
 `babypark-integration.service`
 
 Pre-v2 standalone bridge backup:
@@ -76,36 +153,22 @@ Backup SHA-256:
 Pre-v2 Nginx snapshot:
 `/var/backups/babypark-integration/nginx_chatwoot.pre-v2.20260924T062925Z.conf`
 
-Normal rollback does NOT restore the old database backup after v2 has accepted traffic.
+D1 pre-Catalog-ingress Nginx snapshot:
+`/etc/nginx/sites-available/nginx_chatwoot.conf.bak.20260926T205920Z`
+
+Normal Viber rollback does NOT restore the old database backup after v2 has accepted traffic.
 The additive schema is intentionally compatible with the retained legacy gateway.
 
-## Catalog / AI
+Catalog application rollback and catalog data/recovery rollback are separate operations.
+Before the first FULL, `/var/lib/babypark-catalog` is preserved for diagnosis rather than
+deleted automatically.
+
+## Catalog / AI next state
 
 No Drupal catalog exporter is active.
-No CatalogService is active.
 No AI copilot is active.
 
-The offline/local canonical identity and catalog core phases are complete.
+The canonical CatalogService is now deployed and ready to accept a future authenticated FULL.
+The next slice is the read-only Drupal exporter/preflight/spool path.
+
 No Drupal writes are required.
-
-## E6b-1 status
-
-The authenticated catalog HTTP boundary is implemented as an isolated process,
-with writes disabled by default. It is not deployed or live-ready. E6b remains
-open until E6b-2 operational recovery, backup, and capacity gates close. See
-`CATALOG_INGEST_E6B1.md`.
-
-## E6b-2a mechanism status
-
-The local recovery core is implemented for review: replay statistics,
-publication-locked immutable identity/replay recovery sets, full verification,
-coverage predicates, read-only restore reconciliation, replay-loss
-provisioning, and the `catalog:ops` CLI. It is not deployed. See
-`CATALOG_RECOVERY_E6B2A.md`.
-
-## E6b-2b runtime admission status
-
-E6b-2b wires recovery coverage, capacity admission, the post-ACK final recovery
-gate, and deployment-candidate assets into the catalog HTTP runtime. The service
-remains not deployed and is not a live Drupal integration. The Drupal exporter is
-still the next slice. See `CATALOG_RUNTIME_E6B2B.md`.
