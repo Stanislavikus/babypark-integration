@@ -13,7 +13,7 @@ export { computeRunDigestV2, computeRunDigestV2 as computeRunDigest } from './ru
 const LAYERS = new Set(['content', 'commercial', 'stock', 'taxonomy', 'full']);
 const ID_RE = /^[A-Za-z0-9_-]{1,64}$/;
 const HASH_RE = /^[a-f0-9]{64}$/;
-const SCHEMA_VERSION = 7;
+export const REPLAY_SCHEMA_VERSION = 7;
 const MAX_RUN_STAGED_BYTES = 8 * 1024 * 1024;
 const MAX_LEDGER_STAGED_BYTES = 32 * 1024 * 1024;
 const PROCESS_BOOT_ID = crypto.randomUUID();
@@ -219,7 +219,8 @@ export class ReplayStore {
     }
   }
 
-  static openExisting(filePath, { maxReceipts = 20000, leaseSeconds = 60, catalogStorageDir } = {}) {
+  static openExisting(filePath, { maxReceipts = 20000, leaseSeconds = 60, catalogStorageDir,
+    readOnly = false } = {}) {
     const resolved = path.resolve(filePath);
     if (!fs.existsSync(resolved) || !fs.statSync(resolved).isFile()) {
       fail('INGEST_REPLAY_MISSING', 'Replay database must be bootstrapped');
@@ -227,7 +228,7 @@ export class ReplayStore {
     if ((fs.statSync(resolved).mode & 0o077) !== 0) {
       fail('INGEST_REPLAY_PERMISSIONS', 'Replay database permissions are unsafe');
     }
-    const db = new DatabaseSync(resolved, { create: false });
+    const db = new DatabaseSync(resolved, { create: false, readOnly });
     try {
       const version = db.prepare('PRAGMA user_version').get().user_version;
       const table = db.prepare(
@@ -237,14 +238,15 @@ export class ReplayStore {
       const publications = db.prepare(
         "SELECT 1 FROM sqlite_master WHERE type='table' AND name='publications'"
       ).get();
-      if (version !== SCHEMA_VERSION || !table || !publications || integrity !== 'ok') {
+      if (version !== REPLAY_SCHEMA_VERSION || !table || !publications || integrity !== 'ok') {
         fail('INGEST_REPLAY_SCHEMA_INVALID', 'Replay database cannot be trusted');
       }
       const journalMode = String(db.prepare('PRAGMA journal_mode').get().journal_mode).toLowerCase();
       if (journalMode !== 'delete') {
         fail('INGEST_REPLAY_SCHEMA_INVALID', 'Replay database journal mode must be DELETE');
       }
-      db.exec('PRAGMA synchronous=FULL; PRAGMA busy_timeout=5000;');
+      db.exec(readOnly ? 'PRAGMA busy_timeout=5000;' :
+        'PRAGMA synchronous=FULL; PRAGMA busy_timeout=5000;');
       return new ReplayStore(db, maxReceipts, leaseSeconds, catalogStorageDir);
     } catch (error) {
       db.close();
@@ -517,6 +519,51 @@ export class ReplayStore {
       'SELECT run_id AS runId, state FROM publications WHERE generation_id=?'
     ).get(generationId);
     return row ? { runId: row.runId, state: row.state } : null;
+  }
+
+  stats() {
+    const aggregate = this.db.prepare(
+      'SELECT COUNT(*) AS total, COALESCE(SUM(length(staged_body)),0) AS body_bytes, ' +
+      'MIN(created_at) AS oldest, MAX(created_at) AS newest, ' +
+      "MIN(CASE WHEN status='pending' THEN lease_until END) AS oldest_lease FROM receipts"
+    ).get();
+    const statuses = Object.fromEntries(this.db.prepare(
+      'SELECT status,COUNT(*) AS n FROM receipts GROUP BY status'
+    ).all().map(row => [row.status, Number(row.n)]));
+    const layers = Object.fromEntries(this.db.prepare(
+      'SELECT layer,COUNT(*) AS n FROM receipts GROUP BY layer'
+    ).all().map(row => [row.layer, Number(row.n)]));
+    const publicationStates = Object.fromEntries(this.db.prepare(
+      'SELECT state,COUNT(*) AS n FROM publications GROUP BY state'
+    ).all().map(row => [row.state, Number(row.n)]));
+    const publicationsTotal = Number(this.db.prepare(
+      'SELECT COUNT(*) AS n FROM publications'
+    ).get().n);
+    const total = Number(aggregate.total);
+    return {
+      schema_version: REPLAY_SCHEMA_VERSION,
+      receipts_total: total,
+      max_receipts: this.maxReceipts,
+      receipts_remaining: Math.max(0, this.maxReceipts - total),
+      counts_by_status: Object.fromEntries(
+        ['pending', 'staged', 'staged_released', 'acked'].map(key => [key, statuses[key] || 0])
+      ),
+      counts_by_layer: Object.fromEntries(
+        ['full', 'taxonomy', 'content', 'commercial', 'stock'].map(key => [key, layers[key] || 0])
+      ),
+      staged_body_bytes: Number(aggregate.body_bytes),
+      max_run_staged_bytes: MAX_RUN_STAGED_BYTES,
+      max_ledger_staged_bytes: MAX_LEDGER_STAGED_BYTES,
+      oldest_created_at: aggregate.oldest === null ? null : Number(aggregate.oldest),
+      newest_created_at: aggregate.newest === null ? null : Number(aggregate.newest),
+      oldest_pending_lease_until: aggregate.oldest_lease === null ? null : Number(aggregate.oldest_lease),
+      publications: {
+        total: publicationsTotal,
+        intent: publicationStates.intent || 0,
+        switched: publicationStates.switched || 0,
+        rolled_back: publicationStates.rolled_back || 0,
+      },
+    };
   }
 
   assertPendingOwner(key, claimToken, expectedBuildingGenerationId = null) {

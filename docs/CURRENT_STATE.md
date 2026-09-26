@@ -94,3 +94,12 @@ The authenticated catalog HTTP boundary is implemented as an isolated process,
 with writes disabled by default. It is not deployed or live-ready. E6b remains
 open until E6b-2 operational recovery, backup, and capacity gates close. See
 `CATALOG_INGEST_E6B1.md`.
+
+## E6b-2a mechanism status
+
+The local recovery core is implemented for review: replay statistics,
+publication-locked immutable identity/replay recovery sets, full verification,
+coverage predicates, read-only restore reconciliation, replay-loss
+provisioning, and the `catalog:ops` CLI. It is not deployed and does not change
+HTTP admission or readiness. E6b remains open; E6b-2b is still required. See
+`CATALOG_RECOVERY_E6B2A.md`.
