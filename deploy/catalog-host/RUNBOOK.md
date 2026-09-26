@@ -718,10 +718,13 @@ installed Catalog unit/env/snippet state
 
 If CatalogService deployment fails:
 
+> The Catalog unit may not exist yet when rollback is invoked after an early deployment
+> failure; absence of the unit is therefore a valid rollback state.
+
 ```sh
 set -euo pipefail
 
-systemctl disable --now babypark-catalog-ingest.service
+systemctl disable --now babypark-catalog-ingest.service 2>/dev/null || true
 # restore/remove Catalog Nginx include
 # restore timestamped Nginx config if needed
 nginx -t
