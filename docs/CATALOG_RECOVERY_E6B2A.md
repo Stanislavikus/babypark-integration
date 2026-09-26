@@ -38,9 +38,10 @@ Run `npm run catalog:ops -- <command>` with explicit absolute `--identity`,
   set rather than growing the backup root needlessly.
 * `backup-status` fully verifies sets and reports `COVERED`, `REQUIRED`, or
   `INVALID`; corrupt sets are reported, never deleted.
-* `validate-restore --set-id=... --generation=...` validates a selected set and
-  performs read-only identity/catalog reconciliation. It does not restore or
-  change `CURRENT`.
+* `validate-restore --set-id=...` validates a selected set and performs read-only
+  identity/catalog reconciliation. It does not restore or change `CURRENT`.
+  BOOTSTRAP recovery sets require `--set-id` only; `--generation` is omitted.
+  CURRENT recovery sets require both `--set-id` and `--generation`.
 * `recover-replay --new-replay=/absolute/new.sqlite` creates a fresh replay DB.
   `--last-run-id` and `--last-run-digest` are optional only as a pair. A match
   with CURRENT is `ACCEPTED_LOST_RESPONSE`; otherwise the result is

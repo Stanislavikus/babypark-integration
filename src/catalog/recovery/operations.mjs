@@ -31,7 +31,7 @@ export function bootstrapCatalogRecovery({ identityPath, replayPath, catalogStor
   replay.close();
   if (!fs.existsSync(backupRoot)) { fs.mkdirSync(backupRoot, { mode: 0o700 }); result.backup_root = 'created'; }
   else { validateBackupRoot(backupRoot); result.backup_root = 'existing_valid'; }
-  // Explicit bootstrap is the only operation allowed to initialize this coordination DB.
+  // Explicit bootstrap initializes the coordination DB for a newly provisioned catalog directory.
   const lock = new CatalogPublicationLock(catalogStorageDir); lock.close();
   result.ok = true;
   return result;
@@ -79,7 +79,7 @@ export function backupCatalog(paths) {
         set_id: found.covering.setId, coverage: 'COVERED' };
       const verified = createRecoverySetLocked({ backupRoot: absolute('backup-root', paths.backupRoot),
         catalogStorageDir, identityStore: identity, replayStore: replay, reader,
-        publicationLock: lock, authority });
+        publicationLock: lock });
       return { ok: true, created: true, set_id: verified.setId,
         coverage: 'COVERED', manifest: verified.manifest };
     });

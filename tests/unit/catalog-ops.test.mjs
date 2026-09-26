@@ -119,7 +119,8 @@ test('real catalog-ops process freezes exit codes 0, 1, and 2 with JSON', () => 
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'bp-cli-'));
   const common = [`--identity=${path.join(root, 'identity.sqlite')}`, `--replay=${path.join(root, 'replay.sqlite')}`,
     `--catalog-dir=${path.join(root, 'catalog')}`, `--backup-root=${path.join(root, 'backup')}`];
-  const run = args => spawnSync(process.execPath, ['scripts/catalog-ops.mjs', ...args], { cwd: path.resolve('.'), encoding: 'utf8' });
+  const run = args => spawnSync(process.execPath, ['--no-warnings', 'scripts/catalog-ops.mjs', ...args],
+    { cwd: path.resolve('.'), encoding: 'utf8' });
   try {
     const success = run(['bootstrap', ...common]); assert.equal(success.status, 0); assert.equal(JSON.parse(success.stdout).ok, true);
     const usage = run(['unknown']); assert.equal(usage.status, 2); assert.equal(JSON.parse(usage.stderr).ok, false);

@@ -225,7 +225,7 @@ function newSetId(now) {
 }
 
 export function createRecoverySetLocked({ backupRoot, catalogStorageDir, identityStore,
-  replayStore, reader, publicationLock, authority, now = () => new Date(), failpoint } = {}) {
+  replayStore, reader, publicationLock, now = () => new Date(), failpoint } = {}) {
   const root = validateBackupRoot(backupRoot);
   if (!(identityStore instanceof IdentityStore) || !(replayStore instanceof ReplayStore) ||
       !(reader instanceof CatalogReader) || !publicationLock?.active) {
@@ -236,7 +236,7 @@ export function createRecoverySetLocked({ backupRoot, catalogStorageDir, identit
   fs.mkdirSync(temp, { mode: 0o700 });
   const hit = name => { const result = failpoint?.(name); if (result instanceof Promise) throw new TypeError('Recovery failpoint must be synchronous'); };
   try {
-    authority ??= readRecoveryAuthority(reader);
+    const authority = readRecoveryAuthority(reader);
     const identityPath = path.join(temp, 'identity.sqlite');
     const replayPath = path.join(temp, 'replay.sqlite');
     hit('beforeIdentitySnapshot');

@@ -5,9 +5,36 @@ import path from 'node:path';
 import test from 'node:test';
 import { DatabaseSync } from 'node:sqlite';
 import { createE6aHarness, phase0Records, phase1Records, phase2Records } from '../helpers/catalog-e6a1-fixture.mjs';
-import { createRecoverySet, readRecoveryAuthority, reconcileRestore,
+import { createRecoverySet, createRecoverySetLocked, readRecoveryAuthority, reconcileRestore,
   recoverySetCovers, verifyRecoverySet } from '../../src/catalog/recovery/core.mjs';
 import { canonicalControlJson } from '../../src/catalog/ingest/run-protocol.mjs';
+
+const FAKE_BOOTSTRAP_AUTHORITY = {
+  state: 'BOOTSTRAP', currentGeneration: null, previousGeneration: null,
+  sourceEpoch: null, publishedIdentityRevision: null, acceptedRun: null, acceptedKid: null,
+};
+
+test('recovery-set authority is always read under the publication lock, never caller-supplied', () => {
+  const h = createE6aHarness();
+  const backup = path.join(h.root, 'backup'); fs.mkdirSync(backup, { mode: 0o700 });
+  try {
+    h.apply(phase0Records(), 1); h.apply(phase1Records(), 2); h.apply(phase2Records(), 3); h.finish(4);
+    const authority = readRecoveryAuthority(h.reader);
+    assert.equal(authority.state, 'CURRENT');
+    const locked = h.mutex.withLock(() => createRecoverySetLocked({ backupRoot: backup,
+      catalogStorageDir: h.catalogDir, identityStore: h.identity, replayStore: h.store,
+      reader: h.reader, publicationLock: h.mutex, authority: FAKE_BOOTSTRAP_AUTHORITY }));
+    assert.notEqual(locked.manifest.current_generation, null);
+    assert.notEqual(locked.manifest.accepted_run, null);
+    assert.equal(locked.manifest.current_generation, authority.currentGeneration);
+    assert.deepEqual(locked.manifest.accepted_run, authority.acceptedRun);
+    const viaPublic = createRecoverySet({ backupRoot: backup, catalogStorageDir: h.catalogDir,
+      identityStore: h.identity, replayStore: h.store, reader: h.reader, publicationLock: h.mutex,
+      authority: FAKE_BOOTSTRAP_AUTHORITY });
+    assert.notEqual(viaPublic.manifest.current_generation, null);
+    assert.equal(viaPublic.manifest.accepted_run.run_id, authority.acceptedRun.run_id);
+  } finally { h.close(); }
+});
 
 test('CURRENT authority derives one KID and recovery set reconciles catalog identity', () => {
   const h = createE6aHarness();
