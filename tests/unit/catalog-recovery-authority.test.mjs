@@ -1,11 +1,13 @@
 import assert from 'node:assert/strict';
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import test from 'node:test';
 import { DatabaseSync } from 'node:sqlite';
 import { createE6aHarness, phase0Records, phase1Records, phase2Records } from '../helpers/catalog-e6a1-fixture.mjs';
 import { createRecoverySet, readRecoveryAuthority, reconcileRestore,
-  recoverySetCovers } from '../../src/catalog/recovery/core.mjs';
+  recoverySetCovers, verifyRecoverySet } from '../../src/catalog/recovery/core.mjs';
+import { canonicalControlJson } from '../../src/catalog/ingest/run-protocol.mjs';
 
 test('CURRENT authority derives one KID and recovery set reconciles catalog identity', () => {
   const h = createE6aHarness();
@@ -19,14 +21,23 @@ test('CURRENT authority derives one KID and recovery set reconciles catalog iden
     assert.equal(authority.acceptedRun.run_digest, finished.digest);
     const verified = createRecoverySet({ backupRoot: backup, catalogStorageDir: h.catalogDir,
       identityStore: h.identity, replayStore: h.store, reader: h.reader, publicationLock: h.mutex });
+    assert.throws(() => reconcileRestore({ verified, catalogStorageDir: h.catalogDir }), /explicit generation/);
     assert.equal(recoverySetCovers(verified, authority), true);
     // Live identity being ahead is intentionally not part of CURRENT coverage equality.
     h.identity.setConfigHash('post-publish', 'f'.repeat(64));
     assert.equal(recoverySetCovers(verified, authority), true);
     assert.equal(recoverySetCovers(verified, { ...authority,
       acceptedRun: { ...authority.acceptedRun, run_digest: '0'.repeat(64) } }), false);
+    const liveFiles = [path.join(h.root, 'identity.sqlite'), path.join(h.root, 'replay.sqlite'),
+      path.join(h.catalogDir, 'CURRENT'), path.join(h.catalogDir, 'catalog.e6a1.sqlite')];
+    const before = Object.fromEntries(liveFiles.map(file => [file,
+      { hash: crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex'), mtime: fs.statSync(file).mtimeMs }]));
     assert.equal(reconcileRestore({ verified, catalogStorageDir: h.catalogDir,
       generationId: authority.currentGeneration }).ok, true);
+    for (const file of liveFiles) assert.deepEqual({
+      hash: crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex'),
+      mtime: fs.statSync(file).mtimeMs,
+    }, before[file]);
   } finally { h.close(); }
 });
 
@@ -40,5 +51,43 @@ test('CURRENT authority fails closed when run_chunks contain multiple KIDs', () 
     const db = new DatabaseSync(file);
     try { db.prepare("UPDATE run_chunks SET kid='other-kid' WHERE seq=3").run(); } finally { db.close(); }
     assert.throws(() => readRecoveryAuthority(h.reader), /inconsistent/);
+  } finally { h.close(); }
+});
+
+test('restore rejects canonical manifest accepted-run digest tampering', () => {
+  const h = createE6aHarness(); const backup = path.join(h.root, 'backup'); fs.mkdirSync(backup, { mode: 0o700 });
+  try {
+    h.apply(phase0Records(), 1); h.apply(phase1Records(), 2); h.apply(phase2Records(), 3); h.finish(4);
+    const made = createRecoverySet({ backupRoot: backup, catalogStorageDir: h.catalogDir,
+      identityStore: h.identity, replayStore: h.store, reader: h.reader, publicationLock: h.mutex });
+    const manifestPath = path.join(made.directory, 'manifest.json');
+    const manifest = JSON.parse(fs.readFileSync(manifestPath));
+    manifest.accepted_run.run_digest = '0'.repeat(64);
+    fs.writeFileSync(manifestPath, canonicalControlJson(manifest)); fs.chmodSync(manifestPath, 0o600);
+    const verified = verifyRecoverySet({ backupRoot: backup, setId: made.setId, catalogStorageDir: h.catalogDir });
+    assert.throws(() => reconcileRestore({ verified, catalogStorageDir: h.catalogDir,
+      generationId: manifest.current_generation }), /authority differs/);
+  } finally { h.close(); }
+});
+
+test('restore checks all catalog rows and rejects tombstoned identity compatibility', () => {
+  const h = createE6aHarness(); const backup = path.join(h.root, 'backup'); fs.mkdirSync(backup, { mode: 0o700 });
+  try {
+    h.apply(phase0Records(), 1); h.apply(phase1Records(), 2); h.apply(phase2Records(), 3); h.finish(4);
+    const made = createRecoverySet({ backupRoot: backup, catalogStorageDir: h.catalogDir,
+      identityStore: h.identity, replayStore: h.store, reader: h.reader, publicationLock: h.mutex });
+    h.reader.close();
+    const catalogPath = path.join(h.catalogDir, 'catalog.e6a1.sqlite');
+    const cdb = new DatabaseSync(catalogPath); try { cdb.exec("UPDATE variants SET lifecycle='tombstoned'; UPDATE products SET lifecycle='tombstoned'"); } finally { cdb.close(); }
+    const identityPath = path.join(made.directory, 'identity.sqlite');
+    const idb = new DatabaseSync(identityPath); try { idb.exec("UPDATE variants SET lifecycle='tombstoned'; UPDATE products SET lifecycle='tombstoned'"); } finally { idb.close(); }
+    const manifestPath = path.join(made.directory, 'manifest.json');
+    const manifest = JSON.parse(fs.readFileSync(manifestPath));
+    manifest.identity.bytes = fs.statSync(identityPath).size;
+    manifest.identity.sha256 = crypto.createHash('sha256').update(fs.readFileSync(identityPath)).digest('hex');
+    fs.writeFileSync(manifestPath, canonicalControlJson(manifest));
+    const verified = verifyRecoverySet({ backupRoot: backup, setId: made.setId, catalogStorageDir: h.catalogDir });
+    assert.throws(() => reconcileRestore({ verified, catalogStorageDir: h.catalogDir,
+      generationId: manifest.current_generation }), /Active catalog product/);
   } finally { h.close(); }
 });
