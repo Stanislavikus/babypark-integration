@@ -119,27 +119,33 @@ with mode `0700`.
 The production server may have an old working checkout on a historical branch. Do **not**
 deploy its working tree.
 
-1. Record the approved Git SHA for this deployment (example: `98d20c213cf214dd0529cc7b4487985fd372fcee`).
-2. Fetch and verify:
+> Immediately before deployment, record the exact currently approved merged `main` SHA
+> and verify `origin/main` equals it. Use only that SHA for the release; do not freeze
+> a historical SHA into this reusable SOP.
+
+1. Fetch and verify:
 
 ```sh
+APPROVED_SHA=<approved-exact-sha>
 git -C /path/to/babypark-integration fetch origin
-git -C /path/to/babypark-integration rev-parse origin/main
-# must equal the approved exact SHA
+test "$(git -C /path/to/babypark-integration rev-parse origin/main)" = "$APPROVED_SHA"
 ```
 
-3. Construct a fresh immutable release from the exact SHA:
+2. Construct a fresh immutable release from the exact SHA (fail closed if the path
+   already exists):
 
 ```sh
-APPROVED_SHA=<approved-sha>
 SHORT_SHA=$(git -C /path/to/babypark-integration rev-parse --short "$APPROVED_SHA")
 RELEASE_DIR=/opt/babypark-integration/releases/$(date -u +%Y%m%dT%H%M%SZ)-${SHORT_SHA}
 
-mkdir -p "$RELEASE_DIR"
+mkdir "$RELEASE_DIR"
 git -C /path/to/babypark-integration archive "$APPROVED_SHA" | tar -x -C "$RELEASE_DIR"
 chown -R root:root "$RELEASE_DIR"
 chmod -R a+rX "$RELEASE_DIR"
 ```
+
+`mkdir "$RELEASE_DIR"` must fail if the release path already exists. Do not delete or
+reuse an existing immutable release automatically.
 
 Requirements:
 
@@ -148,10 +154,16 @@ Requirements:
 - no editing inside the immutable release;
 - no `npm install` required for Catalog runtime (no external runtime npm dependencies).
 
-4. Atomically point the Catalog release symlink:
+3. Atomically point the Catalog release symlink (same filesystem/directory; failure
+   before rename leaves the old `catalog-current` intact):
 
 ```sh
-ln -sfn "$RELEASE_DIR" /opt/babypark-integration/catalog-current
+CATALOG_LINK=/opt/babypark-integration/catalog-current
+CATALOG_LINK_NEW=/opt/babypark-integration/.catalog-current.new
+
+rm -f "$CATALOG_LINK_NEW"
+ln -s "$RELEASE_DIR" "$CATALOG_LINK_NEW"
+mv -Tf "$CATALOG_LINK_NEW" "$CATALOG_LINK"
 ```
 
 Do not modify `/opt/babypark-integration/current`.
@@ -247,19 +259,19 @@ runuser -u babypark-catalog -- \
   --catalog-dir="$CATALOG_DATA/catalog" \
   --backup-root="$CATALOG_DATA/backup"
 
-runuser -u babypark-catalog -- \
+BACKUP_JSON=$(runuser -u babypark-catalog -- \
   /usr/bin/node "$CATALOG_RELEASE/scripts/catalog-ops.mjs" backup \
   --identity="$CATALOG_DATA/identity.sqlite" \
   --replay="$CATALOG_DATA/replay.sqlite" \
   --catalog-dir="$CATALOG_DATA/catalog" \
-  --backup-root="$CATALOG_DATA/backup"
+  --backup-root="$CATALOG_DATA/backup")
 
-runuser -u babypark-catalog -- \
+STATUS_JSON=$(runuser -u babypark-catalog -- \
   /usr/bin/node "$CATALOG_RELEASE/scripts/catalog-ops.mjs" backup-status \
   --identity="$CATALOG_DATA/identity.sqlite" \
   --replay="$CATALOG_DATA/replay.sqlite" \
   --catalog-dir="$CATALOG_DATA/catalog" \
-  --backup-root="$CATALOG_DATA/backup"
+  --backup-root="$CATALOG_DATA/backup")
 ```
 
 Expected `backup-status` output:
@@ -269,7 +281,24 @@ authority.state = BOOTSTRAP
 coverage = COVERED
 ```
 
-Then validate the BOOTSTRAP recovery set (no `--generation` argument for BOOTSTRAP):
+Obtain the exact completed covering set ID from either command:
+
+- `backup` → `set_id` (capture from `BACKUP_JSON`), or
+- `backup-status` → `covering_set` (capture from `STATUS_JSON`).
+
+They must match for a fresh BOOTSTRAP backup. Example extraction:
+
+```sh
+COVERING_SET_ID=$(printf '%s\n' "$BACKUP_JSON" | /usr/bin/node -e '
+  const input = require("fs").readFileSync(0, "utf8");
+  const value = JSON.parse(input).set_id;
+  if (!value) { console.error("missing set_id"); process.exit(1); }
+  process.stdout.write(value);
+')
+```
+
+Then validate the BOOTSTRAP recovery set with explicit evidence selection (mandatory
+`--set-id`; omit `--generation`):
 
 ```sh
 runuser -u babypark-catalog -- \
@@ -277,7 +306,21 @@ runuser -u babypark-catalog -- \
   --identity="$CATALOG_DATA/identity.sqlite" \
   --replay="$CATALOG_DATA/replay.sqlite" \
   --catalog-dir="$CATALOG_DATA/catalog" \
-  --backup-root="$CATALOG_DATA/backup"
+  --backup-root="$CATALOG_DATA/backup" \
+  --set-id="$COVERING_SET_ID"
+```
+
+Expected BOOTSTRAP `validate-restore` output:
+
+```json
+{
+  "set_id": "<exact-covering-set-id>",
+  "ok": true,
+  "state": "BOOTSTRAP",
+  "generation_id": null,
+  "identity_revision": <non-negative-integer>,
+  "catalog_identity_revision": null
+}
 ```
 
 ## Install systemd unit
@@ -313,25 +356,104 @@ accepting_ingest = false
 blockers contains INGEST_DISABLED
 ```
 
-Authenticated local state check (use the D1-local probe KID; do not print the secret):
+Authenticated local state check uses BP1 `X-BP-*` headers (not `Authorization: Bearer`).
+CatalogService signs and verifies via `signCanonicalRequest` in
+`src/catalog/ingest/auth.mjs`.
 
-```sh
-# Example: construct BP1 header with probe KID from /etc/babypark-catalog-ingest.env
-curl -sS -H 'Authorization: Bearer <bp1-token>' \
-  http://127.0.0.1:8081/api/catalog/ingest/v1/state
+For `GET /api/catalog/ingest/v1/state`, the signed tuple is:
+
+```text
+method = GET
+path = /api/catalog/ingest/v1/state
+audience = configured CATALOG_BP1_AUDIENCE
+kid = D1 probe kid
+timestamp = current Unix seconds
+run_id = state
+seq = 0
+final = 0
+content_encoding = identity
+body = empty bytes
 ```
 
-Expected:
+Secret-safe local probe (reads the protected env file; does not echo the secret or
+place it in shell history):
 
-```json
-{
-  "schema": "bp.catalog.state/1",
-  "state": "BOOTSTRAP",
-  "accepting_ingest": false,
-  "blockers": ["INGEST_DISABLED"],
-  "current_generation": null,
-  "accepted_run": null
+```sh
+CATALOG_RELEASE=/opt/babypark-integration/catalog-current
+
+runuser -u babypark-catalog -- env CATALOG_RELEASE="$CATALOG_RELEASE" /usr/bin/node --input-type=module - <<'EOF'
+import fs from 'node:fs';
+import http from 'node:http';
+import { pathToFileURL } from 'node:url';
+
+const release = process.env.CATALOG_RELEASE;
+const envText = fs.readFileSync('/etc/babypark-catalog-ingest.env', 'utf8');
+const env = {};
+for (const line of envText.split('\n')) {
+  const match = /^([A-Z0-9_]+)=(.*)$/.exec(line.trim());
+  if (match) env[match[1]] = match[2];
 }
+const audience = env.CATALOG_BP1_AUDIENCE;
+const host = env.CATALOG_INGEST_HOST || '127.0.0.1';
+const port = Number(env.CATALOG_INGEST_PORT || 8081);
+const keys = JSON.parse(env.CATALOG_BP1_KEYS_JSON);
+const kid = Object.keys(keys)[0];
+const secret = keys[kid];
+const route = '/api/catalog/ingest/v1/state';
+const timestamp = String(Math.floor(Date.now() / 1000));
+const { signCanonicalRequest } = await import(
+  pathToFileURL(`${release}/src/catalog/ingest/auth.mjs`).href
+);
+const signed = signCanonicalRequest({
+  secret,
+  bodyBytes: Buffer.alloc(0),
+  method: 'GET',
+  path: route,
+  audience,
+  kid,
+  timestamp,
+  runId: 'state',
+  seq: 0,
+  final: '0',
+  contentEncoding: 'identity',
+});
+const headers = {
+  'X-BP-Version': '1',
+  'X-BP-Aud': audience,
+  'X-BP-Kid': kid,
+  'X-BP-Timestamp': timestamp,
+  'X-BP-Run': 'state',
+  'X-BP-Seq': '0',
+  'X-BP-Final': '0',
+  'X-BP-Content-Encoding': 'identity',
+  'X-BP-Signature': signed.signature,
+};
+const req = http.request({ host, port, method: 'GET', path: route, headers }, (res) => {
+  const chunks = [];
+  res.on('data', (chunk) => chunks.push(chunk));
+  res.on('end', () => {
+    const body = JSON.parse(Buffer.concat(chunks));
+    console.log(JSON.stringify({ status: res.statusCode, body }, null, 2));
+  });
+});
+req.on('error', (error) => {
+  console.error(error.message);
+  process.exitCode = 1;
+});
+req.end();
+EOF
+```
+
+Expected while `CATALOG_INGEST_ENABLED=false`:
+
+```text
+HTTP 200
+schema = bp.catalog.state/1
+state = BOOTSTRAP
+accepting_ingest = false
+blockers = ["INGEST_DISABLED"]
+current_generation = null
+accepted_run = null
 ```
 
 ## Nginx deployment
@@ -378,15 +500,27 @@ systemctl reload nginx
 
 ### From Drupal host (`77.83.102.249`)
 
+Without valid BP1, capture both status and body (do not discard the response):
+
 ```sh
-curl -sS -o /dev/null -w '%{http_code}\n' \
+curl -sS -D /tmp/catalog-state.headers \
+  -o /tmp/catalog-state.json \
   https://chat.babypark.ua/api/catalog/ingest/v1/state
+
+grep -q 'HTTP/[^ ]* 401' /tmp/catalog-state.headers
+jq -e '.schema == "bp.catalog.error/1" and .code == "AUTH_FAILED"' /tmp/catalog-state.json
 ```
 
-Without valid BP1. Expected: `401` with `AUTH_FAILED`.
+Expected:
 
-Meaning: Drupal source IP passed Nginx allowlist, request reached CatalogService, and
-CatalogService BP1 rejected it.
+```text
+HTTP status = 401
+body.schema = bp.catalog.error/1
+body.code = AUTH_FAILED
+```
+
+Meaning: request passed Nginx IP allowlist → reached CatalogService → CatalogService
+BP1 auth rejected it. This is not merely “some component returned 401”.
 
 ### From another BabyPark host (different public IP)
 
@@ -447,7 +581,7 @@ service healthy while disabled
 authenticated local /state OK
 
 Nginx syntax OK
-Drupal IP → Catalog route → 401
+Drupal IP → Catalog route → 401 AUTH_FAILED (Catalog error body)
 other IP → Catalog route → 403
 
 existing Viber gateway PID unchanged
@@ -469,9 +603,10 @@ systemctl restart babypark-catalog-ingest.service
 
 Do **not** restart gateway, Nginx, or Chatwoot.
 
-After restart, authenticated local `/state` must report:
+After restart, rerun the secret-safe local `/state` probe above. Expected:
 
 ```text
+HTTP 200
 state = BOOTSTRAP
 accepting_ingest = true
 blockers = []
@@ -503,7 +638,8 @@ runuser -u babypark-catalog -- \
   --backup-root="$CATALOG_DATA/backup"
 ```
 
-Validate recovery evidence:
+Validate recovery evidence (`--set-id` is mandatory for every `validate-restore`; the
+tool does not auto-select a recovery set):
 
 ```sh
 runuser -u babypark-catalog -- \
@@ -512,11 +648,19 @@ runuser -u babypark-catalog -- \
   --replay="$CATALOG_DATA/replay.sqlite" \
   --catalog-dir="$CATALOG_DATA/catalog" \
   --backup-root="$CATALOG_DATA/backup" \
-  [--set-id=...] [--generation=...]
+  --set-id=<set-id> \
+  [--generation=<exact-generation-id>]
 ```
 
-For BOOTSTRAP validation, omit `--generation`. For CURRENT-era validation, supply
-`--generation` as required by the recovery set.
+Contract:
+
+- `--set-id=<set-id>` — **required** for every `validate-restore`.
+- BOOTSTRAP recovery set — omit `--generation`.
+- CURRENT recovery set — `--generation=<exact-generation-id>` is **required**.
+
+Obtain `<set-id>` from `backup` (`set_id`) or `backup-status` (`covering_set`). For
+CURRENT sets, obtain `<exact-generation-id>` from the recovery manifest or operator
+status output.
 
 If replay recovery is required, preserve old replay evidence, create a new replay path,
 update `CATALOG_REPLAY_PATH`, and restart CatalogService under operator control.
