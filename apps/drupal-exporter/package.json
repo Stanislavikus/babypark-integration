@@ -1,0 +1,20 @@
+{
+  "name": "@babypark/drupal-exporter",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Read-only Drupal catalog snapshot, preflight, and canonical spool (D2a)",
+  "bin": {
+    "drupal-exporter": "./bin/drupal-exporter.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "test": "node --test --test-concurrency=1 test/**/*.test.mjs"
+  },
+  "dependencies": {
+    "mariadb": "^3.5.0",
+    "yaml": "^2.8.2"
+  }
+}
