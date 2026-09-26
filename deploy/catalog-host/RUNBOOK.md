@@ -102,6 +102,10 @@ Do **not** use `npm run catalog:ops` in production operator commands. Recovery
 directories require ownership by `process.geteuid()`; running as root is invalid for
 the production service ownership model.
 
+> BP1 diagnostic probes that need to read `/etc/babypark-catalog-ingest.env` are
+> operator/root actions. `catalog-ops` recovery and durable-state commands are
+> service-identity actions and must run as `babypark-catalog`.
+
 ## Durable paths (frozen)
 
 ```text
@@ -375,13 +379,15 @@ content_encoding = identity
 body = empty bytes
 ```
 
-Secret-safe local probe (reads the protected env file; does not echo the secret or
-place it in shell history):
+Secret-safe local probe (root operator action: reads the root-only env file; computes
+an HMAC signature; sends a loopback GET; does not modify Catalog durable state; does
+not echo the secret or place it in shell history):
 
 ```sh
 CATALOG_RELEASE=/opt/babypark-integration/catalog-current
 
-runuser -u babypark-catalog -- env CATALOG_RELEASE="$CATALOG_RELEASE" /usr/bin/node --input-type=module - <<'EOF'
+env CATALOG_RELEASE="$CATALOG_RELEASE" \
+  /usr/bin/node --input-type=module - <<'EOF'
 import fs from 'node:fs';
 import http from 'node:http';
 import { pathToFileURL } from 'node:url';
