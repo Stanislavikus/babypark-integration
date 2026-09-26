@@ -9,6 +9,7 @@ import { ReplayStore, REPLAY_SCHEMA_VERSION } from '../ingest/replay-store.mjs';
 import { canonicalControlJson } from '../ingest/run-protocol.mjs';
 import { CatalogReader, generationIdFromFilename, inspectCatalogGeneration,
   readCatalogPointer, validateGenerationId } from '../sqlite/generation.mjs';
+import { CatalogPublicationLock } from '../sqlite/publication-lock.mjs';
 
 export const RECOVERY_SET_SCHEMA = 'bp.catalog.backup-set/1';
 const SET_RE = /^set-[0-9]{8}T[0-9]{6}Z-[a-f0-9]{16}$/;
@@ -228,7 +229,8 @@ export function createRecoverySetLocked({ backupRoot, catalogStorageDir, identit
   replayStore, reader, publicationLock, now = () => new Date(), failpoint } = {}) {
   const root = validateBackupRoot(backupRoot);
   if (!(identityStore instanceof IdentityStore) || !(replayStore instanceof ReplayStore) ||
-      !(reader instanceof CatalogReader) || !publicationLock?.active) {
+      !(reader instanceof CatalogReader) ||
+      !(publicationLock instanceof CatalogPublicationLock) || !publicationLock.active) {
     throw new TypeError('Recovery-set creation requires the held publication lock');
   }
   const setId = newSetId(now), temp = path.join(root, '.tmp-' + setId), final = path.join(root, setId);
@@ -278,7 +280,9 @@ export function createRecoverySetLocked({ backupRoot, catalogStorageDir, identit
 }
 
 export function createRecoverySet(options = {}) {
-  if (!options.publicationLock?.withLock) throw new TypeError('Publication lock is required');
+  if (!(options.publicationLock instanceof CatalogPublicationLock)) {
+    throw new TypeError('Publication lock is required');
+  }
   return options.publicationLock.withLock(() => createRecoverySetLocked(options));
 }
 

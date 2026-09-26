@@ -5,14 +5,37 @@ import path from 'node:path';
 import test from 'node:test';
 import { DatabaseSync } from 'node:sqlite';
 import { createE6aHarness, phase0Records, phase1Records, phase2Records } from '../helpers/catalog-e6a1-fixture.mjs';
-import { createRecoverySet, createRecoverySetLocked, readRecoveryAuthority, reconcileRestore,
-  recoverySetCovers, verifyRecoverySet } from '../../src/catalog/recovery/core.mjs';
+import { createRecoverySet, createRecoverySetLocked, discoverRecoverySets, readRecoveryAuthority,
+  reconcileRestore, recoverySetCovers, verifyRecoverySet } from '../../src/catalog/recovery/core.mjs';
 import { canonicalControlJson } from '../../src/catalog/ingest/run-protocol.mjs';
+import { CatalogPublicationLock } from '../../src/catalog/sqlite/publication-lock.mjs';
 
 const FAKE_BOOTSTRAP_AUTHORITY = {
   state: 'BOOTSTRAP', currentGeneration: null, previousGeneration: null,
   sourceEpoch: null, publishedIdentityRevision: null, acceptedRun: null, acceptedKid: null,
 };
+
+const FAKE_PUBLICATION_LOCK = {
+  active: true,
+  withLock(work) { return work(); },
+};
+
+test('recovery-set creation rejects a spoofed publication lock and accepts the real one', () => {
+  const h = createE6aHarness();
+  const backup = path.join(h.root, 'backup'); fs.mkdirSync(backup, { mode: 0o700 });
+  const base = { backupRoot: backup, catalogStorageDir: h.catalogDir, identityStore: h.identity,
+    replayStore: h.store, reader: h.reader, publicationLock: FAKE_PUBLICATION_LOCK };
+  try {
+    h.apply(phase0Records(), 1); h.apply(phase1Records(), 2); h.apply(phase2Records(), 3); h.finish(4);
+    assert.throws(() => createRecoverySetLocked(base), /held publication lock/);
+    assert.throws(() => createRecoverySet(base), /Publication lock is required/);
+    assert.deepEqual(discoverRecoverySets({ backupRoot: backup }), []);
+    const verified = createRecoverySet({ ...base, publicationLock: h.mutex });
+    assert.equal(verified.verified, true);
+    assert.equal(verified.manifest.current_generation, readRecoveryAuthority(h.reader).currentGeneration);
+    assert.deepEqual(discoverRecoverySets({ backupRoot: backup }), [verified.setId]);
+  } finally { h.close(); }
+});
 
 test('recovery-set authority is always read under the publication lock, never caller-supplied', () => {
   const h = createE6aHarness();
