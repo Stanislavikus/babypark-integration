@@ -13,7 +13,9 @@ import { createRecoveryGate } from '../../src/catalog/http/recovery-gate.mjs';
 import { backupCatalog, bootstrapCatalogRecovery } from '../../src/catalog/recovery/operations.mjs';
 import { phase0Records, phase1Records, phase2Records } from './catalog-e6a1-fixture.mjs';
 
-export const secret = 'e6b2b-test-secret-at-least-32-chars-long';
+export const secret1 = 'e6b2b-test-secret-one-at-least-32-chars';
+export const secret2 = 'e6b2b-test-secret-two-at-least-32-chars';
+export const secret = secret1;
 export const now = 1_700_000_000;
 export const hash = value => crypto.createHash('sha256').update(value).digest('hex');
 export const bytes = value => Buffer.from(canonicalJson(value));
@@ -23,6 +25,7 @@ export function createHttpE6b2Fixture({
   withCoveringSet = false,
   maxReceipts = 20000,
   recoveryGateOptions = {},
+  secrets = [['kid1', secret1], ['kid2', secret2]],
 } = {}) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'bp-e6b2b-'));
   const paths = {
@@ -46,7 +49,7 @@ export function createHttpE6b2Fixture({
     port: 0,
     ingestEnabled,
     audience: 'e6b2b',
-    secrets: new Map([['kid1', secret]]),
+    secrets: new Map(secrets),
     maxAgeSec: 300,
     identityPath: paths.identityPath,
     replayPath: paths.replayPath,
@@ -78,7 +81,10 @@ export function createHttpE6b2Fixture({
   return { root, paths, identity, store, mutex, reader, publisher, recoveryGate, runtime, config, close };
 }
 
-export function signRequest({ method, path: route, body = Buffer.alloc(0), runId = 'run-a', seq = 0, final = false, kid = 'kid1' } = {}) {
+export function signRequest({
+  method, path: route, body = Buffer.alloc(0), runId = 'run-a', seq = 0, final = false,
+  kid = 'kid1', secret = secret1,
+} = {}) {
   const signed = signCanonicalRequest({
     secret, bodyBytes: body, method, path: route, audience: 'e6b2b', kid,
     timestamp: String(now), runId, seq, final: final ? '1' : '0', contentEncoding: 'identity',
@@ -97,10 +103,10 @@ export function signRequest({ method, path: route, body = Buffer.alloc(0), runId
   };
 }
 
-export function httpRequest(address, { method = 'GET', path: route = '/', body = Buffer.alloc(0), unsigned = false, ...signArgs } = {}) {
+export function httpRequest(address, { method = 'GET', path: route = '/', body = Buffer.alloc(0), unsigned = false, secret = secret1, ...signArgs } = {}) {
   const headers = unsigned
     ? { ...(method === 'POST' ? { 'Content-Type': 'application/json' } : {}) }
-    : signRequest({ method, path: route, body, ...signArgs });
+    : signRequest({ method, path: route, body, secret, ...signArgs });
   return new Promise((resolve, reject) => {
     const req = http.request({
       host: '127.0.0.1', port: address.port, method, path: route, headers,
@@ -139,17 +145,17 @@ export function fullBodies(runId = 'run-a', sourceEpoch = 'epoch-e6b2b') {
   return { header, chunks, finalBody, digest, count };
 }
 
-export async function publishFullRun(fixture, runId = 'run-a') {
+export async function publishFullRun(fixture, runId = 'run-a', { kid = 'kid1', secret = secret1 } = {}) {
   const { header, chunks, finalBody } = fullBodies(runId);
   const address = fixture.runtime.server.address();
   for (let seq = 0; seq < 4; seq++) {
     const result = await httpRequest(address, {
-      method: 'POST', path: '/api/catalog/ingest/v1/full', body: seq === 0 ? header : chunks[seq - 1], runId, seq,
+      method: 'POST', path: '/api/catalog/ingest/v1/full', body: seq === 0 ? header : chunks[seq - 1], runId, seq, kid, secret,
     });
     if (result.body.status !== 'STAGED') throw new Error('expected STAGED at seq ' + seq + ': ' + JSON.stringify(result.body));
   }
   const final = await httpRequest(address, {
-    method: 'POST', path: '/api/catalog/ingest/v1/full', body: finalBody, runId, seq: 4, final: true,
+    method: 'POST', path: '/api/catalog/ingest/v1/full', body: finalBody, runId, seq: 4, final: true, kid, secret,
   });
   if (final.body.status !== 'ACKED') throw new Error('expected ACKED: ' + JSON.stringify(final.body));
   return { final, finalBody, header };

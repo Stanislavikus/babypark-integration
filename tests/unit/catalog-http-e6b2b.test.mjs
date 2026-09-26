@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict';
+import { fork } from 'node:child_process';
+import { once } from 'node:events';
 import fs from 'node:fs';
 import http from 'node:http';
+import net from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
@@ -8,15 +11,54 @@ import { parseCatalogHttpConfig } from '../../src/catalog/http/config.mjs';
 import { openCatalogHttpRuntime } from '../../src/catalog/http/runtime.mjs';
 import { readCatalogState } from '../../src/catalog/http/state.mjs';
 import { createRecoveryGate } from '../../src/catalog/http/recovery-gate.mjs';
-import { createRecoverySetLocked } from '../../src/catalog/recovery/core.mjs';
+import { createRecoverySetLocked, findCoveringRecoverySet, readRecoveryAuthority } from '../../src/catalog/recovery/core.mjs';
 import { IdentityStore } from '../../src/catalog/identity/store.mjs';
 import { ReplayStore } from '../../src/catalog/ingest/replay-store.mjs';
 import { CatalogReader } from '../../src/catalog/sqlite/generation.mjs';
 import { CatalogPublicationLock } from '../../src/catalog/sqlite/publication-lock.mjs';
 import { backupCatalog, bootstrapCatalogRecovery } from '../../src/catalog/recovery/operations.mjs';
 import {
-  bytes, createHttpE6b2Fixture, fullBodies, hash, httpRequest, publishFullRun, secret, signRequest,
+  bytes, createHttpE6b2Fixture, fullBodies, hash, httpRequest, now, publishFullRun, secret1, secret2, signRequest,
 } from '../helpers/catalog-http-e6b2b-fixture.mjs';
+
+const crashWorker = new URL('../fixtures/catalog-http-e6b2b-crash-worker.mjs', import.meta.url);
+
+function freePort() {
+  return new Promise((resolve, reject) => {
+    const server = net.createServer();
+    server.once('error', reject);
+    server.listen(0, '127.0.0.1', () => {
+      const port = server.address().port;
+      server.close(error => error ? reject(error) : resolve(port));
+    });
+  });
+}
+
+function acceptedRunCount(reader) {
+  return reader.withDb(db => db.prepare("SELECT COUNT(*) AS n FROM ingest_runs WHERE status='ACCEPTED' AND layer='full'").get().n);
+}
+
+function switchedPublicationCount(paths) {
+  const store = ReplayStore.openExisting(paths.replayPath, { catalogStorageDir: paths.catalogStorageDir });
+  try {
+    return store.db.prepare("SELECT COUNT(*) AS n FROM publications WHERE state='switched'").get().n;
+  } finally { store.close(); }
+}
+
+async function publishedBinding(fixture, runId = 'bind-run') {
+  const { final, finalBody } = await publishFullRun(fixture, runId);
+  const authority = readRecoveryAuthority(fixture.reader);
+  return {
+    authority,
+    final,
+    finalBody,
+    key: {
+      kid: 'kid1', runId, layer: 'full', seq: 4, final: true, contentEncoding: 'identity',
+      bodySha256: hash(finalBody),
+    },
+    result: { status: 'ACKED', ack: { ...final.body.ack } },
+  };
+}
 
 const baseEnv = {
   CATALOG_BP1_AUDIENCE: 'a',
@@ -216,25 +258,15 @@ test('ACK self-binding failure returns INTERNAL_INVARIANT', () => {
   }), error => error.code === 'INTERNAL_INVARIANT');
 });
 
-test('same generation digest mismatch returns INTERNAL_INVARIANT', () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'bp-gate-bind-'));
-  const paths = { identityPath: path.join(root, 'identity.sqlite'), replayPath: path.join(root, 'replay.sqlite'),
-    catalogStorageDir: path.join(root, 'catalog'), backupRoot: path.join(root, 'backup') };
-  bootstrapCatalogRecovery(paths);
-  backupCatalog(paths);
-  const identity = IdentityStore.openExisting(paths.identityPath);
-  const store = ReplayStore.openExisting(paths.replayPath, { catalogStorageDir: paths.catalogStorageDir });
-  const mutex = new CatalogPublicationLock(paths.catalogStorageDir);
-  const reader = new CatalogReader(paths.catalogStorageDir);
-  const gate = createRecoveryGate({ backupRoot: paths.backupRoot, catalogStorageDir: paths.catalogStorageDir, reader, identityStore: identity, replayStore: store, mutex });
-  gate.startupInspect();
+test('real CURRENT same-generation digest mismatch returns exactly INTERNAL_INVARIANT', async () => {
+  const f = createHttpE6b2Fixture({ withCoveringSet: true });
+  await f.runtime.listen({ host: '127.0.0.1', port: 0 });
   try {
-    assert.throws(() => gate.ensureFinalRecoveryPoint({
-      key: { kid: 'kid1', runId: 'run', layer: 'full', seq: 4, final: true, contentEncoding: 'identity', bodySha256: 'a'.repeat(64) },
-      result: { status: 'ACKED', ack: { accepted: true, layer: 'full', run_id: 'run', generation_id: 'missing', run_digest: 'b'.repeat(64) } },
-      publicationLock: mutex,
-    }), error => error.code === 'INTERNAL_INVARIANT' || error.code === 'INGEST_RUN_STATE_MOVED');
-  } finally { mutex.close(); reader.close(); store.close(); identity.close(); fs.rmSync(root, { recursive: true, force: true }); }
+    const { key, result } = await publishedBinding(f, 'digest-bind');
+    result.ack.run_digest = 'b'.repeat(64);
+    assert.throws(() => f.recoveryGate.ensureFinalRecoveryPoint({ key, result, publicationLock: f.mutex }),
+      error => error.code === 'INTERNAL_INVARIANT');
+  } finally { await f.runtime.close(); f.close(); }
 });
 
 test('final recovery gate reuses covering set on retry and creates one when absent', async () => {
@@ -299,7 +331,7 @@ test('exact final retry is permitted while BACKUP_REQUIRED blocks unrelated grow
   } finally { await f.runtime.close(); f.close(); }
 });
 
-test('recovery-set creation failure after ACK does not roll back CURRENT and retries repair coverage', async () => {
+test('simulated post-publication backup failure returns retry_final without rolling back CURRENT', async () => {
   let attempts = 0;
   const f = createHttpE6b2Fixture({
     withCoveringSet: true,
@@ -331,7 +363,7 @@ test('recovery-set creation failure after ACK does not roll back CURRENT and ret
   } finally { await f.runtime.close(); f.close(); }
 });
 
-test('post-publication crash window converges through exact final retry without duplicate publication', async () => {
+test('in-process recovery repair reuses durable ACK when BACKUP_REQUIRED is forced', async () => {
   const f = createHttpE6b2Fixture({ withCoveringSet: true });
   await f.runtime.listen({ host: '127.0.0.1', port: 0 });
   try {
@@ -452,58 +484,60 @@ test('matching run_id with wrong body hash does not bypass recovery admission', 
   } finally { await f.runtime.close(); f.close(); }
 });
 
-test('matching run with wrong KID does not bypass recovery admission', async () => {
+test('valid second KID authenticates but cannot bypass BACKUP_REQUIRED exact-final recovery', async () => {
   const f = createHttpE6b2Fixture({ withCoveringSet: true });
   await f.runtime.listen({ host: '127.0.0.1', port: 0 });
   try {
     const { finalBody } = await publishFullRun(f, 'kid-run');
     f.recoveryGate._testing.setCovered(false);
     f.recoveryGate._testing.setForceBackupRequired(true);
+    assert.equal(f.recoveryGate.isExactFinalRecoveryRetry({
+      kid: 'kid2', runId: 'kid-run', layer: 'full', seq: 4, final: true, contentEncoding: 'identity',
+      bodySha256: hash(finalBody),
+    }), false);
     const blocked = await httpRequest(f.runtime.server.address(), {
-      method: 'POST', path: '/api/catalog/ingest/v1/full', body: finalBody, runId: 'kid-run', seq: 4, final: true, kid: 'kid2',
+      method: 'POST', path: '/api/catalog/ingest/v1/full', body: finalBody, runId: 'kid-run', seq: 4, final: true,
+      kid: 'kid2', secret: secret2,
     });
-    assert.equal(blocked.status, 401);
+    assert.equal(blocked.status, 503);
+    assert.equal(blocked.body.code, 'BACKUP_REQUIRED');
+    assert.equal(blocked.body.action, 'operator');
   } finally { await f.runtime.close(); f.close(); }
 });
 
-test('same generation final_seq mismatch returns INTERNAL_INVARIANT', () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'bp-seq-mismatch-'));
-  const paths = { identityPath: path.join(root, 'identity.sqlite'), replayPath: path.join(root, 'replay.sqlite'),
-    catalogStorageDir: path.join(root, 'catalog'), backupRoot: path.join(root, 'backup') };
-  bootstrapCatalogRecovery(paths);
-  backupCatalog(paths);
-  const identity = IdentityStore.openExisting(paths.identityPath);
-  const store = ReplayStore.openExisting(paths.replayPath, { catalogStorageDir: paths.catalogStorageDir });
-  const mutex = new CatalogPublicationLock(paths.catalogStorageDir);
-  const reader = new CatalogReader(paths.catalogStorageDir);
-  const gate = createRecoveryGate({ backupRoot: paths.backupRoot, catalogStorageDir: paths.catalogStorageDir, reader, identityStore: identity, replayStore: store, mutex });
+test('unknown KID still fails authentication before recovery admission', async () => {
+  const f = createHttpE6b2Fixture({ withCoveringSet: true });
+  await f.runtime.listen({ host: '127.0.0.1', port: 0 });
   try {
-    assert.throws(() => gate.ensureFinalRecoveryPoint({
-      key: { kid: 'kid1', runId: 'run', layer: 'full', seq: 9, final: true, contentEncoding: 'identity', bodySha256: 'a'.repeat(64) },
-      result: { status: 'ACKED', ack: { accepted: true, layer: 'full', run_id: 'run', generation_id: 'g', run_digest: 'a'.repeat(64) } },
-      publicationLock: mutex,
-    }), error => error.code === 'INTERNAL_INVARIANT' || error.code === 'INGEST_RUN_STATE_MOVED');
-  } finally { mutex.close(); reader.close(); store.close(); identity.close(); fs.rmSync(root, { recursive: true, force: true }); }
+    const body = Buffer.from('{}');
+    const blocked = await httpRequest(f.runtime.server.address(), {
+      method: 'POST', path: '/api/catalog/ingest/v1/full', body, runId: 'x', seq: 0, kid: 'unknown-kid', secret: secret2,
+    });
+    assert.equal(blocked.status, 401);
+    assert.equal(blocked.body.code, 'AUTH_FAILED');
+  } finally { await f.runtime.close(); f.close(); }
 });
 
-test('same generation acceptedKid mismatch returns INTERNAL_INVARIANT', () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'bp-kid-mismatch-'));
-  const paths = { identityPath: path.join(root, 'identity.sqlite'), replayPath: path.join(root, 'replay.sqlite'),
-    catalogStorageDir: path.join(root, 'catalog'), backupRoot: path.join(root, 'backup') };
-  bootstrapCatalogRecovery(paths);
-  backupCatalog(paths);
-  const identity = IdentityStore.openExisting(paths.identityPath);
-  const store = ReplayStore.openExisting(paths.replayPath, { catalogStorageDir: paths.catalogStorageDir });
-  const mutex = new CatalogPublicationLock(paths.catalogStorageDir);
-  const reader = new CatalogReader(paths.catalogStorageDir);
-  const gate = createRecoveryGate({ backupRoot: paths.backupRoot, catalogStorageDir: paths.catalogStorageDir, reader, identityStore: identity, replayStore: store, mutex });
+test('real CURRENT same-generation final_seq mismatch returns exactly INTERNAL_INVARIANT', async () => {
+  const f = createHttpE6b2Fixture({ withCoveringSet: true });
+  await f.runtime.listen({ host: '127.0.0.1', port: 0 });
   try {
-    assert.throws(() => gate.ensureFinalRecoveryPoint({
-      key: { kid: 'other-kid', runId: 'run', layer: 'full', seq: 4, final: true, contentEncoding: 'identity', bodySha256: 'a'.repeat(64) },
-      result: { status: 'ACKED', ack: { accepted: true, layer: 'full', run_id: 'run', generation_id: 'g', run_digest: 'a'.repeat(64) } },
-      publicationLock: mutex,
-    }), error => error.code === 'INTERNAL_INVARIANT' || error.code === 'INGEST_RUN_STATE_MOVED');
-  } finally { mutex.close(); reader.close(); store.close(); identity.close(); fs.rmSync(root, { recursive: true, force: true }); }
+    const { key, result, authority } = await publishedBinding(f, 'seq-bind');
+    key.seq = authority.acceptedRun.final_seq + 1;
+    assert.throws(() => f.recoveryGate.ensureFinalRecoveryPoint({ key, result, publicationLock: f.mutex }),
+      error => error.code === 'INTERNAL_INVARIANT');
+  } finally { await f.runtime.close(); f.close(); }
+});
+
+test('real CURRENT same-generation acceptedKid mismatch returns exactly INTERNAL_INVARIANT', async () => {
+  const f = createHttpE6b2Fixture({ withCoveringSet: true });
+  await f.runtime.listen({ host: '127.0.0.1', port: 0 });
+  try {
+    const { key, result } = await publishedBinding(f, 'kid-bind');
+    key.kid = 'kid2';
+    assert.throws(() => f.recoveryGate.ensureFinalRecoveryPoint({ key, result, publicationLock: f.mutex }),
+      error => error.code === 'INTERNAL_INVARIANT');
+  } finally { await f.runtime.close(); f.close(); }
 });
 
 test('generation moved after coordinator return maps to STATE_MOVED', async () => {
@@ -532,7 +566,7 @@ test('non-ACK coordinator results skip final recovery gate', async () => {
   } finally { await f.runtime.close(); f.close(); }
 });
 
-test('repair retry returns the same durable ACK as the original publication', async () => {
+test('in-process recovery repair returns the same durable ACK as the original publication', async () => {
   let attempts = 0;
   const f = createHttpE6b2Fixture({
     withCoveringSet: true,
@@ -623,7 +657,7 @@ test('STATE_MOVED from stale ACK generation is returned over HTTP', async () => 
   } finally { await f.runtime.close(); f.close(); }
 });
 
-test('crash repair does not create duplicate CURRENT publications', async () => {
+test('in-process recovery repair does not create duplicate CURRENT publications', async () => {
   const f = createHttpE6b2Fixture({ withCoveringSet: true });
   await f.runtime.listen({ host: '127.0.0.1', port: 0 });
   try {
@@ -663,4 +697,137 @@ test('recovery gate refresh clears BACKUP_REQUIRED after successful coverage cre
     const health = await httpRequest(f.runtime.server.address(), { path: '/health' });
     assert.ok(!health.body.blockers.includes('BACKUP_REQUIRED'));
   } finally { await f.runtime.close(); f.close(); }
+});
+
+function readDurableAck(paths, { kid, runId, seq }) {
+  const store = ReplayStore.openExisting(paths.replayPath, { catalogStorageDir: paths.catalogStorageDir });
+  try {
+    const row = store.db.prepare(
+      "SELECT ack_json FROM receipts WHERE kid=? AND run_id=? AND layer='full' AND seq=? AND status='acked'"
+    ).get(kid, runId, seq);
+    assert.ok(row?.ack_json, 'durable ACK must exist after CURRENT publication');
+    return JSON.parse(row.ack_json);
+  } finally { store.close(); }
+}
+
+test('SIGKILL after durable CURRENT before recovery coverage repairs on restart via exact final retry', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'bp-e6b2b-sigkill-'));
+  const paths = {
+    identityPath: path.join(root, 'identity.sqlite'),
+    replayPath: path.join(root, 'replay.sqlite'),
+    catalogStorageDir: path.join(root, 'catalog'),
+    backupRoot: path.join(root, 'backup'),
+  };
+  bootstrapCatalogRecovery(paths);
+  backupCatalog(paths);
+
+  const port = await freePort();
+  const configPath = path.join(root, 'worker-config.json');
+  fs.writeFileSync(configPath, JSON.stringify({
+    paths, port, withCoveringSet: true, audience: 'e6b2b',
+    secrets: { kid1: secret1, kid2: secret2 }, now,
+    failpoint: 'afterReplaySnapshot',
+  }));
+
+  const child = fork(crashWorker, [configPath], { stdio: ['ignore', 'pipe', 'pipe', 'ipc'] });
+  const ready = await new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error('crash worker ready timeout')), 15000);
+    child.on('message', msg => { if (msg?.type === 'ready') { clearTimeout(timer); resolve(msg); } });
+    child.on('error', reject);
+  });
+
+  const addr = { port: ready.port };
+  const runId = 'sigkill-run';
+  const { header, chunks, finalBody } = fullBodies(runId);
+  for (let seq = 0; seq < 4; seq++) {
+    const body = seq === 0 ? header : chunks[seq - 1];
+    const staged = await httpRequest(addr, {
+      method: 'POST', path: '/api/catalog/ingest/v1/full', body, runId, seq,
+    });
+    assert.equal(staged.body.status, 'STAGED');
+  }
+
+  const failpointReached = new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error('afterReplaySnapshot failpoint timeout')), 20000);
+    child.on('message', msg => {
+      if (msg?.type === 'failpoint' && msg.name === 'afterReplaySnapshot') {
+        clearTimeout(timer); resolve(msg);
+      }
+    });
+  });
+  const finalPromise = httpRequest(addr, {
+    method: 'POST', path: '/api/catalog/ingest/v1/full', body: finalBody, runId, seq: 4, final: true,
+  }).catch(() => ({ connectionReset: true }));
+  await failpointReached;
+
+  const readerBeforeKill = new CatalogReader(paths.catalogStorageDir);
+  const authorityBeforeKill = readRecoveryAuthority(readerBeforeKill);
+  const generationBeforeKill = authorityBeforeKill.currentGeneration;
+  assert.equal(authorityBeforeKill.state, 'CURRENT');
+  assert.equal(authorityBeforeKill.acceptedRun.run_id, runId);
+  const durableAck = readDurableAck(paths, { kid: 'kid1', runId, seq: 4 });
+  const acceptedBefore = acceptedRunCount(readerBeforeKill);
+  const publicationsBefore = switchedPublicationCount(paths);
+  readerBeforeKill.close();
+
+  child.kill('SIGKILL');
+  const [exitCode, signal] = await once(child, 'exit');
+  assert.equal(exitCode, null);
+  assert.equal(signal, 'SIGKILL');
+  await Promise.race([finalPromise, new Promise(resolve => setTimeout(resolve, 500))]);
+
+  const readerInspect = new CatalogReader(paths.catalogStorageDir);
+  const authorityAfterCrash = readRecoveryAuthority(readerInspect);
+  assert.equal(authorityAfterCrash.state, 'CURRENT');
+  assert.equal(authorityAfterCrash.currentGeneration, generationBeforeKill);
+  assert.equal(authorityAfterCrash.acceptedRun.run_id, runId);
+  const coverage = findCoveringRecoverySet({
+    backupRoot: paths.backupRoot, catalogStorageDir: paths.catalogStorageDir, authority: authorityAfterCrash,
+  });
+  assert.equal(coverage.covering, null);
+  assert.equal(acceptedRunCount(readerInspect), acceptedBefore);
+  assert.equal(switchedPublicationCount(paths), publicationsBefore);
+  readerInspect.close();
+
+  const portB = await freePort();
+  const configPathB = path.join(root, 'worker-config-b.json');
+  fs.writeFileSync(configPathB, JSON.stringify({
+    paths, port: portB, existing: true, audience: 'e6b2b',
+    secrets: { kid1: secret1, kid2: secret2 }, now,
+  }));
+  const childB = fork(crashWorker, [configPathB], { stdio: ['ignore', 'pipe', 'pipe', 'ipc'] });
+  const readyB = await new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error('restart worker ready timeout')), 15000);
+    childB.on('message', msg => { if (msg?.type === 'ready') { clearTimeout(timer); resolve(msg); } });
+    childB.on('error', reject);
+  });
+  const addrB = { port: readyB.port };
+  try {
+    const healthBlocked = await httpRequest(addrB, { path: '/health' });
+    assert.equal(healthBlocked.body.state, 'CURRENT');
+    assert.equal(healthBlocked.body.accepting_ingest, false);
+    assert.ok(healthBlocked.body.blockers.includes('BACKUP_REQUIRED'));
+
+    const repaired = await httpRequest(addrB, {
+      method: 'POST', path: '/api/catalog/ingest/v1/full', body: finalBody, runId, seq: 4, final: true,
+    });
+    assert.equal(repaired.status, 200);
+    assert.equal(repaired.body.status, 'ACKED');
+    assert.deepEqual(repaired.body.ack, durableAck);
+
+    const readerAfter = new CatalogReader(paths.catalogStorageDir);
+    assert.equal(acceptedRunCount(readerAfter), acceptedBefore);
+    assert.equal(switchedPublicationCount(paths), publicationsBefore);
+    readerAfter.close();
+
+    const healthAfter = await httpRequest(addrB, { path: '/health' });
+    assert.ok(!healthAfter.body.blockers.includes('BACKUP_REQUIRED'));
+    const readerGen = new CatalogReader(paths.catalogStorageDir);
+    assert.equal(readRecoveryAuthority(readerGen).currentGeneration, generationBeforeKill);
+    readerGen.close();
+  } finally {
+    childB.kill('SIGTERM');
+    await once(childB, 'exit');
+    fs.rmSync(root, { recursive: true, force: true });
+  }
 });

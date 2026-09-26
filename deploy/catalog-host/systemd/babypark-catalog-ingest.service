@@ -11,7 +11,7 @@ EnvironmentFile=/etc/babypark-catalog-ingest.env
 ExecStart=/usr/bin/node /opt/babypark-integration/current/src/catalog/http/index.mjs
 Restart=on-failure
 RestartSec=3
-TimeoutStopSec=30
+TimeoutStopSec=90
 NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=strict
@@ -19,6 +19,9 @@ ProtectHome=true
 ReadWritePaths=/var/lib/babypark-catalog
 LockPersonality=true
 RestrictSUIDSGID=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
 
 [Install]
 WantedBy=multi-user.target

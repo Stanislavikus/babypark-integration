@@ -94,9 +94,6 @@ export function createRecoveryGate({
     try {
       return publicationLock.withLock(() => {
         const authority = readRecoveryAuthority(reader);
-        if (authority.state === 'CURRENT' && authority.currentGeneration !== ack.generation_id) {
-          throw Object.assign(new Error('CURRENT moved after coordinator return'), { code: 'INGEST_RUN_STATE_MOVED' });
-        }
         if (authority.state !== 'CURRENT') invariant('Final recovery gate requires CURRENT authority');
         if (authority.currentGeneration !== ack.generation_id) {
           throw Object.assign(new Error('CURRENT moved after coordinator return'), { code: 'INGEST_RUN_STATE_MOVED' });
