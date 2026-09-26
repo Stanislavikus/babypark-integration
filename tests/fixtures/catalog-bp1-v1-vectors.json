@@ -1,0 +1,38 @@
+{
+  "schema": "bp.catalog.bp1-vectors/1",
+  "secret": "test-only-secret-at-least-32-chars-long",
+  "vectors": [
+    {
+      "name": "full",
+      "method": "POST",
+      "path": "/api/catalog/ingest/v1/full",
+      "audience": "catalog-test",
+      "kid": "kid1",
+      "timestamp": "1700000000",
+      "run_id": "run-vector",
+      "seq": 0,
+      "final": false,
+      "content_encoding": "identity",
+      "body_base64": "eyJoZWxsbyI6IndvcmxkIn0=",
+      "body_sha256": "93a23971a914e5eacbf0a8d25154cda309c3c1c72fbb9914d47c60f3cb681588",
+      "canonical": "BP1\nPOST\n/api/catalog/ingest/v1/full\ncatalog-test\nkid1\n1700000000\nrun-vector\n0\n0\nidentity\n93a23971a914e5eacbf0a8d25154cda309c3c1c72fbb9914d47c60f3cb681588",
+      "signature": "sha256=66d0b2b5a5dba3b5ceca048c61b20f3d37ca5ae45972b75776032cdfebb35c56"
+    },
+    {
+      "name": "state",
+      "method": "GET",
+      "path": "/api/catalog/ingest/v1/state",
+      "audience": "catalog-test",
+      "kid": "kid1",
+      "timestamp": "1700000000",
+      "run_id": "state",
+      "seq": 0,
+      "final": false,
+      "content_encoding": "identity",
+      "body_base64": "",
+      "body_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "canonical": "BP1\nGET\n/api/catalog/ingest/v1/state\ncatalog-test\nkid1\n1700000000\nstate\n0\n0\nidentity\ne3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "signature": "sha256=c751ced15d1600db0e91866c69dceeb8be5551477e2e1c8b917bd21cc81a4650"
+    }
+  ]
+}

@@ -14,6 +14,8 @@
     "identity:bootstrap": "node scripts/identity-bootstrap.mjs",
     "identity:status": "node scripts/identity-status.mjs",
     "catalog:e6a1-benchmark": "node scripts/catalog-e6a1-benchmark.mjs",
+    "catalog:serve": "node src/catalog/http/index.mjs",
+    "catalog:bp1-vectors": "php scripts/catalog-bp1-reference.php tests/fixtures/catalog-bp1-v1-vectors.json",
     "storage:validate": "node scripts/validate-storage-policy.mjs"
   }
 }

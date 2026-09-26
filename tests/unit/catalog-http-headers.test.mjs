@@ -1,0 +1,2 @@
+import assert from 'node:assert/strict'; import test from 'node:test'; import {extractSignedHeaders,SIGNED_HEADERS} from '../../src/catalog/http/headers.mjs';
+test('signed extraction requires exactly one scalar occurrence',()=>{const headersDistinct=Object.fromEntries(SIGNED_HEADERS.map(x=>[x.toLowerCase(),['v']]));assert.equal(extractSignedHeaders({headersDistinct})['X-BP-Kid'],'v');headersDistinct['x-bp-kid']=['a','b'];assert.throws(()=>extractSignedHeaders({headersDistinct}),e=>e.code==='INGEST_AUTH_HEADER_INVALID')});
