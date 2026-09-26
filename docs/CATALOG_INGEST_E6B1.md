@@ -19,9 +19,9 @@ Configuration is `CATALOG_INGEST_HOST` (unset defaults to `127.0.0.1`; any expli
 value other than exact `127.0.0.1` is rejected),
 `CATALOG_INGEST_PORT` (default `8081`), `CATALOG_INGEST_ENABLED` (default `false`),
 `CATALOG_BP1_AUDIENCE`, `CATALOG_BP1_KEYS_JSON`, `CATALOG_BP1_MAX_AGE_SEC`
-(default `300`), `CATALOG_IDENTITY_PATH`, `CATALOG_REPLAY_PATH`, and
-`CATALOG_STORAGE_DIR`. Keys JSON maps one or more valid KIDs to secrets of at least
-32 characters. Secrets are never returned or logged.
+(default `300`), `CATALOG_IDENTITY_PATH`, `CATALOG_REPLAY_PATH`, `CATALOG_STORAGE_DIR`, and when
+ingest is enabled `CATALOG_BACKUP_ROOT`. Keys JSON maps one or more valid KIDs to
+secrets of at least 32 characters. Secrets are never returned or logged.
 
 ## Frozen routes and transport
 

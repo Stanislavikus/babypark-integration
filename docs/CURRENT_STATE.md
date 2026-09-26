@@ -100,6 +100,12 @@ open until E6b-2 operational recovery, backup, and capacity gates close. See
 The local recovery core is implemented for review: replay statistics,
 publication-locked immutable identity/replay recovery sets, full verification,
 coverage predicates, read-only restore reconciliation, replay-loss
-provisioning, and the `catalog:ops` CLI. It is not deployed and does not change
-HTTP admission or readiness. E6b remains open; E6b-2b is still required. See
+provisioning, and the `catalog:ops` CLI. It is not deployed. See
 `CATALOG_RECOVERY_E6B2A.md`.
+
+## E6b-2b runtime admission status
+
+E6b-2b wires recovery coverage, capacity admission, the post-ACK final recovery
+gate, and deployment-candidate assets into the catalog HTTP runtime. The service
+remains not deployed and is not a live Drupal integration. The Drupal exporter is
+still the next slice. See `CATALOG_RUNTIME_E6B2B.md`.
