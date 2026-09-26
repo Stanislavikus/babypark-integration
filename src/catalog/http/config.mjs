@@ -28,8 +28,12 @@ export function parseBp1Keys(value) {
 }
 
 export function parseCatalogHttpConfig(env = process.env) {
+  const host = env.CATALOG_INGEST_HOST || '127.0.0.1';
+  if (host !== '127.0.0.1') {
+    throw new Error('CATALOG_INGEST_HOST must be exactly 127.0.0.1');
+  }
   return {
-    host: env.CATALOG_INGEST_HOST || '127.0.0.1',
+    host,
     port: integer('CATALOG_INGEST_PORT', env.CATALOG_INGEST_PORT, 8081, { min: 1, max: 65535 }),
     ingestEnabled: env.CATALOG_INGEST_ENABLED === 'true' ? true : env.CATALOG_INGEST_ENABLED === undefined || env.CATALOG_INGEST_ENABLED === 'false' ? false : (() => { throw new Error('CATALOG_INGEST_ENABLED must be true or false'); })(),
     audience: required('CATALOG_BP1_AUDIENCE', env.CATALOG_BP1_AUDIENCE),

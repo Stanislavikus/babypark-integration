@@ -15,7 +15,8 @@ configuration is fatal; no `CURRENT` pointer is the valid BOOTSTRAP state. Parti
 startup closes already-open handles. SIGINT/SIGTERM stop accepting connections,
 then close reader, replay, lock and identity handles after synchronous work returns.
 
-Configuration is `CATALOG_INGEST_HOST` (default `127.0.0.1`),
+Configuration is `CATALOG_INGEST_HOST` (unset defaults to `127.0.0.1`; any explicit
+value other than exact `127.0.0.1` is rejected),
 `CATALOG_INGEST_PORT` (default `8081`), `CATALOG_INGEST_ENABLED` (default `false`),
 `CATALOG_BP1_AUDIENCE`, `CATALOG_BP1_KEYS_JSON`, `CATALOG_BP1_MAX_AGE_SEC`
 (default `300`), `CATALOG_IDENTITY_PATH`, `CATALOG_REPLAY_PATH`, and
@@ -39,7 +40,8 @@ run `state`, sequence 0, final 0, identity encoding. State does not touch replay
 All nine BP1 headers must occur exactly once according to `headersDistinct`; joined
 comma values are also rejected by BP1. Authentication failures collapse to 401
 `AUTH_FAILED/fix_request`. FULL forwards the exact authenticated bytes and verified
-key to the production coordinator.
+key to the production coordinator. The write-enable fuse is evaluated only after BP1
+verification, so an unsigned FULL request cannot observe operational admission state.
 
 ## Responses
 

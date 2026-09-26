@@ -38,10 +38,10 @@ export function createCatalogHttpRuntime({ config, identityStore, replayStore, m
       }
       transportEncoding(req);
       if (req.url.endsWith('/full') && req.headers['content-type'] !== 'application/json') throw Object.assign(new Error('media'), { code:'TRANSPORT_UNSUPPORTED' });
-      if (req.url.endsWith('/full') && !config.ingestEnabled) throw Object.assign(new Error('disabled'), { code:'INGEST_DISABLED' });
       const body = await readBoundedBody(req, { maximum: MAX_BODY_BYTES, requireEmpty: req.url.endsWith('/state') });
       const headers = extractSignedHeaders(req);
       verified = verifySignedRequest({ method:req.method, path:req.url, headers, bodyBytes:body, secrets:config.secrets, audience:config.audience, maxAgeSec:config.maxAgeSec, maxBodyBytes:MAX_BODY_BYTES, allowGzip:false, now });
+      if (req.url.endsWith('/full') && !config.ingestEnabled) throw Object.assign(new Error('disabled'), { code:'INGEST_DISABLED' });
       if (req.url.endsWith('/state')) {
         if (verified.run_id !== 'state' || verified.seq !== 0 || verified.final !== false || verified.content_encoding !== 'identity') throw Object.assign(new Error('state tuple'), { code:'INGEST_AUTH_HEADER_INVALID' });
         const state = readCatalogState(reader, config); send(res,200,state,{'Cache-Control':'no-store'}); return finishLog(200);
