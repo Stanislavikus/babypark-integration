@@ -28,7 +28,9 @@ export function parseBp1Keys(value) {
 }
 
 export function parseCatalogHttpConfig(env = process.env) {
-  const host = env.CATALOG_INGEST_HOST || '127.0.0.1';
+  const host = env.CATALOG_INGEST_HOST === undefined
+    ? '127.0.0.1'
+    : env.CATALOG_INGEST_HOST;
   if (host !== '127.0.0.1') {
     throw new Error('CATALOG_INGEST_HOST must be exactly 127.0.0.1');
   }
