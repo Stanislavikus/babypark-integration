@@ -1,0 +1,6 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import test from 'node:test';
+import { signCanonicalRequest, verifySignedRequest } from '../../src/catalog/ingest/auth.mjs';
+const fixture=JSON.parse(fs.readFileSync(new URL('../fixtures/catalog-bp1-v1-vectors.json',import.meta.url)));
+test('frozen BP1 vectors match Node signing and verification',()=>{ for(const v of fixture.vectors){ const body=Buffer.from(v.body_base64,'base64'); const signed=signCanonicalRequest({secret:fixture.secret,bodyBytes:body,method:v.method,path:v.path,audience:v.audience,kid:v.kid,timestamp:v.timestamp,runId:v.run_id,seq:v.seq,final:v.final?'1':'0',contentEncoding:v.content_encoding}); assert.deepEqual(signed,{canonical:v.canonical,body_sha256:v.body_sha256,signature:v.signature}); const headers={'X-BP-Version':'1','X-BP-Aud':v.audience,'X-BP-Kid':v.kid,'X-BP-Timestamp':v.timestamp,'X-BP-Run':v.run_id,'X-BP-Seq':String(v.seq),'X-BP-Final':v.final?'1':'0','X-BP-Content-Encoding':v.content_encoding,'X-BP-Signature':v.signature}; assert.equal(verifySignedRequest({method:v.method,path:v.path,headers,bodyBytes:body,secrets:new Map([[v.kid,fixture.secret]]),audience:v.audience,now:()=>Number(v.timestamp)}).body_sha256,v.body_sha256); } });

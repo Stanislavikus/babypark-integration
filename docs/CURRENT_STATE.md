@@ -85,5 +85,12 @@ No Drupal catalog exporter is active.
 No CatalogService is active.
 No AI copilot is active.
 
-The next implementation phase is offline/local canonical identity + catalog core.
+The offline/local canonical identity and catalog core phases are complete.
 No Drupal writes are required.
+
+## E6b-1 status
+
+The authenticated catalog HTTP boundary is implemented as an isolated process,
+with writes disabled by default. It is not deployed or live-ready. E6b remains
+open until E6b-2 operational recovery, backup, and capacity gates close. See
+`CATALOG_INGEST_E6B1.md`.

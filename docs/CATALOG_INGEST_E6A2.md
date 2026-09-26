@@ -34,6 +34,7 @@ generic FULL final takeover remains forbidden. No heartbeat is added because the
 production apply benchmark remains the release characterization under the 60-second
 lease.
 
-HTTP is still not implemented. Live Drupal ingest is still not enabled. Incremental
-ingest is still not implemented. Transport, deployment, reporting, backup, retention,
-and janitor work remain E6b/E6c or later.
+E6b-1 now supplies the separate authenticated HTTP adapter over this coordinator, with
+writes disabled by default. Live Drupal ingest is still not enabled. Incremental ingest
+is still not implemented. Deployment, recovery operations, reporting, backup,
+retention, and janitor work remain E6b-2/E6c or later.
