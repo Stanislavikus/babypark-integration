@@ -12,7 +12,11 @@ import {
   reportRemainingCollisions,
 } from '../collision/detector.mjs';
 import { buildCanonicalRecords } from '../canonical/build-from-source.mjs';
-import { IncrementalChunkWriter, validateSingleCanonicalRecord } from '../canonical/incremental-chunks.mjs';
+import {
+  IncrementalChunkWriter,
+  validateSingleCanonicalRecord,
+  purgeChunkArtifacts,
+} from '../canonical/incremental-chunks.mjs';
 import { sanitizeProductForCanonical } from '../canonical/sanitize.mjs';
 import {
   checkFilesystemPrecheck,
@@ -207,7 +211,7 @@ async function countFilteredAuthorities(candidatesPath, exclusions) {
   return { ru, uk_fallback: uk };
 }
 
-async function prepareDiagnosticChunks({
+export async function prepareDiagnosticChunks({
   phase0,
   candidatesPath,
   filteredPath,
@@ -217,56 +221,97 @@ async function prepareDiagnosticChunks({
   buildingPath,
 }) {
   const scratch = mode === 'preflight';
-  const outputDir = scratch
+  let diagnosticOutputDir = scratch
     ? fs.mkdtempSync(path.join(os.tmpdir(), 'drupal-chunks-scratch-'))
     : buildingPath;
-
-  const writer = new IncrementalChunkWriter({
-    outputDir,
-    scratch,
-  });
 
   if (fs.existsSync(filteredPath)) {
     fs.unlinkSync(filteredPath);
   }
 
   let phase1Count = 0;
+  let writer = new IncrementalChunkWriter({
+    outputDir: diagnosticOutputDir,
+    scratch,
+  });
+  let phase0Succeeded = true;
+  let abandonedWriterDir = null;
+  let abandonedWriterFiles = null;
 
   try {
     writer.writePhase0Records(phase0);
-
-    await streamCandidateProducts(candidatesPath, product => {
-      const filtered = filterProductByExclusions(product, exclusions);
-      if (!filtered) return;
-
-      const canonical = sanitizeProductForCanonical(filtered);
-      const validation = validateSingleCanonicalRecord(canonical);
-      if (!validation.ok) {
-        const blocker = validation.blocker;
-        if (!blocker.details.native_product_id && filtered.native_product_id) {
-          blocker.details.native_product_id = filtered.native_product_id;
-        }
-        blockers.add(blocker);
-        return;
+  } catch (error) {
+    phase0Succeeded = false;
+    if (error instanceof Blocker) {
+      blockers.add(error);
+    } else {
+      throw error;
+    }
+    abandonedWriterDir = diagnosticOutputDir;
+    if (fs.existsSync(abandonedWriterDir)) {
+      abandonedWriterFiles = fs.readdirSync(abandonedWriterDir);
+    }
+    writer.abandon();
+    if (scratch) {
+      if (fs.existsSync(abandonedWriterDir)) {
+        fs.rmSync(abandonedWriterDir, { recursive: true, force: true });
       }
-
-      phase1Count += 1;
-      fs.appendFileSync(filteredPath, `${JSON.stringify(filtered)}\n`);
-      writer.writePhase1Record(canonical);
+      diagnosticOutputDir = fs.mkdtempSync(path.join(os.tmpdir(), 'drupal-chunks-scratch-'));
+    } else {
+      purgeChunkArtifacts(buildingPath);
+      diagnosticOutputDir = buildingPath;
+    }
+    writer = new IncrementalChunkWriter({
+      outputDir: diagnosticOutputDir,
+      scratch,
     });
+  }
 
+  await streamCandidateProducts(candidatesPath, product => {
+    const filtered = filterProductByExclusions(product, exclusions);
+    if (!filtered) return;
+
+    const canonical = sanitizeProductForCanonical(filtered);
+    const validation = validateSingleCanonicalRecord(canonical);
+    if (!validation.ok) {
+      const blocker = validation.blocker;
+      if (!blocker.details.native_product_id && filtered.native_product_id) {
+        blocker.details.native_product_id = filtered.native_product_id;
+      }
+      blockers.add(blocker);
+      return;
+    }
+
+    phase1Count += 1;
+    fs.appendFileSync(filteredPath, `${JSON.stringify(filtered)}\n`);
+    writer.writePhase1Record(canonical);
+  });
+
+  try {
     const result = writer.finish();
     return {
       prepared: result,
       phase1Count,
-      scratchDir: scratch ? outputDir : null,
+      scratchDir: scratch ? diagnosticOutputDir : null,
+      diagnosticOutputDir,
+      phase0Succeeded,
+      abandonedWriterDir,
+      abandonedWriterFiles,
     };
   } catch (error) {
-    writer.cleanup();
+    writer.abandon();
     if (fs.existsSync(filteredPath)) fs.unlinkSync(filteredPath);
     if (error instanceof Blocker) {
       blockers.add(error);
-      return { prepared: null, phase1Count: 0, scratchDir: scratch ? outputDir : null };
+      return {
+        prepared: null,
+        phase1Count: 0,
+        scratchDir: scratch ? diagnosticOutputDir : null,
+        diagnosticOutputDir,
+        phase0Succeeded,
+        abandonedWriterDir,
+        abandonedWriterFiles,
+      };
     }
     throw error;
   }

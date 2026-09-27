@@ -2,7 +2,10 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { runExportPipeline } from '../src/export/pipeline.mjs';
 import { globalTopoSortCategories } from '../src/canonical/ordering.mjs';
-import { packPhaseChunks } from '../src/canonical/chunk-packer.mjs';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { IncrementalChunkWriter } from '../src/canonical/incremental-chunks.mjs';
 import {
   createFixtureDir,
   writeFixture,
@@ -88,7 +91,12 @@ test('global topo ordering across chunk boundaries', () => {
   assert.equal(sorted[0].native_category_id, '1');
   assert.equal(sorted[1].native_category_id, '2');
 
-  const chunks = packPhaseChunks([...sorted], 0);
-  assert.equal(chunks.length, 1);
-  assert.equal(chunks[0][0].native_category_id, '1');
+  const outputDir = fs.mkdtempSync(path.join(os.tmpdir(), 'category-chunk-'));
+  const writer = new IncrementalChunkWriter({ outputDir, scratch: true });
+  writer.writePhase0Records(sorted);
+  const result = writer.finish();
+  assert.equal(result.chunks.length, 1);
+  const body = JSON.parse(fs.readFileSync(path.join(outputDir, result.chunks[0].filename), 'utf8'));
+  assert.equal(body.rows[0].native_category_id, '1');
+  writer.cleanup();
 });

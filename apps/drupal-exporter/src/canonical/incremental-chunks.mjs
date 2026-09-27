@@ -156,8 +156,23 @@ export class IncrementalChunkWriter {
   }
 
   cleanup() {
-    if (this.scratch && fs.existsSync(this.outputDir)) {
-      fs.rmSync(this.outputDir, { recursive: true, force: true });
+    this.abandon();
+  }
+
+  abandon() {
+    this.current = [];
+    this.chunks = [];
+    this.phaseCounters = new Map();
+    this.currentPhase = null;
+    purgeChunkArtifacts(this.outputDir);
+  }
+}
+
+export function purgeChunkArtifacts(outputDir) {
+  if (!fs.existsSync(outputDir)) return;
+  for (const file of fs.readdirSync(outputDir)) {
+    if (file.endsWith('.json') || file.endsWith('.json.tmp')) {
+      fs.unlinkSync(path.join(outputDir, file));
     }
   }
 }

@@ -2,8 +2,10 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
-import { packAdaptive, chunkByteSize } from '../src/canonical/chunk-packer.mjs';
+import { chunkByteSize } from '../src/canonical/chunk-packer.mjs';
+import { IncrementalChunkWriter } from '../src/canonical/incremental-chunks.mjs';
 import { FULL_RECORD_LIMITS } from '../../../src/catalog/ingest/full-record-v1.mjs';
 import { runExportPipeline } from '../src/export/pipeline.mjs';
 import { BLOCKER_CODES } from '../src/blockers.mjs';
@@ -15,23 +17,36 @@ import {
   testConfig,
 } from './helpers/fixture-builder.mjs';
 
-test('adaptive row and byte chunk limits', () => {
-  const rows = Array.from({ length: 10 }, (_, i) => ({
+function tinyBrand(id) {
+  return {
     schema: 'bp.catalog.full-record/1',
     type: 'brand',
     phase: 0,
     provider: 'drupal',
-    native_brand_id: String(i + 1),
-    name: `Brand ${i + 1}`,
-  }));
-  const chunks = packAdaptive(rows);
-  for (const chunk of chunks) {
-    assert.ok(chunk.length <= FULL_RECORD_LIMITS.rows);
-    assert.ok(chunkByteSize(chunk) <= 1_048_576);
+    native_brand_id: String(id),
+    name: `Brand ${id}`,
+  };
+}
+
+test('incremental writer respects row and byte chunk limits', () => {
+  const outputDir = fs.mkdtempSync(path.join(os.tmpdir(), 'chunk-limits-'));
+  const writer = new IncrementalChunkWriter({ outputDir, scratch: true });
+  const rows = Array.from({ length: 10 }, (_, i) => tinyBrand(i + 1));
+  writer.writePhase0Records(rows);
+  const result = writer.finish();
+  for (const chunk of result.chunks) {
+    assert.ok(chunk.rows <= FULL_RECORD_LIMITS.rows);
+    assert.ok(chunk.bytes <= 1_048_576);
+    assert.ok(chunkByteSize(
+      JSON.parse(fs.readFileSync(path.join(outputDir, chunk.filename), 'utf8')).rows
+    ) <= 1_048_576);
   }
+  writer.cleanup();
 });
 
 test('one record over 1MiB is a blocker', () => {
+  const outputDir = fs.mkdtempSync(path.join(os.tmpdir(), 'chunk-huge-'));
+  const writer = new IncrementalChunkWriter({ outputDir, scratch: true });
   const huge = 'x'.repeat(1_100_000);
   const product = {
     schema: 'bp.catalog.full-record/1',
@@ -54,7 +69,8 @@ test('one record over 1MiB is a blocker', () => {
     images: [],
     updated_at: '2026-01-01T00:00:00.000Z',
   };
-  assert.throws(() => packAdaptive([product]), err => err.code === BLOCKER_CODES.RECORD_TOO_LARGE);
+  assert.throws(() => writer.writePhase1Record(product), err => err.code === BLOCKER_CODES.RECORD_TOO_LARGE);
+  writer.cleanup();
 });
 
 test('deterministic spool artifacts and atomic promote', async t => {
