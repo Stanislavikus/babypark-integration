@@ -232,41 +232,66 @@ rules. Durable future architecture lives in:
 
 `docs/CATALOG_IDENTITY_ANOMALY_MANAGEMENT.md`
 
+## Catalog Anomaly Runtime v1
+
+Status: **merged candidate / NOT DEPLOYED**
+Implementation source: branch `cursor/catalog-anomaly-runtime-v1-2479` (awaiting review merge)
+Design contract: `docs/CATALOG_ANOMALY_RUNTIME_V1.md`
+
+What landed in repository code (not production):
+- provider-neutral anomaly core under `src/catalog/anomaly/` with separate
+  `AnomalyStore` SQLite schema v1;
+- machine-readable publication policy:
+  `config/catalog-anomalies/publication-policy.yaml`;
+- Drupal exporter integration:
+  reviewed legacy mappings first, residual SKU collisions become anomaly
+  observations, whole-product quarantine, deterministic `anomaly-report.json`,
+  spool manifest `bp.drupal-exporter.spool/2`;
+- local/test operator CLI: `npm run catalog:anomaly-ops -- ...`.
+
+Explicit non-actions in this slice:
+- no production deploy;
+- no production `anomalies.sqlite`;
+- no production quarantine activation;
+- no FULL send;
+- no D2b transport binding;
+- no mutation of integration-host `identity.sqlite`;
+- no permanent mappings for `511000` or `80401mc02`;
+- `config/drupal/legacy-sku-collisions.yaml` remains `mappings: []`.
+
+Production Drupal exporter remains:
+`/opt/babypark-exporter/releases/20260927T122537Z-712f09c`
+
+Regression proof uses sanitized 2026-09-27 collision fixtures:
+- 21 reviewed test mappings resolve first;
+- only `511000` and `80401mc02` remain as 2 cross-product anomalies;
+- both quarantine all colliding source products;
+- unrelated products continue into canonical chunks.
+
+Before first controlled FULL, D2b must cryptographically bind
+`anomaly_report_sha256` and behavior-affecting publication-policy digest.
+Before production anomaly persistence, a separate `anomalies.sqlite`
+backup/restore slice is required.
+
+Next step after review merge:
+- review/merge this PR;
+- deploy one immutable exporter release containing anomaly runtime v1;
+- run production preflight and confirm spool v2 + anomaly sidecar;
+- then design/sign D2b binding for first FULL (no unsigned workaround).
+
 ## Catalog / AI next state
 
 No AI copilot is active.
 No Drupal FULL has been sent.
 
-Immediate next engineering slice:
-- **Catalog Anomaly Runtime v1 design is now frozen and independently reviewed**;
-- design source of truth:
-  `docs/CATALOG_ANOMALY_RUNTIME_V1.md`;
-- Sonnet design review verdict:
-  `READY FOR ANOMALY RUNTIME V1 IMPLEMENTATION TASK`;
-- v1 is deliberately narrow:
-  - only residual `SKU_COLLISION_WITHIN_PRODUCT` and
-    `SKU_COLLISION_CROSS_PRODUCT` move to entity quarantine;
-  - all other blocker classes keep current behavior until separately reviewed;
-- v1 freezes two independent incident state axes:
-  - machine observation state: OBSERVED / NOT_OBSERVED / CLEARED;
-  - human review state: NEW / ACKNOWLEDGED / INVESTIGATING / PENDING_ADMIN /
-    RESOLVED;
-- durable rules/governance entry point:
-  `config/catalog-anomalies/`;
-- required v1 implementation includes:
-  - provider-neutral AnomalyStore core, not production-wired yet;
-  - stable fingerprint/deduplication;
-  - authoritative-batch reconciliation and clean-snapshot clearing;
-  - one durable incident with occurrence/recurrence counters instead of log spam;
-  - reviewed legacy mappings applied before residual anomaly detection;
-  - product-level quarantine of residual duplicate-SKU ambiguity;
-  - deterministic `anomaly-report.json`;
-  - Drupal spool manifest v2 with anomaly/policy digests;
-  - no fake content/admin authentication layer in this slice.
+Immediate next engineering slice after anomaly runtime v1 merge:
+- deploy reviewed exporter release with anomaly quarantine + spool v2;
+- run production preflight against live Drupal source;
+- confirm deterministic anomaly report and quarantine counts for the two
+  unresolved fixtures (`511000`, `80401mc02`);
+- proceed to D2b transport design/binding for first controlled FULL.
 
-The two unresolved duplicate identifiers `511000` and `80401mc02` remain useful
-live fixtures for this runtime and still require business/source-process
-investigation before any permanent legacy mapping or identity decision is approved.
+Previously frozen design items now implemented in code (awaiting deploy):
 
 Before the first production FULL, BabyPark must reach one explicitly reviewed safe
 state:
@@ -324,7 +349,9 @@ Agreed anomaly governance is already indexed from:
 - `config/catalog-anomalies/POLICY_CATALOG.md`
 - `docs/CATALOG_ANOMALY_RUNTIME_V1.md`
 
-These files are not yet loaded by production runtime. No anomaly store, quarantine
-runtime, spool-v2 anomaly sidecar or anomaly-policy loader is deployed yet.
+These governance files are indexed in Git. Production runtime still does not load
+them until the reviewed exporter release above is deployed.
 
-No Drupal writes are required for the current D2a/D2a.1 collision-review work.
+The two unresolved duplicate identifiers `511000` and `80401mc02` remain useful
+live fixtures and still require business/source-process investigation before any
+permanent legacy mapping or identity decision is approved.

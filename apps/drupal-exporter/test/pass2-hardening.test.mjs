@@ -390,7 +390,12 @@ test('preflight CLI stdout includes collision_report', () => {
     simpleProduct({ nid: 1, model: '511000' }),
     simpleProduct({ nid: 2, model: '511000' }),
   ));
+  fs.writeFileSync(
+    path.join(sourceDir, 'source-currency.json'),
+    JSON.stringify({ code: 'UAH', precision: 0 })
+  );
   const config = testConfig();
+  fs.mkdirSync(config.spoolRoot, { recursive: true });
   const env = {
     ...process.env,
     DRUPAL_EXPORTER_FIXTURE_SOURCE_DIR: sourceDir,
@@ -401,6 +406,7 @@ test('preflight CLI stdout includes collision_report', () => {
     DRUPAL_EXPORT_DB_PASSWORD: 'secret',
     DRUPAL_EXPORT_SPOOL_ROOT: config.spoolRoot,
     DRUPAL_EXPORT_COLLISION_CONFIG: config.collisionConfigPath,
+    DRUPAL_EXPORT_ANOMALY_PUBLICATION_POLICY: config.anomalyPublicationPolicyPath,
     DRUPAL_EXPORT_PUBLIC_SITE_URL: config.publicSiteUrl,
     DRUPAL_EXPORT_PUBLIC_FILES_URL: config.publicFilesUrl,
     DRUPAL_EXPORT_STOCK_PROCESSED: config.filesystem.stockProcessed,
@@ -413,9 +419,10 @@ test('preflight CLI stdout includes collision_report', () => {
     path.join(process.cwd(), 'bin/drupal-exporter-preflight-fixture.mjs'),
   ], { encoding: 'utf8', env, cwd: process.cwd() });
 
-  assert.equal(child.status, 1);
+  assert.equal(child.status, 0);
   const payload = JSON.parse(child.stdout);
   assert.equal(payload.mode, 'preflight');
   assert.ok(payload.collision_report);
   assert.ok(Array.isArray(payload.collision_report.entries));
+  assert.equal(payload.preflight.anomaly_count, 1);
 });

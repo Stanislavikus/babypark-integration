@@ -1,5 +1,6 @@
 import { BLOCKER_CODES, Blocker } from '../blockers.mjs';
 import { compactVariantEntry, collisionReportFromEntry } from './compact.mjs';
+import { verifyPublishableSkuCollisions } from '../anomaly/quarantine.mjs';
 
 export function createSkuCollisionCollector(blockers) {
   const crossProduct = new Map();
@@ -98,18 +99,6 @@ export function reportRemainingCollisions({ cross, within, blockers }) {
     ));
   }
   for (const collision of within) {
-    if (collision.variants.length > 2) {
-      blockers.add(new Blocker(
-        BLOCKER_CODES.COLLISION_MAPPING_UNSUPPORTED,
-        'Within-product collision has more than two variants',
-        {
-          sku_key: collision.sku_key,
-          native_product_id: collision.native_product_id,
-          variants: collision.variants.map(v => v.native_variant_id),
-        }
-      ));
-      continue;
-    }
     blockers.add(new Blocker(
       BLOCKER_CODES.SKU_COLLISION_WITHIN_PRODUCT,
       `Unresolved within-product SKU collision: ${collision.sku_key}`,
@@ -243,35 +232,6 @@ export function resolveCollisionExclusions({
     }
   }
 
-  for (const collision of cross) {
-    if (!resolvedCross.has(collision.sku_key)) {
-      if (collision.entries.length > 2 ||
-          new Set(collision.entries.map(e => e.native_product_id)).size > 2) {
-        blockers.add(new Blocker(
-          BLOCKER_CODES.COLLISION_MAPPING_UNSUPPORTED,
-          'Cross-product collision shape is not supported by v1 mappings',
-          { sku_key: collision.sku_key }
-        ));
-      }
-    }
-  }
-
-  for (const collision of within) {
-    const key = `${collision.native_product_id}\0${collision.sku_key}`;
-    if (!resolvedWithin.has(key)) {
-      if (collision.variants.length > 2) {
-        blockers.add(new Blocker(
-          BLOCKER_CODES.COLLISION_MAPPING_UNSUPPORTED,
-          'Within-product collision has more than two variants',
-          {
-            sku_key: collision.sku_key,
-            native_product_id: collision.native_product_id,
-          }
-        ));
-      }
-    }
-  }
-
   return { excludedProducts, excludedVariants, defaultPromotions };
 }
 
@@ -330,7 +290,7 @@ export function applyCollisionConfig({
   for (const product of filtered) {
     postCollector.addProduct(product);
   }
-  reportRemainingCollisions({ ...postCollector.snapshot(), blockers });
+  verifyPublishableSkuCollisions(filtered, blockers);
 
   return filtered;
 }

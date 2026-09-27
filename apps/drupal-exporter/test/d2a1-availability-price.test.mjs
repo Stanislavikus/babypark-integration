@@ -528,7 +528,7 @@ test('source-policy diagnostics are aggregate counts not per-variant warnings', 
   );
 });
 
-test('SKU collision behavior remains unchanged', async () => {
+test('SKU collision behavior uses anomaly quarantine', async () => {
   const sourceDir = createFixtureDir();
   writeFixture(sourceDir, mergeDatasets(
     simpleProduct({ nid: 1, model: 'COLLIDE' }),
@@ -540,7 +540,8 @@ test('SKU collision behavior remains unchanged', async () => {
     fixtureSourceDir: sourceDir,
     skipFilesystemChecks: true,
   });
-  assert.ok(result.preflight.blockers.some(
+  assert.equal(result.anomalyReport.anomaly_count, 1);
+  assert.ok(!result.preflight.blockers.some(
     b => b.code === BLOCKER_CODES.SKU_COLLISION_CROSS_PRODUCT
   ));
 });

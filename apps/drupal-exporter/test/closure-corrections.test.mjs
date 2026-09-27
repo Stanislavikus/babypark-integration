@@ -93,7 +93,7 @@ test('phase-0 and phase-1 blockers coexist in one preflight', async () => {
 
   const codes = result.preflight.blockers.map(b => b.code);
   assert.ok(codes.includes(BLOCKER_CODES.CATEGORY_CYCLE));
-  assert.ok(codes.includes(BLOCKER_CODES.SKU_COLLISION_CROSS_PRODUCT));
+  assert.ok(!codes.includes(BLOCKER_CODES.SKU_COLLISION_CROSS_PRODUCT));
   assert.equal(result.ok, false);
 });
 

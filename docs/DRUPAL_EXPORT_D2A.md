@@ -40,6 +40,7 @@ node apps/drupal-exporter/bin/drupal-exporter.mjs spool
 | `DRUPAL_EXPORT_DB_PASSWORD` | Password |
 | `DRUPAL_EXPORT_SPOOL_ROOT` | Absolute spool root |
 | `DRUPAL_EXPORT_COLLISION_CONFIG` | Absolute path to `legacy-sku-collisions.yaml` |
+| `DRUPAL_EXPORT_ANOMALY_PUBLICATION_POLICY` | Absolute path to `publication-policy.yaml` |
 | `DRUPAL_EXPORT_PUBLIC_SITE_URL` | Public site base URL |
 | `DRUPAL_EXPORT_PUBLIC_FILES_URL` | Public files base URL |
 | `DRUPAL_EXPORT_PRICE_PENDING_CSV` | Price pending CSV path |

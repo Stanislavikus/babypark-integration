@@ -28,6 +28,8 @@ export function loadConfig(overrides = {}) {
   const spoolRoot = overrides.spoolRoot ?? env('DRUPAL_EXPORT_SPOOL_ROOT');
   const collisionConfigPath = overrides.collisionConfigPath ??
     env('DRUPAL_EXPORT_COLLISION_CONFIG');
+  const anomalyPublicationPolicyPath = overrides.anomalyPublicationPolicyPath ??
+    env('DRUPAL_EXPORT_ANOMALY_PUBLICATION_POLICY');
   const publicSiteUrl = (overrides.publicSiteUrl ??
     env('DRUPAL_EXPORT_PUBLIC_SITE_URL')).replace(/\/$/, '');
   const publicFilesUrl = (overrides.publicFilesUrl ??
@@ -48,11 +50,15 @@ export function loadConfig(overrides = {}) {
   if (!path.isAbsolute(collisionConfigPath)) {
     throw new ConfigError('CONFIG_INVALID', 'collision config path must be absolute');
   }
+  if (!path.isAbsolute(anomalyPublicationPolicyPath)) {
+    throw new ConfigError('CONFIG_INVALID', 'anomaly publication policy path must be absolute');
+  }
 
   return {
     db,
     spoolRoot,
     collisionConfigPath,
+    anomalyPublicationPolicyPath,
     publicSiteUrl,
     publicFilesUrl,
     filesystem,

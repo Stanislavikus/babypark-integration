@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
@@ -9,8 +10,15 @@ import {
   filterProductByExclusions,
   buildCollisionReportEntry,
   sortCollisionReport,
-  reportRemainingCollisions,
 } from '../collision/detector.mjs';
+import { loadPublicationPolicy } from '../anomaly/publication-policy.mjs';
+import {
+  buildDrupalAnomalyReport,
+  deriveAnomalyQuarantine,
+  filterProductByQuarantine,
+  verifyPublishableSkuCollisions,
+} from '../anomaly/quarantine.mjs';
+import { observationsFromCollisionSnapshot } from '../../../../src/catalog/anomaly/observation.mjs';
 import { buildCanonicalRecords } from '../canonical/build-from-source.mjs';
 import {
   IncrementalChunkWriter,
@@ -87,6 +95,7 @@ export async function runExportPipeline({
   }
 
   const collisionConfig = loadCollisionConfig(config.collisionConfigPath);
+  const publicationPolicy = loadPublicationPolicy(config.anomalyPublicationPolicyPath);
   const mappings = parseCollisionMappings(collisionConfig);
   const { validMappings } = partitionCollisionMappings(mappings, blockers);
 
@@ -116,18 +125,66 @@ export async function runExportPipeline({
   });
 
   const postCollector = createSkuCollisionCollector(blockers);
+  const postMappingProducts = [];
   await streamCandidateProducts(built.candidatesPath, product => {
     const filtered = filterProductByExclusions(product, exclusions, blockers);
-    if (filtered) postCollector.addProduct(filtered);
+    if (filtered) {
+      postMappingProducts.push(filtered);
+      postCollector.addProduct(filtered);
+    }
   });
-  reportRemainingCollisions({ ...postCollector.snapshot(), blockers });
+  const postCollisionSnapshot = postCollector.snapshot();
+
+  const anomalyObservations = observationsFromCollisionSnapshot({
+    snapshot: postCollisionSnapshot,
+    provider: config.provider,
+    sourceEpoch: config.sourceEpoch,
+  });
+
+  let quarantinedProductIds;
+  try {
+    quarantinedProductIds = deriveAnomalyQuarantine({
+      observations: anomalyObservations,
+      policy: publicationPolicy.policy,
+    });
+  } catch (error) {
+    blockers.add(new Blocker(
+      BLOCKER_CODES.COLLISION_MAPPING_UNSUPPORTED,
+      error.message,
+      { phase: 'anomaly_publication_policy' }
+    ));
+    quarantinedProductIds = new Set();
+  }
+
+  const publishableProducts = postMappingProducts.filter(product =>
+    !quarantinedProductIds.has(product.native_product_id)
+  );
+  verifyPublishableSkuCollisions(publishableProducts, blockers);
+
+  const anomalyReport = buildDrupalAnomalyReport({
+    observations: anomalyObservations,
+    provider: config.provider,
+    sourceEpoch: config.sourceEpoch,
+    snapshotWatermark,
+    collisionConfigSha256: collisionConfig.sha256,
+    anomalyPublicationPolicySha256: publicationPolicy.sha256,
+  });
+
+  const combinedExclusions = {
+    excludedProducts: new Set([
+      ...exclusions.excludedProducts,
+      ...quarantinedProductIds,
+    ]),
+    excludedVariants: exclusions.excludedVariants,
+    defaultPromotions: exclusions.defaultPromotions,
+  };
 
   const filteredPath = path.join(path.dirname(built.candidatesPath), 'filtered.ndjson');
   const chunkResult = await prepareDiagnosticChunks({
     phase0: built.phase0,
     candidatesPath: built.candidatesPath,
     filteredPath,
-    exclusions,
+    exclusions: combinedExclusions,
     blockers,
     mode,
     buildingPath,
@@ -137,7 +194,7 @@ export async function runExportPipeline({
 
   const authorityCounts = await countFilteredAuthorities(
     built.candidatesPath,
-    exclusions,
+    combinedExclusions,
     blockers
   );
 
@@ -147,6 +204,9 @@ export async function runExportPipeline({
     source_epoch: config.sourceEpoch,
     snapshot_watermark: snapshotWatermark,
     collision_config_sha256: collisionConfig.sha256,
+    anomaly_publication_policy_sha256: publicationPolicy.sha256,
+    anomaly_count: anomalyReport.anomaly_count,
+    quarantined_product_count: anomalyReport.quarantined_product_count,
     excluded_by_policy: built.excluded_by_policy,
     product_types: built.product_type_names,
     authority_counts: authorityCounts,
@@ -171,6 +231,7 @@ export async function runExportPipeline({
       prepared,
       preflightReport,
       collisionReport,
+      anomalyReport,
       candidatesPath: built.candidatesPath,
       filteredPath,
     });
@@ -182,6 +243,7 @@ export async function runExportPipeline({
     buildingPath,
     preflightReport,
     collisionReport,
+    anomalyReport,
     prepared,
     excludedByPolicy: built.excluded_by_policy,
     authorityCounts,
@@ -193,6 +255,7 @@ export async function runExportPipeline({
     ok: true,
     preflight: preflightReport,
     collisionReport,
+    anomalyReport,
     snapshotWatermark,
     spool: spoolResult,
     blockers,
@@ -326,6 +389,7 @@ function buildPipelineResult({
   snapshotWatermark,
   built,
   collisionReport,
+  anomalyReport,
   preflightReport,
   prepared,
   candidatesPath,
@@ -341,6 +405,7 @@ function buildPipelineResult({
       ...blockers.toReport(),
     },
     collisionReport,
+    anomalyReport,
     snapshotWatermark,
     blockers,
     phase0: built?.phase0 ?? [],
@@ -377,6 +442,7 @@ function writePreparedSpool({
   buildingPath,
   preflightReport,
   collisionReport,
+  anomalyReport,
   prepared,
   excludedByPolicy,
   authorityCounts,
@@ -386,13 +452,23 @@ function writePreparedSpool({
   const { ready } = resolveSpoolPaths(config.spoolRoot, snapshotWatermark);
   const building = buildingPath ?? resolveSpoolPaths(config.spoolRoot, snapshotWatermark).building;
 
+  writeJsonAtomic(building, 'anomaly-report.json', anomalyReport);
+  const anomalyReportBytes = `${JSON.stringify(anomalyReport, null, 2)}\n`;
+  const anomalyReportSha256 = crypto.createHash('sha256')
+    .update(anomalyReportBytes)
+    .digest('hex');
+
   const manifest = {
-    schema: 'bp.drupal-exporter.spool/1',
-    version: 1,
+    schema: 'bp.drupal-exporter.spool/2',
+    version: 2,
     provider: config.provider,
     source_epoch: config.sourceEpoch,
     snapshot_watermark: snapshotWatermark,
     collision_config_sha256: preflightReport.collision_config_sha256,
+    anomaly_publication_policy_sha256: preflightReport.anomaly_publication_policy_sha256,
+    anomaly_report_sha256: anomalyReportSha256,
+    anomaly_count: preflightReport.anomaly_count,
+    quarantined_product_count: preflightReport.quarantined_product_count,
     authority_counts: authorityCounts,
     excluded_by_policy: excludedByPolicy,
     blocker_count: 0,

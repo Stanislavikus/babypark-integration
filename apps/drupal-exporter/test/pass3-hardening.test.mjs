@@ -131,6 +131,7 @@ test('spool CLI output does not expose chunk bodies or internal writer', async (
       DRUPAL_EXPORT_DB_PASSWORD: 'secret',
       DRUPAL_EXPORT_SPOOL_ROOT: config.spoolRoot,
       DRUPAL_EXPORT_COLLISION_CONFIG: config.collisionConfigPath,
+      DRUPAL_EXPORT_ANOMALY_PUBLICATION_POLICY: config.anomalyPublicationPolicyPath,
       DRUPAL_EXPORT_PUBLIC_SITE_URL: config.publicSiteUrl,
       DRUPAL_EXPORT_PUBLIC_FILES_URL: config.publicFilesUrl,
       DRUPAL_EXPORT_STOCK_PROCESSED: config.filesystem.stockProcessed,
@@ -185,6 +186,7 @@ test('1001 tiny records pack as 500/500/1', () => {
 test('unrelated blocker and unresolved cross-product collision both present', async () => {
   const sourceDir = createFixtureDir();
   writeFixture(sourceDir, mergeDatasets(
+    simpleProduct({ nid: 9, model: 'GOOD-PRICE' }),
     simpleProduct({ nid: 1, model: '511000', sellPrice: '-1.00000' }),
     simpleProduct({ nid: 2, model: '511000' }),
   ));
@@ -196,7 +198,8 @@ test('unrelated blocker and unresolved cross-product collision both present', as
   });
   const codes = result.preflight.blockers.map(b => b.code);
   assert.ok(codes.includes(BLOCKER_CODES.PRICE_NEGATIVE));
-  assert.ok(codes.includes(BLOCKER_CODES.SKU_COLLISION_CROSS_PRODUCT));
+  assert.ok(!codes.includes(BLOCKER_CODES.SKU_COLLISION_CROSS_PRODUCT));
+  assert.equal(result.anomalyReport.anomaly_count, 1);
   assert.ok(result.prepared);
   assert.ok(result.preflight.prepared_chunk_count >= 1);
 });
@@ -230,10 +233,11 @@ test('unrelated blocker and unresolved within-product collision both present', a
   });
   const codes = result.preflight.blockers.map(b => b.code);
   assert.ok(codes.includes(BLOCKER_CODES.PRICE_NEGATIVE));
-  assert.ok(codes.includes(BLOCKER_CODES.SKU_COLLISION_WITHIN_PRODUCT));
+  assert.ok(!codes.includes(BLOCKER_CODES.SKU_COLLISION_WITHIN_PRODUCT));
+  assert.equal(result.anomalyReport.anomaly_count, 1);
 });
 
-test('red preflight still validates and chunks unaffected records', async () => {
+test('preflight quarantines colliding products and chunks unaffected records', async () => {
   const sourceDir = createFixtureDir();
   writeFixture(sourceDir, mergeDatasets(
     simpleProduct({ nid: 1, model: 'GOOD' }),
@@ -246,12 +250,11 @@ test('red preflight still validates and chunks unaffected records', async () => 
     fixtureSourceDir: sourceDir,
     skipFilesystemChecks: true,
   });
-  assert.equal(result.ok, false);
+  assert.equal(result.ok, true);
   const phase1 = await loadPhase1(result);
   assert.ok(phase1.some(product => product.native_product_id === '1'));
-  assert.ok(result.preflight.blockers.some(
-    b => b.code === BLOCKER_CODES.SKU_COLLISION_CROSS_PRODUCT
-  ));
+  assert.equal(result.anomalyReport.anomaly_count, 1);
+  assert.equal(result.preflight.quarantined_product_count, 2);
   assert.ok(result.prepared.chunks.length >= 1);
 });
 
@@ -331,10 +334,11 @@ mappings:
     skipFilesystemChecks: true,
   });
   const phase1 = await loadPhase1(result);
-  assert.equal(phase1.length, 2);
+  assert.equal(phase1.length, 0);
   assert.ok(result.preflight.blockers.some(
     b => b.code === BLOCKER_CODES.COLLISION_MAPPING_UNSUPPORTED
   ));
+  assert.equal(result.anomalyReport.anomaly_count, 1);
 });
 
 test('phase-0 validation executes when phase-1 blockers exist', async () => {
@@ -354,9 +358,7 @@ test('phase-0 validation executes when phase-1 blockers exist', async () => {
     fixtureSourceDir: sourceDir,
     skipFilesystemChecks: true,
   });
-  assert.ok(result.preflight.blockers.some(
-    b => b.code === BLOCKER_CODES.SKU_COLLISION_CROSS_PRODUCT
-  ));
+  assert.equal(result.anomalyReport.anomaly_count, 1);
   const phase0Chunks = result.prepared.chunks.filter(chunk => chunk.phase === 0);
   assert.ok(phase0Chunks.length >= 2);
   assert.ok(phase0Chunks.every(chunk => chunk.rows <= FULL_RECORD_LIMITS.rows));

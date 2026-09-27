@@ -24,8 +24,8 @@ test('discovers dynamic uc_product node types and excludes product_kit', async t
         { type: 'product_kit', base: 'uc_product', name: 'Kit' },
       ],
     },
-    simpleProduct({ nid: 1, title: 'Regular' }),
-    simpleProduct({ nid: 2, type: 'toy', title: 'Toy item' }),
+    simpleProduct({ nid: 1, model: 'REG-1', title: 'Regular' }),
+    simpleProduct({ nid: 2, type: 'toy', model: 'TOY-2', title: 'Toy item' }),
     {
       product_kit_groups: [{ product_group: 3, translation_count: 1 }],
     },
