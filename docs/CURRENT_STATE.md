@@ -165,11 +165,11 @@ deleted automatically.
 
 ## Drupal exporter production preflight
 
-D2a code is deployed on the Drupal production host as an isolated, non-scheduled exporter.
-It is not a daemon and does not write Drupal data.
+D2a/D2a.1 code is deployed on the Drupal production host as an isolated,
+non-scheduled exporter. It is not a daemon and does not write Drupal data.
 
 Current exporter release:
-`/opt/babypark-exporter/releases/20260927T102742Z-7b4b630`
+`/opt/babypark-exporter/releases/20260927T122537Z-712f09c`
 
 Current exporter symlink:
 `/opt/babypark-exporter/current`
@@ -182,43 +182,104 @@ Runtime:
 - isolated Node runtime: `/opt/babypark-exporter/runtime/node-v22.23.2/bin/node`
 - system `/usr/bin/node` remains unchanged at v20.20.2
 
-First successful production preflight:
+D2a.1 merged/deployed source:
+`712f09cd390df71821b1315c47fac30a620a4636`
+
+D2a.1 established:
+- FULL record schema v2;
+- variant-level `commercial_availability`;
+- optional price-only offer;
+- trusted-price policy;
+- snapshot currency precision;
+- deterministic degraded-source warnings.
+
+Second production preflight:
 - 2026-09-27
-- duration: about 3m14s
+- duration: about 2m58s
 - mode: `preflight`
-- result: `ok=false` due to source/canonical blockers, as designed
+- result: `ok=false`, as expected while reviewed SKU collisions remain
+- blocker rows: 43
+  - 3 `SKU_COLLISION_CROSS_PRODUCT`
+  - 20 `SKU_COLLISION_WITHIN_PRODUCT`
+  - 20 secondary `FULL_RECORD_INVALID` duplicate-SKU diagnostics for those same
+    within-product collisions
+- unique collision decisions requiring review: 23
+- warning_count: 78
 - no `.ready` spool
 - no Catalog HTTP
 - no FULL
 - no Drupal writes
-- live site remained serving traffic during the run
+- live site remained operational during the run
 
-The first production preflight exposed a real source-model issue: Drupal availability may
-remain trustworthy while an unavailable option's old price delta is stale. D2a.1 implements
-the reviewed correction: FULL record schema v2 with variant-level `commercial_availability`,
-trusted-price policy, snapshot currency precision, and deterministic degraded-source
-warnings. Not deployed; no second production preflight has run yet.
+Collision review state:
+- 21 of 23 unique collisions have sufficient technical evidence for a proposed
+  legacy migration decision;
+- `511000` and `80401mc02` are intentionally NOT approved yet and require
+  business/source-process investigation before any mapping is committed;
+- `config/drupal/legacy-sku-collisions.yaml` remains `mappings: []`.
+
+Default-promotion safety fix:
+- PR #19 merged to main;
+- main merge commit: `b21edcf101116eea3ad93b53430f944725029833`;
+- this fix is intentionally not deployed yet;
+- production exporter remains on `712f09c` until the reviewed collision mapping
+  is ready, so the live host can be switched once rather than repeatedly.
+
+Current collision findings are migration evidence, not universal future identity
+rules. Durable future architecture lives in:
+
+`docs/CATALOG_IDENTITY_ANOMALY_MANAGEMENT.md`
 
 ## Catalog / AI next state
 
 No AI copilot is active.
 No Drupal FULL has been sent.
 
-Immediate next slice:
-- D2a.1 canonical/source-policy correction;
-- repeat production preflight;
-- review only the remaining true source ambiguities/collisions;
-- produce a clean local spool;
-- then D2b transport / first controlled FULL.
+Immediate next steps:
+- investigate the business/source-process cause of the two unresolved duplicate
+  identifiers `511000` and `80401mc02` with the content/process owner;
+- approve all 23 Drupal legacy migration decisions only after that investigation;
+- populate `config/drupal/legacy-sku-collisions.yaml` in a reviewed PR;
+- deploy the merged default-promotion fix plus reviewed collision config in one
+  immutable exporter release;
+- run the next production preflight;
+- target: zero hard blockers and a clean local spool;
+- then proceed to D2b transport / first controlled FULL.
 
-Before customer-facing AI catalog answers are launched, there is an explicit mandatory
-research/design gate for **Product Presentation Projection**. It must study current best
-practices and define provider-neutral reusable product-card/presentation templates, including
-preview images, trusted price, availability, channel rendering, caching/CDN behavior,
-answer/visual quality, click/select likelihood, latency and total delivery/model/channel cost.
-See `docs/SYSTEM_MAP.md`.
+Two mandatory future research/design gates exist before customer-facing AI catalog
+answers are production-ready:
 
-Product Presentation Projection is intentionally a later layer above CatalogService and is not
-part of D2a.1.
+1. **Catalog Identity & Anomaly Management**
+   - provider-neutral identity model;
+   - duplicate/conflicting identifier detection;
+   - safe runtime behavior;
+   - durable anomaly incidents;
+   - notifications/handoff;
+   - human resolution;
+   - reviewed prevention rules;
+   - future Data Quality / Requires Attention SaaS UI.
+   - source of truth:
+     `docs/CATALOG_IDENTITY_ANOMALY_MANAGEMENT.md`
 
-No Drupal writes are required for D2a/D2a.1.
+2. **Product Presentation Projection**
+   - provider-neutral reusable product cards/templates;
+   - preview images;
+   - trusted price;
+   - availability;
+   - channel rendering;
+   - caching/CDN behavior;
+   - answer/visual quality;
+   - click/select likelihood;
+   - latency and total delivery/model/channel cost.
+   - overview:
+     `docs/SYSTEM_MAP.md`
+
+Identity/anomaly resolution logically precedes product presentation: an ambiguous
+identity set must not become a polished AI recommendation/card.
+
+Neither future architecture should be hidden only in an LLM prompt. Deterministic
+business policy belongs in structured/versioned configuration and ultimately the
+SaaS UI; Chatwoot/email are operational surfaces rather than the policy source of
+truth.
+
+No Drupal writes are required for the current D2a/D2a.1 collision-review work.
