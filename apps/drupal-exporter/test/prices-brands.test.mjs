@@ -35,7 +35,7 @@ test('brand multiplicity blocker', async () => {
   assert.ok(result.preflight.blockers.some(b => b.code === BLOCKER_CODES.BRAND_MULTIPLE));
 });
 
-test('sub-cent and negative price blockers', async () => {
+test('negative trusted price blocks; sub-cent noise is absorbed at precision 0', async () => {
   const sourceDir = createFixtureDir();
   writeFixture(sourceDir, mergeDatasets(
     simpleProduct({ nid: 1, model: 'SUB', sellPrice: '10.00001' }),
@@ -48,6 +48,26 @@ test('sub-cent and negative price blockers', async () => {
     fixtureSourceDir: sourceDir,
     skipFilesystemChecks: true,
   });
-  assert.ok(result.preflight.blockers.some(b => b.code === BLOCKER_CODES.PRICE_NOT_MINOR_ALIGNED));
   assert.ok(result.preflight.blockers.some(b => b.code === BLOCKER_CODES.PRICE_NEGATIVE));
+  assert.equal(
+    result.preflight.blockers.some(b => b.code === BLOCKER_CODES.PRICE_NOT_MINOR_ALIGNED),
+    false
+  );
+});
+
+test('trusted invalid price after rounding still fails closed', async () => {
+  const sourceDir = createFixtureDir();
+  writeFixture(sourceDir, simpleProduct({
+    nid: 3,
+    model: 'BAD',
+    sellPrice: '10.12500',
+    statusValue: 1,
+  }));
+  const result = await runExportPipeline({
+    config: testConfig({ sourceCurrency: { code: 'UAH', precision: 2 } }),
+    mode: 'preflight',
+    fixtureSourceDir: sourceDir,
+    skipFilesystemChecks: true,
+  });
+  assert.ok(result.preflight.blockers.some(b => b.code === BLOCKER_CODES.PRICE_NOT_MINOR_ALIGNED));
 });

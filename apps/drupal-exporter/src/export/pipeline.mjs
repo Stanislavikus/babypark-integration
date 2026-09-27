@@ -150,6 +150,8 @@ export async function runExportPipeline({
     product_types: built.product_type_names,
     authority_counts: authorityCounts,
     prepared_chunk_count: prepared?.chunks.length ?? 0,
+    source_currency: built.sourceCurrency ?? null,
+    source_policy_diagnostics: built.sourcePolicyDiagnostics ?? null,
     ...blockers.toReport(),
   };
 
@@ -393,7 +395,7 @@ function writePreparedSpool({
     authority_counts: authorityCounts,
     excluded_by_policy: excludedByPolicy,
     blocker_count: 0,
-    warning_count: 0,
+    warning_count: preflightReport.warning_count ?? 0,
     phase_row_counts: {
       phase0: phase0Count,
       phase1: phase1Count,

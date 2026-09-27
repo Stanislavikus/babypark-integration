@@ -16,7 +16,7 @@ export function compactVariantEntry(product, variant, blockers) {
     source_combination: variant.source_combination ?? null,
     is_default: variant.is_default ?? false,
     price: variant.offer?.current_minor ?? null,
-    availability: variant.offer?.commercial_availability ?? null,
+    availability: variant.commercial_availability ?? null,
     authority_nid: product.authority?.nid ?? null,
     title: product.authority?.title ?? null,
     language: product.authority?.language ?? null,

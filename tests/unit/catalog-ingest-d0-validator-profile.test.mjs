@@ -8,7 +8,7 @@ import {
   FULL_RECORD_LIMITS,
   RECORD_VALIDATOR_VERSION,
   validateFullRecords,
-} from '../../src/catalog/ingest/full-record-v1.mjs';
+} from '../../src/catalog/ingest/full-record-v2.mjs';
 import { IdentityStore } from '../../src/catalog/identity/store.mjs';
 import { productionDependencyFingerprint } from '../../src/catalog/ingest/dependency-fingerprint.mjs';
 import {
@@ -27,6 +27,7 @@ function minimalVariant(index, isDefault = false) {
     native_variant_id: `v${index}`,
     sku: `SKU-${index}`,
     is_default: isDefault,
+    commercial_availability: 'IN_STOCK',
     updated_at: '2026-01-01T00:00:00Z',
   };
 }
@@ -41,7 +42,7 @@ function minimalImage(index, extra = {}) {
 
 function minimalProduct({ variantCount = 1, imageCount = 0, imageExtra } = {}) {
   return {
-    schema: 'bp.catalog.full-record/1',
+    schema: 'bp.catalog.full-record/2',
     type: 'product',
     phase: 1,
     provider: 'fixture',
@@ -56,7 +57,7 @@ function minimalProduct({ variantCount = 1, imageCount = 0, imageExtra } = {}) {
 
 function liveShapeProduct() {
   return {
-    schema: 'bp.catalog.full-record/1',
+    schema: 'bp.catalog.full-record/2',
     type: 'product',
     phase: 1,
     provider: 'fixture',
@@ -71,9 +72,9 @@ function liveShapeProduct() {
   };
 }
 
-test('D0 validator profile v2 keeps contract v1 and the remaining structural bounds', () => {
-  assert.equal(FULL_RECORD_CONTRACT_VERSION, 1);
-  assert.equal(RECORD_VALIDATOR_VERSION, 2);
+test('D0 validator profile v3 keeps contract v2 and the remaining structural bounds', () => {
+  assert.equal(FULL_RECORD_CONTRACT_VERSION, 2);
+  assert.equal(RECORD_VALIDATOR_VERSION, 3);
   assert.deepEqual({ ...FULL_RECORD_LIMITS }, {
     rows: 500,
     variants: 512,
@@ -93,17 +94,17 @@ test('D0 validator profile participates in the production dependency fingerprint
   const store = IdentityStore.createNew(path.join(dir, 'identity.sqlite'));
   t.after(() => store.close());
   const current = productionDependencyFingerprint(store);
+  const validatorV3 = productionDependencyFingerprint(store, { record_validator_version: 3 });
   const validatorV2 = productionDependencyFingerprint(store, { record_validator_version: 2 });
-  const validatorV1 = productionDependencyFingerprint(store, { record_validator_version: 1 });
-  assert.equal(FULL_RECORD_CONTRACT_VERSION, 1);
-  assert.equal(RECORD_VALIDATOR_VERSION, 2);
-  assert.equal(current, validatorV2);
+  assert.equal(FULL_RECORD_CONTRACT_VERSION, 2);
+  assert.equal(RECORD_VALIDATOR_VERSION, 3);
+  assert.equal(current, validatorV3);
   assert.equal(current, productionDependencyFingerprint(store, {
-    full_record_contract_version: 1,
-    record_validator_version: 2,
+    full_record_contract_version: 2,
+    record_validator_version: 3,
   }));
-  assert.notEqual(validatorV2, validatorV1);
-  assert.notEqual(current, productionDependencyFingerprint(store, { full_record_contract_version: 2 }));
+  assert.notEqual(validatorV3, validatorV2);
+  assert.notEqual(current, productionDependencyFingerprint(store, { full_record_contract_version: 1 }));
 });
 
 test('D0 accepts exactly 512 unique variants and rejects 513 with FULL_RECORD_LIMIT_EXCEEDED', () => {

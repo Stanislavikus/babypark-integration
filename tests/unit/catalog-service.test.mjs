@@ -80,8 +80,8 @@ function insertVariant(builder, {
   builder.db.prepare(
     'INSERT INTO variants(' +
     'variant_id,product_id,sku,sku_key,gtin,is_default,' +
-    'options_json,updated_at' +
-    ') VALUES(?,?,?,?,?,?,?,?)'
+    'commercial_availability,options_json,updated_at' +
+    ') VALUES(?,?,?,?,?,?,?,?,?)'
   ).run(
     variantId,
     productId,
@@ -89,6 +89,7 @@ function insertVariant(builder, {
     skuKey,
     gtin,
     isDefault ? 1 : 0,
+    availability,
     JSON.stringify(options),
     '2026-09-24T00:00:00.000Z'
   );
@@ -96,15 +97,14 @@ function insertVariant(builder, {
   builder.db.prepare(
     'INSERT INTO variant_offers(' +
     'variant_id,current_minor,regular_minor,currency,on_sale,' +
-    'commercial_availability,tax_included,source_updated_at' +
-    ') VALUES(?,?,?,?,?,?,?,?)'
+    'tax_included,source_updated_at' +
+    ') VALUES(?,?,?,?,?,?,?)'
   ).run(
     variantId,
     currentMinor,
     regularMinor,
     'UAH',
     onSale ? 1 : 0,
-    availability,
     taxIncluded === null ? null : (taxIncluded ? 1 : 0),
     '2026-09-24T00:00:00.000Z'
   );
@@ -560,8 +560,7 @@ test('known unavailable exact SKU is filtered by default', () => {
   assert.equal(included.match_mode, 'EXACT_SKU');
   assert.equal(included.results[0].product_id, 'p-old');
   assert.equal(
-    included.results[0].matched_variant.offer
-      .commercial_availability,
+    included.results[0].matched_variant.commercial_availability,
     'DISCONTINUED'
   );
 });

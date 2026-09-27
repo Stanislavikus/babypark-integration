@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { validateFullRecords } from '../../../src/catalog/ingest/full-record-v1.mjs';
+import { validateFullRecords } from '../../../src/catalog/ingest/full-record-v2.mjs';
 import { sanitizeProductForCanonical } from '../src/canonical/sanitize.mjs';
 import { runExportPipeline } from '../src/export/pipeline.mjs';
 import { resolveImageUrl } from '../src/canonical/records.mjs';
@@ -91,7 +91,7 @@ test('1025-image product fails validator', () => {
     position: i,
   }));
   const product = {
-    schema: 'bp.catalog.full-record/1',
+    schema: 'bp.catalog.full-record/2',
     type: 'product',
     phase: 1,
     provider: 'drupal',

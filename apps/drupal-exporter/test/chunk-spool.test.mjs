@@ -6,7 +6,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { chunkByteSize } from '../src/canonical/chunk-packer.mjs';
 import { IncrementalChunkWriter } from '../src/canonical/incremental-chunks.mjs';
-import { FULL_RECORD_LIMITS } from '../../../src/catalog/ingest/full-record-v1.mjs';
+import { FULL_RECORD_LIMITS } from '../../../src/catalog/ingest/full-record-v2.mjs';
 import { runExportPipeline } from '../src/export/pipeline.mjs';
 import { BLOCKER_CODES } from '../src/blockers.mjs';
 import {
@@ -19,7 +19,7 @@ import {
 
 function tinyBrand(id) {
   return {
-    schema: 'bp.catalog.full-record/1',
+    schema: 'bp.catalog.full-record/2',
     type: 'brand',
     phase: 0,
     provider: 'drupal',
@@ -49,7 +49,7 @@ test('one record over 1MiB is a blocker', () => {
   const writer = new IncrementalChunkWriter({ outputDir, scratch: true });
   const huge = 'x'.repeat(1_100_000);
   const product = {
-    schema: 'bp.catalog.full-record/1',
+    schema: 'bp.catalog.full-record/2',
     type: 'product',
     phase: 1,
     provider: 'drupal',

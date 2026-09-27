@@ -20,7 +20,7 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..'
 
 function tinyBrand(id) {
   return {
-    schema: 'bp.catalog.full-record/1',
+    schema: 'bp.catalog.full-record/2',
     type: 'brand',
     phase: 0,
     provider: 'drupal',
@@ -32,7 +32,7 @@ function tinyBrand(id) {
 function cyclicPhase0() {
   return [
     {
-      schema: 'bp.catalog.full-record/1',
+      schema: 'bp.catalog.full-record/2',
       type: 'category',
       phase: 0,
       provider: 'drupal',
@@ -41,7 +41,7 @@ function cyclicPhase0() {
       localized_names: { ru: 'A' },
     },
     {
-      schema: 'bp.catalog.full-record/1',
+      schema: 'bp.catalog.full-record/2',
       type: 'category',
       phase: 0,
       provider: 'drupal',
@@ -147,7 +147,7 @@ test('fresh writer directory has zero phase0 files after partial phase-0 failure
   const phase0 = [
     ...Array.from({ length: 500 }, (_, i) => tinyBrand(i + 1)),
     {
-      schema: 'bp.catalog.full-record/1',
+      schema: 'bp.catalog.full-record/2',
       type: 'brand',
       phase: 0,
       provider: 'drupal',
@@ -221,7 +221,7 @@ test('abandoned partial phase-0 artifacts are not reused by fresh writer', async
   let threw = false;
   try {
     failedWriter.writePhase0Records([{
-      schema: 'bp.catalog.full-record/1',
+      schema: 'bp.catalog.full-record/2',
       type: 'brand',
       phase: 0,
       provider: 'drupal',
@@ -240,7 +240,7 @@ test('abandoned partial phase-0 artifacts are not reused by fresh writer', async
   const freshDir = fs.mkdtempSync(path.join('/tmp', 'fresh-phase1-'));
   const freshWriter = new IncrementalChunkWriter({ outputDir: freshDir, scratch: false });
   freshWriter.writePhase1Record({
-    schema: 'bp.catalog.full-record/1',
+    schema: 'bp.catalog.full-record/2',
     type: 'product',
     phase: 1,
     provider: 'drupal',
@@ -253,6 +253,7 @@ test('abandoned partial phase-0 artifacts are not reused by fresh writer', async
       native_variant_id: '1|base',
       sku: 'ONLY',
       is_default: true,
+      commercial_availability: 'IN_STOCK',
       updated_at: '2026-01-01T00:00:00.000Z',
       attributes: [],
       stock: [],

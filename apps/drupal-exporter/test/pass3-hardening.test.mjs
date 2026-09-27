@@ -5,7 +5,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { FULL_RECORD_LIMITS } from '../../../src/catalog/ingest/full-record-v1.mjs';
+import { FULL_RECORD_LIMITS } from '../../../src/catalog/ingest/full-record-v2.mjs';
 import { IncrementalChunkWriter, readChunkBodies } from '../src/canonical/incremental-chunks.mjs';
 import {
   createSkuCollisionCollector,
@@ -32,7 +32,7 @@ import {
 
 function tinyBrand(id) {
   return {
-    schema: 'bp.catalog.full-record/1',
+    schema: 'bp.catalog.full-record/2',
     type: 'brand',
     phase: 0,
     provider: 'drupal',

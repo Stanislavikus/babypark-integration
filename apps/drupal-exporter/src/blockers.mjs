@@ -73,18 +73,33 @@ export class BlockerCollection {
     return this;
   }
 
+  sortWarnings() {
+    this.warnings.sort((a, b) => {
+      const keyA = `${a.code}\0${a.message}\0${JSON.stringify(a.details)}`;
+      const keyB = `${b.code}\0${b.message}\0${JSON.stringify(b.details)}`;
+      return keyA < keyB ? -1 : keyA > keyB ? 1 : 0;
+    });
+    return this;
+  }
+
   toReport() {
     this.sortBlockers();
+    this.sortWarnings();
     const counts = {};
     for (const blocker of this.blockers) {
       counts[blocker.code] = (counts[blocker.code] ?? 0) + 1;
+    }
+    const warningCodes = {};
+    for (const warning of this.warnings) {
+      warningCodes[warning.code] = (warningCodes[warning.code] ?? 0) + 1;
     }
     return {
       blocker_count: this.blockers.length,
       warning_count: this.warnings.length,
       blocker_codes: counts,
+      warning_codes: warningCodes,
       blockers: this.blockers.map(b => b.toJSON()),
-      warnings: this.warnings,
+      warnings: this.warnings.map(w => w.toJSON()),
     };
   }
 }

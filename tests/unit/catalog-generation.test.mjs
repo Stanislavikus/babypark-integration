@@ -48,14 +48,15 @@ function insertSample(builder, suffix, title = 'Коляска тест') {
 
   builder.db.prepare(
     'INSERT INTO variants(' +
-    'variant_id,product_id,sku,sku_key,is_default,updated_at' +
-    ') VALUES(?,?,?,?,?,?)'
+    'variant_id,product_id,sku,sku_key,is_default,commercial_availability,updated_at' +
+    ') VALUES(?,?,?,?,?,?,?)'
   ).run(
     variantId,
     productId,
     sku,
     skuKey,
     1,
+    'IN_STOCK',
     at
   );
 
@@ -69,16 +70,14 @@ function insertSample(builder, suffix, title = 'Коляска тест') {
 
   builder.db.prepare(
     'INSERT INTO variant_offers(' +
-    'variant_id,current_minor,regular_minor,currency,on_sale,' +
-    'commercial_availability' +
-    ') VALUES(?,?,?,?,?,?)'
+    'variant_id,current_minor,regular_minor,currency,on_sale' +
+    ') VALUES(?,?,?,?,?)'
   ).run(
     variantId,
     2499800,
     2999900,
     'UAH',
-    1,
-    'IN_STOCK'
+    1
   );
 
   builder.db.prepare(
@@ -712,7 +711,7 @@ test('extra manifest data cannot override canonical generation fields', t => {
   });
 
   assert.equal(result.manifest.generation_id, 'manifest1');
-  assert.equal(result.manifest.schema_version, 5);
+  assert.equal(result.manifest.schema_version, 6);
   assert.equal(result.manifest.counts.products, 1);
   assert.equal(result.manifest.extra.generation_id, 'evil');
   assert.equal(result.manifest.extra.note, 'source-extra');

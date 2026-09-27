@@ -2,6 +2,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import mariadb from 'mariadb';
 import { parsePhpSerializedInteger } from '../php-variable.mjs';
+import { parseSourceCurrencyFromVariables } from '../source-currency.mjs';
+import { BlockerCollection } from '../blockers.mjs';
 import { checkFilesystemStability } from '../filesystem-stability.mjs';
 import { SOURCE_QUERY_NAMES, SOURCE_QUERIES, SOURCE_QUERY_FILES } from './queries.mjs';
 import { resolveSpoolPaths, createBuildingDir } from '../spool/layout.mjs';
@@ -53,12 +55,27 @@ export async function extractSnapshotToNdjson({
     await conn.query('START TRANSACTION WITH CONSISTENT SNAPSHOT, READ ONLY');
 
     const variableRows = await conn.query(
-      "SELECT value FROM variable WHERE name = 'babypark_sync_stock_time_sync'"
+      "SELECT name, value FROM variable WHERE name IN ('babypark_sync_stock_time_sync', 'uc_currency_code', 'uc_currency_prec')"
     );
-    const stockSyncRaw = variableRows[0]?.value;
+    const variableByName = new Map(variableRows.map(row => [row.name, row.value]));
+    const stockSyncRaw = variableByName.get('babypark_sync_stock_time_sync');
     const stockSyncUnix = stockSyncRaw
       ? parsePhpSerializedInteger(stockSyncRaw)
       : 0;
+    const currencyBlockers = new BlockerCollection();
+    const sourceCurrency = parseSourceCurrencyFromVariables(
+      variableRows,
+      currencyBlockers
+    );
+    if (currencyBlockers.hasBlockers()) {
+      await conn.query('ROLLBACK');
+      return {
+        snapshotWatermark: '0',
+        stockSyncUnix,
+        unstable: true,
+        blockers: currencyBlockers.blockers,
+      };
+    }
 
     const watermarkRows = await conn.query(
       'SELECT CAST(FLOOR(UNIX_TIMESTAMP(NOW(6)) * 1000000) AS CHAR) AS snapshot_watermark'
@@ -94,11 +111,17 @@ export async function extractSnapshotToNdjson({
       );
     }
 
+    fs.writeFileSync(
+      path.join(sourceDir, 'source-currency.json'),
+      `${JSON.stringify(sourceCurrency)}\n`
+    );
+
     await conn.query('ROLLBACK');
 
     return {
       snapshotWatermark,
       stockSyncUnix,
+      sourceCurrency,
       buildingPath,
       sourceDir,
       ownsBuildingPath,

@@ -217,7 +217,6 @@ function offerFromRow(row) {
       row.regular_minor === null ? null : Number(row.regular_minor),
     currency: row.currency,
     on_sale: boolean(row.on_sale),
-    commercial_availability: row.commercial_availability,
     tax_included:
       row.tax_included === null ? null : boolean(row.tax_included),
     valid_from: row.valid_from,
@@ -234,6 +233,7 @@ function variantFromRow(row) {
     sku_key: row.sku_key,
     gtin: row.gtin,
     is_default: boolean(row.is_default),
+    commercial_availability: row.commercial_availability,
     options: parseJson(row.options_json, 'variants.options_json', {}),
     lifecycle: row.lifecycle,
     updated_at: row.updated_at,
@@ -253,8 +253,8 @@ function productSummary(db, productId, language, match = null) {
     'ORDER BY language LIMIT 1) fallback_title,' +
     '(SELECT url FROM product_text t WHERE t.product_id=p.product_id ' +
     'ORDER BY language LIMIT 1) fallback_url,' +
-    'v.sku default_sku,o.current_minor,o.regular_minor,o.currency,' +
-    'o.on_sale,o.commercial_availability ' +
+    'v.sku default_sku,v.commercial_availability,' +
+    'o.current_minor,o.regular_minor,o.currency,o.on_sale ' +
     'FROM products p ' +
     'LEFT JOIN brands b ON b.brand_id=p.brand_id ' +
     'LEFT JOIN variants v ON v.variant_id=p.default_variant_id ' +
@@ -307,8 +307,7 @@ function productDetails(db, productId) {
 
   const variants = db.prepare(
     'SELECT v.*,o.current_minor,o.regular_minor,o.currency,o.on_sale,' +
-    'o.commercial_availability,o.tax_included,o.valid_from,o.valid_to,' +
-    'o.source_updated_at ' +
+    'o.tax_included,o.valid_from,o.valid_to,o.source_updated_at ' +
     'FROM variants v LEFT JOIN variant_offers o ' +
     'ON o.variant_id=v.variant_id ' +
     'WHERE v.product_id=? ORDER BY v.is_default DESC,v.variant_id'
@@ -477,7 +476,6 @@ function productVariantFilter(filters) {
   ];
   const params = [];
   const needsOffer =
-    filters.availability !== null ||
     filters.minPriceMinor !== null ||
     filters.maxPriceMinor !== null;
 
@@ -488,7 +486,7 @@ function productVariantFilter(filters) {
 
   if (filters.availability) {
     clauses.push(
-      'so.commercial_availability IN (' +
+      'sv.commercial_availability IN (' +
       placeholders(filters.availability.length) + ')'
     );
     params.push(...filters.availability);
@@ -525,7 +523,6 @@ function exactVariantPasses(db, variantId, filters) {
   ];
   const params = [variantId];
   const needsOffer =
-    filters.availability !== null ||
     filters.minPriceMinor !== null ||
     filters.maxPriceMinor !== null;
 
@@ -536,7 +533,7 @@ function exactVariantPasses(db, variantId, filters) {
 
   if (filters.availability) {
     clauses.push(
-      'o.commercial_availability IN (' +
+      'v.commercial_availability IN (' +
       placeholders(filters.availability.length) + ')'
     );
     params.push(...filters.availability);
@@ -570,7 +567,6 @@ function matchingVariantForProduct(db, productId, filters) {
   ];
   const params = [productId];
   const needsOffer =
-    filters.availability !== null ||
     filters.minPriceMinor !== null ||
     filters.maxPriceMinor !== null;
 
@@ -581,7 +577,7 @@ function matchingVariantForProduct(db, productId, filters) {
 
   if (filters.availability) {
     clauses.push(
-      'o.commercial_availability IN (' +
+      'v.commercial_availability IN (' +
       placeholders(filters.availability.length) + ')'
     );
     params.push(...filters.availability);
@@ -680,8 +676,7 @@ function ftsProductIds(
 function variantDetails(db, variantId) {
   const row = db.prepare(
     'SELECT v.*,o.current_minor,o.regular_minor,o.currency,o.on_sale,' +
-    'o.commercial_availability,o.tax_included,o.valid_from,o.valid_to,' +
-    'o.source_updated_at ' +
+    'o.tax_included,o.valid_from,o.valid_to,o.source_updated_at ' +
     'FROM variants v LEFT JOIN variant_offers o ' +
     'ON o.variant_id=v.variant_id WHERE v.variant_id=?'
   ).get(variantId);
@@ -795,8 +790,7 @@ export class CatalogService {
       const rows = db.prepare(
         'SELECT v.variant_id,v.product_id,v.sku,v.sku_key,' +
         'o.current_minor,o.regular_minor,o.currency,o.on_sale,' +
-        'o.commercial_availability,o.tax_included,o.valid_from,' +
-        'o.valid_to,o.source_updated_at ' +
+        'o.tax_included,o.valid_from,o.valid_to,o.source_updated_at ' +
         'FROM variants v LEFT JOIN variant_offers o ' +
         'ON o.variant_id=v.variant_id WHERE ' +
         clauses.map(value => '(' + value + ')').join(' OR ') +

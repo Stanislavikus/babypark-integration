@@ -51,6 +51,37 @@ export function toMinorUnits(value) {
   return value / (SCALE_FACTOR / MINOR_FACTOR);
 }
 
+/**
+ * Reproduce PHP number_format HALF_UP rounding at the given display precision.
+ */
+export function roundPhpNumberFormat(valueAtScale5, precision) {
+  if (precision < 0 || precision > SCALE) {
+    throw new MoneyError('MONEY_PRECISION', 'unsupported display precision');
+  }
+  if (valueAtScale5 < 0n) {
+    throw new MoneyError('PRICE_NEGATIVE', 'negative price');
+  }
+  const factor = 10n ** BigInt(SCALE - precision);
+  const half = factor / 2n;
+  return ((valueAtScale5 + half) / factor) * factor;
+}
+
+/**
+ * Convert a scale-5 source decimal to canonical minor units using display precision.
+ */
+export function toMinorUnitsWithDisplayPrecision(valueAtScale5, precision) {
+  const rounded = roundPhpNumberFormat(valueAtScale5, precision);
+  if (precision > Number(MINOR_SCALE)) {
+    throw new MoneyError('MONEY_PRECISION', 'display precision exceeds minor-unit model');
+  }
+  const minorFactor = SCALE_FACTOR / (10n ** (MINOR_SCALE - BigInt(precision)));
+  const remainder = rounded % minorFactor;
+  if (remainder !== 0n) {
+    throw new MoneyError('PRICE_NOT_MINOR_ALIGNED', 'price has sub-cent precision');
+  }
+  return rounded / minorFactor;
+}
+
 export function formatDecimal(value) {
   const negative = value < 0n;
   const abs = negative ? -value : value;

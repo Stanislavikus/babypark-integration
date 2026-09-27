@@ -77,12 +77,12 @@ test('category parent conflict blocker', async () => {
 test('global topo ordering across chunk boundaries', () => {
   const categories = [
     {
-      schema: 'bp.catalog.full-record/1',
+      schema: 'bp.catalog.full-record/2',
       type: 'category', phase: 0, provider: 'drupal',
       native_category_id: '2', parent_native_category_id: '1', localized_names: { uk: 'Child' },
     },
     {
-      schema: 'bp.catalog.full-record/1',
+      schema: 'bp.catalog.full-record/2',
       type: 'category', phase: 0, provider: 'drupal',
       native_category_id: '1', parent_native_category_id: null, localized_names: { uk: 'Root' },
     },

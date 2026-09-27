@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { validateFullRecords } from '../../../src/catalog/ingest/full-record-v1.mjs';
+import { validateFullRecords } from '../../../src/catalog/ingest/full-record-v2.mjs';
 import { runExportPipeline } from '../src/export/pipeline.mjs';
 import { sanitizeProductForCanonical } from '../src/canonical/sanitize.mjs';
 import {

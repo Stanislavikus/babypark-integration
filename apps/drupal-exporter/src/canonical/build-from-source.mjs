@@ -7,6 +7,12 @@ import {
   SUPPORTED_AUTHORITY_LANGUAGES,
 } from '../constants.mjs';
 import { BLOCKER_CODES, Blocker, BlockerCollection } from '../blockers.mjs';
+import { WARNING_CODES, Warning } from '../warnings.mjs';
+import {
+  createSourcePolicyDiagnostics,
+  finalizeSourcePolicyDiagnostics,
+} from '../source-policy-diagnostics.mjs';
+import { loadSourceCurrency } from '../source-currency.mjs';
 import {
   productGroupId,
   categoryGroupId,
@@ -35,31 +41,69 @@ function maxChanged(nodes) {
   return nodes.reduce((max, node) => Math.max(max, node.changed), 0);
 }
 
-function detectDuplicateLanguages(translations, groupId, blockers) {
+function resolveTranslationGroup(translations, groupId, blockers, warnings) {
+  const authority = resolveAuthorityNode(translations);
+  if (!authority) {
+    return { authority: null, exportNodes: [], quarantine: false };
+  }
+
   const byLang = new Map();
-  let duplicate = false;
   for (const node of translations) {
     if (!SUPPORTED_AUTHORITY_LANGUAGES.includes(node.language)) continue;
     if (!byLang.has(node.language)) byLang.set(node.language, []);
     byLang.get(node.language).push(node);
   }
+
+  const authorityNodes = byLang.get(authority.language) ?? [];
+  if (authorityNodes.length > 1) {
+    blockers.add(new Blocker(
+      BLOCKER_CODES.PRODUCT_TRANSLATION_DUPLICATE_LANGUAGE,
+      'Multiple published nodes for authority language in translation group',
+      {
+        native_product_id: groupId,
+        language: authority.language,
+        candidate_nids: authorityNodes.map(n => n.nid),
+        candidate_titles: authorityNodes.map(n => n.title),
+        changed_timestamps: authorityNodes.map(n => n.changed),
+      }
+    ));
+    return { authority: null, exportNodes: [], quarantine: true };
+  }
+
+  const exportNodes = [authority];
   for (const [language, nodes] of byLang) {
-    if (nodes.length > 1) {
-      duplicate = true;
-      blockers.add(new Blocker(
-        BLOCKER_CODES.PRODUCT_TRANSLATION_DUPLICATE_LANGUAGE,
-        'Multiple published nodes for same language in translation group',
+    if (language === authority.language) continue;
+    if (nodes.length === 1) {
+      exportNodes.push(nodes[0]);
+      continue;
+    }
+    const matching = nodes.filter(node => node.changed === authority.changed);
+    if (matching.length === 1) {
+      exportNodes.push(matching[0]);
+      warnings.addWarning(new Warning(
+        WARNING_CODES.TRANSLATION_DUPLICATE_RESOLVED,
+        'Duplicate non-authority translation resolved by authority sync timestamp',
         {
           native_product_id: groupId,
           language,
           candidate_nids: nodes.map(n => n.nid),
-          candidate_titles: nodes.map(n => n.title),
-          changed_timestamps: nodes.map(n => n.changed),
+          selected_nid: matching[0].nid,
         }
       ));
+      continue;
     }
+    warnings.addWarning(new Warning(
+      WARNING_CODES.TRANSLATION_DUPLICATE_OMITTED,
+      'Ambiguous duplicate non-authority translation omitted',
+      {
+        native_product_id: groupId,
+        language,
+        candidate_nids: nodes.map(n => n.nid),
+      }
+    ));
   }
-  return duplicate;
+
+  return { authority, exportNodes, quarantine: false };
 }
 
 function buildCategoryParentIndex(hierarchy, blockers) {
@@ -207,6 +251,19 @@ export async function buildCanonicalRecords({
   const workDir = path.join(sourceDir, '.work');
   fs.mkdirSync(workDir, { recursive: true });
   const shardRoot = await buildProductShards(sourceDir, workDir, exportNids, authorityNids);
+
+  const sourcePolicyDiagnostics = createSourcePolicyDiagnostics();
+  const currency = loadSourceCurrency({ sourceDir, config, blockers });
+  if (!currency) {
+    return {
+      phase0: [],
+      candidatesPath: candidatesPathFor(sourceDir),
+      productCount: 0,
+      excluded_by_policy: { product_kit: excludedKitCount },
+      product_type_names: [],
+      sourcePolicyDiagnostics: finalizeSourcePolicyDiagnostics(sourcePolicyDiagnostics),
+    };
+  }
 
   const statusByNid = new Map(fieldStatuses.map(r => [r.entity_id, r.value]));
   const providerByNid = new Map();
@@ -398,11 +455,11 @@ export async function buildCanonicalRecords({
 
   for (const groupId of sortedGroupIds) {
     const translations = groups.get(groupId);
-    if (detectDuplicateLanguages(translations, groupId, blockers)) {
+    const resolved = resolveTranslationGroup(translations, groupId, blockers, blockers);
+    if (resolved.quarantine) {
       continue;
     }
-
-    const authority = resolveAuthorityNode(translations);
+    const authority = resolved.authority;
     if (!authority) {
       const langs = translations.map(t => t.language);
       if (!langs.some(l => SUPPORTED_AUTHORITY_LANGUAGES.includes(l))) {
@@ -414,6 +471,7 @@ export async function buildCanonicalRecords({
       }
       continue;
     }
+    const exportNodes = resolved.exportNodes;
 
     const productAttrs = readNidShard(
       path.join(shardRoot, 'product_attributes'),
@@ -446,9 +504,9 @@ export async function buildCanonicalRecords({
       } else {
         brandNativeId = String(tids[0]);
         if (!brandRecords.has(brandNativeId)) {
-          blockers.add(new Blocker(
-            BLOCKER_CODES.BRAND_REFERENCE_MISSING,
-            'Referenced brand term is missing from provider vocabulary',
+          blockers.addWarning(new Warning(
+            WARNING_CODES.BRAND_REFERENCE_MISSING_OMITTED,
+            'Referenced brand term is missing from provider vocabulary; brand omitted',
             { native_product_id: groupId, brand_native_id: brandNativeId }
           ));
           brandNativeId = null;
@@ -456,10 +514,10 @@ export async function buildCanonicalRecords({
       }
     }
 
-    const bodies = readBodiesForTranslations(shardRoot, translations);
-    const aliasByNid = readAliasesForTranslations(shardRoot, translations);
+    const bodies = readBodiesForTranslations(shardRoot, exportNodes);
+    const aliasByNid = readAliasesForTranslations(shardRoot, exportNodes);
     const localized = buildLocalized(
-      translations,
+      exportNodes,
       bodies,
       aliasByNid,
       config.publicSiteUrl,
@@ -501,6 +559,9 @@ export async function buildCanonicalRecords({
       optionMeta,
       statusByNid,
       blockers,
+      warnings: blockers,
+      currency,
+      sourcePolicyDiagnostics,
     });
 
     const imageRecords = [];
@@ -576,7 +637,7 @@ export async function buildCanonicalRecords({
       attributes: [],
       variants,
       images: imageRecords,
-      updated_at: unixToIso(maxChanged(translations)),
+      updated_at: unixToIso(maxChanged(exportNodes)),
       authority: {
         nid: authority.nid,
         title: authority.title,
@@ -613,5 +674,7 @@ export async function buildCanonicalRecords({
     product_type_names: [...productTypeNames]
       .filter(type => !EXCLUDED_PRODUCT_TYPES.has(type))
       .sort(),
+    sourcePolicyDiagnostics: finalizeSourcePolicyDiagnostics(sourcePolicyDiagnostics),
+    sourceCurrency: currency,
   };
 }

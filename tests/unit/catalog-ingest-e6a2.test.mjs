@@ -280,7 +280,7 @@ test('second replacement FULL preserves identities and publishes changed busines
   const changed = structuredClone(phase1Records()); const stroller = changed.find(row => row.native_product_id === 'stroller');
   stroller.localized.uk.title = 'Новий зоряний візок'; stroller.localized.uk.description = 'Оновлений опис';
   const blue = stroller.variants.find(row => row.native_variant_id === 'stroller-blue');
-  blue.offer.current_minor = 777000; blue.offer.commercial_availability = 'EXPECTED';
+  blue.offer.current_minor = 777000; blue.commercial_availability = 'EXPECTED';
   blue.stock.find(row => row.store_native_id === 'kyiv').quantity = 19;
   const g2 = run('g2-run', g1.generation, '9', '10', changed); assert.equal(g2.result.status, 'ACKED');
   assert.notEqual(g2.generation, g1.generation); const pointers = publisher.state();
@@ -293,7 +293,7 @@ test('second replacement FULL preserves identities and publishes changed busines
   const detail = service.getProduct({ productId }).product; assert.equal(detail.localized.uk.title, 'Новий зоряний візок');
   assert.equal(detail.localized.uk.description, 'Оновлений опис');
   const variant = service.getVariant({ variantId }).variant;
-  assert.equal(variant.offer.current_minor, 777000); assert.equal(variant.offer.commercial_availability, 'EXPECTED');
+  assert.equal(variant.offer.current_minor, 777000); assert.equal(variant.commercial_availability, 'EXPECTED');
   assert.equal(service.getOffers({ skus: ['BP-STAR-BLUE'] }).offers[0].offer.current_minor, 777000);
   assert.equal(service.getStoreStock({ sku: 'BP-STAR-BLUE', activeOnly: false }).stock.find(row => row.store_name === 'Kyiv').quantity, 19);
 });

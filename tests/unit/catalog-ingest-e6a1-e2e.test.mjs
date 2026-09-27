@@ -19,7 +19,7 @@ test('E6a-1 signed FULL publishes a fresh searchable production catalog', t => {
   assert.equal(productId, 'prod_e6a_1'); assert.equal(variantId, 'var_e6a_1');
   for (const query of ['Зоряний', 'BP-STAR-BLUE', 'Acme Baby', 'Візочки', 'ocean-blue']) assert.ok(service.searchProducts({ query, includeUnavailable: true, limit: 20 }).results.some(row => row.product_id === productId), query);
   const detail = service.getProduct({ productId }).product; assert.equal(detail.localized.en.title, 'Star stroller'); assert.equal(detail.default_variant_id, variantId);
-  const variant = service.getVariant({ variantId }).variant; assert.equal(variant.offer.current_minor, 1250000); assert.equal(variant.offer.commercial_availability, 'IN_STOCK');
+  const variant = service.getVariant({ variantId }).variant; assert.equal(variant.offer.current_minor, 1250000); assert.equal(variant.commercial_availability, 'IN_STOCK');
   assert.equal(service.getOffers({ variantIds: [variantId] }).offers[0].offer.current_minor, 1250000); assert.equal(service.getStoreStock({ variantId, activeOnly: false }).stock.find(row => row.store_name === 'Kyiv').quantity, 7);
   assert.equal(service.lookupSku('bp-star-blue').variant.variant_id, variantId); assert.equal(service.listCategories({ language: 'uk' }).categories.length, 2); assert.equal(service.listAttributes({ language: 'en' }).attributes.length, 2);
   const kitId = fixture.identity.lookupProductBySource({ provider: 'fixture', nativeProductId: 'kit' }).product_id; const kit = service.getProduct({ productId: kitId }).product; assert.equal(kit.kit[0].component_variant_id, variantId); assert.equal(kit.kit[0].quantity, 1);

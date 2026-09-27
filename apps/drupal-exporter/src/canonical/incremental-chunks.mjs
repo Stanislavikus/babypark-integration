@@ -1,8 +1,8 @@
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
-import { validateFullRecords, FULL_RECORD_LIMITS } from '../../../../src/catalog/ingest/full-record-v1.mjs';
-import { FullRecordError } from '../../../../src/catalog/ingest/full-record-v1.mjs';
+import { validateFullRecords, FULL_RECORD_LIMITS } from '../../../../src/catalog/ingest/full-record-v2.mjs';
+import { FullRecordError } from '../../../../src/catalog/ingest/full-record-v2.mjs';
 import { BLOCKER_CODES, Blocker } from '../blockers.mjs';
 import { CHUNK_BODY_BYTE_LIMIT } from '../constants.mjs';
 import { globalTopoSortCategories } from './ordering.mjs';

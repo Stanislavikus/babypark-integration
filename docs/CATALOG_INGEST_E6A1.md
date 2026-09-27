@@ -1,6 +1,6 @@
 # E6a-1 production FULL data plane
 
-E6a-1 accepts provider-neutral `bp.catalog.full-record/1` chunks. Phase 0 contains
+E6a-1 accepts provider-neutral `bp.catalog.full-record/2` chunks. Phase 0 contains
 brands, stores, categories and attribute definitions; phase 1 contains complete
 product aggregates; phase 2 contains KIT relations. A chunk contains one phase.
 Because JSON cannot use `type` simultaneously as a discriminator and attribute
