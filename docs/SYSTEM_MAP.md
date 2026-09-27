@@ -88,6 +88,49 @@ needed later. Current canonical image `position` is the deterministic ordering p
 justifies a normalized role vocabulary.
 
 
+## Planned Catalog Anomaly Runtime v1
+
+```text
+source/import/snapshot
+  -> deterministic validation / anomaly detection
+  -> fingerprint + incident store
+       -> known approved policy? -> deterministic action
+       -> unknown/ambiguous?     -> quarantine smallest unsafe entity
+                                 -> continue unaffected catalog
+                                 -> notify responsible role
+                                 -> Data Quality / Requires attention
+
+customer/seller query
+  -> CatalogService
+  -> identity resolution state
+       -> resolved -> normal product selection/presentation
+       -> ambiguous -> safe handoff / unaffected alternatives
+                    -> internal links/context for seller
+                    -> same deduplicated anomaly incident
+
+content/operator
+  -> acknowledge / investigate / add evidence / fix source
+  -> no authority to create global AI truth
+
+administrator/reviewer
+  -> approve durable same/different identity
+  -> approve exception / permanent rule
+  -> auditable policy version
+
+future snapshots
+  -> anomaly absent -> NOT_OBSERVED -> AUTO_CLEARED after clean threshold
+  -> anomaly recurs -> REOPEN same incident + recurrence_count
+```
+
+Repository navigation:
+- architecture: `docs/CATALOG_IDENTITY_ANOMALY_MANAGEMENT.md`;
+- rule/governance entry point: `config/catalog-anomalies/README.md`;
+- agreed human-readable policies: `config/catalog-anomalies/POLICY_CATALOG.md`;
+- current implementation state: `docs/CURRENT_STATE.md`.
+
+Runtime incident storage/UI is not implemented yet. Git is for durable policy,
+not for one file per incident.
+
 ## Future research gate — Catalog Identity & Anomaly Management
 
 Before customer-facing AI is production-ready, BabyPark must run a dedicated
