@@ -117,7 +117,7 @@ export async function runExportPipeline({
 
   const postCollector = createSkuCollisionCollector(blockers);
   await streamCandidateProducts(built.candidatesPath, product => {
-    const filtered = filterProductByExclusions(product, exclusions);
+    const filtered = filterProductByExclusions(product, exclusions, blockers);
     if (filtered) postCollector.addProduct(filtered);
   });
   reportRemainingCollisions({ ...postCollector.snapshot(), blockers });
@@ -137,7 +137,8 @@ export async function runExportPipeline({
 
   const authorityCounts = await countFilteredAuthorities(
     built.candidatesPath,
-    exclusions
+    exclusions,
+    blockers
   );
 
   const preflightReport = {
@@ -201,11 +202,11 @@ export async function runExportPipeline({
   };
 }
 
-async function countFilteredAuthorities(candidatesPath, exclusions) {
+async function countFilteredAuthorities(candidatesPath, exclusions, blockers) {
   let ru = 0;
   let uk = 0;
   await streamCandidateProducts(candidatesPath, product => {
-    const filtered = filterProductByExclusions(product, exclusions);
+    const filtered = filterProductByExclusions(product, exclusions, blockers);
     if (!filtered) return;
     if (filtered.authority?.language === 'ru') ru += 1;
     else if (filtered.authority?.language === 'uk') uk += 1;
@@ -270,7 +271,7 @@ export async function prepareDiagnosticChunks({
   }
 
   await streamCandidateProducts(candidatesPath, product => {
-    const filtered = filterProductByExclusions(product, exclusions);
+    const filtered = filterProductByExclusions(product, exclusions, blockers);
     if (!filtered) return;
 
     const canonical = sanitizeProductForCanonical(filtered);
