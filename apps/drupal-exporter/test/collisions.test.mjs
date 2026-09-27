@@ -107,6 +107,7 @@ mappings:
   const retained = phase1.find(p => p.native_product_id === '21136');
   assert.equal(retained.variants.length, 1);
   assert.equal(retained.variants[0].native_variant_id, '21136|opts:26=24401');
+  assert.equal(retained.variants[0].is_default, true);
 });
 
 test('stale reviewed mapping is a blocker', async () => {

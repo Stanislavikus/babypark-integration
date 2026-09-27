@@ -130,6 +130,7 @@ export function resolveCollisionExclusions({
 }) {
   const excludedProducts = new Set();
   const excludedVariants = new Set();
+  const defaultPromotions = new Map();
   const crossByKey = new Map(cross.map(c => [c.sku_key, c]));
   const withinByKey = new Map();
   for (const entry of within) {
@@ -211,6 +212,26 @@ export function resolveCollisionExclusions({
         ));
         continue;
       }
+      const excludedVariant = collision.variants.find(
+        variant => variant.native_variant_id === mapping.exclude_native_variant_id
+      );
+      if (excludedVariant?.is_default) {
+        if (defaultPromotions.has(mapping.native_product_id)) {
+          blockers.add(new Blocker(
+            BLOCKER_CODES.VARIANT_DEFAULT_INVALID,
+            'exclude_variant default promotion conflicts with another mapping',
+            {
+              mapping,
+              existing: defaultPromotions.get(mapping.native_product_id),
+            }
+          ));
+          continue;
+        }
+        defaultPromotions.set(
+          mapping.native_product_id,
+          mapping.retain_native_variant_id
+        );
+      }
       excludedVariants.add(mapping.exclude_native_variant_id);
       resolvedWithin.add(key);
     } else {
@@ -251,18 +272,46 @@ export function resolveCollisionExclusions({
     }
   }
 
-  return { excludedProducts, excludedVariants };
+  return { excludedProducts, excludedVariants, defaultPromotions };
 }
 
-export function filterProductByExclusions(product, { excludedProducts, excludedVariants }) {
+export function filterProductByExclusions(
+  product,
+  { excludedProducts, excludedVariants, defaultPromotions = new Map() },
+  blockers = null
+) {
   if (excludedProducts.has(product.native_product_id)) {
+    return null;
+  }
+  const variants = product.variants.filter(
+    variant => !excludedVariants.has(variant.native_variant_id)
+  );
+  const promoteId = defaultPromotions.get(product.native_product_id);
+  if (!promoteId) {
+    return { ...product, variants };
+  }
+  const retained = variants.find(
+    variant => variant.native_variant_id === promoteId
+  );
+  if (!retained) {
+    if (blockers) {
+      blockers.add(new Blocker(
+        BLOCKER_CODES.VARIANT_DEFAULT_INVALID,
+        'exclude_variant retained variant missing after filtering',
+        {
+          native_product_id: product.native_product_id,
+          retain_native_variant_id: promoteId,
+        }
+      ));
+    }
     return null;
   }
   return {
     ...product,
-    variants: product.variants.filter(
-      v => !excludedVariants.has(v.native_variant_id)
-    ),
+    variants: variants.map(variant => ({
+      ...variant,
+      is_default: variant.native_variant_id === promoteId,
+    })),
   };
 }
 
@@ -274,7 +323,7 @@ export function applyCollisionConfig({
   const { cross, within } = collectSkuCollisions(products, blockers);
   const exclusions = resolveCollisionExclusions({ cross, within, mappings, blockers });
   const filtered = products
-    .map(product => filterProductByExclusions(product, exclusions))
+    .map(product => filterProductByExclusions(product, exclusions, blockers))
     .filter(Boolean);
 
   const postCollector = createSkuCollisionCollector(blockers);
