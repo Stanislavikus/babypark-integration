@@ -25,7 +25,9 @@ test('discovers dynamic uc_product node types and excludes product_kit', async t
     },
     simpleProduct({ nid: 1, title: 'Regular' }),
     simpleProduct({ nid: 2, type: 'toy', title: 'Toy item' }),
-    simpleProduct({ nid: 3, type: 'product_kit', title: 'Kit item' }),
+    {
+      product_kit_groups: [{ product_group: 3, translation_count: 1 }],
+    },
   ));
 
   const result = await runExportPipeline({
@@ -75,11 +77,11 @@ test('RU authority with UK fallback and unsupported language blocker', async () 
 test('joins und-language Drupal fields without requiring field.language = node.language', async () => {
   const sourceDir = createFixtureDir();
   writeFixture(sourceDir, mergeDatasets(
-    simpleProduct({ nid: 30, language: 'ru' }),
+    simpleProduct({ nid: 30, language: 'ru', statusValue: 2 }),
     {
       bodies: [{ entity_id: 30, summary: 'und summary', value: 'und body' }],
       field_provider: [{ entity_id: 30, tid: 5 }],
-      field_status: [{ entity_id: 30, weight: 2 }],
+      field_status: [{ entity_id: 30, value: 2 }],
       brand_terms: [{ tid: 5, name: 'Brand' }],
     },
   ));

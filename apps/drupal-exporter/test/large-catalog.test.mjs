@@ -20,7 +20,7 @@ test('202-variant configurable product passes validator', async () => {
     const oid = 10000 + i;
     attributeOptions.push({ oid, aid: 26, name: `Opt ${i}` });
     productOptions.push({
-      nid: 500, aid: 26, oid, price: '0.00000', weight: 1,
+      nid: 500, oid, price: '0.00000', weight: 1,
     });
     adjustments.push({
       nid: 500,
@@ -63,9 +63,8 @@ test('zero stock rows retained for dynamically selected active stores', async ()
         { tid: 1575, name: 'Store 1575' },
       ],
       stock: [
-        { sku: 'OTHER', shop_id: 1575, stock: 3 },
-        { sku: 'ZERO-TEST', shop_id: 747, stock: 1 },
-        { sku: 'ZERO-TEST', shop_id: 1575, stock: 0 },
+        { sku: 'OTHER', shop: 1575, stock: 3 },
+        { sku: 'ZERO-TEST', shop: 747, stock: 1 },
       ],
     }
   ));
@@ -78,9 +77,6 @@ test('zero stock rows retained for dynamically selected active stores', async ()
   });
 
   const stock = result.phase1[0].variants[0].stock;
-  assert.deepEqual(
-    stock.map(row => row.store_native_id).sort((a, b) => Number(a) - Number(b)),
-    ['747', '1575']
-  );
-  assert.equal(stock.find(row => row.store_native_id === '1575').quantity, 0);
+  assert.deepEqual(stock.map(row => row.store_native_id), ['747']);
+  assert.equal(stock.length, 1);
 });

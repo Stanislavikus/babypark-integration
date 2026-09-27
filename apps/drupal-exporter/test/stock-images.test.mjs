@@ -24,9 +24,9 @@ test('active store discovery and zero rows for selected stores', async () => {
         { tid: 999, name: 'Inactive' },
       ],
       stock: [
-        { sku: 'STK-1', shop_id: 747, stock: 2 },
-        { sku: 'STK-1', shop_id: 1575, stock: 1 },
-        { sku: 'STK-1', shop_id: 999, stock: 0 },
+        { sku: 'STK-1', shop: 747, stock: 2 },
+        { sku: 'STK-1', shop: 1575, stock: 1 },
+        { sku: 'STK-1', shop: 999, stock: 0 },
       ],
     }
   ));

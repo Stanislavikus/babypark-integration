@@ -21,8 +21,10 @@ export function resolveAuthorityNode(translations) {
   return null;
 }
 
-export function mapFieldStatus(weight) {
-  const mapped = STATUS_WEIGHT_MAP[weight];
+export function mapFieldStatus(value) {
+  const numeric = typeof value === 'string' ? Number(value) : value;
+  if (!Number.isFinite(numeric)) return null;
+  const mapped = STATUS_WEIGHT_MAP[numeric];
   if (!mapped) return null;
   return mapped;
 }

@@ -22,8 +22,8 @@ test('cross-product and within-product SKU collisions are blockers', async () =>
       {
         product_attributes: [{ nid: 21136, aid: 26, default_option: 24401 }],
         product_options: [
-          { nid: 21136, aid: 26, oid: 24401, price: '0.00000', weight: 1 },
-          { nid: 21136, aid: 26, oid: 25350, price: '0.00000', weight: 1 },
+          { nid: 21136, oid: 24401, price: '0.00000', weight: 1 },
+          { nid: 21136, oid: 25350, price: '0.00000', weight: 1 },
         ],
         attributes: [{ aid: 26, name: 'Color' }],
         attribute_options: [
@@ -77,8 +77,8 @@ mappings:
       {
         product_attributes: [{ nid: 21136, aid: 26, default_option: 24401 }],
         product_options: [
-          { nid: 21136, aid: 26, oid: 24401, price: '0.00000', weight: 1 },
-          { nid: 21136, aid: 26, oid: 25350, price: '0.00000', weight: 1 },
+          { nid: 21136, oid: 24401, price: '0.00000', weight: 1 },
+          { nid: 21136, oid: 25350, price: '0.00000', weight: 1 },
         ],
         attributes: [{ aid: 26, name: 'Color' }],
         attribute_options: [

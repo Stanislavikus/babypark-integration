@@ -27,7 +27,7 @@ function configurableProduct({
     {
       product_attributes: [{ nid, aid: defaultAid, default_option: defaultOid }],
       product_options: [{
-        nid, aid: defaultAid, oid: defaultOid, price: optionPrice, weight: optionWeight,
+        nid, oid: defaultOid, price: optionPrice, weight: optionWeight,
       }],
       attributes: [{ aid: defaultAid, name: 'Color' }],
       attribute_options: [{ oid: defaultOid, aid: defaultAid, name: 'Blue' }],
@@ -99,8 +99,8 @@ test('synthesized default fallback variant when default combination lacks adjust
         { oid: 99999, aid: 26, name: 'Other' },
       ],
       product_options: [
-        { nid: 101, aid: 26, oid: 24401, price: '5.00000', weight: 1 },
-        { nid: 101, aid: 26, oid: 99999, price: '0.00000', weight: 2 },
+        { nid: 101, oid: 24401, price: '5.00000', weight: 1 },
+        { nid: 101, oid: 99999, price: '0.00000', weight: 2 },
       ],
     }
   ));
@@ -133,7 +133,7 @@ test('variant option status mappings and weight 0 blocker', async () => {
       attributes: [{ aid: 42, name: 'Size' }],
       attribute_options: [{ oid: 616, aid: 42, name: '11' }],
       product_attributes: [{ nid: 47526, aid: 42, default_option: 616 }],
-      product_options: [{ nid: 47526, aid: 42, oid: 616, price: '0.00000', weight: 0 }],
+      product_options: [{ nid: 47526, oid: 616, price: '0.00000', weight: 0 }],
     }
   ));
   const result = await runExportPipeline({
@@ -158,8 +158,8 @@ test('ambiguous multi-option status produces VARIANT_STATUS_AMBIGUOUS', async ()
         { nid: 200, aid: 2, default_option: 20 },
       ],
       product_options: [
-        { nid: 200, aid: 1, oid: 10, price: '0.00000', weight: 1 },
-        { nid: 200, aid: 2, oid: 20, price: '0.00000', weight: 3 },
+        { nid: 200, oid: 10, price: '0.00000', weight: 1 },
+        { nid: 200, oid: 20, price: '0.00000', weight: 3 },
       ],
       attributes: [
         { aid: 1, name: 'A' },

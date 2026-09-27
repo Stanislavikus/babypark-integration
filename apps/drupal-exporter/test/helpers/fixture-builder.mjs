@@ -11,6 +11,7 @@ export function writeFixture(sourceDir, datasets) {
   const defaults = {
     node_types: [{ type: 'product', base: 'uc_product', name: 'Product' }],
     nodes: [],
+    product_kit_groups: [],
     bodies: [],
     aliases: [],
     categories: [],
@@ -38,23 +39,24 @@ export function writeFixture(sourceDir, datasets) {
 
 export function simpleProduct({
   nid,
+  vid = nid,
   tnid = 0,
   language = 'ru',
   title = 'Product',
   type = 'product',
   model = 'SKU-1',
   sellPrice = '100.00000',
-  statusWeight = 1,
+  statusValue = 1,
   brandTid = null,
   categoryTids = [],
   changed = 1700000000,
 }) {
   return {
     nodes: [
-      { nid, tnid, type, language, title, status: 1, changed },
+      { nid, vid, tnid, type, language, title, status: 1, changed },
     ],
-    uc_products: [{ nid, model, sell_price: sellPrice, list_price: null }],
-    field_status: [{ entity_id: nid, weight: statusWeight }],
+    uc_products: [{ nid, vid, model, sell_price: sellPrice, list_price: null }],
+    field_status: [{ entity_id: nid, value: statusValue }],
     field_provider: brandTid ? [{ entity_id: nid, tid: brandTid }] : [],
     taxonomy_membership: categoryTids.map(tid => ({ nid, tid })),
     bodies: [{

@@ -95,6 +95,43 @@ export function sortCollisionReport(entries) {
   });
 }
 
+function reportRemainingCollisions({ products, blockers }) {
+  const { cross, within } = collectSkuCollisions(products);
+  for (const collision of cross) {
+    blockers.add(new Blocker(
+      BLOCKER_CODES.SKU_COLLISION_CROSS_PRODUCT,
+      `Unresolved cross-product SKU collision: ${collision.sku_key}`,
+      {
+        sku_key: collision.sku_key,
+        products: [...new Set(collision.entries.map(e => e.native_product_id))],
+      }
+    ));
+  }
+  for (const collision of within) {
+    if (collision.variants.length > 2) {
+      blockers.add(new Blocker(
+        BLOCKER_CODES.COLLISION_MAPPING_UNSUPPORTED,
+        'Within-product collision has more than two variants',
+        {
+          sku_key: collision.sku_key,
+          native_product_id: collision.native_product_id,
+          variants: collision.variants.map(v => v.native_variant_id),
+        }
+      ));
+      continue;
+    }
+    blockers.add(new Blocker(
+      BLOCKER_CODES.SKU_COLLISION_WITHIN_PRODUCT,
+      `Unresolved within-product SKU collision: ${collision.sku_key}`,
+      {
+        sku_key: collision.sku_key,
+        native_product_id: collision.native_product_id,
+        variants: collision.variants.map(v => v.native_variant_id),
+      }
+    ));
+  }
+}
+
 export function applyCollisionConfig({
   products,
   mappings,
@@ -110,11 +147,19 @@ export function applyCollisionConfig({
     withinByKey.set(`${entry.native_product_id}\0${entry.sku_key}`, entry);
   }
 
-  const unresolvedCross = new Set(cross.map(c => c.sku_key));
-  const unresolvedWithin = new Set(within.map(w => `${w.native_product_id}\0${w.sku_key}`));
+  const resolvedCross = new Set();
+  const resolvedWithin = new Set();
 
   for (const mapping of mappings) {
     if (mapping.action === 'exclude_product') {
+      if (mapping.retain_native_product_id === mapping.exclude_native_product_id) {
+        blockers.add(new Blocker(
+          BLOCKER_CODES.COLLISION_MAPPING_STALE,
+          'exclude_product retain and exclude IDs must differ',
+          { mapping }
+        ));
+        continue;
+      }
       const collision = crossByKey.get(mapping.sku_key);
       if (!collision) {
         blockers.add(new Blocker(
@@ -135,30 +180,35 @@ export function applyCollisionConfig({
         ));
         continue;
       }
-      const retainHasSku = collision.entries.some(
-        e => e.native_product_id === mapping.retain_native_product_id
-      );
-      const excludeHasSku = collision.entries.some(
-        e => e.native_product_id === mapping.exclude_native_product_id
-      );
-      if (!retainHasSku || !excludeHasSku) {
+      excludedProducts.add(mapping.exclude_native_product_id);
+      resolvedCross.add(mapping.sku_key);
+    } else if (mapping.action === 'exclude_variant') {
+      if (mapping.retain_native_variant_id === mapping.exclude_native_variant_id) {
         blockers.add(new Blocker(
           BLOCKER_CODES.COLLISION_MAPPING_STALE,
-          'exclude_product mapping retain/exclude products no longer share SKU',
+          'exclude_variant retain and exclude IDs must differ',
           { mapping }
         ));
         continue;
       }
-      excludedProducts.add(mapping.exclude_native_product_id);
-      unresolvedCross.delete(mapping.sku_key);
-    } else if (mapping.action === 'exclude_variant') {
       const key = `${mapping.native_product_id}\0${mapping.sku_key}`;
       const collision = withinByKey.get(key);
       if (!collision) {
         blockers.add(new Blocker(
           BLOCKER_CODES.COLLISION_MAPPING_STALE,
-          `exclude_variant mapping has no current within-product collision`,
+          'exclude_variant mapping has no current within-product collision',
           { mapping }
+        ));
+        continue;
+      }
+      if (collision.variants.length !== 2) {
+        blockers.add(new Blocker(
+          BLOCKER_CODES.COLLISION_MAPPING_UNSUPPORTED,
+          'exclude_variant requires exactly two current colliding variants',
+          {
+            mapping,
+            current_variants: collision.variants.map(v => v.native_variant_id),
+          }
         ));
         continue;
       }
@@ -173,7 +223,7 @@ export function applyCollisionConfig({
         continue;
       }
       excludedVariants.add(mapping.exclude_native_variant_id);
-      unresolvedWithin.delete(key);
+      resolvedWithin.add(key);
     } else {
       blockers.add(new Blocker(
         BLOCKER_CODES.COLLISION_MAPPING_UNSUPPORTED,
@@ -183,29 +233,33 @@ export function applyCollisionConfig({
     }
   }
 
-  for (const skuKey of unresolvedCross) {
-    const collision = crossByKey.get(skuKey);
-    blockers.add(new Blocker(
-      BLOCKER_CODES.SKU_COLLISION_CROSS_PRODUCT,
-      `Unresolved cross-product SKU collision: ${skuKey}`,
-      {
-        sku_key: skuKey,
-        products: [...new Set(collision.entries.map(e => e.native_product_id))],
+  for (const collision of cross) {
+    if (!resolvedCross.has(collision.sku_key)) {
+      if (collision.entries.length > 2 ||
+          new Set(collision.entries.map(e => e.native_product_id)).size > 2) {
+        blockers.add(new Blocker(
+          BLOCKER_CODES.COLLISION_MAPPING_UNSUPPORTED,
+          'Cross-product collision shape is not supported by v1 mappings',
+          { sku_key: collision.sku_key }
+        ));
       }
-    ));
+    }
   }
 
-  for (const key of unresolvedWithin) {
-    const collision = withinByKey.get(key);
-    blockers.add(new Blocker(
-      BLOCKER_CODES.SKU_COLLISION_WITHIN_PRODUCT,
-      `Unresolved within-product SKU collision: ${collision.sku_key}`,
-      {
-        sku_key: collision.sku_key,
-        native_product_id: collision.native_product_id,
-        variants: collision.variants.map(v => v.native_variant_id),
+  for (const collision of within) {
+    const key = `${collision.native_product_id}\0${collision.sku_key}`;
+    if (!resolvedWithin.has(key)) {
+      if (collision.variants.length > 2) {
+        blockers.add(new Blocker(
+          BLOCKER_CODES.COLLISION_MAPPING_UNSUPPORTED,
+          'Within-product collision has more than two variants',
+          {
+            sku_key: collision.sku_key,
+            native_product_id: collision.native_product_id,
+          }
+        ));
       }
-    ));
+    }
   }
 
   const filtered = products
@@ -216,6 +270,8 @@ export function applyCollisionConfig({
         v => !excludedVariants.has(v.native_variant_id)
       ),
     }));
+
+  reportRemainingCollisions({ products: filtered, blockers });
 
   return filtered;
 }

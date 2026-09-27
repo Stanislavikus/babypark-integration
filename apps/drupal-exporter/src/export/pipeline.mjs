@@ -9,18 +9,16 @@ import {
   sortCollisionReport,
 } from '../collision/detector.mjs';
 import { buildCanonicalRecords } from '../canonical/build-from-source.mjs';
-import { packPhaseChunks, buildChunkFiles } from '../canonical/chunk-packer.mjs';
-import { sanitizePhaseRecords } from '../canonical/sanitize.mjs';
+import { prepareCanonicalChunks } from '../canonical/prepare.mjs';
 import {
   checkFilesystemPrecheck,
-  checkFilesystemStability,
 } from '../filesystem-stability.mjs';
 import { extractSnapshotToNdjson } from '../source/mariadb-snapshot.mjs';
 import {
   resolveSpoolPaths,
-  createBuildingDir,
   writeJsonAtomic,
   writeFileAtomic,
+  atomicPromote,
 } from '../spool/layout.mjs';
 
 export async function runExportPipeline({
@@ -38,27 +36,52 @@ export async function runExportPipeline({
 
   let snapshotWatermark = '0';
   let stockSyncUnix = 0;
-  let sourceDir;
+  let sourceDir = fixtureSourceDir;
+  let buildingPath = null;
 
-  if (fixtureSourceDir) {
-    sourceDir = fixtureSourceDir;
-    snapshotWatermark = 'fixture-watermark-123456789012345678';
-    stockSyncUnix = 1700000000;
-  } else {
-    const buildingPaths = resolveSpoolPaths(config.spoolRoot, 'pending');
-    sourceDir = path.join(buildingPaths.building, 'source');
-    fs.mkdirSync(sourceDir, { recursive: true });
+  if (!fixtureSourceDir) {
+    if (blockers.hasBlockers()) {
+      return buildPipelineResult({
+        mode,
+        config,
+        blockers,
+        snapshotWatermark,
+        built: null,
+        products: [],
+        collisionConfig: null,
+        mappings: [],
+        prepared: null,
+      });
+    }
 
-    const snapshot = await sourceExtractor({ config, sourceDir });
-    snapshotWatermark = snapshot.snapshotWatermark;
-    stockSyncUnix = snapshot.stockSyncUnix;
-
-    const stability = checkFilesystemStability({
+    const snapshot = await sourceExtractor({
       config,
       beforeFingerprint: precheck.processedFingerprint,
-      stockSyncUnix,
     });
-    for (const blocker of stability.blockers) blockers.add(blocker);
+
+    if (snapshot.unstable) {
+      for (const blocker of snapshot.blockers) blockers.add(blocker);
+      return buildPipelineResult({
+        mode,
+        config,
+        blockers,
+        snapshotWatermark: snapshot.snapshotWatermark,
+        built: null,
+        products: [],
+        collisionConfig: null,
+        mappings: [],
+        prepared: null,
+      });
+    }
+
+    snapshotWatermark = snapshot.snapshotWatermark;
+    stockSyncUnix = snapshot.stockSyncUnix;
+    sourceDir = snapshot.sourceDir;
+    buildingPath = snapshot.buildingPath;
+  } else {
+    snapshotWatermark = 'fixture-watermark-123456789012345678';
+    stockSyncUnix = 1700000000;
+    buildingPath = resolveSpoolPaths(config.spoolRoot, snapshotWatermark).building;
   }
 
   const collisionConfig = loadCollisionConfig(config.collisionConfigPath);
@@ -78,6 +101,12 @@ export async function runExportPipeline({
     blockers,
   });
 
+  const prepared = prepareCanonicalChunks({
+    phase0: built.phase0,
+    phase1: products,
+    blockers,
+  });
+
   const collisionReport = buildCollisionReport({
     products: built.phase1,
     mappings,
@@ -92,31 +121,40 @@ export async function runExportPipeline({
     excluded_by_policy: built.excluded_by_policy,
     product_types: built.product_type_names,
     authority_counts: countAuthorities(built.phase1),
+    prepared_chunk_count: prepared?.allChunks.length ?? 0,
     ...blockers.toReport(),
   };
 
-  if (mode === 'preflight' || blockers.hasBlockers()) {
-    return {
-      ok: !blockers.hasBlockers(),
-      preflight: preflightReport,
-      collisionReport,
-      snapshotWatermark,
+  if (blockers.hasBlockers() || mode === 'preflight') {
+    if (buildingPath && fs.existsSync(buildingPath) && !fixtureSourceDir) {
+      fs.rmSync(buildingPath, { recursive: true, force: true });
+    }
+    return buildPipelineResult({
+      mode,
+      config,
       blockers,
-      phase0: built.phase0,
-      phase1: products,
-    };
+      snapshotWatermark,
+      built,
+      products,
+      collisionConfig,
+      mappings,
+      prepared,
+      preflightReport,
+      collisionReport,
+    });
   }
 
-  const spoolResult = await writeSpool({
+  const spoolResult = writePreparedSpool({
     config,
     snapshotWatermark,
+    buildingPath,
     preflightReport,
     collisionReport,
-    phase0: built.phase0,
-    phase1: products,
-    collisionConfigSha256: collisionConfig.sha256,
+    prepared,
     excludedByPolicy: built.excluded_by_policy,
     authorityCounts: countAuthorities(products),
+    phase0Count: built.phase0.length,
+    phase1Count: products.length,
   });
 
   return {
@@ -126,6 +164,35 @@ export async function runExportPipeline({
     snapshotWatermark,
     spool: spoolResult,
     blockers,
+    prepared,
+  };
+}
+
+function buildPipelineResult({
+  mode,
+  blockers,
+  snapshotWatermark,
+  built,
+  products,
+  collisionReport,
+  preflightReport,
+  prepared,
+}) {
+  return {
+    ok: !blockers.hasBlockers(),
+    mode,
+    preflight: preflightReport ?? {
+      mode,
+      snapshot_watermark: snapshotWatermark,
+      prepared_chunk_count: prepared?.allChunks.length ?? 0,
+      ...blockers.toReport(),
+    },
+    collisionReport,
+    snapshotWatermark,
+    blockers,
+    phase0: built?.phase0 ?? [],
+    phase1: products,
+    prepared,
   };
 }
 
@@ -178,37 +245,33 @@ function buildCollisionReport({ products, mappings }) {
   };
 }
 
-async function writeSpool({
+function writePreparedSpool({
   config,
   snapshotWatermark,
+  buildingPath,
   preflightReport,
   collisionReport,
-  phase0,
-  phase1,
-  collisionConfigSha256,
+  prepared,
   excludedByPolicy,
   authorityCounts,
+  phase0Count,
+  phase1Count,
 }) {
-  const { building, ready } = resolveSpoolPaths(config.spoolRoot, snapshotWatermark);
-  createBuildingDir(building);
-
-  const canonicalPhase0 = sanitizePhaseRecords(phase0);
-  const canonicalPhase1 = sanitizePhaseRecords(phase1);
-  const phase0Chunks = buildChunkFiles(packPhaseChunks(canonicalPhase0, 0), 0);
-  const phase1Chunks = buildChunkFiles(packPhaseChunks(canonicalPhase1, 1), 1);
-  const allChunks = [...phase0Chunks, ...phase1Chunks];
+  const { ready } = resolveSpoolPaths(config.spoolRoot, snapshotWatermark);
+  const building = buildingPath ?? resolveSpoolPaths(config.spoolRoot, snapshotWatermark).building;
+  fs.mkdirSync(building, { recursive: true });
 
   let totalRows = 0;
   let largestChunkBytes = 0;
   let largestProductBytes = 0;
 
-  for (const chunk of allChunks) {
+  for (const chunk of prepared.allChunks) {
     writeFileAtomic(building, chunk.filename, chunk.body);
     totalRows += chunk.rows;
     largestChunkBytes = Math.max(largestChunkBytes, chunk.bytes);
   }
 
-  for (const product of phase1) {
+  for (const product of prepared.canonicalPhase1) {
     const bytes = Buffer.byteLength(JSON.stringify(product), 'utf8');
     largestProductBytes = Math.max(largestProductBytes, bytes);
   }
@@ -219,17 +282,17 @@ async function writeSpool({
     provider: config.provider,
     source_epoch: config.sourceEpoch,
     snapshot_watermark: snapshotWatermark,
-    collision_config_sha256: collisionConfigSha256,
+    collision_config_sha256: preflightReport.collision_config_sha256,
     authority_counts: authorityCounts,
     excluded_by_policy: excludedByPolicy,
     blocker_count: 0,
     warning_count: 0,
     phase_row_counts: {
-      phase0: phase0.length,
-      phase1: phase1.length,
+      phase0: phase0Count,
+      phase1: phase1Count,
     },
-    chunk_count: allChunks.length,
-    chunks: allChunks.map(c => ({
+    chunk_count: prepared.allChunks.length,
+    chunks: prepared.allChunks.map(c => ({
       filename: c.filename,
       phase: c.phase,
       rows: c.rows,
@@ -245,11 +308,16 @@ async function writeSpool({
   writeJsonAtomic(building, 'preflight.json', preflightReport);
   writeJsonAtomic(building, 'collision-report.json', collisionReport);
 
-  const { atomicPromote } = await import('../spool/layout.mjs');
+  const sourceScratch = path.join(building, 'source');
+  if (fs.existsSync(sourceScratch)) {
+    fs.rmSync(sourceScratch, { recursive: true, force: true });
+  }
+
   atomicPromote(building, ready);
 
   return {
     readyPath: ready,
     manifest,
+    prepared,
   };
 }

@@ -2,20 +2,38 @@ import fs from 'node:fs';
 import path from 'node:path';
 import mariadb from 'mariadb';
 import { parsePhpSerializedInteger } from '../php-variable.mjs';
+import { checkFilesystemStability } from '../filesystem-stability.mjs';
+import { SOURCE_QUERY_NAMES, SOURCE_QUERIES, SOURCE_QUERY_FILES } from './queries.mjs';
+import { resolveSpoolPaths, createBuildingDir } from '../spool/layout.mjs';
 
-async function streamQueryToNdjson(conn, sql, params, outPath) {
-  const stream = conn.queryStream({ sql, ...(params ? { namedPlaceholders: true, ...params } : {}) });
+export async function streamQueryToNdjson(conn, sql, outPath) {
+  const stream = conn.queryStream({ sql });
   const fd = fs.openSync(outPath, 'w');
   try {
     for await (const row of stream) {
-      fs.writeSync(fd, `${JSON.stringify(row)}\n`);
+      try {
+        fs.writeSync(fd, `${JSON.stringify(row)}\n`);
+      } catch (error) {
+        if (typeof stream.close === 'function') {
+          await stream.close();
+        }
+        throw error;
+      }
     }
+  } catch (error) {
+    if (typeof stream.close === 'function') {
+      await stream.close();
+    }
+    throw error;
   } finally {
     fs.closeSync(fd);
   }
 }
 
-export async function extractSnapshotToNdjson({ config, sourceDir }) {
+export async function extractSnapshotToNdjson({
+  config,
+  beforeFingerprint,
+}) {
   const conn = await mariadb.createConnection({
     host: config.db.host,
     port: config.db.port,
@@ -25,6 +43,8 @@ export async function extractSnapshotToNdjson({ config, sourceDir }) {
     bigIntAsNumber: true,
     decimalAsNumber: false,
   });
+
+  let buildingPath = null;
 
   try {
     await conn.query('SET SESSION TRANSACTION ISOLATION LEVEL REPEATABLE READ');
@@ -43,115 +63,32 @@ export async function extractSnapshotToNdjson({ config, sourceDir }) {
     );
     const snapshotWatermark = String(watermarkRows[0].snapshot_watermark);
 
-    const queries = [
-      ['node_types.ndjson', `SELECT type, base, name FROM node_type WHERE base = 'uc_product'`],
-      ['nodes.ndjson', `
-        SELECT n.nid, n.tnid, n.type, n.language, n.title, n.status, n.changed
-        FROM node n
-        JOIN node_type nt ON nt.type = n.type
-        WHERE nt.base = 'uc_product' AND n.status = 1
-      `],
-      ['bodies.ndjson', `
-        SELECT f.entity_id, f.body_summary AS summary, f.body_value AS value
-        FROM field_data_body f
-        JOIN node n ON n.nid = f.entity_id
-        JOIN node_type nt ON nt.type = n.type
-        WHERE f.entity_type = 'node' AND f.deleted = 0
-          AND nt.base = 'uc_product' AND n.status = 1
-      `],
-      ['aliases.ndjson', `
-        SELECT ua.pid, ua.source, ua.alias, ua.language,
-               CAST(SUBSTRING_INDEX(ua.source, '/', -1) AS UNSIGNED) AS nid
-        FROM url_alias ua
-        WHERE ua.source LIKE 'node/%'
-      `],
-      ['categories.ndjson', `
-        SELECT t.tid, t.vid, t.name, t.language, ti.i18n_tsid
-        FROM taxonomy_term_data t
-        JOIN taxonomy_vocabulary v ON v.vid = t.vid
-        LEFT JOIN i18n_term ti ON ti.tid = t.tid
-        WHERE v.machine_name = 'catalog'
-      `],
-      ['category_hierarchy.ndjson', `
-        SELECT h.tid, h.parent
-        FROM taxonomy_term_hierarchy h
-        JOIN taxonomy_term_data t ON t.tid = h.tid
-        JOIN taxonomy_vocabulary v ON v.vid = t.vid
-        WHERE v.machine_name = 'catalog'
-      `],
-      ['brand_terms.ndjson', `
-        SELECT t.tid, t.name
-        FROM taxonomy_term_data t
-        JOIN taxonomy_vocabulary v ON v.vid = t.vid
-        WHERE v.machine_name = 'provider'
-      `],
-      ['store_terms.ndjson', `
-        SELECT t.tid, t.name
-        FROM taxonomy_term_data t
-      `],
-      ['product_attributes.ndjson', `
-        SELECT pa.nid, pa.aid, pa.default_option
-        FROM uc_product_attributes pa
-        JOIN node n ON n.nid = pa.nid
-        WHERE n.status = 1
-      `],
-      ['product_options.ndjson', `
-        SELECT po.nid, po.aid, po.oid, po.price, po.weight
-        FROM uc_product_options po
-        JOIN node n ON n.nid = po.nid
-        WHERE n.status = 1
-      `],
-      ['attributes.ndjson', 'SELECT aid, name FROM uc_attributes'],
-      ['attribute_options.ndjson', 'SELECT oid, aid, name FROM uc_attribute_options'],
-      ['adjustments.ndjson', `
-        SELECT a.nid, a.combination, a.model, a.price
-        FROM uc_product_adjustments a
-        JOIN node n ON n.nid = a.nid
-        WHERE n.status = 1
-      `],
-      ['uc_products.ndjson', `
-        SELECT p.nid, p.model, p.sell_price, p.list_price
-        FROM uc_products p
-        JOIN node n ON n.nid = p.nid
-        WHERE n.status = 1
-      `],
-      ['images.ndjson', `
-        SELECT f.entity_id, f.delta, f.field_uc_product_image_fid AS fid,
-               fm.uri, fm.filemime, fi.field_file_image_alt_value AS alt,
-               fi.field_file_image_title_value AS title,
-               fi.field_file_image_width_value AS width,
-               fi.field_file_image_height_value AS height
-        FROM field_data_uc_product_image f
-        JOIN file_managed fm ON fm.fid = f.field_uc_product_image_fid
-        LEFT JOIN field_data_field_file_image fi ON fi.entity_id = fm.fid
-          AND fi.entity_type = 'file' AND fi.deleted = 0
-        JOIN node n ON n.nid = f.entity_id
-        WHERE f.entity_type = 'node' AND f.deleted = 0 AND n.status = 1
-      `],
-      ['field_status.ndjson', `
-        SELECT f.entity_id, f.field_status_weight AS weight
-        FROM field_data_field_status f
-        JOIN node n ON n.nid = f.entity_id
-        WHERE f.entity_type = 'node' AND f.deleted = 0 AND n.status = 1
-      `],
-      ['field_provider.ndjson', `
-        SELECT f.entity_id, f.field_provider_tid AS tid
-        FROM field_data_field_provider f
-        JOIN node n ON n.nid = f.entity_id
-        WHERE f.entity_type = 'node' AND f.deleted = 0 AND n.status = 1
-      `],
-      ['stock.ndjson', 'SELECT sku, shop_id, stock FROM babypark_stock'],
-      ['taxonomy_membership.ndjson', `
-        SELECT tn.nid, tn.tid
-        FROM taxonomy_index tn
-        JOIN taxonomy_term_data t ON t.tid = tn.tid
-        JOIN taxonomy_vocabulary v ON v.vid = t.vid
-        WHERE v.machine_name = 'catalog'
-      `],
-    ];
+    const stability = checkFilesystemStability({
+      config,
+      beforeFingerprint,
+      stockSyncUnix,
+    });
+    if (stability.blockers.length) {
+      await conn.query('ROLLBACK');
+      return {
+        snapshotWatermark,
+        stockSyncUnix,
+        unstable: true,
+        blockers: stability.blockers,
+      };
+    }
 
-    for (const [filename, sql] of queries) {
-      await streamQueryToNdjson(conn, sql, null, path.join(sourceDir, filename));
+    const paths = resolveSpoolPaths(config.spoolRoot, snapshotWatermark);
+    buildingPath = paths.building;
+    const sourceDir = path.join(buildingPath, 'source');
+    createBuildingDir(buildingPath);
+
+    for (const name of SOURCE_QUERY_NAMES) {
+      await streamQueryToNdjson(
+        conn,
+        SOURCE_QUERIES[name],
+        path.join(sourceDir, SOURCE_QUERY_FILES[name])
+      );
     }
 
     await conn.query('ROLLBACK');
@@ -159,7 +96,17 @@ export async function extractSnapshotToNdjson({ config, sourceDir }) {
     return {
       snapshotWatermark,
       stockSyncUnix,
+      buildingPath,
+      sourceDir,
     };
+  } catch (error) {
+    if (buildingPath && fs.existsSync(buildingPath)) {
+      fs.rmSync(buildingPath, { recursive: true, force: true });
+    }
+    try {
+      await conn.query('ROLLBACK');
+    } catch {}
+    throw error;
   } finally {
     await conn.end();
   }

@@ -73,6 +73,7 @@ test('deterministic spool artifacts and atomic promote', async t => {
   const ready1 = first.spool.readyPath;
 
   const hashes1 = hashArtifacts(ready1);
+  assert.ok(first.spool.prepared);
 
   fs.rmSync(ready1, { recursive: true, force: true });
 
