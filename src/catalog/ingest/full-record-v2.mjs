@@ -1,9 +1,9 @@
 import { normalizeSku } from '../domain/sku.mjs';
 import { normalizeLanguageTag } from '../domain/language.mjs';
 
-export const FULL_RECORD_SCHEMA = 'bp.catalog.full-record/1';
-export const FULL_RECORD_CONTRACT_VERSION = 1;
-export const RECORD_VALIDATOR_VERSION = 2;
+export const FULL_RECORD_SCHEMA = 'bp.catalog.full-record/2';
+export const FULL_RECORD_CONTRACT_VERSION = 2;
+export const RECORD_VALIDATOR_VERSION = 3;
 export const FULL_RECORD_LIMITS = Object.freeze({
   rows: 500,
   variants: 512,
@@ -97,11 +97,14 @@ function normalizedSku(value) {
   text(value, 'sku');
   try { return normalizeSku(value).sku_key; } catch { fail('FULL_RECORD_INVALID', 'sku is invalid'); }
 }
+const AVAILABILITY_VALUES = ['IN_STOCK', 'EXPECTED', 'OUT_OF_STOCK', 'DISCONTINUED', 'MADE_TO_ORDER'];
+function validateCommercialAvailability(value, label) {
+  if (!AVAILABILITY_VALUES.includes(value)) fail('FULL_RECORD_INVALID', `${label} is invalid`);
+}
 function validateOffer(value) {
-  keys(value, ['current_minor', 'regular_minor', 'currency', 'on_sale', 'commercial_availability', 'tax_included', 'valid_from', 'valid_to', 'source_updated_at'], 'offer');
-  required(value, ['current_minor', 'currency', 'on_sale', 'commercial_availability'], 'offer');
+  keys(value, ['current_minor', 'regular_minor', 'currency', 'on_sale', 'tax_included', 'valid_from', 'valid_to', 'source_updated_at'], 'offer');
+  required(value, ['current_minor', 'currency', 'on_sale'], 'offer');
   integer(value.current_minor, 'current_minor'); text(value.currency, 'currency'); bool(value.on_sale, 'on_sale');
-  if (!['IN_STOCK', 'EXPECTED', 'OUT_OF_STOCK', 'DISCONTINUED', 'MADE_TO_ORDER'].includes(value.commercial_availability)) fail('FULL_RECORD_INVALID', 'commercial_availability is invalid');
   if (has(value, 'regular_minor')) integer(value.regular_minor, 'regular_minor', { nullable: true });
   if (has(value, 'tax_included')) bool(value.tax_included, 'tax_included', true);
   for (const field of ['valid_from', 'valid_to', 'source_updated_at']) if (has(value, field)) value[field] = timestamp(value[field], field, true);
@@ -122,9 +125,11 @@ function validateProduct(record) {
   record.variants = list(record.variants, 'variants', FULL_RECORD_LIMITS.variants);
   if (!record.variants.length) fail('FULL_RECORD_INVALID', 'variants must not be empty');
   for (const variant of record.variants) {
-    keys(variant, ['native_variant_id', 'sku', 'is_default', 'updated_at', 'gtin', 'options', 'attributes', 'offer', 'stock'], 'variant');
-    required(variant, ['native_variant_id', 'sku', 'is_default', 'updated_at'], 'variant');
-    text(variant.native_variant_id, 'native_variant_id'); text(variant.sku, 'sku'); bool(variant.is_default, 'is_default'); variant.updated_at = timestamp(variant.updated_at, 'variant.updated_at');
+    keys(variant, ['native_variant_id', 'sku', 'is_default', 'commercial_availability', 'updated_at', 'gtin', 'options', 'attributes', 'offer', 'stock'], 'variant');
+    required(variant, ['native_variant_id', 'sku', 'is_default', 'commercial_availability', 'updated_at'], 'variant');
+    text(variant.native_variant_id, 'native_variant_id'); text(variant.sku, 'sku'); bool(variant.is_default, 'is_default');
+    validateCommercialAvailability(variant.commercial_availability, 'commercial_availability');
+    variant.updated_at = timestamp(variant.updated_at, 'variant.updated_at');
     if (has(variant, 'gtin')) text(variant.gtin, 'gtin'); optionalObject(variant, 'options'); variant.attributes = attributeReferences(variant.attributes);
     if (has(variant, 'offer')) validateOffer(variant.offer);
     variant.stock = list(has(variant, 'stock') ? variant.stock : [], 'stock', FULL_RECORD_LIMITS.stock);

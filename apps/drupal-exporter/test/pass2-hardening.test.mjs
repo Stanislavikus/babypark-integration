@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { validateFullRecords } from '../../../src/catalog/ingest/full-record-v1.mjs';
+import { validateFullRecords } from '../../../src/catalog/ingest/full-record-v2.mjs';
 import { sanitizeProductForCanonical } from '../src/canonical/sanitize.mjs';
 import { runExportPipeline } from '../src/export/pipeline.mjs';
 import { streamQueryToNdjson } from '../src/source/mariadb-snapshot.mjs';

@@ -1,7 +1,7 @@
 import { FULL_RECORD_SCHEMA, PROVIDER, STATUS_WEIGHT_MAP } from '../constants.mjs';
 import { BLOCKER_CODES, Blocker } from '../blockers.mjs';
 import { combinationToCanonicalId } from '../php-combination.mjs';
-import { addDecimal, parseDecimal, toMinorUnits } from '../decimal-money.mjs';
+import { addDecimal, parseDecimal, toMinorUnitsWithDisplayPrecision } from '../decimal-money.mjs';
 
 export function productGroupId(node) {
   const group = node.tnid && node.tnid !== 0 ? node.tnid : node.nid;
@@ -86,6 +86,7 @@ export function resolveImageUrl(uri, publicFilesUrl) {
 export function computeVariantPrice({
   basePrice,
   optionPrices,
+  currency,
   blockers,
   context,
 }) {
@@ -102,14 +103,14 @@ export function computeVariantPrice({
       return null;
     }
     try {
-      const minor = toMinorUnits(final);
-      return { current_minor: Number(minor), currency: 'UAH' };
+      const minor = toMinorUnitsWithDisplayPrecision(final, currency.precision);
+      return { current_minor: Number(minor), currency: currency.code };
     } catch (error) {
-      if (error.code === 'PRICE_NOT_MINOR_ALIGNED') {
+      if (error.code === 'PRICE_NOT_MINOR_ALIGNED' || error.code === 'MONEY_PRECISION') {
         blockers.add(new Blocker(
           BLOCKER_CODES.PRICE_NOT_MINOR_ALIGNED,
-          'Variant final price has sub-cent precision',
-          { ...context, final: final.toString() }
+          'Variant final price cannot be represented in canonical minor units',
+          { ...context, final: final.toString(), precision: currency.precision }
         ));
       } else if (error.code === 'PRICE_NEGATIVE') {
         blockers.add(new Blocker(
@@ -135,12 +136,15 @@ export function buildVariantOptions(optionDetails) {
   for (const detail of optionDetails.sort((a, b) =>
     Number(a.attribute_id) - Number(b.attribute_id)
   )) {
-    options[detail.attribute_id] = {
+    const entry = {
       attribute_id: detail.attribute_id,
       attribute_name: detail.attribute_name,
       option_id: detail.option_id,
-      option_name: detail.option_name,
     };
+    if (detail.option_name !== undefined) {
+      entry.option_name = detail.option_name;
+    }
+    options[detail.attribute_id] = entry;
   }
   return options;
 }

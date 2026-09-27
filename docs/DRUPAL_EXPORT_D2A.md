@@ -102,20 +102,71 @@ Variant identity:
 <native_product_id>|opts:<aid>=<oid>,...
 ```
 
-## Price semantics
+## FULL record contract (D2a.1)
+
+```text
+bp.catalog.full-record/2
+FULL_RECORD_CONTRACT_VERSION = 2
+RECORD_VALIDATOR_VERSION = 3
+CATALOG_SCHEMA_VERSION = 6
+PRODUCTION_MAPPER_VERSION = 2
+```
+
+Each variant carries required `commercial_availability`. `offer` is optional and
+price-only (`current_minor`, `currency`, `on_sale`, …). Availability is no longer
+nested inside `offer`.
+
+HTTP ingest transport remains `/api/catalog/ingest/v1/full` — that `v1` is the BP1
+transport protocol version, independent of FULL record schema v2.
+
+## Price semantics (trusted-price policy)
+
+Currency is read from the same snapshot connection:
+
+```text
+uc_currency_code  → offer.currency
+uc_currency_prec  → PHP number_format display precision
+```
+
+Narrow PHP serialized-string parser only (`s:<byte-len>:"...";`).
+
+Trusted price is emitted only when proven current by legacy 1C sync policy:
+
+- **SIMPLE**: `field_status == 1`
+- **CONFIGURABLE**: all selected option `uc_product_options.weight == 1`
+
+Otherwise availability is still exported but `offer` is omitted (aggregate
+`source_policy_diagnostics` counts; no per-variant warnings).
+
+When trusted:
 
 - `base = uc_products.sell_price`
 - `adjustment = SUM(uc_product_options.price)` for selected options
-- Exact `DECIMAL(16,5)` arithmetic via fixed-scale BigInt (no JS float math)
-- Canonical minor units only when exactly representable in 1/100 UAH
-- Negative or sub-cent finals are blockers (not rounded)
+- exact `DECIMAL(16,5)` BigInt math
+- PHP `number_format` HALF_UP at `uc_currency_prec`
+- convert displayed amount to canonical minor units
+- unexpected invalid trusted prices fail closed (`PRICE_*` blockers)
 
 ## Commercial availability
 
-- SIMPLE: `field_status` weight mapping `1..5`
-- CONFIGURABLE: derived from selected option `uc_product_options.weight`
-- Conflicting multi-option statuses → `VARIANT_STATUS_AMBIGUOUS` blocker
-- Unknown weights (e.g. `0`) → blocker
+- required on every variant as `commercial_availability`
+- SIMPLE: `field_status` mapping `1..5`
+- CONFIGURABLE: selected option `uc_product_options.weight`
+- conflicting multi-option statuses → `VARIANT_STATUS_AMBIGUOUS` blocker
+- synthesized default variant may fall back to product-level `field_status` when all
+  selected option weights are missing/0 (warning, narrow case only)
+- ordinary adjustment variants with weight `0` remain blockers
+
+## Degraded-source warnings (non-blocking)
+
+Deterministic warnings (do not block spool when no hard blockers):
+
+- missing referenced brand omitted
+- duplicate non-authority locale resolved/omitted
+- missing global option label (single-attribute products)
+- synthesized-default status fallback
+
+`manifest.json.warning_count` mirrors `preflight.json.warning_count`.
 
 ## Collision quarantine
 

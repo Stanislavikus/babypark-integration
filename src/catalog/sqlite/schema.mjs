@@ -1,4 +1,4 @@
-export const CATALOG_SCHEMA_VERSION = 5;
+export const CATALOG_SCHEMA_VERSION = 6;
 
 export const CATALOG_LAYERS = Object.freeze([
   'taxonomy',
@@ -114,6 +114,14 @@ const SCHEMA_SQL = `
     gtin TEXT,
     is_default INTEGER NOT NULL DEFAULT 0
       CHECK(is_default IN (0,1)),
+    commercial_availability TEXT NOT NULL
+      CHECK(commercial_availability IN (
+        'IN_STOCK',
+        'EXPECTED',
+        'OUT_OF_STOCK',
+        'DISCONTINUED',
+        'MADE_TO_ORDER'
+      )),
     options_json TEXT NOT NULL DEFAULT '{}',
     lifecycle TEXT NOT NULL DEFAULT 'active'
       CHECK(lifecycle IN ('active','tombstoned')),
@@ -127,6 +135,9 @@ const SCHEMA_SQL = `
   CREATE INDEX idx_variants_product
     ON variants(product_id);
 
+  CREATE INDEX idx_variants_availability
+    ON variants(commercial_availability);
+
   CREATE UNIQUE INDEX idx_one_default_variant_per_product
     ON variants(product_id)
     WHERE is_default = 1;
@@ -138,14 +149,6 @@ const SCHEMA_SQL = `
     currency TEXT NOT NULL DEFAULT 'UAH',
     on_sale INTEGER NOT NULL DEFAULT 0
       CHECK(on_sale IN (0,1)),
-    commercial_availability TEXT NOT NULL
-      CHECK(commercial_availability IN (
-        'IN_STOCK',
-        'EXPECTED',
-        'OUT_OF_STOCK',
-        'DISCONTINUED',
-        'MADE_TO_ORDER'
-      )),
     tax_included INTEGER
       CHECK(tax_included IS NULL OR tax_included IN (0,1)),
     valid_from TEXT,
@@ -156,9 +159,6 @@ const SCHEMA_SQL = `
       ON UPDATE RESTRICT
       ON DELETE CASCADE
   );
-
-  CREATE INDEX idx_variant_offers_availability
-    ON variant_offers(commercial_availability);
 
   CREATE TABLE stores (
     store_id TEXT PRIMARY KEY,
@@ -339,8 +339,10 @@ const SCHEMA_SQL = `
     tokenize='trigram'
   );
 
-  PRAGMA user_version=5;
+  PRAGMA user_version=6;
 `;
+
+export { SCHEMA_SQL };
 
 export function initializeCatalogSchema(db, {
   generationId,

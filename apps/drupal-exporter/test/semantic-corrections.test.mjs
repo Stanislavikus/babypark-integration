@@ -98,7 +98,7 @@ test('missing referenced category is a blocker', async () => {
   ));
 });
 
-test('missing referenced brand term is a blocker', async () => {
+test('missing referenced brand term emits warning and omits brand', async () => {
   const sourceDir = createFixtureDir();
   writeFixture(sourceDir, mergeDatasets(
     simpleProduct({ nid: 1, brandTid: 55 }),
@@ -110,9 +110,12 @@ test('missing referenced brand term is a blocker', async () => {
     fixtureSourceDir: sourceDir,
     skipFilesystemChecks: true,
   });
-  assert.ok(result.preflight.blockers.some(
-    b => b.code === BLOCKER_CODES.BRAND_REFERENCE_MISSING
+  assert.equal(result.preflight.warning_count, 1);
+  assert.ok(result.preflight.warnings.some(
+    w => w.code === 'BRAND_REFERENCE_MISSING_OMITTED'
   ));
+  const phase1 = await loadPhase1(result);
+  assert.equal(phase1[0].brand_native_id, undefined);
 });
 
 test('duplicate structural combination is a blocker', async () => {

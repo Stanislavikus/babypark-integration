@@ -2,7 +2,7 @@ import crypto from 'node:crypto';
 import { frameUtf8 } from './framing.mjs';
 import { CATALOG_SCHEMA_VERSION } from '../sqlite/schema.mjs';
 import { IDENTITY_SCHEMA_VERSION } from '../identity/schema.mjs';
-import { FULL_RECORD_CONTRACT_VERSION, RECORD_VALIDATOR_VERSION } from './full-record-v1.mjs';
+import { FULL_RECORD_CONTRACT_VERSION, RECORD_VALIDATOR_VERSION } from './full-record-v2.mjs';
 import { PRODUCTION_MAPPER_VERSION } from './production-full-mapper.mjs';
 export const FTS_BUILDER_VERSION=1;
 export const SKU_NORMALIZER_VERSION=1;

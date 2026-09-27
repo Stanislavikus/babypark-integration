@@ -1,6 +1,6 @@
 export const PROVIDER = 'drupal';
 export const SOURCE_EPOCH = 'drupal-prod-v1';
-export const FULL_RECORD_SCHEMA = 'bp.catalog.full-record/1';
+export const FULL_RECORD_SCHEMA = 'bp.catalog.full-record/2';
 export const CHUNK_BODY_BYTE_LIMIT = 1_048_576;
 
 export const SUPPORTED_AUTHORITY_LANGUAGES = ['ru', 'uk'];

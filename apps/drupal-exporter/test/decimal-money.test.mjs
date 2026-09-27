@@ -4,6 +4,7 @@ import {
   parseDecimal,
   addDecimal,
   toMinorUnits,
+  toMinorUnitsWithDisplayPrecision,
   MoneyError,
 } from '../src/decimal-money.mjs';
 
@@ -32,5 +33,27 @@ test('does not round sub-cent values', () => {
   assert.throws(
     () => toMinorUnits(parseDecimal('100.00500')),
     MoneyError
+  );
+});
+
+test('display precision 1 HALF_UP boundary converts with fixed minor divisor', () => {
+  assert.equal(
+    toMinorUnitsWithDisplayPrecision(parseDecimal('12.34000'), 1),
+    1230n
+  );
+  assert.equal(
+    toMinorUnitsWithDisplayPrecision(parseDecimal('12.35000'), 1),
+    1240n
+  );
+});
+
+test('display precision 2 HALF_UP boundary converts with fixed minor divisor', () => {
+  assert.equal(
+    toMinorUnitsWithDisplayPrecision(parseDecimal('12.34400'), 2),
+    1234n
+  );
+  assert.equal(
+    toMinorUnitsWithDisplayPrecision(parseDecimal('12.34500'), 2),
+    1235n
   );
 });

@@ -194,8 +194,10 @@ First successful production preflight:
 - live site remained serving traffic during the run
 
 The first production preflight exposed a real source-model issue: Drupal availability may
-remain trustworthy while an unavailable option's old price delta is stale. D2a.1 therefore
-must separate variant availability from optional price/offer semantics before the first FULL.
+remain trustworthy while an unavailable option's old price delta is stale. D2a.1 implements
+the reviewed correction: FULL record schema v2 with variant-level `commercial_availability`,
+trusted-price policy, snapshot currency precision, and deterministic degraded-source
+warnings. Not deployed; no second production preflight has run yet.
 
 ## Catalog / AI next state
 

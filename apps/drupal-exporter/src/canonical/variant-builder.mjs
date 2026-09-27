@@ -1,11 +1,26 @@
 import { BLOCKER_CODES, Blocker } from '../blockers.mjs';
+import { WARNING_CODES, Warning } from '../warnings.mjs';
 import {
   mapFieldStatus,
   computeVariantPrice,
   buildVariantOptions,
   unixToIso,
 } from './records.mjs';
+import {
+  recordOfferEmitted,
+  recordOfferOmitted,
+} from '../source-policy-diagnostics.mjs';
 import { parsePhpCombination, combinationToCanonicalId } from '../php-combination.mjs';
+
+function isSimplePriceTrusted(statusValue) {
+  const numeric = typeof statusValue === 'string' ? Number(statusValue) : statusValue;
+  return Number.isFinite(numeric) && numeric === 1;
+}
+
+function areOptionPricesTrusted(optionWeights) {
+  return optionWeights.length > 0 &&
+    optionWeights.every(weight => Number(weight) === 1);
+}
 
 function deriveVariantAvailability({
   kind,
@@ -13,6 +28,8 @@ function deriveVariantAvailability({
   optionWeights,
   blockers,
   context,
+  warnings,
+  allowProductStatusFallback = false,
 }) {
   if (kind === 'SIMPLE') {
     const mapped = mapFieldStatus(authorityStatus);
@@ -27,8 +44,22 @@ function deriveVariantAvailability({
     return mapped;
   }
 
-  const statuses = optionWeights.map(w => mapFieldStatus(w));
-  if (statuses.some(s => s === null)) {
+  const statuses = optionWeights.map(weight => mapFieldStatus(weight));
+  const hasInvalid = statuses.some(status => status === null);
+  const hasValid = statuses.some(status => status !== null);
+
+  if (hasInvalid) {
+    if (allowProductStatusFallback && !hasValid) {
+      const productMapped = mapFieldStatus(authorityStatus);
+      if (productMapped) {
+        warnings.addWarning(new Warning(
+          WARNING_CODES.VARIANT_STATUS_FALLBACK,
+          'Synthesized default variant uses product-level status fallback',
+          context
+        ));
+        return productMapped;
+      }
+    }
     blockers.add(new Blocker(
       BLOCKER_CODES.VARIANT_STATUS_INVALID,
       'Invalid configurable variant option status',
@@ -36,6 +67,7 @@ function deriveVariantAvailability({
     ));
     return null;
   }
+
   const unique = new Set(statuses);
   if (unique.size > 1) {
     blockers.add(new Blocker(
@@ -46,6 +78,30 @@ function deriveVariantAvailability({
     return null;
   }
   return statuses[0];
+}
+
+function attachVariantCommerce({
+  variant,
+  availability,
+  priceTrusted,
+  price,
+  currency,
+  sourcePolicyDiagnostics,
+}) {
+  if (!availability) return;
+  variant.commercial_availability = availability;
+  if (priceTrusted && price) {
+    variant.offer = {
+      current_minor: price.current_minor,
+      regular_minor: null,
+      currency: price.currency ?? currency.code,
+      on_sale: false,
+      tax_included: null,
+    };
+    recordOfferEmitted(sourcePolicyDiagnostics, availability);
+  } else if (!priceTrusted) {
+    recordOfferOmitted(sourcePolicyDiagnostics, availability);
+  }
 }
 
 function productAttributeIds(productAttrs) {
@@ -60,6 +116,7 @@ function validateCombinationPairs({
   attrMeta,
   optionMeta,
   blockers,
+  warnings,
   contextPrefix,
 }) {
   const productAids = productAttributeIds(productAttrs);
@@ -102,6 +159,32 @@ function validateCombinationPairs({
     }
     const optMeta = optionMeta.get(oid);
     if (!optMeta) {
+      if (productAttrs.length === 1 && productOids.has(oid)) {
+        const attr = attrMeta.get(aid);
+        if (!attr) {
+          blockers.add(new Blocker(
+            BLOCKER_CODES.VARIANT_COMBINATION_INVALID,
+            'Attribute metadata missing',
+            { native_product_id: groupId, aid, ...contextPrefix }
+          ));
+          valid = false;
+          continue;
+        }
+        warnings.addWarning(new Warning(
+          WARNING_CODES.OPTION_LABEL_MISSING,
+          'Global option metadata missing; structural identity preserved without option label',
+          { native_product_id: groupId, aid, oid, ...contextPrefix }
+        ));
+        optionDetails.push({
+          attribute_id: String(aid),
+          attribute_name: attr.name,
+          option_id: String(oid),
+        });
+        const productOption = productOptions.find(o => o.oid === oid);
+        optionPrices.push(productOption?.price ?? '0.00000');
+        optionWeights.push(productOption?.weight);
+        continue;
+      }
       blockers.add(new Blocker(
         BLOCKER_CODES.VARIANT_COMBINATION_INVALID,
         'Option metadata missing',
@@ -169,24 +252,31 @@ export function buildVariants({
   optionMeta,
   statusByNid,
   blockers,
+  warnings,
+  currency,
+  sourcePolicyDiagnostics,
 }) {
-  const optionPriceByOid = new Map(productOptions.map(o => [o.oid, o.price]));
-  const optionWeightByOid = new Map(productOptions.map(o => [o.oid, o.weight]));
+  const authorityStatus = statusByNid.get(authority.nid);
 
   if (kind === 'SIMPLE') {
     const availability = deriveVariantAvailability({
       kind,
-      authorityStatus: statusByNid.get(authority.nid),
+      authorityStatus,
       optionWeights: [],
       blockers,
       context: { native_product_id: groupId, kind: 'SIMPLE' },
+      warnings,
     });
-    const price = computeVariantPrice({
-      basePrice: uc.sell_price,
-      optionPrices: [],
-      blockers,
-      context: { native_product_id: groupId, variant: 'base' },
-    });
+    const priceTrusted = isSimplePriceTrusted(authorityStatus);
+    const price = priceTrusted
+      ? computeVariantPrice({
+        basePrice: uc.sell_price,
+        optionPrices: [],
+        currency,
+        blockers,
+        context: { native_product_id: groupId, variant: 'base' },
+      })
+      : null;
     const variant = {
       native_variant_id: `${groupId}|base`,
       sku: uc.model,
@@ -196,16 +286,14 @@ export function buildVariants({
       options: {},
       source_combination: null,
     };
-    if (price && availability) {
-      variant.offer = {
-        current_minor: price.current_minor,
-        regular_minor: null,
-        currency: price.currency,
-        on_sale: false,
-        commercial_availability: availability,
-        tax_included: null,
-      };
-    }
+    attachVariantCommerce({
+      variant,
+      availability,
+      priceTrusted,
+      price,
+      currency,
+      sourcePolicyDiagnostics,
+    });
     return [variant];
   }
 
@@ -257,6 +345,7 @@ export function buildVariants({
       attrMeta,
       optionMeta,
       blockers,
+      warnings,
       contextPrefix: { native_variant_id: nativeVariantId },
     });
     if (!combo.valid) continue;
@@ -264,17 +353,22 @@ export function buildVariants({
     const isDefault = nativeVariantId === defaultVariantId;
     const availability = deriveVariantAvailability({
       kind,
-      authorityStatus: statusByNid.get(authority.nid),
+      authorityStatus,
       optionWeights: combo.optionWeights,
       blockers,
+      warnings,
       context: { native_product_id: groupId, native_variant_id: nativeVariantId },
     });
-    const price = computeVariantPrice({
-      basePrice: uc.sell_price,
-      optionPrices: combo.optionPrices,
-      blockers,
-      context: { native_product_id: groupId, native_variant_id: nativeVariantId },
-    });
+    const priceTrusted = areOptionPricesTrusted(combo.optionWeights);
+    const price = priceTrusted
+      ? computeVariantPrice({
+        basePrice: uc.sell_price,
+        optionPrices: combo.optionPrices,
+        currency,
+        blockers,
+        context: { native_product_id: groupId, native_variant_id: nativeVariantId },
+      })
+      : null;
 
     const variant = {
       native_variant_id: nativeVariantId,
@@ -285,16 +379,14 @@ export function buildVariants({
       options: buildVariantOptions(combo.optionDetails),
       source_combination: adj.combination,
     };
-    if (price && availability) {
-      variant.offer = {
-        current_minor: price.current_minor,
-        regular_minor: null,
-        currency: price.currency,
-        on_sale: false,
-        commercial_availability: availability,
-        tax_included: null,
-      };
-    }
+    attachVariantCommerce({
+      variant,
+      availability,
+      priceTrusted,
+      price,
+      currency,
+      sourcePolicyDiagnostics,
+    });
     variants.push(variant);
   }
 
@@ -307,6 +399,7 @@ export function buildVariants({
       attrMeta,
       optionMeta,
       blockers,
+      warnings,
       contextPrefix: { native_variant_id: defaultVariantId, default_fallback: true },
     });
 
@@ -314,23 +407,29 @@ export function buildVariants({
       if (!seenIds.has(defaultVariantId)) {
         const availability = deriveVariantAvailability({
           kind,
-          authorityStatus: statusByNid.get(authority.nid),
+          authorityStatus,
           optionWeights: defaultCombo.optionWeights,
           blockers,
+          warnings,
+          allowProductStatusFallback: true,
           context: {
             native_product_id: groupId,
             native_variant_id: defaultVariantId,
           },
         });
-        const price = computeVariantPrice({
-          basePrice: uc.sell_price,
-          optionPrices: defaultCombo.optionPrices,
-          blockers,
-          context: {
-            native_product_id: groupId,
-            native_variant_id: defaultVariantId,
-          },
-        });
+        const priceTrusted = areOptionPricesTrusted(defaultCombo.optionWeights);
+        const price = priceTrusted
+          ? computeVariantPrice({
+            basePrice: uc.sell_price,
+            optionPrices: defaultCombo.optionPrices,
+            currency,
+            blockers,
+            context: {
+              native_product_id: groupId,
+              native_variant_id: defaultVariantId,
+            },
+          })
+          : null;
         const variant = {
           native_variant_id: defaultVariantId,
           sku: uc.model,
@@ -340,16 +439,14 @@ export function buildVariants({
           options: buildVariantOptions(defaultCombo.optionDetails),
           source_combination: null,
         };
-        if (price && availability) {
-          variant.offer = {
-            current_minor: price.current_minor,
-            regular_minor: null,
-            currency: price.currency,
-            on_sale: false,
-            commercial_availability: availability,
-            tax_included: null,
-          };
-        }
+        attachVariantCommerce({
+          variant,
+          availability,
+          priceTrusted,
+          price,
+          currency,
+          sourcePolicyDiagnostics,
+        });
         variants.push(variant);
       } else {
         for (const variant of variants) {

@@ -99,7 +99,7 @@ test('joins und-language Drupal fields without requiring field.language = node.l
   const product = phase1[0];
   assert.equal(product.localized.ru.short_description, 'und summary');
   assert.equal(product.brand_native_id, '5');
-  assert.equal(product.variants[0].offer.commercial_availability, 'EXPECTED');
+  assert.equal(product.variants[0].commercial_availability, 'EXPECTED');
 });
 
 test('URL alias lookup and /node/<nid> fallback', async () => {
@@ -110,7 +110,7 @@ test('URL alias lookup and /node/<nid> fallback', async () => {
       aliases: [],
       nodes: [{ nid: 41, tnid: 41, type: 'product', language: 'ru', title: 'No alias', status: 1, changed: 1 }],
       uc_products: [{ nid: 41, model: 'NA', sell_price: '1.00000', list_price: null }],
-      field_status: [{ entity_id: 41, weight: 1 }],
+      field_status: [{ entity_id: 41, value: 1 }],
       bodies: [{ entity_id: 41, summary: '', value: '' }],
     },
   ));
