@@ -8,6 +8,7 @@ rules and governance.
 
 Read first:
 - `docs/CATALOG_IDENTITY_ANOMALY_MANAGEMENT.md`
+- `docs/CATALOG_ANOMALY_RUNTIME_V1.md`
 - `config/catalog-anomalies/POLICY_CATALOG.md`
 - `docs/CURRENT_STATE.md`
 
@@ -56,5 +57,11 @@ Those actions require an authorized administrator/reviewer.
 
 No production anomaly runtime loads this directory yet.
 
-Until Catalog Anomaly Runtime v1 is implemented, these files are architecture and
-policy registry documentation only.
+Catalog Anomaly Runtime v1 design is frozen in:
+`docs/CATALOG_ANOMALY_RUNTIME_V1.md`.
+
+Its first machine-readable runtime policy will be:
+`config/catalog-anomalies/publication-policy.yaml`.
+
+Until that implementation is merged, this directory remains architecture and
+policy-registry documentation only.

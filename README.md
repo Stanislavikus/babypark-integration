@@ -18,8 +18,9 @@ Canonical integration source for BabyPark customer messaging, catalog synchroniz
 4. `docs/CATALOG_IDENTITY_ANOMALY_MANAGEMENT.md` — durable identity/anomaly architecture
 5. `config/catalog-anomalies/README.md` — obvious entry point for anomaly rules/governance
 6. `config/catalog-anomalies/POLICY_CATALOG.md` — human-readable catalog of agreed policies
-7. `legacy/current/` — exact captured production Viber implementation
-8. `deploy/chatwoot-host/` — sanitized current deployment snapshots
+7. `docs/CATALOG_ANOMALY_RUNTIME_V1.md` — frozen implementation contract for Anomaly Runtime v1
+8. `legacy/current/` — exact captured production Viber implementation
+9. `deploy/chatwoot-host/` — sanitized current deployment snapshots
 
 
 ## Definition of Done — keep CURRENT_STATE current
