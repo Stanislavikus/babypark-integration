@@ -1,7 +1,7 @@
 # Catalog Identity Registry
 
 Status: CURRENT (code) / NOT DEPLOYED (production data)
-Last verified: 2026-09-24
+Last verified: 2026-09-27
 Owner: BabyPark
 Source of truth: src/catalog/domain/sku.mjs, src/catalog/identity/
 
@@ -11,6 +11,14 @@ The identity registry preserves BabyPark-owned product and variant identity
 across catalog rebuilds and provider cutovers.
 
 It is deliberately separate from rebuildable catalog generations.
+
+Durable architecture for duplicate identifiers, ambiguous identity, supplier-offer
+separation, anomaly incidents, AI-safe behavior and human resolution lives in:
+
+    docs/CATALOG_IDENTITY_ANOMALY_MANAGEMENT.md
+
+Any agent changing identity matching, collision handling, supplier imports or
+customer-facing AI catalog selection must read both documents.
 
 Durable database:
 
@@ -165,10 +173,11 @@ Git source of truth:
 
     config/drupal/legacy-sku-collisions.yaml
 
-Phase D1 contains no approved mappings.
+This file is a **legacy migration exception ledger**, not the long-term
+BabyPark anomaly-policy engine.
 
-The file will only be populated after the future read-only Drupal collision
-report is reviewed.
+Mappings may only be populated after evidence-backed review of the production
+collision report.
 
 The applied config SHA-256 is stored in identity config_state.
 
@@ -176,6 +185,9 @@ Unknown collision:
 - quarantine;
 - never first-row-wins;
 - never autonomous customer use.
+
+Future provider-independent anomaly behavior is specified in
+`docs/CATALOG_IDENTITY_ANOMALY_MANAGEMENT.md`.
 
 ## Backup requirement before production use
 
