@@ -6,9 +6,9 @@ Canonical integration source for BabyPark customer messaging, catalog synchroniz
 
 - self-hosted Chatwoot 4.17.1
 - custom Viber ↔ Chatwoot gateway
-- future read-only Drupal catalog exporter
-- future local canonical CatalogService
-- future seller-facing copilot
+- deployed local canonical CatalogService (BOOTSTRAP; no FULL accepted yet)
+- deployed isolated read-only Drupal catalog exporter/preflight path
+- future seller-facing and customer-facing AI layers
 
 ## Start here
 
