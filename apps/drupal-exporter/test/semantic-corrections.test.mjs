@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { runExportPipeline } from '../src/export/pipeline.mjs';
@@ -10,7 +11,9 @@ import {
   simpleProduct,
   mergeDatasets,
   testConfig,
+  loadPhase1,
 } from './helpers/fixture-builder.mjs';
+import { readChunkBodies } from '../src/canonical/incremental-chunks.mjs';
 
 test('product_kit canonical group count from dedicated query artifact', async () => {
   const sourceDir = createFixtureDir();
@@ -47,7 +50,8 @@ test('normalized SKU stock matching across whitespace/case', async () => {
     fixtureSourceDir: sourceDir,
     skipFilesystemChecks: true,
   });
-  assert.equal(result.phase1[0].variants[0].stock[0].quantity, 4);
+  const phase1 = await loadPhase1(result);
+  assert.equal(phase1[0].variants[0].stock[0].quantity, 4);
 });
 
 test('missing stock row is not synthesized for active store', async () => {
@@ -71,7 +75,8 @@ test('missing stock row is not synthesized for active store', async () => {
     fixtureSourceDir: sourceDir,
     skipFilesystemChecks: true,
   });
-  const stock = result.phase1[0].variants[0].stock;
+  const phase1 = await loadPhase1(result);
+  const stock = phase1[0].variants[0].stock;
   assert.equal(stock.length, 1);
   assert.equal(stock[0].store_native_id, '747');
 });
@@ -218,7 +223,7 @@ test('preflight performs canonical validation and packing', async () => {
     skipFilesystemChecks: true,
   });
   assert.ok(result.prepared);
-  assert.ok(result.prepared.allChunks.length >= 1);
+  assert.ok(result.prepared.chunks.length >= 1);
   assert.ok(result.preflight.prepared_chunk_count >= 1);
 });
 
@@ -241,9 +246,18 @@ test('preflight and spool produce identical canonical chunk bytes', async () => 
     skipFilesystemChecks: true,
   });
 
-  const preflightChunks = preflight.prepared.allChunks.map(c => c.body);
-  const spoolChunks = spool.spool.prepared.allChunks.map(c => c.body);
-  assert.deepEqual(preflightChunks, spoolChunks);
+  assert.deepEqual(
+    preflight.prepared.chunks.map(c => c.sha256),
+    spool.spool.prepared.chunks.map(c => c.sha256)
+  );
+  const spoolBodies = readChunkBodies(
+    spool.spool.readyPath,
+    spool.spool.prepared.chunks
+  );
+  const spoolHashes = spoolBodies.map(body =>
+    crypto.createHash('sha256').update(body).digest('hex')
+  );
+  assert.deepEqual(spoolHashes, spool.spool.prepared.chunks.map(c => c.sha256));
 });
 
 test('successful spool removes transient source scratch', async () => {
@@ -284,5 +298,6 @@ test('uc_products fixture uses vid revision binding', async () => {
     fixtureSourceDir: sourceDir,
     skipFilesystemChecks: true,
   });
-  assert.equal(result.phase1[0].variants[0].sku, 'CURRENT');
+  const phase1 = await loadPhase1(result);
+  assert.equal(phase1[0].variants[0].sku, 'CURRENT');
 });

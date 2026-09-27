@@ -52,6 +52,7 @@ export const SOURCE_QUERIES = Object.freeze({
     JOIN node_type nt ON nt.type = n.type
     WHERE f.entity_type = 'node' AND f.deleted = 0
       AND nt.base = 'uc_product' AND n.status = 1
+    ORDER BY f.entity_id
   `,
 
   aliases: `
@@ -93,6 +94,7 @@ export const SOURCE_QUERIES = Object.freeze({
     FROM uc_product_attributes pa
     JOIN node n ON n.nid = pa.nid
     WHERE n.status = 1
+    ORDER BY pa.nid, pa.aid
   `,
 
   product_options: `
@@ -100,6 +102,7 @@ export const SOURCE_QUERIES = Object.freeze({
     FROM uc_product_options po
     JOIN node n ON n.nid = po.nid
     WHERE n.status = 1
+    ORDER BY po.nid, po.oid
   `,
 
   attributes: 'SELECT aid, name FROM uc_attributes',
@@ -111,6 +114,7 @@ export const SOURCE_QUERIES = Object.freeze({
     FROM uc_product_adjustments a
     JOIN node n ON n.nid = a.nid
     WHERE n.status = 1
+    ORDER BY a.nid, a.combination, a.model
   `,
 
   uc_products: `
@@ -133,6 +137,7 @@ export const SOURCE_QUERIES = Object.freeze({
     JOIN node n ON n.nid = f.entity_id AND n.status = 1
     JOIN node_type nt ON nt.type = n.type AND nt.base = 'uc_product'
     WHERE f.entity_type = 'node' AND f.deleted = 0
+    ORDER BY f.entity_id, f.delta, f.uc_product_image_fid
   `,
 
   field_status: `
@@ -140,6 +145,7 @@ export const SOURCE_QUERIES = Object.freeze({
     FROM field_data_field_status f
     JOIN node n ON n.nid = f.entity_id
     WHERE f.entity_type = 'node' AND f.deleted = 0 AND n.status = 1
+    ORDER BY f.entity_id
   `,
 
   field_provider: `
@@ -147,11 +153,13 @@ export const SOURCE_QUERIES = Object.freeze({
     FROM field_data_field_provider f
     JOIN node n ON n.nid = f.entity_id
     WHERE f.entity_type = 'node' AND f.deleted = 0 AND n.status = 1
+    ORDER BY f.entity_id
   `,
 
   stock: `
     SELECT s.sid, s.sku, s.shop AS shop_id, s.stock, s.stock_old
     FROM babypark_stock s
+    ORDER BY s.sku, s.shop, s.sid
   `,
 
   taxonomy_membership: `
@@ -160,6 +168,7 @@ export const SOURCE_QUERIES = Object.freeze({
     JOIN taxonomy_term_data t ON t.tid = tn.tid
     JOIN taxonomy_vocabulary v ON v.vid = t.vid
     WHERE v.machine_name = 'catalog'
+    ORDER BY tn.nid, tn.tid
   `,
 });
 

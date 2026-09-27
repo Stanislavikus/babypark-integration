@@ -11,9 +11,16 @@ export function resolveSpoolPaths(spoolRoot, watermark) {
   return { building, ready };
 }
 
-export function createBuildingDir(buildingPath) {
-  fs.mkdirSync(buildingPath, { recursive: true });
-  fs.mkdirSync(path.join(buildingPath, 'source'), { recursive: true });
+export function createBuildingDir(buildingPath, readyPath) {
+  if (fs.existsSync(buildingPath)) {
+    throw new Error(`building directory already exists: ${buildingPath}`);
+  }
+  if (readyPath && fs.existsSync(readyPath)) {
+    throw new Error(`ready spool already exists: ${readyPath}`);
+  }
+  fs.mkdirSync(buildingPath, { recursive: false });
+  fs.mkdirSync(path.join(buildingPath, 'source'), { recursive: false });
+  return true;
 }
 
 export function atomicPromote(buildingPath, readyPath) {

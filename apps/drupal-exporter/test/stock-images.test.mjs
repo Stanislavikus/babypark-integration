@@ -11,6 +11,7 @@ import {
   simpleProduct,
   mergeDatasets,
   testConfig,
+  loadPhase1,
 } from './helpers/fixture-builder.mjs';
 
 test('active store discovery and zero rows for selected stores', async () => {
@@ -38,7 +39,8 @@ test('active store discovery and zero rows for selected stores', async () => {
     skipFilesystemChecks: true,
   });
 
-  const stock = result.phase1[0].variants[0].stock;
+  const phase1 = await loadPhase1(result);
+  const stock = phase1[0].variants[0].stock;
   assert.deepEqual(stock.map(s => s.store_native_id), ['747', '1575']);
   assert.equal(stock.find(s => s.store_native_id === '1575').quantity, 1);
 });
@@ -77,8 +79,9 @@ test('658-image product passes validator', async () => {
     fixtureSourceDir: sourceDir,
     skipFilesystemChecks: true,
   });
-  assert.equal(result.phase1[0].images.length, 658);
-  validateFullRecords([sanitizeProductForCanonical(result.phase1[0])]);
+  const phase1 = await loadPhase1(result);
+  assert.equal(phase1[0].images.length, 658);
+  validateFullRecords([sanitizeProductForCanonical(phase1[0])]);
 });
 
 test('1025-image product fails validator', () => {

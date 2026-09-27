@@ -1,15 +1,18 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { BlockerCollection } from '../blockers.mjs';
-import { loadCollisionConfig, parseCollisionMappings } from '../collision/config.mjs';
+import os from 'node:os';
+import { BLOCKER_CODES, Blocker, BlockerCollection } from '../blockers.mjs';
+import { loadCollisionConfig, parseCollisionMappings, validateCollisionMappingUniqueness } from '../collision/config.mjs';
 import {
-  applyCollisionConfig,
-  collectSkuCollisions,
+  createSkuCollisionCollector,
+  resolveCollisionExclusions,
+  filterProductByExclusions,
   buildCollisionReportEntry,
   sortCollisionReport,
 } from '../collision/detector.mjs';
 import { buildCanonicalRecords } from '../canonical/build-from-source.mjs';
-import { prepareCanonicalChunks } from '../canonical/prepare.mjs';
+import { IncrementalChunkWriter } from '../canonical/incremental-chunks.mjs';
+import { sanitizeProductForCanonical } from '../canonical/sanitize.mjs';
 import {
   checkFilesystemPrecheck,
 } from '../filesystem-stability.mjs';
@@ -17,9 +20,9 @@ import { extractSnapshotToNdjson } from '../source/mariadb-snapshot.mjs';
 import {
   resolveSpoolPaths,
   writeJsonAtomic,
-  writeFileAtomic,
   atomicPromote,
 } from '../spool/layout.mjs';
+import { streamCandidateProducts } from './candidates.mjs';
 
 export async function runExportPipeline({
   config,
@@ -38,18 +41,15 @@ export async function runExportPipeline({
   let stockSyncUnix = 0;
   let sourceDir = fixtureSourceDir;
   let buildingPath = null;
+  let ownsBuildingPath = false;
 
   if (!fixtureSourceDir) {
     if (blockers.hasBlockers()) {
       return buildPipelineResult({
         mode,
-        config,
         blockers,
         snapshotWatermark,
         built: null,
-        products: [],
-        collisionConfig: null,
-        mappings: [],
         prepared: null,
       });
     }
@@ -63,13 +63,9 @@ export async function runExportPipeline({
       for (const blocker of snapshot.blockers) blockers.add(blocker);
       return buildPipelineResult({
         mode,
-        config,
         blockers,
         snapshotWatermark: snapshot.snapshotWatermark,
         built: null,
-        products: [],
-        collisionConfig: null,
-        mappings: [],
         prepared: null,
       });
     }
@@ -78,6 +74,7 @@ export async function runExportPipeline({
     stockSyncUnix = snapshot.stockSyncUnix;
     sourceDir = snapshot.sourceDir;
     buildingPath = snapshot.buildingPath;
+    ownsBuildingPath = snapshot.ownsBuildingPath ?? false;
   } else {
     snapshotWatermark = 'fixture-watermark-123456789012345678';
     stockSyncUnix = 1700000000;
@@ -86,6 +83,7 @@ export async function runExportPipeline({
 
   const collisionConfig = loadCollisionConfig(config.collisionConfigPath);
   const mappings = parseCollisionMappings(collisionConfig);
+  validateCollisionMappingUniqueness(mappings, blockers);
 
   const built = await buildCanonicalRecords({
     sourceDir,
@@ -94,23 +92,48 @@ export async function runExportPipeline({
     blockers,
   });
 
-  let products = built.phase1;
-  products = applyCollisionConfig({
-    products,
-    mappings,
-    blockers,
+  const collisionCollector = createSkuCollisionCollector(blockers);
+  const productIndex = new Map();
+  await streamCandidateProducts(built.candidatesPath, product => {
+    collisionCollector.addProduct(product);
+    productIndex.set(product.native_product_id, product);
   });
+  const collisionSnapshot = collisionCollector.snapshot();
 
-  const prepared = prepareCanonicalChunks({
-    phase0: built.phase0,
-    phase1: products,
+  const exclusions = resolveCollisionExclusions({
+    cross: collisionSnapshot.cross,
+    within: collisionSnapshot.within,
+    mappings,
     blockers,
   });
 
   const collisionReport = buildCollisionReport({
-    products: built.phase1,
+    collisionSnapshot,
+    productIndex,
     mappings,
   });
+
+  const filteredPath = path.join(path.dirname(built.candidatesPath), 'filtered.ndjson');
+  let prepared = null;
+  let phase1Count = 0;
+  if (!blockers.hasBlockers()) {
+    const chunkResult = await prepareIncrementalChunks({
+      phase0: built.phase0,
+      candidatesPath: built.candidatesPath,
+      filteredPath,
+      exclusions,
+      blockers,
+      mode,
+      buildingPath,
+    });
+    prepared = chunkResult?.prepared ?? null;
+    phase1Count = chunkResult?.phase1Count ?? 0;
+  }
+
+  const authorityCounts = await countFilteredAuthorities(
+    built.candidatesPath,
+    exclusions
+  );
 
   const preflightReport = {
     mode,
@@ -120,27 +143,28 @@ export async function runExportPipeline({
     collision_config_sha256: collisionConfig.sha256,
     excluded_by_policy: built.excluded_by_policy,
     product_types: built.product_type_names,
-    authority_counts: countAuthorities(built.phase1),
-    prepared_chunk_count: prepared?.allChunks.length ?? 0,
+    authority_counts: authorityCounts,
+    prepared_chunk_count: prepared?.chunks.length ?? 0,
     ...blockers.toReport(),
   };
 
   if (blockers.hasBlockers() || mode === 'preflight') {
-    if (buildingPath && fs.existsSync(buildingPath) && !fixtureSourceDir) {
+    if (prepared?.writer) {
+      prepared.writer.cleanup();
+    }
+    if (buildingPath && fs.existsSync(buildingPath) && (ownsBuildingPath || fixtureSourceDir)) {
       fs.rmSync(buildingPath, { recursive: true, force: true });
     }
     return buildPipelineResult({
       mode,
-      config,
       blockers,
       snapshotWatermark,
       built,
-      products,
-      collisionConfig,
-      mappings,
       prepared,
       preflightReport,
       collisionReport,
+      candidatesPath: built.candidatesPath,
+      filteredPath,
     });
   }
 
@@ -152,9 +176,9 @@ export async function runExportPipeline({
     collisionReport,
     prepared,
     excludedByPolicy: built.excluded_by_policy,
-    authorityCounts: countAuthorities(products),
+    authorityCounts,
     phase0Count: built.phase0.length,
-    phase1Count: products.length,
+    phase1Count,
   });
 
   return {
@@ -165,7 +189,118 @@ export async function runExportPipeline({
     spool: spoolResult,
     blockers,
     prepared,
+    candidatesPath: built.candidatesPath,
+    filteredPath,
   };
+}
+
+async function countFilteredAuthorities(candidatesPath, exclusions) {
+  let ru = 0;
+  let uk = 0;
+  await streamCandidateProducts(candidatesPath, product => {
+    const filtered = filterProductByExclusions(product, exclusions);
+    if (!filtered) return;
+    if (filtered.authority?.language === 'ru') ru += 1;
+    else if (filtered.authority?.language === 'uk') uk += 1;
+  });
+  return { ru, uk_fallback: uk };
+}
+
+async function prepareIncrementalChunks({
+  phase0,
+  candidatesPath,
+  filteredPath,
+  exclusions,
+  blockers,
+  mode,
+  buildingPath,
+}) {
+  const outputDir = mode === 'preflight'
+    ? fs.mkdtempSync(path.join(os.tmpdir(), 'drupal-chunks-scratch-'))
+    : buildingPath;
+
+  const writer = new IncrementalChunkWriter({
+    outputDir,
+    scratch: mode === 'preflight',
+  });
+
+  if (fs.existsSync(filteredPath)) {
+    fs.unlinkSync(filteredPath);
+  }
+
+  let phase1Count = 0;
+
+  try {
+    writer.writePhase0Records(phase0);
+
+    const postCollector = createSkuCollisionCollector(blockers);
+    await streamCandidateProducts(candidatesPath, product => {
+      const filtered = filterProductByExclusions(product, exclusions);
+      if (!filtered) return;
+      phase1Count += 1;
+      fs.appendFileSync(filteredPath, `${JSON.stringify(filtered)}\n`);
+      postCollector.addProduct(filtered);
+      writer.writePhase1Record(sanitizeProductForCanonical(filtered));
+    });
+
+    const remaining = postCollector.snapshot();
+    for (const collision of remaining.cross) {
+      blockers.add(new Blocker(
+        BLOCKER_CODES.SKU_COLLISION_CROSS_PRODUCT,
+        `Unresolved cross-product SKU collision: ${collision.sku_key}`,
+        {
+          sku_key: collision.sku_key,
+          products: [...new Set(collision.entries.map(e => e.native_product_id))],
+        }
+      ));
+    }
+    for (const collision of remaining.within) {
+      if (collision.variants.length > 2) {
+        blockers.add(new Blocker(
+          BLOCKER_CODES.COLLISION_MAPPING_UNSUPPORTED,
+          'Within-product collision has more than two variants',
+          {
+            sku_key: collision.sku_key,
+            native_product_id: collision.native_product_id,
+            variants: collision.variants.map(v => v.native_variant_id),
+          }
+        ));
+        continue;
+      }
+      blockers.add(new Blocker(
+        BLOCKER_CODES.SKU_COLLISION_WITHIN_PRODUCT,
+        `Unresolved within-product SKU collision: ${collision.sku_key}`,
+        {
+          sku_key: collision.sku_key,
+          native_product_id: collision.native_product_id,
+          variants: collision.variants.map(v => v.native_variant_id),
+        }
+      ));
+    }
+
+    if (blockers.hasBlockers()) {
+      writer.cleanup();
+      if (fs.existsSync(filteredPath)) fs.unlinkSync(filteredPath);
+      return { prepared: null, phase1Count: 0 };
+    }
+
+    const result = writer.finish();
+    return {
+      prepared: {
+        ...result,
+        writer,
+      },
+      phase1Count,
+    };
+  } catch (error) {
+    writer.cleanup();
+    if (fs.existsSync(filteredPath)) fs.unlinkSync(filteredPath);
+    if (error instanceof Blocker) {
+      blockers.add(error);
+      return { prepared: null, phase1Count: 0 };
+    }
+    throw error;
+  }
 }
 
 function buildPipelineResult({
@@ -173,10 +308,11 @@ function buildPipelineResult({
   blockers,
   snapshotWatermark,
   built,
-  products,
   collisionReport,
   preflightReport,
   prepared,
+  candidatesPath,
+  filteredPath,
 }) {
   return {
     ok: !blockers.hasBlockers(),
@@ -184,34 +320,23 @@ function buildPipelineResult({
     preflight: preflightReport ?? {
       mode,
       snapshot_watermark: snapshotWatermark,
-      prepared_chunk_count: prepared?.allChunks.length ?? 0,
+      prepared_chunk_count: prepared?.chunks.length ?? 0,
       ...blockers.toReport(),
     },
     collisionReport,
     snapshotWatermark,
     blockers,
     phase0: built?.phase0 ?? [],
-    phase1: products,
     prepared,
+    candidatesPath,
+    filteredPath,
   };
 }
 
-function countAuthorities(products) {
-  let ru = 0;
-  let uk = 0;
-  for (const product of products) {
-    if (product.authority?.language === 'ru') ru += 1;
-    else if (product.authority?.language === 'uk') uk += 1;
-  }
-  return { ru, uk_fallback: uk };
-}
-
-function buildCollisionReport({ products, mappings }) {
-  const { cross, within } = collectSkuCollisions(products);
-  const productIndex = new Map(products.map(p => [p.native_product_id, p]));
+function buildCollisionReport({ collisionSnapshot, productIndex, mappings }) {
   const entries = [];
 
-  for (const collision of cross) {
+  for (const collision of collisionSnapshot.cross) {
     for (const entry of collision.entries) {
       entries.push(buildCollisionReportEntry({
         collision: {
@@ -224,7 +349,7 @@ function buildCollisionReport({ products, mappings }) {
       }));
     }
   }
-  for (const collision of within) {
+  for (const collision of collisionSnapshot.within) {
     for (const variant of collision.variants) {
       entries.push(buildCollisionReportEntry({
         collision: {
@@ -259,22 +384,6 @@ function writePreparedSpool({
 }) {
   const { ready } = resolveSpoolPaths(config.spoolRoot, snapshotWatermark);
   const building = buildingPath ?? resolveSpoolPaths(config.spoolRoot, snapshotWatermark).building;
-  fs.mkdirSync(building, { recursive: true });
-
-  let totalRows = 0;
-  let largestChunkBytes = 0;
-  let largestProductBytes = 0;
-
-  for (const chunk of prepared.allChunks) {
-    writeFileAtomic(building, chunk.filename, chunk.body);
-    totalRows += chunk.rows;
-    largestChunkBytes = Math.max(largestChunkBytes, chunk.bytes);
-  }
-
-  for (const product of prepared.canonicalPhase1) {
-    const bytes = Buffer.byteLength(JSON.stringify(product), 'utf8');
-    largestProductBytes = Math.max(largestProductBytes, bytes);
-  }
 
   const manifest = {
     schema: 'bp.drupal-exporter.spool/1',
@@ -291,17 +400,17 @@ function writePreparedSpool({
       phase0: phase0Count,
       phase1: phase1Count,
     },
-    chunk_count: prepared.allChunks.length,
-    chunks: prepared.allChunks.map(c => ({
+    chunk_count: prepared.chunks.length,
+    chunks: prepared.chunks.map(c => ({
       filename: c.filename,
       phase: c.phase,
       rows: c.rows,
       bytes: c.bytes,
       sha256: c.sha256,
     })),
-    total_canonical_rows: totalRows,
-    largest_chunk_bytes: largestChunkBytes,
-    largest_product_bytes: largestProductBytes,
+    total_canonical_rows: prepared.totalRows,
+    largest_chunk_bytes: prepared.largestChunkBytes,
+    largest_product_bytes: prepared.largestProductBytes,
   };
 
   writeJsonAtomic(building, 'manifest.json', manifest);
@@ -311,6 +420,11 @@ function writePreparedSpool({
   const sourceScratch = path.join(building, 'source');
   if (fs.existsSync(sourceScratch)) {
     fs.rmSync(sourceScratch, { recursive: true, force: true });
+  }
+
+  const sourceCandidates = path.join(building, 'source', 'candidates.ndjson');
+  if (fs.existsSync(sourceCandidates)) {
+    fs.unlinkSync(sourceCandidates);
   }
 
   atomicPromote(building, ready);

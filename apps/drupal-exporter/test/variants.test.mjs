@@ -7,6 +7,7 @@ import {
   simpleProduct,
   mergeDatasets,
   testConfig,
+  loadPhase1,
 } from './helpers/fixture-builder.mjs';
 import { BLOCKER_CODES } from '../src/blockers.mjs';
 import { combinationToCanonicalId } from '../src/php-combination.mjs';
@@ -50,7 +51,8 @@ test('simple product uses base variant identity', async () => {
     fixtureSourceDir: sourceDir,
     skipFilesystemChecks: true,
   });
-  const variant = result.phase1[0].variants[0];
+  const phase1 = await loadPhase1(result);
+  const variant = phase1[0].variants[0];
   assert.equal(variant.native_variant_id, '1|base');
   assert.equal(variant.is_default, true);
 });
@@ -75,7 +77,8 @@ test('default adjustment variant is default and base model is not duplicated', a
     fixtureSourceDir: sourceDir,
     skipFilesystemChecks: true,
   });
-  const product = result.phase1[0];
+  const phase1 = await loadPhase1(result);
+  const product = phase1[0];
   assert.equal(product.variants.length, 1);
   assert.equal(product.variants[0].sku, 'ADJ-SKU');
   assert.equal(product.variants[0].is_default, true);
@@ -110,7 +113,8 @@ test('synthesized default fallback variant when default combination lacks adjust
     fixtureSourceDir: sourceDir,
     skipFilesystemChecks: true,
   });
-  const product = result.phase1[0];
+  const phase1 = await loadPhase1(result);
+  const product = phase1[0];
   const defaults = product.variants.filter(v => v.is_default);
   assert.equal(defaults.length, 1);
   assert.equal(defaults[0].sku, 'FALLBACK-SKU');

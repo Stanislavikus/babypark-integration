@@ -1,54 +1,75 @@
-import { normalizeSku } from '../../../../src/catalog/domain/sku.mjs';
 import { BLOCKER_CODES, Blocker } from '../blockers.mjs';
+import { tryNormalizeSku } from '../canonical/sku.mjs';
 
-export function collectSkuCollisions(products) {
+export function createSkuCollisionCollector(blockers) {
   const crossProduct = new Map();
-  const withinProduct = [];
+  const withinByProduct = new Map();
 
+  return {
+    addProduct(product) {
+      const byKey = new Map();
+      for (const variant of product.variants) {
+        const normalized = tryNormalizeSku(variant.sku, blockers, {
+          native_product_id: product.native_product_id,
+          native_variant_id: variant.native_variant_id,
+          context: 'collision',
+        });
+        if (!normalized) continue;
+        const { sku_key } = normalized;
+        if (!byKey.has(sku_key)) byKey.set(sku_key, []);
+        byKey.get(sku_key).push(variant);
+      }
+
+      for (const [skuKey, variants] of byKey) {
+        if (variants.length > 1) {
+          if (!withinByProduct.has(product.native_product_id)) {
+            withinByProduct.set(product.native_product_id, []);
+          }
+          withinByProduct.get(product.native_product_id).push({
+            type: 'within_product',
+            sku_key: skuKey,
+            native_product_id: product.native_product_id,
+            variants,
+          });
+        }
+        if (!crossProduct.has(skuKey)) crossProduct.set(skuKey, []);
+        for (const variant of variants) {
+          crossProduct.get(skuKey).push({
+            native_product_id: product.native_product_id,
+            variant,
+            product,
+          });
+        }
+      }
+    },
+    snapshot() {
+      const cross = [];
+      for (const [skuKey, entries] of crossProduct) {
+        const productIds = new Set(entries.map(e => e.native_product_id));
+        if (productIds.size > 1) {
+          cross.push({
+            type: 'cross_product',
+            sku_key: skuKey,
+            entries,
+          });
+        }
+      }
+
+      const within = [];
+      for (const entries of withinByProduct.values()) {
+        within.push(...entries);
+      }
+      return { cross, within };
+    },
+  };
+}
+
+export function collectSkuCollisions(products, blockers = null) {
+  const collector = createSkuCollisionCollector(blockers ?? { add() {} });
   for (const product of products) {
-    const byKey = new Map();
-    for (const variant of product.variants) {
-      const { sku_key } = normalizeSku(variant.sku);
-      if (!byKey.has(sku_key)) {
-        byKey.set(sku_key, []);
-      }
-      byKey.get(sku_key).push(variant);
-    }
-    for (const [skuKey, variants] of byKey) {
-      if (variants.length > 1) {
-        withinProduct.push({
-          type: 'within_product',
-          sku_key: skuKey,
-          native_product_id: product.native_product_id,
-          variants,
-        });
-      }
-      if (!crossProduct.has(skuKey)) {
-        crossProduct.set(skuKey, []);
-      }
-      for (const variant of variants) {
-        crossProduct.get(skuKey).push({
-          native_product_id: product.native_product_id,
-          variant,
-          product,
-        });
-      }
-    }
+    collector.addProduct(product);
   }
-
-  const cross = [];
-  for (const [skuKey, entries] of crossProduct) {
-    const productIds = new Set(entries.map(e => e.native_product_id));
-    if (productIds.size > 1) {
-      cross.push({
-        type: 'cross_product',
-        sku_key: skuKey,
-        entries,
-      });
-    }
-  }
-
-  return { cross, within: withinProduct };
+  return collector.snapshot();
 }
 
 export function buildCollisionReportEntry({
@@ -58,11 +79,14 @@ export function buildCollisionReportEntry({
   const product = collision.product ?? productIndex.get(collision.native_product_id);
   const authority = product?.authority ?? {};
   const variant = collision.variant;
-  const normalized = normalizeSku(variant.sku);
+  const normalized = tryNormalizeSku(variant.sku, { add() {} }, {
+    native_product_id: product?.native_product_id ?? collision.native_product_id,
+    native_variant_id: variant.native_variant_id,
+  });
   return {
     collision_type: collision.collision_type,
     sku: variant.sku,
-    sku_key: normalized.sku_key,
+    sku_key: normalized?.sku_key ?? null,
     native_product_id: product?.native_product_id ?? collision.native_product_id,
     authority_nid: authority.nid ?? null,
     title: authority.title ?? null,
@@ -95,8 +119,7 @@ export function sortCollisionReport(entries) {
   });
 }
 
-function reportRemainingCollisions({ products, blockers }) {
-  const { cross, within } = collectSkuCollisions(products);
+function reportRemainingCollisions({ cross, within, blockers }) {
   for (const collision of cross) {
     blockers.add(new Blocker(
       BLOCKER_CODES.SKU_COLLISION_CROSS_PRODUCT,
@@ -132,15 +155,14 @@ function reportRemainingCollisions({ products, blockers }) {
   }
 }
 
-export function applyCollisionConfig({
-  products,
+export function resolveCollisionExclusions({
+  cross,
+  within,
   mappings,
   blockers,
 }) {
   const excludedProducts = new Set();
   const excludedVariants = new Set();
-  const { cross, within } = collectSkuCollisions(products);
-
   const crossByKey = new Map(cross.map(c => [c.sku_key, c]));
   const withinByKey = new Map();
   for (const entry of within) {
@@ -262,16 +284,37 @@ export function applyCollisionConfig({
     }
   }
 
-  const filtered = products
-    .filter(p => !excludedProducts.has(p.native_product_id))
-    .map(product => ({
-      ...product,
-      variants: product.variants.filter(
-        v => !excludedVariants.has(v.native_variant_id)
-      ),
-    }));
+  return { excludedProducts, excludedVariants };
+}
 
-  reportRemainingCollisions({ products: filtered, blockers });
+export function filterProductByExclusions(product, { excludedProducts, excludedVariants }) {
+  if (excludedProducts.has(product.native_product_id)) {
+    return null;
+  }
+  return {
+    ...product,
+    variants: product.variants.filter(
+      v => !excludedVariants.has(v.native_variant_id)
+    ),
+  };
+}
+
+export function applyCollisionConfig({
+  products,
+  mappings,
+  blockers,
+}) {
+  const { cross, within } = collectSkuCollisions(products, blockers);
+  const exclusions = resolveCollisionExclusions({ cross, within, mappings, blockers });
+  const filtered = products
+    .map(product => filterProductByExclusions(product, exclusions))
+    .filter(Boolean);
+
+  const postCollector = createSkuCollisionCollector(blockers);
+  for (const product of filtered) {
+    postCollector.addProduct(product);
+  }
+  reportRemainingCollisions({ ...postCollector.snapshot(), blockers });
 
   return filtered;
 }

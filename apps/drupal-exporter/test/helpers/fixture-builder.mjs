@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { writeNdjson } from '../../src/source/fixture-reader.mjs';
+import { loadAllCandidateProducts } from '../../src/export/candidates.mjs';
 
 export function createFixtureDir(name = 'drupal-fixture-') {
   return fs.mkdtempSync(path.join(os.tmpdir(), name));
@@ -83,6 +84,19 @@ export function mergeDatasets(...parts) {
     }
   }
   return merged;
+}
+
+export async function loadPhase1(result) {
+  if (result.phase1?.length) {
+    return result.phase1;
+  }
+  if (result.filteredPath && fs.existsSync(result.filteredPath)) {
+    return loadAllCandidateProducts(result.filteredPath);
+  }
+  if (result.candidatesPath && fs.existsSync(result.candidatesPath)) {
+    return loadAllCandidateProducts(result.candidatesPath);
+  }
+  return [];
 }
 
 export function testConfig(overrides = {}) {

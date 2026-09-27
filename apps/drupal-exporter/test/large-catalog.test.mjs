@@ -9,6 +9,7 @@ import {
   simpleProduct,
   mergeDatasets,
   testConfig,
+  loadPhase1,
 } from './helpers/fixture-builder.mjs';
 
 test('202-variant configurable product passes validator', async () => {
@@ -48,7 +49,8 @@ test('202-variant configurable product passes validator', async () => {
     skipFilesystemChecks: true,
   });
 
-  const product = result.phase1[0];
+  const phase1 = await loadPhase1(result);
+  const product = phase1[0];
   assert.equal(product.variants.length, 202);
   validateFullRecords([sanitizeProductForCanonical(product)]);
 });
@@ -76,7 +78,8 @@ test('zero stock rows retained for dynamically selected active stores', async ()
     skipFilesystemChecks: true,
   });
 
-  const stock = result.phase1[0].variants[0].stock;
+  const phase1 = await loadPhase1(result);
+  const stock = phase1[0].variants[0].stock;
   assert.deepEqual(stock.map(row => row.store_native_id), ['747']);
   assert.equal(stock.length, 1);
 });

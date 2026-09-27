@@ -9,23 +9,24 @@ import { resolveSpoolPaths, createBuildingDir } from '../spool/layout.mjs';
 export async function streamQueryToNdjson(conn, sql, outPath) {
   const stream = conn.queryStream({ sql });
   const fd = fs.openSync(outPath, 'w');
-  try {
-    for await (const row of stream) {
-      try {
-        fs.writeSync(fd, `${JSON.stringify(row)}\n`);
-      } catch (error) {
-        if (typeof stream.close === 'function') {
-          await stream.close();
-        }
-        throw error;
-      }
-    }
-  } catch (error) {
-    if (typeof stream.close === 'function') {
+  let closed = false;
+
+  async function closeStreamOnce() {
+    if (!closed && typeof stream.close === 'function') {
+      closed = true;
       await stream.close();
     }
+  }
+
+  try {
+    for await (const row of stream) {
+      fs.writeSync(fd, `${JSON.stringify(row)}\n`);
+    }
+  } catch (error) {
+    await closeStreamOnce();
     throw error;
   } finally {
+    await closeStreamOnce();
     fs.closeSync(fd);
   }
 }
@@ -45,6 +46,7 @@ export async function extractSnapshotToNdjson({
   });
 
   let buildingPath = null;
+  let ownsBuildingPath = false;
 
   try {
     await conn.query('SET SESSION TRANSACTION ISOLATION LEVEL REPEATABLE READ');
@@ -81,7 +83,8 @@ export async function extractSnapshotToNdjson({
     const paths = resolveSpoolPaths(config.spoolRoot, snapshotWatermark);
     buildingPath = paths.building;
     const sourceDir = path.join(buildingPath, 'source');
-    createBuildingDir(buildingPath);
+    createBuildingDir(buildingPath, paths.ready);
+    ownsBuildingPath = true;
 
     for (const name of SOURCE_QUERY_NAMES) {
       await streamQueryToNdjson(
@@ -98,9 +101,10 @@ export async function extractSnapshotToNdjson({
       stockSyncUnix,
       buildingPath,
       sourceDir,
+      ownsBuildingPath,
     };
   } catch (error) {
-    if (buildingPath && fs.existsSync(buildingPath)) {
+    if (ownsBuildingPath && buildingPath && fs.existsSync(buildingPath)) {
       fs.rmSync(buildingPath, { recursive: true, force: true });
     }
     try {

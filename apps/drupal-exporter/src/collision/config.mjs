@@ -63,3 +63,33 @@ export function parseCollisionMappings(config) {
   }
   return mappings;
 }
+
+function mappingIdentityKey(mapping) {
+  if (mapping.action === 'exclude_product') {
+    return `exclude_product:${mapping.sku_key}`;
+  }
+  if (mapping.action === 'exclude_variant') {
+    return `exclude_variant:${mapping.native_product_id}:${mapping.sku_key}`;
+  }
+  return `unsupported:${JSON.stringify(mapping)}`;
+}
+
+export function validateCollisionMappingUniqueness(mappings, blockers) {
+  const seen = new Map();
+  for (const mapping of mappings) {
+    const key = mappingIdentityKey(mapping);
+    if (seen.has(key)) {
+      blockers.add(new Blocker(
+        BLOCKER_CODES.COLLISION_MAPPING_UNSUPPORTED,
+        'Duplicate or conflicting collision mapping for same collision identity',
+        {
+          collision_identity: key,
+          existing_mapping: seen.get(key),
+          conflicting_mapping: mapping,
+        }
+      ));
+      continue;
+    }
+    seen.set(key, mapping);
+  }
+}

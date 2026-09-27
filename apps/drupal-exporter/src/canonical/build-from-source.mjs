@@ -1,5 +1,5 @@
 import path from 'node:path';
-import { normalizeSku } from '../../../../src/catalog/domain/sku.mjs';
+import fs from 'node:fs';
 import {
   FULL_RECORD_SCHEMA,
   PROVIDER,
@@ -18,56 +18,125 @@ import {
   unixToIso,
 } from './records.mjs';
 import { buildVariants } from './variant-builder.mjs';
+import { buildLocalized } from './localized.mjs';
+import { tryNormalizeSku } from './sku.mjs';
 import {
   streamNdjson,
   loadSmallNdjson,
 } from '../source/stream-index.mjs';
+import { buildNidShards, readNidShard, removeNidShards } from '../source/nid-shards.mjs';
 import { globalTopoSortCategories } from './ordering.mjs';
+import {
+  candidatesPathFor,
+  appendCandidateProduct,
+} from '../export/candidates.mjs';
 
 function maxChanged(nodes) {
   return nodes.reduce((max, node) => Math.max(max, node.changed), 0);
 }
 
-function resolveUrl(node, aliases, publicSiteUrl) {
-  const matches = aliases.filter(a =>
-    (a.language === node.language || a.language === 'und')
-  );
-  if (matches.length > 1) {
-    return {
-      error: new Blocker(
-        BLOCKER_CODES.URL_ALIAS_MULTIPLE,
-        'Multiple URL aliases for node/language',
-        { nid: node.nid, language: node.language, aliases: matches }
-      ),
-    };
-  }
-  if (matches.length === 1) {
-    const alias = matches[0].alias.startsWith('/')
-      ? matches[0].alias
-      : `/${matches[0].alias}`;
-    return { url: `${publicSiteUrl}${alias}` };
-  }
-  return { url: `${publicSiteUrl}/node/${node.nid}` };
-}
-
-function buildLocalized(translations, bodies, aliases, publicSiteUrl, blockers) {
-  const localized = {};
+function detectDuplicateLanguages(translations, groupId, blockers) {
+  const byLang = new Map();
   for (const node of translations) {
     if (!SUPPORTED_AUTHORITY_LANGUAGES.includes(node.language)) continue;
-    const body = bodies.get(node.nid) ?? {};
-    const urlResult = resolveUrl(node, aliases.get(node.nid) ?? [], publicSiteUrl);
-    if (urlResult.error) {
-      blockers.add(urlResult.error);
+    if (!byLang.has(node.language)) byLang.set(node.language, []);
+    byLang.get(node.language).push(node);
+  }
+  for (const [language, nodes] of byLang) {
+    if (nodes.length > 1) {
+      blockers.add(new Blocker(
+        BLOCKER_CODES.PRODUCT_TRANSLATION_DUPLICATE_LANGUAGE,
+        'Multiple published nodes for same language in translation group',
+        {
+          native_product_id: groupId,
+          language,
+          candidate_nids: nodes.map(n => n.nid),
+          candidate_titles: nodes.map(n => n.title),
+          changed_timestamps: nodes.map(n => n.changed),
+        }
+      ));
+    }
+  }
+}
+
+function buildCategoryParentIndex(hierarchy, blockers) {
+  const parentsByTid = new Map();
+  for (const row of hierarchy) {
+    if (!parentsByTid.has(row.tid)) parentsByTid.set(row.tid, new Set());
+    parentsByTid.get(row.tid).add(row.parent);
+  }
+  const parentByTid = new Map();
+  for (const [tid, parents] of parentsByTid) {
+    if (parents.size > 1) {
+      blockers.add(new Blocker(
+        BLOCKER_CODES.CATEGORY_PARENT_CONFLICT,
+        'Category term has multiple distinct parents',
+        { tid, parents: [...parents] }
+      ));
       continue;
     }
-    localized[node.language] = {
-      title: node.title,
-      short_description: body.summary ?? '',
-      description: body.value ?? '',
-      url: urlResult.url,
-    };
+    parentByTid.set(tid, [...parents][0]);
   }
-  return localized;
+  return parentByTid;
+}
+
+async function buildProductShards(sourceDir, workDir, exportNids, authorityNids) {
+  const shardRoot = path.join(workDir, 'nid-shards');
+  const shardSpecs = [
+    { name: 'bodies', file: 'bodies.ndjson', field: 'entity_id', filter: nid => exportNids.has(nid) },
+    { name: 'aliases', file: 'aliases.ndjson', field: 'nid', filter: nid => exportNids.has(nid) },
+    {
+      name: 'product_attributes',
+      file: 'product_attributes.ndjson',
+      field: 'nid',
+      filter: nid => authorityNids.has(nid),
+    },
+    {
+      name: 'product_options',
+      file: 'product_options.ndjson',
+      field: 'nid',
+      filter: nid => authorityNids.has(nid),
+    },
+    {
+      name: 'adjustments',
+      file: 'adjustments.ndjson',
+      field: 'nid',
+      filter: nid => authorityNids.has(nid),
+    },
+    {
+      name: 'images',
+      file: 'images.ndjson',
+      field: 'entity_id',
+      filter: nid => authorityNids.has(nid),
+    },
+  ];
+
+  await Promise.all(shardSpecs.map(spec => buildNidShards({
+    sourceFile: path.join(sourceDir, spec.file),
+    shardDir: path.join(shardRoot, spec.name),
+    nidField: spec.field,
+    filter: spec.filter,
+  })));
+
+  return shardRoot;
+}
+
+function readBodiesForTranslations(shardRoot, translations) {
+  const bodies = new Map();
+  for (const node of translations) {
+    const rows = readNidShard(path.join(shardRoot, 'bodies'), node.nid);
+    if (rows.length) bodies.set(node.nid, rows[rows.length - 1]);
+  }
+  return bodies;
+}
+
+function readAliasesForTranslations(shardRoot, translations) {
+  const aliases = new Map();
+  for (const node of translations) {
+    const rows = readNidShard(path.join(shardRoot, 'aliases'), node.nid);
+    if (rows.length) aliases.set(node.nid, rows);
+  }
+  return aliases;
 }
 
 export async function buildCanonicalRecords({
@@ -132,16 +201,9 @@ export async function buildCanonicalRecords({
     if (authority) authorityNids.add(authority.nid);
   }
 
-  const bodies = new Map();
-  await streamNdjson(path.join(sourceDir, 'bodies.ndjson'), row => {
-    if (exportNids.has(row.entity_id)) bodies.set(row.entity_id, row);
-  });
-
-  const aliasByNid = new Map();
-  await streamNdjson(path.join(sourceDir, 'aliases.ndjson'), row => {
-    if (!aliasByNid.has(row.nid)) aliasByNid.set(row.nid, []);
-    aliasByNid.get(row.nid).push(row);
-  });
+  const workDir = path.join(sourceDir, '.work');
+  fs.mkdirSync(workDir, { recursive: true });
+  const shardRoot = await buildProductShards(sourceDir, workDir, exportNids, authorityNids);
 
   const statusByNid = new Map(fieldStatuses.map(r => [r.entity_id, r.value]));
   const providerByNid = new Map();
@@ -194,7 +256,7 @@ export async function buildCanonicalRecords({
     categoryLocalized.get(canonical)[term.language] = term.name;
   }
 
-  const parentByTid = new Map(hierarchy.map(row => [row.tid, row.parent]));
+  const parentByTid = buildCategoryParentIndex(hierarchy, blockers);
   const translationGroupParents = new Map();
   for (const term of categories) {
     const canonical = categoryCanonicalIds.get(term.tid);
@@ -260,27 +322,6 @@ export async function buildCanonicalRecords({
     if (error instanceof Blocker) blockers.add(error);
   }
 
-  const attrsByProduct = new Map();
-  await streamNdjson(path.join(sourceDir, 'product_attributes.ndjson'), row => {
-    if (!authorityNids.has(row.nid)) return;
-    if (!attrsByProduct.has(row.nid)) attrsByProduct.set(row.nid, []);
-    attrsByProduct.get(row.nid).push(row);
-  });
-
-  const optionsByProduct = new Map();
-  await streamNdjson(path.join(sourceDir, 'product_options.ndjson'), row => {
-    if (!authorityNids.has(row.nid)) return;
-    if (!optionsByProduct.has(row.nid)) optionsByProduct.set(row.nid, []);
-    optionsByProduct.get(row.nid).push(row);
-  });
-
-  const adjustmentsByProduct = new Map();
-  await streamNdjson(path.join(sourceDir, 'adjustments.ndjson'), row => {
-    if (!authorityNids.has(row.nid)) return;
-    if (!adjustmentsByProduct.has(row.nid)) adjustmentsByProduct.set(row.nid, []);
-    adjustmentsByProduct.get(row.nid).push(row);
-  });
-
   const nodeByNid = new Map(nodes.map(n => [n.nid, n]));
   const ucByNid = new Map();
   for (const row of ucProducts) {
@@ -293,21 +334,20 @@ export async function buildCanonicalRecords({
   const optionMeta = new Map(attributeOptions.map(o => [o.oid, o]));
 
   const activeStoreIds = new Set();
-  const stockRows = [];
-  await streamNdjson(path.join(sourceDir, 'stock.ndjson'), row => {
-    stockRows.push(row);
-    const storeId = String(row.shop_id ?? row.shop);
-    if (row.stock > 0) activeStoreIds.add(storeId);
-  });
-
   const stockBySkuKey = new Map();
   const stockDedupe = new Set();
   const stockSourceUpdatedAt = unixToIso(stockSyncUnix);
-  for (const row of stockRows) {
+  await streamNdjson(path.join(sourceDir, 'stock.ndjson'), row => {
     const storeId = String(row.shop_id ?? row.shop);
-    if (!activeStoreIds.has(storeId)) continue;
+    if (row.stock > 0) activeStoreIds.add(storeId);
 
-    const { sku_key } = normalizeSku(row.sku);
+    const normalized = tryNormalizeSku(row.sku, blockers, {
+      context: 'stock',
+      store_native_id: storeId,
+    });
+    if (!normalized) return;
+
+    const { sku_key } = normalized;
     const dedupeKey = `${sku_key}\0${storeId}`;
     if (stockDedupe.has(dedupeKey)) {
       blockers.add(new Blocker(
@@ -315,7 +355,7 @@ export async function buildCanonicalRecords({
         'Duplicate normalized stock row for sku_key and store',
         { sku_key, store_native_id: storeId }
       ));
-      continue;
+      return;
     }
     stockDedupe.add(dedupeKey);
     if (!stockBySkuKey.has(sku_key)) stockBySkuKey.set(sku_key, []);
@@ -324,7 +364,7 @@ export async function buildCanonicalRecords({
       quantity: row.stock,
       source_updated_at: stockSourceUpdatedAt,
     });
-  }
+  });
 
   const storeRecords = new Map();
   for (const term of storeTerms) {
@@ -345,18 +385,18 @@ export async function buildCanonicalRecords({
     }
   }
 
-  const imagesByNid = new Map();
-  await streamNdjson(path.join(sourceDir, 'images.ndjson'), row => {
-    if (!authorityNids.has(row.entity_id)) return;
-    if (!imagesByNid.has(row.entity_id)) imagesByNid.set(row.entity_id, []);
-    imagesByNid.get(row.entity_id).push(row);
-  });
+  const candidatesPath = candidatesPathFor(sourceDir);
+  if (fs.existsSync(candidatesPath)) {
+    fs.unlinkSync(candidatesPath);
+  }
 
-  const products = [];
   const sortedGroupIds = [...groups.keys()].sort((a, b) => Number(a) - Number(b));
+  let productCount = 0;
 
   for (const groupId of sortedGroupIds) {
     const translations = groups.get(groupId);
+    detectDuplicateLanguages(translations, groupId, blockers);
+
     const authority = resolveAuthorityNode(translations);
     if (!authority) {
       const langs = translations.map(t => t.language);
@@ -370,10 +410,24 @@ export async function buildCanonicalRecords({
       continue;
     }
 
-    const productAttrs = attrsByProduct.get(authority.nid) ?? [];
+    const productAttrs = readNidShard(
+      path.join(shardRoot, 'product_attributes'),
+      authority.nid
+    );
     const kind = productAttrs.length === 0 ? 'SIMPLE' : 'CONFIGURABLE';
     const uc = ucByNid.get(authority.nid);
-    if (!uc) continue;
+    if (!uc) {
+      blockers.add(new Blocker(
+        BLOCKER_CODES.PRODUCT_SOURCE_MISSING,
+        'Published uc_product node missing current uc_products row',
+        {
+          native_product_id: groupId,
+          authority_nid: authority.nid,
+          authority_vid: authority.vid,
+        }
+      ));
+      continue;
+    }
 
     const tids = providerByNid.get(authority.nid) ?? [];
     let brandNativeId = null;
@@ -397,6 +451,8 @@ export async function buildCanonicalRecords({
       }
     }
 
+    const bodies = readBodiesForTranslations(shardRoot, translations);
+    const aliasByNid = readAliasesForTranslations(shardRoot, translations);
     const localized = buildLocalized(
       translations,
       bodies,
@@ -419,14 +475,23 @@ export async function buildCanonicalRecords({
       membership.push({ native_category_id: canonical });
     }
 
+    const productOptions = readNidShard(
+      path.join(shardRoot, 'product_options'),
+      authority.nid
+    );
+    const adjustments = readNidShard(
+      path.join(shardRoot, 'adjustments'),
+      authority.nid
+    );
+
     const variants = buildVariants({
       groupId,
       authority,
       kind,
       uc,
       productAttrs,
-      productOptions: optionsByProduct.get(authority.nid) ?? [],
-      adjustments: adjustmentsByProduct.get(authority.nid) ?? [],
+      productOptions,
+      adjustments,
       attrMeta,
       optionMeta,
       statusByNid,
@@ -434,8 +499,10 @@ export async function buildCanonicalRecords({
     });
 
     const imageRecords = [];
-    const authorityImages = (imagesByNid.get(authority.nid) ?? [])
-      .sort((a, b) => a.delta - b.delta || a.fid - b.fid);
+    const authorityImages = readNidShard(
+      path.join(shardRoot, 'images'),
+      authority.nid
+    ).sort((a, b) => a.delta - b.delta || a.fid - b.fid);
     for (const image of authorityImages) {
       const resolved = resolveImageUrl(image.uri, config.publicFilesUrl);
       if (resolved.error) {
@@ -458,8 +525,13 @@ export async function buildCanonicalRecords({
     }
 
     for (const variant of variants) {
-      const { sku_key } = normalizeSku(variant.sku);
-      variant.stock = (stockBySkuKey.get(sku_key) ?? [])
+      const normalized = tryNormalizeSku(variant.sku, blockers, {
+        native_product_id: groupId,
+        native_variant_id: variant.native_variant_id,
+      });
+      if (!normalized) continue;
+      variant.stock = (stockBySkuKey.get(normalized.sku_key) ?? [])
+        .filter(entry => activeStoreIds.has(entry.store_native_id))
         .slice()
         .sort((a, b) => Number(a.store_native_id) - Number(b.store_native_id));
     }
@@ -496,7 +568,13 @@ export async function buildCanonicalRecords({
     if (brandNativeId) {
       productRecord.brand_native_id = brandNativeId;
     }
-    products.push(productRecord);
+    appendCandidateProduct(candidatesPath, productRecord);
+    productCount += 1;
+  }
+
+  removeNidShards(shardRoot);
+  if (fs.existsSync(workDir)) {
+    fs.rmSync(workDir, { recursive: true, force: true });
   }
 
   return {
@@ -509,7 +587,8 @@ export async function buildCanonicalRecords({
       ),
       ...categoryRecords,
     ],
-    phase1: products,
+    candidatesPath,
+    productCount,
     excluded_by_policy: {
       product_kit: excludedKitCount,
     },

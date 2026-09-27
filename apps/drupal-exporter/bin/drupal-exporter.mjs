@@ -23,6 +23,7 @@ try {
     mode: command,
     snapshot_watermark: result.snapshotWatermark,
     preflight: result.preflight,
+    collision_report: result.collisionReport ?? null,
     spool: result.spool ?? null,
   }, null, 2)}\n`);
 

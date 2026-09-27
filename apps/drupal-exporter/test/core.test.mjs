@@ -8,6 +8,7 @@ import {
   simpleProduct,
   mergeDatasets,
   testConfig,
+  loadPhase1,
 } from './helpers/fixture-builder.mjs';
 import { productGroupId, resolveAuthorityNode } from '../src/canonical/records.mjs';
 import { BLOCKER_CODES } from '../src/blockers.mjs';
@@ -39,7 +40,8 @@ test('discovers dynamic uc_product node types and excludes product_kit', async t
 
   assert.deepEqual(result.preflight.product_types.sort(), ['product', 'toy']);
   assert.equal(result.preflight.excluded_by_policy.product_kit, 1);
-  assert.equal(result.phase1.length, 2);
+  const phase1 = await loadPhase1(result);
+  assert.equal(phase1.length, 2);
 });
 
 test('RU authority with UK fallback and unsupported language blocker', async () => {
@@ -68,9 +70,10 @@ test('RU authority with UK fallback and unsupported language blocker', async () 
     skipFilesystemChecks: true,
   });
 
+  const phase1 = await loadPhase1(result);
   assert.equal(resolveAuthorityNode([{ language: 'uk' }]).language, 'uk');
-  assert.equal(result.phase1.find(p => p.native_product_id === '10').authority.language, 'ru');
-  assert.equal(result.phase1.find(p => p.native_product_id === '10').localized.uk.title, 'UK');
+  assert.equal(phase1.find(p => p.native_product_id === '10').authority.language, 'ru');
+  assert.equal(phase1.find(p => p.native_product_id === '10').localized.uk.title, 'UK');
   assert.ok(result.preflight.blockers.some(b => b.code === BLOCKER_CODES.UNSUPPORTED_LANGUAGE));
 });
 
@@ -92,7 +95,8 @@ test('joins und-language Drupal fields without requiring field.language = node.l
     fixtureSourceDir: sourceDir,
     skipFilesystemChecks: true,
   });
-  const product = result.phase1[0];
+  const phase1 = await loadPhase1(result);
+  const product = phase1[0];
   assert.equal(product.localized.ru.short_description, 'und summary');
   assert.equal(product.brand_native_id, '5');
   assert.equal(product.variants[0].offer.commercial_availability, 'EXPECTED');
@@ -118,12 +122,13 @@ test('URL alias lookup and /node/<nid> fallback', async () => {
     skipFilesystemChecks: true,
   });
 
+  const phase1 = await loadPhase1(result);
   assert.equal(
-    result.phase1.find(p => p.native_product_id === '40').localized.ru.url,
+    phase1.find(p => p.native_product_id === '40').localized.ru.url,
     'https://babypark.ua/product-40'
   );
   assert.equal(
-    result.phase1.find(p => p.native_product_id === '41').localized.ru.url,
+    phase1.find(p => p.native_product_id === '41').localized.ru.url,
     'https://babypark.ua/node/41'
   );
 });

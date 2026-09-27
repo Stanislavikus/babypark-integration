@@ -9,6 +9,7 @@ import {
   simpleProduct,
   mergeDatasets,
   testConfig,
+  loadPhase1,
 } from './helpers/fixture-builder.mjs';
 import { BLOCKER_CODES } from '../src/blockers.mjs';
 
@@ -100,9 +101,10 @@ mappings:
     skipFilesystemChecks: true,
   });
 
-  assert.equal(result.phase1.length, 2);
-  assert.equal(result.phase1.find(p => p.native_product_id === '2'), undefined);
-  const retained = result.phase1.find(p => p.native_product_id === '21136');
+  const phase1 = await loadPhase1(result);
+  assert.equal(phase1.length, 2);
+  assert.equal(phase1.find(p => p.native_product_id === '2'), undefined);
+  const retained = phase1.find(p => p.native_product_id === '21136');
   assert.equal(retained.variants.length, 1);
   assert.equal(retained.variants[0].native_variant_id, '21136|opts:26=24401');
 });
