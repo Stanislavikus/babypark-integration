@@ -4,6 +4,7 @@ import path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { anomalyError } from './errors.mjs';
 import { computeObservationSetDigest } from './fingerprint.mjs';
+import { validateObservation } from './observation.mjs';
 import {
   ANOMALY_REQUIRED_TABLES,
   ANOMALY_SCHEMA_VERSION,
@@ -290,13 +291,93 @@ export class AnomalyStore {
         'detectorVersion must be a positive integer'
       );
     }
+    if (snapshotWatermark !== null) {
+      requireText('snapshotWatermark', snapshotWatermark);
+    }
+    if (!Array.isArray(observations)) {
+      throw anomalyError(
+        'ANOMALY_INVALID_ARGUMENT',
+        'observations must be an array'
+      );
+    }
+
+    for (const [index, observation] of observations.entries()) {
+      try {
+        validateObservation(observation);
+      } catch (error) {
+        throw anomalyError(
+          'ANOMALY_INVALID_OBSERVATION',
+          'Authoritative batch contains an invalid observation',
+          { index, cause: error.message }
+        );
+      }
+      if (observation.provider !== provider ||
+          observation.sourceEpoch !== sourceEpoch ||
+          observation.detectorNamespace !== detectorNamespace ||
+          observation.detectorVersion !== detectorVersion) {
+        throw anomalyError(
+          'ANOMALY_OBSERVATION_DOMAIN_MISMATCH',
+          'Observation identity does not match authoritative batch domain',
+          {
+            index,
+            batch: {
+              provider,
+              sourceEpoch,
+              detectorNamespace,
+              detectorVersion,
+            },
+            observation: {
+              provider: observation.provider,
+              sourceEpoch: observation.sourceEpoch,
+              detectorNamespace: observation.detectorNamespace,
+              detectorVersion: observation.detectorVersion,
+            },
+          }
+        );
+      }
+    }
 
     const digest = computeObservationSetDigest(observations);
-    const existingBatch = this.db.prepare(
-      'SELECT observation_set_digest FROM observation_batches WHERE batch_id = ?'
-    ).get(batchId);
+    const existingBatch = this.db.prepare(`
+      SELECT provider, source_epoch, detector_namespace, detector_version,
+             authoritative, snapshot_watermark, observation_set_digest
+      FROM observation_batches
+      WHERE batch_id = ?
+    `).get(batchId);
 
     if (existingBatch) {
+      const sameIdentity =
+        existingBatch.provider === provider &&
+        existingBatch.source_epoch === sourceEpoch &&
+        existingBatch.detector_namespace === detectorNamespace &&
+        Number(existingBatch.detector_version) === detectorVersion &&
+        Number(existingBatch.authoritative) === 1 &&
+        existingBatch.snapshot_watermark === snapshotWatermark;
+      if (!sameIdentity) {
+        throw anomalyError(
+          'ANOMALY_BATCH_IDENTITY_CONFLICT',
+          'Batch ID was reused with different authoritative batch identity',
+          {
+            batchId,
+            expected: {
+              provider: existingBatch.provider,
+              sourceEpoch: existingBatch.source_epoch,
+              detectorNamespace: existingBatch.detector_namespace,
+              detectorVersion: Number(existingBatch.detector_version),
+              authoritative: Number(existingBatch.authoritative) === 1,
+              snapshotWatermark: existingBatch.snapshot_watermark,
+            },
+            actual: {
+              provider,
+              sourceEpoch,
+              detectorNamespace,
+              detectorVersion,
+              authoritative: true,
+              snapshotWatermark,
+            },
+          }
+        );
+      }
       if (existingBatch.observation_set_digest !== digest) {
         throw anomalyError(
           'ANOMALY_BATCH_DIGEST_CONFLICT',
@@ -405,6 +486,7 @@ export class AnomalyStore {
       return { fingerprint: observation.fingerprint, event: 'OPENED' };
     }
 
+    const wasAbsent = existing.observation_state !== 'OBSERVED';
     const wasCleared = existing.observation_state === 'CLEARED';
     const materialChanged = existing.material_evidence_sha256 !== observation.materialEvidenceSha256;
     const events = [];
@@ -423,7 +505,10 @@ export class AnomalyStore {
       SET observation_state = 'OBSERVED',
           last_seen_at = ?,
           occurrence_count = occurrence_count + 1,
-          consecutive_occurrence_count = consecutive_occurrence_count + 1,
+          consecutive_occurrence_count = CASE
+            WHEN ? THEN 1
+            ELSE consecutive_occurrence_count + 1
+          END,
           clean_observation_count = 0,
           recurrence_count = ?,
           last_material_change_at = CASE WHEN ? THEN ? ELSE last_material_change_at END,
@@ -433,6 +518,7 @@ export class AnomalyStore {
       WHERE incident_id = ?
     `).run(
       now,
+      wasAbsent ? 1 : 0,
       recurrenceCount,
       materialChanged ? 1 : 0,
       now,
@@ -462,6 +548,7 @@ export class AnomalyStore {
       this.db.prepare(`
         UPDATE incidents
         SET observation_state = 'NOT_OBSERVED',
+            consecutive_occurrence_count = 0,
             clean_observation_count = ?
         WHERE incident_id = ?
       `).run(nextCleanCount, incident.incident_id);
@@ -473,6 +560,7 @@ export class AnomalyStore {
       this.db.prepare(`
         UPDATE incidents
         SET observation_state = 'CLEARED',
+            consecutive_occurrence_count = 0,
             clean_observation_count = ?
         WHERE incident_id = ?
       `).run(nextCleanCount, incident.incident_id);

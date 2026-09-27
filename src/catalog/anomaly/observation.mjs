@@ -133,14 +133,105 @@ export function validateObservation(observation) {
   if (!observation?.fingerprint || !/^[a-f0-9]{64}$/.test(observation.fingerprint)) {
     throw new Error('Invalid observation fingerprint');
   }
-  if (!observation.anomalyType || !observation.provider || !observation.sourceEpoch) {
-    throw new Error('Observation missing required identity fields');
+
+  const requiredTextFields = [
+    'anomalyType',
+    'provider',
+    'sourceEpoch',
+    'detectorNamespace',
+    'identifierKind',
+    'identifierKey',
+    'isolationScope',
+  ];
+  for (const field of requiredTextFields) {
+    if (typeof observation[field] !== 'string' || observation[field].trim() === '') {
+      throw new Error(`Observation missing required identity field: ${field}`);
+    }
   }
-  if (!observation.materialEvidence || !observation.materialEvidenceSha256) {
+  if (!Number.isInteger(observation.detectorVersion) || observation.detectorVersion < 1) {
+    throw new Error('Observation detectorVersion must be a positive integer');
+  }
+  if (observation.identifierKind !== IDENTIFIER_KINDS.SKU_KEY) {
+    throw new Error('Unsupported observation identifier kind');
+  }
+  if (observation.isolationScope !== 'SOURCE_PRODUCTS') {
+    throw new Error('Unsupported observation isolation scope');
+  }
+
+  if (!observation.materialEvidence || typeof observation.materialEvidence !== 'object' ||
+      Array.isArray(observation.materialEvidence)) {
     throw new Error('Observation missing material evidence');
   }
+  if (!/^[a-f0-9]{64}$/.test(observation.materialEvidenceSha256 ?? '')) {
+    throw new Error('Invalid observation material evidence hash');
+  }
+  const expectedEvidenceHash = materialEvidenceSha256(observation.materialEvidence);
+  if (observation.materialEvidenceSha256 !== expectedEvidenceHash) {
+    throw new Error('Observation material evidence hash mismatch');
+  }
+
   if (!Array.isArray(observation.affectedNativeProductIds) ||
-      observation.affectedNativeProductIds.length === 0) {
+      observation.affectedNativeProductIds.length === 0 ||
+      observation.affectedNativeProductIds.some(
+        productId => typeof productId !== 'string' || productId.trim() === ''
+      )) {
     throw new Error('Observation missing affected native product IDs');
   }
+  const affected = observation.affectedNativeProductIds;
+  if (new Set(affected).size !== affected.length) {
+    throw new Error('Observation contains duplicate affected native product IDs');
+  }
+  const sortedAffected = [...affected].sort((a, b) => a.localeCompare(b));
+  if (affected.some((productId, index) => productId !== sortedAffected[index])) {
+    throw new Error('Observation affected native product IDs are not sorted');
+  }
+
+  const colliders = observation.materialEvidence.colliders;
+  if (!Array.isArray(colliders) || colliders.length < 2 ||
+      colliders.some(collider =>
+        typeof collider?.native_product_id !== 'string' ||
+        collider.native_product_id.trim() === '' ||
+        typeof collider?.native_variant_id !== 'string' ||
+        collider.native_variant_id.trim() === ''
+      )) {
+    throw new Error('Observation material evidence has invalid colliders');
+  }
+  const evidenceAffected = [
+    ...new Set(colliders.map(collider => collider.native_product_id)),
+  ].sort((a, b) => a.localeCompare(b));
+  if (evidenceAffected.length !== affected.length ||
+      evidenceAffected.some((productId, index) => productId !== affected[index])) {
+    throw new Error('Observation affected native product IDs do not match material evidence');
+  }
+
+  if (observation.anomalyType === ANOMALY_TYPES.SKU_COLLISION_WITHIN_PRODUCT) {
+    if (affected.length !== 1 ||
+        typeof observation.nativeProductId !== 'string' ||
+        observation.nativeProductId !== affected[0]) {
+      throw new Error('Within-product observation has invalid native product identity');
+    }
+  } else if (observation.anomalyType === ANOMALY_TYPES.SKU_COLLISION_CROSS_PRODUCT) {
+    if (affected.length < 2 ||
+        (observation.nativeProductId !== null && observation.nativeProductId !== undefined)) {
+      throw new Error('Cross-product observation has invalid native product identity');
+    }
+  } else {
+    throw new Error('Unsupported observation anomaly type');
+  }
+
+  const expectedFingerprint = computeFingerprint({
+    anomalyType: observation.anomalyType,
+    provider: observation.provider,
+    sourceEpoch: observation.sourceEpoch,
+    detectorNamespace: observation.detectorNamespace,
+    detectorVersion: observation.detectorVersion,
+    identifierKind: observation.identifierKind,
+    identifierKey: observation.identifierKey,
+    nativeProductId: observation.nativeProductId ?? null,
+  });
+  if (observation.fingerprint !== expectedFingerprint) {
+    throw new Error('Observation fingerprint does not match identity fields');
+  }
+
+  return observation;
 }

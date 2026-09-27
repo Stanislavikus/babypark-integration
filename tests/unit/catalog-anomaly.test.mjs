@@ -200,6 +200,80 @@ test('conflicting reuse of batch_id fails', () => {
   store.close();
 });
 
+test('batch replay requires exact authoritative batch identity', () => {
+  const dbPath = tempDb('anomaly-batch-identity-');
+  const store = AnomalyStore.createNew(dbPath);
+  const batch = {
+    batchId: 'batch-identity',
+    provider: PROVIDER,
+    sourceEpoch: SOURCE_EPOCH,
+    detectorNamespace: DRUPAL_SKU_COLLISION_DETECTOR.namespace,
+    detectorVersion: DRUPAL_SKU_COLLISION_DETECTOR.version,
+    snapshotWatermark: 'wm-1',
+    observations: [],
+  };
+  store.reconcileAuthoritativeBatch(batch);
+
+  const mutations = [
+    { provider: 'other-provider' },
+    { sourceEpoch: 'drupal-prod-v2' },
+    { detectorNamespace: 'other.detector' },
+    { detectorVersion: 2 },
+    { snapshotWatermark: 'wm-2' },
+  ];
+  for (const mutation of mutations) {
+    assert.throws(
+      () => store.reconcileAuthoritativeBatch({ ...batch, ...mutation }),
+      error => error?.code === 'ANOMALY_BATCH_IDENTITY_CONFLICT'
+    );
+  }
+  assert.equal(store.status().batch_count, 1);
+  store.close();
+});
+
+test('authoritative batch validates observation integrity and domain binding', () => {
+  const dbPath = tempDb('anomaly-observation-binding-');
+  const store = AnomalyStore.createNew(dbPath);
+  const observation = observationFromCrossProductCollision({
+    collision: {
+      sku_key: '511000',
+      entries: [
+        baseCollider(),
+        baseCollider({ native_product_id: '2', native_variant_id: '2|base' }),
+      ],
+    },
+    provider: PROVIDER,
+    sourceEpoch: SOURCE_EPOCH,
+  });
+  const baseBatch = {
+    batchId: 'binding-1',
+    provider: PROVIDER,
+    sourceEpoch: SOURCE_EPOCH,
+    detectorNamespace: DRUPAL_SKU_COLLISION_DETECTOR.namespace,
+    detectorVersion: DRUPAL_SKU_COLLISION_DETECTOR.version,
+  };
+
+  assert.throws(
+    () => store.reconcileAuthoritativeBatch({
+      ...baseBatch,
+      observations: [{ ...observation, materialEvidenceSha256: 'a'.repeat(64) }],
+    }),
+    error => error?.code === 'ANOMALY_INVALID_OBSERVATION'
+  );
+  assert.throws(
+    () => store.reconcileAuthoritativeBatch({
+      ...baseBatch,
+      batchId: 'binding-2',
+      provider: 'other-provider',
+      observations: [observation],
+    }),
+    error => error?.code === 'ANOMALY_OBSERVATION_DOMAIN_MISMATCH'
+  );
+  assert.equal(store.status().batch_count, 0);
+  assert.equal(store.status().incident_count, 0);
+  store.close();
+});
+
 test('first clean authoritative batch -> NOT_OBSERVED', () => {
   const dbPath = tempDb('anomaly-not-observed-');
   const store = AnomalyStore.createNew(dbPath);
@@ -332,6 +406,48 @@ test('recurrence reuses incident and increments recurrence_count', () => {
   store.close();
 });
 
+test('consecutive occurrence count resets after absence and clear', () => {
+  const dbPath = tempDb('anomaly-consecutive-reset-');
+  const store = AnomalyStore.createNew(dbPath);
+  const observation = observationFromCrossProductCollision({
+    collision: {
+      sku_key: '511000',
+      entries: [
+        baseCollider(),
+        baseCollider({ native_product_id: '2', native_variant_id: '2|base' }),
+      ],
+    },
+    provider: PROVIDER,
+    sourceEpoch: SOURCE_EPOCH,
+  });
+  const batch = batchId => ({
+    batchId,
+    provider: PROVIDER,
+    sourceEpoch: SOURCE_EPOCH,
+    detectorNamespace: DRUPAL_SKU_COLLISION_DETECTOR.namespace,
+    detectorVersion: DRUPAL_SKU_COLLISION_DETECTOR.version,
+  });
+
+  store.reconcileAuthoritativeBatch({ ...batch('batch-1'), observations: [observation] });
+  store.reconcileAuthoritativeBatch({ ...batch('batch-2'), observations: [] });
+  assert.equal(store.getIncidentByFingerprint(observation.fingerprint).consecutive_occurrence_count, 0);
+
+  store.reconcileAuthoritativeBatch({ ...batch('batch-3'), observations: [observation] });
+  let incident = store.getIncidentByFingerprint(observation.fingerprint);
+  assert.equal(incident.consecutive_occurrence_count, 1);
+  assert.equal(incident.occurrence_count, 2);
+
+  store.reconcileAuthoritativeBatch({ ...batch('batch-4'), observations: [] });
+  store.reconcileAuthoritativeBatch({ ...batch('batch-5'), observations: [] });
+  assert.equal(store.getIncidentByFingerprint(observation.fingerprint).observation_state, 'CLEARED');
+
+  store.reconcileAuthoritativeBatch({ ...batch('batch-6'), observations: [observation] });
+  incident = store.getIncidentByFingerprint(observation.fingerprint);
+  assert.equal(incident.consecutive_occurrence_count, 1);
+  assert.equal(incident.recurrence_count, 1);
+  store.close();
+});
+
 test('review_state survives observation transitions', () => {
   const dbPath = tempDb('anomaly-review-state-');
   const store = AnomalyStore.createNew(dbPath);
@@ -428,6 +544,50 @@ test('anomaly report validation rejects forbidden bodies', () => {
   assert.throws(() => validateAnomalyReport(bad), /forbidden key: description/);
 });
 
+test('anomaly report validates evidence, fingerprint, and isolation integrity', () => {
+  const observation = observationFromCrossProductCollision({
+    collision: {
+      sku_key: '511000',
+      entries: [
+        baseCollider(),
+        baseCollider({ native_product_id: '2', native_variant_id: '2|base' }),
+      ],
+    },
+    provider: PROVIDER,
+    sourceEpoch: SOURCE_EPOCH,
+  });
+  const report = buildAnomalyReport({
+    provider: PROVIDER,
+    sourceEpoch: SOURCE_EPOCH,
+    snapshotWatermark: 'wm-integrity',
+    detector: DRUPAL_SKU_COLLISION_DETECTOR,
+    collisionConfigSha256: 'a'.repeat(64),
+    anomalyPublicationPolicySha256: 'b'.repeat(64),
+    observations: [observation],
+  });
+
+  const badEvidence = structuredClone(report);
+  badEvidence.anomalies[0].material_evidence.colliders[0].sku = 'tampered';
+  assert.throws(
+    () => validateAnomalyReport(badEvidence),
+    /material evidence hash mismatch/
+  );
+
+  const badFingerprint = structuredClone(report);
+  badFingerprint.anomalies[0].fingerprint = 'a'.repeat(64);
+  assert.throws(
+    () => validateAnomalyReport(badFingerprint),
+    /fingerprint does not match identity fields/
+  );
+
+  const badIsolation = structuredClone(report);
+  badIsolation.anomalies[0].isolation.affected_native_product_ids = ['1', '3'];
+  assert.throws(
+    () => validateAnomalyReport(badIsolation),
+    /do not match material evidence/
+  );
+});
+
 test('catalog anomaly ops bootstrap and reconcile-report', () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'anomaly-ops-'));
   const storePath = path.join(dir, 'anomalies.sqlite');
@@ -475,6 +635,44 @@ test('catalog anomaly ops bootstrap and reconcile-report', () => {
   const store = AnomalyStore.openExisting(storePath, { readOnly: true });
   assert.equal(store.listIncidents().length, 1);
   store.close();
+});
+
+test('catalog anomaly reconcile-report fails closed when store is missing', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'anomaly-ops-missing-'));
+  const storePath = path.join(dir, 'anomalies.sqlite');
+  const reportPath = path.join(dir, 'anomaly-report.json');
+  const observation = observationFromCrossProductCollision({
+    collision: {
+      sku_key: '511000',
+      entries: [
+        baseCollider(),
+        baseCollider({ native_product_id: '2', native_variant_id: '2|base' }),
+      ],
+    },
+    provider: PROVIDER,
+    sourceEpoch: SOURCE_EPOCH,
+  });
+  const report = buildAnomalyReport({
+    provider: PROVIDER,
+    sourceEpoch: SOURCE_EPOCH,
+    snapshotWatermark: 'fixture-missing-store',
+    detector: DRUPAL_SKU_COLLISION_DETECTOR,
+    collisionConfigSha256: 'a'.repeat(64),
+    anomalyPublicationPolicySha256: 'b'.repeat(64),
+    observations: [observation],
+  });
+  fs.writeFileSync(reportPath, JSON.stringify(report, null, 2));
+
+  const reconcile = spawnSync('node', [
+    'scripts/catalog-anomaly-ops.mjs',
+    'reconcile-report',
+    `--store=${storePath}`,
+    `--report=${reportPath}`,
+  ], { cwd: path.resolve(path.dirname(new URL(import.meta.url).pathname), '../..'), encoding: 'utf8' });
+
+  assert.equal(reconcile.status, 1);
+  assert.equal(JSON.parse(reconcile.stderr).error, 'ANOMALY_MISSING');
+  assert.equal(fs.existsSync(storePath), false);
 });
 
 test('observationsFromAnomalyReport round trip', () => {

@@ -10,13 +10,13 @@ import {
   filterProductByExclusions,
   buildCollisionReportEntry,
   sortCollisionReport,
+  verifyPublishableSkuCollisions,
 } from '../collision/detector.mjs';
 import { loadPublicationPolicy } from '../anomaly/publication-policy.mjs';
 import {
   buildDrupalAnomalyReport,
   deriveAnomalyQuarantine,
   filterProductByQuarantine,
-  verifyPublishableSkuCollisions,
 } from '../anomaly/quarantine.mjs';
 import { observationsFromCollisionSnapshot } from '../../../../src/catalog/anomaly/observation.mjs';
 import { buildCanonicalRecords } from '../canonical/build-from-source.mjs';

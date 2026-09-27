@@ -63,10 +63,7 @@ try {
     const reportPath = path.resolve(values.report);
     const raw = fs.readFileSync(reportPath, 'utf8');
     const report = validateAnomalyReport(JSON.parse(raw));
-    fs.mkdirSync(path.dirname(storePath), { recursive: true });
-    const store = fs.existsSync(storePath)
-      ? AnomalyStore.openExisting(storePath)
-      : AnomalyStore.createNew(storePath);
+    const store = AnomalyStore.openExisting(storePath);
     const observations = observationsFromAnomalyReport(report);
     result = store.reconcileAuthoritativeBatch({
       batchId: `report:${report.snapshot_watermark}`,

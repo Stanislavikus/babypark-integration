@@ -1,3 +1,5 @@
+import { ANOMALY_TYPES, validateObservation } from './observation.mjs';
+
 export const ANOMALY_REPORT_SCHEMA = 'bp.catalog.anomaly-report/1';
 
 export function buildAnomalyReport({
@@ -60,6 +62,33 @@ const FORBIDDEN_REPORT_BODY_KEYS = [
   'raw_db',
 ];
 
+function observationFromReportEntry(report, anomaly) {
+  const affectedNativeProductIds = anomaly.isolation?.affected_native_product_ids;
+  const nativeProductId =
+    anomaly.anomaly_type === ANOMALY_TYPES.SKU_COLLISION_WITHIN_PRODUCT &&
+    Array.isArray(affectedNativeProductIds) &&
+    affectedNativeProductIds.length === 1
+      ? affectedNativeProductIds[0]
+      : null;
+
+  return {
+    fingerprint: anomaly.fingerprint,
+    anomalyType: anomaly.anomaly_type,
+    provider: report.provider,
+    sourceEpoch: report.source_epoch,
+    detectorNamespace: report.detector.namespace,
+    detectorVersion: report.detector.version,
+    identifierKind: anomaly.identifier?.kind,
+    identifierKey: anomaly.identifier?.key,
+    nativeProductId,
+    materialEvidence: anomaly.material_evidence,
+    materialEvidenceSha256: anomaly.material_evidence_sha256,
+    context: anomaly.context ?? {},
+    affectedNativeProductIds,
+    isolationScope: anomaly.isolation?.scope,
+  };
+}
+
 export function validateAnomalyReport(report) {
   if (!report || report.schema !== ANOMALY_REPORT_SCHEMA || report.version !== 1) {
     throw new Error('Invalid anomaly report schema');
@@ -93,19 +122,17 @@ export function validateAnomalyReport(report) {
     }
   }
 
-  let quarantined = 0;
   const seen = new Set();
   for (const anomaly of report.anomalies) {
-    if (!/^[a-f0-9]{64}$/.test(anomaly.fingerprint ?? '')) {
-      throw new Error('Invalid anomaly fingerprint');
+    try {
+      validateObservation(observationFromReportEntry(report, anomaly));
+    } catch (error) {
+      throw new Error(`Invalid anomaly report entry: ${error.message}`);
     }
     if (seen.has(anomaly.fingerprint)) {
       throw new Error('Duplicate anomaly fingerprint in report');
     }
     seen.add(anomaly.fingerprint);
-    for (const productId of anomaly.isolation?.affected_native_product_ids ?? []) {
-      quarantined += 1;
-    }
   }
 
   const uniqueQuarantined = new Set(
@@ -129,19 +156,5 @@ export function validateAnomalyReport(report) {
 
 export function observationsFromAnomalyReport(report) {
   validateAnomalyReport(report);
-  return report.anomalies.map(anomaly => ({
-    fingerprint: anomaly.fingerprint,
-    anomalyType: anomaly.anomaly_type,
-    provider: report.provider,
-    sourceEpoch: report.source_epoch,
-    detectorNamespace: report.detector.namespace,
-    detectorVersion: report.detector.version,
-    identifierKind: anomaly.identifier.kind,
-    identifierKey: anomaly.identifier.key,
-    materialEvidence: anomaly.material_evidence,
-    materialEvidenceSha256: anomaly.material_evidence_sha256,
-    context: anomaly.context ?? {},
-    affectedNativeProductIds: anomaly.isolation.affected_native_product_ids,
-    isolationScope: anomaly.isolation.scope,
-  }));
+  return report.anomalies.map(anomaly => observationFromReportEntry(report, anomaly));
 }

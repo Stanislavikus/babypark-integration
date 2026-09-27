@@ -383,6 +383,14 @@ mappings:
   assert.equal(phase1.find(p => p.native_product_id === '2'), undefined);
 });
 
+test('collision detector does not depend on anomaly quarantine adapter', () => {
+  const detectorSource = fs.readFileSync(
+    path.join(REPO_ROOT, 'apps/drupal-exporter/src/collision/detector.mjs'),
+    'utf8'
+  );
+  assert.equal(detectorSource.includes('../anomaly/quarantine.mjs'), false);
+});
+
 test('spool with quarantined collisions succeeds and excludes colliders', async () => {
   const sourceDir = createFixtureDir();
   writeFixture(sourceDir, mergeDatasets(
