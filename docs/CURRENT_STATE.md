@@ -214,6 +214,8 @@ Second production preflight:
 Collision review state:
 - 21 of 23 unique collisions have sufficient technical evidence for a proposed
   legacy migration decision;
+- durable evidence ledger:
+  `docs/DRUPAL_LEGACY_COLLISION_REVIEW_20260927.md`;
 - `511000` and `80401mc02` are intentionally NOT approved yet and require
   business/source-process investigation before any mapping is committed;
 - `config/drupal/legacy-sku-collisions.yaml` remains `mappings: []`.
