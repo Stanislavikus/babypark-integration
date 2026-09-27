@@ -1,7 +1,7 @@
 # CURRENT_STATE
 
 Status: CURRENT
-Last verified: 2026-09-26
+Last verified: 2026-09-27
 Owner: BabyPark
 Source of truth: production runtime + this repository
 
@@ -163,12 +163,60 @@ Catalog application rollback and catalog data/recovery rollback are separate ope
 Before the first FULL, `/var/lib/babypark-catalog` is preserved for diagnosis rather than
 deleted automatically.
 
+## Drupal exporter production preflight
+
+D2a code is deployed on the Drupal production host as an isolated, non-scheduled exporter.
+It is not a daemon and does not write Drupal data.
+
+Current exporter release:
+`/opt/babypark-exporter/releases/20260927T102742Z-7b4b630`
+
+Current exporter symlink:
+`/opt/babypark-exporter/current`
+
+Runtime:
+- dedicated OS identity: `babypark-exporter`
+- private state: `/var/lib/babypark-exporter` mode `0700`
+- dedicated MariaDB principal: `babypark_exporter@127.0.0.1`
+- database grant: `SELECT` on `babypark_ua.*` only
+- isolated Node runtime: `/opt/babypark-exporter/runtime/node-v22.23.2/bin/node`
+- system `/usr/bin/node` remains unchanged at v20.20.2
+
+First successful production preflight:
+- 2026-09-27
+- duration: about 3m14s
+- mode: `preflight`
+- result: `ok=false` due to source/canonical blockers, as designed
+- no `.ready` spool
+- no Catalog HTTP
+- no FULL
+- no Drupal writes
+- live site remained serving traffic during the run
+
+The first production preflight exposed a real source-model issue: Drupal availability may
+remain trustworthy while an unavailable option's old price delta is stale. D2a.1 therefore
+must separate variant availability from optional price/offer semantics before the first FULL.
+
 ## Catalog / AI next state
 
-No Drupal catalog exporter is active.
 No AI copilot is active.
+No Drupal FULL has been sent.
 
-The canonical CatalogService is now deployed and ready to accept a future authenticated FULL.
-The next slice is the read-only Drupal exporter/preflight/spool path.
+Immediate next slice:
+- D2a.1 canonical/source-policy correction;
+- repeat production preflight;
+- review only the remaining true source ambiguities/collisions;
+- produce a clean local spool;
+- then D2b transport / first controlled FULL.
 
-No Drupal writes are required.
+Before customer-facing AI catalog answers are launched, there is an explicit mandatory
+research/design gate for **Product Presentation Projection**. It must study current best
+practices and define provider-neutral reusable product-card/presentation templates, including
+preview images, trusted price, availability, channel rendering, caching/CDN behavior,
+answer/visual quality, click/select likelihood, latency and total delivery/model/channel cost.
+See `docs/SYSTEM_MAP.md`.
+
+Product Presentation Projection is intentionally a later layer above CatalogService and is not
+part of D2a.1.
+
+No Drupal writes are required for D2a/D2a.1.
