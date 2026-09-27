@@ -110,6 +110,7 @@ customer/seller query
 
 content/operator
   -> acknowledge / investigate / add evidence / fix source
+  -> review_state changes only
   -> no authority to create global AI truth
 
 administrator/reviewer
@@ -117,13 +118,17 @@ administrator/reviewer
   -> approve exception / permanent rule
   -> auditable policy version
 
-future snapshots
-  -> anomaly absent -> NOT_OBSERVED -> AUTO_CLEARED after clean threshold
-  -> anomaly recurs -> REOPEN same incident + recurrence_count
+authoritative detector snapshots
+  -> observation_state=OBSERVED when present
+  -> first clean complete batch -> NOT_OBSERVED
+  -> clean threshold -> CLEARED
+  -> recurrence -> OBSERVED again + recurrence_count
+  -> review_state remains an independent axis
 ```
 
 Repository navigation:
 - architecture: `docs/CATALOG_IDENTITY_ANOMALY_MANAGEMENT.md`;
+- frozen v1 implementation contract: `docs/CATALOG_ANOMALY_RUNTIME_V1.md`;
 - rule/governance entry point: `config/catalog-anomalies/README.md`;
 - agreed human-readable policies: `config/catalog-anomalies/POLICY_CATALOG.md`;
 - current implementation state: `docs/CURRENT_STATE.md`.
