@@ -308,29 +308,30 @@ Do not write every occurrence as a Git file.
 
 The target platform should have a durable anomaly/exception record.
 
-Conceptual lifecycle:
+The v1 design freezes **two orthogonal state axes**, rather than one
+combined workflow state.
 
-```text
-OPEN
-  -> ACKNOWLEDGED / INVESTIGATING
-  -> PENDING_ADMIN (when durable identity action is proposed)
-  -> RESOLVED_ADMIN
+Observation state is machine-owned:
+- `OBSERVED`
+- `NOT_OBSERVED`
+- `CLEARED`
 
-or
+Review state is human-workflow-owned:
+- `NEW`
+- `ACKNOWLEDGED`
+- `INVESTIGATING`
+- `PENDING_ADMIN`
+- `RESOLVED`
 
-OPEN
-  -> NOT_OBSERVED
-  -> AUTO_CLEARED
+This allows, for example, a source problem to disappear while a human review is
+still open without falsifying either fact.
 
-and on recurrence:
+A recurrence changes observation history/counters; it does not erase the separate
+review history.
 
-AUTO_CLEARED / RESOLVED
-  -> REOPENED
-```
+Frozen implementation contract:
 
-Exact persisted enum names require implementation research, but the distinction
-between administrator-approved resolution and observation-based auto-clear is
-mandatory.
+`docs/CATALOG_ANOMALY_RUNTIME_V1.md`
 
 An incident should preserve:
 - anomaly type;
@@ -543,6 +544,24 @@ At the current review point:
 - repository collision config remains unpopulated until the review is approved.
 
 These facts are current-state evidence, not universal business rules.
+
+## Anomaly Runtime v1 frozen scope
+
+The first implementation is deliberately narrow.
+
+Only residual:
+- `SKU_COLLISION_WITHIN_PRODUCT`
+- `SKU_COLLISION_CROSS_PRODUCT`
+
+are converted from hard blockers into safely scoped product quarantine.
+
+All other blocker classes keep their current behavior until separately reviewed.
+
+This prevents the anomaly framework from becoming an accidental blanket downgrade
+of existing safety checks.
+
+See:
+`docs/CATALOG_ANOMALY_RUNTIME_V1.md`
 
 ## Required future research slice
 
