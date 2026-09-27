@@ -86,3 +86,44 @@ It is deliberately **not part of D2a/D2a.1**. D2a only preserves the canonical m
 needed later. Current canonical image `position` is the deterministic ordering primitive;
 `images.role` remains provider-neutral/free-form until evidence from multiple real providers
 justifies a normalized role vocabulary.
+
+
+## Future research gate — Catalog Identity & Anomaly Management
+
+Before customer-facing AI is production-ready, BabyPark must run a dedicated
+provider-neutral **Catalog Identity & Anomaly Management** research/design slice.
+
+Durable architecture:
+
+`docs/CATALOG_IDENTITY_ANOMALY_MANAGEMENT.md`
+
+Required lifecycle:
+
+```text
+source / provider / supplier data
+  -> identity validation
+  -> detect anomaly
+  -> classify
+  -> safe runtime behavior
+  -> anomaly incident
+  -> alert / human resolution
+  -> reviewed rule or source correction
+  -> prevent recurrence
+```
+
+Key invariants:
+- SKU/article alone is not canonical product identity;
+- duplicate identifiers are not silently merged;
+- cheapest-price selection is allowed only after records are confirmed to be
+  the same physical product/variant;
+- ambiguous identity is never resolved by the LLM;
+- policy/contacts/routing live in structured configuration and later SaaS UI,
+  not only in prompts;
+- Chatwoot/email are notification and workflow surfaces, not the source of truth;
+- current Drupal collision mappings are migration exceptions only;
+- the future SaaS should expose a durable Data Quality / Requires Attention
+  anomaly inbox with audit history.
+
+This research gate is separate from, but ordered before/alongside,
+**Product Presentation Projection**. Identity must be safely resolved before a
+product is rendered as an AI recommendation/card.
