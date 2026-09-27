@@ -28,7 +28,8 @@ Current v1 surface:
 - searchProducts(...)
 - getProduct(productId | sku | url)
 - getVariant(variantId | sku)
-- getOffers(variantIds | skus)
+- getOffers(variantIds | skus) — returns variant-level `commercial_availability`
+  beside an optional price-only `offer` (or `offer: null`)
 - getStoreStock(variantId | sku, storeIds?)
 - listCategories(...)
 - listAttributes(...)
@@ -129,6 +130,16 @@ getProduct returns provider-neutral:
 - provenance.
 
 Money remains integer minor units.
+
+## Variant availability and offers
+
+Commercial availability belongs to the variant, not to the offer.
+
+- `getVariant` exposes `commercial_availability` on the variant DTO and a
+  price-only `offer` when a trusted price exists.
+- `getOffers` returns the same variant-level `commercial_availability` for each
+  row, with `offer` containing price fields only (or `null` when no trusted
+  price was ingested). Availability is never duplicated inside `offer`.
 
 ## Same-generation guarantee
 

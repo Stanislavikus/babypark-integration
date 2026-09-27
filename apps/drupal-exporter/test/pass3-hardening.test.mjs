@@ -110,6 +110,10 @@ test('incremental chunk writer does not retain body in chunk metadata', () => {
 test('spool CLI output does not expose chunk bodies or internal writer', async () => {
   const sourceDir = createFixtureDir();
   writeFixture(sourceDir, simpleProduct({ nid: 1, model: 'CLI-OK' }));
+  fs.writeFileSync(
+    path.join(sourceDir, 'source-currency.json'),
+    JSON.stringify({ code: 'UAH', precision: 0 })
+  );
   const config = testConfig();
   fs.mkdirSync(config.spoolRoot, { recursive: true });
 

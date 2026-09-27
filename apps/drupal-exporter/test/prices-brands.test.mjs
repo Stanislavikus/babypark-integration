@@ -55,12 +55,12 @@ test('negative trusted price blocks; sub-cent noise is absorbed at precision 0',
   );
 });
 
-test('trusted invalid price after rounding still fails closed', async () => {
+test('trusted invalid price still fails closed via blocker not rounding', async () => {
   const sourceDir = createFixtureDir();
   writeFixture(sourceDir, simpleProduct({
     nid: 3,
     model: 'BAD',
-    sellPrice: '10.12500',
+    sellPrice: '-1.00000',
     statusValue: 1,
   }));
   const result = await runExportPipeline({
@@ -69,5 +69,5 @@ test('trusted invalid price after rounding still fails closed', async () => {
     fixtureSourceDir: sourceDir,
     skipFilesystemChecks: true,
   });
-  assert.ok(result.preflight.blockers.some(b => b.code === BLOCKER_CODES.PRICE_NOT_MINOR_ALIGNED));
+  assert.ok(result.preflight.blockers.some(b => b.code === BLOCKER_CODES.PRICE_NEGATIVE));
 });

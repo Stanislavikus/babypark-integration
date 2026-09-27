@@ -110,6 +110,33 @@ function insertVariant(builder, {
   );
 }
 
+function insertVariantWithoutOffer(builder, {
+  variantId,
+  productId,
+  sku,
+  skuKey,
+  availability,
+  isDefault = false,
+  options = {},
+}) {
+  builder.db.prepare(
+    'INSERT INTO variants(' +
+    'variant_id,product_id,sku,sku_key,gtin,is_default,' +
+    'commercial_availability,options_json,updated_at' +
+    ') VALUES(?,?,?,?,?,?,?,?,?)'
+  ).run(
+    variantId,
+    productId,
+    sku,
+    skuKey,
+    null,
+    isDefault ? 1 : 0,
+    availability,
+    JSON.stringify(options),
+    '2026-09-24T00:00:00.000Z'
+  );
+}
+
 function insertFts(builder, {
   productId,
   language,
@@ -422,6 +449,25 @@ function buildFixture(storageDir) {
     '{}'
   );
 
+  insertProduct(builder, {
+    productId: 'p-noprice',
+    defaultVariantId: 'v-noprice',
+    texts: {
+      uk: {
+        title: 'Variant without trusted price',
+      },
+    },
+    provenance: { source: 'fixture' },
+  });
+  insertVariantWithoutOffer(builder, {
+    variantId: 'v-noprice',
+    productId: 'p-noprice',
+    sku: 'NO-PRICE',
+    skuKey: 'no-price',
+    availability: 'OUT_OF_STOCK',
+    isDefault: true,
+  });
+
   for (const item of [
     {
       productId: 'p-day3',
@@ -685,6 +731,7 @@ test('getVariant and getOffers use stable IDs and sku_key lookup', () => {
     sku: ' day3-gry ',
   }).variant;
   assert.equal(variant.variant_id, 'v-day3-gray');
+  assert.equal(variant.commercial_availability, 'EXPECTED');
   assert.equal(variant.offer.current_minor, 2599800);
 
   const offers = service.getOffers({
@@ -695,6 +742,28 @@ test('getVariant and getOffers use stable IDs and sku_key lookup', () => {
     offers.map(row => row.variant_id).sort(),
     ['v-day3-black', 'v-day3-gray']
   );
+  const priced = offers.find(row => row.variant_id === 'v-day3-black');
+  assert.equal(priced.commercial_availability, 'IN_STOCK');
+  assert.equal(priced.offer.current_minor, 2499800);
+  assert.equal(priced.offer.commercial_availability, undefined);
+});
+
+test('getOffers returns variant availability beside price-only offer', () => {
+  const priced = service.getOffers({
+    variantIds: ['v-day3-black'],
+  }).offers[0];
+  assert.equal(priced.commercial_availability, 'IN_STOCK');
+  assert.equal(priced.offer.current_minor, 2499800);
+  assert.equal(priced.offer.commercial_availability, undefined);
+});
+
+test('getOffers returns variant availability with offer null when unpriced', () => {
+  const unpriced = service.getOffers({
+    skus: ['NO-PRICE'],
+  }).offers[0];
+  assert.equal(unpriced.variant_id, 'v-noprice');
+  assert.equal(unpriced.commercial_availability, 'OUT_OF_STOCK');
+  assert.equal(unpriced.offer, null);
 });
 
 test('store stock hides inactive stores by default', () => {

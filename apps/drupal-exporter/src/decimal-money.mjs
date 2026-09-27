@@ -74,12 +74,12 @@ export function toMinorUnitsWithDisplayPrecision(valueAtScale5, precision) {
   if (precision > Number(MINOR_SCALE)) {
     throw new MoneyError('MONEY_PRECISION', 'display precision exceeds minor-unit model');
   }
-  const minorFactor = SCALE_FACTOR / (10n ** (MINOR_SCALE - BigInt(precision)));
-  const remainder = rounded % minorFactor;
+  const minorDivisor = SCALE_FACTOR / MINOR_FACTOR;
+  const remainder = rounded % minorDivisor;
   if (remainder !== 0n) {
     throw new MoneyError('PRICE_NOT_MINOR_ALIGNED', 'price has sub-cent precision');
   }
-  return rounded / minorFactor;
+  return rounded / minorDivisor;
 }
 
 export function formatDecimal(value) {

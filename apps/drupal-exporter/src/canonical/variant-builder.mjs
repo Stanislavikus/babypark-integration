@@ -45,10 +45,11 @@ function deriveVariantAvailability({
   }
 
   const statuses = optionWeights.map(weight => mapFieldStatus(weight));
-  const validStatuses = statuses.filter(status => status !== null);
+  const hasInvalid = statuses.some(status => status === null);
+  const hasValid = statuses.some(status => status !== null);
 
-  if (validStatuses.length === 0) {
-    if (allowProductStatusFallback) {
+  if (hasInvalid) {
+    if (allowProductStatusFallback && !hasValid) {
       const productMapped = mapFieldStatus(authorityStatus);
       if (productMapped) {
         warnings.addWarning(new Warning(
@@ -67,7 +68,7 @@ function deriveVariantAvailability({
     return null;
   }
 
-  const unique = new Set(validStatuses);
+  const unique = new Set(statuses);
   if (unique.size > 1) {
     blockers.add(new Blocker(
       BLOCKER_CODES.VARIANT_STATUS_AMBIGUOUS,
@@ -76,7 +77,7 @@ function deriveVariantAvailability({
     ));
     return null;
   }
-  return validStatuses[0];
+  return statuses[0];
 }
 
 function attachVariantCommerce({
@@ -98,7 +99,7 @@ function attachVariantCommerce({
       tax_included: null,
     };
     recordOfferEmitted(sourcePolicyDiagnostics, availability);
-  } else if (availability) {
+  } else if (!priceTrusted) {
     recordOfferOmitted(sourcePolicyDiagnostics, availability);
   }
 }

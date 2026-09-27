@@ -788,7 +788,7 @@ export class CatalogService {
       }
 
       const rows = db.prepare(
-        'SELECT v.variant_id,v.product_id,v.sku,v.sku_key,' +
+        'SELECT v.variant_id,v.product_id,v.sku,v.sku_key,v.commercial_availability,' +
         'o.current_minor,o.regular_minor,o.currency,o.on_sale,' +
         'o.tax_included,o.valid_from,o.valid_to,o.source_updated_at ' +
         'FROM variants v LEFT JOIN variant_offers o ' +
@@ -804,6 +804,7 @@ export class CatalogService {
           product_id: row.product_id,
           sku: row.sku,
           sku_key: row.sku_key,
+          commercial_availability: row.commercial_availability,
           offer: offerFromRow(row),
         })),
       };

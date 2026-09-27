@@ -128,6 +128,10 @@ export function testConfig(overrides = {}) {
     },
     provider: 'drupal',
     sourceEpoch: 'drupal-prod-v1',
+    sourceCurrency: {
+      code: 'UAH',
+      precision: 0,
+    },
     ...overrides,
   };
 }

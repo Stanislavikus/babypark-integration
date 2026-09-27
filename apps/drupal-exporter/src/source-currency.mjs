@@ -3,10 +3,19 @@ import path from 'node:path';
 import { BLOCKER_CODES, Blocker } from './blockers.mjs';
 import { parsePhpSerializedString } from './php-variable.mjs';
 
-export const DEFAULT_SOURCE_CURRENCY = Object.freeze({
-  code: 'UAH',
-  precision: 0,
-});
+export function validateSourceCurrencyConfig(config) {
+  if (!config || typeof config !== 'object' || Array.isArray(config)) {
+    throw new Error('currency config must be an object');
+  }
+  const { code, precision } = config;
+  if (typeof code !== 'string' || !/^[A-Z]{3}$/.test(code)) {
+    throw new Error('currency code must be a 3-letter uppercase code');
+  }
+  if (!Number.isInteger(precision) || precision < 0 || precision > 2) {
+    throw new Error('currency precision is out of supported range');
+  }
+  return { code, precision };
+}
 
 export function parseSourceCurrencyFromVariables(rows, blockers) {
   const byName = new Map(rows.map(row => [row.name, row.value]));
@@ -17,13 +26,7 @@ export function parseSourceCurrencyFromVariables(rows, blockers) {
       throw new Error('currency precision must be a non-negative integer string');
     }
     const precision = Number(precisionText);
-    if (!Number.isInteger(precision) || precision < 0 || precision > 2) {
-      throw new Error('currency precision is out of supported range');
-    }
-    if (!/^[A-Z]{3}$/.test(code)) {
-      throw new Error('currency code must be a 3-letter uppercase code');
-    }
-    return { code, precision };
+    return validateSourceCurrencyConfig({ code, precision });
   } catch (error) {
     blockers.add(new Blocker(
       BLOCKER_CODES.SOURCE_UNSTABLE,
@@ -37,14 +40,44 @@ export function parseSourceCurrencyFromVariables(rows, blockers) {
 export function loadSourceCurrency({ sourceDir, config, blockers }) {
   const currencyPath = path.join(sourceDir, 'source-currency.json');
   if (fs.existsSync(currencyPath)) {
-    const parsed = JSON.parse(fs.readFileSync(currencyPath, 'utf8'));
-    return {
-      code: parsed.code,
-      precision: parsed.precision,
-    };
+    let parsed;
+    try {
+      parsed = JSON.parse(fs.readFileSync(currencyPath, 'utf8'));
+    } catch (error) {
+      blockers.add(new Blocker(
+        BLOCKER_CODES.SOURCE_UNSTABLE,
+        'Malformed source currency snapshot artifact',
+        { path: currencyPath, reason: error.message }
+      ));
+      return null;
+    }
+    try {
+      return validateSourceCurrencyConfig(parsed);
+    } catch (error) {
+      blockers.add(new Blocker(
+        BLOCKER_CODES.SOURCE_UNSTABLE,
+        'Invalid source currency snapshot artifact',
+        { path: currencyPath, reason: error.message }
+      ));
+      return null;
+    }
   }
   if (config.sourceCurrency) {
-    return config.sourceCurrency;
+    try {
+      return validateSourceCurrencyConfig(config.sourceCurrency);
+    } catch (error) {
+      blockers.add(new Blocker(
+        BLOCKER_CODES.SOURCE_UNSTABLE,
+        'Invalid source currency fixture override',
+        { reason: error.message }
+      ));
+      return null;
+    }
   }
-  return { ...DEFAULT_SOURCE_CURRENCY };
+  blockers.add(new Blocker(
+    BLOCKER_CODES.SOURCE_UNSTABLE,
+    'Missing source currency snapshot artifact',
+    { path: currencyPath }
+  ));
+  return null;
 }
