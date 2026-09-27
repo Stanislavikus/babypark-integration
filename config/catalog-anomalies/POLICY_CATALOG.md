@@ -42,16 +42,34 @@ This policy may never be used as evidence that two records are the same product.
 
 ## P-03 — Source correction / disappearance
 
+Observation truth and human review are independent.
+
+Machine-owned observation state:
+- OBSERVED;
+- NOT_OBSERVED;
+- CLEARED.
+
+Human-owned review state:
+- NEW;
+- ACKNOWLEDGED;
+- INVESTIGATING;
+- PENDING_ADMIN;
+- RESOLVED.
+
 If an anomaly stops appearing after a source correction:
 - do not delete history;
-- mark it NOT_OBSERVED after the first clean observation;
+- only a complete authoritative detector batch may advance absence;
+- first clean authoritative batch -> observation_state=NOT_OBSERVED;
 - after a configurable number of consecutive clean authoritative snapshots,
-  transition to AUTO_CLEARED;
+  observation_state=CLEARED;
 - default design target for batch catalog sync: 2 consecutive clean snapshots;
-- if the same fingerprint reappears, REOPEN the same incident and increment
-  recurrence_count.
+- if the same fingerprint reappears after CLEARED, reuse the same incident and
+  increment recurrence_count.
 
-AUTO_CLEARED is not equivalent to an administrator-approved identity rule.
+A one-off runtime/customer query may never clear an incident by absence.
+
+CLEARED is not equivalent to an administrator-approved identity rule and does not
+erase review_state.
 
 ## P-04 — Notification deduplication
 
