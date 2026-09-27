@@ -237,15 +237,40 @@ rules. Durable future architecture lives in:
 No AI copilot is active.
 No Drupal FULL has been sent.
 
-Immediate next steps:
-- investigate the business/source-process cause of the two unresolved duplicate
-  identifiers `511000` and `80401mc02` with the content/process owner;
-- approve all 23 Drupal legacy migration decisions only after that investigation;
-- populate `config/drupal/legacy-sku-collisions.yaml` in a reviewed PR;
-- deploy the merged default-promotion fix plus reviewed collision config in one
-  immutable exporter release;
-- run the next production preflight;
-- target: zero hard blockers and a clean local spool;
+Immediate next engineering slice:
+- do **not** wait for the two unresolved Drupal duplicates before continuing design;
+- research/freeze and then implement **Catalog Anomaly Runtime v1** using the 23
+  real Drupal collisions as fixtures;
+- durable rules/governance entry point:
+  `config/catalog-anomalies/`;
+- required v1 semantics include:
+  - stable anomaly fingerprint/deduplication;
+  - one durable incident with occurrence/recurrence counters instead of log spam;
+  - scoped entity quarantine so one unknown product does not stop unrelated catalog;
+  - administrator-only durable identity/rule approval;
+  - content/operator acknowledge/evidence/source-fix workflow without authority to
+    teach global AI behavior;
+  - notification throttling/escalation;
+  - NOT_OBSERVED/AUTO_CLEARED/REOPENED behavior verified from later snapshots;
+  - safe AI/seller handoff contract with conflicting product links/context.
+
+The two unresolved duplicate identifiers `511000` and `80401mc02` remain useful
+live fixtures for this runtime and still require business/source-process
+investigation before any permanent legacy mapping or identity decision is approved.
+
+Before the first production FULL, BabyPark must reach one explicitly reviewed safe
+state:
+- either all remaining legacy collisions are resolved by approved migration
+  mappings; or
+- unresolved entities are handled by an implemented/tested anomaly quarantine
+  contract that makes their exclusion/handling explicit and auditable.
+
+No untracked ambiguity may silently enter the first canonical generation.
+
+After that gate:
+- deploy one immutable exporter/runtime release;
+- run production preflight;
+- target: zero unaccounted hard blockers and a clean local spool;
 - then proceed to D2b transport / first controlled FULL.
 
 Two mandatory future research/design gates exist before customer-facing AI catalog
@@ -283,5 +308,11 @@ Neither future architecture should be hidden only in an LLM prompt. Deterministi
 business policy belongs in structured/versioned configuration and ultimately the
 SaaS UI; Chatwoot/email are operational surfaces rather than the policy source of
 truth.
+
+Agreed anomaly governance is already indexed from:
+- `config/catalog-anomalies/README.md`
+- `config/catalog-anomalies/POLICY_CATALOG.md`
+
+These files are not yet loaded by production runtime.
 
 No Drupal writes are required for the current D2a/D2a.1 collision-review work.
