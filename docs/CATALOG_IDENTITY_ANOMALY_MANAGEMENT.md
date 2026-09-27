@@ -189,6 +189,26 @@ The prompt may say:
 But the business policy, contacts, routing and resolution state belong in
 structured configuration/services, not only in prompt text.
 
+## Scoped failure semantics
+
+A new/unknown anomaly must not automatically stop the whole catalog.
+
+Default behavior should isolate the **smallest unsafe scope**:
+- quarantine affected product/variant/listing;
+- continue unaffected entities;
+- create/update the anomaly incident;
+- surface the issue to the responsible queue.
+
+Whole-run blocking is reserved for system-wide safety/integrity failures such as:
+- corrupt/missing identity authority;
+- broken snapshot consistency;
+- unsupported schema/contract;
+- publication fencing/recovery failure;
+- any condition where safe entity isolation cannot be proven.
+
+This separation is central to BabyPark's automation goal: unknown data quality
+problems become work items, not routine full-system outages.
+
 ## Safe AI behavior
 
 Customer-facing AI must consume already resolved catalog facts.
@@ -199,12 +219,90 @@ safe behaviors depending on context:
 - ask a clarifying question when it genuinely disambiguates the customer's need;
 - hand off to a seller;
 - present only unaffected alternatives;
-- create/attach an anomaly incident.
+- create/attach the deduplicated anomaly incident.
+
+When handing off, the internal seller context should include the conflicting
+product links/IDs and concise evidence so the seller can resolve the customer's
+immediate need without reverse-engineering the anomaly.
+
+Seller behavior in one conversation must not silently create a global identity rule.
 
 Do not promise that "cheapest wins" for ambiguous data.
 
 When multiple offers are confirmed to represent the same product, a customer-facing
 selection policy may prefer the lowest trusted current available customer price.
+
+## Governance and authority
+
+Catalog anomaly handling must separate operational investigation from durable
+identity authority.
+
+### Content/operator role
+
+A content manager or responsible operator may:
+- receive and acknowledge an anomaly;
+- add comments/evidence;
+- investigate the source;
+- mark that a source correction was attempted;
+- propose a resolution;
+- own the follow-up work.
+
+This role must **not** be able to make an unreviewed click become global AI truth.
+
+A content/operator action alone must not:
+- declare two records the same canonical product;
+- declare them permanently different;
+- create a known exception;
+- publish a permanent identity mapping;
+- create/promote a global rule.
+
+### Administrator/reviewer role
+
+An authorized administrator/reviewer approves:
+- canonical same-product/different-product resolution;
+- known exceptions;
+- permanent mappings/aliases where supported;
+- promotion of repeated incident patterns into global policy;
+- rollback/reopen of those durable decisions.
+
+The AI consumes only approved structured state and policy.
+
+Unapproved comments, seller behavior in one conversation, or content-manager
+suggestions are evidence, not authority.
+
+### Source correction verification
+
+If an operator says "fixed in source", the system should not trust the button as
+proof.
+
+The next authoritative catalog observations verify whether the anomaly actually
+disappeared.
+
+Recommended lifecycle:
+- first clean observation -> `NOT_OBSERVED`;
+- configurable consecutive clean authoritative snapshots -> `AUTO_CLEARED`;
+- initial batch-sync design target: 2 consecutive clean snapshots;
+- same fingerprint reappears -> `REOPENED` and increment recurrence count.
+
+`AUTO_CLEARED` preserves history and does not create a permanent identity rule.
+
+## Runtime policy registry
+
+The obvious repository entry point for durable anomaly rules is:
+
+`config/catalog-anomalies/`
+
+Human-readable agreed policy catalog:
+
+`config/catalog-anomalies/POLICY_CATALOG.md`
+
+The directory is currently documentation/registry only and is not loaded by
+production runtime until Catalog Anomaly Runtime v1 is implemented.
+
+The future rule engine must keep durable policy in versioned structured
+configuration/services and runtime incidents in a durable anomaly store/UI.
+
+Do not write every occurrence as a Git file.
 
 ## Anomaly incident lifecycle
 
@@ -214,18 +312,38 @@ Conceptual lifecycle:
 
 ```text
 OPEN
-  -> TRIAGED
-  -> RESOLVED
-  -> VERIFIED
-  -> CLOSED
+  -> ACKNOWLEDGED / INVESTIGATING
+  -> PENDING_ADMIN (when durable identity action is proposed)
+  -> RESOLVED_ADMIN
+
+or
+
+OPEN
+  -> NOT_OBSERVED
+  -> AUTO_CLEARED
+
+and on recurrence:
+
+AUTO_CLEARED / RESOLVED
+  -> REOPENED
 ```
 
-Exact statuses require research.
+Exact persisted enum names require implementation research, but the distinction
+between administrator-approved resolution and observation-based auto-clear is
+mandatory.
 
 An incident should preserve:
 - anomaly type;
 - deterministic fingerprint/dedupe key;
-- detected timestamp;
+- first_seen_at;
+- last_seen_at;
+- occurrence_count;
+- consecutive_occurrence_count;
+- clean_observation_count;
+- recurrence_count;
+- last_notified_at;
+- last_material_change_at;
+- detected timestamp/run/snapshot;
 - affected provider/source;
 - affected canonical/source IDs;
 - conflicting identifiers;
@@ -242,8 +360,12 @@ conflict.
 
 Default direction:
 - one incident per stable conflict fingerprint;
-- notify once;
-- re-notify on material change, explicit SLA/escalation, or recurrence after resolution.
+- repeated observations increment counters instead of creating duplicate rows/log spam;
+- notify on first observation;
+- do not notify on every sync or customer query;
+- re-notify on material evidence/state change, configurable frequency/severity
+  threshold, explicit SLA/escalation, or recurrence after clear/resolution;
+- preserve closed/auto-cleared incidents for audit and recurrence detection.
 
 ## Human resolution and prevention
 
