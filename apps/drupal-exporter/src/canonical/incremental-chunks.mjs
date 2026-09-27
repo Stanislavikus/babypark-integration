@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { validateFullRecords, FULL_RECORD_LIMITS } from '../../../../src/catalog/ingest/full-record-v1.mjs';
+import { FullRecordError } from '../../../../src/catalog/ingest/full-record-v1.mjs';
 import { BLOCKER_CODES, Blocker } from '../blockers.mjs';
 import { CHUNK_BODY_BYTE_LIMIT } from '../constants.mjs';
 import { globalTopoSortCategories } from './ordering.mjs';
@@ -16,6 +17,38 @@ function validateChunkRows(rows) {
       ? BLOCKER_CODES.RECORD_TOO_LARGE
       : BLOCKER_CODES.FULL_RECORD_INVALID;
     throw new Blocker(code, error.message, { cause_code: error.code });
+  }
+}
+
+export function validateSingleCanonicalRecord(record) {
+  try {
+    validateFullRecords([record]);
+    const bytes = Buffer.byteLength(serializeChunkBody([record]), 'utf8');
+    if (bytes > CHUNK_BODY_BYTE_LIMIT) {
+      throw new Blocker(
+        BLOCKER_CODES.RECORD_TOO_LARGE,
+        'Single record exceeds chunk byte limit',
+        { native_id: record.native_product_id ?? record.native_brand_id }
+      );
+    }
+    return { ok: true, bytes };
+  } catch (error) {
+    if (error instanceof Blocker) {
+      return { ok: false, blocker: error };
+    }
+    if (error instanceof FullRecordError) {
+      const code = error.code === 'FULL_RECORD_LIMIT_EXCEEDED'
+        ? BLOCKER_CODES.RECORD_TOO_LARGE
+        : BLOCKER_CODES.FULL_RECORD_INVALID;
+      return {
+        ok: false,
+        blocker: new Blocker(code, error.message, {
+          cause_code: error.code,
+          native_id: record.native_product_id ?? record.native_brand_id,
+        }),
+      };
+    }
+    throw error;
   }
 }
 
@@ -47,31 +80,24 @@ export class IncrementalChunkWriter {
     const filename = this.#nextFilename(this.currentPhase);
     const sha256 = crypto.createHash('sha256').update(body).digest('hex');
     writeFileAtomic(this.outputDir, filename, body);
-    const chunkMeta = {
+    this.chunks.push({
       filename,
       phase: this.currentPhase,
       rows: this.current.length,
       bytes,
       sha256,
-    };
-    if (!this.scratch) {
-      chunkMeta.body = body;
-    }
-    this.chunks.push(chunkMeta);
+    });
     this.largestChunkBytes = Math.max(this.largestChunkBytes, bytes);
     this.totalRows += this.current.length;
     this.current = [];
   }
 
   #appendRecord(record) {
-    const candidate = [...this.current, record];
-    if (candidate.length > FULL_RECORD_LIMITS.rows) {
-      throw new Blocker(
-        BLOCKER_CODES.RECORD_TOO_LARGE,
-        'Single record exceeds row limit',
-        { native_id: record.native_product_id ?? record.native_brand_id }
-      );
+    if (this.current.length >= FULL_RECORD_LIMITS.rows) {
+      this.#flushCurrent();
     }
+
+    const candidate = [...this.current, record];
     const bytes = Buffer.byteLength(serializeChunkBody(candidate), 'utf8');
     if (bytes > CHUNK_BODY_BYTE_LIMIT) {
       if (this.current.length === 0) {
@@ -122,7 +148,6 @@ export class IncrementalChunkWriter {
     this.#flushCurrent();
     return {
       chunks: this.chunks,
-      allChunks: this.chunks,
       outputDir: this.outputDir,
       totalRows: this.totalRows,
       largestChunkBytes: this.largestChunkBytes,

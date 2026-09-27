@@ -62,3 +62,9 @@ test('product_kit_groups counts canonical groups', () => {
   assert.match(SOURCE_QUERIES.product_kit_groups, /product_kit/);
   assert.match(SOURCE_QUERIES.product_kit_groups, /GROUP BY/);
 });
+
+test('nodes query uses deterministic product-group ordering', () => {
+  assert.match(SOURCE_QUERIES.nodes, /ORDER BY/);
+  assert.match(SOURCE_QUERIES.nodes, /n\.tnid/);
+  assert.match(SOURCE_QUERIES.uc_products, /ORDER BY p\.nid, p\.vid/);
+});

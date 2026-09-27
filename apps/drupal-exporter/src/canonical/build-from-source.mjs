@@ -37,6 +37,7 @@ function maxChanged(nodes) {
 
 function detectDuplicateLanguages(translations, groupId, blockers) {
   const byLang = new Map();
+  let duplicate = false;
   for (const node of translations) {
     if (!SUPPORTED_AUTHORITY_LANGUAGES.includes(node.language)) continue;
     if (!byLang.has(node.language)) byLang.set(node.language, []);
@@ -44,6 +45,7 @@ function detectDuplicateLanguages(translations, groupId, blockers) {
   }
   for (const [language, nodes] of byLang) {
     if (nodes.length > 1) {
+      duplicate = true;
       blockers.add(new Blocker(
         BLOCKER_CODES.PRODUCT_TRANSLATION_DUPLICATE_LANGUAGE,
         'Multiple published nodes for same language in translation group',
@@ -57,6 +59,7 @@ function detectDuplicateLanguages(translations, groupId, blockers) {
       ));
     }
   }
+  return duplicate;
 }
 
 function buildCategoryParentIndex(hierarchy, blockers) {
@@ -395,7 +398,9 @@ export async function buildCanonicalRecords({
 
   for (const groupId of sortedGroupIds) {
     const translations = groups.get(groupId);
-    detectDuplicateLanguages(translations, groupId, blockers);
+    if (detectDuplicateLanguages(translations, groupId, blockers)) {
+      continue;
+    }
 
     const authority = resolveAuthorityNode(translations);
     if (!authority) {
@@ -524,13 +529,26 @@ export async function buildCanonicalRecords({
       });
     }
 
+    const variantSkuKeys = new Map();
+    let productSkuInvalid = false;
     for (const variant of variants) {
       const normalized = tryNormalizeSku(variant.sku, blockers, {
         native_product_id: groupId,
         native_variant_id: variant.native_variant_id,
       });
-      if (!normalized) continue;
-      variant.stock = (stockBySkuKey.get(normalized.sku_key) ?? [])
+      if (!normalized) {
+        productSkuInvalid = true;
+        break;
+      }
+      variantSkuKeys.set(variant.native_variant_id, normalized.sku_key);
+    }
+    if (productSkuInvalid) {
+      continue;
+    }
+
+    for (const variant of variants) {
+      const skuKey = variantSkuKeys.get(variant.native_variant_id);
+      variant.stock = (stockBySkuKey.get(skuKey) ?? [])
         .filter(entry => activeStoreIds.has(entry.store_native_id))
         .slice()
         .sort((a, b) => Number(a.store_native_id) - Number(b.store_native_id));

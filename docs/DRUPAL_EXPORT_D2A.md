@@ -165,6 +165,54 @@ Chunk rules:
 - serialized via root `canonicalJson()`
 - validated via root `validateFullRecords()`
 
+## Bounded-memory runtime model
+
+Large-run resident state is intentionally limited to compact dimensions plus one
+in-flight product/chunk buffer. The exporter does **not** retain whole-catalog
+payloads in the JS heap.
+
+### Acceptable in memory (approximate production scale)
+
+```text
+~32k lightweight node metadata rows
+~32k current uc_products revision rows
+~33k status/provider/category reference tuples
+~56k compact stock tuples (sku_key + store + quantity)
+taxonomy / brand / attribute metadata
+~49k compact collision entries (SKU identity + report fields only)
+one product/group payload while building
+one <=1MiB current chunk buffer
+chunk metadata only (filename, phase, rows, bytes, sha256)
+```
+
+### Disk/stream-backed (not held wholesale in RAM)
+
+```text
+NDJSON source staging (bodies, options, adjustments, images via per-nid shards)
+candidates.ndjson / filtered.ndjson
+canonical chunk files on disk
+```
+
+### Explicitly not retained
+
+```text
+full-catalog product object graphs
+all localized HTML bodies
+all authority image payloads
+collision collector full product references
+chunk body strings after writeFileAtomic()
+internal writer/scratch objects in CLI output
+```
+
+### Red preflight diagnostics
+
+Preflight always runs diagnostic canonical validation/chunk packing even when other
+source blockers exist. Post-filter SKU collision blockers are reported regardless of
+unrelated blockers. Products quarantined at source (duplicate translation language,
+missing current `uc_products`, invalid SKU) are not emitted to candidates. Per-record
+canonical validation failures quarantine individual products but allow later products
+to continue diagnostic packing. No `.ready` spool is produced while any blocker exists.
+
 ## D2a / D2b boundary
 
 | D2a | D2b |

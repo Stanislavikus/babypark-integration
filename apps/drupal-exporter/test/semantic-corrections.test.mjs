@@ -248,16 +248,16 @@ test('preflight and spool produce identical canonical chunk bytes', async () => 
 
   assert.deepEqual(
     preflight.prepared.chunks.map(c => c.sha256),
-    spool.spool.prepared.chunks.map(c => c.sha256)
+    spool.prepared.chunks.map(c => c.sha256)
   );
   const spoolBodies = readChunkBodies(
-    spool.spool.readyPath,
-    spool.spool.prepared.chunks
+    spool.spool.ready_path,
+    spool.prepared.chunks
   );
   const spoolHashes = spoolBodies.map(body =>
     crypto.createHash('sha256').update(body).digest('hex')
   );
-  assert.deepEqual(spoolHashes, spool.spool.prepared.chunks.map(c => c.sha256));
+  assert.deepEqual(spoolHashes, spool.prepared.chunks.map(c => c.sha256));
 });
 
 test('successful spool removes transient source scratch', async () => {
@@ -272,7 +272,7 @@ test('successful spool removes transient source scratch', async () => {
     fixtureSourceDir: sourceDir,
     skipFilesystemChecks: true,
   });
-  const ready = result.spool.readyPath;
+  const ready = result.spool.ready_path;
   assert.equal(fs.existsSync(path.join(ready, 'source')), false);
 });
 

@@ -34,6 +34,10 @@ export const SOURCE_QUERIES = Object.freeze({
     FROM node n
     JOIN node_type nt ON nt.type = n.type
     WHERE nt.base = 'uc_product' AND n.status = 1
+    ORDER BY
+      CASE WHEN n.tnid != 0 THEN n.tnid ELSE n.nid END,
+      n.language,
+      n.nid
   `,
 
   product_kit_groups: `
@@ -60,6 +64,7 @@ export const SOURCE_QUERIES = Object.freeze({
            CAST(SUBSTRING_INDEX(ua.source, '/', -1) AS UNSIGNED) AS nid
     FROM url_alias ua
     WHERE ua.source LIKE 'node/%'
+    ORDER BY nid, ua.language, ua.pid
   `,
 
   categories: `
@@ -122,6 +127,7 @@ export const SOURCE_QUERIES = Object.freeze({
     FROM uc_products p
     JOIN node n ON n.nid = p.nid AND p.vid = n.vid
     WHERE n.status = 1
+    ORDER BY p.nid, p.vid
   `,
 
   images: `

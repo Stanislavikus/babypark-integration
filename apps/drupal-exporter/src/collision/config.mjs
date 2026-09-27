@@ -74,11 +74,17 @@ function mappingIdentityKey(mapping) {
   return `unsupported:${JSON.stringify(mapping)}`;
 }
 
-export function validateCollisionMappingUniqueness(mappings, blockers) {
+export function partitionCollisionMappings(mappings, blockers) {
   const seen = new Map();
+  let validMappings = [];
+  const conflictingKeys = [];
+
   for (const mapping of mappings) {
     const key = mappingIdentityKey(mapping);
     if (seen.has(key)) {
+      if (!conflictingKeys.includes(key)) {
+        conflictingKeys.push(key);
+      }
       blockers.add(new Blocker(
         BLOCKER_CODES.COLLISION_MAPPING_UNSUPPORTED,
         'Duplicate or conflicting collision mapping for same collision identity',
@@ -88,8 +94,17 @@ export function validateCollisionMappingUniqueness(mappings, blockers) {
           conflicting_mapping: mapping,
         }
       ));
+      validMappings = validMappings.filter(m => mappingIdentityKey(m) !== key);
       continue;
     }
     seen.set(key, mapping);
+    validMappings.push(mapping);
   }
+
+  return { validMappings, conflictingKeys };
+}
+
+/** @deprecated use partitionCollisionMappings */
+export function validateCollisionMappingUniqueness(mappings, blockers) {
+  partitionCollisionMappings(mappings, blockers);
 }

@@ -70,10 +70,10 @@ test('deterministic spool artifacts and atomic promote', async t => {
     skipFilesystemChecks: true,
   });
   assert.equal(first.ok, true);
-  const ready1 = first.spool.readyPath;
+  const ready1 = first.spool.ready_path;
 
   const hashes1 = hashArtifacts(ready1);
-  assert.ok(first.spool.prepared);
+  assert.ok(first.prepared);
 
   fs.rmSync(ready1, { recursive: true, force: true });
 
@@ -83,9 +83,9 @@ test('deterministic spool artifacts and atomic promote', async t => {
     fixtureSourceDir: sourceDir,
     skipFilesystemChecks: true,
   });
-  const hashes2 = hashArtifacts(second.spool.readyPath);
+  const hashes2 = hashArtifacts(second.spool.ready_path);
   assert.deepEqual(hashes1, hashes2);
-  assert.ok(fs.existsSync(second.spool.readyPath));
+  assert.ok(fs.existsSync(second.spool.ready_path));
   assert.equal(
     fs.existsSync(path.join(config.spoolRoot, 'snapshot-fixture-watermark-123456789012345678.building')),
     false

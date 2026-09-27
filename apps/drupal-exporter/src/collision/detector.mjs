@@ -1,5 +1,5 @@
 import { BLOCKER_CODES, Blocker } from '../blockers.mjs';
-import { tryNormalizeSku } from '../canonical/sku.mjs';
+import { compactVariantEntry, collisionReportFromEntry } from './compact.mjs';
 
 export function createSkuCollisionCollector(blockers) {
   const crossProduct = new Map();
@@ -9,15 +9,11 @@ export function createSkuCollisionCollector(blockers) {
     addProduct(product) {
       const byKey = new Map();
       for (const variant of product.variants) {
-        const normalized = tryNormalizeSku(variant.sku, blockers, {
-          native_product_id: product.native_product_id,
-          native_variant_id: variant.native_variant_id,
-          context: 'collision',
-        });
-        if (!normalized) continue;
-        const { sku_key } = normalized;
+        const compact = compactVariantEntry(product, variant, blockers);
+        if (!compact) continue;
+        const { sku_key } = compact;
         if (!byKey.has(sku_key)) byKey.set(sku_key, []);
-        byKey.get(sku_key).push(variant);
+        byKey.get(sku_key).push(compact);
       }
 
       for (const [skuKey, variants] of byKey) {
@@ -33,12 +29,8 @@ export function createSkuCollisionCollector(blockers) {
           });
         }
         if (!crossProduct.has(skuKey)) crossProduct.set(skuKey, []);
-        for (const variant of variants) {
-          crossProduct.get(skuKey).push({
-            native_product_id: product.native_product_id,
-            variant,
-            product,
-          });
+        for (const entry of variants) {
+          crossProduct.get(skuKey).push(entry);
         }
       }
     },
@@ -72,33 +64,8 @@ export function collectSkuCollisions(products, blockers = null) {
   return collector.snapshot();
 }
 
-export function buildCollisionReportEntry({
-  collision,
-  productIndex,
-}) {
-  const product = collision.product ?? productIndex.get(collision.native_product_id);
-  const authority = product?.authority ?? {};
-  const variant = collision.variant;
-  const normalized = tryNormalizeSku(variant.sku, { add() {} }, {
-    native_product_id: product?.native_product_id ?? collision.native_product_id,
-    native_variant_id: variant.native_variant_id,
-  });
-  return {
-    collision_type: collision.collision_type,
-    sku: variant.sku,
-    sku_key: normalized?.sku_key ?? null,
-    native_product_id: product?.native_product_id ?? collision.native_product_id,
-    authority_nid: authority.nid ?? null,
-    title: authority.title ?? null,
-    language: authority.language ?? null,
-    brand: product?.brand_native_id ?? null,
-    category: product?.categories?.[0]?.native_category_id ?? null,
-    structural_native_variant_id: variant.native_variant_id,
-    source_combination: variant.source_combination ?? null,
-    price: variant.offer?.current_minor ?? null,
-    availability: variant.offer?.commercial_availability ?? null,
-    is_default: variant.is_default ?? false,
-  };
+export function buildCollisionReportEntry(collisionType, entry) {
+  return collisionReportFromEntry(collisionType, entry);
 }
 
 export function sortCollisionReport(entries) {
@@ -119,7 +86,7 @@ export function sortCollisionReport(entries) {
   });
 }
 
-function reportRemainingCollisions({ cross, within, blockers }) {
+export function reportRemainingCollisions({ cross, within, blockers }) {
   for (const collision of cross) {
     blockers.add(new Blocker(
       BLOCKER_CODES.SKU_COLLISION_CROSS_PRODUCT,

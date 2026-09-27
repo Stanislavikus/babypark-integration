@@ -2,16 +2,17 @@ import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import { BLOCKER_CODES, Blocker, BlockerCollection } from '../blockers.mjs';
-import { loadCollisionConfig, parseCollisionMappings, validateCollisionMappingUniqueness } from '../collision/config.mjs';
+import { loadCollisionConfig, parseCollisionMappings, partitionCollisionMappings } from '../collision/config.mjs';
 import {
   createSkuCollisionCollector,
   resolveCollisionExclusions,
   filterProductByExclusions,
   buildCollisionReportEntry,
   sortCollisionReport,
+  reportRemainingCollisions,
 } from '../collision/detector.mjs';
 import { buildCanonicalRecords } from '../canonical/build-from-source.mjs';
-import { IncrementalChunkWriter } from '../canonical/incremental-chunks.mjs';
+import { IncrementalChunkWriter, validateSingleCanonicalRecord } from '../canonical/incremental-chunks.mjs';
 import { sanitizeProductForCanonical } from '../canonical/sanitize.mjs';
 import {
   checkFilesystemPrecheck,
@@ -83,7 +84,7 @@ export async function runExportPipeline({
 
   const collisionConfig = loadCollisionConfig(config.collisionConfigPath);
   const mappings = parseCollisionMappings(collisionConfig);
-  validateCollisionMappingUniqueness(mappings, blockers);
+  const { validMappings } = partitionCollisionMappings(mappings, blockers);
 
   const built = await buildCanonicalRecords({
     sourceDir,
@@ -93,42 +94,42 @@ export async function runExportPipeline({
   });
 
   const collisionCollector = createSkuCollisionCollector(blockers);
-  const productIndex = new Map();
   await streamCandidateProducts(built.candidatesPath, product => {
     collisionCollector.addProduct(product);
-    productIndex.set(product.native_product_id, product);
   });
   const collisionSnapshot = collisionCollector.snapshot();
 
   const exclusions = resolveCollisionExclusions({
     cross: collisionSnapshot.cross,
     within: collisionSnapshot.within,
-    mappings,
+    mappings: validMappings,
     blockers,
   });
 
   const collisionReport = buildCollisionReport({
     collisionSnapshot,
-    productIndex,
     mappings,
   });
 
+  const postCollector = createSkuCollisionCollector(blockers);
+  await streamCandidateProducts(built.candidatesPath, product => {
+    const filtered = filterProductByExclusions(product, exclusions);
+    if (filtered) postCollector.addProduct(filtered);
+  });
+  reportRemainingCollisions({ ...postCollector.snapshot(), blockers });
+
   const filteredPath = path.join(path.dirname(built.candidatesPath), 'filtered.ndjson');
-  let prepared = null;
-  let phase1Count = 0;
-  if (!blockers.hasBlockers()) {
-    const chunkResult = await prepareIncrementalChunks({
-      phase0: built.phase0,
-      candidatesPath: built.candidatesPath,
-      filteredPath,
-      exclusions,
-      blockers,
-      mode,
-      buildingPath,
-    });
-    prepared = chunkResult?.prepared ?? null;
-    phase1Count = chunkResult?.phase1Count ?? 0;
-  }
+  const chunkResult = await prepareDiagnosticChunks({
+    phase0: built.phase0,
+    candidatesPath: built.candidatesPath,
+    filteredPath,
+    exclusions,
+    blockers,
+    mode,
+    buildingPath,
+  });
+  const prepared = chunkResult?.prepared ?? null;
+  const phase1Count = chunkResult?.phase1Count ?? 0;
 
   const authorityCounts = await countFilteredAuthorities(
     built.candidatesPath,
@@ -149,8 +150,8 @@ export async function runExportPipeline({
   };
 
   if (blockers.hasBlockers() || mode === 'preflight') {
-    if (prepared?.writer) {
-      prepared.writer.cleanup();
+    if (chunkResult?.scratchDir && fs.existsSync(chunkResult.scratchDir)) {
+      fs.rmSync(chunkResult.scratchDir, { recursive: true, force: true });
     }
     if (buildingPath && fs.existsSync(buildingPath) && (ownsBuildingPath || fixtureSourceDir)) {
       fs.rmSync(buildingPath, { recursive: true, force: true });
@@ -206,7 +207,7 @@ async function countFilteredAuthorities(candidatesPath, exclusions) {
   return { ru, uk_fallback: uk };
 }
 
-async function prepareIncrementalChunks({
+async function prepareDiagnosticChunks({
   phase0,
   candidatesPath,
   filteredPath,
@@ -215,13 +216,14 @@ async function prepareIncrementalChunks({
   mode,
   buildingPath,
 }) {
-  const outputDir = mode === 'preflight'
+  const scratch = mode === 'preflight';
+  const outputDir = scratch
     ? fs.mkdtempSync(path.join(os.tmpdir(), 'drupal-chunks-scratch-'))
     : buildingPath;
 
   const writer = new IncrementalChunkWriter({
     outputDir,
-    scratch: mode === 'preflight',
+    scratch,
   });
 
   if (fs.existsSync(filteredPath)) {
@@ -233,71 +235,38 @@ async function prepareIncrementalChunks({
   try {
     writer.writePhase0Records(phase0);
 
-    const postCollector = createSkuCollisionCollector(blockers);
     await streamCandidateProducts(candidatesPath, product => {
       const filtered = filterProductByExclusions(product, exclusions);
       if (!filtered) return;
+
+      const canonical = sanitizeProductForCanonical(filtered);
+      const validation = validateSingleCanonicalRecord(canonical);
+      if (!validation.ok) {
+        const blocker = validation.blocker;
+        if (!blocker.details.native_product_id && filtered.native_product_id) {
+          blocker.details.native_product_id = filtered.native_product_id;
+        }
+        blockers.add(blocker);
+        return;
+      }
+
       phase1Count += 1;
       fs.appendFileSync(filteredPath, `${JSON.stringify(filtered)}\n`);
-      postCollector.addProduct(filtered);
-      writer.writePhase1Record(sanitizeProductForCanonical(filtered));
+      writer.writePhase1Record(canonical);
     });
-
-    const remaining = postCollector.snapshot();
-    for (const collision of remaining.cross) {
-      blockers.add(new Blocker(
-        BLOCKER_CODES.SKU_COLLISION_CROSS_PRODUCT,
-        `Unresolved cross-product SKU collision: ${collision.sku_key}`,
-        {
-          sku_key: collision.sku_key,
-          products: [...new Set(collision.entries.map(e => e.native_product_id))],
-        }
-      ));
-    }
-    for (const collision of remaining.within) {
-      if (collision.variants.length > 2) {
-        blockers.add(new Blocker(
-          BLOCKER_CODES.COLLISION_MAPPING_UNSUPPORTED,
-          'Within-product collision has more than two variants',
-          {
-            sku_key: collision.sku_key,
-            native_product_id: collision.native_product_id,
-            variants: collision.variants.map(v => v.native_variant_id),
-          }
-        ));
-        continue;
-      }
-      blockers.add(new Blocker(
-        BLOCKER_CODES.SKU_COLLISION_WITHIN_PRODUCT,
-        `Unresolved within-product SKU collision: ${collision.sku_key}`,
-        {
-          sku_key: collision.sku_key,
-          native_product_id: collision.native_product_id,
-          variants: collision.variants.map(v => v.native_variant_id),
-        }
-      ));
-    }
-
-    if (blockers.hasBlockers()) {
-      writer.cleanup();
-      if (fs.existsSync(filteredPath)) fs.unlinkSync(filteredPath);
-      return { prepared: null, phase1Count: 0 };
-    }
 
     const result = writer.finish();
     return {
-      prepared: {
-        ...result,
-        writer,
-      },
+      prepared: result,
       phase1Count,
+      scratchDir: scratch ? outputDir : null,
     };
   } catch (error) {
     writer.cleanup();
     if (fs.existsSync(filteredPath)) fs.unlinkSync(filteredPath);
     if (error instanceof Blocker) {
       blockers.add(error);
-      return { prepared: null, phase1Count: 0 };
+      return { prepared: null, phase1Count: 0, scratchDir: scratch ? outputDir : null };
     }
     throw error;
   }
@@ -333,33 +302,17 @@ function buildPipelineResult({
   };
 }
 
-function buildCollisionReport({ collisionSnapshot, productIndex, mappings }) {
+function buildCollisionReport({ collisionSnapshot, mappings }) {
   const entries = [];
 
   for (const collision of collisionSnapshot.cross) {
     for (const entry of collision.entries) {
-      entries.push(buildCollisionReportEntry({
-        collision: {
-          collision_type: 'cross_product',
-          native_product_id: entry.native_product_id,
-          variant: entry.variant,
-          product: entry.product,
-        },
-        productIndex,
-      }));
+      entries.push(buildCollisionReportEntry('cross_product', entry));
     }
   }
   for (const collision of collisionSnapshot.within) {
     for (const variant of collision.variants) {
-      entries.push(buildCollisionReportEntry({
-        collision: {
-          collision_type: 'within_product',
-          native_product_id: collision.native_product_id,
-          variant,
-          product: productIndex.get(collision.native_product_id),
-        },
-        productIndex,
-      }));
+      entries.push(buildCollisionReportEntry('within_product', variant));
     }
   }
 
@@ -422,16 +375,10 @@ function writePreparedSpool({
     fs.rmSync(sourceScratch, { recursive: true, force: true });
   }
 
-  const sourceCandidates = path.join(building, 'source', 'candidates.ndjson');
-  if (fs.existsSync(sourceCandidates)) {
-    fs.unlinkSync(sourceCandidates);
-  }
-
   atomicPromote(building, ready);
 
   return {
-    readyPath: ready,
+    ready_path: ready,
     manifest,
-    prepared,
   };
 }
