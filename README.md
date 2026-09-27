@@ -19,4 +19,45 @@ Canonical integration source for BabyPark customer messaging, catalog synchroniz
 5. `legacy/current/` — exact captured production Viber implementation
 6. `deploy/chatwoot-host/` — sanitized current deployment snapshots
 
+
+## Definition of Done — keep CURRENT_STATE current
+
+A substantial task is **not CLOSED** until `docs/CURRENT_STATE.md` reflects the
+actual resulting project state.
+
+This applies to any completed change that materially affects one or more of:
+
+- architecture or durable contracts;
+- production/runtime behavior;
+- deployed version/release/SHA;
+- connector/exporter/catalog/AI capability;
+- security or operational controls;
+- roadmap phase/slice status;
+- blockers, unresolved decisions or the next executable step.
+
+Before declaring such work complete, the implementing/reviewing agent must update
+`docs/CURRENT_STATE.md` in the same PR or in an immediate closure/docs PR.
+
+The update must record, when relevant:
+
+- what is now completed;
+- exact merged/reviewed SHA(s);
+- what is actually deployed versus merged-only/not deployed;
+- production verification/preflight result;
+- remaining blockers or intentionally unresolved decisions;
+- the next agreed step;
+- links to the durable architecture document when the design itself changed.
+
+Do **not** turn `CURRENT_STATE.md` into an exhaustive commit log. Pure refactors,
+test-only changes, formatting, or other changes that do not alter the meaningful
+current project/runtime state do not require a new current-state entry. Historical
+detail belongs in Git and, when useful, `docs/CHANGELOG.md`.
+
+If durable architecture changes, update its source-of-truth document as well;
+`CURRENT_STATE.md` should summarize the current implementation/status and link to
+that durable document rather than duplicate the whole design.
+
+An agent must not report a phase/slice as completed when
+`docs/CURRENT_STATE.md` still describes an older or contradictory state.
+
 Secrets are never committed.
