@@ -663,7 +663,8 @@ test('catalog anomaly reconcile-report fails closed when store is missing', () =
   });
   fs.writeFileSync(reportPath, JSON.stringify(report, null, 2));
 
-  const reconcile = spawnSync('node', [
+  const reconcile = spawnSync(process.execPath, [
+    '--no-warnings',
     'scripts/catalog-anomaly-ops.mjs',
     'reconcile-report',
     `--store=${storePath}`,
