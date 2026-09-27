@@ -1,9 +1,25 @@
 version: 1
-# Reviewed Drupal legacy SKU collision overrides belong here.
+# Reviewed Drupal legacy SKU collision overrides for the read-only exporter.
 #
-# This file is intentionally empty during Phase D1. No collision is approved
-# merely because it already exists in Drupal.
+# Supported actions (D2a parser):
 #
-# Future entries must be produced from the read-only collision report and
-# reviewed before bootstrap/certification.
+# exclude_product — cross-product sku_key collision between exactly two products:
+#   - sku_key
+#   - action: exclude_product
+#   - retain_native_product_id
+#   - exclude_native_product_id
+#   - reviewed_source: "review:<identifier>"
+#   - reason
+#
+# exclude_variant — within-product duplicate sku_key between two structural variants:
+#   - sku_key
+#   - action: exclude_variant
+#   - native_product_id
+#   - retain_native_variant_id
+#   - exclude_native_variant_id
+#   - reviewed_source: "review:<identifier>"
+#   - reason
+#
+# This file remains intentionally empty until human review of exporter collision-report.json.
+# No collision is approved merely because it exists in Drupal source data.
 mappings: []
