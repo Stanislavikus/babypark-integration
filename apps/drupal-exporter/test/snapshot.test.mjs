@@ -6,8 +6,22 @@ import { parsePhpSerializedInteger } from '../src/php-variable.mjs';
 import { BLOCKER_CODES } from '../src/blockers.mjs';
 import { testConfig } from './helpers/fixture-builder.mjs';
 
-test('parsePhpSerializedInteger handles production form', () => {
+test('parsePhpSerializedInteger handles production form as string', () => {
   assert.equal(parsePhpSerializedInteger('i:1700000000;'), 1700000000);
+});
+
+test('parsePhpSerializedInteger handles MariaDB LONG BLOB as Buffer', () => {
+  assert.equal(
+    parsePhpSerializedInteger(Buffer.from('i:1700000000;', 'utf8')),
+    1700000000
+  );
+});
+
+test('parsePhpSerializedInteger rejects unsupported value types', () => {
+  assert.throws(
+    () => parsePhpSerializedInteger(1700000000),
+    /string or Buffer/
+  );
 });
 
 test('source instability when pending stock file appears', () => {

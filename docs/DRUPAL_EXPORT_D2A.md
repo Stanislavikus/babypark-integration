@@ -19,7 +19,7 @@ generation. D2b owns HTTP transport and the first controlled FULL send.
 apps/drupal-exporter/
 ```
 
-Runtime: Node `>= 20` (production host has `/usr/bin/node` v20.20.2).
+Runtime: Node `>= 22`. The Drupal host system `/usr/bin/node` remains v20.20.2; the exporter uses an isolated Node 22 runtime under `/opt/babypark-exporter/runtime/` so the live site runtime is not changed.
 
 CLI:
 
