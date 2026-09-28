@@ -343,6 +343,15 @@ test('preflight exposes anomaly summary without ready spool', async () => {
   assert.equal(result.ok, true);
 });
 
+test('publication-policy hash is exact raw bytes', () => {
+  const policyPath = path.join(REPO_ROOT, 'config/catalog-anomalies/publication-policy.yaml');
+  const loaded = loadPublicationPolicy(policyPath);
+  const expected = crypto.createHash('sha256')
+    .update(fs.readFileSync(policyPath))
+    .digest('hex');
+  assert.equal(loaded.sha256, expected);
+});
+
 test('publication policy rejects unknown top-level fields', () => {
   const dir = createFixtureDir();
   const policyPath = path.join(dir, 'bad-policy.yaml');
