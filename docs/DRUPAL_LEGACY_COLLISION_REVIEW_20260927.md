@@ -67,6 +67,25 @@ Evidence used includes:
 - manufacturer/GTIN identity where independently corroborated;
 - content/image equivalence for historical split cards.
 
+### 2026-09-28 production recheck of default-fallback decisions
+
+A read-only query through the dedicated `babypark_exporter` SELECT-only database
+principal reverified the six decisions whose ledger evidence was previously
+descriptive rather than option-ID-specific.
+
+| SKU key | Product | Retain option | Exclude/default option | Production evidence |
+|---|---:|---:|---:|---|
+| `106-2.45.44` | `67463` | `19792` | `19789` | default=19789; retain adjustment model `106-2.45.44`; weights 1 vs 3 |
+| `154.6.01ver` | `39988` | `25587` | `12377` | default=12377; retain adjustment model `154.6.01ver`; weights 1 vs 3 |
+| `1801blbf01` | `42887` | `9795` | `9796` | default=9796; retain adjustment model `1801BLBF01`; weights 1 vs 3 |
+| `216.04.7ver` | `38223` | `20655` | `17828` | default=17828; retain adjustment model `216.04.7ver`; weights 1 vs 3 |
+| `23241eu4ep` | `62506` | `20157` | `20022` | default=20022; retain adjustment model `23241EU4ep`; weights 1 vs 3 |
+| `o3sumc` | `77502` | `31713` | `31539` | default=31539; retain adjustment model `O3SUMC`; weights 1 vs 3 |
+
+For all six rows, the excluded/default option has no corresponding
+`uc_product_adjustments` row for the colliding SKU. This confirms the mapped
+direction without relying on numeric option-ID ordering.
+
 ## 21 technically evidenced decisions
 
 | Type | SKU key | Product | Action | Retain | Exclude | Evidence basis |
