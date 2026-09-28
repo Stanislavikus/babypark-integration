@@ -1,0 +1,37 @@
+version: 1
+schema: bp.drupal.source-acceptance-cases/1
+# Reviewed first-FULL acceptance fixtures. This file affects only retained
+# acceptance evidence; it does not alter publication/collision decisions.
+cases:
+  - id: reviewed-collision-mappings
+    purpose: Verify raw source evidence for all 21 reviewed legacy collision decisions.
+    native_product_ids:
+      - "55677"
+      - "55682"
+      - "67463"
+      - "133434"
+      - "80520"
+      - "39988"
+      - "42887"
+      - "38223"
+      - "62506"
+      - "16553"
+      - "48595"
+      - "16680"
+      - "39002"
+      - "12871"
+      - "114708"
+      - "61907"
+      - "71198"
+      - "21136"
+      - "49533"
+      - "70541"
+      - "77502"
+      - "38178"
+  - id: unresolved-anomaly-fixtures
+    purpose: Preserve raw/current-absence evidence for the two identity cases that were unresolved at D2b design freeze.
+    native_product_ids:
+      - "79252"
+      - "139026"
+      - "12605"
+      - "118670"

@@ -7,6 +7,7 @@ import { BlockerCollection } from '../blockers.mjs';
 import { checkFilesystemStability } from '../filesystem-stability.mjs';
 import { SOURCE_QUERY_NAMES, SOURCE_QUERIES, SOURCE_QUERY_FILES } from './queries.mjs';
 import { resolveSpoolPaths, createBuildingDir } from '../spool/layout.mjs';
+import { collectSourceAcceptance } from './source-acceptance.mjs';
 
 export async function streamQueryToNdjson(conn, sql, outPath) {
   const stream = conn.queryStream({ sql });
@@ -36,6 +37,7 @@ export async function streamQueryToNdjson(conn, sql, outPath) {
 export async function extractSnapshotToNdjson({
   config,
   beforeFingerprint,
+  acceptanceCases,
 }) {
   const conn = await mariadb.createConnection({
     host: config.db.host,
@@ -116,12 +118,21 @@ export async function extractSnapshotToNdjson({
       `${JSON.stringify(sourceCurrency)}\n`
     );
 
+    const sourceAcceptance = await collectSourceAcceptance(conn, {
+      provider: config.provider,
+      sourceEpoch: config.sourceEpoch,
+      snapshotWatermark,
+      stockSyncUnix,
+      acceptanceCases,
+    });
+
     await conn.query('ROLLBACK');
 
     return {
       snapshotWatermark,
       stockSyncUnix,
       sourceCurrency,
+      sourceAcceptance,
       buildingPath,
       sourceDir,
       ownsBuildingPath,

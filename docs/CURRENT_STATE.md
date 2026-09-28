@@ -245,8 +245,10 @@ What landed in repository code (not production):
   `config/catalog-anomalies/publication-policy.yaml`;
 - Drupal exporter integration:
   reviewed legacy mappings first, residual SKU collisions become anomaly
-  observations, whole-product quarantine, deterministic `anomaly-report.json`,
-  spool manifest `bp.drupal-exporter.spool/2`;
+  observations, whole-product quarantine and deterministic `anomaly-report.json`;
+  PR #26 originally emitted `bp.drupal-exporter.spool/2`, while current D2b
+  implementation slice 1 upgrades the repository exporter to transportable
+  `bp.drupal-exporter.spool/3`;
 - local/test operator CLI: `npm run catalog:anomaly-ops -- ...`.
 
 Explicit non-actions in this slice:
@@ -262,31 +264,37 @@ Explicit non-actions in this slice:
 Production Drupal exporter remains:
 `/opt/babypark-exporter/releases/20260927T122537Z-712f09c`
 
-Regression proof uses sanitized 2026-09-27 collision fixtures:
+Regression proof from sanitized 2026-09-27 collision fixtures remains:
 - 21 reviewed test mappings resolve first;
-- only `511000` and `80401mc02` remain as 2 cross-product anomalies;
-- both quarantine all colliding source products;
+- fixture data leaves `511000` and `80401mc02` as 2 cross-product anomalies;
+- both quarantine all fixture colliding source products;
 - unrelated products continue into canonical chunks.
+
+That fixture is historical regression evidence, not a claim that live Drupal remains
+unchanged. A read-only live-source probe on 2026-09-28 found source group/node
+`139026` absent; current `511000` rows belong only to product group `79252`.
+`80401mc02` still appears under groups `12605` and `118670`.
 
 Before first controlled FULL, D2b must cryptographically bind
 `anomaly_report_sha256` and behavior-affecting publication-policy digest.
 Before production anomaly persistence, a separate `anomalies.sqlite`
 backup/restore slice is required.
 
-Next operational steps after collision-config review merge:
-- deploy one immutable exporter release containing anomaly runtime v1,
-  the default-promotion fix, and the 21 reviewed legacy mappings;
-- run production preflight and confirm exactly two residual anomalies
-  (`511000`, `80401mc02`), four quarantined products and zero unaccounted
-  hard blockers;
-- then design/sign D2b binding for first FULL (no unsigned workaround).
+Next operational steps:
+- finish/review implementation slice 1 and build one immutable exporter candidate;
+- run candidate production preflight without switching `current`;
+- require zero unaccounted hard blockers and let the candidate establish the current
+  residual anomaly/quarantine set from live Drupal;
+- preserve acceptance evidence for the historical `511000`/`80401mc02` cases,
+  including an explicit missing-source outcome for `139026`;
+- continue D2b implementation only from that reviewed source truth.
 
-In parallel, review/freeze `docs/PRODUCT_IDENTITY_RESOLUTION_V1.md` while those
-two unresolved collisions remain live acceptance fixtures.
+Product Identity Resolution v1 is already frozen/merged. Its two original cases
+remain historical acceptance fixtures, while the current live incident set is
+re-established by candidate preflight.
 
-The identity-resolution design is required before implementing Requires Attention
-approval or customer-facing identity resolution, but it is **not** a safety
-prerequisite for exporter deploy, quarantined preflight, or D2b design.
+Requires Attention/application remains a separate later track and is not a safety
+prerequisite for exporter candidate preflight or the remaining D2b implementation.
 
 ## Catalog / AI next state
 
@@ -296,20 +304,25 @@ No Drupal FULL has been sent.
 Two independent tracks are active:
 
 1. **Operational ingestion**
-   - deploy one reviewed exporter release with anomaly quarantine + spool v2;
-   - run production preflight against live Drupal source;
-   - confirm deterministic anomaly report and quarantine counts for `511000` and
-     `80401mc02`;
-   - proceed to D2b transport design/binding for first controlled FULL.
+   - review implementation slice 1 and build an immutable exporter candidate with
+     anomaly quarantine + spool v3;
+   - run candidate preflight against live Drupal without switching production
+     `current`;
+   - confirm deterministic anomaly report/quarantine from the current source rather
+     than forcing the historical 2026-09-27 2/4 count;
+   - only after candidate proof install/switch the reviewed exporter release;
+   - continue D2b runtime/sender implementation toward first controlled FULL.
 
-2. **Identity-resolution design**
-   - review/freeze `docs/PRODUCT_IDENTITY_RESOLUTION_V1.md`;
-   - keep the two live cases unresolved/unmapped as acceptance fixtures;
-   - do not implement approval authority until exact evidence binding,
-     IdentityStore constraints and digest-bound reviewed authority are frozen.
+2. **Identity-resolution application (later)**
+   - frozen design: `docs/PRODUCT_IDENTITY_RESOLUTION_V1.md`;
+   - keep both historical identifiers unmapped unless a separately reviewed
+     resolution is approved;
+   - current source absence of a historical card is evidence, not an implicit legacy
+     mapping or permanent identity decision;
+   - do not pull Requires Attention/application work back into the first-FULL
+     critical path.
 
-The identity-resolution design step does not change the current exporter release,
-does not resolve either fixture by legacy mapping, and does not authorize FULL.
+No identity-resolution application is authorized by this exporter slice.
 
 Previously frozen design items now implemented in code (awaiting deploy):
 
@@ -372,9 +385,11 @@ Agreed anomaly governance is already indexed from:
 These governance files are indexed in Git. Production runtime still does not load
 them until the reviewed exporter release above is deployed.
 
-The two unresolved duplicate identifiers `511000` and `80401mc02` remain useful
-live fixtures and intentionally stay unmapped/quarantined while the provider-neutral
-resolution workflow is reviewed.
+The two identifiers `511000` and `80401mc02` remain intentionally unmapped in
+configuration and useful historical acceptance cases. They are no longer both assumed
+to be live duplicate incidents: the 2026-09-28 read-only source probe found the former
+Joolz duplicate group `139026` absent. Candidate preflight must determine the current
+runtime incident set.
 
 Current design slice:
 - `docs/PRODUCT_IDENTITY_RESOLUTION_V1.md`;
@@ -390,9 +405,9 @@ Current design slice:
 
 No production deployment or FULL is part of this design slice.
 
-## D2b / first controlled FULL design research
+## D2b / first controlled FULL
 
-Status: **DESIGN DRAFT / NO IMPLEMENTATION / NO PRODUCTION CHANGE**
+Status: **FROZEN DESIGN / IMPLEMENTATION SLICE 1 IN REPOSITORY / NOT DEPLOYED**
 
 Design source:
 `docs/DRUPAL_EXPORT_D2B.md`
@@ -404,8 +419,9 @@ critical ingestion path:
    production mapper 1, while current exporter/main emits FULL record v2 and expects
    catalog schema 6 / mapper 2; D2b server support and that compatibility upgrade must
    be deployed together before first FULL;
-2. exporter `.ready` payload spools are not yet represented by the current storage
-   policy, which still describes exporter state as tiny/no-payload state;
+2. exporter payload spool lifecycle is now represented in repository storage policy
+   by dedicated transient `exporter_ready_spools` and `catalog_link_a_staging`
+   objects; production directories/retention are not yet activated;
 3. sender retries require durable exact run-state so one run ID never acquires changed
    header/trailer bytes after restart;
 4. current BOOTSTRAP recovery coverage does not bind the snapshotted/live
@@ -423,7 +439,7 @@ Verified production capability facts:
 - first full-scale isolated rehearsal is therefore mandatory before production
   CatalogService cutover.
 
-Frozen direction pending closure review:
+Frozen direction:
 - keep BP1 transport v1 and existing `/api/catalog/ingest/v1/full` route;
 - introduce exact signed `bp.catalog.run-header/2` with
   `bp.catalog.publication-authority/1`;
@@ -460,4 +476,19 @@ Frozen direction pending closure review:
 - off-host identity/recovery copy + restore drill and two-link acceptance are gates
   before Seller AI/catalog consumers are enabled.
 
-No code/config/storage policy/runtime/production state is changed by this design draft.
+Implementation slice 1 now changes repository exporter/storage-policy code only:
+- exporter writes exact `bp.drupal-exporter.spool/3` with producer release provenance
+  and `source-acceptance.json` hashes;
+- production source-acceptance evidence is gathered by separate targeted SELECTs inside
+  the same repeatable-read snapshot transaction;
+- preflight/spool fail closed on an explicit temp/spool/MariaDB free-space gate;
+- immutable `RELEASE.json` creation/validation is implemented;
+- ready-spool and future CatalogService Link A staging are required transient storage
+  classes.
+
+Still not implemented in this slice: D2b HTTP sender, run-header/2, CatalogService
+publication-authority validation, BOOTSTRAP recovery fix, Link A verifier, rehearsal,
+production CatalogService upgrade or first FULL.
+
+Production exporter remains on its previous release until candidate review/preflight;
+no production state has been changed by this repository slice.

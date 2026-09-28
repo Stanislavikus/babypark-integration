@@ -554,6 +554,74 @@
       "pii": "none_expected"
     },
     {
+      "id": "exporter_ready_spools",
+      "host_role": "drupal",
+      "status": "PLANNED",
+      "scope": "directory",
+      "location": "/var/lib/babypark-exporter/spools",
+      "owner": "bpexport",
+      "purpose": "Transient authoritative ready/in-flight Drupal payload spools through ACK/state, Link A, and owner accept/reset decision.",
+      "state_class": "transient",
+      "thresholds": {
+        "metric": "bytes_total",
+        "basis": "provisional estimate; replace after measured first-FULL baseline",
+        "expected": 536870912,
+        "warning": 1073741824,
+        "critical": 2147483648
+      },
+      "retention": {
+        "mode": "terminal_evidence_guarded",
+        "ttl_days": null
+      },
+      "cleanup": {
+        "automatic": false,
+        "mechanism": "Manual recorded cleanup only after terminal ACK/state, successful exhaustive Link A, and owner accept/reset decision.",
+        "dry_run_required": true,
+        "delete_guard": "Never delete ready/in-flight heavy spool by age alone or while Link A/owner decision is pending."
+      },
+      "recovery": "Rebuild only before seq0. Once a run starts, preserve exact spool bytes until terminal evidence and owner decision.",
+      "backup": {
+        "required": false,
+        "off_host": false,
+        "status": "TRANSIENT_HEAVY_PAYLOAD"
+      },
+      "pii": "none_expected"
+    },
+    {
+      "id": "catalog_link_a_staging",
+      "host_role": "integration",
+      "status": "PLANNED",
+      "scope": "directory",
+      "location": "/var/lib/babypark-catalog/acceptance-staging",
+      "owner": "babypark-catalog:babypark-catalog",
+      "purpose": "Private transient copy of exact accepted spool for exhaustive read-only Link A verification.",
+      "state_class": "transient",
+      "thresholds": {
+        "metric": "bytes_total",
+        "basis": "provisional estimate; replace after measured Link A rehearsal baseline",
+        "expected": 536870912,
+        "warning": 1073741824,
+        "critical": 2147483648
+      },
+      "retention": {
+        "mode": "link_a_owner_decision_guarded",
+        "ttl_days": null
+      },
+      "cleanup": {
+        "automatic": false,
+        "mechanism": "Manual recorded cleanup only after successful Link A and owner accept/reset decision.",
+        "dry_run_required": true,
+        "delete_guard": "No age-only deletion; preserve staging while Link A or owner decision is pending."
+      },
+      "recovery": "Re-pull exact ready spool from Drupal host and reverify all manifest/chunk hashes if staging is lost before Link A completes.",
+      "backup": {
+        "required": false,
+        "off_host": false,
+        "status": "TRANSIENT_HEAVY_PAYLOAD"
+      },
+      "pii": "none_expected"
+    },
+    {
       "id": "exporter_releases",
       "host_role": "drupal",
       "status": "PLANNED",

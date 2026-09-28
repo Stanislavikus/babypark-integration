@@ -73,6 +73,8 @@ test('required storage class cannot disappear silently', () => {
 for (const id of [
   'catalog_publication_lock_db',
   'catalog_publication_lock_sidecars',
+  'exporter_ready_spools',
+  'catalog_link_a_staging',
 ]) {
   test(`${id} cannot disappear silently`, () => {
     const policy = clone(loadStoragePolicy(POLICY));

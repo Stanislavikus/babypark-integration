@@ -26,6 +26,8 @@ const REQUIRED_IDS = Object.freeze([
   'ai_trace_metadata',
   'integration_releases',
   'exporter_state',
+  'exporter_ready_spools',
+  'catalog_link_a_staging',
   'exporter_releases',
   'operations_packages',
 ]);

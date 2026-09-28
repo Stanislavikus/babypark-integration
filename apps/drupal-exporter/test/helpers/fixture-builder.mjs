@@ -117,6 +117,15 @@ export function testConfig(overrides = {}) {
     path.join(REPO_ROOT, 'config/catalog-anomalies/publication-policy.yaml'),
     publicationPolicyPath
   );
+  const releaseProvenancePath = path.join(root, 'RELEASE.json');
+  fs.writeFileSync(releaseProvenancePath, `${JSON.stringify({
+    schema: 'bp.release-provenance/1',
+    repository: 'Stanislavikus/babypark-integration',
+    commit: 'a'.repeat(40),
+    tree: 'b'.repeat(40),
+    package_lock_sha256: 'c'.repeat(64),
+    created_at: '2026-09-28T00:00:00.000Z',
+  }, null, 2)}\n`);
   const stockProcessed = path.join(root, 'stock.xml');
   fs.writeFileSync(stockProcessed, '<stock/>');
   const mtime = new Date(1600000000 * 1000);
@@ -133,6 +142,10 @@ export function testConfig(overrides = {}) {
     spoolRoot: path.join(root, 'spool'),
     collisionConfigPath: collisionPath,
     anomalyPublicationPolicyPath: publicationPolicyPath,
+    releaseProvenancePath,
+    sourceAcceptanceCasesPath: path.join(REPO_ROOT, 'config/drupal/source-acceptance-cases.yaml'),
+    dbDataPath: root,
+    minFreeBytes: 1,
     publicSiteUrl: 'https://babypark.ua',
     publicFilesUrl: 'https://babypark.ua/sites/default/files',
     filesystem: {
