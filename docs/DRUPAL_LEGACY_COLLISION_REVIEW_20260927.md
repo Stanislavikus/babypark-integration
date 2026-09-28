@@ -116,100 +116,118 @@ direction without relying on numeric option-ID ordering.
 
 ### SKU `511000` — Joolz Day2/Day3/Day+ Maxi-Cosi adapter
 
-Candidate A — retain product `79252`:
+Source card `79252`:
 - RU+UK product group;
 - 3 images;
-- current price 1999;
+- current observed price 1999;
 - status IN_STOCK;
 - live RU page;
 - no current catalog category membership found during review.
 
-Candidate B — retain product `139026`:
+Source card `139026`:
 - newer UK-only group;
 - 1 image;
-- current price 1999;
+- current observed price 1999;
 - status IN_STOCK;
 - correct Accessories category and newer UK URL.
 
-Both describe the same physical adapter and both remain live.
+Current review hypothesis: the cards appear to describe the same physical adapter,
+but that identity decision is **not approved**.
 
-A plain `exclude_product` necessarily discards useful data from one side.
+Equal price is volatile commercial context, not identity evidence.
 
-Current technical proposal, **not approved**:
-- retain `79252`;
-- exclude `139026`;
-- rationale: preserve multilingual/richer product identity and reclassify category
-  later if the business confirms this is an accidental duplicate.
+A plain `exclude_product` would discard useful data from one side and is no longer
+the proposed resolution path.
 
-Before approval, investigate why the duplicate was created and whether it represents
-supplier, Merchant Center, SEO, translation or another historical process rule.
+This incident is the Joolz acceptance fixture for
+`docs/PRODUCT_IDENTITY_RESOLUTION_V1.md`: collect scoped manufacturer/variant
+evidence, review complete variant alignment, then if SAME is approved create a
+lossless action plan for canonical binding, content/category merge and legacy URL
+handling.
 
 ### SKU `80401mc02` — Bugaboo Cameleon3 Maxi-Cosi adapter
 
-Candidate A — retain product `12605`:
+Source card `12605`:
 - RU+UK;
 - Accessories category;
 - live page;
-- price 2475;
+- observed price 2475;
 - status IN_STOCK;
 - changed 2026-09-24.
 
-Candidate B — retain product `118670`:
+Source card `118670`:
 - RU+UK;
 - same category/brand;
 - newer structured URL;
 - live page;
-- price 1599;
+- observed price 1599;
 - status OUT_OF_STOCK;
 - changed 2025-04-30.
 
 The normalized SKU currently has zero stock, so stock does not distinguish identity.
-
 Both public pages exist and commercial facts conflict.
 
-Current technical proposal, **not approved**:
-- retain `12605`;
-- exclude `118670`;
-- rationale: `12605` carries the current sync-updated commercial record, while
-  `118670` appears stale.
+Business evidence supplied by the BabyPark content manager on 2026-09-28:
+- the two cards originated from different suppliers;
+- their source articles differ only by letter case;
+- legacy 1C treated those strings as different articles;
+- that produced two customer-facing cards.
 
-Before approval, investigate why both cards exist and which product record/content
-manager considers authoritative.
+This is human-confirmed business provenance, not yet proof that the value is a
+manufacturer MPN rather than a supplier-scoped SKU, and not yet approved proof
+that all variants are the same physical item.
 
-## Questions for the process/content owner
+Price, freshness and availability must not choose a winner.
 
-For each of `511000` and `80401MC02`, determine:
+This incident is the Bugaboo acceptance fixture for
+`docs/PRODUCT_IDENTITY_RESOLUTION_V1.md`: verify identifier scope and
+manufacturer/variant identity first; if SAME is approved, preserve supplier-specific
+raw SKUs as supplier-offer data and resolve customer-offer pricing separately.
 
-1. Why were two product cards created with the same article?
-2. Are they genuinely the same physical manufacturer product/variant?
-3. Do they represent different suppliers while intentionally sharing the
-   manufacturer article?
-4. Was duplication introduced for Google Merchant Center, SEO, language/category
-   routing, stock handling or another Drupal limitation/workaround?
-5. Which card is considered the authoritative customer-facing product today?
-6. Is any unique content/category/URL/supplier relationship from the other card
-   still required and should be migrated rather than discarded?
-7. What source/process should be corrected so the same condition does not recur in
-   Magento/SaaS?
+## Remaining identity/process questions
+
+For Joolz `511000`:
+1. What historical process created the second card?
+2. Do manufacturer identifiers and complete variant attributes confirm one
+   physical product/variant set?
+3. Which unique content/category/URL facts from each card must survive migration?
+
+For Bugaboo `80401mc02`:
+1. Is the case-variant article a manufacturer MPN/article or only a supplier-scoped
+   SKU?
+2. Do manufacturer identifiers and complete variant attributes confirm one
+   physical product/variant set across the two supplier records?
+3. Which source-system rule should prevent supplier identity from creating a
+   duplicate customer-facing product in 1C/SaaS/Magento?
+4. What reviewed pricing/customer-offer policy resolves the conflicting commercial
+   facts if identity is confirmed SAME?
+
+For both cases, preserve legacy URLs needed for future redirect/SEO handling.
 
 Do not approve an `exclude_product` merely to make preflight green.
 
 ## Next step
 
-1. Keep `511000` and `80401mc02` unresolved and unmapped until their root cause and
-   business decision are recorded here.
-2. Validate the 21 active mappings against config schema, drift and
-   default-promotion behavior.
-3. Deploy one immutable exporter release containing the merged default-promotion
-   fix, Catalog Anomaly Runtime v1 and these 21 reviewed mappings.
-4. Run the next production preflight.
-5. Expected result: exactly two residual anomaly incidents (`511000`,
+Identity-resolution track:
+1. Keep `511000` and `80401mc02` unresolved and unmapped.
+2. Review/freeze `docs/PRODUCT_IDENTITY_RESOLUTION_V1.md`.
+3. Use these two incidents as live acceptance fixtures; do not replace that
+   workflow with a legacy retain/exclude mapping.
+
+Operational ingestion track may proceed independently:
+1. Deploy one immutable exporter release containing the merged default-promotion
+   fix, Catalog Anomaly Runtime v1 and the 21 reviewed mappings.
+2. Run production preflight.
+3. Expected result: exactly two residual anomaly incidents (`511000`,
    `80401mc02`), four quarantined source products and zero unaccounted hard
    blockers.
-6. Produce a deterministic local spool only after the preflight is clean under
+4. Produce a deterministic local spool only after the preflight is clean under
    that policy.
-7. Proceed to D2b / first controlled FULL only after the spool and signed binding
+5. Proceed to D2b / first controlled FULL only after the spool and signed binding
    design are reviewed.
+
+The identity-resolution design is not a prerequisite for quarantined preflight or
+D2b design; it is required before any durable resolution of these two incidents.
 
 ## Audit rule
 

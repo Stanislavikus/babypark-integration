@@ -273,7 +273,7 @@ Before first controlled FULL, D2b must cryptographically bind
 Before production anomaly persistence, a separate `anomalies.sqlite`
 backup/restore slice is required.
 
-Next step after collision-config review merge:
+Next operational steps after collision-config review merge:
 - deploy one immutable exporter release containing anomaly runtime v1,
   the default-promotion fix, and the 21 reviewed legacy mappings;
 - run production preflight and confirm exactly two residual anomalies
@@ -281,17 +281,35 @@ Next step after collision-config review merge:
   hard blockers;
 - then design/sign D2b binding for first FULL (no unsigned workaround).
 
+In parallel, review/freeze `docs/PRODUCT_IDENTITY_RESOLUTION_V1.md` while those
+two unresolved collisions remain live acceptance fixtures.
+
+The identity-resolution design is required before implementing Requires Attention
+approval or customer-facing identity resolution, but it is **not** a safety
+prerequisite for exporter deploy, quarantined preflight, or D2b design.
+
 ## Catalog / AI next state
 
 No AI copilot is active.
 No Drupal FULL has been sent.
 
-Immediate next engineering slice after anomaly runtime v1 merge:
-- deploy reviewed exporter release with anomaly quarantine + spool v2;
-- run production preflight against live Drupal source;
-- confirm deterministic anomaly report and quarantine counts for the two
-  unresolved fixtures (`511000`, `80401mc02`);
-- proceed to D2b transport design/binding for first controlled FULL.
+Two independent tracks are active:
+
+1. **Operational ingestion**
+   - deploy one reviewed exporter release with anomaly quarantine + spool v2;
+   - run production preflight against live Drupal source;
+   - confirm deterministic anomaly report and quarantine counts for `511000` and
+     `80401mc02`;
+   - proceed to D2b transport design/binding for first controlled FULL.
+
+2. **Identity-resolution design**
+   - review/freeze `docs/PRODUCT_IDENTITY_RESOLUTION_V1.md`;
+   - keep the two live cases unresolved/unmapped as acceptance fixtures;
+   - do not implement approval authority until exact evidence binding,
+     IdentityStore constraints and digest-bound reviewed authority are frozen.
+
+The identity-resolution design step does not change the current exporter release,
+does not resolve either fixture by legacy mapping, and does not authorize FULL.
 
 Previously frozen design items now implemented in code (awaiting deploy):
 
@@ -355,5 +373,19 @@ These governance files are indexed in Git. Production runtime still does not loa
 them until the reviewed exporter release above is deployed.
 
 The two unresolved duplicate identifiers `511000` and `80401mc02` remain useful
-live fixtures and still require business/source-process investigation before any
-permanent legacy mapping or identity decision is approved.
+live fixtures and intentionally stay unmapped/quarantined while the provider-neutral
+resolution workflow is reviewed.
+
+Current design slice:
+- `docs/PRODUCT_IDENTITY_RESOLUTION_V1.md`;
+- Joolz `511000`: acceptance case for a candidate same-product resolution where
+  useful content, category and URL facts are split across legacy cards;
+- Bugaboo `80401mc02`: acceptance case for a candidate same-product resolution
+  involving multiple suppliers and case-variant source articles;
+- product/variant identity, root cause, identifier exception and action plan are
+  separate structured decisions;
+- approval binds exact material evidence and collider/source-entity set;
+- AI may propose; until authenticated admin approval exists, reviewed digest-bound
+  registry changes are the durable authority.
+
+No production deployment or FULL is part of this design slice.

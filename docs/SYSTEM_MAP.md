@@ -128,6 +128,7 @@ authoritative detector snapshots
 
 Repository navigation:
 - architecture: `docs/CATALOG_IDENTITY_ANOMALY_MANAGEMENT.md`;
+- identity-resolution workflow draft: `docs/PRODUCT_IDENTITY_RESOLUTION_V1.md`;
 - frozen v1 implementation contract: `docs/CATALOG_ANOMALY_RUNTIME_V1.md`;
 - rule/governance entry point: `config/catalog-anomalies/README.md`;
 - agreed human-readable policies: `config/catalog-anomalies/POLICY_CATALOG.md`;

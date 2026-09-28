@@ -90,55 +90,31 @@ It must never be used to resolve an identity ambiguity.
 For example, two records with the same article but different color/size/package
 must not be collapsed or ranked solely by price.
 
-## Resolution states
+## Resolution-state vocabulary
 
-The future anomaly/identity layer should expose an explicit structured state such
-as:
+The concrete v1 workflow is defined in `docs/PRODUCT_IDENTITY_RESOLUTION_V1.md`.
 
-```text
-RESOLVED_SAME_PRODUCT
-RESOLVED_DIFFERENT_PRODUCTS
-AMBIGUOUS
-KNOWN_EXCEPTION
-```
+Do not use one combined label for identity truth, exception policy and workflow.
 
-Names may change during research, but the semantic separation is required.
+The previous conceptual labels map as follows:
 
-### RESOLVED_SAME_PRODUCT
+- `RESOLVED_SAME_PRODUCT`
+  -> approved identity decision `SAME_PHYSICAL_PRODUCT`
+  plus anomaly `review_state=RESOLVED`;
+- `RESOLVED_DIFFERENT_PRODUCTS`
+  -> approved identity decision `DISTINCT_PHYSICAL_PRODUCTS`
+  plus anomaly `review_state=RESOLVED`;
+- `AMBIGUOUS`
+  -> identity decision `UNDECIDED` with an open review state;
+- `KNOWN_EXCEPTION`
+  -> a separate reviewed exception/policy axis, never physical-product identity.
 
-The system has reviewed evidence that records/offers describe the same physical
-product/variant.
+Resolution authority is bound to exact reviewed material evidence. A stable anomaly
+fingerprint alone is insufficient because the collider set may change while the
+fingerprint remains the same.
 
-Downstream policy may select among trusted offers using deterministic commercial
-rules such as availability and customer price.
-
-### RESOLVED_DIFFERENT_PRODUCTS
-
-The same/similar identifier was observed on records that are confirmed to be
-different products/variants.
-
-The conflict must not be auto-merged.
-
-Source data should be corrected or an explicit reviewed exception must explain why
-the identifier is intentionally shared.
-
-### AMBIGUOUS
-
-Evidence is insufficient to know whether records are the same physical item.
-
-Required behavior:
-- do not guess;
-- do not select the cheapest record as an identity decision;
-- do not silently expose one result while hiding the other;
-- create/dedupe an anomaly incident;
-- use a safe customer behavior defined by policy;
-- route to human review when needed.
-
-### KNOWN_EXCEPTION
-
-A reviewed and documented business exception exists.
-
-The exception must be structured/auditable, not hidden in an LLM prompt.
+If reviewed material evidence drifts, the effective resolution becomes `STALE` and
+must not be applied until re-reviewed.
 
 ## Detection points
 
@@ -256,19 +232,29 @@ A content/operator action alone must not:
 - publish a permanent identity mapping;
 - create/promote a global rule.
 
-### Administrator/reviewer role
+### Administrator/reviewer authority
 
-An authorized administrator/reviewer approves:
+The target authenticated administrator/reviewer role may eventually approve:
 - canonical same-product/different-product resolution;
 - known exceptions;
 - permanent mappings/aliases where supported;
 - promotion of repeated incident patterns into global policy;
-- rollback/reopen of those durable decisions.
+- superseding/reopening reviewed decisions.
 
-The AI consumes only approved structured state and policy.
+That authenticated mutation path does not exist yet.
 
-Unapproved comments, seller behavior in one conversation, or content-manager
-suggestions are evidence, not authority.
+In the current phase, durable Product Identity Resolution v1 authority is a
+reviewed, versioned registry change whose exact digest is bound through canonical
+identity/publication authority. Requires Attention UI remains read/propose only.
+
+A reviewed decision may be superseded before application. Reversing an already
+applied canonical identity binding requires a separately designed migration
+operation when the current IdentityStore cannot unbind/rebind it.
+
+The AI consumes only applicable, non-stale approved structured state and policy.
+
+Unapproved comments, seller behavior in one conversation, content-manager
+suggestions or an unauthenticated role string are evidence, not authority.
 
 ### Source correction verification
 
@@ -280,11 +266,11 @@ disappeared.
 
 Recommended lifecycle:
 - first clean observation -> `NOT_OBSERVED`;
-- configurable consecutive clean authoritative snapshots -> `AUTO_CLEARED`;
+- configurable consecutive clean authoritative snapshots -> `CLEARED`;
 - initial batch-sync design target: 2 consecutive clean snapshots;
-- same fingerprint reappears -> `REOPENED` and increment recurrence count.
+- same fingerprint reappears -> `OBSERVED` again and increment recurrence count.
 
-`AUTO_CLEARED` preserves history and does not create a permanent identity rule.
+`CLEARED` preserves history and does not create a permanent identity rule.
 
 ## Runtime policy registry
 
@@ -296,8 +282,9 @@ Human-readable agreed policy catalog:
 
 `config/catalog-anomalies/POLICY_CATALOG.md`
 
-The directory is currently documentation/registry only and is not loaded by
-production runtime until Catalog Anomaly Runtime v1 is implemented.
+Catalog Anomaly Runtime v1 is implemented in the repository but is not yet
+deployed in production. Its publication policy becomes production-active only with
+the reviewed exporter release.
 
 The future rule engine must keep durable policy in versioned structured
 configuration/services and runtime incidents in a durable anomaly store/UI.
@@ -564,12 +551,19 @@ of existing safety checks.
 See:
 `docs/CATALOG_ANOMALY_RUNTIME_V1.md`
 
-## Required future research slice
+## Product Identity Resolution v1 design slice
 
-Before customer-facing AI is considered production-ready, run a dedicated
-**Catalog Identity & Anomaly Management** research/design slice.
+The first concrete provider-neutral resolution design is now drafted in:
 
-It must study at least:
+`docs/PRODUCT_IDENTITY_RESOLUTION_V1.md`
+
+It uses the live Joolz `511000` and Bugaboo `80401mc02` anomaly cases as
+acceptance fixtures and makes explicit the required separation between physical
+identity, supplier offers, category assignments, customer offers and migration actions.
+
+Before customer-facing AI is considered production-ready, the broader
+**Catalog Identity & Anomaly Management** research/design program must still study
+at least:
 
 1. identity modeling across products, variants, suppliers and channels;
 2. GTIN/EAN/MPN/manufacturer SKU vs supplier SKU semantics;
