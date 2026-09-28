@@ -37,7 +37,7 @@ import {
   atomicPromote,
 } from '../spool/layout.mjs';
 import { streamCandidateProducts } from './candidates.mjs';
-import { loadReleaseProvenance } from '../release-provenance.mjs';
+import { loadReleaseProvenance, RUNTIME_PACKAGE_LOCK_PATH, RUNTIME_RELEASE_PROVENANCE_PATH } from '../release-provenance.mjs';
 import { checkDiskSpaceGate } from '../disk-gate.mjs';
 import { collectFixtureSourceAcceptance } from '../source/source-acceptance.mjs';
 import { loadSourceAcceptanceCases } from '../source/source-acceptance-config.mjs';
@@ -50,7 +50,13 @@ export async function runExportPipeline({
   skipFilesystemChecks = false,
 }) {
   const blockers = new BlockerCollection();
-  const releaseProvenance = loadReleaseProvenance(config.releaseProvenancePath);
+  const releaseProvenance = loadReleaseProvenance(
+    config.releaseProvenancePath,
+    {
+      expectedPath: fixtureSourceDir ? null : RUNTIME_RELEASE_PROVENANCE_PATH,
+      expectedPackageLockPath: fixtureSourceDir ? null : RUNTIME_PACKAGE_LOCK_PATH,
+    }
+  );
   const sourceAcceptanceCases = loadSourceAcceptanceCases(config.sourceAcceptanceCasesPath);
   const diskGate = skipFilesystemChecks
     ? { checks: [], blockers: [] }

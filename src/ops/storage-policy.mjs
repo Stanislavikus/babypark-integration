@@ -44,6 +44,11 @@ const STATE_CLASS = new Set([
   'transient',
 ]);
 
+const PRIVATE_PAYLOAD_IDS = new Set([
+  'exporter_ready_spools',
+  'catalog_link_a_staging',
+]);
+
 const DRUPAL_WEBROOT = path.resolve(
   '/home/babypark/sites/babypark.ua'
 );
@@ -207,6 +212,29 @@ function validateBackup(entry) {
   requireText(backup, 'status', entry.id);
 }
 
+function validatePrivatePayloadPermissions(entry) {
+  if (!PRIVATE_PAYLOAD_IDS.has(entry.id)) return;
+  const permissions = entry.permissions;
+  if (!permissions || typeof permissions !== 'object') {
+    fail(
+      'STORAGE_POLICY_PERMISSIONS_MISSING',
+      'private payload storage requires permissions',
+      { id: entry.id }
+    );
+  }
+  if (permissions.directory_mode !== '0700' || permissions.file_mode !== '0600') {
+    fail(
+      'STORAGE_POLICY_PERMISSIONS_INVALID',
+      'private payload storage requires directory_mode=0700 and file_mode=0600',
+      {
+        id: entry.id,
+        directory_mode: permissions.directory_mode,
+        file_mode: permissions.file_mode,
+      }
+    );
+  }
+}
+
 function validateDrupalIsolation(entry) {
   if (entry.host_role !== 'drupal') return;
 
@@ -283,6 +311,7 @@ function validateEntry(entry, seen) {
   validateRetention(entry);
   validateCleanup(entry);
   validateBackup(entry);
+  validatePrivatePayloadPermissions(entry);
   validateDrupalIsolation(entry);
 }
 

@@ -525,7 +525,7 @@
       "status": "PLANNED",
       "scope": "directory",
       "location": "/var/lib/babypark-exporter",
-      "owner": "bpexport",
+      "owner": "babypark-exporter:babypark-exporter",
       "purpose": "Tiny non-authoritative exporter cache/diagnostic state only; no payload spool.",
       "state_class": "rebuildable",
       "thresholds": {
@@ -559,7 +559,11 @@
       "status": "PLANNED",
       "scope": "directory",
       "location": "/var/lib/babypark-exporter/spools",
-      "owner": "bpexport",
+      "owner": "babypark-exporter:babypark-exporter",
+      "permissions": {
+        "directory_mode": "0700",
+        "file_mode": "0600"
+      },
       "purpose": "Transient authoritative ready/in-flight Drupal payload spools through ACK/state, Link A, and owner accept/reset decision.",
       "state_class": "transient",
       "thresholds": {
@@ -594,6 +598,10 @@
       "scope": "directory",
       "location": "/var/lib/babypark-catalog/acceptance-staging",
       "owner": "babypark-catalog:babypark-catalog",
+      "permissions": {
+        "directory_mode": "0700",
+        "file_mode": "0600"
+      },
       "purpose": "Private transient copy of exact accepted spool for exhaustive read-only Link A verification.",
       "state_class": "transient",
       "thresholds": {

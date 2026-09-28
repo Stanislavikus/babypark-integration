@@ -480,11 +480,17 @@ Implementation slice 1 now changes repository exporter/storage-policy code only:
 - exporter writes exact `bp.drupal-exporter.spool/3` with producer release provenance
   and `source-acceptance.json` hashes;
 - production source-acceptance evidence is gathered by separate targeted SELECTs inside
-  the same repeatable-read snapshot transaction;
-- preflight/spool fail closed on an explicit temp/spool/MariaDB free-space gate;
-- immutable `RELEASE.json` creation/validation is implemented;
+  the same repeatable-read snapshot transaction, with exact catalog-vocabulary
+  taxonomy/hierarchy, provider brand terms and NFC-correct streamed stock matching;
+- reviewed acceptance cases are bounded to 128 product-group IDs;
+- preflight/spool fail closed on explicit existing temp/spool/MariaDB directory
+  free-space gates;
+- immutable `RELEASE.json` creation/validation is canonical and rejects dirty or
+  non-normal Git index state plus source-tree output paths;
 - ready-spool and future CatalogService Link A staging are required transient storage
-  classes.
+  classes with frozen private `0700/0600` permissions;
+- production storage ownership is recorded as
+  `babypark-exporter:babypark-exporter`.
 
 Still not implemented in this slice: D2b HTTP sender, run-header/2, CatalogService
 publication-authority validation, BOOTSTRAP recovery fix, Link A verifier, rehearsal,

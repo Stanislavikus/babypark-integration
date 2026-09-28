@@ -86,6 +86,27 @@ for (const id of [
   });
 }
 
+test('private payload storage requires 0700 directories and 0600 files', () => {
+  const policy = loadStoragePolicy(POLICY);
+  for (const id of ['exporter_ready_spools', 'catalog_link_a_staging']) {
+    const entry = policy.objects.find(item => item.id === id);
+    assert.equal(entry.permissions.directory_mode, '0700');
+    assert.equal(entry.permissions.file_mode, '0600');
+  }
+  assert.equal(
+    policy.objects.find(item => item.id === 'exporter_ready_spools').owner,
+    'babypark-exporter:babypark-exporter'
+  );
+
+  const weakened = clone(policy);
+  weakened.objects.find(item => item.id === 'exporter_ready_spools')
+    .permissions.directory_mode = '0755';
+  assert.throws(
+    () => validateStoragePolicy(weakened),
+    policyError('STORAGE_POLICY_PERMISSIONS_INVALID')
+  );
+});
+
 test('publication lock policy forbids live cleanup and excludes lock artifacts from janitor', () => {
   const policy = loadStoragePolicy(POLICY);
   const lock = policy.objects.find(entry => entry.id === 'catalog_publication_lock_db');

@@ -543,6 +543,12 @@ Every exporter/sender release is built from one exact reviewed Git commit/tree a
 contains an immutable `RELEASE.json` with at least repository, commit, tree,
 package-lock hash and build/install timestamp.
 
+Implementation must materialize release source from that Git object itself
+(`git archive <commit>` or an equivalent clean detached checkout), not by recursively
+copying an arbitrary developer worktree. The provenance generator rejects ordinary
+dirty state, non-normal index flags such as `assume-unchanged` / `skip-worktree`,
+and output paths inside the source checkout.
+
 Release contents are not edited after installation; correction produces a new release.
 
 ### Early candidate preflight

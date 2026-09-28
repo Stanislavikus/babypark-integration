@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import YAML from 'yaml';
 
 export const SOURCE_ACCEPTANCE_CASES_SCHEMA = 'bp.drupal.source-acceptance-cases/1';
+export const MAX_REVIEWED_PRODUCT_GROUPS = 128;
 
 function fail(message) {
   const error = new Error(message);
@@ -47,6 +48,10 @@ export function loadSourceAcceptanceCases(filePath) {
     });
     return Object.freeze({ id: entry.id, purpose: entry.purpose, native_product_ids: Object.freeze(nativeProductIds) });
   });
+
+  if (ids.size > MAX_REVIEWED_PRODUCT_GROUPS) {
+    fail(`source acceptance cases exceed ${MAX_REVIEWED_PRODUCT_GROUPS} reviewed product groups`);
+  }
 
   return Object.freeze({
     schema: parsed.schema,
