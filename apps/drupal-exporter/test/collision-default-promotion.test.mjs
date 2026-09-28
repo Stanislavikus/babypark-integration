@@ -208,7 +208,7 @@ mappings:
   ));
 });
 
-test('repository collision config remains empty mappings', () => {
+test('repository collision config does not resolve the two pending business decisions', () => {
   const repoRoot = path.resolve(
     path.dirname(fileURLToPath(import.meta.url)),
     '../../..'
@@ -217,5 +217,6 @@ test('repository collision config remains empty mappings', () => {
     path.join(repoRoot, 'config/drupal/legacy-sku-collisions.yaml'),
     'utf8'
   );
-  assert.match(text, /mappings:\s*\[\]/);
+  assert.doesNotMatch(text, /sku_key:\s*["']511000["']/i);
+  assert.doesNotMatch(text, /sku_key:\s*["']80401mc02["']/i);
 });

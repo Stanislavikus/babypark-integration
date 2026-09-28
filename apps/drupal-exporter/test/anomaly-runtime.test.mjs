@@ -6,6 +6,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { runExportPipeline } from '../src/export/pipeline.mjs';
 import { loadPublicationPolicy } from '../src/anomaly/publication-policy.mjs';
+import { loadCollisionConfig, parseCollisionMappings } from '../src/collision/config.mjs';
 import { BLOCKER_CODES } from '../src/blockers.mjs';
 import {
   createFixtureDir,
@@ -292,12 +293,37 @@ test('excluded_by_policy and quarantined_product_count are distinct', async () =
   assert.equal(result.preflight.excluded_by_policy.product_kit ?? 0, 0);
 });
 
-test('production legacy collision config remains unchanged', () => {
-  const text = fs.readFileSync(
-    path.join(REPO_ROOT, 'config/drupal/legacy-sku-collisions.yaml'),
-    'utf8'
-  );
-  assert.match(text, /mappings:\s*\[\]/);
+test('production collision config matches exactly the 21 reviewed migration decisions', () => {
+  const productionPath = path.join(REPO_ROOT, 'config/drupal/legacy-sku-collisions.yaml');
+  const production = parseCollisionMappings(loadCollisionConfig(productionPath));
+
+  const dir = createFixtureDir();
+  const fixturePath = path.join(dir, 'reviewed-fixture-mappings.yaml');
+  fs.writeFileSync(fixturePath, REVIEWED_FIXTURE_MAPPINGS_YAML);
+  const fixture = parseCollisionMappings(loadCollisionConfig(fixturePath));
+
+  const identity = mapping => mapping.action === 'exclude_product'
+    ? {
+        sku_key: mapping.sku_key,
+        action: mapping.action,
+        retain_native_product_id: mapping.retain_native_product_id,
+        exclude_native_product_id: mapping.exclude_native_product_id,
+      }
+    : {
+        sku_key: mapping.sku_key,
+        action: mapping.action,
+        native_product_id: mapping.native_product_id,
+        retain_native_variant_id: mapping.retain_native_variant_id,
+        exclude_native_variant_id: mapping.exclude_native_variant_id,
+      };
+
+  assert.equal(production.length, 21);
+  assert.deepEqual(production.map(identity), fixture.map(identity));
+  assert.equal(production.some(mapping => mapping.sku_key === '511000'), false);
+  assert.equal(production.some(mapping => mapping.sku_key === '80401mc02'), false);
+  assert.ok(production.every(mapping =>
+    mapping.reviewed_source === 'review:DRUPAL_LEGACY_COLLISION_REVIEW_20260927'
+  ));
 });
 
 test('21-reviewed + 2-unresolved fixture gives exactly 2 residual anomalies', async () => {

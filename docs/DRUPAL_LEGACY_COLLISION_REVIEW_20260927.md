@@ -1,7 +1,7 @@
 # Drupal Legacy Collision Review — 2026-09-27
 
-Status: REVIEW IN PROGRESS / 21 TECHNICALLY EVIDENCED / 2 BUSINESS DECISIONS PENDING
-Last verified: 2026-09-27
+Status: 21 APPROVED LEGACY MIGRATION MAPPINGS / 2 BUSINESS DECISIONS PENDING
+Last verified: 2026-09-28
 Owner: BabyPark
 Repository main at review handoff: `583bfb5bd22df15c76c477a751b224c656dcc8d6`
 
@@ -19,19 +19,13 @@ collisions discovered by the production D2a.1 preflight.
 It preserves the investigation even after temporary server scratch files are
 deleted.
 
-It is **not** the active collision configuration.
+The 21 technically evidenced decisions below are approved as legacy migration
+exceptions and are represented in `config/drupal/legacy-sku-collisions.yaml`.
+Their production deployment is still a separate controlled release step.
 
-No mapping below becomes operational until it is copied into
-`config/drupal/legacy-sku-collisions.yaml` through a separately reviewed PR.
-
-The collision configuration remains:
-
-```yaml
-version: 1
-mappings: []
-```
-
-until all required review is complete.
+The two unresolved identifiers `511000` and `80401mc02` are intentionally absent
+from the mapping config and remain subject to Catalog Anomaly Runtime v1 quarantine
+until a separate business/source-process decision is reviewed.
 
 These decisions are legacy migration exceptions. They must not be generalized
 into Magento, supplier, marketplace or AI identity policy. Durable provider-neutral
@@ -61,9 +55,9 @@ row order.
 ## Evidence classification
 
 `SAFE_TO_MAP` in this document means there is sufficient technical evidence for a
-legacy migration decision.
-
-It does **not** mean the repository mapping has already been approved or activated.
+legacy migration decision. For the 21 decisions listed below, BabyPark approved
+activation in the repository mapping set on 2026-09-28. This approval remains
+limited to Drupal legacy migration and is not a universal identity rule.
 
 Evidence used includes:
 - production preflight/source semantics;
@@ -158,20 +152,22 @@ For each of `511000` and `80401MC02`, determine:
 
 Do not approve an `exclude_product` merely to make preflight green.
 
-## Next step after the two answers
+## Next step
 
-1. Record the root cause and business decision in this ledger.
-2. Review all 23 decisions as one legacy migration set.
-3. Populate `config/drupal/legacy-sku-collisions.yaml` in a dedicated PR.
-4. Validate config schema/drift/default-promotion behavior.
-5. Update the applied collision-config hash according to the pre-first-FULL D2b
-   procedure, not during this documentation step.
-6. Deploy one immutable exporter release containing the already merged
-   default-promotion fix plus reviewed mappings.
-7. Run the next production preflight.
-8. Target: zero hard blockers.
-9. Produce clean local spool.
-10. Proceed to D2b / first controlled FULL only after the clean spool.
+1. Keep `511000` and `80401mc02` unresolved and unmapped until their root cause and
+   business decision are recorded here.
+2. Validate the 21 active mappings against config schema, drift and
+   default-promotion behavior.
+3. Deploy one immutable exporter release containing the merged default-promotion
+   fix, Catalog Anomaly Runtime v1 and these 21 reviewed mappings.
+4. Run the next production preflight.
+5. Expected result: exactly two residual anomaly incidents (`511000`,
+   `80401mc02`), four quarantined source products and zero unaccounted hard
+   blockers.
+6. Produce a deterministic local spool only after the preflight is clean under
+   that policy.
+7. Proceed to D2b / first controlled FULL only after the spool and signed binding
+   design are reviewed.
 
 ## Audit rule
 
