@@ -13,7 +13,7 @@ import {
 } from './helpers/fixture-builder.mjs';
 import { BLOCKER_CODES } from '../src/blockers.mjs';
 
-test('cross-product and within-product SKU collisions are blockers', async () => {
+test('cross-product and within-product SKU collisions quarantine instead of blocking', async () => {
   const sourceDir = createFixtureDir();
   writeFixture(sourceDir, mergeDatasets(
     simpleProduct({ nid: 1, model: '511000' }),
@@ -46,8 +46,10 @@ test('cross-product and within-product SKU collisions are blockers', async () =>
     skipFilesystemChecks: true,
   });
 
-  assert.ok(result.preflight.blockers.some(b => b.code === BLOCKER_CODES.SKU_COLLISION_CROSS_PRODUCT));
-  assert.ok(result.preflight.blockers.some(b => b.code === BLOCKER_CODES.SKU_COLLISION_WITHIN_PRODUCT));
+  assert.equal(result.ok, true);
+  assert.equal(result.anomalyReport.anomaly_count, 2);
+  assert.ok(!result.preflight.blockers.some(b => b.code === BLOCKER_CODES.SKU_COLLISION_CROSS_PRODUCT));
+  assert.ok(!result.preflight.blockers.some(b => b.code === BLOCKER_CODES.SKU_COLLISION_WITHIN_PRODUCT));
 });
 
 test('reviewed exclude_product and exclude_variant mappings', async () => {

@@ -1,8 +1,14 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { writeNdjson } from '../../src/source/fixture-reader.mjs';
 import { loadAllCandidateProducts } from '../../src/export/candidates.mjs';
+
+const REPO_ROOT = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  '../../../..'
+);
 
 export function createFixtureDir(name = 'drupal-fixture-') {
   return fs.mkdtempSync(path.join(os.tmpdir(), name));
@@ -90,8 +96,11 @@ export async function loadPhase1(result) {
   if (result.phase1?.length) {
     return result.phase1;
   }
-  if (result.filteredPath && fs.existsSync(result.filteredPath)) {
-    return loadAllCandidateProducts(result.filteredPath);
+  if (result.filteredPath) {
+    if (fs.existsSync(result.filteredPath)) {
+      return loadAllCandidateProducts(result.filteredPath);
+    }
+    return [];
   }
   if (result.candidatesPath && fs.existsSync(result.candidatesPath)) {
     return loadAllCandidateProducts(result.candidatesPath);
@@ -103,6 +112,11 @@ export function testConfig(overrides = {}) {
   const root = createFixtureDir('drupal-config-');
   const collisionPath = path.join(root, 'collisions.yaml');
   fs.writeFileSync(collisionPath, 'version: 1\nmappings: []\n');
+  const publicationPolicyPath = path.join(root, 'publication-policy.yaml');
+  fs.copyFileSync(
+    path.join(REPO_ROOT, 'config/catalog-anomalies/publication-policy.yaml'),
+    publicationPolicyPath
+  );
   const stockProcessed = path.join(root, 'stock.xml');
   fs.writeFileSync(stockProcessed, '<stock/>');
   const mtime = new Date(1600000000 * 1000);
@@ -118,6 +132,7 @@ export function testConfig(overrides = {}) {
     },
     spoolRoot: path.join(root, 'spool'),
     collisionConfigPath: collisionPath,
+    anomalyPublicationPolicyPath: publicationPolicyPath,
     publicSiteUrl: 'https://babypark.ua',
     publicFilesUrl: 'https://babypark.ua/sites/default/files',
     filesystem: {

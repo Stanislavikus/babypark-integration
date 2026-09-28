@@ -108,7 +108,7 @@ test('deterministic spool artifacts and atomic promote', async t => {
   );
 });
 
-test('failed spool with blockers never becomes ready', async () => {
+test('spool with quarantined collisions promotes ready spool', async () => {
   const sourceDir = createFixtureDir();
   writeFixture(sourceDir, mergeDatasets(
     simpleProduct({ nid: 1, model: '511000' }),
@@ -123,8 +123,9 @@ test('failed spool with blockers never becomes ready', async () => {
     fixtureSourceDir: sourceDir,
     skipFilesystemChecks: true,
   });
-  assert.equal(result.ok, false);
-  assert.equal(fs.readdirSync(config.spoolRoot).length, 0);
+  assert.equal(result.ok, true);
+  assert.ok(fs.existsSync(result.spool.ready_path));
+  assert.equal(result.spool.manifest.anomaly_count, 1);
 });
 
 function hashArtifacts(dir) {

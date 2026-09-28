@@ -1,0 +1,11 @@
+schema: bp.catalog.anomaly-publication-policy/1
+version: 1
+
+rules:
+  SKU_COLLISION_WITHIN_PRODUCT:
+    action: QUARANTINE_SOURCE_PRODUCTS
+
+  SKU_COLLISION_CROSS_PRODUCT:
+    action: QUARANTINE_SOURCE_PRODUCTS
+
+unknown_action: BLOCK_RUN
