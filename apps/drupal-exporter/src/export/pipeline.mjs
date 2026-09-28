@@ -41,6 +41,7 @@ import { loadReleaseProvenance, RUNTIME_PACKAGE_LOCK_PATH, RUNTIME_RELEASE_PROVE
 import { checkDiskSpaceGate } from '../disk-gate.mjs';
 import { collectFixtureSourceAcceptance } from '../source/source-acceptance.mjs';
 import { loadSourceAcceptanceCases } from '../source/source-acceptance-config.mjs';
+import { finishStage, startStage } from '../stage-timings.mjs';
 
 export async function runExportPipeline({
   config,
@@ -49,7 +50,10 @@ export async function runExportPipeline({
   fixtureSourceDir = null,
   skipFilesystemChecks = false,
 }) {
+  const totalStarted = startStage();
+  const stageTimings = {};
   const blockers = new BlockerCollection();
+  const prerequisitesStarted = startStage();
   const releaseProvenance = loadReleaseProvenance(
     config.releaseProvenancePath,
     {
@@ -58,6 +62,9 @@ export async function runExportPipeline({
     }
   );
   const sourceAcceptanceCases = loadSourceAcceptanceCases(config.sourceAcceptanceCasesPath);
+  finishStage(stageTimings, 'prerequisites_ms', prerequisitesStarted);
+
+  const diskGateStarted = startStage();
   const diskGate = skipFilesystemChecks
     ? { checks: [], blockers: [] }
     : checkDiskSpaceGate({
@@ -65,11 +72,14 @@ export async function runExportPipeline({
         minFreeBytes: config.minFreeBytes,
       });
   for (const blocker of diskGate.blockers) blockers.add(blocker);
+  finishStage(stageTimings, 'disk_gate_ms', diskGateStarted);
 
+  const filesystemPrecheckStarted = startStage();
   const precheck = skipFilesystemChecks
     ? { blockers: [], processedFingerprint: null }
     : checkFilesystemPrecheck(config);
   for (const blocker of precheck.blockers) blockers.add(blocker);
+  finishStage(stageTimings, 'filesystem_precheck_ms', filesystemPrecheckStarted);
 
   let snapshotWatermark = '0';
   let stockSyncUnix = 0;
@@ -80,12 +90,14 @@ export async function runExportPipeline({
 
   if (!fixtureSourceDir) {
     if (blockers.hasBlockers()) {
+      finishStage(stageTimings, 'total_ms', totalStarted);
       return buildPipelineResult({
         mode,
         blockers,
         snapshotWatermark,
         built: null,
         prepared: null,
+        stageTimings,
       });
     }
 
@@ -94,15 +106,18 @@ export async function runExportPipeline({
       beforeFingerprint: precheck.processedFingerprint,
       acceptanceCases: sourceAcceptanceCases,
     });
+    Object.assign(stageTimings, snapshot.stageTimings ?? {});
 
     if (snapshot.unstable) {
       for (const blocker of snapshot.blockers) blockers.add(blocker);
+      finishStage(stageTimings, 'total_ms', totalStarted);
       return buildPipelineResult({
         mode,
         blockers,
         snapshotWatermark: snapshot.snapshotWatermark,
         built: null,
         prepared: null,
+        stageTimings,
       });
     }
 
@@ -116,26 +131,33 @@ export async function runExportPipeline({
     snapshotWatermark = 'fixture-watermark-123456789012345678';
     stockSyncUnix = 1700000000;
     buildingPath = resolveSpoolPaths(config.spoolRoot, snapshotWatermark).building;
+    const fixtureAcceptanceStarted = startStage();
     sourceAcceptance = await collectFixtureSourceAcceptance(sourceDir, {
       provider: config.provider,
       sourceEpoch: config.sourceEpoch,
       snapshotWatermark,
       stockSyncUnix,
     });
+    finishStage(stageTimings, 'source_acceptance_ms', fixtureAcceptanceStarted);
   }
 
+  const authorityConfigStarted = startStage();
   const collisionConfig = loadCollisionConfig(config.collisionConfigPath);
   const publicationPolicy = loadPublicationPolicy(config.anomalyPublicationPolicyPath);
   const mappings = parseCollisionMappings(collisionConfig);
   const { validMappings } = partitionCollisionMappings(mappings, blockers);
+  finishStage(stageTimings, 'authority_config_ms', authorityConfigStarted);
 
+  const canonicalBuildStarted = startStage();
   const built = await buildCanonicalRecords({
     sourceDir,
     config,
     stockSyncUnix,
     blockers,
   });
+  finishStage(stageTimings, 'canonical_build_ms', canonicalBuildStarted);
 
+  const collisionStageStarted = startStage();
   const collisionCollector = createSkuCollisionCollector(blockers);
   await streamCandidateProducts(built.candidatesPath, product => {
     collisionCollector.addProduct(product);
@@ -170,7 +192,9 @@ export async function runExportPipeline({
     provider: config.provider,
     sourceEpoch: config.sourceEpoch,
   });
+  finishStage(stageTimings, 'collision_mapping_anomaly_ms', collisionStageStarted);
 
+  const quarantineStarted = startStage();
   let quarantinedProductIds;
   try {
     quarantinedProductIds = deriveAnomalyQuarantine({
@@ -208,8 +232,10 @@ export async function runExportPipeline({
     excludedVariants: exclusions.excludedVariants,
     defaultPromotions: exclusions.defaultPromotions,
   };
+  finishStage(stageTimings, 'quarantine_filter_ms', quarantineStarted);
 
   const filteredPath = path.join(path.dirname(built.candidatesPath), 'filtered.ndjson');
+  const chunkPreparationStarted = startStage();
   const chunkResult = await prepareDiagnosticChunks({
     phase0: built.phase0,
     candidatesPath: built.candidatesPath,
@@ -227,7 +253,9 @@ export async function runExportPipeline({
     combinedExclusions,
     blockers
   );
+  finishStage(stageTimings, 'chunk_preparation_ms', chunkPreparationStarted);
 
+  const acceptanceSerializeStarted = startStage();
   if (!sourceAcceptance) {
     throw new Error('source acceptance evidence is required');
   }
@@ -235,6 +263,7 @@ export async function runExportPipeline({
   const sourceAcceptanceSha256 = crypto.createHash('sha256')
     .update(sourceAcceptanceBytes)
     .digest('hex');
+  finishStage(stageTimings, 'acceptance_serialize_ms', acceptanceSerializeStarted);
 
   const preflightReport = {
     mode,
@@ -255,16 +284,20 @@ export async function runExportPipeline({
     prepared_chunk_count: prepared?.chunks.length ?? 0,
     source_currency: built.sourceCurrency ?? null,
     source_policy_diagnostics: built.sourcePolicyDiagnostics ?? null,
+    ...(mode === 'preflight' ? { stage_timings_ms: stageTimings } : {}),
     ...blockers.toReport(),
   };
 
   if (blockers.hasBlockers() || mode === 'preflight') {
+    const cleanupStarted = startStage();
     if (chunkResult?.scratchDir && fs.existsSync(chunkResult.scratchDir)) {
       fs.rmSync(chunkResult.scratchDir, { recursive: true, force: true });
     }
     if (buildingPath && fs.existsSync(buildingPath) && (ownsBuildingPath || fixtureSourceDir)) {
       fs.rmSync(buildingPath, { recursive: true, force: true });
     }
+    finishStage(stageTimings, 'cleanup_ms', cleanupStarted);
+    finishStage(stageTimings, 'total_ms', totalStarted);
     return buildPipelineResult({
       mode,
       blockers,
@@ -276,6 +309,7 @@ export async function runExportPipeline({
       anomalyReport,
       candidatesPath: built.candidatesPath,
       filteredPath,
+      stageTimings,
     });
   }
 
@@ -440,6 +474,7 @@ function buildPipelineResult({
   prepared,
   candidatesPath,
   filteredPath,
+  stageTimings = {},
 }) {
   return {
     ok: !blockers.hasBlockers(),
@@ -448,6 +483,7 @@ function buildPipelineResult({
       mode,
       snapshot_watermark: snapshotWatermark,
       prepared_chunk_count: prepared?.chunks.length ?? 0,
+      stage_timings_ms: stageTimings,
       ...blockers.toReport(),
     },
     collisionReport,

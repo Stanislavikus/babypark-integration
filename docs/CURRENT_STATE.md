@@ -179,7 +179,11 @@ Runtime:
 - private state: `/var/lib/babypark-exporter` mode `0700`
 - dedicated MariaDB principal: `babypark_exporter@127.0.0.1`
 - database grant: `SELECT` on `babypark_ua.*` only
-- isolated Node runtime: `/opt/babypark-exporter/runtime/node-v22.23.2/bin/node`
+- current candidate-capable side runtime:
+  `/opt/babypark-exporter/runtime/node-v22.23.2/bin/node`
+- PR #31 target runtime: pinned Node `24.21.0` LTS at
+  `/opt/babypark-exporter/runtime/node-v24.21.0/bin/node`, installed side-by-side
+  with official archive SHA-256 verification and `node:sqlite`/FTS5 probe
 - system `/usr/bin/node` remains unchanged at v20.20.2
 
 D2a.1 merged/deployed source:
@@ -210,6 +214,20 @@ Second production preflight:
 - no FULL
 - no Drupal writes
 - live site remained operational during the run
+
+D2b Slice 1 candidate preflight after PR #30 merge:
+- candidate commit: `a251275b4ccd0019cf5d22bdbbd2eb027555430e`;
+- executed against live Drupal without switching `current` and without FULL;
+- result: `ok=true`, zero hard blockers;
+- current residual anomaly: only `80401mc02`;
+- quarantined source product groups: `118670`, `12605`;
+- historical Joolz `511000` collision no longer appears in the current collision report;
+- warning count/classification remained the established 78-warning baseline;
+- the successful run proved the existing side Node 22.23.2 has `node:sqlite` + FTS5,
+  while system Node 20 cannot import the new exporter;
+- observed runtime was materially longer than the old D2a preflight, so PR #31 adds
+  pinned Node 24.21.0 plus stage timing diagnostics before cutover;
+- production exporter symlink remains on the previous release.
 
 Collision review state:
 - 21 of 23 unique collisions have sufficient technical evidence and are approved
