@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 import { loadExporterRuntimeManifest, validateExporterRuntimeManifest } from '../src/runtime-manifest.mjs';
 import { runExportPipeline } from '../src/export/pipeline.mjs';
+import { streamNdjson } from '../src/source/stream-index.mjs';
 import {
   createFixtureDir,
   writeFixture,
@@ -149,4 +150,22 @@ test('runtime launcher reaches pinned-runtime guard without ReferenceError', () 
     child.stderr,
     /pinned exporter runtime missing|Usage: drupal-exporter/
   );
+});
+
+test('NDJSON reader treats U+2028/U+2029 as JSON data and only LF/CRLF as record framing', async () => {
+  const dir = fs.mkdtempSync(path.join('/tmp', 'bp-ndjson-u2028-'));
+  const file = path.join(dir, 'rows.ndjson');
+  const rows = [
+    { id: 1, body: `before\u2028after` },
+    { id: 2, body: `before\u2029after` },
+  ];
+  const bytes = `${JSON.stringify(rows[0])}\r\n${JSON.stringify(rows[1])}\n`;
+  fs.writeFileSync(file, bytes);
+
+  assert.ok(fs.readFileSync(file).includes(Buffer.from([0xE2, 0x80, 0xA8])));
+  assert.ok(fs.readFileSync(file).includes(Buffer.from([0xE2, 0x80, 0xA9])));
+
+  const actual = [];
+  await streamNdjson(file, row => actual.push(row));
+  assert.deepEqual(actual, rows);
 });
