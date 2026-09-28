@@ -142,7 +142,9 @@ config_digests
 full_record_contract_version
 record_validator_version
 sku_normalizer_version
-exporter_commit
+native_identity_scheme
+producer_commit
+producer_release_provenance_sha256
 ```
 
 For the first Drupal FULL:
@@ -152,9 +154,20 @@ spool_schema = bp.drupal-exporter.spool/2
 full_record_contract_version = 2
 record_validator_version = 3
 sku_normalizer_version = 1
+native_identity_scheme = bp.drupal.native-identity/1
 ```
 
-`exporter_commit` is audit provenance, not a security substitute for content hashes.
+`producer_commit` is the exact Git commit of the immutable BabyPark release that
+created the spool **and** contains the D2b sender used to transmit it.
+`producer_release_provenance_sha256` binds the exact immutable `RELEASE.json`
+provenance record for that release. These are audit provenance, not substitutes for
+payload/config hashes.
+
+`bp.drupal.native-identity/1` freezes the provider-native identity convention used
+by the first FULL, including product grouping by `tnid != 0 ? tnid : nid` and the
+current deterministic base/options variant-ID construction. A future incompatible
+native-ID convention requires a new scheme value and reviewed receiver support before
+it can create different source xrefs.
 
 ### `config_digests`
 
@@ -270,6 +283,12 @@ given `(run_id, seq)` never change.
 Loss/corruption of sender run state during an in-progress run is an operator event; do
 not guess a replacement header or silently start a new FULL against an orphaned run.
 
+Before creating or resuming run state, the sender must hold one exclusive lock keyed
+by the ready spool / spool_manifest_sha256. A second sender invocation for the same
+spool must fail before creating another run ID or contacting CatalogService. Stale-lock
+breakage is explicit/operator-reviewed and only after proving no sender still owns the
+run.
+
 KID rotation occurs only between runs. The KID used by an in-flight/accepted run must
 remain configured until terminal recovery/ACK is complete.
 
@@ -295,28 +314,55 @@ review.
 
 ## BOOTSTRAP recovery/config-state correction
 
-Current `recoverySetCovers()` treats any valid BOOTSTRAP recovery set as covering when
-catalog authority is still null; it does not compare the live IdentityStore revision.
+Current `recoverySetCovers()` treats any valid BOOTSTRAP recovery set as covering
+whenever catalog authority is still null. It does not compare the configuration
+authority stored inside the snapshotted IdentityStore.
 
-That is insufficient once reviewed config hashes are written before the first FULL:
-`setConfigHash()` advances identity revision while an old revision-0 BOOTSTRAP set can
-still appear covering.
+That creates a pre-first-FULL gap: reviewed `setConfigHash()` calls change
+`config_state`, while an older BOOTSTRAP recovery set can still appear covering.
 
-Before first FULL, correct the recovery gate so BOOTSTRAP coverage binds the exact live
-IdentityStore revision (or equivalent exact identity snapshot authority) while keeping
-the existing CURRENT rule that permits live identity to be ahead of the published
-revision after abandoned/unpublished work.
+Do **not** solve this by requiring equality of the whole live IdentityStore revision.
+Data chunks in the first FULL legitimately create source xrefs/canonical IDs and bump
+identity revision before publication. A restart during that unpublished work must
+still be able to resume the same run.
 
-Then:
+For BOOTSTRAP, recovery coverage instead binds the exact identity config-state
+authority:
 
-1. set reviewed config hashes;
-2. verify exact `config_state` set/readback;
-3. create/verify a recovery set containing that BOOTSTRAP identity revision;
-4. only then enable/admit the new FULL.
+```text
+BP-IDENTITY-CONFIG-STATE-V1 digest from recovery-set identity snapshot
+==
+BP-IDENTITY-CONFIG-STATE-V1 digest from live IdentityStore
+```
 
-Two sequential idempotent `setConfigHash()` calls are acceptable; an atomic multi-key
-API is not required when ingest is administratively fenced until the exact set is
-verified.
+The verifier already opens the snapshotted `identity.sqlite`; it can derive this
+digest from that snapshot. A backup-set schema bump is not required merely to
+compute/check it.
+
+Required behavior:
+
+- changing reviewed `config_state` invalidates an older BOOTSTRAP recovery set;
+- unpublished product/variant/xref revision growth with unchanged `config_state`
+  does **not** invalidate that BOOTSTRAP set;
+- CURRENT recovery semantics remain as currently designed: live identity may be ahead
+  of the published generation after abandoned/unpublished work;
+- `startupInspect()` after restart must still find coverage for an in-progress
+  first FULL when only unpublished identity rows advanced.
+
+Before first FULL:
+
+1. fence ingest;
+2. set reviewed config hashes;
+3. verify the exact `config_state` set/readback;
+4. create/verify a recovery set whose snapshotted config-state digest equals the live
+   config-state digest;
+5. start/admit the FULL;
+6. during rehearsal, prove a restart after unpublished identity growth still resumes
+   the exact run under the same BOOTSTRAP config-state coverage.
+
+Two sequential idempotent `setConfigHash()` calls are acceptable; an atomic
+multi-key API is not required while ingest is fenced and exact-map verification is
+mandatory.
 
 ## Exporter spool storage policy
 
@@ -340,22 +386,32 @@ ready/sending spools with these invariants:
 - cleanup only after sender/audit transition proves the run terminal;
 - no off-host backup requirement for heavy chunk payloads.
 
-Do not invent final capacity thresholds from fixture estimates. Candidate preflight and
-first real spool must measure peak source scratch, diagnostic/chunk bytes and free disk.
-Before periodic operation, convert those measurements into enforced warning/critical
-free-space gates. For the first controlled candidate/preflight, perform an explicit
-operator disk-free gate and monitor high-water usage so the shared Drupal/MariaDB host
-cannot be filled accidentally.
+The existing storage-policy schema requires numeric expected/warning/critical
+thresholds even for transient objects. The first spool-policy entry may therefore use
+explicit conservative provisional numbers whose basis says
+"estimate; replace after measured first-FULL baseline"; those values are not final
+capacity engineering.
 
-## Immutable exporter release and candidate proof
+Candidate preflight and the first controlled spool must measure both filesystems used
+by exporter work (os.tmpdir() scratch and /var/lib/babypark-exporter building/ready
+data), plus free space on the shared MariaDB volume. A scripted operator free-space
+gate with an explicit byte threshold is required before both preflight and spool.
+The first-spool threshold is derived from measured preflight high-water usage plus
+reserved MariaDB/headroom; recurring automated warning/critical gates are frozen from
+the measured first-FULL baseline before D3 scheduling.
 
-Build the exporter candidate from one exact reviewed Git commit/tree. Record a small
-release provenance file containing at least repository, commit, tree, package-lock
-hash and build/install timestamp.
+## Immutable release, candidate proof and spool provenance
+
+Every exporter/sender release is built from one exact reviewed Git commit/tree and
+contains an immutable `RELEASE.json` with at least repository, commit, tree,
+package-lock hash and build/install timestamp.
 
 Release contents are not edited after installation; correction produces a new release.
 
-Before switching `/opt/babypark-exporter/current`:
+### Early candidate preflight
+
+Before D2b implementation is production-ready, an exporter candidate may prove the
+live Drupal source path:
 
 1. install candidate and nested dependencies;
 2. pass candidate config paths explicitly, including anomaly publication policy;
@@ -366,13 +422,48 @@ Before switching `/opt/babypark-exporter/current`:
 7. prove unrelated products still produce canonical chunks;
 8. measure runtime, scratch/chunk high-water disk use and warnings.
 
-After that proof, add `DRUPAL_EXPORT_ANOMALY_PUBLICATION_POLICY` to the production env
-and switch `current` once to the reviewed release.
+That early candidate proof does not make its spool the production transport artifact.
 
-A second full preflight immediately after the symlink switch is not a mandatory proof:
-`spool` reruns the same source/validation path. Prefer one candidate preflight followed
-by the controlled `spool` unless the release/env/symlink transition itself changed
-anything that needs a diagnostic rerun.
+If later D2b work leaves `apps/drupal-exporter/src` behavior unchanged, the source-side
+preflight evidence remains useful. If exporter semantics change, rerun preflight.
+
+### Rehearsal spool
+
+After D2b server/sender implementation is merged into an immutable release, build a
+real `.ready` spool from that exact release and use it for the isolated full-scale
+rehearsal.
+
+The rehearsal spool is **never** reused as the production FULL merely because it passed
+rehearsal. It may be hours/days old by production cutover.
+
+### Production spool
+
+After rehearsal passes and the final release commit is frozen, install/switch the
+Drupal exporter/sender to that exact immutable release.
+
+The production spool is freshly rebuilt from live Drupal by that **same immutable
+release commit** whose sender transmits it. Signed `producer_commit` refers to this
+producer/sender release, not merely the sender source revision.
+
+For the first controlled FULL:
+
+- maximum age from database `snapshot_watermark` to first seq0 transmission is
+  **30 minutes**;
+- if seq0 has not been sent and that age is exceeded, discard the unsent spool and
+  build a fresh one;
+- once seq0 is sent, never replace the snapshot under the same run ID merely because
+  wall-clock age grows; finish/recover that exact run or stop for operator review.
+
+The acceptance baseline is the exact production spool snapshot/watermark, not the
+later mutable Drupal database. Source changes after that watermark are future source
+changes, not defects in the earlier accepted snapshot.
+
+The release provenance hash, producer commit and spool manifest hash are preserved in
+signed publication authority and the post-ACK audit package.
+
+A second full preflight immediately after symlink switch is not mandatory when exact
+exporter code/config was already proven and `spool` reruns the same invariants. If the
+release/env transition changes exporter semantics/config inputs, rerun it.
 
 ## CatalogService D2b production release
 
@@ -441,35 +532,92 @@ is declared ready for consumers.
 
 Unit/fixture/benchmark success is not enough for the first production FULL.
 
-Production host verification already proves `node:sqlite` and SQLite FTS5 are
-available. The remaining unknown is full-scale resource/time behavior.
+A production capability probe performed on **2026-09-28** on the deployed
+CatalogService host (`Ubuntu 24.04.4 LTS`, `/usr/bin/node v24.20.0`, SQLite 3.53.4)
+confirmed working `node:sqlite` and successful SQLite FTS5 virtual-table
+create/query. The remaining unknown is full-scale resource/time/recovery behavior.
 
-After D2b sender/server code exists and a real `.ready` spool has been built, but before
-the one production CatalogService cutover, run the exact payload against an isolated
-CatalogService instance using:
+### Rehearsal host
 
-- the same reviewed application release;
+Use a disposable **dedicated VM**, not the live Chatwoot/Viber/CatalogService host.
+
+Match the production machine class as closely as practical:
+
+```text
+DigitalOcean Premium AMD class
+2 vCPU
+4 GB RAM
+80 GB ext4
+Ubuntu 24.04 LTS
+Node v24.20.0
+2 GB swap
+```
+
+The VM has no customer/seller/Chatwoot traffic and is destroyed after rehearsal
+evidence is captured.
+
+Use:
+
+- the exact future production application release;
+- the exact rehearsal `.ready` spool;
 - separate identity/replay/catalog/backup paths;
-- separate port;
-- separate audience/KID;
-- no access from customer/seller consumers.
+- rehearsal-only audience/KID;
+- no production KID;
+- no public consumer routes;
+- sender traffic through an SSH/private tunnel or otherwise restricted path.
 
-Measure at minimum:
+The rehearsal intentionally does **not** claim to exercise the production Nginx FULL
+proxy hop. The first real large final request will exercise that hop; exact-final retry
+remains the recovery mechanism for a lost proxy/client response.
 
-- total sender duration;
-- maximum nonfinal request duration;
-- final certification/seal/publication duration;
-- peak CatalogService RSS;
-- catalog generation bytes;
-- replay/identity bytes and revisions;
-- CPU load;
-- recovery-set creation duration;
-- FTS smoke/query behavior after acceptance.
+### Predeclared resource/time gate
 
-Current production Nginx read timeout for catalog ingest is 300 seconds and the replay
-lease defaults to 60 seconds. Do not assume those values are sufficient or change them
-blindly. Use rehearsal measurements to set the bounded client/Nginx timeout and
-systemd resource envelope with explicit headroom before production FULL.
+Before starting the full-volume rehearsal, configure the rehearsal CatalogService unit:
+
+```text
+MemoryMax = 1 GiB
+MemoryHigh = 768 MiB
+```
+
+and require free disk for the spool plus at least 3x the previously measured
+candidate high-water catalog/replay/temp footprint.
+
+Pass criteria are declared **before** the run:
+
+- no OOM, memory-pressure termination or filesystem exhaustion;
+- no invariant/recovery failure;
+- maximum nonfinal request processing time <= 30 seconds, i.e. 50% of the current
+  60-second replay lease;
+- final certification/seal/publication processing time <= 180 seconds, i.e. 60% of
+  the production Nginx 300-second read timeout;
+- final accepted generation certifies and FTS smoke queries pass;
+- recovery-set creation succeeds within the same final request budget;
+- measured peak RSS/disk/CPU are recorded.
+
+If these gates fail, do not simply increase production limits. Review/optimize the
+bottleneck or provision a safer CatalogService host, then repeat rehearsal.
+
+### Authority parity and required failure drills
+
+The rehearsal IdentityStore receives the **same reviewed config key/digest set** as
+the planned production run and obtains matching BOOTSTRAP config-state recovery
+coverage before test execution.
+
+After a successful baseline run, repeat from clean rehearsal state as needed to prove:
+
+1. **sender termination mid-run** — stop sender after data chunks, restart it, acquire
+   the same spool/run lock and resume from atomic run-state with the same run ID and
+   exact semantic bytes;
+2. **CatalogService termination during finalization** — terminate the rehearsal
+   service after final processing begins, restart it, and prove BOOTSTRAP config-state
+   recovery does not block exact run recovery merely because unpublished identity
+   revision advanced;
+3. **lost final response** — allow publication to complete while the client does not
+   receive the response, then retry the exact final request and recover the durable
+   ACK/state without a new run.
+
+Record total sender duration, max nonfinal time, finalization time, peak RSS, CPU,
+catalog bytes, replay/identity growth, recovery duration and FTS results.
 
 ## Reset window before consumers
 
@@ -492,19 +640,25 @@ identity migration strategy.
 
 A concrete reset-before-consumers runbook is required before the production first FULL.
 
+If owner acceptance rejects a run and reset is used, mark that run's audit package and
+any off-host recovery copy as REJECTED / NOT CONSUMER AUTHORITY. Never leave rejected
+first-FULL evidence indistinguishable from the later accepted identity authority.
+
 ## First production FULL gate
 
 No scheduling. Manual owner-controlled run only.
 
 Pre-send requirements:
 
-- immutable reviewed `.ready` spool;
+- fresh production `.ready` spool built by the same immutable producer/sender release
+  and younger than the 30-minute snapshot-to-seq0 age limit;
 - spool/audit storage policy valid;
 - candidate production preflight passed;
-- D2b isolated full-scale rehearsal passed;
+- D2b isolated full-scale rehearsal and failure drills passed;
 - one D2b-capable CatalogService production release deployed;
 - exact `config_state` map contains the reviewed hashes;
-- BOOTSTRAP recovery set covers the exact live identity revision;
+- BOOTSTRAP recovery set covers the exact live config-state digest while allowing
+  unpublished identity revision growth;
 - health/state green;
 - `BOOTSTRAP` and `accepting_ingest=true`;
 - production KID/secret installed outside Git;
@@ -540,12 +694,25 @@ After final `ACKED`:
 9. perform a scratch restore verification of that off-host copy;
 10. run automated read-only Drupal-vs-catalog acceptance checks.
 
+Additionally prove the audit chain after ACK:
+
+- SHA-256 of the exact saved run-header bytes equals the seq0 body_sha256 stored in
+  ReplayStore;
+- decoded publication_authority from those exact header bytes equals
+  manifest.extra.publication_authority;
+- the acceptance-package checksum manifest covers those exact header/trailer/ACK/state
+  artifacts.
+
 Only after these gates may owner approval enable consumers.
 
 ## Real-data acceptance package
 
-Before Seller AI consumes the catalog, automatically compare real source/catalog data
-without an LLM. Include at least:
+Before Seller AI consumes the catalog, automatically compare the accepted catalog
+against the **exact production spool snapshot/watermark** without an LLM. Live Drupal
+may legitimately have changed after that watermark; later source writes are not defects
+in the earlier snapshot.
+
+Include at least:
 
 - counts by product/source type;
 - exact expected treatment of the 21 reviewed legacy mappings;
@@ -599,17 +766,27 @@ before recurring automation:
 The shortest safe path to trusted Seller AI data is:
 
 1. freeze this D2b design;
-2. storage-policy/spool-contract correction;
-3. immutable exporter candidate + production preflight;
-4. build one real `.ready` spool;
-5. implement D2b server + sender + sender run-state + audit binding + BOOTSTRAP recovery fix;
-6. isolated full-scale rehearsal using that real spool;
-7. one D2b-capable production CatalogService cutover;
-8. exact config-state/recovery gate;
-9. first controlled FULL;
-10. off-host identity recovery + real-data acceptance package;
+2. implement storage-policy/spool lifecycle + scripted disk gate and run the early
+   immutable exporter candidate preflight;
+3. implement D2b server + sender + exclusive sender lock + atomic run-state + audit
+   binding + BOOTSTRAP config-state recovery fix;
+4. build a real rehearsal `.ready` spool from that exact immutable D2b-capable release;
+5. run the dedicated disposable-VM full-scale rehearsal and required failure drills;
+6. fix/repeat rehearsal if any gate fails, then freeze the exact final release commit;
+7. deploy/switch the exact final immutable exporter/sender release and perform the
+   single D2b-capable production CatalogService cutover;
+8. fence ingest, set/verify exact production config-state authority and verify matching
+   BOOTSTRAP config-state recovery coverage;
+9. build a **fresh production spool from that same final release**, require the
+   <=30-minute snapshot-to-seq0 age, then send the first controlled FULL;
+10. establish post-ACK local recovery, off-host identity recovery + restore drill and
+    exact snapshot-vs-catalog acceptance package;
 11. owner acceptance;
 12. only then enable Seller AI/catalog consumers.
+
+A rehearsal spool is never promoted to production by age/history alone. Production
+spool is a new snapshot made only after the final release and production receiver are
+ready.
 
 Product Identity Resolution application, Requires Attention approval UI and governance
 expansion remain outside this critical path.
@@ -622,9 +799,15 @@ This design may be frozen only when review confirms:
 - header v1 is not silently extended;
 - exact config authority cannot drift unnoticed;
 - sender restart cannot change semantic run bytes;
+- sender has an exclusive per-spool/run lock;
 - `.ready` spool cannot be deleted before terminal evidence;
-- BOOTSTRAP recovery covers config-state identity revision;
-- full-scale rehearsal occurs before production cutover;
+- BOOTSTRAP recovery binds exact snapshotted/live config-state digest and does not
+  break restart/resume merely because unpublished identity revision advanced;
+- full-scale rehearsal runs on a dedicated disposable VM before production cutover,
+  with predeclared resource/time gates and termination/lost-response drills;
+- rehearsal and production spools are distinct, production spool is created by the
+  same immutable producer/sender release, and snapshot-to-seq0 max age is enforced;
+- signed authority declares the frozen Drupal native_identity_scheme;
 - one production CatalogService cutover includes both FULL-v2 compatibility and D2b;
 - accepted authority is durable on receiver and in a small producer audit package;
 - off-host identity restore is a consumer-enablement gate;

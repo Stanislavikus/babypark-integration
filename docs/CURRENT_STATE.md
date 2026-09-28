@@ -408,9 +408,11 @@ critical ingestion path:
    policy, which still describes exporter state as tiny/no-payload state;
 3. sender retries require durable exact run-state so one run ID never acquires changed
    header/trailer bytes after restart;
-4. current BOOTSTRAP recovery coverage does not bind the live IdentityStore revision,
-   so a revision-0 recovery set can still appear covering after reviewed config hashes
-   advance identity revision.
+4. current BOOTSTRAP recovery coverage does not bind the snapshotted/live
+   IdentityStore `config_state` authority, so an older BOOTSTRAP recovery set can
+   still appear covering after reviewed config hashes change. Coverage must compare
+   exact config-state digest, not the whole live identity revision, so restart/resume
+   remains valid after unpublished xref/UUID growth.
 
 Verified production capability facts:
 - CatalogService host supports `node:sqlite` and SQLite FTS5;
@@ -426,16 +428,21 @@ Frozen direction pending closure review:
 - introduce exact signed `bp.catalog.run-header/2` with
   `bp.catalog.publication-authority/1`;
 - publication authority uses a versioned `config_digests` map, spool/anomaly hashes,
-  source contract versions and exporter commit provenance;
+  source contract versions, `native_identity_scheme`, producer commit and release
+  provenance digest;
 - CatalogService compares the signed config map to exact current `config_state` before
   accepting seq0;
-- D2a keeps the no-HTTP invariant; D2b is a separate sender/control module;
+- D2a keeps the no-HTTP invariant; D2b is a separate sender/control module with atomic
+  run-state and an exclusive per-spool sender lock;
 - accepted authority is preserved in generation manifest extra plus a small producer
   acceptance-audit package;
-- first full-scale rehearsal is an operational gate after D2b implementation and real
-  spool creation, not part of the D2b implementation PR itself;
+- full-scale rehearsal runs on a disposable dedicated production-class VM after D2b
+  implementation, with predeclared 30s nonfinal / 180s final gates and failure drills;
+- rehearsal spool is never reused as production: after final release freeze, production
+  builds a fresh spool from the same immutable producer/sender commit and starts seq0
+  within 30 minutes of the snapshot watermark;
 - one production CatalogService cutover occurs only after rehearsal;
-- off-host identity/recovery copy + restore drill and real-data acceptance are gates
-  before Seller AI/catalog consumers are enabled.
+- off-host identity/recovery copy + restore drill and exact snapshot-vs-catalog
+  acceptance are gates before Seller AI/catalog consumers are enabled.
 
 No code/config/storage policy/runtime/production state is changed by this design draft.
