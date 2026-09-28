@@ -165,11 +165,29 @@ deleted automatically.
 
 ## Drupal exporter production preflight
 
-D2a/D2a.1 code is deployed on the Drupal production host as an isolated,
-non-scheduled exporter. It is not a daemon and does not write Drupal data.
+D2a/D2a.1 plus D2b exporter slice 1 code is deployed on the Drupal production host
+as an isolated, non-scheduled exporter. It is not a daemon and does not write Drupal
+data.
+
+Web-origin protection changed during the 2026-09-28 preflight investigation:
+- the Cloudflare wildcard `*.babypark.ua` was disabled by renaming the DNS record to
+  `wildcard-disabled-20260928`; exact service records remain unchanged;
+- existing static `jpg/jpeg/png/gif/webp/svg/ico/css/js/woff/woff2/ttf/eot` files are
+  now served directly by Nginx, with missing files falling back to Apache/Drupal so
+  image-style generation remains intact;
+- Nginx vhost backups:
+  `/etc/nginx/sites-available/babypark.ua.conf.bak.static-direct.20260928T193301Z`
+  and
+  `/etc/nginx/sites-available/ssl.babypark.ua.conf.bak.static-direct.20260928T193301Z`;
+- verification proved existing JS/JPG requests no longer hit Apache while a missing
+  JPG still reaches the Drupal fallback.
 
 Current exporter release:
-`/opt/babypark-exporter/releases/20260927T122537Z-712f09c`
+`/opt/babypark-exporter/releases/20260928T195344Z-8c78bd5`
+
+Production source:
+`8c78bd51a7b73a0a29209d5f6c43f6f13ad09bc3`
+(PR #31 merge; tree `ff6a1578cc53fc22a16644e32accf8ad6d085334`)
 
 Current exporter symlink:
 `/opt/babypark-exporter/current`
@@ -179,14 +197,15 @@ Runtime:
 - private state: `/var/lib/babypark-exporter` mode `0700`
 - dedicated MariaDB principal: `babypark_exporter@127.0.0.1`
 - database grant: `SELECT` on `babypark_ua.*` only
-- current candidate-capable side runtime:
-  `/opt/babypark-exporter/runtime/node-v22.23.2/bin/node`
-- PR #31 target runtime: pinned Node `24.21.0` LTS at
-  `/opt/babypark-exporter/runtime/node-v24.21.0/bin/node`, installed side-by-side
-  with official archive SHA-256 verification and `node:sqlite`/FTS5 probe
+- production exporter runtime is pinned Node `24.21.0` LTS at
+  `/opt/babypark-exporter/runtime/node-v24.21.0/bin/node`;
+- the pinned archive SHA-256 was verified against the official Node release checksum,
+  and the installed runtime passed `node:sqlite`/FTS5 probing;
+- legacy side Node `22.23.2` remains installed but is no longer production execution
+  authority;
 - system `/usr/bin/node` remains unchanged at v20.20.2
 
-D2a.1 merged/deployed source:
+D2a.1 historical merge/deployment source:
 `712f09cd390df71821b1315c47fac30a620a4636`
 
 D2a.1 established:
@@ -227,7 +246,26 @@ D2b Slice 1 candidate preflight after PR #30 merge:
   while system Node 20 cannot import the new exporter;
 - observed runtime was materially longer than the old D2a preflight, so PR #31 adds
   pinned Node 24.21.0 plus stage timing diagnostics before cutover;
-- production exporter symlink remains on the previous release.
+- at this candidate-proof point, the production exporter symlink still remained on
+  the previous release.
+
+PR #31 production hardening and cutover completed on 2026-09-28:
+- PR #31 merged as
+  `8c78bd51a7b73a0a29209d5f6c43f6f13ad09bc3`;
+- exact merge tree equals the reviewed PR-head tree:
+  `ff6a1578cc53fc22a16644e32accf8ad6d085334`;
+- immutable production release:
+  `/opt/babypark-exporter/releases/20260928T195344Z-8c78bd5`;
+- pre-cutover and post-switch production preflights both returned `ok=true`;
+- each had zero hard blockers, warning_count 78, anomaly_count 1,
+  quarantined_product_count 2 and prepared_chunk_count 175;
+- post-switch `current` remained on the new immutable release before/after the proof;
+- no `.ready` spool, Catalog HTTP, FULL or Drupal write occurred;
+- post-switch stage timings: snapshot extract about 10.3s, canonical build about
+  41.0s, chunk preparation about 126.8s, total about 183.5s;
+- measured post-switch envelope: peak RSS about 650 MiB, peak temporary scratch about
+  170 MiB, peak building spool about 537 MiB, minimum free disk about 10.57 GiB;
+- successful cleanup left no exporter `.building` or chunk-scratch directory.
 
 Collision review state:
 - 21 of 23 unique collisions have sufficient technical evidence and are approved
@@ -241,9 +279,9 @@ Collision review state:
 Default-promotion safety fix:
 - PR #19 merged to main;
 - main merge commit: `b21edcf101116eea3ad93b53430f944725029833`;
-- this fix is intentionally not deployed yet;
-- production exporter remains on `712f09c` until the reviewed collision mapping
-  is ready, so the live host can be switched once rather than repeatedly.
+- the fix is now included transitively in the current production exporter release
+  `8c78bd51a7b73a0a29209d5f6c43f6f13ad09bc3`;
+- no intermediate production cutover was made solely for this fix.
 
 Current collision findings are migration evidence, not universal future identity
 rules. Durable future architecture lives in:
@@ -252,7 +290,7 @@ rules. Durable future architecture lives in:
 
 ## Catalog Anomaly Runtime v1
 
-Status: **MERGED / NOT DEPLOYED**
+Status: **MERGED / EXPORTER QUARANTINE INTEGRATION DEPLOYED / PERSISTENT CATALOG ANOMALY STORE NOT DEPLOYED**
 Implementation source: `main`, PR #26 merge `eb70c08c8917550bfe2666d85b845328e38b02a4`
 Design contract: `docs/CATALOG_ANOMALY_RUNTIME_V1.md`
 
@@ -279,8 +317,12 @@ Explicit non-actions in this slice:
 - no permanent mappings for `511000` or `80401mc02`;
 - the production collision config contains only the 21 reviewed legacy migration mappings.
 
-Production Drupal exporter remains:
-`/opt/babypark-exporter/releases/20260927T122537Z-712f09c`
+Production Drupal exporter is now:
+`/opt/babypark-exporter/releases/20260928T195344Z-8c78bd5`
+
+The exporter-side anomaly quarantine/publication-policy integration is therefore
+deployed for future controlled batch runs. Persistent Catalog `anomalies.sqlite`
+runtime/application work remains not deployed.
 
 Regression proof from sanitized 2026-09-27 collision fixtures remains:
 - 21 reviewed test mappings resolve first;
@@ -299,13 +341,14 @@ Before production anomaly persistence, a separate `anomalies.sqlite`
 backup/restore slice is required.
 
 Next operational steps:
-- finish/review implementation slice 1 and build one immutable exporter candidate;
-- run candidate production preflight without switching `current`;
-- require zero unaccounted hard blockers and let the candidate establish the current
-  residual anomaly/quarantine set from live Drupal;
-- preserve acceptance evidence for the historical `511000`/`80401mc02` cases,
-  including an explicit missing-source outcome for `139026`;
-- continue D2b implementation only from that reviewed source truth.
+- exporter slice 1 + runtime hardening are merged, deployed and production-preflighted;
+- preserve the established live baseline: zero hard blockers, one residual anomaly
+  (`80401mc02`), quarantined groups `118670`/`12605`, warning_count 78;
+- continue D2b server/sender implementation from the frozen design:
+  run-header/2 + publication-authority/1, durable/exclusive sender run-state,
+  CatalogService authority validation and BOOTSTRAP config-state recovery correction;
+- keep Link A verifier, isolated full-scale rehearsal and first controlled FULL behind
+  their existing explicit gates.
 
 Product Identity Resolution v1 is already frozen/merged. Its two original cases
 remain historical acceptance fixtures, while the current live incident set is
@@ -322,14 +365,13 @@ No Drupal FULL has been sent.
 Two independent tracks are active:
 
 1. **Operational ingestion**
-   - review implementation slice 1 and build an immutable exporter candidate with
-     anomaly quarantine + spool v3;
-   - run candidate preflight against live Drupal without switching production
-     `current`;
-   - confirm deterministic anomaly report/quarantine from the current source rather
-     than forcing the historical 2026-09-27 2/4 count;
-   - only after candidate proof install/switch the reviewed exporter release;
-   - continue D2b runtime/sender implementation toward first controlled FULL.
+   - exporter spool/3 + anomaly quarantine + pinned Node 24 production rollout is
+     complete;
+   - the current live-source baseline is established by both pre- and post-cutover
+     preflight;
+   - continue D2b runtime/sender implementation toward first controlled FULL;
+   - do not create/send production FULL until sender/server/recovery, isolated rehearsal
+     and acceptance gates are closed.
 
 2. **Identity-resolution application (later)**
    - frozen design: `docs/PRODUCT_IDENTITY_RESOLUTION_V1.md`;
@@ -342,7 +384,7 @@ Two independent tracks are active:
 
 No identity-resolution application is authorized by this exporter slice.
 
-Previously frozen design items now implemented in code (awaiting deploy):
+Previously frozen exporter-side design items are now implemented and deployed:
 
 Before the first production FULL, BabyPark must reach one explicitly reviewed safe
 state:
@@ -353,11 +395,11 @@ state:
 
 No untracked ambiguity may silently enter the first canonical generation.
 
-After that gate:
-- deploy one immutable exporter/runtime release;
-- run production preflight;
-- target: zero unaccounted hard blockers and a clean local spool;
-- then proceed to D2b transport / first controlled FULL.
+That exporter gate is now closed:
+- immutable merged exporter/runtime release is production `current`;
+- pre- and post-switch production preflight both have zero unaccounted hard blockers;
+- next critical path is D2b transport/server/recovery implementation, then isolated
+  rehearsal before any first controlled FULL.
 
 Two mandatory future research/design gates exist before customer-facing AI catalog
 answers are production-ready:
@@ -400,8 +442,9 @@ Agreed anomaly governance is already indexed from:
 - `config/catalog-anomalies/POLICY_CATALOG.md`
 - `docs/CATALOG_ANOMALY_RUNTIME_V1.md`
 
-These governance files are indexed in Git. Production runtime still does not load
-them until the reviewed exporter release above is deployed.
+These governance files are indexed in Git. The production exporter now loads the
+reviewed publication/collision authority during controlled batch runs; persistent
+Catalog anomaly-store/application runtime remains a later deployment.
 
 The two identifiers `511000` and `80401mc02` remain intentionally unmapped in
 configuration and useful historical acceptance cases. They are no longer both assumed
@@ -425,7 +468,7 @@ No production deployment or FULL is part of this design slice.
 
 ## D2b / first controlled FULL
 
-Status: **FROZEN DESIGN / IMPLEMENTATION SLICE 1 IN REPOSITORY / NOT DEPLOYED**
+Status: **FROZEN DESIGN / EXPORTER SLICE 1 + PR31 RUNTIME HARDENING DEPLOYED / D2b SENDER-SERVER NOT IMPLEMENTED**
 
 Design source:
 `docs/DRUPAL_EXPORT_D2B.md`
@@ -514,5 +557,8 @@ Still not implemented in this slice: D2b HTTP sender, run-header/2, CatalogServi
 publication-authority validation, BOOTSTRAP recovery fix, Link A verifier, rehearsal,
 production CatalogService upgrade or first FULL.
 
-Production exporter remains on its previous release until candidate review/preflight;
-no production state has been changed by this repository slice.
+Production exporter cutover is complete at
+`/opt/babypark-exporter/releases/20260928T195344Z-8c78bd5`
+(commit `8c78bd51a7b73a0a29209d5f6c43f6f13ad09bc3`). Both pre-cutover and
+post-switch preflight passed with the established live-source baseline. No FULL has
+been sent and CatalogService remains BOOTSTRAP.
