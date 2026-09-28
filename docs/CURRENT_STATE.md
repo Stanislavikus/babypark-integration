@@ -274,7 +274,9 @@ Before production anomaly persistence, a separate `anomalies.sqlite`
 backup/restore slice is required.
 
 Next step after collision-config review merge:
-- deploy one immutable exporter release containing anomaly runtime v1,
+- review/freeze `docs/PRODUCT_IDENTITY_RESOLUTION_V1.md` while the two unresolved
+  collisions remain live acceptance fixtures;
+- then deploy one immutable exporter release containing anomaly runtime v1,
   the default-promotion fix, and the 21 reviewed legacy mappings;
 - run production preflight and confirm exactly two residual anomalies
   (`511000`, `80401mc02`), four quarantined products and zero unaccounted
@@ -286,12 +288,17 @@ Next step after collision-config review merge:
 No AI copilot is active.
 No Drupal FULL has been sent.
 
-Immediate next engineering slice after anomaly runtime v1 merge:
-- deploy reviewed exporter release with anomaly quarantine + spool v2;
-- run production preflight against live Drupal source;
-- confirm deterministic anomaly report and quarantine counts for the two
-  unresolved fixtures (`511000`, `80401mc02`);
-- proceed to D2b transport design/binding for first controlled FULL.
+Immediate sequence after anomaly runtime v1 and mapping merge:
+1. review/freeze `docs/PRODUCT_IDENTITY_RESOLUTION_V1.md` using the two live
+   unresolved cases as acceptance fixtures;
+2. deploy one reviewed exporter release with anomaly quarantine + spool v2;
+3. run production preflight against live Drupal source;
+4. confirm deterministic anomaly report and quarantine counts for `511000` and
+   `80401mc02`;
+5. proceed to D2b transport design/binding for first controlled FULL.
+
+The identity-resolution design step does not change the current exporter release,
+does not resolve either fixture by legacy mapping, and does not authorize FULL.
 
 Previously frozen design items now implemented in code (awaiting deploy):
 
@@ -355,5 +362,17 @@ These governance files are indexed in Git. Production runtime still does not loa
 them until the reviewed exporter release above is deployed.
 
 The two unresolved duplicate identifiers `511000` and `80401mc02` remain useful
-live fixtures and still require business/source-process investigation before any
-permanent legacy mapping or identity decision is approved.
+live fixtures and intentionally stay unmapped/quarantined while the provider-neutral
+resolution workflow is reviewed.
+
+Current design slice:
+- `docs/PRODUCT_IDENTITY_RESOLUTION_V1.md`;
+- Joolz `511000`: acceptance case for one physical product whose useful content
+  and category assignments are split across legacy cards;
+- Bugaboo `80401mc02`: acceptance case for one candidate physical product
+  represented by multiple suppliers and case-variant supplier articles;
+- identity decision, root cause and migration/publication action are separate
+  structured decisions;
+- AI may propose; only reviewed structured state becomes authority.
+
+No production deployment or FULL is part of this design slice.

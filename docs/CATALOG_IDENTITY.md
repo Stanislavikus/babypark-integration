@@ -1,7 +1,7 @@
 # Catalog Identity Registry
 
 Status: CURRENT (code) / NOT DEPLOYED (production data)
-Last verified: 2026-09-27
+Last verified: 2026-09-28
 Owner: BabyPark
 Source of truth: src/catalog/domain/sku.mjs, src/catalog/identity/
 
@@ -17,8 +17,14 @@ separation, anomaly incidents, AI-safe behavior and human resolution lives in:
 
     docs/CATALOG_IDENTITY_ANOMALY_MANAGEMENT.md
 
-Any agent changing identity matching, collision handling, supplier imports or
-customer-facing AI catalog selection must read both documents.
+The first concrete resolution workflow and its Joolz/Bugaboo acceptance cases are
+drafted in:
+
+    docs/PRODUCT_IDENTITY_RESOLUTION_V1.md
+
+Any agent changing identity matching, collision handling, supplier imports,
+category/product merging or customer-facing AI catalog selection must read all
+three documents.
 
 Durable database:
 

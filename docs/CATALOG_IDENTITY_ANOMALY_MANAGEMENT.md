@@ -564,12 +564,19 @@ of existing safety checks.
 See:
 `docs/CATALOG_ANOMALY_RUNTIME_V1.md`
 
-## Required future research slice
+## Product Identity Resolution v1 design slice
 
-Before customer-facing AI is considered production-ready, run a dedicated
-**Catalog Identity & Anomaly Management** research/design slice.
+The first concrete provider-neutral resolution design is now drafted in:
 
-It must study at least:
+`docs/PRODUCT_IDENTITY_RESOLUTION_V1.md`
+
+It uses the live Joolz `511000` and Bugaboo `80401mc02` anomaly cases as
+acceptance fixtures and makes explicit the required separation between physical
+identity, supplier offers, category assignments, customer offers and migration actions.
+
+Before customer-facing AI is considered production-ready, the broader
+**Catalog Identity & Anomaly Management** research/design program must still study
+at least:
 
 1. identity modeling across products, variants, suppliers and channels;
 2. GTIN/EAN/MPN/manufacturer SKU vs supplier SKU semantics;
