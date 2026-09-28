@@ -12,9 +12,12 @@ export class D2bClient {
     if (method === 'POST') { headers['Content-Type'] = 'application/json'; headers['Content-Encoding'] = 'identity'; }
     const controller = new AbortController(); const timer = setTimeout(() => controller.abort(), this.config.timeoutMs);
     let response;
-    try { response = await this.fetch(`${this.config.origin}${path}`, { method, headers, body: method === 'POST' ? body : undefined, redirect: 'error', signal: controller.signal }); }
+    try { response = await this.fetch(`${this.config.origin}${path}`, { method, headers, body: method === 'POST' ? body : undefined, redirect: 'manual', signal: controller.signal }); }
     catch (error) { throw new D2bError('D2B_NETWORK_RETRYABLE', `Catalog request failed: ${error.message}`, { retryable: true }); }
     finally { clearTimeout(timer); }
+    if (response.status >= 300 && response.status <= 399) {
+      throw new D2bError('D2B_REDIRECT_REJECTED', `Catalog redirect response ${response.status} is forbidden`, { details: { http_status: response.status } });
+    }
     const length = Number(response.headers.get('content-length'));
     if (Number.isFinite(length) && length > MAX_RESPONSE_BYTES) fail('D2B_RESPONSE_TOO_LARGE', 'Catalog response exceeds byte limit');
     const reader = response.body?.getReader(); let size = 0; const chunks = [];

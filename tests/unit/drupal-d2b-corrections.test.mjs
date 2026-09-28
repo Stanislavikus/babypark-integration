@@ -19,6 +19,7 @@ import { D2bError } from '../../src/drupal-d2b/errors.mjs';
 const sha = value => crypto.createHash('sha256').update(value).digest('hex');
 const layers = watermark => Object.fromEntries(['taxonomy','content','commercial','stock'].map(layer => [layer, { accepted_watermark: watermark, need_full: false, need_reconcile: false }]));
 const bootstrap = { schema:'bp.catalog.state/1', state:'BOOTSTRAP', accepting_ingest:true, blockers:[], current_generation:null, source_epoch:null, published_identity_revision:null, accepted_run:null, layers:layers(null) };
+async function waitFor(predicate, timeout=5000) { const end=Date.now()+timeout; while(Date.now()<end){if(predicate())return;await new Promise(resolve=>setTimeout(resolve,10));}throw new Error('timed out waiting for child process'); }
 
 function rewriteChunk(f, body, { rows, phase = 0 } = {}) {
   const bytes = Buffer.isBuffer(body) ? body : Buffer.from(body);
@@ -64,6 +65,14 @@ test('two real processes compete and exactly one owns the per-spool lock', async
   assert.deepEqual(fs.readdirSync(root).sort(),['go','locks','one','two']);
 });
 
+test('SIGKILL leaves a provably dead lock that only explicit break removes', async t => {
+  const root=fs.mkdtempSync(path.join(os.tmpdir(),'d2b-lock-kill-'));t.after(()=>fs.rmSync(root,{recursive:true,force:true}));const hash='d'.repeat(64);const acquired=path.join(root,'acquired');const worker=path.resolve('tests/fixtures/drupal-d2b-lock-sigkill-worker.mjs');const child=fork(worker,[root,hash,acquired],{stdio:'ignore'});await waitFor(()=>fs.existsSync(acquired));assert.equal(inspectSenderLock(root,hash).alive,true);child.kill('SIGKILL');await new Promise(resolve=>child.once('exit',resolve));const stale=inspectSenderLock(root,hash);assert.equal(stale.alive,false);assert.equal(stale.reason,'pid_absent');assert.equal(fs.existsSync(stale.path),true);assert.throws(()=>acquireSenderLock(root,hash),e=>e.code==='D2B_SENDER_LOCKED');assert.equal(breakStaleSenderLock(root,hash).reason,'pid_absent');assert.doesNotThrow(()=>acquireSenderLock(root,hash).release());
+});
+
+test('two real sender entries give the loser zero state, FULL, run-state, and run ID side effects', async t => {
+  const f=fixture();t.after(()=>fs.rmSync(f.root,{recursive:true,force:true}));const stateDir=path.join(f.root,'sender');const barrier=path.join(f.root,'barrier');const release=path.join(f.root,'release-winner');const events=path.join(f.root,'events');const results=[path.join(f.root,'result-one'),path.join(f.root,'result-two')];const worker=path.resolve('tests/fixtures/drupal-d2b-sender-boundary-worker.mjs');const children=results.map(result=>fork(worker,[f.spool,stateDir,f.release,barrier,release,result,events],{stdio:'ignore'}));fs.writeFileSync(barrier,'go');await waitFor(()=>results.some(x=>fs.existsSync(x)));const early=results.find(x=>fs.existsSync(x));assert.match(fs.readFileSync(early,'utf8'),/:D2B_SENDER_LOCKED$/);assert.equal(fs.readFileSync(events,'utf8').trim().split('\n').length,1);assert.match(fs.readFileSync(events,'utf8'),/:state\n$/);assert.equal(fs.existsSync(stateFilePath(stateDir,sha(fs.readFileSync(path.join(f.spool,'manifest.json'))))),false);fs.writeFileSync(release,'go');await Promise.all(children.map(child=>new Promise((resolve,reject)=>{if(child.exitCode!==null)return resolve();child.once('exit',code=>code===0?resolve():reject(new Error(`worker ${code}`)));child.once('error',reject)})));const outcomes=results.map(x=>fs.readFileSync(x,'utf8'));assert.equal(outcomes.filter(x=>x.endsWith(':D2B_SENDER_LOCKED')).length,1);assert.equal(outcomes.filter(x=>x.endsWith(':TEST_STOP')).length,1);const lines=fs.readFileSync(events,'utf8').trim().split('\n');assert.equal(lines.filter(x=>x.endsWith(':state')).length,1);assert.equal(lines.filter(x=>x.endsWith(':full')).length,0);
+});
+
 test('send never auto-breaks a stale-looking lock and performs zero HTTP/state creation', async t => {
   const f=fixture();t.after(()=>fs.rmSync(f.root,{recursive:true,force:true}));const stateDir=path.join(f.root,'state');const spool=verifySpool(f.spool,f.options);const lock=acquireSenderLock(stateDir,spool.spoolManifestSha256);const owner={...lock.owner,pid:2147483647};fs.writeFileSync(path.join(lock.path,'owner.json'),JSON.stringify(owner));let requests=0;
   await assert.rejects(()=>sendSpool({spoolPath:f.spool,config:{stateDir,kid:'kid',maxAttempts:1},verification:f.options,client:{state(){requests++},full(){requests++}},now:()=>new Date('2026-09-28T00:01:00.000Z')}),e=>e.code==='D2B_SENDER_LOCKED');assert.equal(requests,0);assert.equal(fs.existsSync(stateFilePath(stateDir,spool.spoolManifestSha256)),false);assert.equal(fs.existsSync(lock.path),true);
@@ -101,10 +110,19 @@ test('sender-generated GET, seq0, data, and final requests verify with receiver 
   captured.forEach(({url,options},i)=>assert.doesNotThrow(()=>verifySignedRequest({method:options.method,path:new URL(url).pathname,headers:options.headers,bodyBytes:bodies[i],secrets:new Map([['kid',secret]]),audience:'aud',now:()=>123})));
 });
 
-test('HTTP client rejects redirects and bounded response overflow', async () => {
+test('HTTP redirect is manual, dedicated non-retryable, and never followed', async () => {
   const config={origin:'http://127.0.0.1:1',audience:'aud',kid:'kid',secret:'sender-test-secret-at-least-32-chars',timeoutMs:1000};
-  const redirect=new D2bClient(config,{fetchImpl:async(_u,o)=>{assert.equal(o.redirect,'error');throw new TypeError('redirect')},nowSeconds:()=>1}); await assert.rejects(()=>redirect.state(),e=>e.code==='D2B_NETWORK_RETRYABLE');
+  let calls=0;const redirect=new D2bClient(config,{fetchImpl:async(_u,o)=>{calls++;assert.equal(o.redirect,'manual');return new Response('',{status:307,headers:{location:'https://forbidden.example/'}})},nowSeconds:()=>1}); await assert.rejects(()=>redirect.state(),e=>e.code==='D2B_REDIRECT_REJECTED'&&e.retryable===false&&e.details.http_status===307);assert.equal(calls,1);
+});
+
+test('redirect rejection never enters sender retry loop', async t => {
+  const f=fixture();t.after(()=>fs.rmSync(f.root,{recursive:true,force:true}));let calls=0;const config={stateDir:path.join(f.root,'state'),kid:'kid',maxAttempts:4,origin:'http://127.0.0.1:1',audience:'aud',secret:'sender-test-secret-at-least-32-chars',timeoutMs:1000};const client=new D2bClient(config,{fetchImpl:async()=>{calls++;return new Response('',{status:302,headers:{location:'https://forbidden.example/'}})},nowSeconds:()=>1});await assert.rejects(()=>sendSpool({spoolPath:f.spool,config,verification:f.options,client,now:()=>new Date('2026-09-28T00:01:00.000Z'),sleep:async()=>{}}),e=>e.code==='D2B_REDIRECT_REJECTED'&&e.retryable===false);assert.equal(calls,1);
+});
+
+test('HTTP client bounds responses and ordinary network failures remain retryable', async () => {
+  const config={origin:'http://127.0.0.1:1',audience:'aud',kid:'kid',secret:'sender-test-secret-at-least-32-chars',timeoutMs:1000};
   const oversized=new D2bClient(config,{fetchImpl:async()=>new Response('x'.repeat(1_048_577),{status:500}),nowSeconds:()=>1}); await assert.rejects(()=>oversized.state(),e=>e.code==='D2B_RESPONSE_TOO_LARGE');
+  const network=new D2bClient(config,{fetchImpl:async()=>{throw new TypeError('reset')},nowSeconds:()=>1});await assert.rejects(()=>network.state(),e=>e.code==='D2B_NETWORK_RETRYABLE'&&e.retryable===true);
 });
 
 function staged(runId, seq, body) { return {status:200,body:{schema:'bp.catalog.ingest-response/1',status:'STAGED',ack:{staged:true,run_id:runId,layer:'full',seq,body_sha256:sha(body)}}}; }
@@ -127,7 +145,7 @@ test('restart after multiple durable sequence ACKs starts at the next frozen seq
 
 for (const [name,response] of [
   ['PENDING retry_same',{status:202,body:{schema:'bp.catalog.ingest-response/1',status:'PENDING',action:'retry_same'},retryAfter:0}],
-  ['TEMPORARILY_BUSY retry_same',{status:503,body:{schema:'bp.catalog.error/1',code:'TEMPORARILY_BUSY',action:'retry_same'},retryAfter:0}],
+  ['TEMPORARILY_BUSY retry_same',{status:503,body:{schema:'bp.catalog.error/1',status:503,code:'TEMPORARILY_BUSY',action:'retry_same',request_id:'busy-request'},retryAfter:0}],
 ]) test(`${name} retries the exact same bytes`, async t => {
   const f=fixture();t.after(()=>fs.rmSync(f.root,{recursive:true,force:true}));const stateDir=path.join(f.root,'state');const bodies=[];let first=true;let run;
   const client={async state(){return{status:200,body:bootstrap}},async full(runId,seq,_final,body){bodies.push(Buffer.from(body));if(first){first=false;return response}return staged(runId,seq,body)}};
@@ -150,7 +168,7 @@ test('durable final ACK with lost post-ACK state resumes confirmation without FU
   await assert.rejects(()=>sendSpool({spoolPath:f.spool,config,verification:f.options,client:first,now:()=>new Date('2026-09-28T00:01:00.000Z'),sleep:async()=>{}}));const spool=verifySpool(f.spool,f.options);run=readRunState(stateDir,spool);assert.equal(run.transport_state,'ACKED');let full=0;const second={async state(){return{status:200,body:currentFor(run,spool)}},async full(){full++}};await sendSpool({spoolPath:f.spool,config,verification:f.options,client:second,now:()=>new Date('2026-09-28T01:01:00.000Z'),sleep:async()=>{}});assert.equal(full,0);assert.equal(readRunState(stateDir,spool).transport_state,'STATE_CONFIRMED');
 });
 
-for (const code of ['STATE_MOVED','RUN_LOST','RUN_SUPERSEDED','SOURCE_EPOCH_CHANGED','DEPENDENCY_CHANGED','CONFIG_AUTHORITY_MISMATCH']) test(`${code} stops without replacement run or changed semantic bytes`, async t => {
-  const f=fixture();t.after(()=>fs.rmSync(f.root,{recursive:true,force:true}));const stateDir=path.join(f.root,'state');const config={stateDir,kid:'kid',maxAttempts:1};const client={async state(){return{status:200,body:bootstrap}},async full(){return{status:409,body:{schema:'bp.catalog.error/1',code,action:'operator'}}}};
-  await assert.rejects(()=>sendSpool({spoolPath:f.spool,config,verification:f.options,client,now:()=>new Date('2026-09-28T00:01:00.000Z'),sleep:async()=>{}}));const spool=verifySpool(f.spool,f.options);const before=readRunState(stateDir,spool);await assert.rejects(()=>sendSpool({spoolPath:f.spool,config,verification:f.options,client,now:()=>new Date('2026-09-28T01:01:00.000Z'),sleep:async()=>{}}));const after=readRunState(stateDir,spool);assert.equal(after.run_id,before.run_id);assert.equal(after.run_header_base64,before.run_header_base64);assert.equal(after.trailer_base64,before.trailer_base64);
+for (const [code,action] of [['STATE_MOVED','fetch_state_new_run'],['RUN_LOST','fetch_state_new_run'],['RUN_SUPERSEDED','fetch_state_new_run'],['SOURCE_EPOCH_CHANGED','operator'],['DEPENDENCY_CHANGED','fetch_state_new_run'],['CONFIG_AUTHORITY_MISMATCH','operator'],['RUN_HEADER_V2_REQUIRED','operator'],['PUBLICATION_AUTHORITY_UNSUPPORTED','operator'],['BACKUP_REQUIRED','operator'],['PAYLOAD_INVALID','fix_request'],['RUN_PROTOCOL_CONFLICT','fix_request_new_run']]) test(`${code} preserves remote code/action and frozen run`, async t => {
+  const f=fixture();t.after(()=>fs.rmSync(f.root,{recursive:true,force:true}));const stateDir=path.join(f.root,'state');const config={stateDir,kid:'kid',maxAttempts:1};const client={async state(){return{status:200,body:bootstrap}},async full(){return{status:409,body:{schema:'bp.catalog.error/1',status:409,code,action,request_id:`request-${code}`}}}};
+  const assertion=e=>e.code==='D2B_CATALOG_ERROR'&&e.retryable===false&&e.details.http_status===409&&e.details.code===code&&e.details.action===action&&e.details.request_id===`request-${code}`;await assert.rejects(()=>sendSpool({spoolPath:f.spool,config,verification:f.options,client,now:()=>new Date('2026-09-28T00:01:00.000Z'),sleep:async()=>{}}),assertion);const spool=verifySpool(f.spool,f.options);const before=readRunState(stateDir,spool);await assert.rejects(()=>sendSpool({spoolPath:f.spool,config,verification:f.options,client,now:()=>new Date('2026-09-28T01:01:00.000Z'),sleep:async()=>{}}),assertion);const after=readRunState(stateDir,spool);assert.equal(after.run_id,before.run_id);assert.equal(after.run_header_base64,before.run_header_base64);assert.equal(after.trailer_base64,before.trailer_base64);
 });
