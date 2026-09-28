@@ -434,8 +434,9 @@ Frozen direction pending closure review:
   source contract versions, `native_identity_scheme`, producer commit and release
   provenance digest;
 - CatalogService compares the signed config map to exact current `config_state` before
-  accepting seq0 and recovery gate revalidates live config-state digest on every
-  ingest admission/`/state` blocker computation;
+  accepting seq0; while catalog authority is BOOTSTRAP, recovery gate also revalidates
+  the covering-vs-live config-state digest on every ingest admission/`/state` blocker
+  computation; CURRENT recovery semantics are intentionally unchanged in D2b;
 - D2a keeps the no-HTTP invariant; D2b is a separate sender/control module with atomic
   run-state and an exclusive per-spool sender lock;
 - accepted authority is preserved in generation manifest extra plus a small producer

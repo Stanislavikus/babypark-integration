@@ -434,14 +434,16 @@ mandatory.
 ### Runtime invalidation of cached BOOTSTRAP coverage
 
 The current recovery gate caches `covered` at startup and after final recovery. That
-boolean alone is insufficient once `config_state` may be changed by an operator while
-the service process remains alive.
+boolean alone is insufficient in **BOOTSTRAP** when `config_state` may be changed by
+an operator while the service process remains alive.
 
-The corrected gate must also cache the covering recovery set's verified
+The corrected gate must therefore cache the covering BOOTSTRAP recovery set's verified
 `identity_config_state_sha256`.
 
-On **every ingest admission path** and when computing authenticated `/state`
-blockers, compare:
+On every ingest admission path and when computing authenticated `/state` blockers:
+
+1. read current catalog recovery authority;
+2. **only when authority state is BOOTSTRAP**, compare:
 
 ```text
 covering_config_state_sha256
@@ -449,23 +451,36 @@ covering_config_state_sha256
 identityConfigStateSha256(live IdentityStore)
 ```
 
-If they differ:
+3. if the BOOTSTRAP digests differ:
+   - immediately treat recovery coverage as invalid;
+   - surface `BACKUP_REQUIRED`;
+   - reject seq0, data chunks and final before durable ingest mutation;
+   - require a new verified BOOTSTRAP recovery set for the new config-state authority.
 
-- immediately treat recovery coverage as invalid;
-- surface `BACKUP_REQUIRED`;
-- reject seq0, data chunks and final before durable ingest mutation;
-- require a new verified recovery set for the new config-state authority.
+The comparison must occur before any early return based on cached
+`covered && !forceBackupRequired`.
 
 This check is cheap because `config_state` contains only reviewed behavior-authority
 rows and is already queried for the production dependency fingerprint.
 
 Operationally, first-FULL config changes are still performed only while ingest is
-administratively fenced (`INGEST_DISABLED` / no admission). Runtime digest
+administratively fenced (`INGEST_DISABLED` / no admission). BOOTSTRAP runtime digest
 revalidation is defense in depth so a live process cannot keep admitting work under a
 stale cached recovery decision.
 
 Unpublished identity revision growth does not change this digest and therefore does not
 break exact restart/resume of the in-progress run.
+
+**Do not apply this new config-digest predicate to CURRENT in D2b.** CURRENT recovery
+coverage keeps the existing frozen semantics based on accepted generation/run and
+published identity revision. A later reviewed `config_state` change while CURRENT may
+advance live identity/config authority without retroactively invalidating the recovery
+set for the already published CURRENT generation.
+
+Whether future recurring operation should require a config-state-aware CURRENT backup
+predicate is a separate D3 policy/design decision. D2b must not create a permanent
+`BACKUP_REQUIRED` loop by tightening CURRENT coverage without a matching
+backup-creation predicate.
 
 ## Exporter spool storage policy
 
@@ -485,9 +500,14 @@ ready/sending spools with these invariants:
 - state class `transient`;
 - no age-only deletion;
 - at most the explicitly controlled ready/in-flight spool for the first-FULL slice;
-- heavy chunks retained until terminal ACK plus authoritative `/state` confirmation;
-- cleanup only after sender/audit transition proves the run terminal;
-- no off-host backup requirement for heavy chunk payloads.
+- heavy chunks retained through terminal ACK, authoritative `/state` confirmation,
+  **successful exhaustive Link A verification and the owner's accept/reset decision**;
+- cleanup is forbidden while Link A is pending or while owner acceptance/reset is
+  unresolved;
+- if owner rejects/reset is chosen, retain the original heavy spool until rejection
+  evidence/audit has been sealed and the reset runbook explicitly authorizes cleanup;
+- no off-host long-term backup requirement for heavy chunk payloads after Link A and
+  owner decision.
 
 The existing storage-policy schema requires numeric expected/warning/critical
 thresholds even for transient objects. The first spool-policy entry may therefore use
@@ -552,6 +572,9 @@ For the first controlled FULL:
 
 - maximum age from database `snapshot_watermark` to first seq0 transmission is
   **30 minutes**;
+- the **sender itself** parses the spool/3 `snapshot_watermark` and rejects run-state
+  creation/seq0 send when the age exceeds that bound; this is not an operator-only
+  checklist item;
 - if seq0 has not been sent and that age is exceeded, discard the unsent spool and
   build a fresh one;
 - once seq0 is sent, never replace the snapshot under the same run ID merely because
@@ -852,6 +875,42 @@ provider/native source xrefs and canonical semantic fields.
 This link must be exhaustive for the accepted production spool. It proves that
 CatalogService accepted what was sent.
 
+### Link A execution location and staging
+
+Run Link A on the **CatalogService host**, because exhaustive comparison needs private
+read access to the accepted generation and `identity.sqlite`/source xrefs, which live
+under the CatalogService data root.
+
+After final ACK + authoritative `/state`, but before Link A:
+
+1. create a private, non-web-accessible staging directory on the CatalogService host
+   owned by the CatalogService operator/service account;
+2. copy the exact production spool manifest/chunks needed for Link A from the Drupal
+   host over a controlled authenticated channel;
+3. verify the spool manifest hash and every copied chunk byte-length/SHA-256 **again on
+   the CatalogService host** before verification begins;
+4. run a dedicated read-only acceptance verifier against:
+   - the staged exact spool;
+   - read-only `identity.sqlite`;
+   - the accepted immutable catalog generation;
+5. write a small Link A result/report into the acceptance audit package.
+
+The verifier must not mutate IdentityStore, ReplayStore, catalog generation or CURRENT
+pointers.
+
+The original heavy production spool remains on the Drupal host while this comparison
+runs. The CatalogService staging copy is temporary and follows the same retention gate:
+neither copy is removed before successful Link A and owner accept/reset decision.
+
+The implementation slice must add a separate required transient storage-policy object
+for this CatalogService-host acceptance staging area (host role `integration`), with
+private directory/file modes, explicit numeric thresholds, no age-only deletion and a
+delete guard tied to successful Link A plus owner accept/reset decision. It is not
+covered by the Drupal-host spool storage object.
+
+After successful Link A plus owner acceptance, both heavy copies may be deleted under
+the recorded cleanup transition; the small Link A report remains in the audit package.
+
 ### Link B — source snapshot evidence supports the spool
 
 This is the exporter/transformation proof.
@@ -874,6 +933,11 @@ The acceptance verifier independently checks a deterministic real-data set inclu
 For each selected case, the sidecar preserves the raw source facts and revision markers
 needed to independently recompute/verify the expected canonical projection.
 
+The Link B verifier must be a deliberately small independent acceptance implementation.
+It must not import/reuse the production exporter mapping/price/availability transformation
+functions whose defects it is meant to detect. Shared low-level parsers are allowed only
+when they do not encode the business projection being checked.
+
 This is where real-source price correctness is checked: the current source contract has
 no independent post-snapshot price revision marker, so a later live Drupal `sell_price`
 must **not** be treated as proof about the earlier snapshot.
@@ -881,12 +945,17 @@ must **not** be treated as proof about the earlier snapshot.
 ### Optional post-ACK live-source corroboration
 
 Live Drupal may legitimately change after `snapshot_watermark`. Re-read live rows only
-when unchanged status can be proven by the source's own marker:
+when unchanged status can be proven by a marker that actually governs that fact:
 
-- node-backed facts: require the same captured `nid`/`vid` and `node.changed` as the
-  snapshot evidence;
-- stock: require current `babypark_sync_stock_time_sync` to equal the captured
-  `stock_sync_unix` before comparing live stock rows;
+- **node/content facts only** (for example title/body and node revision identity):
+  require the same captured `nid`/`vid` and `node.changed`;
+- do **not** use `node.changed` as proof that independently updated commerce/status
+  tables are unchanged, including `uc_products`, `uc_product_options`,
+  `uc_product_adjustments` and `field_status`;
+- stock requires both:
+  - current `babypark_sync_stock_time_sync` equals captured `stock_sync_unix`; and
+  - the configured D2a `stockPending` input remains absent, using the same
+    source-stability rule that prevents comparison while a 1C stock import is pending;
 - a field without a trustworthy independent change marker is not live-compared after
   the watermark; use its retained snapshot evidence instead.
 
@@ -973,7 +1042,9 @@ This design may be frozen only when review confirms:
   while the service process remains alive;
 - sender restart cannot change semantic run bytes;
 - sender has an exclusive per-spool/run lock;
-- `.ready` spool cannot be deleted before terminal evidence;
+- Drupal `.ready` spool and CatalogService Link A staging chunks cannot be deleted
+  before terminal ACK/state, successful exhaustive Link A and owner accept/reset
+  decision;
 - BOOTSTRAP recovery binds exact snapshotted/live config-state digest and does not
   break restart/resume merely because unpublished identity revision advanced;
 - full-scale rehearsal runs on a dedicated disposable VM before production cutover,
