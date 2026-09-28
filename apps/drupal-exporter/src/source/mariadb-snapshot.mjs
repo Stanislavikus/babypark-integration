@@ -8,6 +8,7 @@ import { checkFilesystemStability } from '../filesystem-stability.mjs';
 import { SOURCE_QUERY_NAMES, SOURCE_QUERIES, SOURCE_QUERY_FILES } from './queries.mjs';
 import { resolveSpoolPaths, createBuildingDir } from '../spool/layout.mjs';
 import { collectSourceAcceptance } from './source-acceptance.mjs';
+import { finishStage, startStage } from '../stage-timings.mjs';
 
 export async function streamQueryToNdjson(conn, sql, outPath) {
   const stream = conn.queryStream({ sql });
@@ -39,6 +40,8 @@ export async function extractSnapshotToNdjson({
   beforeFingerprint,
   acceptanceCases,
 }) {
+  const stageTimings = {};
+  const setupStarted = startStage();
   const conn = await mariadb.createConnection({
     host: config.db.host,
     port: config.db.port,
@@ -71,11 +74,13 @@ export async function extractSnapshotToNdjson({
     );
     if (currencyBlockers.hasBlockers()) {
       await conn.query('ROLLBACK');
+      finishStage(stageTimings, 'snapshot_setup_ms', setupStarted);
       return {
         snapshotWatermark: '0',
         stockSyncUnix,
         unstable: true,
         blockers: currencyBlockers.blockers,
+        stageTimings,
       };
     }
 
@@ -91,11 +96,13 @@ export async function extractSnapshotToNdjson({
     });
     if (stability.blockers.length) {
       await conn.query('ROLLBACK');
+      finishStage(stageTimings, 'snapshot_setup_ms', setupStarted);
       return {
         snapshotWatermark,
         stockSyncUnix,
         unstable: true,
         blockers: stability.blockers,
+        stageTimings,
       };
     }
 
@@ -104,7 +111,9 @@ export async function extractSnapshotToNdjson({
     const sourceDir = path.join(buildingPath, 'source');
     createBuildingDir(buildingPath, paths.ready);
     ownsBuildingPath = true;
+    finishStage(stageTimings, 'snapshot_setup_ms', setupStarted);
 
+    const extractStarted = startStage();
     for (const name of SOURCE_QUERY_NAMES) {
       await streamQueryToNdjson(
         conn,
@@ -117,7 +126,9 @@ export async function extractSnapshotToNdjson({
       path.join(sourceDir, 'source-currency.json'),
       `${JSON.stringify(sourceCurrency)}\n`
     );
+    finishStage(stageTimings, 'snapshot_extract_ms', extractStarted);
 
+    const acceptanceStarted = startStage();
     const sourceAcceptance = await collectSourceAcceptance(conn, {
       provider: config.provider,
       sourceEpoch: config.sourceEpoch,
@@ -125,6 +136,7 @@ export async function extractSnapshotToNdjson({
       stockSyncUnix,
       acceptanceCases,
     });
+    finishStage(stageTimings, 'source_acceptance_ms', acceptanceStarted);
 
     await conn.query('ROLLBACK');
 
@@ -133,6 +145,7 @@ export async function extractSnapshotToNdjson({
       stockSyncUnix,
       sourceCurrency,
       sourceAcceptance,
+      stageTimings,
       buildingPath,
       sourceDir,
       ownsBuildingPath,

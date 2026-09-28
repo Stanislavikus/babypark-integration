@@ -19,15 +19,26 @@ generation. D2b owns HTTP transport and the first controlled FULL send.
 apps/drupal-exporter/
 ```
 
-Runtime: Node `>= 22`. The Drupal host system `/usr/bin/node` remains v20.20.2; the exporter uses an isolated Node 22 runtime under `/opt/babypark-exporter/runtime/` so the live site runtime is not changed.
+Runtime production contract:
 
-CLI:
+- exact runtime authority: `config/drupal/exporter-runtime.json`;
+- pinned Node: `24.21.0` LTS (`linux-x64`);
+- isolated install root: `/opt/babypark-exporter/runtime/node-v24.21.0`;
+- system `/usr/bin/node` remains unchanged;
+- installer verifies the pinned archive SHA-256 plus `node:sqlite`/FTS5;
+- production execution uses `scripts/run-drupal-exporter.mjs`, which verifies the exact
+  pinned Node version before handoff.
+
+CLI from an immutable release:
 
 ```text
 npm --prefix apps/drupal-exporter ci
-node apps/drupal-exporter/bin/drupal-exporter.mjs preflight
-node apps/drupal-exporter/bin/drupal-exporter.mjs spool
+node scripts/run-drupal-exporter.mjs preflight
+node scripts/run-drupal-exporter.mjs spool
 ```
+
+Direct `node apps/drupal-exporter/bin/drupal-exporter.mjs ...` remains acceptable for
+local tests, but is not the production run contract.
 
 ## Configuration (environment)
 
@@ -58,6 +69,17 @@ Frozen source identity:
 provider = drupal
 source_epoch = drupal-prod-v1
 ```
+
+## Preflight stage timings
+
+`preflight.stage_timings_ms` records operational stage durations for diagnosis and
+baseline comparison. Production snapshot runs include separate `snapshot_setup_ms`,
+`snapshot_extract_ms` and `source_acceptance_ms`; pipeline stages also include
+canonical build, collision/anomaly processing, quarantine/filtering, chunk preparation,
+cleanup and total time.
+
+Timings are diagnostic metadata only. They do not change collision/anomaly authority,
+canonical records, spool hashes or publication eligibility.
 
 ## Snapshot / stability protocol
 
