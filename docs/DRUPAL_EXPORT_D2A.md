@@ -219,6 +219,7 @@ Identity operator (does not apply collisions, only records config hash):
 ```text
 node scripts/identity-set-config-hash.mjs \
   --path=/absolute/path/identity.sqlite \
+  --catalog-dir=/absolute/path/catalog-storage \
   --config-key=drupal-collisions \
   --config-file=/absolute/path/legacy-sku-collisions.yaml
 ```

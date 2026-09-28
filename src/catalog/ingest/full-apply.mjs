@@ -43,10 +43,9 @@ export function decodeFullChunkForApply(key, verifiedBody) {
         runId: key.runId, seq: key.seq, final: key.final,
       });
       if (header.run_kind !== 'full') throw new Error('not full');
-      return { header: true, headerValue: parseRunHeader(verifiedBody, {
-        runId: key.runId, seq: key.seq, final: key.final,
-      }), rows: [] };
-    } catch {
+      return { header: true, headerValue: header, rows: [] };
+    } catch (error) {
+      if (['PUBLICATION_AUTHORITY_INVALID', 'INGEST_RUN_HEADER_SCHEMA_UNSUPPORTED'].includes(error?.code)) throw error;
       fail('FULL_APPLY_BODY_INVALID', 'Sequence zero must be a valid full run header');
     }
   }

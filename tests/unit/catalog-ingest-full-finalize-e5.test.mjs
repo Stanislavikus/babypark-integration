@@ -13,11 +13,12 @@ import { ReplayStore, canonicalJson } from '../../src/catalog/ingest/replay-stor
 import { writeFullChunk } from '../../src/catalog/ingest/full-apply.mjs';
 import { finalizeFullRun } from '../../src/catalog/ingest/full-finalize.mjs';
 import { computeRunDigestV2 } from '../../src/catalog/ingest/run-protocol.mjs';
+import { TEST_PUBLICATION_AUTHORITY } from '../helpers/catalog-d2b-fixture.mjs';
 
 const hash = value => crypto.createHash('sha256').update(value).digest('hex');
 const code = expected => error => error?.code === expected;
 
-function fixture(t, { runId = 'run1' } = {}) {
+function fixture(t, { runId = 'run1', d2b = false } = {}) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'bp-e5-'));
   t.after(() => fs.rmSync(root, { recursive:true, force:true }));
   const dir = path.join(root, 'catalog'); fs.mkdirSync(dir);
@@ -31,7 +32,8 @@ function fixture(t, { runId = 'run1' } = {}) {
   const headerBody = Buffer.from(canonicalJson({ header:{ base_generation_id:null,
     layers:['taxonomy','content','commercial','stock'].map(layer => ({ base_watermark:null,
       layer, mode:'replace', output_watermark:'7', t_high:'7', t_low:null })),
-    run_id:runId, run_kind:'full', schema:'bp.catalog.run-header/1', source_epoch:'epoch-1' } }));
+    run_id:runId, run_kind:'full', schema:d2b ? 'bp.catalog.run-header/2' : 'bp.catalog.run-header/1',
+    source_epoch:'epoch-1', ...(d2b ? { publication_authority:TEST_PUBLICATION_AUTHORITY } : {}) } }));
   const headerKey = { kid:'kid1', runId, layer:'full', seq:0, final:false,
     contentEncoding:'identity', bodySha256:hash(headerBody) };
   const owner = store.claim(headerKey, 100, { verifiedBody:headerBody });
@@ -132,6 +134,69 @@ test('E5 recovers a ready building artifact interrupted before checkpoint', t =>
     now:() => '2026-01-02T03:04:06.000Z' });
   assert.equal(result.status, 'ACKED');
   assert.equal(f.publisher.state().current_generation, 'target');
+});
+
+test('D2b certification, ready recoverSeal, and final-before-publication preserve durable authority', t => {
+  for (const [runId, point, artifact] of [
+    ['d2b-certified', 'certification.afterCommit', 'building'],
+    ['d2b-ready', 'seal.afterReady', 'building'],
+    ['d2b-final', 'seal.afterRename', 'final'],
+  ]) {
+    const f = fixture(t, { runId, d2b:true });
+    assert.throws(() => finalizeFullRun({ ...f, verifiedFinalBody:f.finalBody,
+      now:() => '2026-01-02T03:04:05.000Z', failpoint(name) {
+        if (name === point) throw new Error(point);
+      } }), new RegExp(point.replaceAll('.', '\\.')));
+    if (point !== 'certification.afterCommit') {
+      const file = path.join(f.dir, artifact === 'final' ? 'catalog.target.sqlite' : 'catalog.target.building.sqlite');
+      const db = new DatabaseSync(file, { readOnly:true });
+      assert.deepEqual(JSON.parse(db.prepare('SELECT manifest_json FROM catalog_meta').get().manifest_json)
+        .extra.publication_authority, TEST_PUBLICATION_AUTHORITY);
+      db.close();
+    }
+    assert.equal(resume(f, { forbidProof:true }).status, 'ACKED');
+    f.reader.withDb(db => assert.deepEqual(
+      JSON.parse(db.prepare('SELECT manifest_json FROM catalog_meta').get().manifest_json)
+        .extra.publication_authority, TEST_PUBLICATION_AUTHORITY));
+  }
+});
+
+test('D2b ready manifest missing or tampered authority fails closed before publication', t => {
+  for (const [runId, authority] of [['d2b-missing', undefined],
+    ['d2b-tampered', { ...TEST_PUBLICATION_AUTHORITY, spool_manifest_sha256:'0'.repeat(64) }]]) {
+    const f = fixture(t, { runId, d2b:true });
+    assert.throws(() => finalizeFullRun({ ...f, verifiedFinalBody:f.finalBody,
+      now:() => '2026-01-02T03:04:05.000Z', failpoint(name) {
+        if (name === 'seal.afterReady') throw new Error('stop-ready');
+      } }), /stop-ready/);
+    const file = path.join(f.dir, 'catalog.target.building.sqlite');
+    const db = new DatabaseSync(file);
+    const manifest = JSON.parse(db.prepare('SELECT manifest_json FROM catalog_meta').get().manifest_json);
+    if (authority === undefined) delete manifest.extra.publication_authority;
+    else manifest.extra.publication_authority = authority;
+    const manifestJson = JSON.stringify(manifest);
+    db.prepare('UPDATE catalog_meta SET manifest_json=?,manifest_sha256=?').run(manifestJson, hash(manifestJson));
+    db.close();
+    assert.throws(() => resume(f, { forbidProof:true }), code('FULL_PUBLICATION_AUTHORITY_BINDING_INVALID'));
+    assert.equal(f.publisher.state().current_generation, null);
+  }
+});
+
+test('D2b tampered final manifest fails closed before publication', t => {
+  const f = fixture(t, { runId:'d2b-final-tampered', d2b:true });
+  assert.throws(() => finalizeFullRun({ ...f, verifiedFinalBody:f.finalBody,
+    now:() => '2026-01-02T03:04:05.000Z', failpoint(name) {
+      if (name === 'seal.afterRename') throw new Error('stop-final');
+    } }), /stop-final/);
+  const file = path.join(f.dir, 'catalog.target.sqlite');
+  const db = new DatabaseSync(file);
+  const manifest = JSON.parse(db.prepare('SELECT manifest_json FROM catalog_meta').get().manifest_json);
+  manifest.extra.publication_authority.anomaly_report_sha256 = '0'.repeat(64);
+  const manifestJson = JSON.stringify(manifest);
+  db.prepare('UPDATE catalog_meta SET manifest_json=?,manifest_sha256=?').run(manifestJson, hash(manifestJson));
+  db.close();
+  assert.throws(() => resume(f, { forbidProof:true }), code('FULL_PUBLICATION_AUTHORITY_BINDING_INVALID'));
+  assert.equal(f.publisher.state().current_generation, null);
 });
 
 test('E5 fails closed when final and building target artifacts both exist', t => {

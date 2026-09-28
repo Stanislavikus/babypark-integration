@@ -6,6 +6,7 @@ import {
 } from '../sqlite/generation.mjs';
 import { ReplayStore } from './replay-store.mjs';
 import { verifyFullRunForApply } from './full-apply.mjs';
+import { canonicalControlJson, HEADER_SCHEMA_V2 } from './run-protocol.mjs';
 
 export class FullFinalizeError extends Error {
   constructor(code, message) { super(message); this.name = 'FullFinalizeError'; this.code = code; }
@@ -102,6 +103,22 @@ function inspectCertification(filePath, context) {
   try { return certification(db, context); } finally { db.close(); }
 }
 
+function verifyManifestAuthority(filePath, context) {
+  const db = new DatabaseSync(filePath, { readOnly: true, create: false });
+  try {
+    const raw = db.prepare('SELECT manifest_json FROM catalog_meta WHERE singleton=1').get()?.manifest_json;
+    let manifest;
+    try { manifest = JSON.parse(raw); } catch { fail('FULL_PUBLICATION_AUTHORITY_BINDING_INVALID', 'Generation manifest is invalid'); }
+    const persisted = manifest?.extra?.publication_authority;
+    const expected = context.header.schema === HEADER_SCHEMA_V2
+      ? context.header.publication_authority : undefined;
+    if ((expected === undefined && persisted !== undefined) ||
+        (expected !== undefined && canonicalControlJson(persisted) !== canonicalControlJson(expected))) {
+      fail('FULL_PUBLICATION_AUTHORITY_BINDING_INVALID', 'Generation manifest authority differs from durable seq0');
+    }
+  } finally { db.close(); }
+}
+
 function currentReconciliation(store, finalKey, reader, failpoint) {
   const reconcilePublication = result => {
     if (result.status !== 'ACKED') return;
@@ -168,6 +185,7 @@ export function finalizeFullRun(args = {}) {
       if (artifacts.state === 'final') {
         if (inspectCertification(artifacts.finalPath, context).status !== 'CERTIFIED')
           fail('FULL_FINALIZE_CERTIFICATION_CONFLICT', 'Final target is not certified');
+        verifyManifestAuthority(artifacts.finalPath, context);
         invoke(failpoint, 'publication.beforeIntent');
         publisher.publish(context.targetGenerationId, { expectedCurrent: context.header.base_generation_id,
           runId: context.header.run_id, replayStore: store });
@@ -177,6 +195,7 @@ export function finalizeFullRun(args = {}) {
       if (artifacts.state === 'ready') {
         if (inspectCertification(artifacts.buildingPath, context).status !== 'CERTIFIED')
           fail('FULL_FINALIZE_CERTIFICATION_CONFLICT', 'Ready target is not certified');
+        verifyManifestAuthority(artifacts.buildingPath, context);
         CatalogGenerationBuilder.recoverSeal({ storageDir: publisher.storageDir,
           generationId: context.targetGenerationId, expectedRunId: context.header.run_id,
           expectedRunDigest: context.runDigest, expectedFinalSeq: context.finalSeq, failpoint });
@@ -188,7 +207,8 @@ export function finalizeFullRun(args = {}) {
       try {
         const existing = certification(builder.db, context);
         if (existing.status === 'CERTIFIED') {
-          builder.seal({ failpoint });
+          builder.seal({ extraManifest: context.header.schema === HEADER_SCHEMA_V2
+            ? { publication_authority: context.header.publication_authority } : {}, failpoint });
           continue;
         }
         invoke(failpoint, 'proof.before');

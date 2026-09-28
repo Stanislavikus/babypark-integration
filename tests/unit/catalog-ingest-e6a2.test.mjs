@@ -15,6 +15,7 @@ import { productionGenerationId } from '../../src/catalog/ingest/production-gene
 import { CatalogService } from '../../src/catalog/service/catalog-service.mjs';
 import { productionDependencyFingerprint } from '../../src/catalog/ingest/dependency-fingerprint.mjs';
 import { phase0Records, phase1Records, phase2Records } from '../helpers/catalog-e6a1-fixture.mjs';
+import { seedD2bConfig, TEST_PUBLICATION_AUTHORITY } from '../helpers/catalog-d2b-fixture.mjs';
 
 const hash = value => crypto.createHash('sha256').update(value).digest('hex');
 const bytes = value => Buffer.from(canonicalJson(value));
@@ -36,13 +37,13 @@ function child(config, t) {
 function persistedHarness(t, leaseSeconds = 1) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'bp-e6a2-process-'));
   const catalog = path.join(root, 'catalog'); fs.mkdirSync(catalog);
-  IdentityStore.createNew(path.join(root, 'identity.sqlite')).close();
+  { const identity = seedD2bConfig(IdentityStore.createNew(path.join(root, 'identity.sqlite'))); identity.close(); }
   ReplayStore.createNew(path.join(root, 'replay.sqlite'), { catalogStorageDir: catalog, leaseSeconds }).close();
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   const runId = 'process-run';
   const header = bytes({ header: { base_generation_id: null,
     layers: ['taxonomy', 'content', 'commercial', 'stock'].map(layer => ({ base_watermark: null, layer, mode: 'replace', output_watermark: '9', t_high: '9', t_low: null })),
-    run_id: runId, run_kind: 'full', schema: 'bp.catalog.run-header/1', source_epoch: 'epoch-process' } });
+    run_id: runId, run_kind: 'full', schema: 'bp.catalog.run-header/2', publication_authority: TEST_PUBLICATION_AUTHORITY, source_epoch: 'epoch-process' } });
   const base = { kid: 'process-kid', runId, layer: 'full', final: false, contentEncoding: 'identity' };
   return { root, catalog, header, base };
 }
@@ -59,10 +60,31 @@ test('production generation identifiers are stable, separated and safe', () => {
   assert.notEqual(first, productionGenerationId({ ...input, seq0BodySha256: 'b'.repeat(64) }));
 });
 
+test('exact pending v2 seq0 retry revalidates config authority before takeover or builder creation', t => {
+  const f = persistedHarness(t, 1);
+  const store = ReplayStore.openExisting(path.join(f.root, 'replay.sqlite'), {
+    catalogStorageDir: f.catalog, leaseSeconds: 1,
+  });
+  const identity = IdentityStore.openExisting(path.join(f.root, 'identity.sqlite'));
+  const mutex = new CatalogPublicationLock(f.catalog); const reader = new CatalogReader(f.catalog);
+  const publisher = new CatalogPublisher(f.catalog, { mutex, readers: [reader] });
+  t.after(() => { reader.close(); mutex.close(); identity.close(); store.close(); });
+  const key = { ...f.base, seq: 0, bodySha256: hash(f.header) };
+  assert.equal(store.claim(key, 100, { verifiedBody: f.header }).status, 'NEW');
+  assert.equal(fs.readdirSync(f.catalog).some(name => name.endsWith('.building.sqlite')), false);
+  mutex.withLock(() => identity.setConfigHash('drupal-collisions', '9'.repeat(64)));
+  assert.throws(() => processProductionFullChunk({ store, publisher, mutex, reader,
+    identityStore: identity, key, verifiedBody: f.header, now: 102 }),
+  error => error.code === 'CONFIG_AUTHORITY_MISMATCH');
+  assert.equal(fs.readdirSync(f.catalog).some(name => name.endsWith('.building.sqlite')), false);
+  assert.equal(store.db.prepare('SELECT status FROM receipts WHERE run_id=? AND seq=0').get(key.runId).status,
+    'pending');
+});
+
 test('coordinator owns seq0, all production phases and E5a finalization', t => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'bp-e6a2-'));
   const catalog = path.join(root, 'catalog'); fs.mkdirSync(catalog);
-  const identity = IdentityStore.createNew(path.join(root, 'identity.sqlite'));
+  const identity = seedD2bConfig(IdentityStore.createNew(path.join(root, 'identity.sqlite')));
   const mutex = new CatalogPublicationLock(catalog);
   const reader = new CatalogReader(catalog);
   const publisher = new CatalogPublisher(catalog, { mutex, readers: [reader] });
@@ -71,7 +93,7 @@ test('coordinator owns seq0, all production phases and E5a finalization', t => {
   const runId = 'e6a2-run';
   const header = bytes({ header: { base_generation_id: null,
     layers: ['taxonomy', 'content', 'commercial', 'stock'].map(layer => ({ base_watermark: null, layer, mode: 'replace', output_watermark: '9', t_high: '9', t_low: null })),
-    run_id: runId, run_kind: 'full', schema: 'bp.catalog.run-header/1', source_epoch: 'epoch-e6a2' } });
+    run_id: runId, run_kind: 'full', schema: 'bp.catalog.run-header/2', publication_authority: TEST_PUBLICATION_AUTHORITY, source_epoch: 'epoch-e6a2' } });
   const base = { kid: 'e6a2-kid', runId, layer: 'full', final: false, contentEncoding: 'identity' };
   const bodies = [header, ...[phase0Records(), phase1Records(), phase2Records()].map(rows => bytes({ rows }))];
   const results = bodies.map((body, seq) => processProductionFullChunk({ store, publisher, mutex, reader, identityStore: identity,
@@ -103,6 +125,9 @@ test('coordinator owns seq0, all production phases and E5a finalization', t => {
   assert.equal(final.status, 'ACKED');
   assert.equal(final.ack.generation_id, generation);
   assert.equal(publisher.state().current_generation, generation);
+  reader.withDb(db => assert.deepEqual(
+    JSON.parse(db.prepare('SELECT manifest_json FROM catalog_meta').get().manifest_json).extra.publication_authority,
+    TEST_PUBLICATION_AUTHORITY));
   reader.withDb(db => assert.deepEqual(db.prepare('SELECT phase FROM run_chunks ORDER BY seq').all().map(row => row.phase), phases));
   const lateSeq0 = processProductionFullChunk({ store, publisher, mutex, reader, identityStore: identity,
     key: { ...base, seq: 0, bodySha256: hash(header) }, verifiedBody: header, now: 201 });
@@ -227,7 +252,7 @@ test('dependency fingerprint change after restart fences mapper and preserves bu
   assert.equal((await processA.next()).results.length, 2); await new Promise(resolve => processA.proc.once('exit', resolve));
   const identity = IdentityStore.openExisting(path.join(f.root, 'identity.sqlite'));
   const fingerprintA = productionDependencyFingerprint(identity);
-  identity.setConfigHash('drupal-collisions', 'a'.repeat(64));
+  identity.setConfigHash('drupal-collisions', '9'.repeat(64));
   const fingerprintB = productionDependencyFingerprint(identity); identity.close();
   assert.notEqual(fingerprintA, fingerprintB);
   const generation = productionGenerationId({ kid: f.base.kid, runId: f.base.runId, seq0BodySha256: hash(f.header) });
@@ -251,7 +276,7 @@ test('dependency fingerprint change after restart fences mapper and preserves bu
 test('second replacement FULL preserves identities and publishes changed business data', t => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'bp-e6a2-g2-'));
   const catalog = path.join(root, 'catalog'); fs.mkdirSync(catalog);
-  const identity = IdentityStore.createNew(path.join(root, 'identity.sqlite'));
+  const identity = seedD2bConfig(IdentityStore.createNew(path.join(root, 'identity.sqlite')));
   const mutex = new CatalogPublicationLock(catalog); let reader = new CatalogReader(catalog);
   const publisher = new CatalogPublisher(catalog, { mutex, readers: [reader] });
   const store = ReplayStore.createNew(path.join(root, 'replay.sqlite'), { catalogStorageDir: catalog });
@@ -260,7 +285,7 @@ test('second replacement FULL preserves identities and publishes changed busines
     const header = bytes({ header: { base_generation_id: baseGeneration,
       layers: ['taxonomy', 'content', 'commercial', 'stock'].map(layer => ({ base_watermark: baseWatermark,
         layer, mode: 'replace', output_watermark: outputWatermark, t_high: outputWatermark, t_low: null })),
-      run_id: runId, run_kind: 'full', schema: 'bp.catalog.run-header/1', source_epoch: 'epoch-g2' } });
+      run_id: runId, run_kind: 'full', schema: 'bp.catalog.run-header/2', publication_authority: TEST_PUBLICATION_AUTHORITY, source_epoch: 'epoch-g2' } });
     const base = { kid: 'g2-kid', runId, layer: 'full', final: false, contentEncoding: 'identity' };
     const bodies = [header, ...[phase0Records(), rows1, phase2Records()].map(rows => bytes({ rows }))];
     bodies.forEach((body, seq) => processProductionFullChunk({ store, publisher, mutex, reader,

@@ -52,7 +52,7 @@ export function createCatalogHttpRuntime({ config, identityStore, replayStore, m
         if (recoveryGate.shouldCapacityBlockNewSeq0(key)) throw Object.assign(new Error('capacity'), { code:'INGEST_REPLAY_CAPACITY' });
         if (recoveryGate.shouldBackupBlock(key)) throw Object.assign(new Error('backup required'), { code:'BACKUP_REQUIRED' });
       }
-      let result = coordinator({ store:replayStore, publisher, mutex, reader, identityStore, key, verifiedBody:body });
+      let result = coordinator({ store:replayStore, publisher, mutex, reader, identityStore, recoveryGate, key, verifiedBody:body });
       if (result?.status === 'ACKED' && recoveryGate) {
         result = recoveryGate.ensureFinalRecoveryPoint({ key, result, publicationLock: mutex });
       }

@@ -12,6 +12,7 @@ import { createCatalogHttpRuntime } from '../../src/catalog/http/app.mjs';
 import { createRecoveryGate } from '../../src/catalog/http/recovery-gate.mjs';
 import { backupCatalog, bootstrapCatalogRecovery } from '../../src/catalog/recovery/operations.mjs';
 import { phase0Records, phase1Records, phase2Records } from './catalog-e6a1-fixture.mjs';
+import { seedD2bConfig, TEST_PUBLICATION_AUTHORITY } from './catalog-d2b-fixture.mjs';
 
 export const secret1 = 'e6b2b-test-secret-one-at-least-32-chars';
 export const secret2 = 'e6b2b-test-secret-two-at-least-32-chars';
@@ -35,8 +36,9 @@ export function createHttpE6b2Fixture({
     backupRoot: path.join(root, 'backup'),
   };
   bootstrapCatalogRecovery(paths);
-  if (withCoveringSet) backupCatalog(paths);
   const identity = IdentityStore.openExisting(paths.identityPath);
+  seedD2bConfig(identity);
+  if (withCoveringSet) backupCatalog(paths);
   const store = ReplayStore.openExisting(paths.replayPath, {
     catalogStorageDir: paths.catalogStorageDir,
     maxReceipts,
@@ -131,7 +133,7 @@ export function fullBodies(runId = 'run-a', sourceEpoch = 'epoch-e6b2b') {
       layers: ['taxonomy', 'content', 'commercial', 'stock'].map(layer => ({
         base_watermark: null, layer, mode: 'replace', output_watermark: '9', t_high: '9', t_low: null,
       })),
-      run_id: runId, run_kind: 'full', schema: 'bp.catalog.run-header/1', source_epoch: sourceEpoch,
+      run_id: runId, run_kind: 'full', schema: 'bp.catalog.run-header/2', publication_authority: TEST_PUBLICATION_AUTHORITY, source_epoch: sourceEpoch,
     },
   });
   const chunks = [phase0Records(), phase1Records(), phase2Records()].map(rows => bytes({ rows }));

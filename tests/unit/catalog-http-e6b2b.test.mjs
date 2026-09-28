@@ -20,6 +20,7 @@ import { backupCatalog, bootstrapCatalogRecovery } from '../../src/catalog/recov
 import {
   bytes, createHttpE6b2Fixture, fullBodies, hash, httpRequest, now, publishFullRun, secret1, secret2, signRequest,
 } from '../helpers/catalog-http-e6b2b-fixture.mjs';
+import { seedD2bConfig } from '../helpers/catalog-d2b-fixture.mjs';
 
 const crashWorker = new URL('../fixtures/catalog-http-e6b2b-crash-worker.mjs', import.meta.url);
 
@@ -122,6 +123,34 @@ test('BOOTSTRAP with covering set admits ordinary FULL', async () => {
       method: 'POST', path: '/api/catalog/ingest/v1/full', body: header, runId: 'admit-run', seq: 0,
     });
     assert.equal(admitted.body.status, 'STAGED');
+  } finally { await f.runtime.close(); f.close(); }
+});
+
+test('live BOOTSTRAP config change immediately stales /state and blocks every FULL chunk shape', async () => {
+  const f = createHttpE6b2Fixture({ withCoveringSet: true });
+  await f.runtime.listen({ host: '127.0.0.1', port: 0 });
+  try {
+    f.mutex.withLock(() => f.identity.setConfigHash('drupal-collisions', '9'.repeat(64)));
+    const before = f.store.stats();
+    const state = await httpRequest(f.runtime.server.address(), {
+      path: '/api/catalog/ingest/v1/state', runId: 'state',
+    });
+    assert.equal(state.body.state, 'BOOTSTRAP');
+    assert.equal(state.body.accepting_ingest, false);
+    assert.ok(state.body.blockers.includes('BACKUP_REQUIRED'));
+    const bodies = fullBodies('stale-coverage');
+    for (const request of [
+      { body: bodies.header, seq: 0, final: false },
+      { body: bodies.chunks[0], seq: 1, final: false },
+      { body: bodies.finalBody, seq: 4, final: true },
+    ]) {
+      const blocked = await httpRequest(f.runtime.server.address(), {
+        method: 'POST', path: '/api/catalog/ingest/v1/full', runId: 'stale-coverage', ...request,
+      });
+      assert.equal(blocked.status, 503);
+      assert.equal(blocked.body.code, 'BACKUP_REQUIRED');
+    }
+    assert.deepEqual(f.store.stats(), before);
   } finally { await f.runtime.close(); f.close(); }
 });
 
@@ -719,6 +748,7 @@ test('SIGKILL after durable CURRENT before recovery coverage repairs on restart 
     backupRoot: path.join(root, 'backup'),
   };
   bootstrapCatalogRecovery(paths);
+  { const identity = IdentityStore.openExisting(paths.identityPath); seedD2bConfig(identity); identity.close(); }
   backupCatalog(paths);
 
   const port = await freePort();

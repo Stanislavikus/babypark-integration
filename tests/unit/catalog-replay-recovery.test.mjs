@@ -13,6 +13,7 @@ import { CatalogPublicationLock } from '../../src/catalog/sqlite/publication-loc
 import { openCatalogHttpRuntime } from '../../src/catalog/http/runtime.mjs';
 import { readRecoveryAuthority, recoverReplay } from '../../src/catalog/recovery/core.mjs';
 import { phase0Records, phase1Records, phase2Records } from '../helpers/catalog-e6a1-fixture.mjs';
+import { seedD2bConfig, TEST_PUBLICATION_AUTHORITY } from '../helpers/catalog-d2b-fixture.mjs';
 
 const hash = value => crypto.createHash('sha256').update(value).digest('hex');
 const rowsBody = rows => Buffer.from(canonicalJson({ rows }));
@@ -24,7 +25,7 @@ function runFull(env, { runId, kid, sourceEpoch, baseGenerationId, baseWatermark
     layers: ['taxonomy', 'content', 'commercial', 'stock'].map(layer => ({
       base_watermark: baseWatermark, layer, mode: 'replace', output_watermark: outputWatermark,
       t_high: outputWatermark, t_low: null,
-    })), run_id: runId, run_kind: 'full', schema: 'bp.catalog.run-header/1', source_epoch: sourceEpoch,
+    })), run_id: runId, run_kind: 'full', schema: 'bp.catalog.run-header/2', publication_authority: { ...TEST_PUBLICATION_AUTHORITY, config_digests: Object.fromEntries(env.identityStore.db.prepare('SELECT config_key,sha256 FROM config_state ORDER BY config_key').all().map(row => [row.config_key, row.sha256])) }, source_epoch: sourceEpoch,
   } }));
   const base = { kid, runId, layer: 'full', final: false, contentEncoding: 'identity' };
   const chunks = [headerBody, rowsBody(phase0Records()), rowsBody(phase1Records()), rowsBody(phase2Records())];
@@ -50,7 +51,7 @@ test('R1-R8 replay loss preserves CURRENT, classifies, abandons partial work, an
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'bp-replay-recovery-'));
   const catalog = path.join(root, 'catalog'); fs.mkdirSync(catalog, { mode: 0o700 });
   const identityPath = path.join(root, 'identity.sqlite');
-  const identity = IdentityStore.createNew(identityPath);
+  const identity = seedD2bConfig(IdentityStore.createNew(identityPath));
   const mutex = new CatalogPublicationLock(catalog); const reader = new CatalogReader(catalog);
   const publisher = new CatalogPublisher(catalog, { mutex, readers: [reader] });
   const oldPath = path.join(root, 'replay-old.sqlite');
@@ -67,7 +68,7 @@ test('R1-R8 replay loss preserves CURRENT, classifies, abandons partial work, an
       baseGenerationId: authorityA.currentGeneration, baseWatermark: '9', outputWatermark: '10', final: false });
     const orphan = fs.readdirSync(catalog).find(name => name.endsWith('.building.sqlite'));
     assert.ok(orphan); // Partial B performed the real mapper/building flow.
-    identity.setConfigHash('replay-loss-ahead', 'f'.repeat(64));
+    identity.setConfigHash('drupal-collisions', '9'.repeat(64));
     assert.ok(identity.metadata().revision > authorityA.publishedIdentityRevision); // R3/R5/R6
     assert.equal(readRecoveryAuthority(reader).acceptedRun.run_id, 'run-A');
 

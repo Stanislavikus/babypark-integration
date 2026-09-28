@@ -9,6 +9,7 @@ import {
   readRecoveryAuthority, reconcileRestore, recoverReplay, validateBackupRoot,
   validatePrivateDirectory, verifyRecoverySet,
 } from './core.mjs';
+import { identityConfigStateSha256 } from '../ingest/dependency-fingerprint.mjs';
 
 function absolute(name, value) {
   if (!value || !path.isAbsolute(value)) throw Object.assign(new Error(name + ' must be an absolute path'), { code: 'USAGE' });
@@ -53,7 +54,8 @@ export function recoveryStatus(paths, { fullVerification = false } = {}) {
     const root = validateBackupRoot(absolute('backup-root', paths.backupRoot));
     const sets = discoverRecoverySets({ backupRoot: root });
     const coverage = fullVerification
-      ? findCoveringRecoverySet({ backupRoot: root, catalogStorageDir: stores.catalogStorageDir, authority })
+      ? findCoveringRecoverySet({ backupRoot: root, catalogStorageDir: stores.catalogStorageDir, authority,
+        liveIdentityConfigStateSha256: identityConfigStateSha256(stores.identity) })
       : null;
     return { ok: true, authority, live_identity_revision: identityRevision,
       identity_ahead: authority.publishedIdentityRevision === null ? identityRevision : identityRevision - authority.publishedIdentityRevision,
@@ -74,7 +76,7 @@ export function backupCatalog(paths) {
     return lock.withLock(() => {
       const authority = readRecoveryAuthority(reader);
       const found = findCoveringRecoverySet({ backupRoot: absolute('backup-root', paths.backupRoot),
-        catalogStorageDir, authority });
+        catalogStorageDir, authority, liveIdentityConfigStateSha256: identityConfigStateSha256(identity) });
       if (found.covering) return { ok: true, created: false,
         set_id: found.covering.setId, coverage: 'COVERED' };
       const verified = createRecoverySetLocked({ backupRoot: absolute('backup-root', paths.backupRoot),
@@ -108,7 +110,8 @@ export function backupStatus(paths, { now = () => new Date() } = {}) {
     identityRevision = stores.identity.metadata().revision;
     replayStats = stores.replay.stats();
     inventory = inspectRecoverySets({ backupRoot: root,
-      catalogStorageDir: stores.catalogStorageDir, authority });
+      catalogStorageDir: stores.catalogStorageDir, authority,
+      liveIdentityConfigStateSha256: identityConfigStateSha256(stores.identity) });
   } finally { stores.reader.close(); stores.replay.close(); stores.identity.close(); }
   const ids = discoverRecoverySets({ backupRoot: paths.backupRoot });
   const latest = inventory.valid[0] ?? null;

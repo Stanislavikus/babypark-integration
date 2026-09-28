@@ -11,7 +11,8 @@ import { productionWriteRows } from './production-full-mapper.mjs';
 import { prepareProductionCertification } from './production-certification.mjs';
 import { productionDependencyFingerprint } from './dependency-fingerprint.mjs';
 import { productionGenerationId } from './production-generation.mjs';
-import { validateAuthoritativeState } from './run-protocol.mjs';
+import { HEADER_SCHEMA_V2, validateAuthoritativeState } from './run-protocol.mjs';
+import { validateProductionPublicationAuthority } from './publication-authority.mjs';
 
 export class ProductionFullCoordinatorError extends Error {
   constructor(code, message) { super(message); this.name = 'ProductionFullCoordinatorError'; this.code = code; }
@@ -92,7 +93,7 @@ function contextForData(store, key) {
 }
 
 export function processProductionFullChunk(args = {}) {
-  const { store, publisher, mutex, reader, identityStore, key, verifiedBody, failpoint } = args;
+  const { store, publisher, mutex, reader, identityStore, key, verifiedBody, failpoint, recoveryGate } = args;
   if (!(store instanceof ReplayStore) || !(publisher instanceof CatalogPublisher) ||
       !(mutex instanceof CatalogPublicationLock) || publisher.mutex !== mutex ||
       !(reader instanceof CatalogReader) || !(identityStore instanceof IdentityStore) ||
@@ -101,11 +102,14 @@ export function processProductionFullChunk(args = {}) {
     fail('FULL_COORDINATOR_CONFIG_INVALID', 'Exact production coordinator dependencies are required');
   }
   if (key.final === true) {
-    return finalizeFullRun({ store, publisher, mutex, reader, finalKey: key,
-      verifiedFinalBody: verifiedBody, now: typeof args.now === 'function' ? args.now : () => args.now ?? Date.now(),
-      failpoint, prepareCertification: ({ db, context }) => prepareProductionCertification({
-        db, identityStore, runId: context.header.run_id,
-      }) });
+    return mutex.withLock(() => {
+      if (recoveryGate?.shouldBackupBlock(key)) fail('BACKUP_REQUIRED', 'Recovery coverage is required');
+      return finalizeFullRun({ store, publisher, mutex, reader, finalKey: key,
+        verifiedFinalBody: verifiedBody, now: typeof args.now === 'function' ? args.now : () => args.now ?? Date.now(),
+        failpoint, prepareCertification: ({ db, context }) => prepareProductionCertification({
+          db, identityStore, runId: context.header.run_id,
+        }) });
+    });
   }
   if (key.final !== false) fail('FULL_COORDINATOR_CONFIG_INVALID', 'Chunk final flag is invalid');
   const decoded = decodeFullChunkForApply(key, verifiedBody);
@@ -119,13 +123,19 @@ export function processProductionFullChunk(args = {}) {
   }
   const now = timestamp(args.now);
   return mutex.withLock(() => {
+    if (recoveryGate?.shouldBackupBlock(key)) fail('BACKUP_REQUIRED', 'Recovery coverage is required');
     let generationId, header, headerSha256;
     let exactReceipt = false;
     if (key.seq === 0) {
       header = decoded.headerValue; headerSha256 = key.bodySha256;
       generationId = productionGenerationId({ kid: key.kid, runId: key.runId, seq0BodySha256: headerSha256 });
       exactReceipt = store.hasExactReceipt(key);
-      if (!exactReceipt) validateAuthoritativeState(header, currentState(reader));
+      if (!exactReceipt || header.schema === HEADER_SCHEMA_V2) {
+        validateProductionPublicationAuthority(header, identityStore);
+      }
+      if (!exactReceipt) {
+        validateAuthoritativeState(header, currentState(reader));
+      }
     }
     let state = store.claim(key, now.seconds, key.seq === 0 ? { verifiedBody } : undefined);
     for (;;) {

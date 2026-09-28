@@ -72,10 +72,10 @@ test('CURRENT authority derives one KID and recovery set reconciles catalog iden
     const verified = createRecoverySet({ backupRoot: backup, catalogStorageDir: h.catalogDir,
       identityStore: h.identity, replayStore: h.store, reader: h.reader, publicationLock: h.mutex });
     assert.throws(() => reconcileRestore({ verified, catalogStorageDir: h.catalogDir }), /explicit generation/);
-    assert.equal(recoverySetCovers(verified, authority), true);
+    assert.equal(recoverySetCovers(verified, authority, { liveIdentityConfigStateSha256: verified.identityConfigStateSha256 }), true);
     // Live identity being ahead is intentionally not part of CURRENT coverage equality.
     h.identity.setConfigHash('post-publish', 'f'.repeat(64));
-    assert.equal(recoverySetCovers(verified, authority), true);
+    assert.equal(recoverySetCovers(verified, authority, { liveIdentityConfigStateSha256: verified.identityConfigStateSha256 }), true);
     assert.equal(recoverySetCovers(verified, { ...authority,
       acceptedRun: { ...authority.acceptedRun, run_digest: '0'.repeat(64) } }), false);
     const liveFiles = [path.join(h.root, 'identity.sqlite'), path.join(h.root, 'replay.sqlite'),

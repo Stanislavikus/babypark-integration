@@ -31,7 +31,7 @@ test('BOOTSTRAP recovery set is immutable, canonical, verified, and covering', (
       acceptedRun: null, acceptedKid: null });
     const verified = createRecoverySet({ backupRoot: f.backup, catalogStorageDir: f.catalog,
       identityStore: f.identity, replayStore: f.replay, reader: f.reader, publicationLock: f.lock });
-    assert.equal(recoverySetCovers(verified, authority), true);
+    assert.equal(recoverySetCovers(verified, authority, { liveIdentityConfigStateSha256: verified.identityConfigStateSha256 }), true);
     assert.deepEqual(discoverRecoverySets({ backupRoot: f.backup }), [verified.setId]);
     assert.equal(fs.statSync(verified.directory).mode & 0o777, 0o700);
     for (const name of ['identity.sqlite', 'replay.sqlite', 'manifest.json']) {
