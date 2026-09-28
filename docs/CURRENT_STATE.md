@@ -165,8 +165,9 @@ deleted automatically.
 
 ## Drupal exporter production preflight
 
-D2a/D2a.1 code is deployed on the Drupal production host as an isolated,
-non-scheduled exporter. It is not a daemon and does not write Drupal data.
+D2a/D2a.1 plus D2b exporter slice 1 code is deployed on the Drupal production host
+as an isolated, non-scheduled exporter. It is not a daemon and does not write Drupal
+data.
 
 Web-origin protection changed during the 2026-09-28 preflight investigation:
 - the Cloudflare wildcard `*.babypark.ua` was disabled by renaming the DNS record to
@@ -204,7 +205,7 @@ Runtime:
   authority;
 - system `/usr/bin/node` remains unchanged at v20.20.2
 
-D2a.1 merged/deployed source:
+D2a.1 historical merge/deployment source:
 `712f09cd390df71821b1315c47fac30a620a4636`
 
 D2a.1 established:
@@ -289,7 +290,7 @@ rules. Durable future architecture lives in:
 
 ## Catalog Anomaly Runtime v1
 
-Status: **MERGED / NOT DEPLOYED**
+Status: **MERGED / EXPORTER QUARANTINE INTEGRATION DEPLOYED / PERSISTENT CATALOG ANOMALY STORE NOT DEPLOYED**
 Implementation source: `main`, PR #26 merge `eb70c08c8917550bfe2666d85b845328e38b02a4`
 Design contract: `docs/CATALOG_ANOMALY_RUNTIME_V1.md`
 
