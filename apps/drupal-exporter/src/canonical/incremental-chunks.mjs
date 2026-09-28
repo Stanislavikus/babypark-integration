@@ -7,7 +7,7 @@ import { BLOCKER_CODES, Blocker } from '../blockers.mjs';
 import { CHUNK_BODY_BYTE_LIMIT } from '../constants.mjs';
 import { globalTopoSortCategories } from './ordering.mjs';
 import { serializeChunkBody } from './chunk-packer.mjs';
-import { writeFileAtomic } from '../spool/layout.mjs';
+import { SPOOL_DIRECTORY_MODE, writeFileAtomic } from '../spool/layout.mjs';
 
 function validateChunkRows(rows) {
   try {
@@ -63,7 +63,7 @@ export class IncrementalChunkWriter {
     this.largestChunkBytes = 0;
     this.largestProductBytes = 0;
     this.totalRows = 0;
-    fs.mkdirSync(outputDir, { recursive: true });
+    fs.mkdirSync(outputDir, { recursive: true, mode: SPOOL_DIRECTORY_MODE });
   }
 
   #nextFilename(phase) {

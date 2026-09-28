@@ -272,7 +272,7 @@ test('exact anomaly-report file hash is in spool manifest', async () => {
   const reportPath = path.join(result.spool.ready_path, 'anomaly-report.json');
   const reportBytes = fs.readFileSync(reportPath);
   const reportHash = crypto.createHash('sha256').update(reportBytes).digest('hex');
-  assert.equal(result.spool.manifest.schema, 'bp.drupal-exporter.spool/2');
+  assert.equal(result.spool.manifest.schema, 'bp.drupal-exporter.spool/3');
   assert.equal(result.spool.manifest.anomaly_report_sha256, reportHash);
 });
 

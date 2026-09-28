@@ -41,6 +41,10 @@ node apps/drupal-exporter/bin/drupal-exporter.mjs spool
 | `DRUPAL_EXPORT_SPOOL_ROOT` | Absolute spool root |
 | `DRUPAL_EXPORT_COLLISION_CONFIG` | Absolute path to `legacy-sku-collisions.yaml` |
 | `DRUPAL_EXPORT_ANOMALY_PUBLICATION_POLICY` | Absolute path to `publication-policy.yaml` |
+| `DRUPAL_EXPORT_RELEASE_PROVENANCE` | Absolute path to `RELEASE.json` in the same immutable release root as the executing exporter code |
+| `DRUPAL_EXPORT_SOURCE_ACCEPTANCE_CASES` | Absolute path to reviewed `source-acceptance-cases.yaml` |
+| `DRUPAL_EXPORT_DB_DATA_PATH` | Absolute MariaDB data path used by the free-space gate |
+| `DRUPAL_EXPORT_MIN_FREE_BYTES` | Positive integer minimum free bytes required on temp/spool/DB-data filesystems |
 | `DRUPAL_EXPORT_PUBLIC_SITE_URL` | Public site base URL |
 | `DRUPAL_EXPORT_PUBLIC_FILES_URL` | Public files base URL |
 | `DRUPAL_EXPORT_PRICE_PENDING_CSV` | Price pending CSV path |
@@ -204,15 +208,78 @@ node scripts/identity-set-config-hash.mjs \
 <spool-root>/snapshot-<watermark>.ready/
 ```
 
-Ready contents:
+Ready contents for the first D2b-transportable artifact:
 
-- `manifest.json`
-- `preflight.json`
-- `collision-report.json`
-- `phase0-*.json`, `phase1-*.json` canonical chunks
+- `manifest.json` — exact `bp.drupal-exporter.spool/3`;
+- `preflight.json`;
+- `collision-report.json`;
+- `anomaly-report.json`;
+- `source-acceptance.json`;
+- `phase0-*.json`, `phase1-*.json` canonical chunks.
+
+Spool/3 does not silently redefine historical spool/2. Its manifest additionally binds:
+
+- `producer_commit`;
+- raw-byte SHA-256 of immutable release `RELEASE.json`;
+- raw-byte SHA-256 of `source-acceptance.json`;
+- exact anomaly/policy/collision hashes already used by the exporter.
+
+The immutable release provenance file is validated before snapshot work. Generate it
+for a release with:
+
+```text
+node scripts/create-exporter-release-provenance.mjs \
+  --output=/absolute/release/RELEASE.json
+```
+
+The generator fails closed when:
+
+- the Git worktree/index is dirty;
+- any tracked entry carries non-normal index flags such as
+  `assume-unchanged` or `skip-worktree`;
+- the output path is inside the source checkout.
+
+`RELEASE.json` uses one canonical generated JSON representation, an exact repository
+identifier, canonical UTC ISO timestamp, exact HEAD/tree and raw package-lock hash.
+
+The immutable release directory itself must be materialized from the exact reviewed
+Git object (for example `git archive <commit>` or an equivalent clean detached
+checkout) and then have dependencies installed from the locked package. Do not build
+the immutable release by recursively copying an arbitrary developer worktree.
+
+`source-acceptance.json` is independent acceptance evidence. In production it is
+collected by separate targeted SELECTs while the same repeatable-read snapshot
+transaction is still open; it is not reconstructed from canonical output after the
+fact. Catalog membership is filtered to the exact `catalog` vocabulary, the sidecar
+carries the complete catalog taxonomy terms/hierarchy needed to reproduce category
+canonicalization, provider terms for selected brands, and stock rows selected with
+the same NFC/trim/lower identity semantics using a streaming stock scan.
+
+The reviewed evidence-selection file
+`config/drupal/source-acceptance-cases.yaml` is acceptance-only and does not alter
+publication decisions. It covers all product-group identities referenced by the 21
+reviewed legacy mappings plus the four historical source groups from the two
+identity cases that were unresolved at D2b design freeze. If a reviewed historical
+group no longer resolves in the current snapshot, the sidecar records that absence
+explicitly instead of inventing a replacement source row.
 
 Promotion uses same-directory atomic rename only after all validation passes.
 Failed runs must not leave `.ready`.
+
+Before `preflight` or `spool`, the exporter performs a byte-based free-space gate
+against `os.tmpdir()`, `DRUPAL_EXPORT_SPOOL_ROOT`, and
+`DRUPAL_EXPORT_DB_DATA_PATH`. Every configured path must already exist as a directory;
+a missing/incorrect path is a blocker rather than silently checking an ancestor
+filesystem. Every checked filesystem must have at least
+`DRUPAL_EXPORT_MIN_FREE_BYTES` available.
+
+Ready/building spool directories are created with mode `0700`; spool files are
+created with mode `0600`. The storage policy freezes the same private modes for the
+future CatalogService Link A staging area.
+
+A ready spool is transient but authoritative once transport begins. It is not eligible
+for age-only deletion and must survive through ACK/state, exhaustive Link A and owner
+accept/reset decision as frozen in `docs/DRUPAL_EXPORT_D2B.md`.
 
 Chunk rules:
 

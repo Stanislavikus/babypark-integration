@@ -1,6 +1,6 @@
 # Drupal Export D2b — Signed Transport and First Controlled FULL
 
-Status: **DESIGN DRAFT / NO IMPLEMENTATION / NO PRODUCTION CHANGE**
+Status: **FROZEN DESIGN / IMPLEMENTATION SLICES IN PROGRESS / NO PRODUCTION FULL**
 
 This document freezes the intended boundary between an already validated Drupal
 `.ready` spool and CatalogService for the first controlled production FULL.
@@ -178,10 +178,8 @@ vectors and reviewed receiver support before it can create different source xref
 
 ### Transportable spool v3 provenance binding
 
-Current D2a emits `bp.drupal-exporter.spool/2`. Do not silently change its exact
-meaning.
-
-The first D2b-transportable spool introduces:
+Historical D2a emitted `bp.drupal-exporter.spool/2`; that exact meaning remains frozen.
+Implementation slice 1 introduces the first D2b-transportable format:
 
 `bp.drupal-exporter.spool/3`
 
@@ -545,6 +543,12 @@ Every exporter/sender release is built from one exact reviewed Git commit/tree a
 contains an immutable `RELEASE.json` with at least repository, commit, tree,
 package-lock hash and build/install timestamp.
 
+Implementation must materialize release source from that Git object itself
+(`git archive <commit>` or an equivalent clean detached checkout), not by recursively
+copying an arbitrary developer worktree. The provenance generator rejects ordinary
+dirty state, non-normal index flags such as `assume-unchanged` / `skip-worktree`,
+and output paths inside the source checkout.
+
 Release contents are not edited after installation; correction produces a new release.
 
 ### Early candidate preflight
@@ -556,10 +560,21 @@ live Drupal source path:
 2. pass candidate config paths explicitly, including anomaly publication policy;
 3. run production preflight with the existing SELECT-only MariaDB account;
 4. require zero hard blockers;
-5. require exactly two residual anomalies: `511000`, `80401mc02`;
-6. require exactly four quarantined source products: `79252`, `139026`, `12605`, `118670`;
+5. compare the residual anomaly/quarantine set to current live-source evidence rather
+   than a historical hard-coded count;
+6. specifically preserve reviewed evidence for the historical `511000` and
+   `80401mc02` cases, including an explicit "reviewed source group missing" outcome
+   when a formerly colliding source card no longer exists;
 7. prove unrelated products still produce canonical chunks;
 8. measure runtime, scratch/chunk high-water disk use and warnings.
+
+Historical note: the 2026-09-27 preflight had two residual cross-product anomalies
+(`511000`, `80401mc02`) and four quarantined products
+(`79252`, `139026`, `12605`, `118670`). A read-only production probe on
+2026-09-28 found that Drupal node/product group `139026` no longer exists and
+`511000` is currently observed only under product group `79252`. Therefore the
+candidate preflight, not the old 2/4 count, is the authority for the first-FULL
+current-source gate.
 
 That early candidate proof does not make its spool the production transport artifact.
 

@@ -33,9 +33,14 @@ import { extractSnapshotToNdjson } from '../source/mariadb-snapshot.mjs';
 import {
   resolveSpoolPaths,
   writeJsonAtomic,
+  writeFileAtomic,
   atomicPromote,
 } from '../spool/layout.mjs';
 import { streamCandidateProducts } from './candidates.mjs';
+import { loadReleaseProvenance, RUNTIME_PACKAGE_LOCK_PATH, RUNTIME_RELEASE_PROVENANCE_PATH } from '../release-provenance.mjs';
+import { checkDiskSpaceGate } from '../disk-gate.mjs';
+import { collectFixtureSourceAcceptance } from '../source/source-acceptance.mjs';
+import { loadSourceAcceptanceCases } from '../source/source-acceptance-config.mjs';
 
 export async function runExportPipeline({
   config,
@@ -45,6 +50,22 @@ export async function runExportPipeline({
   skipFilesystemChecks = false,
 }) {
   const blockers = new BlockerCollection();
+  const releaseProvenance = loadReleaseProvenance(
+    config.releaseProvenancePath,
+    {
+      expectedPath: fixtureSourceDir ? null : RUNTIME_RELEASE_PROVENANCE_PATH,
+      expectedPackageLockPath: fixtureSourceDir ? null : RUNTIME_PACKAGE_LOCK_PATH,
+    }
+  );
+  const sourceAcceptanceCases = loadSourceAcceptanceCases(config.sourceAcceptanceCasesPath);
+  const diskGate = skipFilesystemChecks
+    ? { checks: [], blockers: [] }
+    : checkDiskSpaceGate({
+        paths: [os.tmpdir(), config.spoolRoot, config.dbDataPath],
+        minFreeBytes: config.minFreeBytes,
+      });
+  for (const blocker of diskGate.blockers) blockers.add(blocker);
+
   const precheck = skipFilesystemChecks
     ? { blockers: [], processedFingerprint: null }
     : checkFilesystemPrecheck(config);
@@ -53,6 +74,7 @@ export async function runExportPipeline({
   let snapshotWatermark = '0';
   let stockSyncUnix = 0;
   let sourceDir = fixtureSourceDir;
+  let sourceAcceptance = null;
   let buildingPath = null;
   let ownsBuildingPath = false;
 
@@ -70,6 +92,7 @@ export async function runExportPipeline({
     const snapshot = await sourceExtractor({
       config,
       beforeFingerprint: precheck.processedFingerprint,
+      acceptanceCases: sourceAcceptanceCases,
     });
 
     if (snapshot.unstable) {
@@ -86,12 +109,19 @@ export async function runExportPipeline({
     snapshotWatermark = snapshot.snapshotWatermark;
     stockSyncUnix = snapshot.stockSyncUnix;
     sourceDir = snapshot.sourceDir;
+    sourceAcceptance = snapshot.sourceAcceptance;
     buildingPath = snapshot.buildingPath;
     ownsBuildingPath = snapshot.ownsBuildingPath ?? false;
   } else {
     snapshotWatermark = 'fixture-watermark-123456789012345678';
     stockSyncUnix = 1700000000;
     buildingPath = resolveSpoolPaths(config.spoolRoot, snapshotWatermark).building;
+    sourceAcceptance = await collectFixtureSourceAcceptance(sourceDir, {
+      provider: config.provider,
+      sourceEpoch: config.sourceEpoch,
+      snapshotWatermark,
+      stockSyncUnix,
+    });
   }
 
   const collisionConfig = loadCollisionConfig(config.collisionConfigPath);
@@ -198,11 +228,23 @@ export async function runExportPipeline({
     blockers
   );
 
+  if (!sourceAcceptance) {
+    throw new Error('source acceptance evidence is required');
+  }
+  const sourceAcceptanceBytes = `${JSON.stringify(sourceAcceptance, null, 2)}\n`;
+  const sourceAcceptanceSha256 = crypto.createHash('sha256')
+    .update(sourceAcceptanceBytes)
+    .digest('hex');
+
   const preflightReport = {
     mode,
     provider: config.provider,
     source_epoch: config.sourceEpoch,
     snapshot_watermark: snapshotWatermark,
+    producer_commit: releaseProvenance.document.commit,
+    producer_release_provenance_sha256: releaseProvenance.sha256,
+    source_acceptance_sha256: sourceAcceptanceSha256,
+    disk_gate: diskGate.checks,
     collision_config_sha256: collisionConfig.sha256,
     anomaly_publication_policy_sha256: publicationPolicy.sha256,
     anomaly_count: anomalyReport.anomaly_count,
@@ -244,6 +286,10 @@ export async function runExportPipeline({
     preflightReport,
     collisionReport,
     anomalyReport,
+    sourceAcceptance,
+    sourceAcceptanceBytes,
+    sourceAcceptanceSha256,
+    releaseProvenance,
     prepared,
     excludedByPolicy: built.excluded_by_policy,
     authorityCounts,
@@ -443,6 +489,10 @@ function writePreparedSpool({
   preflightReport,
   collisionReport,
   anomalyReport,
+  sourceAcceptance,
+  sourceAcceptanceBytes,
+  sourceAcceptanceSha256,
+  releaseProvenance,
   prepared,
   excludedByPolicy,
   authorityCounts,
@@ -458,12 +508,20 @@ function writePreparedSpool({
     .update(anomalyReportBytes)
     .digest('hex');
 
+  if (sourceAcceptance.schema !== 'bp.drupal.source-acceptance/1') {
+    throw new Error('unsupported source acceptance schema');
+  }
+  writeFileAtomic(building, 'source-acceptance.json', sourceAcceptanceBytes);
+
   const manifest = {
-    schema: 'bp.drupal-exporter.spool/2',
-    version: 2,
+    schema: 'bp.drupal-exporter.spool/3',
+    version: 3,
     provider: config.provider,
     source_epoch: config.sourceEpoch,
     snapshot_watermark: snapshotWatermark,
+    producer_commit: releaseProvenance.document.commit,
+    producer_release_provenance_sha256: releaseProvenance.sha256,
+    source_acceptance_sha256: sourceAcceptanceSha256,
     collision_config_sha256: preflightReport.collision_config_sha256,
     anomaly_publication_policy_sha256: preflightReport.anomaly_publication_policy_sha256,
     anomaly_report_sha256: anomalyReportSha256,

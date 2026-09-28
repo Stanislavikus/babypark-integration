@@ -30,6 +30,13 @@ export function loadConfig(overrides = {}) {
     env('DRUPAL_EXPORT_COLLISION_CONFIG');
   const anomalyPublicationPolicyPath = overrides.anomalyPublicationPolicyPath ??
     env('DRUPAL_EXPORT_ANOMALY_PUBLICATION_POLICY');
+  const releaseProvenancePath = overrides.releaseProvenancePath ??
+    env('DRUPAL_EXPORT_RELEASE_PROVENANCE');
+  const sourceAcceptanceCasesPath = overrides.sourceAcceptanceCasesPath ??
+    env('DRUPAL_EXPORT_SOURCE_ACCEPTANCE_CASES');
+  const dbDataPath = overrides.dbDataPath ?? env('DRUPAL_EXPORT_DB_DATA_PATH');
+  const minFreeBytes = Number(overrides.minFreeBytes ??
+    env('DRUPAL_EXPORT_MIN_FREE_BYTES'));
   const publicSiteUrl = (overrides.publicSiteUrl ??
     env('DRUPAL_EXPORT_PUBLIC_SITE_URL')).replace(/\/$/, '');
   const publicFilesUrl = (overrides.publicFilesUrl ??
@@ -53,12 +60,28 @@ export function loadConfig(overrides = {}) {
   if (!path.isAbsolute(anomalyPublicationPolicyPath)) {
     throw new ConfigError('CONFIG_INVALID', 'anomaly publication policy path must be absolute');
   }
+  if (!path.isAbsolute(releaseProvenancePath)) {
+    throw new ConfigError('CONFIG_INVALID', 'release provenance path must be absolute');
+  }
+  if (!path.isAbsolute(sourceAcceptanceCasesPath)) {
+    throw new ConfigError('CONFIG_INVALID', 'source acceptance cases path must be absolute');
+  }
+  if (!path.isAbsolute(dbDataPath)) {
+    throw new ConfigError('CONFIG_INVALID', 'DB data path must be absolute');
+  }
+  if (!Number.isSafeInteger(minFreeBytes) || minFreeBytes <= 0) {
+    throw new ConfigError('CONFIG_INVALID', 'minimum free bytes must be a positive safe integer');
+  }
 
   return {
     db,
     spoolRoot,
     collisionConfigPath,
     anomalyPublicationPolicyPath,
+    releaseProvenancePath,
+    sourceAcceptanceCasesPath,
+    dbDataPath,
+    minFreeBytes,
     publicSiteUrl,
     publicFilesUrl,
     filesystem,
