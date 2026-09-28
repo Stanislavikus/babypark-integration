@@ -5,6 +5,8 @@ import { loadReleaseProvenance, RUNTIME_PACKAGE_LOCK_PATH, RUNTIME_RELEASE_PROVE
 import { CHUNK_BODY_BYTE_LIMIT } from '../../apps/drupal-exporter/src/constants.mjs';
 import { DRUPAL_SPOOL_SCHEMA } from '../catalog/ingest/publication-authority.mjs';
 import { isDec20 } from '../catalog/ingest/run-protocol.mjs';
+import { decodeFullChunkForApply } from '../catalog/ingest/full-apply.mjs';
+import { validateFullRecords } from '../catalog/ingest/full-record-v2.mjs';
 import { fail } from './errors.mjs';
 
 const HASH = /^[a-f0-9]{64}$/;
@@ -29,13 +31,28 @@ function parseJson(bytes, label) {
   try { return JSON.parse(bytes.toString('utf8')); } catch { fail('D2B_SPOOL_JSON_INVALID', `${label} is not valid JSON`); }
 }
 
-export function readVerifiedChunk(spool, chunk) {
+export function readVerifiedChunk(spool, chunk, { validateSemantic = false } = {}) {
   const filePath = path.join(spool.path, chunk.filename);
   const body = readFile(filePath);
   if (body.length !== chunk.bytes || body.length > CHUNK_BODY_BYTE_LIMIT || sha256(body) !== chunk.sha256) {
     fail('D2B_CHUNK_CHANGED', `Chunk ${chunk.filename} no longer matches frozen metadata`);
   }
-  return body;
+  if (!validateSemantic) return body;
+  let decoded;
+  try {
+    decoded = decodeFullChunkForApply({ layer: 'full', final: false,
+      contentEncoding: 'identity', bodySha256: chunk.sha256, seq: 1,
+      runId: 'spool-verification' }, body);
+    if (decoded.rows.length === 0) fail('D2B_CHUNK_EMPTY', `Chunk ${chunk.filename} is empty`);
+    validateFullRecords(decoded.rows);
+  } catch (error) {
+    if (error?.name === 'D2bError') throw error;
+    fail('D2B_CHUNK_CONTENT_INVALID', `Chunk ${chunk.filename} is not a valid canonical FULL body: ${error.message}`);
+  }
+  if (decoded.rows.length !== chunk.rows || decoded.rows.some(row => row.phase !== chunk.phase)) {
+    fail('D2B_CHUNK_CONTENT_MISMATCH', `Chunk ${chunk.filename} rows/phase differ from manifest`);
+  }
+  return { body, rows: decoded.rows.length, phase: decoded.rows[0].phase };
 }
 
 export function verifySpool(spoolPath, options = {}) {
@@ -54,8 +71,10 @@ export function verifySpool(spoolPath, options = {}) {
     phase = chunk.phase; phaseIndexes[phase]++;
     const expected = `phase${phase}-${String(phaseIndexes[phase]).padStart(6, '0')}.json`;
     if (chunk.filename !== expected || path.basename(chunk.filename) !== chunk.filename || seen.has(chunk.filename)) fail('D2B_CHUNK_FILENAME_INVALID', 'Unsafe, duplicate, or non-deterministic chunk filename');
-    seen.add(chunk.filename); totalRows += chunk.rows; phaseRows[phase] += chunk.rows;
-    readVerifiedChunk({ path: spoolPath }, chunk);
+    seen.add(chunk.filename);
+    const verified = readVerifiedChunk({ path: spoolPath }, chunk, { validateSemantic: true });
+    if (verified.phase < phase) fail('D2B_CHUNK_PHASE_REGRESSION', 'Actual chunk phases regress');
+    phase = verified.phase; totalRows += verified.rows; phaseRows[phase] += verified.rows;
   }
   if (totalRows !== manifest.total_canonical_rows || manifest.phase_row_counts?.phase0 !== phaseRows[0] || manifest.phase_row_counts?.phase1 !== phaseRows[1]) fail('D2B_SPOOL_COUNTS_INVALID', 'Manifest row summaries do not reconcile');
   const actual = new Set(fs.readdirSync(spoolPath));

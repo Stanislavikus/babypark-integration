@@ -19,7 +19,8 @@ export function acquireSenderLock(stateDir, spoolHash, now = () => new Date()) {
 export function inspectSenderLock(stateDir, spoolHash) {
   const dir = lockPath(stateDir, spoolHash); let owner;
   try { owner = JSON.parse(fs.readFileSync(path.join(dir, 'owner.json'), 'utf8')); } catch (error) { fail('D2B_LOCK_EVIDENCE_INVALID', `Cannot inspect lock owner: ${error.message}`); }
-  const valid = owner && Object.keys(owner).sort().join() === ['schema','spool_manifest_sha256','boot_id','pid','process_start_ticks','acquired_at'].sort().join() && owner.schema === SENDER_LOCK_SCHEMA && owner.spool_manifest_sha256 === spoolHash && Number.isInteger(owner.pid) && owner.pid > 0 && typeof owner.process_start_ticks === 'string';
+  const canonicalTime = value => typeof value === 'string' && /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}Z$/.test(value) && new Date(value).toISOString() === value;
+  const valid = owner && Object.keys(owner).sort().join() === ['schema','spool_manifest_sha256','boot_id','pid','process_start_ticks','acquired_at'].sort().join() && owner.schema === SENDER_LOCK_SCHEMA && owner.spool_manifest_sha256 === spoolHash && /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/.test(owner.boot_id || '') && Number.isInteger(owner.pid) && owner.pid > 0 && /^(?:[1-9][0-9]*)$/.test(owner.process_start_ticks || '') && canonicalTime(owner.acquired_at);
   if (!valid) fail('D2B_LOCK_EVIDENCE_INVALID', 'Lock owner evidence is malformed');
   let alive = false, reason = 'different_boot';
   if (owner.boot_id === bootId()) { try { const ticks = startTicks(owner.pid); alive = ticks === owner.process_start_ticks; reason = ticks === undefined ? 'pid_absent' : alive ? 'owner_alive' : 'pid_reused'; } catch (e) { if (e.code !== 'ENOENT') fail('D2B_LOCK_IDENTITY_UNKNOWN', 'Cannot disprove lock owner'); reason = 'pid_absent'; } }

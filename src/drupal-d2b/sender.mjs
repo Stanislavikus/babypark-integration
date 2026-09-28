@@ -31,8 +31,8 @@ export async function sendSpool({ spoolPath, config, verification = {}, client =
     let run = readRunState(config.stateDir, spool); const http = client ?? new D2bClient(config);
     const stateResponse = await attempt(config, () => http.state(), sleep); if (stateResponse.status !== 200) fail('D2B_STATE_HTTP_FAILED', 'Authenticated /state request failed');
     const catalogState = validateStateEnvelope(stateResponse.body);
-    if (!run) { if (!isBootstrap(catalogState)) fail('D2B_FIRST_FULL_AUTHORITY_INVALID','New first FULL requires exact accepting BOOTSTRAP authority'); run=createRunState(spool,config.kid,{now}); writeRunState(config.stateDir,run); }
-    else { validateRunState(run,spool); if(run.kid!==config.kid) fail('D2B_KID_CHANGED','In-progress run requires its original KID'); const disposition=assertResumeState(catalogState,run); }
+    if (!run) { if (!isBootstrap(catalogState)) fail('D2B_FIRST_FULL_AUTHORITY_INVALID','New first FULL requires exact accepting BOOTSTRAP authority'); ageGate(spool.manifest.snapshot_watermark,now().getTime()); run=createRunState(spool,config.kid,{now}); writeRunState(config.stateDir,run); }
+    else { validateRunState(run,spool); if(run.kid!==config.kid) fail('D2B_KID_CHANGED','In-progress run requires its original KID'); assertResumeState(catalogState,run); }
     if(run.transport_state==='STATE_CONFIRMED') return { status:'STATE_CONFIRMED',run_id:run.run_id };
     if(run.transport_state==='ACKED'){ assertAccepted(catalogState,run,spool); run=updateRunState(config.stateDir,run,{transport_state:'STATE_CONFIRMED',post_ack_state:catalogState},now); return {status:'STATE_CONFIRMED',run_id:run.run_id}; }
     const bodies = [Buffer.from(run.run_header_base64,'base64'), ...run.ordered_chunks, Buffer.from(run.trailer_base64,'base64')];

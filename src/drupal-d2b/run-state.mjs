@@ -13,6 +13,8 @@ const KEYS = ['schema','spool_manifest_sha256','run_id','kid','run_header_base64
 const HASH = /^[a-f0-9]{64}$/; const ID = /^[A-Za-z0-9_-]{1,64}$/;
 const hash = bytes => crypto.createHash('sha256').update(bytes).digest('hex');
 const timestamp = date => date.toISOString();
+const LAYERS = ['taxonomy','content','commercial','stock'];
+const exactKeys = (value, keys) => value && typeof value === 'object' && !Array.isArray(value) && Object.keys(value).sort().join('\0') === [...keys].sort().join('\0');
 
 export function stateFilePath(stateDir, spoolHash) { return path.join(stateDir, `${spoolHash}.json`); }
 
@@ -43,6 +45,15 @@ export function createRunState(spool, kid, { randomUUID = crypto.randomUUID, now
 }
 
 function iso(value) { return typeof value === 'string' && /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}Z$/.test(value) && new Date(value).toISOString() === value; }
+function validateFinalAck(ack, state, spool) {
+  const keys = ['accepted','generation_id','layer','run_id','run_digest','source_watermark'];
+  if (!exactKeys(ack, keys) || ack.accepted !== true || !ID.test(ack.generation_id || '') || ack.layer !== 'full' || ack.run_id !== state.run_id || ack.run_digest !== state.run_digest || ack.source_watermark !== spool.manifest.snapshot_watermark) fail('D2B_RUN_STATE_INVALID', 'Persisted final ACK is invalid');
+}
+function validatePostAckState(value, state, spool) {
+  const keys = ['schema','state','accepting_ingest','blockers','current_generation','source_epoch','published_identity_revision','accepted_run','layers'];
+  if (!exactKeys(value, keys) || value.schema !== 'bp.catalog.state/1' || value.state !== 'CURRENT' || typeof value.accepting_ingest !== 'boolean' || !Array.isArray(value.blockers) || value.current_generation !== state.final_ack.generation_id || value.source_epoch !== spool.manifest.source_epoch || !Number.isSafeInteger(value.published_identity_revision) || value.published_identity_revision < 0 ||
+      !exactKeys(value.accepted_run, ['run_id','run_digest','final_seq','accepted_at']) || value.accepted_run.run_id !== state.run_id || value.accepted_run.run_digest !== state.run_digest || value.accepted_run.final_seq !== state.ordered_chunks.length + 1 || !iso(value.accepted_run.accepted_at) || !exactKeys(value.layers, LAYERS) || LAYERS.some(layer => !exactKeys(value.layers[layer], ['accepted_watermark','need_full','need_reconcile']) || value.layers[layer].accepted_watermark !== spool.manifest.snapshot_watermark || typeof value.layers[layer].need_full !== 'boolean' || typeof value.layers[layer].need_reconcile !== 'boolean')) fail('D2B_RUN_STATE_INVALID', 'Persisted post-ACK state is invalid');
+}
 export function validateRunState(state, spool) {
   if (!state || Object.keys(state).sort().join() !== [...KEYS].sort().join() || state.schema !== RUN_STATE_SCHEMA || state.spool_manifest_sha256 !== spool.spoolManifestSha256 || !ID.test(state.run_id || '') || !ID.test(state.kid || '') || !HASH.test(state.run_header_sha256 || '') || !HASH.test(state.run_digest || '') || !iso(state.created_at) || !iso(state.updated_at)) fail('D2B_RUN_STATE_INVALID', 'Run state shape or identity is invalid');
   let headerBytes, trailerBytes;
@@ -64,17 +75,27 @@ export function validateRunState(state, spool) {
   if (!Number.isInteger(state.last_durably_acked_sequence) || state.last_durably_acked_sequence < -1 || state.last_durably_acked_sequence > max || !TRANSPORT_STATES.includes(state.transport_state) || !(state.first_seq0_attempt_started_at === null || iso(state.first_seq0_attempt_started_at))) fail('D2B_RUN_STATE_INVALID', 'Run progression is invalid');
   if ((state.first_seq0_attempt_started_at === null && state.last_durably_acked_sequence !== -1) || (state.transport_state === 'SENDING' && state.last_durably_acked_sequence >= max) || (state.transport_state !== 'SENDING' && state.last_durably_acked_sequence !== max)) fail('D2B_RUN_STATE_INVALID', 'Run sequence progression is incoherent');
   if ((state.transport_state === 'SENDING' && (state.final_ack !== null || state.post_ack_state !== null)) || (state.transport_state === 'ACKED' && (!state.final_ack || state.post_ack_state !== null)) || (state.transport_state === 'STATE_CONFIRMED' && (!state.final_ack || !state.post_ack_state))) fail('D2B_RUN_STATE_INVALID', 'Run terminal progression is incoherent');
+  if (state.transport_state !== 'SENDING') validateFinalAck(state.final_ack, state, spool);
+  if (state.transport_state === 'STATE_CONFIRMED') validatePostAckState(state.post_ack_state, state, spool);
   return state;
 }
 
 export function readRunState(stateDir, spool) {
   const target = stateFilePath(stateDir, spool.spoolManifestSha256);
-  try { return validateRunState(JSON.parse(fs.readFileSync(target, 'utf8')), spool); }
+  try {
+    const dirStat = fs.lstatSync(stateDir);
+    if (dirStat.isSymbolicLink() || !dirStat.isDirectory() || (dirStat.mode & 0o777) !== 0o700) fail('D2B_RUN_STATE_STORAGE_INVALID', 'Run-state directory must be a non-symlink mode 0700 directory');
+    const fileStat = fs.lstatSync(target);
+    if (fileStat.isSymbolicLink() || !fileStat.isFile() || (fileStat.mode & 0o777) !== 0o600) fail('D2B_RUN_STATE_STORAGE_INVALID', 'Run-state file must be a regular non-symlink mode 0600 file');
+    return validateRunState(JSON.parse(fs.readFileSync(target, 'utf8')), spool);
+  }
   catch (error) { if (error?.code === 'ENOENT') return null; if (error?.code) throw error; fail('D2B_RUN_STATE_INVALID', `Cannot read run state: ${error.message}`); }
 }
 
 export function writeRunState(stateDir, state, { failpoint = null } = {}) {
   fs.mkdirSync(stateDir, { recursive: true, mode: 0o700 }); fs.chmodSync(stateDir, 0o700);
+  const stateDirStat = fs.lstatSync(stateDir);
+  if (stateDirStat.isSymbolicLink() || !stateDirStat.isDirectory()) fail('D2B_RUN_STATE_STORAGE_INVALID', 'Run-state directory must not be a symlink');
   const target = stateFilePath(stateDir, state.spool_manifest_sha256);
   const temp = path.join(stateDir, `.${path.basename(target)}.${process.pid}.${crypto.randomBytes(8).toString('hex')}.tmp`);
   let handle;
