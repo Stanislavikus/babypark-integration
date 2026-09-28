@@ -34,7 +34,9 @@ Rebuildable database:
 
     catalog.<generation_id>.sqlite
 
-No production identity.sqlite has been created during Phase D1.
+Production `identity.sqlite` exists on the CatalogService host and is covered by
+the current recovery set. Its identity revision remains 0 because no Drupal FULL
+has been accepted yet.
 
 ## SKU contract
 
@@ -78,6 +80,17 @@ A provider-native ID cannot silently move to a different canonical identity.
 A new provider may bind to an existing canonical product only explicitly.
 A variant may reuse an existing canonical variant by sku_key only when the
 canonical product_id also matches.
+
+Current v1 limitations are deliberate:
+- there is no product/variant merge, unbind, rebind or split operation;
+- an existing source product/variant xref cannot be moved to another canonical ID;
+- `variants.sku_key` is globally UNIQUE;
+- many-to-one source binding is safe only during initial binding, or when one
+  reviewed canonical side already exists and the other source side is unbound;
+- Product Identity Resolution must fail closed rather than inventing a merge that
+  this store cannot represent.
+
+See `docs/PRODUCT_IDENTITY_RESOLUTION_V1.md` for the reviewed-resolution boundary.
 
 ## Fail-closed behavior
 
