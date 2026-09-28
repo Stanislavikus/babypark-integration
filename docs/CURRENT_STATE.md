@@ -347,10 +347,13 @@ Next operational steps:
 - receiver-side D2b authority/recovery foundation is merged in PR #33 at
   `54763804fbceb34ab107d94d44bdf993b59d3152`, but is intentionally not deployed
   to production CatalogService yet;
-- next implementation slice is the separate D2b HTTP sender/control module with
-  durable exact run-state and one exclusive sender lock per ready spool;
-- keep CatalogService production cutover, Link A verifier, isolated full-scale
-  rehearsal and first controlled FULL behind their existing explicit gates.
+- D2b HTTP sender/control with durable exact run-state and one exclusive sender
+  lock per ready spool is merged in PR #35 at
+  `46cc19e3389efdf202be6ad8aed21c05c45c693a`, but is intentionally not deployed;
+- next critical implementation slice is Link A staging + exhaustive spool-to-catalog
+  verification, still without any production FULL;
+- keep CatalogService production cutover, isolated full-scale rehearsal and first
+  controlled FULL behind their existing explicit gates.
 
 Product Identity Resolution v1 is already frozen/merged. Its two original cases
 remain historical acceptance fixtures, while the current live incident set is
@@ -373,9 +376,11 @@ Two independent tracks are active:
      preflight;
    - receiver-side run-header/2/publication-authority/BOOTSTRAP recovery support is
      merged in repository but not deployed to production;
-   - implement D2b sender + durable/exclusive sender run-state next;
-   - do not create/send production FULL until sender + Link A implementation,
-     isolated rehearsal and acceptance gates are closed.
+   - D2b sender/control + durable/exclusive sender run-state are merged in repository
+     but not deployed;
+   - implement Link A staging/exhaustive verifier next;
+   - do not create/send production FULL until Link A implementation, isolated
+     rehearsal and the remaining acceptance/cutover gates are closed.
 
 2. **Identity-resolution application (later)**
    - frozen design: `docs/PRODUCT_IDENTITY_RESOLUTION_V1.md`;
@@ -403,8 +408,9 @@ That exporter gate is now closed:
 - immutable merged exporter/runtime release is production `current`;
 - pre- and post-switch production preflight both have zero unaccounted hard blockers;
 - receiver-side D2b authority/recovery implementation is merged and reviewed;
-- next critical path is D2b sender/control transport, then Link A and isolated
-  rehearsal before any first controlled FULL.
+- D2b sender/control transport with durable/exclusive run-state is merged and reviewed;
+- next critical path is Link A staging/exhaustive verification, then isolated
+  full-scale rehearsal before any first controlled FULL.
 
 Two mandatory future research/design gates exist before customer-facing AI catalog
 answers are production-ready:
@@ -473,7 +479,7 @@ No production deployment or FULL is part of this design slice.
 
 ## D2b / first controlled FULL
 
-Status: **FROZEN DESIGN / EXPORTER DEPLOYED / RECEIVER D2b SLICE MERGED NOT DEPLOYED / SENDER NOT IMPLEMENTED**
+Status: **FROZEN DESIGN / EXPORTER DEPLOYED / RECEIVER + SENDER D2b SLICES MERGED NOT DEPLOYED / LINK A NOT IMPLEMENTED**
 
 Design source:
 `docs/DRUPAL_EXPORT_D2B.md`
@@ -488,8 +494,9 @@ critical ingestion path:
 2. exporter payload spool lifecycle is now represented in repository storage policy
    by dedicated transient `exporter_ready_spools` and `catalog_link_a_staging`
    objects; production directories/retention are not yet activated;
-3. sender retries still require durable exact run-state so one run ID never acquires
-   changed header/trailer bytes after restart;
+3. sender retry durability is now implemented in repository by PR #35:
+   `bp.drupal-d2b.run-state/1` freezes one run ID plus exact header/chunk/trailer
+   semantics across restart, and one cross-process sender lock owns each ready spool;
 4. the BOOTSTRAP config-state recovery gap is now corrected in repository by PR #33:
    verified recovery sets derive the snapshot config-state digest and live BOOTSTRAP
    admission/state revalidates it. Production CatalogService remains on the previous
@@ -574,8 +581,6 @@ Implementation slice 1 now changes repository exporter/storage-policy code only:
   `babypark-exporter:babypark-exporter`.
 
 Still not implemented/deployed on the critical path:
-- D2b HTTP sender/control module;
-- durable/exclusive sender run-state;
 - Link A staging/exhaustive verifier;
 - isolated full-scale rehearsal and failure drills;
 - the one D2b-capable production CatalogService cutover;
@@ -583,7 +588,9 @@ Still not implemented/deployed on the critical path:
 
 Repository receiver support for run-header/2, publication-authority validation,
 accepted-generation authority binding and BOOTSTRAP recovery correction is merged by
-PR #33 but intentionally remains undeployed until sender/Link A/rehearsal gates are
+PR #33. Repository sender/control support with exact durable run-state, exclusive
+per-spool ownership, bounded retry/resume and authenticated BP1 transport is merged
+by PR #35. Both remain intentionally undeployed until Link A/rehearsal gates are
 closed.
 
 Production exporter cutover is complete at
@@ -601,3 +608,19 @@ PR #33 receiver closure evidence:
 - root unit 330/330, focused correction 75/75, legacy 13/13, refactor 13/13,
   exporter 181/181 and storage-policy validation all passed on the reviewed tree;
 - no production deployment, CatalogService mutation or FULL occurred as part of PR #33.
+
+PR #35 sender/control closure evidence:
+- reviewed PR HEAD `b7fa3f7816d6b3529775305b8e5a7bd59c649e39`,
+  tree `ae9b176dfb267adc5c58cf46dc43770714f41e44`;
+- merge commit `46cc19e3389efdf202be6ad8aed21c05c45c693a`;
+- exact spool/3 verification reuses FULL decoding/record validation before network;
+- durable `bp.drupal-d2b.run-state/1` freezes run/header/chunk/trailer evidence;
+- `bp.drupal-d2b.sender-lock/1` fails closed on malformed owner evidence and requires
+  explicit stale-lock breaking only after dead ownership is proven;
+- redirects are non-retryable `D2B_REDIRECT_REJECTED`; valid CatalogService terminal
+  errors preserve remote `code/action/request_id` through `D2B_CATALOG_ERROR`;
+- focused sender/storage 62/62, isolated real SIGKILL 10/10, root unit 377/377,
+  legacy 13/13, refactor 13/13, exporter 181/181 and storage-policy validation
+  21 objects / 6 durable all passed on the reviewed tree;
+- no production deployment, production spool, CatalogService mutation, FULL, Link A
+  or acceptance package occurred as part of PR #35.
