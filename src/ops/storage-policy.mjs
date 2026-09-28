@@ -26,6 +26,7 @@ const REQUIRED_IDS = Object.freeze([
   'ai_trace_metadata',
   'integration_releases',
   'exporter_state',
+  'exporter_sender_run_state',
   'exporter_ready_spools',
   'catalog_link_a_staging',
   'exporter_releases',
@@ -45,6 +46,7 @@ const STATE_CLASS = new Set([
 ]);
 
 const PRIVATE_PAYLOAD_IDS = new Set([
+  'exporter_sender_run_state',
   'exporter_ready_spools',
   'catalog_link_a_staging',
 ]);

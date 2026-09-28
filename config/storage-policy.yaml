@@ -554,6 +554,44 @@
       "pii": "none_expected"
     },
     {
+      "id": "exporter_sender_run_state",
+      "host_role": "drupal",
+      "status": "PLANNED",
+      "scope": "directory",
+      "location": "/var/lib/babypark-exporter/sender-runs",
+      "owner": "babypark-exporter:babypark-exporter",
+      "permissions": {
+        "directory_mode": "0700",
+        "file_mode": "0600"
+      },
+      "purpose": "Durable exact D2b run, ACK, confirmation, and exclusive per-spool lock authority.",
+      "state_class": "durable",
+      "thresholds": {
+        "metric": "bytes_total",
+        "basis": "Small metadata only; one exact state and lock record per controlled spool",
+        "expected": 1048576,
+        "warning": 4194304,
+        "critical": 16777216
+      },
+      "retention": {
+        "mode": "owner_decision_guarded",
+        "ttl_days": null
+      },
+      "cleanup": {
+        "automatic": false,
+        "mechanism": "Explicit operator cleanup only; no age-only deletion.",
+        "dry_run_required": true,
+        "delete_guard": "Before seq0 only explicit unsent cleanup; after seq0 preserve through ACK/state, Link A, audit and owner decision."
+      },
+      "recovery": "Loss or corruption after seq0 is an operator event; never reconstruct a different run/header. No host-loss backup requirement is introduced in D2b Slice 2B.",
+      "backup": {
+        "required": false,
+        "off_host": false,
+        "status": "OPERATOR_EVENT_ON_HOST_LOSS"
+      },
+      "pii": "none_expected"
+    },
+    {
       "id": "exporter_ready_spools",
       "host_role": "drupal",
       "status": "PLANNED",
