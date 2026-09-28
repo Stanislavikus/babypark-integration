@@ -442,10 +442,17 @@ Frozen direction pending closure review:
 - accepted authority is preserved in generation manifest extra plus a small producer
   acceptance-audit package;
 - full-scale rehearsal runs on a disposable dedicated production-class VM after D2b
-  implementation, with predeclared 30s nonfinal / 180s final gates and failure drills;
+  implementation, with predeclared 30s nonfinal / 180s final gates, failure drills and
+  the complete Link A staging/exhaustive verifier under a separate 512/384 MiB
+  low-priority transient-unit envelope;
+- production Link A uses the same or stricter rehearsed bounded-memory transient-unit
+  envelope on the CatalogService host and is safely abortable/read-only;
 - rehearsal spool is never reused as production: after final release freeze, production
   builds a fresh spool from the same immutable producer/sender commit and starts seq0
   within 30 minutes of the snapshot watermark;
+- heavy spool data remains available through ACK/state, Link A and owner accept/reset
+  decision; CatalogService Link A staging is a separate transient storage-policy
+  object;
 - acceptance is two-link: exhaustive spool-to-catalog plus independent retained
   source-snapshot-to-spool evidence; live Drupal is only rechecked when unchanged
   status can be proven by source markers;

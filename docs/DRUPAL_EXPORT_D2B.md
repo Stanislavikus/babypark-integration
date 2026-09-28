@@ -194,9 +194,16 @@ fields:
 - `source_acceptance_sha256` — raw-byte SHA-256 of
   `source-acceptance.json`.
 
-At spool construction time, before source scratch is discarded, the exporter writes
-`source-acceptance.json` from the same repeatable-read snapshot. It records at
-minimum:
+At spool construction time, `extractSnapshotToNdjson()` (or its reviewed successor)
+collects `source-acceptance.json` **inside the same still-open repeatable-read
+transaction, before ROLLBACK/connection close**.
+
+The acceptance rows are gathered by separate small targeted SELECTs/aggregations over
+the chosen source IDs/cases. They must not be reconstructed later from the exported
+NDJSON scratch shards or canonical records, because that would repeat extraction/JOIN/
+filter mistakes instead of independently checking them.
+
+The sidecar records at minimum:
 
 - `snapshot_watermark`;
 - the captured `stock_sync_unix`;
@@ -362,6 +369,15 @@ remain configured until terminal recovery/ACK is complete.
 ## `/state` and first-run construction
 
 Before creating sender run state, fetch authenticated `/state`.
+
+Run state contains `first_seq0_attempt_started_at = null` initially. Immediately before
+the **first** seq0 network attempt, atomically persist the current timestamp into that
+field and fsync the run state; only then issue the HTTP request.
+
+The 30-minute spool-age rule is evaluated only while
+`first_seq0_attempt_started_at === null`. Once that field is persisted, an uncertain/
+lost seq0 response is retried with the exact same run/seq0 bytes and is never rejected
+merely because wall-clock spool age later exceeds 30 minutes.
 
 For the first production FULL require:
 
@@ -754,6 +770,53 @@ After a successful baseline run, repeat from clean rehearsal state as needed to 
 Record total sender duration, max nonfinal time, finalization time, peak RSS, CPU,
 catalog bytes, replay/identity growth, recovery duration and FTS results.
 
+### Rehearse Link A end to end
+
+The full-scale rehearsal is not complete when CatalogService merely ACKs the run.
+
+After the rehearsal run reaches ACKED/CURRENT, execute the **same Link A staging and
+exhaustive verifier implementation intended for production** on the disposable VM:
+
+1. copy the exact rehearsal spool into the VM's private Link A staging area using the
+   same authenticated-copy mechanism planned for production;
+2. reverify the spool manifest hash and every copied chunk size/SHA-256;
+3. require the copied manifest hash to equal
+   `manifest.extra.publication_authority.spool_manifest_sha256` from the accepted
+   rehearsal generation;
+4. run the exhaustive spool-to-catalog verifier against staged chunks, read-only
+   rehearsal `identity.sqlite` and the accepted immutable generation;
+5. capture Link A wall time, peak RSS, CPU and read/write I/O;
+6. require the Link A report to pass before the rehearsal is considered successful.
+
+Run the rehearsal Link A verifier as a separate transient systemd unit, not inside the
+CatalogService service process, with this **predeclared first-pass envelope**:
+
+```text
+MemoryMax = 512 MiB
+MemoryHigh = 384 MiB
+CPUWeight = 10
+IOWeight = 10
+Nice = 10
+```
+
+The verifier implementation must be streaming/batched and bounded-memory. It must not
+load all products/variants/images/chunks into one in-memory object.
+
+Link A rehearsal pass criteria:
+
+- zero semantic mismatches;
+- no OOM/resource-limit termination;
+- peak RSS remains below `MemoryHigh` in the successful baseline;
+- wall time <= 15 minutes;
+- no sustained resource pressure that prevents CatalogService health/state reads;
+- staged spool hashes remain identical before and after the verifier;
+- verifier process performs no writes to identity/replay/generation/CURRENT authority.
+
+If the verifier cannot pass inside this envelope, do not increase the production
+envelope merely to make the check fit. Optimize/batch the verifier or move production
+acceptance to a safer dedicated execution host with controlled read-only copies, then
+repeat the rehearsal and review that topology before first FULL.
+
 ## Reset window before consumers
 
 Identity IDs are random durable UUIDs and IdentityStore has no general unbind/rebind/
@@ -787,7 +850,7 @@ Pre-send requirements:
 
 - fresh production `.ready` spool built by the same immutable producer/sender release
   and younger than the 30-minute snapshot-to-seq0 age limit;
-- spool/audit storage policy valid;
+- storage policy valid for both Drupal ready-spool lifecycle and CatalogService Link A acceptance staging;
 - candidate production preflight passed;
 - D2b isolated full-scale rehearsal and failure drills passed;
 - one D2b-capable CatalogService production release deployed;
@@ -824,10 +887,18 @@ After final `ACKED`:
 5. require published identity revision to equal the accepted generation/recovery
    authority (do not guess the revision in advance);
 6. require final local recovery coverage and no `BACKUP_REQUIRED` blocker;
-7. create the small acceptance audit package;
+7. create a **draft** local acceptance audit package containing the evidence already
+   available at ACK/state;
 8. create encrypted off-host copy of the accepted recovery/identity authority;
 9. perform a scratch restore verification of that off-host copy;
-10. run the two-link read-only acceptance checks defined below.
+10. run the two-link read-only acceptance checks defined below;
+11. append Link A/Link B reports and both producer/CatalogService release provenance;
+12. regenerate/finalize the package checksum manifest, mark the package SEALED, then
+    copy that sealed small audit package off-host.
+
+Only the SEALED post-Link-A/B audit package is long-term acceptance evidence. Any draft
+package/checksum created immediately after ACK is provisional and must not be copied or
+presented as final consumer authority.
 
 Additionally prove the audit chain after ACK:
 
@@ -885,18 +956,59 @@ After final ACK + authoritative `/state`, but before Link A:
 
 1. create a private, non-web-accessible staging directory on the CatalogService host
    owned by the CatalogService operator/service account;
-2. copy the exact production spool manifest/chunks needed for Link A from the Drupal
-   host over a controlled authenticated channel;
+2. **pull** the exact production spool manifest/chunks needed for Link A from the
+   Drupal host using a dedicated restricted read-only transfer credential whose source
+   scope is the one ready-spool directory; do not grant the Drupal host write access to
+   CatalogService state;
 3. verify the spool manifest hash and every copied chunk byte-length/SHA-256 **again on
    the CatalogService host** before verification begins;
-4. run a dedicated read-only acceptance verifier against:
+4. require the copied `spool_manifest_sha256` to equal
+   `manifest.extra.publication_authority.spool_manifest_sha256` of the accepted
+   immutable generation before the verifier reads any semantic row;
+5. run a dedicated read-only acceptance verifier against:
    - the staged exact spool;
    - read-only `identity.sqlite`;
    - the accepted immutable catalog generation;
-5. write a small Link A result/report into the acceptance audit package.
+6. write a small Link A result/report into the acceptance audit package.
 
 The verifier must not mutate IdentityStore, ReplayStore, catalog generation or CURRENT
 pointers.
+
+### Production Link A resource fence
+
+Production Link A must run as its **own transient systemd unit**, never inside
+`babypark-catalog-ingest.service` and never as an unbounded interactive SSH process.
+
+Use the same or stricter resource envelope that passed rehearsal:
+
+```text
+MemoryMax <= 512 MiB
+MemoryHigh <= 384 MiB
+CPUWeight <= 10
+IOWeight <= 10
+Nice >= 10
+```
+
+The exact production values are recorded from the successful rehearsal and may be
+lowered. They must not be raised above the rehearsed envelope without a new isolated
+Link A rehearsal/review.
+
+Before starting production Link A require:
+
+- CatalogService `/health` and authenticated `/state` are green/CURRENT;
+- no catalog ingest request is actively finalizing;
+- enough free disk exists for the private staging copy under its storage-policy gate;
+- the low-priority transient-unit properties are visible before execution;
+- run is scheduled outside the known Chatwoot/Viber peak window.
+
+While Link A runs, sample CatalogService/host memory pressure, disk space and health.
+Abort the verifier if host pressure threatens the live services. Because Link A is
+strictly read-only, interruption is safe: keep both heavy spool copies, leave the
+catalog untouched, correct the resource issue and rerun Link A from the beginning.
+
+If the transient unit hits `MemoryMax`/timeout or violates the rehearsed resource
+envelope, owner acceptance remains blocked. Do not weaken the limit on the live host
+without repeating the isolated rehearsal.
 
 The original heavy production spool remains on the Drupal host while this comparison
 runs. The CatalogService staging copy is temporary and follows the same retention gate:
