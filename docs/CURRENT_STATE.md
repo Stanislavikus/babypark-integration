@@ -1,7 +1,7 @@
 # CURRENT_STATE
 
 Status: CURRENT
-Last verified: 2026-09-27
+Last verified: 2026-09-28
 Owner: BabyPark
 Source of truth: production runtime + this repository
 
@@ -212,13 +212,13 @@ Second production preflight:
 - live site remained operational during the run
 
 Collision review state:
-- 21 of 23 unique collisions have sufficient technical evidence for a proposed
-  legacy migration decision;
+- 21 of 23 unique collisions have sufficient technical evidence and are approved
+  as legacy migration mappings;
 - durable evidence ledger:
   `docs/DRUPAL_LEGACY_COLLISION_REVIEW_20260927.md`;
-- `511000` and `80401mc02` are intentionally NOT approved yet and require
-  business/source-process investigation before any mapping is committed;
-- `config/drupal/legacy-sku-collisions.yaml` remains `mappings: []`.
+- `config/drupal/legacy-sku-collisions.yaml` contains exactly those 21 mappings;
+- `511000` and `80401mc02` remain intentionally unmapped pending
+  business/source-process investigation and are handled by anomaly quarantine.
 
 Default-promotion safety fix:
 - PR #19 merged to main;
@@ -234,8 +234,8 @@ rules. Durable future architecture lives in:
 
 ## Catalog Anomaly Runtime v1
 
-Status: **merged candidate / NOT DEPLOYED**
-Implementation source: branch `cursor/catalog-anomaly-runtime-v1-2479` (awaiting review merge)
+Status: **MERGED / NOT DEPLOYED**
+Implementation source: `main`, PR #26 merge `eb70c08c8917550bfe2666d85b845328e38b02a4`
 Design contract: `docs/CATALOG_ANOMALY_RUNTIME_V1.md`
 
 What landed in repository code (not production):
@@ -257,7 +257,7 @@ Explicit non-actions in this slice:
 - no D2b transport binding;
 - no mutation of integration-host `identity.sqlite`;
 - no permanent mappings for `511000` or `80401mc02`;
-- `config/drupal/legacy-sku-collisions.yaml` remains `mappings: []`.
+- the production collision config contains only the 21 reviewed legacy migration mappings.
 
 Production Drupal exporter remains:
 `/opt/babypark-exporter/releases/20260927T122537Z-712f09c`
@@ -273,10 +273,12 @@ Before first controlled FULL, D2b must cryptographically bind
 Before production anomaly persistence, a separate `anomalies.sqlite`
 backup/restore slice is required.
 
-Next step after review merge:
-- review/merge this PR;
-- deploy one immutable exporter release containing anomaly runtime v1;
-- run production preflight and confirm spool v2 + anomaly sidecar;
+Next step after collision-config review merge:
+- deploy one immutable exporter release containing anomaly runtime v1,
+  the default-promotion fix, and the 21 reviewed legacy mappings;
+- run production preflight and confirm exactly two residual anomalies
+  (`511000`, `80401mc02`), four quarantined products and zero unaccounted
+  hard blockers;
 - then design/sign D2b binding for first FULL (no unsigned workaround).
 
 ## Catalog / AI next state

@@ -182,7 +182,11 @@ Supported reviewed actions only:
 - `exclude_product` (cross-product duplicate `sku_key`)
 - `exclude_variant` (within-product duplicate `sku_key`)
 
-Unknown collisions remain blockers. D2a keeps `mappings: []`.
+Reviewed mappings are applied before residual collision detection. The production
+config contains exactly 21 reviewed legacy migration mappings. Residual supported
+SKU collisions are handled by Catalog Anomaly Runtime v1 whole-product quarantine;
+all non-v1 blocker classes remain hard blockers. `511000` and `80401mc02` are
+intentionally not mapped.
 
 Identity operator (does not apply collisions, only records config hash):
 

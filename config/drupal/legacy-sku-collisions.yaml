@@ -1,25 +1,160 @@
 version: 1
 # Reviewed Drupal legacy SKU collision overrides for the read-only exporter.
 #
-# Supported actions (D2a parser):
+# Active legacy migration decisions: 21.
+# Evidence ledger: docs/DRUPAL_LEGACY_COLLISION_REVIEW_20260927.md
 #
-# exclude_product — cross-product sku_key collision between exactly two products:
-#   - sku_key
-#   - action: exclude_product
-#   - retain_native_product_id
-#   - exclude_native_product_id
-#   - reviewed_source: "review:<identifier>"
-#   - reason
+# Intentionally NOT mapped:
+# - 511000
+# - 80401mc02
 #
-# exclude_variant — within-product duplicate sku_key between two structural variants:
-#   - sku_key
-#   - action: exclude_variant
-#   - native_product_id
-#   - retain_native_variant_id
-#   - exclude_native_variant_id
-#   - reviewed_source: "review:<identifier>"
-#   - reason
-#
-# This file remains intentionally empty until human review of exporter collision-report.json.
-# No collision is approved merely because it exists in Drupal source data.
-mappings: []
+# Those two identifiers remain unresolved and must be handled by Catalog Anomaly
+# Runtime v1 whole-product quarantine until a separate reviewed business/source
+# decision is recorded. Never add a mapping merely to make preflight green.
+mappings:
+  - sku_key: "1003ig"
+    action: exclude_product
+    retain_native_product_id: "55677"
+    exclude_native_product_id: "55682"
+    reviewed_source: "review:DRUPAL_LEGACY_COLLISION_REVIEW_20260927"
+    reason: "Approved legacy migration exception; evidence in docs/DRUPAL_LEGACY_COLLISION_REVIEW_20260927.md"
+  - sku_key: "106-2.45.44"
+    action: exclude_variant
+    native_product_id: "67463"
+    retain_native_variant_id: "67463|opts:255=19792"
+    exclude_native_variant_id: "67463|opts:255=19789"
+    reviewed_source: "review:DRUPAL_LEGACY_COLLISION_REVIEW_20260927"
+    reason: "Approved legacy migration exception; evidence in docs/DRUPAL_LEGACY_COLLISION_REVIEW_20260927.md"
+  - sku_key: "11009873-blackcabfpar"
+    action: exclude_variant
+    native_product_id: "133434"
+    retain_native_variant_id: "133434|opts:47=33395"
+    exclude_native_variant_id: "133434|opts:47=33401"
+    reviewed_source: "review:DRUPAL_LEGACY_COLLISION_REVIEW_20260927"
+    reason: "Approved legacy migration exception; evidence in docs/DRUPAL_LEGACY_COLLISION_REVIEW_20260927.md"
+  - sku_key: "1412/03bo"
+    action: exclude_variant
+    native_product_id: "80520"
+    retain_native_variant_id: "80520|opts:306=26041"
+    exclude_native_variant_id: "80520|opts:306=26040"
+    reviewed_source: "review:DRUPAL_LEGACY_COLLISION_REVIEW_20260927"
+    reason: "Approved legacy migration exception; evidence in docs/DRUPAL_LEGACY_COLLISION_REVIEW_20260927.md"
+  - sku_key: "154.6.01ver"
+    action: exclude_variant
+    native_product_id: "39988"
+    retain_native_variant_id: "39988|opts:255=25587"
+    exclude_native_variant_id: "39988|opts:255=12377"
+    reviewed_source: "review:DRUPAL_LEGACY_COLLISION_REVIEW_20260927"
+    reason: "Approved legacy migration exception; evidence in docs/DRUPAL_LEGACY_COLLISION_REVIEW_20260927.md"
+  - sku_key: "1801blbf01"
+    action: exclude_variant
+    native_product_id: "42887"
+    retain_native_variant_id: "42887|opts:14=9795"
+    exclude_native_variant_id: "42887|opts:14=9796"
+    reviewed_source: "review:DRUPAL_LEGACY_COLLISION_REVIEW_20260927"
+    reason: "Approved legacy migration exception; evidence in docs/DRUPAL_LEGACY_COLLISION_REVIEW_20260927.md"
+  - sku_key: "216.04.7ver"
+    action: exclude_variant
+    native_product_id: "38223"
+    retain_native_variant_id: "38223|opts:255=20655"
+    exclude_native_variant_id: "38223|opts:255=17828"
+    reviewed_source: "review:DRUPAL_LEGACY_COLLISION_REVIEW_20260927"
+    reason: "Approved legacy migration exception; evidence in docs/DRUPAL_LEGACY_COLLISION_REVIEW_20260927.md"
+  - sku_key: "23241eu4ep"
+    action: exclude_variant
+    native_product_id: "62506"
+    retain_native_variant_id: "62506|opts:530=20157"
+    exclude_native_variant_id: "62506|opts:530=20022"
+    reviewed_source: "review:DRUPAL_LEGACY_COLLISION_REVIEW_20260927"
+    reason: "Approved legacy migration exception; evidence in docs/DRUPAL_LEGACY_COLLISION_REVIEW_20260927.md"
+  - sku_key: "25199"
+    action: exclude_variant
+    native_product_id: "16553"
+    retain_native_variant_id: "16553|opts:118=2060"
+    exclude_native_variant_id: "16553|opts:118=2059"
+    reviewed_source: "review:DRUPAL_LEGACY_COLLISION_REVIEW_20260927"
+    reason: "Approved legacy migration exception; evidence in docs/DRUPAL_LEGACY_COLLISION_REVIEW_20260927.md"
+  - sku_key: "2822827000"
+    action: exclude_variant
+    native_product_id: "48595"
+    retain_native_variant_id: "48595|opts:351=27077"
+    exclude_native_variant_id: "48595|opts:351=13366"
+    reviewed_source: "review:DRUPAL_LEGACY_COLLISION_REVIEW_20260927"
+    reason: "Approved legacy migration exception; evidence in docs/DRUPAL_LEGACY_COLLISION_REVIEW_20260927.md"
+  - sku_key: "3110iti"
+    action: exclude_variant
+    native_product_id: "16680"
+    retain_native_variant_id: "16680|opts:132=2036"
+    exclude_native_variant_id: "16680|opts:132=2035"
+    reviewed_source: "review:DRUPAL_LEGACY_COLLISION_REVIEW_20260927"
+    reason: "Approved legacy migration exception; evidence in docs/DRUPAL_LEGACY_COLLISION_REVIEW_20260927.md"
+  - sku_key: "391589"
+    action: exclude_variant
+    native_product_id: "39002"
+    retain_native_variant_id: "39002|opts:344=16159"
+    exclude_native_variant_id: "39002|opts:344=9779"
+    reviewed_source: "review:DRUPAL_LEGACY_COLLISION_REVIEW_20260927"
+    reason: "Approved legacy migration exception; evidence in docs/DRUPAL_LEGACY_COLLISION_REVIEW_20260927.md"
+  - sku_key: "80210zw01"
+    action: exclude_variant
+    native_product_id: "12871"
+    retain_native_variant_id: "12871|opts:14=2572"
+    exclude_native_variant_id: "12871|opts:14=2571"
+    reviewed_source: "review:DRUPAL_LEGACY_COLLISION_REVIEW_20260927"
+    reason: "Approved legacy migration exception; evidence in docs/DRUPAL_LEGACY_COLLISION_REVIEW_20260927.md"
+  - sku_key: "8710103876397"
+    action: exclude_variant
+    native_product_id: "114708"
+    retain_native_variant_id: "114708|opts:380=12398"
+    exclude_native_variant_id: "114708|opts:380=28097"
+    reviewed_source: "review:DRUPAL_LEGACY_COLLISION_REVIEW_20260927"
+    reason: "Approved legacy migration exception; evidence in docs/DRUPAL_LEGACY_COLLISION_REVIEW_20260927.md"
+  - sku_key: "ab10256-ws/18f"
+    action: exclude_variant
+    native_product_id: "61907"
+    retain_native_variant_id: "61907|opts:529=21616"
+    exclude_native_variant_id: "61907|opts:529=25900"
+    reviewed_source: "review:DRUPAL_LEGACY_COLLISION_REVIEW_20260927"
+    reason: "Approved legacy migration exception; evidence in docs/DRUPAL_LEGACY_COLLISION_REVIEW_20260927.md"
+  - sku_key: "abx20408/58sk"
+    action: exclude_variant
+    native_product_id: "71198"
+    retain_native_variant_id: "71198|opts:529=25894"
+    exclude_native_variant_id: "71198|opts:529=25893"
+    reviewed_source: "review:DRUPAL_LEGACY_COLLISION_REVIEW_20260927"
+    reason: "Approved legacy migration exception; evidence in docs/DRUPAL_LEGACY_COLLISION_REVIEW_20260927.md"
+  - sku_key: "evo19brgrs"
+    action: exclude_variant
+    native_product_id: "21136"
+    retain_native_variant_id: "21136|opts:26=24401"
+    exclude_native_variant_id: "21136|opts:26=25350"
+    reviewed_source: "review:DRUPAL_LEGACY_COLLISION_REVIEW_20260927"
+    reason: "Approved legacy migration exception; evidence in docs/DRUPAL_LEGACY_COLLISION_REVIEW_20260927.md"
+  - sku_key: "m008071"
+    action: exclude_variant
+    native_product_id: "49533"
+    retain_native_variant_id: "49533|opts:375=11561"
+    exclude_native_variant_id: "49533|opts:375=11565"
+    reviewed_source: "review:DRUPAL_LEGACY_COLLISION_REVIEW_20260927"
+    reason: "Approved legacy migration exception; evidence in docs/DRUPAL_LEGACY_COLLISION_REVIEW_20260927.md"
+  - sku_key: "nio19grgrs"
+    action: exclude_variant
+    native_product_id: "70541"
+    retain_native_variant_id: "70541|opts:26=24548"
+    exclude_native_variant_id: "70541|opts:26=5504"
+    reviewed_source: "review:DRUPAL_LEGACY_COLLISION_REVIEW_20260927"
+    reason: "Approved legacy migration exception; evidence in docs/DRUPAL_LEGACY_COLLISION_REVIEW_20260927.md"
+  - sku_key: "o3sumc"
+    action: exclude_variant
+    native_product_id: "77502"
+    retain_native_variant_id: "77502|opts:452=31713"
+    exclude_native_variant_id: "77502|opts:452=31539"
+    reviewed_source: "review:DRUPAL_LEGACY_COLLISION_REVIEW_20260927"
+    reason: "Approved legacy migration exception; evidence in docs/DRUPAL_LEGACY_COLLISION_REVIEW_20260927.md"
+  - sku_key: "wk21-h27-003"
+    action: exclude_variant
+    native_product_id: "38178"
+    retain_native_variant_id: "38178|opts:249=21060"
+    exclude_native_variant_id: "38178|opts:249=9423"
+    reviewed_source: "review:DRUPAL_LEGACY_COLLISION_REVIEW_20260927"
+    reason: "Approved legacy migration exception; evidence in docs/DRUPAL_LEGACY_COLLISION_REVIEW_20260927.md"
