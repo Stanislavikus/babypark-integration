@@ -22,6 +22,11 @@ if (!path.isAbsolute(output)) {
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const git = (...args) => execFileSync('git', args, { cwd: repoRoot, encoding: 'utf8' }).trim();
+const dirty = git('status', '--porcelain=v1', '--untracked-files=all');
+if (dirty) {
+  process.stderr.write('refusing release provenance from dirty Git worktree\n');
+  process.exit(1);
+}
 const commit = git('rev-parse', 'HEAD');
 const tree = git('rev-parse', 'HEAD^{tree}');
 const lockPath = path.join(repoRoot, 'apps/drupal-exporter/package-lock.json');

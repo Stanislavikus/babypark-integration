@@ -4,6 +4,7 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { spawnSync } from 'node:child_process';
 import { runExportPipeline } from '../src/export/pipeline.mjs';
 import { checkDiskSpaceGate, freeBytesForPath } from '../src/disk-gate.mjs';
 import { collectSourceAcceptance } from '../src/source/source-acceptance.mjs';
@@ -276,4 +277,51 @@ test('source acceptance preserves reviewed historical group that disappeared fro
   assert.deepEqual(evidence.selection.resolved_reviewed_product_group_ids, ['10']);
   assert.deepEqual(evidence.selection.missing_reviewed_product_group_ids, ['11']);
   assert.deepEqual(evidence.selection.reviewed_node_ids, ['100']);
+});
+
+test('release provenance generator refuses a dirty Git worktree', () => {
+  const repo = fs.mkdtempSync(path.join(os.tmpdir(), 'd2b-release-repo-'));
+  fs.mkdirSync(path.join(repo, 'scripts'), { recursive: true });
+  fs.mkdirSync(path.join(repo, 'apps/drupal-exporter'), { recursive: true });
+  fs.copyFileSync(
+    path.resolve(process.cwd(), '../../scripts/create-exporter-release-provenance.mjs'),
+    path.join(repo, 'scripts/create-exporter-release-provenance.mjs')
+  );
+  fs.writeFileSync(
+    path.join(repo, 'apps/drupal-exporter/package-lock.json'),
+    '{"lockfileVersion":3}\n'
+  );
+  fs.writeFileSync(path.join(repo, 'tracked.txt'), 'clean\n');
+
+  const git = (...args) => {
+    const child = spawnSync('git', args, { cwd: repo, encoding: 'utf8' });
+    assert.equal(child.status, 0, child.stderr);
+  };
+  git('init', '-q');
+  git('config', 'user.email', 'test@example.invalid');
+  git('config', 'user.name', 'BabyPark Test');
+  git('add', '.');
+  git('commit', '-qm', 'fixture');
+
+  const output = path.join(os.tmpdir(), `bp-release-${process.pid}-${Date.now()}.json`);
+  const clean = spawnSync('node', [
+    path.join(repo, 'scripts/create-exporter-release-provenance.mjs'),
+    '--output',
+    output,
+  ], { cwd: repo, encoding: 'utf8' });
+  assert.equal(clean.status, 0, clean.stderr);
+  const provenance = JSON.parse(fs.readFileSync(output, 'utf8'));
+  assert.match(provenance.commit, /^[0-9a-f]{40}$/);
+  assert.match(provenance.tree, /^[0-9a-f]{40}$/);
+
+  fs.writeFileSync(path.join(repo, 'tracked.txt'), 'dirty\n');
+  const dirtyOutput = path.join(os.tmpdir(), `bp-release-dirty-${process.pid}-${Date.now()}.json`);
+  const dirty = spawnSync('node', [
+    path.join(repo, 'scripts/create-exporter-release-provenance.mjs'),
+    '--output',
+    dirtyOutput,
+  ], { cwd: repo, encoding: 'utf8' });
+  assert.equal(dirty.status, 1);
+  assert.match(dirty.stderr, /dirty Git worktree/);
+  assert.equal(fs.existsSync(dirtyOutput), false);
 });
