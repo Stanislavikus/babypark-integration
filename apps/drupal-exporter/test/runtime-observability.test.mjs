@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { spawnSync } from 'node:child_process';
 import { loadExporterRuntimeManifest, validateExporterRuntimeManifest } from '../src/runtime-manifest.mjs';
 import { runExportPipeline } from '../src/export/pipeline.mjs';
 import {
@@ -132,4 +133,20 @@ test('successful spool keeps timing diagnostics out of deterministic preflight a
     fs.readFileSync(path.join(result.spool.ready_path, 'preflight.json'), 'utf8')
   );
   assert.equal('stage_timings_ms' in persisted, false);
+});
+
+test('runtime launcher reaches pinned-runtime guard without ReferenceError', () => {
+  const child = spawnSync(process.execPath, [
+    path.join(REPO_ROOT, 'scripts/run-drupal-exporter.mjs'),
+  ], {
+    cwd: REPO_ROOT,
+    encoding: 'utf8',
+  });
+
+  assert.notEqual(child.status, 0);
+  assert.doesNotMatch(child.stderr, /ReferenceError/);
+  assert.match(
+    child.stderr,
+    /pinned exporter runtime missing|Usage: drupal-exporter/
+  );
 });
