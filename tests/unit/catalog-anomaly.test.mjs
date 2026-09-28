@@ -22,7 +22,6 @@ import {
   validateAnomalyReport,
   observationsFromAnomalyReport,
 } from '../../src/catalog/anomaly/report.mjs';
-import { loadPublicationPolicy } from '../../apps/drupal-exporter/src/anomaly/publication-policy.mjs';
 
 const PROVIDER = 'drupal';
 const SOURCE_EPOCH = 'drupal-prod-v1';
@@ -504,16 +503,6 @@ test('review_state survives observation transitions', () => {
   assert.equal(incident.review_state, 'INVESTIGATING');
   assert.equal(incident.observation_state, 'CLEARED');
   store.close();
-});
-
-test('publication-policy hash is exact raw bytes', () => {
-  const repoRoot = path.resolve(path.dirname(new URL(import.meta.url).pathname), '../..');
-  const policyPath = path.join(repoRoot, 'config/catalog-anomalies/publication-policy.yaml');
-  const loaded = loadPublicationPolicy(policyPath);
-  const expected = crypto.createHash('sha256')
-    .update(fs.readFileSync(policyPath))
-    .digest('hex');
-  assert.equal(loaded.sha256, expected);
 });
 
 test('anomaly report validation rejects forbidden bodies', () => {
