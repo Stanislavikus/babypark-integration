@@ -11,7 +11,7 @@ import { productionWriteRows } from './production-full-mapper.mjs';
 import { prepareProductionCertification } from './production-certification.mjs';
 import { productionDependencyFingerprint } from './dependency-fingerprint.mjs';
 import { productionGenerationId } from './production-generation.mjs';
-import { validateAuthoritativeState } from './run-protocol.mjs';
+import { HEADER_SCHEMA_V2, validateAuthoritativeState } from './run-protocol.mjs';
 import { validateProductionPublicationAuthority } from './publication-authority.mjs';
 
 export class ProductionFullCoordinatorError extends Error {
@@ -130,8 +130,10 @@ export function processProductionFullChunk(args = {}) {
       header = decoded.headerValue; headerSha256 = key.bodySha256;
       generationId = productionGenerationId({ kid: key.kid, runId: key.runId, seq0BodySha256: headerSha256 });
       exactReceipt = store.hasExactReceipt(key);
-      if (!exactReceipt) {
+      if (!exactReceipt || header.schema === HEADER_SCHEMA_V2) {
         validateProductionPublicationAuthority(header, identityStore);
+      }
+      if (!exactReceipt) {
         validateAuthoritativeState(header, currentState(reader));
       }
     }

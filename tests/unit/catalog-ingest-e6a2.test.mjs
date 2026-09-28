@@ -37,7 +37,7 @@ function child(config, t) {
 function persistedHarness(t, leaseSeconds = 1) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'bp-e6a2-process-'));
   const catalog = path.join(root, 'catalog'); fs.mkdirSync(catalog);
-  { const identity = seedD2bConfig(IdentityStore.createNew(path.join(root, 'identity.sqlite'))); seedD2bConfig(identity); identity.close(); }
+  { const identity = seedD2bConfig(IdentityStore.createNew(path.join(root, 'identity.sqlite'))); identity.close(); }
   ReplayStore.createNew(path.join(root, 'replay.sqlite'), { catalogStorageDir: catalog, leaseSeconds }).close();
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   const runId = 'process-run';
@@ -58,6 +58,27 @@ test('production generation identifiers are stable, separated and safe', () => {
   assert.notEqual(first, productionGenerationId({ ...input, kid: 'kid2' }));
   assert.notEqual(first, productionGenerationId({ ...input, runId: 'run2' }));
   assert.notEqual(first, productionGenerationId({ ...input, seq0BodySha256: 'b'.repeat(64) }));
+});
+
+test('exact pending v2 seq0 retry revalidates config authority before takeover or builder creation', t => {
+  const f = persistedHarness(t, 1);
+  const store = ReplayStore.openExisting(path.join(f.root, 'replay.sqlite'), {
+    catalogStorageDir: f.catalog, leaseSeconds: 1,
+  });
+  const identity = IdentityStore.openExisting(path.join(f.root, 'identity.sqlite'));
+  const mutex = new CatalogPublicationLock(f.catalog); const reader = new CatalogReader(f.catalog);
+  const publisher = new CatalogPublisher(f.catalog, { mutex, readers: [reader] });
+  t.after(() => { reader.close(); mutex.close(); identity.close(); store.close(); });
+  const key = { ...f.base, seq: 0, bodySha256: hash(f.header) };
+  assert.equal(store.claim(key, 100, { verifiedBody: f.header }).status, 'NEW');
+  assert.equal(fs.readdirSync(f.catalog).some(name => name.endsWith('.building.sqlite')), false);
+  mutex.withLock(() => identity.setConfigHash('drupal-collisions', '9'.repeat(64)));
+  assert.throws(() => processProductionFullChunk({ store, publisher, mutex, reader,
+    identityStore: identity, key, verifiedBody: f.header, now: 102 }),
+  error => error.code === 'CONFIG_AUTHORITY_MISMATCH');
+  assert.equal(fs.readdirSync(f.catalog).some(name => name.endsWith('.building.sqlite')), false);
+  assert.equal(store.db.prepare('SELECT status FROM receipts WHERE run_id=? AND seq=0').get(key.runId).status,
+    'pending');
 });
 
 test('coordinator owns seq0, all production phases and E5a finalization', t => {

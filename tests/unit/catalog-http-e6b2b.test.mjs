@@ -126,6 +126,34 @@ test('BOOTSTRAP with covering set admits ordinary FULL', async () => {
   } finally { await f.runtime.close(); f.close(); }
 });
 
+test('live BOOTSTRAP config change immediately stales /state and blocks every FULL chunk shape', async () => {
+  const f = createHttpE6b2Fixture({ withCoveringSet: true });
+  await f.runtime.listen({ host: '127.0.0.1', port: 0 });
+  try {
+    f.mutex.withLock(() => f.identity.setConfigHash('drupal-collisions', '9'.repeat(64)));
+    const before = f.store.stats();
+    const state = await httpRequest(f.runtime.server.address(), {
+      path: '/api/catalog/ingest/v1/state', runId: 'state',
+    });
+    assert.equal(state.body.state, 'BOOTSTRAP');
+    assert.equal(state.body.accepting_ingest, false);
+    assert.ok(state.body.blockers.includes('BACKUP_REQUIRED'));
+    const bodies = fullBodies('stale-coverage');
+    for (const request of [
+      { body: bodies.header, seq: 0, final: false },
+      { body: bodies.chunks[0], seq: 1, final: false },
+      { body: bodies.finalBody, seq: 4, final: true },
+    ]) {
+      const blocked = await httpRequest(f.runtime.server.address(), {
+        method: 'POST', path: '/api/catalog/ingest/v1/full', runId: 'stale-coverage', ...request,
+      });
+      assert.equal(blocked.status, 503);
+      assert.equal(blocked.body.code, 'BACKUP_REQUIRED');
+    }
+    assert.deepEqual(f.store.stats(), before);
+  } finally { await f.runtime.close(); f.close(); }
+});
+
 test('unsigned FULL cannot observe BACKUP_REQUIRED or CAPACITY_BLOCKED', async () => {
   const f = createHttpE6b2Fixture({ withCoveringSet: false, maxReceipts: 1 });
   f.recoveryGate._testing.setForceBackupRequired(true);
