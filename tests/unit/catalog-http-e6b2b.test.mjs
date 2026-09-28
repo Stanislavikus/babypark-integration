@@ -20,6 +20,7 @@ import { backupCatalog, bootstrapCatalogRecovery } from '../../src/catalog/recov
 import {
   bytes, createHttpE6b2Fixture, fullBodies, hash, httpRequest, now, publishFullRun, secret1, secret2, signRequest,
 } from '../helpers/catalog-http-e6b2b-fixture.mjs';
+import { seedD2bConfig } from '../helpers/catalog-d2b-fixture.mjs';
 
 const crashWorker = new URL('../fixtures/catalog-http-e6b2b-crash-worker.mjs', import.meta.url);
 
@@ -719,6 +720,7 @@ test('SIGKILL after durable CURRENT before recovery coverage repairs on restart 
     backupRoot: path.join(root, 'backup'),
   };
   bootstrapCatalogRecovery(paths);
+  { const identity = IdentityStore.openExisting(paths.identityPath); seedD2bConfig(identity); identity.close(); }
   backupCatalog(paths);
 
   const port = await freePort();

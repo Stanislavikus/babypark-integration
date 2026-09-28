@@ -3,6 +3,7 @@ import {
   createRecoverySetLocked as defaultCreateRecoverySetLocked,
   findCoveringRecoverySet, readRecoveryAuthority,
 } from '../recovery/core.mjs';
+import { identityConfigStateSha256 } from '../ingest/dependency-fingerprint.mjs';
 
 function invariant(message) {
   throw Object.assign(new Error(message), { code: 'INTERNAL_INVARIANT' });
@@ -20,19 +21,36 @@ export function createRecoveryGate({
   let covered = !backupRoot;
   let coveringSetId = null;
   let forceBackupRequired = false;
+  let coveringBootstrapConfigDigest = null;
+
+  function liveDigest() { return identityConfigStateSha256(identityStore); }
+
+  function refreshBootstrapCoverage() {
+    if (!backupRoot) return;
+    const authority = readRecoveryAuthority(reader);
+    if (authority.state !== 'BOOTSTRAP') return;
+    if (!coveringBootstrapConfigDigest || liveDigest() !== coveringBootstrapConfigDigest) {
+      covered = false;
+      forceBackupRequired = true;
+    }
+  }
 
   function startupInspect() {
     if (!backupRoot) {
       covered = true;
       coveringSetId = null;
       forceBackupRequired = false;
+      coveringBootstrapConfigDigest = null;
       return { covered: true, coveringSetId: null };
     }
     const authority = readRecoveryAuthority(reader);
-    const found = findCoveringRecoverySet({ backupRoot, catalogStorageDir, authority });
+    const found = findCoveringRecoverySet({ backupRoot, catalogStorageDir, authority,
+      liveIdentityConfigStateSha256: liveDigest() });
     covered = Boolean(found.covering);
     coveringSetId = found.covering?.setId ?? null;
     forceBackupRequired = !covered;
+    coveringBootstrapConfigDigest = authority.state === 'BOOTSTRAP'
+      ? found.covering?.identityConfigStateSha256 ?? null : null;
     return { covered, coveringSetId };
   }
 
@@ -41,6 +59,7 @@ export function createRecoveryGate({
   }
 
   function computeBlockers({ ingestEnabled }) {
+    refreshBootstrapCoverage();
     const blockers = [];
     if (!ingestEnabled) blockers.push('INGEST_DISABLED');
     if (ingestEnabled && backupRoot && (forceBackupRequired || !covered)) {
@@ -72,15 +91,17 @@ export function createRecoveryGate({
   }
 
   function shouldBackupBlock(key) {
+    refreshBootstrapCoverage();
     if (!backupRoot || covered && !forceBackupRequired) return false;
     if (isExactFinalRecoveryRetry(key)) return false;
     return true;
   }
 
-  function markCoverageVerified({ setId, authority }) {
+  function markCoverageVerified({ setId, authority, identityConfigStateSha256: verifiedDigest }) {
     covered = true;
     coveringSetId = setId;
     forceBackupRequired = false;
+    coveringBootstrapConfigDigest = authority.state === 'BOOTSTRAP' ? verifiedDigest : null;
     return { covered: true, coveringSetId: setId, authority };
   }
 
@@ -104,15 +125,18 @@ export function createRecoveryGate({
         if (authority.acceptedRun.run_digest !== ack.run_digest) invariant('Accepted run_digest does not match ACK');
         if (authority.acceptedRun.final_seq !== key.seq) invariant('Accepted final_seq does not match request key');
         if (authority.acceptedKid !== key.kid) invariant('Accepted KID does not match request key');
-        const found = findCoveringRecoverySet({ backupRoot, catalogStorageDir, authority });
+        const found = findCoveringRecoverySet({ backupRoot, catalogStorageDir, authority,
+          liveIdentityConfigStateSha256: liveDigest() });
         if (found.covering) {
-          markCoverageVerified({ setId: found.covering.setId, authority });
+          markCoverageVerified({ setId: found.covering.setId, authority,
+            identityConfigStateSha256: found.covering.identityConfigStateSha256 });
           return result;
         }
         const verified = createRecoverySetLockedImpl({
           backupRoot, catalogStorageDir, identityStore, replayStore, reader, publicationLock,
         });
-        markCoverageVerified({ setId: verified.setId, authority });
+        markCoverageVerified({ setId: verified.setId, authority,
+          identityConfigStateSha256: verified.identityConfigStateSha256 });
         return result;
       });
     } catch (error) {

@@ -10,6 +10,7 @@ import { canonicalControlJson } from '../ingest/run-protocol.mjs';
 import { CatalogReader, generationIdFromFilename, inspectCatalogGeneration,
   readCatalogPointer, validateGenerationId } from '../sqlite/generation.mjs';
 import { CatalogPublicationLock } from '../sqlite/publication-lock.mjs';
+import { identityConfigStateSha256 } from '../ingest/dependency-fingerprint.mjs';
 
 export const RECOVERY_SET_SCHEMA = 'bp.catalog.backup-set/1';
 const SET_RE = /^set-[0-9]{8}T[0-9]{6}Z-[a-f0-9]{16}$/;
@@ -161,15 +162,19 @@ export function verifyRecoverySet({ backupRoot, setId, catalogStorageDir }) {
   const identityPath = path.join(directory, 'identity.sqlite');
   const replayPath = path.join(directory, 'replay.sqlite');
   const identity = IdentityStore.openExisting(identityPath, { readOnly: true });
-  let identityMetadata;
-  try { identityMetadata = identity.metadata(); } finally { identity.close(); }
+  let identityMetadata, verifiedIdentityConfigStateSha256;
+  try {
+    identityMetadata = identity.metadata();
+    verifiedIdentityConfigStateSha256 = identityConfigStateSha256(identity);
+  } finally { identity.close(); }
   if (identityMetadata.revision !== manifest.identity.revision) fail('RECOVERY_IDENTITY_REVISION_MISMATCH', 'Identity revision differs');
   const replay = ReplayStore.openExisting(replayPath, { catalogStorageDir, readOnly: true });
   try {
     const full = replay.db.prepare('PRAGMA integrity_check').all().map(row => String(Object.values(row)[0]));
     if (full.length !== 1 || full[0] !== 'ok') fail('RECOVERY_REPLAY_INTEGRITY', 'Replay full integrity_check failed');
   } finally { replay.close(); }
-  return { setId, directory, manifest, identityMetadata, verified: true };
+  return { setId, directory, manifest, identityMetadata,
+    identityConfigStateSha256: verifiedIdentityConfigStateSha256, verified: true };
 }
 
 export function discoverRecoverySets({ backupRoot }) {
@@ -179,11 +184,15 @@ export function discoverRecoverySets({ backupRoot }) {
     .map(entry => entry.name).sort();
 }
 
-export function recoverySetCovers(verified, authority) {
+export function recoverySetCovers(verified, authority, { liveIdentityConfigStateSha256 } = {}) {
   const m = verified.manifest;
   if (authority.state === 'BOOTSTRAP') {
+    if (!/^[a-f0-9]{64}$/.test(liveIdentityConfigStateSha256 || '')) {
+      throw new TypeError('BOOTSTRAP coverage requires live identity config-state digest');
+    }
     return m.current_generation === null && m.accepted_run === null &&
-      m.published_identity_revision === null;
+      m.published_identity_revision === null &&
+      verified.identityConfigStateSha256 === liveIdentityConfigStateSha256;
   }
   return m.current_generation === authority.currentGeneration && m.accepted_run !== null &&
     m.accepted_run.run_id === authority.acceptedRun.run_id &&
@@ -193,19 +202,19 @@ export function recoverySetCovers(verified, authority) {
     verified.identityMetadata.revision >= authority.publishedIdentityRevision;
 }
 
-export function findCoveringRecoverySet({ backupRoot, catalogStorageDir, authority }) {
+export function findCoveringRecoverySet({ backupRoot, catalogStorageDir, authority, liveIdentityConfigStateSha256 }) {
   const valid = [], invalid = [];
   for (const setId of discoverRecoverySets({ backupRoot }).reverse()) {
     try {
       const verified = verifyRecoverySet({ backupRoot, setId, catalogStorageDir });
       valid.push(verified);
-      if (recoverySetCovers(verified, authority)) return { covering: verified, valid, invalid };
+      if (recoverySetCovers(verified, authority, { liveIdentityConfigStateSha256 })) return { covering: verified, valid, invalid };
     } catch (error) { invalid.push({ setId, code: error.code || 'RECOVERY_VERIFY_FAILED' }); }
   }
   return { covering: null, valid, invalid };
 }
 
-export function inspectRecoverySets({ backupRoot, catalogStorageDir, authority }) {
+export function inspectRecoverySets({ backupRoot, catalogStorageDir, authority, liveIdentityConfigStateSha256 }) {
   const valid = [], invalid = [];
   let covering = null;
   for (const setId of discoverRecoverySets({ backupRoot }).reverse()) {
@@ -217,7 +226,7 @@ export function inspectRecoverySets({ backupRoot, catalogStorageDir, authority }
     }
   }
   valid.sort((left, right) => right.manifest.created_at.localeCompare(left.manifest.created_at));
-  covering = valid.find(item => recoverySetCovers(item, authority)) ?? null;
+  covering = valid.find(item => recoverySetCovers(item, authority, { liveIdentityConfigStateSha256 })) ?? null;
   return { covering, valid, invalid };
 }
 

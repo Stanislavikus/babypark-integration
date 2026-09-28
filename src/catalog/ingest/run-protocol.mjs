@@ -1,12 +1,20 @@
 import crypto from 'node:crypto';
 
-export const HEADER_SCHEMA = 'bp.catalog.run-header/1';
+export const HEADER_SCHEMA_V1 = 'bp.catalog.run-header/1';
+export const HEADER_SCHEMA_V2 = 'bp.catalog.run-header/2';
+export const HEADER_SCHEMA = HEADER_SCHEMA_V1;
+export const PUBLICATION_AUTHORITY_SCHEMA = 'bp.catalog.publication-authority/1';
 export const TRAILER_SCHEMA = 'bp.catalog.trailer/2';
 export const MAX_HEADER_BYTES = 4096;
 const ID = /^[A-Za-z0-9_-]{1,64}$/;
 const DEC20 = /^(0|[1-9][0-9]{0,19})$/;
 const HASH = /^[a-f0-9]{64}$/;
-const HEADER_KEYS = ['base_generation_id', 'layers', 'run_id', 'run_kind', 'schema', 'source_epoch'];
+const HEADER_KEYS_V1 = ['base_generation_id', 'layers', 'run_id', 'run_kind', 'schema', 'source_epoch'];
+const HEADER_KEYS_V2 = [...HEADER_KEYS_V1, 'publication_authority'];
+const AUTHORITY_KEYS = ['schema', 'spool_schema', 'spool_manifest_sha256', 'anomaly_report_sha256',
+  'config_digests', 'full_record_contract_version', 'record_validator_version',
+  'sku_normalizer_version', 'native_identity_scheme', 'producer_commit',
+  'producer_release_provenance_sha256'];
 const LAYER_KEYS = ['base_watermark', 'layer', 'mode', 'output_watermark', 't_high', 't_low'];
 const FULL_LAYERS = ['taxonomy', 'content', 'commercial', 'stock'];
 const SINGLE_MODES = new Map([
@@ -48,6 +56,27 @@ function decodeCanonical(body, maxBytes, code) {
 }
 function nullableDec20(value) { return value === null || isDec20(value); }
 
+function validatePublicationAuthority(authority) {
+  const version = value => Number.isSafeInteger(value) && value > 0 && value <= 2147483647;
+  if (!exactKeys(authority, AUTHORITY_KEYS) || authority.schema !== PUBLICATION_AUTHORITY_SCHEMA ||
+      typeof authority.spool_schema !== 'string' || authority.spool_schema.length < 1 || authority.spool_schema.length > 128 ||
+      !HASH.test(authority.spool_manifest_sha256 || '') || !HASH.test(authority.anomaly_report_sha256 || '') ||
+      !HASH.test(authority.producer_release_provenance_sha256 || '') ||
+      !/^[a-f0-9]{40}$/.test(authority.producer_commit || '') ||
+      typeof authority.native_identity_scheme !== 'string' || authority.native_identity_scheme.length < 1 ||
+      authority.native_identity_scheme.length > 128 ||
+      !version(authority.full_record_contract_version) || !version(authority.record_validator_version) ||
+      !version(authority.sku_normalizer_version) || !authority.config_digests ||
+      typeof authority.config_digests !== 'object' || Array.isArray(authority.config_digests)) {
+    fail('PUBLICATION_AUTHORITY_INVALID', 'Invalid publication authority');
+  }
+  const entries = Object.entries(authority.config_digests);
+  if (entries.length > 64 || entries.some(([key, digest]) =>
+    !/^[a-z0-9][a-z0-9._-]{0,127}$/.test(key) || !HASH.test(digest))) {
+    fail('PUBLICATION_AUTHORITY_INVALID', 'Invalid publication authority config digests');
+  }
+}
+
 function validateLayer(entry, baseGenerationId) {
   if (!exactKeys(entry, LAYER_KEYS) || !nullableDec20(entry.base_watermark) ||
       !nullableDec20(entry.t_low) || !nullableDec20(entry.t_high) ||
@@ -70,9 +99,12 @@ function validateLayer(entry, baseGenerationId) {
 export function parseRunHeader(body, { runId, seq = 0, final = false } = {}) {
   if (seq !== 0 || final || !ID.test(runId || '')) fail('INGEST_RUN_HEADER_INVALID', 'Header must be signed non-final sequence zero');
   const value = decodeCanonical(body, MAX_HEADER_BYTES, 'INGEST_RUN_HEADER_INVALID');
-  if (!exactKeys(value, ['header']) || !exactKeys(value.header, HEADER_KEYS)) fail('INGEST_RUN_HEADER_INVALID', 'Invalid header keys');
+  if (!exactKeys(value, ['header']) || !value.header || typeof value.header !== 'object' || Array.isArray(value.header)) fail('INGEST_RUN_HEADER_INVALID', 'Invalid header keys');
   const h = value.header;
-  if (h.schema !== HEADER_SCHEMA || h.run_id !== runId || !ID.test(h.run_id) || !ID.test(h.source_epoch || '') ||
+  if (![HEADER_SCHEMA_V1, HEADER_SCHEMA_V2].includes(h.schema)) fail('INGEST_RUN_HEADER_SCHEMA_UNSUPPORTED', 'Unsupported run header schema');
+  if (!exactKeys(h, h.schema === HEADER_SCHEMA_V1 ? HEADER_KEYS_V1 : HEADER_KEYS_V2)) fail('INGEST_RUN_HEADER_INVALID', 'Invalid header keys');
+  if (h.schema === HEADER_SCHEMA_V2) validatePublicationAuthority(h.publication_authority);
+  if (h.run_id !== runId || !ID.test(h.run_id) || !ID.test(h.source_epoch || '') ||
       !(h.base_generation_id === null || ID.test(h.base_generation_id)) || !Array.isArray(h.layers)) fail('INGEST_RUN_HEADER_INVALID', 'Invalid header identity');
   if (h.run_kind === 'incremental') {
     if (h.base_generation_id === null || h.layers.length !== 1 || SINGLE_MODES.get(h.layers[0]?.layer) !== h.layers[0]?.mode) fail('INGEST_RUN_HEADER_INVALID', 'Invalid single-layer refresh');

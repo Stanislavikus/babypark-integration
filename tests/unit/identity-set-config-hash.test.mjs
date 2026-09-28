@@ -4,7 +4,7 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { spawn } from 'node:child_process';
+import { fork, spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { IdentityStore } from '../../src/catalog/identity/store.mjs';
 
@@ -43,12 +43,14 @@ test('identity-set-config-hash is idempotent for identical file bytes', async t 
   t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
   const dbPath = path.join(dir, 'identity.sqlite');
   const configPath = path.join(dir, 'legacy-sku-collisions.yaml');
+  const catalogDir = path.join(dir, 'catalog'); fs.mkdirSync(catalogDir);
   fs.writeFileSync(configPath, 'version: 1\nmappings: []\n');
 
   IdentityStore.createNew(dbPath).close();
 
   const first = await run([
     `--path=${dbPath}`,
+    `--catalog-dir=${catalogDir}`,
     '--config-key=drupal-collisions',
     `--config-file=${configPath}`,
   ]);
@@ -62,6 +64,7 @@ test('identity-set-config-hash is idempotent for identical file bytes', async t 
 
   const second = await run([
     `--path=${dbPath}`,
+    `--catalog-dir=${catalogDir}`,
     '--config-key=drupal-collisions',
     `--config-file=${configPath}`,
   ]);
@@ -70,4 +73,27 @@ test('identity-set-config-hash is idempotent for identical file bytes', async t 
   assert.equal(secondJson.changed, false);
   assert.equal(secondJson.old_revision, firstJson.new_revision);
   assert.equal(secondJson.new_revision, firstJson.new_revision);
+});
+
+test('config mutation is serialized by the catalog publication lock', async t => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'bp-config-lock-'));
+  t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
+  const dbPath = path.join(dir, 'identity.sqlite');
+  const configPath = path.join(dir, 'policy.json');
+  const catalogDir = path.join(dir, 'catalog'); fs.mkdirSync(catalogDir);
+  IdentityStore.createNew(dbPath).close(); fs.writeFileSync(configPath, '{}\n');
+  const args = [`--path=${dbPath}`, `--catalog-dir=${catalogDir}`,
+    '--config-key=drupal-anomaly-publication-policy', `--config-file=${configPath}`];
+  const holder = fork(path.join(ROOT, 'tests/fixtures/catalog-lock-holder-worker.mjs'), [catalogDir],
+    { stdio: ['ignore', 'ignore', 'ignore', 'ipc'] });
+  await new Promise((resolve, reject) => {
+    holder.once('message', resolve); holder.once('error', reject);
+  });
+  const blocked = await run(args);
+  assert.notEqual(blocked.code, 0);
+  const identity = IdentityStore.openExisting(dbPath, { readOnly: true });
+  assert.equal(identity.db.prepare('SELECT count(*) count FROM config_state').get().count, 0);
+  identity.close(); holder.kill('SIGKILL');
+  await new Promise(resolve => holder.once('exit', resolve));
+  assert.equal((await run(args)).code, 0);
 });
