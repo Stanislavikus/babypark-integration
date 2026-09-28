@@ -537,11 +537,12 @@ This is direct evidence that "duplicate SKU -> keep one row" is not a safe unive
 policy.
 
 At the current review point:
-- 21 collision decisions have sufficient technical evidence for a legacy migration
-  decision;
-- 2 cross-product cases (`511000`, `80401mc02`) are intentionally held for
-  business/source-process investigation;
-- repository collision config remains unpopulated until the review is approved.
+- 21 collision decisions are approved in
+  `config/drupal/legacy-sku-collisions.yaml` as Drupal legacy migration exceptions;
+- 2 cross-product cases (`511000`, `80401mc02`) remain intentionally unmapped
+  pending business/source-process investigation;
+- those two residual collisions stay under Catalog Anomaly Runtime v1
+  whole-source-product quarantine until a separate reviewed decision is recorded.
 
 These facts are current-state evidence, not universal business rules.
 
