@@ -344,11 +344,13 @@ Next operational steps:
 - exporter slice 1 + runtime hardening are merged, deployed and production-preflighted;
 - preserve the established live baseline: zero hard blockers, one residual anomaly
   (`80401mc02`), quarantined groups `118670`/`12605`, warning_count 78;
-- continue D2b server/sender implementation from the frozen design:
-  run-header/2 + publication-authority/1, durable/exclusive sender run-state,
-  CatalogService authority validation and BOOTSTRAP config-state recovery correction;
-- keep Link A verifier, isolated full-scale rehearsal and first controlled FULL behind
-  their existing explicit gates.
+- receiver-side D2b authority/recovery foundation is merged in PR #33 at
+  `54763804fbceb34ab107d94d44bdf993b59d3152`, but is intentionally not deployed
+  to production CatalogService yet;
+- next implementation slice is the separate D2b HTTP sender/control module with
+  durable exact run-state and one exclusive sender lock per ready spool;
+- keep CatalogService production cutover, Link A verifier, isolated full-scale
+  rehearsal and first controlled FULL behind their existing explicit gates.
 
 Product Identity Resolution v1 is already frozen/merged. Its two original cases
 remain historical acceptance fixtures, while the current live incident set is
@@ -369,9 +371,11 @@ Two independent tracks are active:
      complete;
    - the current live-source baseline is established by both pre- and post-cutover
      preflight;
-   - continue D2b runtime/sender implementation toward first controlled FULL;
-   - do not create/send production FULL until sender/server/recovery, isolated rehearsal
-     and acceptance gates are closed.
+   - receiver-side run-header/2/publication-authority/BOOTSTRAP recovery support is
+     merged in repository but not deployed to production;
+   - implement D2b sender + durable/exclusive sender run-state next;
+   - do not create/send production FULL until sender + Link A implementation,
+     isolated rehearsal and acceptance gates are closed.
 
 2. **Identity-resolution application (later)**
    - frozen design: `docs/PRODUCT_IDENTITY_RESOLUTION_V1.md`;
@@ -398,7 +402,8 @@ No untracked ambiguity may silently enter the first canonical generation.
 That exporter gate is now closed:
 - immutable merged exporter/runtime release is production `current`;
 - pre- and post-switch production preflight both have zero unaccounted hard blockers;
-- next critical path is D2b transport/server/recovery implementation, then isolated
+- receiver-side D2b authority/recovery implementation is merged and reviewed;
+- next critical path is D2b sender/control transport, then Link A and isolated
   rehearsal before any first controlled FULL.
 
 Two mandatory future research/design gates exist before customer-facing AI catalog
@@ -468,7 +473,7 @@ No production deployment or FULL is part of this design slice.
 
 ## D2b / first controlled FULL
 
-Status: **FROZEN DESIGN / EXPORTER SLICE 1 + PR31 RUNTIME HARDENING DEPLOYED / D2b SENDER-SERVER NOT IMPLEMENTED**
+Status: **FROZEN DESIGN / EXPORTER DEPLOYED / RECEIVER D2b SLICE MERGED NOT DEPLOYED / SENDER NOT IMPLEMENTED**
 
 Design source:
 `docs/DRUPAL_EXPORT_D2B.md`
@@ -483,13 +488,12 @@ critical ingestion path:
 2. exporter payload spool lifecycle is now represented in repository storage policy
    by dedicated transient `exporter_ready_spools` and `catalog_link_a_staging`
    objects; production directories/retention are not yet activated;
-3. sender retries require durable exact run-state so one run ID never acquires changed
-   header/trailer bytes after restart;
-4. current BOOTSTRAP recovery coverage does not bind the snapshotted/live
-   IdentityStore `config_state` authority, so an older BOOTSTRAP recovery set can
-   still appear covering after reviewed config hashes change. Coverage must compare
-   exact config-state digest, not the whole live identity revision, so restart/resume
-   remains valid after unpublished xref/UUID growth.
+3. sender retries still require durable exact run-state so one run ID never acquires
+   changed header/trailer bytes after restart;
+4. the BOOTSTRAP config-state recovery gap is now corrected in repository by PR #33:
+   verified recovery sets derive the snapshot config-state digest and live BOOTSTRAP
+   admission/state revalidates it. Production CatalogService remains on the previous
+   release until the one planned D2b cutover.
 
 Verified production capability facts:
 - CatalogService host supports `node:sqlite` and SQLite FTS5;
@@ -499,6 +503,22 @@ Verified production capability facts:
 - full-scale production-shape certification/seal/publication has not yet been timed;
 - first full-scale isolated rehearsal is therefore mandatory before production
   CatalogService cutover.
+
+Receiver implementation status:
+- PR #33 merged at `54763804fbceb34ab107d94d44bdf993b59d3152`;
+- structural historical `bp.catalog.run-header/1` parsing is retained;
+- new production FULL admission requires exact `bp.catalog.run-header/2`;
+- signed `bp.catalog.publication-authority/1` is validated against the exact two-key
+  IdentityStore config map before NEW seq0 durable admission and on v2 seq0 retry;
+- config hash mutation and decisive seq0 admission share
+  `CatalogPublicationLock`, closing the cross-process config/admission race;
+- accepted generation manifests bind the exact authority recovered from durable seq0,
+  including seal/recovery/publication tamper checks;
+- BOOTSTRAP recovery coverage binds snapshot/live config-state digest and cached
+  coverage is invalidated live; CURRENT recovery semantics remain unchanged;
+- explicit D2b HTTP authority/config/version errors are non-500;
+- no ReplayStore, recovery-set, Catalog DB or IdentityStore schema bump was required;
+- this code has NOT been deployed to production CatalogService and no FULL was sent.
 
 Frozen direction:
 - keep BP1 transport v1 and existing `/api/catalog/ingest/v1/full` route;
@@ -553,12 +573,31 @@ Implementation slice 1 now changes repository exporter/storage-policy code only:
 - production storage ownership is recorded as
   `babypark-exporter:babypark-exporter`.
 
-Still not implemented in this slice: D2b HTTP sender, run-header/2, CatalogService
-publication-authority validation, BOOTSTRAP recovery fix, Link A verifier, rehearsal,
-production CatalogService upgrade or first FULL.
+Still not implemented/deployed on the critical path:
+- D2b HTTP sender/control module;
+- durable/exclusive sender run-state;
+- Link A staging/exhaustive verifier;
+- isolated full-scale rehearsal and failure drills;
+- the one D2b-capable production CatalogService cutover;
+- first controlled FULL and post-ACK acceptance package/off-host restore gates.
+
+Repository receiver support for run-header/2, publication-authority validation,
+accepted-generation authority binding and BOOTSTRAP recovery correction is merged by
+PR #33 but intentionally remains undeployed until sender/Link A/rehearsal gates are
+closed.
 
 Production exporter cutover is complete at
 `/opt/babypark-exporter/releases/20260928T195344Z-8c78bd5`
 (commit `8c78bd51a7b73a0a29209d5f6c43f6f13ad09bc3`). Both pre-cutover and
 post-switch preflight passed with the established live-source baseline. No FULL has
 been sent and CatalogService remains BOOTSTRAP.
+
+PR #33 receiver closure evidence:
+- reviewed PR HEAD `43974f1105bf11276dbe24cdf7e73b8590358cd0`,
+  tree `eda43ffc34acdaee30d068c80db1be0a13a08b4d`;
+- merge commit `54763804fbceb34ab107d94d44bdf993b59d3152`;
+- independent exact crash-window reproduction proves config A -> pending seq0 ->
+  config B -> exact retry now fails `CONFIG_AUTHORITY_MISMATCH` before builder/stage;
+- root unit 330/330, focused correction 75/75, legacy 13/13, refactor 13/13,
+  exporter 181/181 and storage-policy validation all passed on the reviewed tree;
+- no production deployment, CatalogService mutation or FULL occurred as part of PR #33.
