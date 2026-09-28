@@ -389,3 +389,53 @@ Current design slice:
   registry changes are the durable authority.
 
 No production deployment or FULL is part of this design slice.
+
+## D2b / first controlled FULL design research
+
+Status: **DESIGN DRAFT / NO IMPLEMENTATION / NO PRODUCTION CHANGE**
+
+Design source:
+`docs/DRUPAL_EXPORT_D2B.md`
+
+Research after Product Identity Resolution v1 freeze found four material gates on the
+critical ingestion path:
+
+1. production CatalogService is still on FULL record v1 / catalog schema 5 /
+   production mapper 1, while current exporter/main emits FULL record v2 and expects
+   catalog schema 6 / mapper 2; D2b server support and that compatibility upgrade must
+   be deployed together before first FULL;
+2. exporter `.ready` payload spools are not yet represented by the current storage
+   policy, which still describes exporter state as tiny/no-payload state;
+3. sender retries require durable exact run-state so one run ID never acquires changed
+   header/trailer bytes after restart;
+4. current BOOTSTRAP recovery coverage does not bind the live IdentityStore revision,
+   so a revision-0 recovery set can still appear covering after reviewed config hashes
+   advance identity revision.
+
+Verified production capability facts:
+- CatalogService host supports `node:sqlite` and SQLite FTS5;
+- CatalogService is BOOTSTRAP and `/health` is green;
+- current service has no systemd `MemoryMax`/`MemoryHigh` envelope;
+- catalog Nginx `proxy_read_timeout` is 300 seconds;
+- full-scale production-shape certification/seal/publication has not yet been timed;
+- first full-scale isolated rehearsal is therefore mandatory before production
+  CatalogService cutover.
+
+Frozen direction pending closure review:
+- keep BP1 transport v1 and existing `/api/catalog/ingest/v1/full` route;
+- introduce exact signed `bp.catalog.run-header/2` with
+  `bp.catalog.publication-authority/1`;
+- publication authority uses a versioned `config_digests` map, spool/anomaly hashes,
+  source contract versions and exporter commit provenance;
+- CatalogService compares the signed config map to exact current `config_state` before
+  accepting seq0;
+- D2a keeps the no-HTTP invariant; D2b is a separate sender/control module;
+- accepted authority is preserved in generation manifest extra plus a small producer
+  acceptance-audit package;
+- first full-scale rehearsal is an operational gate after D2b implementation and real
+  spool creation, not part of the D2b implementation PR itself;
+- one production CatalogService cutover occurs only after rehearsal;
+- off-host identity/recovery copy + restore drill and real-data acceptance are gates
+  before Seller AI/catalog consumers are enabled.
+
+No code/config/storage policy/runtime/production state is changed by this design draft.
