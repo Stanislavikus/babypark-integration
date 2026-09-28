@@ -170,7 +170,8 @@ Every resolution record must bind at minimum:
 - detector namespace/version;
 - exact detector `material_evidence_sha256`;
 - exact sorted collider/source-entity set;
-- immutable detector evidence snapshot or canonical digest;
+- immutable copy of the exact detector evidence snapshot that was reviewed;
+- canonical digest of that immutable detector evidence snapshot;
 - `resolution_subject_digest` over the complete reviewed source-product/variant
   topology used by the action plan;
 - exact sorted subject product IDs and source variant IDs;
@@ -189,6 +190,11 @@ bundle. It must **not** mutate the frozen anomaly fingerprint or detector
 A materially different supplemental evidence bundle requires a new/superseding
 reviewed resolution rather than rewriting the evidence behind an existing approval.
 
+The detector evidence snapshot is mandatory, not replaceable by a digest alone:
+`AnomalyStore.latest_evidence_json` is mutable/current-state storage, so after
+evidence drift the reviewed registry must still preserve exactly what the reviewer
+approved and make a human-readable diff possible.
+
 The anomaly fingerprint intentionally excludes the collider set, so fingerprint
 equality alone can never authorize reuse of a resolution.
 
@@ -206,11 +212,30 @@ commercial/content action declares those values as its own precondition.
 If any required authority/subject binding changes:
 - effective resolution state becomes `STALE`;
 - do not apply the old resolution;
-- do not silently fall back to a weaker behavior;
-- fail closed with a hard publication blocker for that reviewed resolution until
-  it is re-reviewed or revoked.
+- do not silently fall back to a weaker identity action;
+- hold/quarantine the complete union of the previously reviewed subject products
+  and the currently observed affected/collider products, **when that complete
+  isolation scope can be proven**;
+- emit a high-severity run-level stale-resolution finding while unrelated products
+  continue.
 
-This mirrors the existing stale-approved-mapping safety rule.
+A stale resolution therefore does **not** normally stop the whole catalog run.
+This differs deliberately from the existing static legacy-mapping stale rule:
+resolution subjects are live reviewed entities and v1 preserves the anomaly-runtime
+principle of isolating a proven complete unsafe scope.
+
+`BLOCK_RUN` remains mandatory when safe isolation cannot be proven, including:
+- invalid/unparseable resolution-registry schema;
+- registry raw-byte digest/config-state authority mismatch;
+- duplicate or internally conflicting active resolution records;
+- an active reviewed resolution and active legacy collision mapping both claiming
+  the same collision/subject;
+- stale/drifted authority where the complete affected product scope cannot be
+  established.
+
+There is **no precedence rule** between legacy collision mappings and the resolution
+registry. Double coverage is a hard configuration conflict that must be fixed by a
+reviewed config change before publication.
 
 The frozen anomaly `review_state` is not silently rewritten by evidence drift.
 A previously `RESOLVED` review may coexist with effective resolution `STALE`;
@@ -570,7 +595,7 @@ Current facts:
 - `source_variants(provider, native_variant_id)` cannot be rebound to another
   canonical variant/product once bound;
 - `variants.sku_key` is globally UNIQUE;
-- there is no merge, unbind or split operation;
+- there is no merge, unbind, rebind or split operation;
 - reviewed SKU rename/alias exists, but it does not merge canonical identities.
 
 Therefore executable v1 resolution is limited to:
@@ -578,9 +603,22 @@ Therefore executable v1 resolution is limited to:
 - cases where at most one side already owns the intended canonical identity and
   every other source identity is still unbound.
 
-A new many-to-one source binding must reference the approved resolution ID and may
-use existing explicit `ensureProduct({ productId })` / matching-variant behavior
-only when no conflicting xref already exists.
+A new many-to-one source binding must reference the approved resolution ID.
+
+The current code cannot execute that contract yet:
+- `src/catalog/ingest/production-full-mapper.mjs` calls
+  `ensureProduct({ provider, nativeProductId })` without a reviewed target
+  `productId`;
+- FULL record v2 has an exact schema and carries no resolution ID, additional
+  source-product binding set or variant-alignment authority;
+- the current IdentityStore schema has no durable field/table that records which
+  reviewed resolution authorized a source xref;
+- the Drupal exporter is on a separate host and must not mutate CatalogService
+  `identity.sqlite`.
+
+Therefore the existence of `ensureProduct({ productId })` is only a low-level
+capability. It is **not** an executable resolution path until the versioned
+transport/mapper/identity prerequisites below are implemented.
 
 If two affected source entities are already bound to different canonical
 identities:
@@ -604,34 +642,99 @@ This limitation must be visible in Requires Attention before approval.
 
 ## Future application order
 
-The reviewed resolution registry is evaluated before residual anomaly quarantine
-changes canonical output.
+Resolution **application is not implemented by the current exporter/FULL v2
+pipeline**. It is a separate future contract slice and is not required for the
+first quarantined FULL.
 
-Conceptually:
+### Executor split
+
+Drupal exporter side:
+- load/validate the reviewed resolution registry and its digest;
+- compare current detector/subject state with the approved binding;
+- for unresolved, stale, conflicting or non-executable subjects, exclude/hold the
+  complete affected source products from canonical payload exactly as quarantine
+  policy requires;
+- emit deterministic anomaly/resolution evidence and run-level findings;
+- never mutate CatalogService `identity.sqlite`.
+
+CatalogService side:
+- is the only side allowed to create durable canonical/source identity bindings;
+- applies a resolution-aware binding only under the publication/identity lock and
+  only from signed/versioned transport authority;
+- persists the reviewed resolution provenance with the resulting source binding;
+- refuses unsupported rebind/merge topology.
+
+### Mandatory prerequisites before the first applied resolution
+
+All of these require a separately reviewed implementation slice:
+
+1. **Exporter/resolution evaluator**
+   - exact registry-schema validation;
+   - overlap validation against legacy collision mappings;
+   - exact evidence/collider/subject-digest applicability check;
+   - entity-scoped stale quarantine when complete scope is proven;
+   - deterministic resolution-control output for executable approved cases.
+
+2. **Transport/FULL contract version bump**
+   - FULL v2 cannot express a resolution ID, multiple source identities bound to
+     one canonical target, or complete variant alignment;
+   - introduce a new versioned record/control contract (for example FULL v3 or a
+     separate signed resolution-control object);
+   - preserve all source product/variant IDs rather than silently dropping the
+     duplicate source identity;
+   - D2b must cryptographically bind the active resolution-registry digest and the
+     exact resolution-control payload/digest.
+
+3. **Production mapper version bump**
+   - current mapper calls `ensureProduct` without `productId` and has no
+     resolution-aware branch;
+   - the new mapper must consume the versioned resolution control, establish or
+     reuse the canonical anchor, apply the approved variant alignment and certify
+     that the emitted canonical payload matches the approved subject.
+
+4. **IdentityStore schema/API version bump**
+   - current schema cannot persist which resolution authorized a new many-to-one
+     source binding;
+   - add durable resolution provenance (field or binding/audit table) and a
+     reviewed operation that permits compatible **initial** binding only;
+   - do not add silent rebind/unbind behavior as part of this slice.
+
+5. **Canonical writer/certification/recovery coverage**
+   - one canonical product/variant set must be written once even when several
+     source identities bind to it;
+   - certification must prove source xrefs, canonical variants and resolution
+     provenance agree;
+   - identity revision/config-state changes must receive the normal fresh recovery
+     set before later accepted publication.
+
+Until those prerequisites exist, an approved resolution may guide review but is
+**non-executable**: exporter keeps the subject out of the publishable payload and
+CatalogService receives no identity-mutation instruction for it.
+
+### Future order after those prerequisites exist
 
 ```text
 build source candidates
-  -> collect deterministic collision/evidence snapshot
-  -> match reviewed resolution by exact fingerprint + evidence/subject binding
-       -> stale reviewed resolution: hard publication blocker
-       -> applicable + executable resolution: apply reviewed identity/action step
-       -> approved but non-executable: do not mutate identity; leave residual unsafe scope
-       -> no approved resolution: leave residual unsafe scope
-  -> recompute residual collisions
+  -> collect deterministic collision/evidence/subject snapshot
+  -> validate registry + reject legacy-mapping overlap
+  -> match reviewed resolution by exact authority binding
+       -> STALE + complete scope known: quarantine subject/current colliders; continue run
+       -> STALE + complete scope unknown: BLOCK_RUN
+       -> approved but non-executable: quarantine subject; continue run
+       -> applicable + executable: emit signed resolution-control intent
+       -> no approved resolution: residual unsafe scope
+  -> recompute residual collisions for publishable source products
   -> residual collisions become anomaly observations/quarantine
   -> canonical-validate/chunk unaffected products
+  -> CatalogService applies signed resolution-aware identity binding
+     under publication/identity authority
 ```
 
-A detector snapshot may be used to validate resolution authority, but an
-applicable/executed reviewed resolution should not continue generating the same
+An applicable/executed reviewed resolution should not continue generating the same
 residual anomaly merely because the pre-resolution detector saw it.
 
-Approved but non-executable resolutions remain visible workflow facts and keep
-their affected entities quarantined; they do not pretend the canonical change
-already happened.
-
-This application stage is future implementation. It does not change the frozen
-Catalog Anomaly Runtime v1 contract or PR #26 behavior.
+This future application stage does not retroactively change the frozen Catalog
+Anomaly Runtime v1 fingerprint/observation contract or PR #26 behavior.
 
 ## Requires Attention workflow v1
 
@@ -846,8 +949,23 @@ The first implementation after design review is successful when:
 - an approved resolution registry has a strict schema and raw-byte digest;
 - the registry digest is bound through IdentityStore `config_state` before any
   resolution affects canonical output;
-- every approval is bound to exact material evidence hash and collider set;
-- material evidence drift makes the resolution `STALE` and hard-blocking;
+- every approval satisfies the **entire Approval binding and stale behavior
+  contract**, including:
+  - exact detector `material_evidence_sha256`;
+  - exact collider/source-entity set;
+  - mandatory immutable detector evidence snapshot plus its digest;
+  - exact subject product/variant IDs;
+  - `resolution_subject_digest`;
+  - supplemental reviewed-evidence digest;
+  - identity decision, root causes, identifier exception;
+  - complete variant alignment where required;
+  - ordered action plan and reviewer provenance;
+- detector/subject topology drift makes the resolution `STALE`;
+- stale authority quarantines only the complete proven subject/current-collider
+  scope and emits a high-severity run finding; it escalates to `BLOCK_RUN` when
+  complete isolation cannot be proven;
+- invalid registry authority, digest mismatch, conflicting active resolutions or
+  overlap with an active legacy collision mapping are `BLOCK_RUN`;
 - identity decision, root cause, identifier exception and action plan are separate;
 - product-level SAME requires complete variant alignment;
 - action combinations are validated against the decision matrix;
