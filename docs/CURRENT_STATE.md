@@ -427,11 +427,15 @@ Frozen direction pending closure review:
 - keep BP1 transport v1 and existing `/api/catalog/ingest/v1/full` route;
 - introduce exact signed `bp.catalog.run-header/2` with
   `bp.catalog.publication-authority/1`;
+- preserve existing D2a `bp.drupal-exporter.spool/2` semantics and introduce
+  D2b-transportable `bp.drupal-exporter.spool/3` with producer provenance and
+  `source-acceptance.json` hash binding;
 - publication authority uses a versioned `config_digests` map, spool/anomaly hashes,
   source contract versions, `native_identity_scheme`, producer commit and release
   provenance digest;
 - CatalogService compares the signed config map to exact current `config_state` before
-  accepting seq0;
+  accepting seq0 and recovery gate revalidates live config-state digest on every
+  ingest admission/`/state` blocker computation;
 - D2a keeps the no-HTTP invariant; D2b is a separate sender/control module with atomic
   run-state and an exclusive per-spool sender lock;
 - accepted authority is preserved in generation manifest extra plus a small producer
@@ -441,8 +445,11 @@ Frozen direction pending closure review:
 - rehearsal spool is never reused as production: after final release freeze, production
   builds a fresh spool from the same immutable producer/sender commit and starts seq0
   within 30 minutes of the snapshot watermark;
+- acceptance is two-link: exhaustive spool-to-catalog plus independent retained
+  source-snapshot-to-spool evidence; live Drupal is only rechecked when unchanged
+  status can be proven by source markers;
 - one production CatalogService cutover occurs only after rehearsal;
-- off-host identity/recovery copy + restore drill and exact snapshot-vs-catalog
-  acceptance are gates before Seller AI/catalog consumers are enabled.
+- off-host identity/recovery copy + restore drill and two-link acceptance are gates
+  before Seller AI/catalog consumers are enabled.
 
 No code/config/storage policy/runtime/production state is changed by this design draft.

@@ -150,7 +150,7 @@ producer_release_provenance_sha256
 For the first Drupal FULL:
 
 ```text
-spool_schema = bp.drupal-exporter.spool/2
+spool_schema = bp.drupal-exporter.spool/3
 full_record_contract_version = 2
 record_validator_version = 3
 sku_normalizer_version = 1
@@ -165,9 +165,73 @@ payload/config hashes.
 
 `bp.drupal.native-identity/1` freezes the provider-native identity convention used
 by the first FULL, including product grouping by `tnid != 0 ? tnid : nid` and the
-current deterministic base/options variant-ID construction. A future incompatible
-native-ID convention requires a new scheme value and reviewed receiver support before
-it can create different source xrefs.
+current deterministic base/options variant-ID construction.
+
+CatalogService must compare the signed scheme value to an explicit supported
+`NATIVE_IDENTITY_SCHEME` constant before admitting seq0; an unknown value is a stable
+operator/config error, not `INTERNAL_INVARIANT`.
+
+The implementation slice must add golden-vector tests for the v1 product/variant
+native-ID convention, including base variants and sorted option-combination IDs. A
+future incompatible native-ID convention requires a new scheme value, new golden
+vectors and reviewed receiver support before it can create different source xrefs.
+
+### Transportable spool v3 provenance binding
+
+Current D2a emits `bp.drupal-exporter.spool/2`. Do not silently change its exact
+meaning.
+
+The first D2b-transportable spool introduces:
+
+`bp.drupal-exporter.spool/3`
+
+Spool v3 preserves the existing v2 anomaly/chunk authority and adds exact manifest
+fields:
+
+- `producer_commit`;
+- `producer_release_provenance_sha256` — raw-byte SHA-256 of the immutable
+  producer/sender release `RELEASE.json`;
+- `source_acceptance_sha256` — raw-byte SHA-256 of
+  `source-acceptance.json`.
+
+At spool construction time, before source scratch is discarded, the exporter writes
+`source-acceptance.json` from the same repeatable-read snapshot. It records at
+minimum:
+
+- `snapshot_watermark`;
+- the captured `stock_sync_unix`;
+- deterministic sampled/high-cardinality source entity IDs and their source revision
+  markers;
+- source facts needed to verify the sampled canonical projections, including price,
+  stock, category/brand and variant/image membership where applicable.
+
+The sidecar is acceptance evidence, not another canonical payload and not an authority
+for identity.
+
+Before contacting CatalogService, sender must:
+
+1. hash its own exact immutable `RELEASE.json`;
+2. require that hash to equal
+   `manifest.producer_release_provenance_sha256`;
+3. require the commit in that release to equal `manifest.producer_commit`;
+4. verify exact `source-acceptance.json` hash;
+5. then hash/sign the exact spool manifest through publication authority.
+
+A mismatch fails locally before run creation/network send.
+
+This gives a verifiable chain:
+
+```text
+same immutable producer/sender RELEASE.json
+  -> producer provenance hash in spool/3 manifest
+  -> spool manifest hash in signed publication_authority
+  -> BP1-signed run header
+  -> run digest + exact chunks
+```
+
+The signed `producer_commit` and provenance digest in publication authority must
+equal the values already bound by the spool/3 manifest; they are not caller-supplied
+overrides.
 
 ### `config_digests`
 
@@ -218,8 +282,11 @@ At minimum distinguish:
 - run-header v2 required / unsupported header schema;
 - publication authority malformed;
 - config-state set/digest mismatch;
-- contract/normalizer version mismatch;
-- spool/anomaly authority conflict detected by sender before network send.
+- contract/normalizer/native-identity-scheme version mismatch;
+- producer release provenance mismatch;
+- unsupported spool schema/provenance binding;
+- spool/anomaly/source-acceptance authority conflict detected by sender before network
+  send.
 
 Protocol/config conflicts require correction/new run, not blind retry of changed
 bytes under the same run ID.
@@ -363,6 +430,42 @@ Before first FULL:
 Two sequential idempotent `setConfigHash()` calls are acceptable; an atomic
 multi-key API is not required while ingest is fenced and exact-map verification is
 mandatory.
+
+### Runtime invalidation of cached BOOTSTRAP coverage
+
+The current recovery gate caches `covered` at startup and after final recovery. That
+boolean alone is insufficient once `config_state` may be changed by an operator while
+the service process remains alive.
+
+The corrected gate must also cache the covering recovery set's verified
+`identity_config_state_sha256`.
+
+On **every ingest admission path** and when computing authenticated `/state`
+blockers, compare:
+
+```text
+covering_config_state_sha256
+==
+identityConfigStateSha256(live IdentityStore)
+```
+
+If they differ:
+
+- immediately treat recovery coverage as invalid;
+- surface `BACKUP_REQUIRED`;
+- reject seq0, data chunks and final before durable ingest mutation;
+- require a new verified recovery set for the new config-state authority.
+
+This check is cheap because `config_state` contains only reviewed behavior-authority
+rows and is already queried for the production dependency fingerprint.
+
+Operationally, first-FULL config changes are still performed only while ingest is
+administratively fenced (`INGEST_DISABLED` / no admission). Runtime digest
+revalidation is defense in depth so a live process cannot keep admitting work under a
+stale cached recovery decision.
+
+Unpublished identity revision growth does not change this digest and therefore does not
+break exact restart/resume of the in-progress run.
 
 ## Exporter spool storage policy
 
@@ -508,8 +611,10 @@ After final ACK and authoritative `/state` confirmation, create a small package 
 contains exact/auditable copies of at least:
 
 ```text
-release provenance
+producer/sender release provenance
+CatalogService release provenance
 spool manifest
+source-acceptance.json
 preflight report
 collision report
 anomaly report
@@ -579,8 +684,12 @@ MemoryMax = 1 GiB
 MemoryHigh = 768 MiB
 ```
 
-and require free disk for the spool plus at least 3x the previously measured
-candidate high-water catalog/replay/temp footprint.
+For the **first** rehearsal, before any CatalogService full-volume footprint exists,
+require at least **60 GiB free** on the 80 GB VM root volume before copying the spool
+or starting the run.
+
+After that first baseline, also require free disk for the spool plus at least 3x the
+measured catalog/replay/temp high-water footprint before each repeated failure drill.
 
 Pass criteria are declared **before** the run:
 
@@ -608,10 +717,13 @@ After a successful baseline run, repeat from clean rehearsal state as needed to 
 1. **sender termination mid-run** — stop sender after data chunks, restart it, acquire
    the same spool/run lock and resume from atomic run-state with the same run ID and
    exact semantic bytes;
-2. **CatalogService termination during finalization** — terminate the rehearsal
-   service after final processing begins, restart it, and prove BOOTSTRAP config-state
-   recovery does not block exact run recovery merely because unpublished identity
-   revision advanced;
+2. **CatalogService termination during finalization** — exercise at least two
+   deterministic failure points from clean rehearsal state:
+   - before CURRENT publication/swap, after identity work has advanced unpublished
+     revision;
+   - after CURRENT publication but before final recovery coverage/response completes;
+   restart the service in each case and prove exact run recovery/ACK behavior without
+   weakening config-state recovery authority;
 3. **lost final response** — allow publication to complete while the client does not
    receive the response, then retry the exact final request and recover the durable
    ACK/state without a new run.
@@ -692,7 +804,7 @@ After final `ACKED`:
 7. create the small acceptance audit package;
 8. create encrypted off-host copy of the accepted recovery/identity authority;
 9. perform a scratch restore verification of that off-host copy;
-10. run automated read-only Drupal-vs-catalog acceptance checks.
+10. run the two-link read-only acceptance checks defined below.
 
 Additionally prove the audit chain after ACK:
 
@@ -707,27 +819,85 @@ Only after these gates may owner approval enable consumers.
 
 ## Real-data acceptance package
 
-Before Seller AI consumes the catalog, automatically compare the accepted catalog
-against the **exact production spool snapshot/watermark** without an LLM. Live Drupal
-may legitimately have changed after that watermark; later source writes are not defects
-in the earlier snapshot.
+Acceptance has **two different links**. Do not collapse them into a single
+"Drupal-vs-catalog" comparison.
 
-Include at least:
+### Link A — accepted catalog equals the exact production spool
 
-- counts by product/source type;
-- exact expected treatment of the 21 reviewed legacy mappings;
-- absence of the four quarantined source products from the accepted catalog;
-- representative deterministic sample;
-- known high-cardinality products (variants/images);
-- prices where trusted;
-- commercial availability;
-- stock/store behavior;
-- image references;
-- category and brand navigation;
+This is the transport/receiver/mapper proof.
+
+Using the exact archived spool manifest/chunks and CatalogService source xrefs, perform
+an exhaustive read-only comparison over all emitted canonical authorities/products,
+not only a sample.
+
+Verify at minimum:
+
+- every transmitted source product/variant maps to the expected accepted canonical
+  entity and no transmitted source entity disappears;
+- no quarantined source product appears;
+- all phase-0 dimensions referenced by products exist;
+- product/variant SKU and default-variant semantics;
+- offers/prices carried by the spool;
+- commercial availability and store stock;
+- attributes/options;
+- image references and variant image binding;
+- categories, brands and navigation relations;
+- kits/other emitted record types if present;
+- counts by record/product/source type;
 - FTS smoke by exact SKU, text/brand and category-facing queries.
+
+Internal canonical UUIDs need not equal source IDs; compare through the persisted
+provider/native source xrefs and canonical semantic fields.
+
+This link must be exhaustive for the accepted production spool. It proves that
+CatalogService accepted what was sent.
+
+### Link B — source snapshot evidence supports the spool
+
+This is the exporter/transformation proof.
+
+`source-acceptance.json` is built **before source scratch deletion** from raw rows of
+the same MariaDB repeatable-read snapshot. It is not generated by serializing the final
+canonical record back into "source" form.
+
+The acceptance verifier independently checks a deterministic real-data set including:
+
+- the 21 reviewed legacy collision mappings;
+- the two quarantined anomaly SKUs/products;
+- representative ordinary products;
+- known high-cardinality variant/image products;
+- price examples;
+- stock/store examples;
+- category/brand relationships;
+- RU/UK authority/fallback examples.
+
+For each selected case, the sidecar preserves the raw source facts and revision markers
+needed to independently recompute/verify the expected canonical projection.
+
+This is where real-source price correctness is checked: the current source contract has
+no independent post-snapshot price revision marker, so a later live Drupal `sell_price`
+must **not** be treated as proof about the earlier snapshot.
+
+### Optional post-ACK live-source corroboration
+
+Live Drupal may legitimately change after `snapshot_watermark`. Re-read live rows only
+when unchanged status can be proven by the source's own marker:
+
+- node-backed facts: require the same captured `nid`/`vid` and `node.changed` as the
+  snapshot evidence;
+- stock: require current `babypark_sync_stock_time_sync` to equal the captured
+  `stock_sync_unix` before comparing live stock rows;
+- a field without a trustworthy independent change marker is not live-compared after
+  the watermark; use its retained snapshot evidence instead.
+
+Therefore a later source update produces "not comparable to this snapshot", not a
+false acceptance failure and not a silent pass.
 
 The catalog schema already enforces canonical SKU uniqueness; do not invent a separate
 post-ACK duplicate-SKU scan merely to restate that invariant.
+
+Only after Link A, Link B, recovery/audit checks and owner review pass may Seller AI
+consume the catalog.
 
 ## Off-host identity recovery
 
@@ -766,7 +936,8 @@ before recurring automation:
 The shortest safe path to trusted Seller AI data is:
 
 1. freeze this D2b design;
-2. implement storage-policy/spool lifecycle + scripted disk gate and run the early
+2. implement storage-policy/spool lifecycle + transportable spool v3 producer
+   provenance/source-acceptance binding + scripted disk gate, then run the early
    immutable exporter candidate preflight;
 3. implement D2b server + sender + exclusive sender lock + atomic run-state + audit
    binding + BOOTSTRAP config-state recovery fix;
@@ -780,7 +951,8 @@ The shortest safe path to trusted Seller AI data is:
 9. build a **fresh production spool from that same final release**, require the
    <=30-minute snapshot-to-seq0 age, then send the first controlled FULL;
 10. establish post-ACK local recovery, off-host identity recovery + restore drill and
-    exact snapshot-vs-catalog acceptance package;
+    the two-link acceptance package: exhaustive spool-to-catalog plus independent
+    source-snapshot-to-spool evidence;
 11. owner acceptance;
 12. only then enable Seller AI/catalog consumers.
 
@@ -797,7 +969,8 @@ This design may be frozen only when review confirms:
 
 - no second transport/signature state machine was introduced;
 - header v1 is not silently extended;
-- exact config authority cannot drift unnoticed;
+- exact config authority cannot drift unnoticed, including config changes committed
+  while the service process remains alive;
 - sender restart cannot change semantic run bytes;
 - sender has an exclusive per-spool/run lock;
 - `.ready` spool cannot be deleted before terminal evidence;
@@ -805,11 +978,15 @@ This design may be frozen only when review confirms:
   break restart/resume merely because unpublished identity revision advanced;
 - full-scale rehearsal runs on a dedicated disposable VM before production cutover,
   with predeclared resource/time gates and termination/lost-response drills;
+- current D2a spool/2 is not silently redefined; D2b uses spool/3 with producer
+  provenance and source-acceptance hashes;
 - rehearsal and production spools are distinct, production spool is created by the
   same immutable producer/sender release, and snapshot-to-seq0 max age is enforced;
 - signed authority declares the frozen Drupal native_identity_scheme;
 - one production CatalogService cutover includes both FULL-v2 compatibility and D2b;
 - accepted authority is durable on receiver and in a small producer audit package;
+- acceptance proves both spool-to-catalog transport/mapper fidelity and independent
+  source-snapshot-to-spool transformation evidence;
 - off-host identity restore is a consumer-enablement gate;
 - no first-FULL action silently resolves `511000` or `80401mc02`;
 - no customer/seller consumer is enabled before owner acceptance.
