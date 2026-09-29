@@ -70,6 +70,15 @@ variant was the old default. Missing, excluded, and product-kit products plus
 unexpected or duplicate selected rows are failures. Selected raw states that should
 have blocked spool creation also fail closed.
 
+Every post-mapping selected-scope residual SKU collision must have exactly one
+hash-bound anomaly with the independently derived collision type, SKU key, affected
+products, collider product/variant identities, raw SKU, default flag, and source
+combination. The reverse is also required: a selected-scope anomaly without a raw
+residual collision fails. Only products affected by this exact match are removed from
+the expected publishable set. Reviewed mappings are never skipped when their products
+are missing; every mapped product must be represented by the reviewed acceptance set
+and its current raw collision must be proven.
+
 The work root must already be a real, non-symlink mode-0700 directory outside the
 frozen spool. Equal, nested, and symlink-parent aliases into the spool are rejected;
 the mode-0600 report is written through an exclusive temporary file, fsync, and
