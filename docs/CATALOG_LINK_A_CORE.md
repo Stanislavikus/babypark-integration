@@ -32,7 +32,9 @@ The caller supplies one absolute, existing, non-symlink mode-`0700` working root
 It must not be Catalog storage, the identity authority location, or the staged spool
 directory. `link-a-work.sqlite` and `link-a-report.json` are derived internally from
 that root; callers cannot select arbitrary output paths. Existing authority paths
-are therefore outside the only Link A write boundary.
+are therefore outside the only Link A write boundary. Containment uses canonical
+`realpath` locations, and a work path whose lexical path differs from its canonical
+path is rejected, preventing symlinked parent components from aliasing authority.
 
 ## Bounded verification
 

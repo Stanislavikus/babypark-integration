@@ -13,9 +13,13 @@ function syncDirectory(directory) { const fd = fs.openSync(directory, 'r'); try 
 /** Copy a locally supplied complete .ready artifact; transfer adapters remain outside this boundary. */
 export function stageFrozenSpool({ sourcePath, stagingRoot }) {
   if (!path.isAbsolute(sourcePath) || !path.isAbsolute(stagingRoot)) fail('LINK_A_STAGING_PATH_INVALID', 'Source and staging root must be absolute');
-  const sourceResolved=path.resolve(sourcePath),rootResolved=path.resolve(stagingRoot);
-  if(rootResolved===sourceResolved||rootResolved.startsWith(`${sourceResolved}${path.sep}`))fail('LINK_A_STAGING_PATH_INVALID','Staging root must be disjoint from the frozen source spool');
-  stagingRoot=rootResolved;
+  const sourceResolved=path.resolve(sourcePath),rootResolved=path.resolve(stagingRoot);let canonicalSource,canonicalTarget;
+  try { canonicalSource=fs.realpathSync(sourceResolved); } catch { fail('LINK_A_STAGING_PATH_INVALID','Source spool must already exist'); }
+  if(canonicalSource!==sourceResolved)fail('LINK_A_STAGING_PATH_INVALID','Symlinked source paths are forbidden');
+  if(fs.existsSync(rootResolved)){canonicalTarget=fs.realpathSync(rootResolved);if(canonicalTarget!==rootResolved)fail('LINK_A_STAGING_PATH_INVALID','Symlinked staging paths are forbidden');}
+  else {let parent;try{parent=fs.realpathSync(path.dirname(rootResolved));}catch{fail('LINK_A_STAGING_PATH_INVALID','Staging parent must already exist');}if(parent!==path.resolve(path.dirname(rootResolved)))fail('LINK_A_STAGING_PATH_INVALID','Symlinked staging parent paths are forbidden');canonicalTarget=path.join(parent,path.basename(rootResolved));}
+  if(canonicalTarget===canonicalSource||canonicalTarget.startsWith(`${canonicalSource}${path.sep}`))fail('LINK_A_STAGING_PATH_INVALID','Staging root must be disjoint from the frozen source spool');
+  stagingRoot=canonicalTarget;
   if (!fs.existsSync(stagingRoot)) privateDirectory(stagingRoot, true); else privateDirectory(stagingRoot);
   const source = verifyFrozenSpoolArtifact(sourcePath);
   const building = path.join(stagingRoot, `${source.spoolManifestSha256}.building`);

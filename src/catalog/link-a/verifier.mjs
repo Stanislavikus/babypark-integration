@@ -52,10 +52,13 @@ function reservoirAdd(list, kind, stable, probe) { const score=sha256(`${kind}\0
 
 function validateWorkRoot(workRoot, catalogStorageDir, identityPath, stagedSpoolPath) {
   if (!path.isAbsolute(workRoot)) fail('LINK_A_WORK_ROOT_INVALID','Link A working root must be absolute');
-  const root=path.resolve(workRoot); const catalog=path.resolve(catalogStorageDir); const identity=path.resolve(identityPath); const staged=path.resolve(stagedSpoolPath);
+  const resolvedRoot=path.resolve(workRoot);let root,catalog,identity,staged,identityAuthority;
+  try { root=fs.realpathSync(resolvedRoot);catalog=fs.realpathSync(path.resolve(catalogStorageDir));identity=fs.realpathSync(path.resolve(identityPath));staged=fs.realpathSync(path.resolve(stagedSpoolPath));identityAuthority=fs.realpathSync(path.dirname(path.resolve(identityPath))); }
+  catch { fail('LINK_A_WORK_ROOT_INVALID','Link A paths must already exist'); }
+  if(root!==resolvedRoot)fail('LINK_A_WORK_ROOT_INVALID','Symlinked Link A working paths are forbidden');
   const stat=fs.lstatSync(root); if(stat.isSymbolicLink()||!stat.isDirectory()||(stat.mode&0o777)!==0o700)fail('LINK_A_WORK_ROOT_INVALID','Link A working root must be a non-symlink mode-0700 directory');
   const inside=(candidate,parent)=>candidate===parent||candidate.startsWith(`${parent}${path.sep}`);
-  if(inside(root,catalog)||root===identity||root===path.dirname(identity)||root===staged)fail('LINK_A_WORK_ROOT_AUTHORITY','Link A working root overlaps an authority or frozen artifact');
+  if(inside(root,catalog)||inside(root,staged)||root===identity||root===identityAuthority)fail('LINK_A_WORK_ROOT_AUTHORITY','Link A working root overlaps an authority or frozen artifact');
   return root;
 }
 
@@ -106,9 +109,9 @@ export function verifyLinkA({ stagedSpoolPath, workRoot, catalogStorageDir, iden
           quarantineCount=Number(work.prepare('SELECT count(*) n FROM quarantine').get().n);
           for(const chunk of spool.chunks){currentGuard.assert();const body=readVerifiedChunk(spool,chunk);const records=decodeFullChunkForApply({layer:'full',final:false,contentEncoding:'identity',bodySha256:chunk.sha256,seq:1,runId:'link-a'},body).rows;validateFullRecords(records);
             for(const r of records){sourceCounts[`${r.phase}:${r.type}`]=(sourceCounts[`${r.phase}:${r.type}`]??0)+1;
-              if(r.type==='brand'){const id=linkADimensionId('brand',r.provider,r.native_brand_id);work.prepare('INSERT INTO source_dimensions VALUES(?,?,?,?)').run('brand',r.provider,r.native_brand_id,canonicalLinkAJson(r.name));add('brands',{brand_id:id},{brand_id:id,name:r.name,provenance_json:provenance(r.provider,r.native_brand_id,r.provenance)});}
+              if(r.type==='brand'){const id=linkADimensionId('brand',r.provider,r.native_brand_id);work.prepare('INSERT OR IGNORE INTO source_dimensions VALUES(?,?,?,?)').run('brand',r.provider,r.native_brand_id,canonicalLinkAJson(r.name));add('brands',{brand_id:id},{brand_id:id,name:r.name,provenance_json:provenance(r.provider,r.native_brand_id,r.provenance)});}
               else if(r.type==='store'){const id=linkADimensionId('store',r.provider,r.native_store_id);add('stores',{store_id:id},{store_id:id,name:r.name,active:+r.active,metadata_json:provenance(r.provider,r.native_store_id,r.metadata)});}
-              else if(r.type==='category'){const id=linkADimensionId('category',r.provider,r.native_category_id);work.prepare('INSERT INTO source_dimensions VALUES(?,?,?,?)').run('category',r.provider,r.native_category_id,canonicalLinkAJson(r.localized_names));add('categories',{category_id:id},{category_id:id,parent_id:r.parent_native_category_id?linkADimensionId('category',r.provider,r.parent_native_category_id):null,name_json:canonicalLinkAJson(r.localized_names),provenance_json:provenance(r.provider,r.native_category_id,r.provenance)});}
+              else if(r.type==='category'){const id=linkADimensionId('category',r.provider,r.native_category_id);work.prepare('INSERT OR IGNORE INTO source_dimensions VALUES(?,?,?,?)').run('category',r.provider,r.native_category_id,canonicalLinkAJson(r.localized_names));add('categories',{category_id:id},{category_id:id,parent_id:r.parent_native_category_id?linkADimensionId('category',r.provider,r.parent_native_category_id):null,name_json:canonicalLinkAJson(r.localized_names),provenance_json:provenance(r.provider,r.native_category_id,r.provenance)});}
               else if(r.type==='attribute_definition'){const id=linkADimensionId('attribute_definition',r.provider,r.native_attribute_id);add('attribute_defs',{attribute_id:id},{attribute_id:id,code:r.code,type:r.value_type,label_json:canonicalLinkAJson(r.localized_labels),provenance_json:provenance(r.provider,r.native_attribute_id,r.provenance)});}
               else if(r.type==='product'){
                 work.prepare('INSERT OR IGNORE INTO source_products VALUES(?,?)').run(r.provider,r.native_product_id);if(work.prepare('SELECT 1 FROM quarantine WHERE provider=? AND native_id=?').get(r.provider,r.native_product_id))mismatch('LINK_A_QUARANTINE_EMITTED','products',`${r.provider}:${r.native_product_id}`,null,'emitted');
