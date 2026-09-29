@@ -1,0 +1,23 @@
+#!/bin/sh
+# BabyPark Link A one-use restricted rsync SSH wrapper template.
+# Root must copy this file to a root-owned mode-0755 path and replace only the
+# two placeholders below with absolute root-owned paths.
+IDENTITY='/root/<ONE_TIME_PRIVATE_KEY>'
+KNOWN_HOSTS='/root/<PINNED_KNOWN_HOSTS>'
+exec /usr/bin/ssh -F /dev/null -T \
+  -i "$IDENTITY" \
+  -oBatchMode=yes \
+  -oPasswordAuthentication=no \
+  -oKbdInteractiveAuthentication=no \
+  -oStrictHostKeyChecking=yes \
+  -oUserKnownHostsFile="$KNOWN_HOSTS" \
+  -oGlobalKnownHostsFile=/dev/null \
+  -oIdentitiesOnly=yes \
+  -oClearAllForwardings=yes \
+  -oForwardAgent=no \
+  -oForwardX11=no \
+  -oRequestTTY=no \
+  -oPermitLocalCommand=no \
+  -oProxyCommand=none \
+  -oProxyJump=none \
+  "$@"

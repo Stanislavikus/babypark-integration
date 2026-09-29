@@ -19,6 +19,7 @@
     "catalog:anomaly-ops": "node scripts/catalog-anomaly-ops.mjs",
     "catalog:link-b": "node scripts/catalog-link-b.mjs",
     "catalog:link-a": "node scripts/catalog-link-a.mjs",
+    "catalog:link-a-pull": "node scripts/catalog-link-a-pull.mjs",
     "catalog:bp1-vectors": "php scripts/catalog-bp1-reference.php tests/fixtures/catalog-bp1-v1-vectors.json",
     "storage:validate": "node scripts/validate-storage-policy.mjs"
   }
