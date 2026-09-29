@@ -53,20 +53,21 @@ export function phase1Records() {
 }
 export function phase2Records() { return [{ schema: 'bp.catalog.full-record/2', type: 'kit_component', phase: 2, provider: 'fixture', kit_native_product_id: 'kit', component_native_variant_id: 'stroller-blue', quantity: 1, discount_minor: 5000, mutable: false, metadata: { provider: 'cannot-overwrite' } }]; }
 
-export function createE6aHarness({ generationId = 'e6a1', runId = 'e6a-run' } = {}) {
+export function createE6aHarness({ generationId = 'e6a1', runId = 'e6a-run', headerSchema = 'bp.catalog.run-header/1', publicationAuthority = null, sourceEpoch = 'epoch-e6a', watermark = '9' } = {}) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'bp-e6a1-')); const catalogDir = path.join(root, 'catalog'); fs.mkdirSync(catalogDir);
   let productSequence = 0; let variantSequence = 0;
   const identity = IdentityStore.createNew(path.join(root, 'identity.sqlite'), { idFactory: {
     product: () => `prod_e6a_${++productSequence}`, variant: () => `var_e6a_${++variantSequence}`,
   } });
+  if (publicationAuthority) for (const [key,digest] of Object.entries(publicationAuthority.config_digests)) identity.setConfigHash(key,digest);
   const dependencyFingerprint = productionDependencyFingerprint(identity);
-  const builder = CatalogGenerationBuilder.create({ storageDir: catalogDir, generationId, sourceEpoch: 'epoch-e6a', identityRevision: identity.metadata().revision, dependencyFingerprint });
+  const builder = CatalogGenerationBuilder.create({ storageDir: catalogDir, generationId, sourceEpoch, identityRevision: identity.metadata().revision, dependencyFingerprint });
   const mutex = new CatalogPublicationLock(catalogDir); const reader = new CatalogReader(catalogDir);
   const publisher = new CatalogPublisher(catalogDir, { mutex, readers: [reader] });
   const store = ReplayStore.createNew(path.join(root, 'replay.sqlite'), { catalogStorageDir: catalogDir });
   const headerBody = Buffer.from(canonicalJson({ header: { base_generation_id: null,
-    layers: ['taxonomy', 'content', 'commercial', 'stock'].map(layer => ({ base_watermark: null, layer, mode: 'replace', output_watermark: '9', t_high: '9', t_low: null })),
-    run_id: runId, run_kind: 'full', schema: 'bp.catalog.run-header/1', source_epoch: 'epoch-e6a' } }));
+    layers: ['taxonomy', 'content', 'commercial', 'stock'].map(layer => ({ base_watermark: null, layer, mode: 'replace', output_watermark: watermark, t_high: watermark, t_low: null })),
+    run_id: runId, run_kind: 'full', schema: headerSchema, source_epoch: sourceEpoch, ...(publicationAuthority?{publication_authority:publicationAuthority}:{}) } }));
   const baseKey = { kid: 'e6a-kid', runId, layer: 'full', seq: 0, final: false, contentEncoding: 'identity', bodySha256: hash(headerBody) };
   const claim = store.claim(baseKey, 100, { verifiedBody: headerBody });
   writeFullChunk({ mutex, store, builder, key: baseKey, verifiedBody: headerBody, claimToken: claim.claimToken });
