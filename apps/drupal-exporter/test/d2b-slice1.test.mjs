@@ -188,16 +188,20 @@ test('production source-acceptance selector keeps reviewed, deterministic and hi
     queryStream({ sql }) {
       queries.push({ sql, params: [], stream: true });
       return (async function* () {
-        yield { sid: 1, sku: 'CAFE\u0301', shop_id: 1, stock: 2, stock_old: 0 };
+        yield { sid: 1, sku: 'CAFE\u0301', shop_id: 1, stock: 0, stock_old: 2 };
       })();
     },
     async query(sql, params = []) {
       queries.push({ sql, params });
       if (sql.includes('AS product_group') && sql.includes('IN (')) {
+        if (sql.includes('SELECT DISTINCT')) return [10, 11, 12, 13, 14].map(product_group => ({ product_group }));
         return [
           { product_group: 10, nid: 10 },
           { product_group: 11, nid: 11 },
         ];
+      }
+      if (sql.includes('SELECT n.nid') && sql.includes("nt.base='uc_product'") && sql.includes('IN (')) {
+        return [10, 11, 12, 13, 14, 15].map(nid => ({ nid }));
       }
       if (sql.includes('ORDER BY CASE WHEN n.tnid')) return [{ nid: 12 }];
       if (sql.includes('field_data_uc_product_image') && sql.includes('GROUP BY f.entity_id')) {
@@ -205,8 +209,8 @@ test('production source-acceptance selector keeps reviewed, deterministic and hi
       }
       if (sql.includes('SUM(x.row_count)')) return [{ nid: 14, row_count: 10 }];
       if (sql.includes('FROM node WHERE nid IN')) {
-        return [10, 11, 12, 13, 14].map(nid => ({
-          nid, vid: nid, tnid: 0, type: 'product', language: 'ru', title: `P${nid}`,
+        return [10, 11, 12, 13, 14, 15].map(nid => ({
+          nid, vid: nid, tnid: nid === 15 ? 13 : 0, type: 'product', language: nid === 15 ? 'uk' : 'ru', title: `P${nid}`,
           status: 1, changed: 100 + nid,
         }));
       }
@@ -257,6 +261,16 @@ test('production source-acceptance selector keeps reviewed, deterministic and hi
     sourceEpoch: 'drupal-prod-v1',
     snapshotWatermark: '123456',
     stockSyncUnix: 1700000000,
+    producerInputs: {
+      public_site_url: 'https://example.test',
+      public_files_url: 'https://files.example.test',
+      source_currency: { code: 'UAH', precision: 0 },
+    },
+    variableRows: [
+      { name: 'uc_currency_prec', value: Buffer.from('s:1:"0";') },
+      { name: 'babypark_sync_stock_time_sync', value: 'i:1700000000;' },
+      { name: 'uc_currency_code', value: Buffer.from('s:3:"UAH";') },
+    ],
     acceptanceCases,
   });
 
@@ -267,8 +281,15 @@ test('production source-acceptance selector keeps reviewed, deterministic and hi
   assert.deepEqual(evidence.selection.reviewed_node_ids, ['10', '11']);
   assert.deepEqual(evidence.selection.deterministic_product_ids, ['12']);
   assert.deepEqual(evidence.selection.high_cardinality_product_ids, ['13', '14']);
-  assert.deepEqual(evidence.selection.selected_product_ids, ['10', '11', '12', '13', '14']);
-  assert.equal(evidence.raw.nodes.length, 5);
+  assert.deepEqual(evidence.selection.selected_product_ids, ['10', '11', '12', '13', '14', '15']);
+  assert.deepEqual(evidence.selection.expanded_selected_node_ids, ['10', '11', '12', '13', '14', '15']);
+  assert.deepEqual(evidence.producer_inputs.source_currency, { code: 'UAH', precision: 0 });
+  assert.deepEqual(evidence.raw.drupal_variables.map(row => row.name), [
+    'babypark_sync_stock_time_sync', 'uc_currency_code', 'uc_currency_prec',
+  ]);
+  assert.equal(Buffer.from(evidence.raw.drupal_variables[0].value_base64, 'base64').toString(), 'i:1700000000;');
+  assert.deepEqual(evidence.raw.active_stores, [{ shop_id: 1 }]);
+  assert.equal(evidence.raw.nodes.length, 6);
   assert.deepEqual(evidence.raw.category_terms, [
     { tid: 601, vid: 8, name: 'Cat', language: 'ru', i18n_tsid: 9001 },
   ]);
@@ -276,7 +297,9 @@ test('production source-acceptance selector keeps reviewed, deterministic and hi
   assert.deepEqual(evidence.raw.brand_terms, [{ tid: 501, name: 'Brand' }]);
   assert.equal(evidence.raw.stock.length, 1);
   assert.equal(evidence.raw.stock[0].sku, 'CAFE\u0301');
+  assert.equal(evidence.raw.stock[0].stock, 0);
   assert.deepEqual(evidence.raw.store_terms, [{ tid: 1, name: 'Store 1' }]);
+  assert.ok(queries.some(q => q.sql.includes('SELECT DISTINCT shop AS shop_id') && q.sql.includes('stock > 0')));
   assert.ok(queries.some(q => q.stream === true && q.sql.includes('FROM babypark_stock')));
   assert.ok(queries.some(q => q.sql.includes("v.machine_name='catalog'") && q.sql.includes('taxonomy_index')));
   assert.equal(queries.some(q => q.sql.includes('cross_keys') || q.sql.includes('duplicate_keys')), false);

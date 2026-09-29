@@ -54,6 +54,8 @@ export async function collectSourceAcceptance(conn, {
   sourceEpoch,
   snapshotWatermark,
   stockSyncUnix,
+  producerInputs,
+  variableRows = [],
   acceptanceCases,
 }) {
   if (!acceptanceCases?.native_product_ids?.length) {
@@ -126,9 +128,33 @@ export async function collectSourceAcceptance(conn, {
     ...imageHeavyRows.map(row => row.nid),
     ...variantHeavyRows.map(row => row.nid),
   ]);
-  const ids = uniqueSortedNumbers([...reviewedNodeIds, ...deterministicIds, ...highCardinalityIds]);
+  const seedIds = uniqueSortedNumbers([...reviewedNodeIds, ...deterministicIds, ...highCardinalityIds]);
+  const seedGroups = seedIds.length ? await conn.query(`
+    SELECT DISTINCT CASE WHEN n.tnid != 0 THEN n.tnid ELSE n.nid END AS product_group
+    FROM node n JOIN node_type nt ON nt.type=n.type
+    WHERE nt.base='uc_product' AND n.status=1 AND n.nid IN (${placeholders(seedIds.length)})
+    ORDER BY product_group
+  `, seedIds) : [];
+  const selectedProductGroupIds = uniqueSortedNumbers(seedGroups.map(row => row.product_group));
+  const expandedRows = selectedProductGroupIds.length ? await conn.query(`
+    SELECT n.nid
+    FROM node n JOIN node_type nt ON nt.type=n.type
+    WHERE nt.base='uc_product' AND n.status=1
+      AND CASE WHEN n.tnid != 0 THEN n.tnid ELSE n.nid END IN (${placeholders(selectedProductGroupIds.length)})
+    ORDER BY CASE WHEN n.tnid != 0 THEN n.tnid ELSE n.nid END,n.language,n.nid
+  `, selectedProductGroupIds) : [];
+  // Keep every seed even if a compatibility fixture supplies an incomplete expansion;
+  // the production query adds every published sibling in each resolved group.
+  const ids = uniqueSortedNumbers([...seedIds, ...expandedRows.map(row => row.nid)]);
 
   const raw = {};
+  raw.drupal_variables = [...variableRows]
+    .filter(row => ['babypark_sync_stock_time_sync', 'uc_currency_code', 'uc_currency_prec'].includes(row.name))
+    .map(row => ({
+      name: row.name,
+      value_base64: (Buffer.isBuffer(row.value) ? row.value : Buffer.from(String(row.value), 'utf8')).toString('base64'),
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name));
   raw.nodes = await rowsForIds(conn,
     'SELECT nid,vid,tnid,type,language,title,status,changed FROM node WHERE nid IN', ids,
     'ORDER BY nid,vid');
@@ -224,11 +250,10 @@ export async function collectSourceAcceptance(conn, {
       .filter(Boolean)
   );
   raw.stock = await collectMatchingStockRows(conn, skuKeys);
-  const storeIds = uniqueSortedNumbers(
-    raw.stock
-      .filter(row => Number(row.stock) > 0)
-      .map(row => row.shop_id ?? row.shop)
-  );
+  raw.active_stores = (await conn.query(`
+    SELECT DISTINCT shop AS shop_id FROM babypark_stock WHERE stock > 0 ORDER BY shop
+  `)).map(row => ({ shop_id: row.shop_id }));
+  const storeIds = uniqueSortedNumbers(raw.active_stores.map(row => row.shop_id));
   raw.store_terms = await rowsForIds(conn,
     'SELECT tid,name FROM taxonomy_term_data WHERE tid IN', storeIds,
     'ORDER BY tid');
@@ -240,6 +265,7 @@ export async function collectSourceAcceptance(conn, {
     source_epoch: sourceEpoch,
     snapshot_watermark: String(snapshotWatermark),
     stock_sync_unix: Number(stockSyncUnix),
+    producer_inputs: producerInputs,
     selection: {
       reviewed_cases: acceptanceCases.cases,
       reviewed_product_group_ids: reviewedProductGroupIds.map(String),
@@ -248,6 +274,8 @@ export async function collectSourceAcceptance(conn, {
       reviewed_node_ids: reviewedNodeIds.map(String),
       deterministic_product_ids: deterministicIds.map(String),
       high_cardinality_product_ids: highCardinalityIds.map(String),
+      selected_product_group_ids: selectedProductGroupIds.map(String),
+      expanded_selected_node_ids: ids.map(String),
       selected_product_ids: ids.map(String),
     },
     raw,
@@ -259,6 +287,7 @@ export async function collectFixtureSourceAcceptance(sourceDir, {
   sourceEpoch,
   snapshotWatermark,
   stockSyncUnix,
+  producerInputs,
 }) {
   const fileMap = {
     nodes: 'nodes',
@@ -284,6 +313,13 @@ export async function collectFixtureSourceAcceptance(sourceDir, {
   for (const [key, file] of Object.entries(fileMap)) {
     raw[key] = await readNdjson(path.join(sourceDir, `${file}.ndjson`));
   }
+  raw.drupal_variables = [
+    { name: 'babypark_sync_stock_time_sync', value_base64: Buffer.from(`i:${stockSyncUnix};`).toString('base64') },
+    { name: 'uc_currency_code', value_base64: Buffer.from(`s:${producerInputs.source_currency.code.length}:\"${producerInputs.source_currency.code}\";`).toString('base64') },
+    { name: 'uc_currency_prec', value_base64: Buffer.from(`s:${String(producerInputs.source_currency.precision).length}:\"${producerInputs.source_currency.precision}\";`).toString('base64') },
+  ].sort((a, b) => a.name.localeCompare(b.name));
+  const activeStoreIds = uniqueSortedNumbers(raw.stock.filter(row => Number(row.stock) > 0).map(row => row.shop_id ?? row.shop));
+  raw.active_stores = activeStoreIds.map(shop_id => ({ shop_id }));
   const ids = uniqueSortedNumbers(raw.nodes.map(row => row.nid));
   return {
     schema: SOURCE_ACCEPTANCE_SCHEMA,
@@ -292,6 +328,7 @@ export async function collectFixtureSourceAcceptance(sourceDir, {
     source_epoch: sourceEpoch,
     snapshot_watermark: String(snapshotWatermark),
     stock_sync_unix: Number(stockSyncUnix),
+    producer_inputs: producerInputs,
     selection: {
       reviewed_cases: [],
       reviewed_product_group_ids: [],
@@ -300,6 +337,8 @@ export async function collectFixtureSourceAcceptance(sourceDir, {
       reviewed_node_ids: [],
       deterministic_product_ids: ids.map(String),
       high_cardinality_product_ids: [],
+      selected_product_group_ids: uniqueSortedNumbers(raw.nodes.map(row => Number(row.tnid) !== 0 ? row.tnid : row.nid)).map(String),
+      expanded_selected_node_ids: ids.map(String),
       selected_product_ids: ids.map(String),
     },
     raw,

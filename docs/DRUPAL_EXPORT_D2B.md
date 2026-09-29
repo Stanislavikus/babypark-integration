@@ -210,6 +210,13 @@ The sidecar records at minimum:
 - source facts needed to verify the sampled canonical projections, including price,
   stock, category/brand and variant/image membership where applicable.
 
+The finalized additive version-1 evidence profile also binds normalized public site
+and files URL inputs, parsed source currency, exact base64 bytes of the three Drupal
+stock/currency variables, the global active-store aggregate, and explicit
+deterministic/high-cardinality seed-to-translation-group expansion metadata. See
+`docs/CATALOG_LINK_B.md`. This does not add a spool manifest field: preflight and
+collision reports remain diagnostic rather than semantic acceptance authorities.
+
 The sidecar is acceptance evidence, not another canonical payload and not an authority
 for identity.
 
