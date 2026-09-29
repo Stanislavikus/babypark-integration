@@ -50,7 +50,10 @@ min-hash probe reservoirs of 16 entries each.
 
 Dimension and image IDs are derived independently from the frozen framed SHA-256
 domain formulas. Golden vectors are hard-coded in tests. Product and variant IDs are
-resolved only through a read-only `IdentityStore`.
+resolved only through a read-only `IdentityStore`. Before any source-xref lookup, the
+live IdentityStore revision must exactly equal the identity revision sealed into the
+accepted generation; pre-existing identity drift fails with
+`LINK_A_IDENTITY_REVISION_MISMATCH` rather than being silently followed.
 
 Publication-authority hashing is SHA-256 of UTF-8 JSON produced recursively by
 sorting every object key lexicographically, preserving array order, and applying

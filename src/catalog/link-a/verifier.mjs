@@ -85,6 +85,8 @@ export function verifyLinkA({ stagedSpoolPath, workRoot, catalogStorageDir, iden
     try {
       withExactCatalogGeneration(catalogStorageDir,expectedGenerationId,(db,metadata)=>{
         generationMeta={generation_id:expectedGenerationId,generation_manifest_sha256:metadata.manifest_sha256,identity_revision:metadata.identity_revision};
+        const liveIdentityRevision=identity.metadata().revision;
+        if(liveIdentityRevision!==metadata.identity_revision){mismatch('LINK_A_IDENTITY_REVISION_MISMATCH','identity_meta','revision',metadata.identity_revision,liveIdentityRevision);return;}
         const manifest=JSON.parse(db.prepare('SELECT manifest_json FROM catalog_meta WHERE singleton=1').get().manifest_json); const authority=manifest.extra?.publication_authority;
         const authorityKeys=['anomaly_report_sha256','config_digests','full_record_contract_version','native_identity_scheme','producer_commit','producer_release_provenance_sha256','record_validator_version','schema','sku_normalizer_version','spool_manifest_sha256','spool_schema'];
         if(!authority||Object.keys(authority).sort().join('\0')!==authorityKeys.sort().join('\0'))mismatch('LINK_A_PUBLICATION_AUTHORITY','catalog_meta','keys',authorityKeys,Object.keys(authority??{}).sort());
