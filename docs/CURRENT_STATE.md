@@ -5,6 +5,14 @@ Last verified: 2026-09-28
 Owner: BabyPark
 Source of truth: production runtime + this repository
 
+## D2b acceptance status (2026-09-29)
+
+Link A PR #37 merged at `c89fd25a6fac2f48d025527531b9601bdf817d22` and
+Link B PR #38 merged at `ca8b748aa8e845403debf31b6133b08d0e59e640`.
+Both are reviewed but not deployed or rehearsed. Production CatalogService remains
+the older BOOTSTRAP release; no production FULL has occurred. The next gate is final
+operations tooling, then the exact-release full-scale isolated rehearsal.
+
 ## Viber gateway
 
 Production release:

@@ -9,6 +9,25 @@ function privateDirectory(directory, create = false) {
   if (stat.isSymbolicLink() || !stat.isDirectory() || (stat.mode & 0o777) !== 0o700) fail('LINK_A_STAGING_UNSAFE', `${directory} must be a private non-symlink directory`);
 }
 function syncDirectory(directory) { const fd = fs.openSync(directory, 'r'); try { fs.fsyncSync(fd); } finally { fs.closeSync(fd); } }
+function canonicalStagingRoot(stagingRoot) {
+  if (!path.isAbsolute(stagingRoot)) fail('LINK_A_STAGING_PATH_INVALID','Staging root must be absolute');
+  const resolved=path.resolve(stagingRoot);let canonical;
+  if(fs.existsSync(resolved)){canonical=fs.realpathSync(resolved);if(canonical!==resolved)fail('LINK_A_STAGING_PATH_INVALID','Symlinked staging paths are forbidden');}
+  else {const parent=fs.realpathSync(path.dirname(resolved));if(parent!==path.resolve(path.dirname(resolved)))fail('LINK_A_STAGING_PATH_INVALID','Symlinked staging parent paths are forbidden');canonical=path.join(parent,path.basename(resolved));fs.mkdirSync(canonical,{mode:0o700});syncDirectory(parent);}
+  privateDirectory(canonical);return canonical;
+}
+
+export async function stageFrozenSpoolFromTransfer({stagingRoot,expectedManifestSha256,transfer}) {
+  if(!/^[a-f0-9]{64}$/.test(expectedManifestSha256??'')||typeof transfer!=='function')fail('LINK_A_STAGING_INPUT_INVALID','Trusted manifest hash and transfer callback are required');
+  const root=canonicalStagingRoot(stagingRoot),building=path.join(root,`${expectedManifestSha256}.building`),staged=path.join(root,`${expectedManifestSha256}.staged`);
+  if(fs.existsSync(building)||fs.existsSync(staged))fail('LINK_A_STAGING_EXISTS','Staging artifact already exists; overwrite/reuse is forbidden');
+  fs.mkdirSync(building,{mode:0o700});syncDirectory(root);
+  await transfer(building);
+  privateDirectory(building);
+  for(const name of fs.readdirSync(building)){if(path.basename(name)!==name)fail('LINK_A_STAGING_PATH_INVALID','Unsafe transfer entry');const file=path.join(building,name),stat=fs.lstatSync(file);if(stat.isSymbolicLink()||!stat.isFile())fail('LINK_A_STAGING_SOURCE_INVALID','Transfer entries must be regular files');if((stat.mode&0o777)!==0o600)fail('LINK_A_STAGING_UNSAFE','Transfer files must be mode 0600');const fd=fs.openSync(file,'r');try{fs.fsyncSync(fd);}finally{fs.closeSync(fd);}}
+  syncDirectory(building);const verified=verifyFrozenSpoolArtifact(building);if(verified.spoolManifestSha256!==expectedManifestSha256)fail('LINK_A_STAGING_VERIFY_FAILED','Transferred manifest digest differs from trusted authority');
+  fs.renameSync(building,staged);syncDirectory(root);return verifyFrozenSpoolArtifact(staged);
+}
 
 /** Copy a locally supplied complete .ready artifact; transfer adapters remain outside this boundary. */
 export function stageFrozenSpool({ sourcePath, stagingRoot }) {
