@@ -84,6 +84,14 @@ frozen spool. Equal, nested, and symlink-parent aliases into the spool are rejec
 the mode-0600 report is written through an exclusive temporary file, fsync, and
 atomic rename.
 
+Global active-store rows and the full retained category vocabulary are exhaustive:
+their canonical ID sets must match exactly, including names, active flags, localized
+names, and parents, with no duplicates or extras. Brand evidence remains deliberately
+bounded to selected products, so unrelated extra brands are ignored. The current
+Drupal phase-0/1 contract also globally forbids `attribute_definition` and any phase-1
+`product_type=product_kit` row. Collision mapping identity keys are unique; duplicate
+or conflicting mapping identities are rejected before application.
+
 ## Operator CLI
 
 ```bash
