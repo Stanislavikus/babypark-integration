@@ -26,6 +26,12 @@ It never reads `CURRENT`, follows a pointer, or constructs builder/publisher pat
 Link A separately requires `CURRENT` to name the expected ID at admission, between
 chunks, and before PASS.
 
+The caller supplies one absolute, existing, non-symlink mode-`0700` working root.
+It must not be Catalog storage, the identity authority location, or the staged spool
+directory. `link-a-work.sqlite` and `link-a-report.json` are derived internally from
+that root; callers cannot select arbitrary output paths. Existing authority paths
+are therefore outside the only Link A write boundary.
+
 ## Bounded verification
 
 Chunks are decoded sequentially. Expected keys, source identities, and quarantine
@@ -43,6 +49,12 @@ resolved only through a read-only `IdentityStore`.
 Publication-authority hashing is SHA-256 of UTF-8 JSON produced recursively by
 sorting every object key lexicographically, preserving array order, and applying
 standard `JSON.stringify` scalar encoding (`canonicalLinkAJson`).
+
+Generation and IdentityStore evidence hashes use a fixed reusable buffer and
+incremental SHA-256 updates; neither SQLite file is loaded into a proportional-size
+JavaScript buffer. Accepted FULL evidence requires exact run ID/digest/final sequence,
+`layer=full`, `run_kind=full`, `status=ACCEPTED`, and `source_watermark=NULL`. The
+snapshot watermark is instead bound by all four `sync_state.accepted_watermark` rows.
 
 ## Report schema
 
@@ -68,7 +80,7 @@ The private, atomic mode-0600 report has this exact top-level shape:
   "expected_unique_counts": {},
   "actual_counts": {},
   "quarantine": { "quarantined_source_products": 0, "leaked_source_products": 0 },
-  "fts": { "probe_count": 0, "failed_probe_count": 0, "probes": [] },
+  "fts": { "status": "COMPLETE | NOT_COMPLETED", "probe_count": 0, "executed_probe_count": 0, "failed_probe_count": "integer-or-null", "probes": [] },
   "mismatch_count": 0,
   "mismatches_truncated": false,
   "mismatches": [],

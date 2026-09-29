@@ -25,7 +25,7 @@ export function stageFrozenSpool({ sourcePath, stagingRoot }) {
       const from = path.join(source.path, name); const stat = fs.lstatSync(from);
       if (stat.isSymbolicLink() || !stat.isFile()) fail('LINK_A_STAGING_SOURCE_INVALID', 'Source entries must be regular non-symlink files');
       const to = path.join(building, name); const input = fs.openSync(from, 'r'); const output = fs.openSync(to, 'wx', 0o600);
-      try { const buffer = Buffer.allocUnsafe(1024 * 1024); let count; while ((count = fs.readSync(input, buffer, 0, buffer.length)) > 0) fs.writeSync(output, buffer, 0, count); fs.fsyncSync(output); }
+      try { const buffer = Buffer.allocUnsafe(1024 * 1024); let count; while ((count = fs.readSync(input, buffer, 0, buffer.length)) > 0) { let offset=0; while(offset<count)offset+=fs.writeSync(output,buffer,offset,count-offset); } fs.fsyncSync(output); }
       finally { fs.closeSync(input); fs.closeSync(output); }
     }
     syncDirectory(building);
