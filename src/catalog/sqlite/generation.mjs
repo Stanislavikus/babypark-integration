@@ -595,6 +595,28 @@ export function inspectCatalogGeneration(
   }
 }
 
+/**
+ * Opens one sealed generation by validated ID.  It never consults CURRENT and the
+ * handle cannot create or mutate a database.  The synchronous callback prevents a
+ * long-lived, pointer-following reader from escaping this boundary.
+ */
+export function withExactCatalogGeneration(storageDir, expectedGenerationId, callback) {
+  const dir = requireStorageDir(storageDir);
+  const id = validateGenerationId(expectedGenerationId);
+  if (typeof callback !== 'function') throw catalogError('CATALOG_INVALID_ARGUMENT', 'callback must be a function');
+  const filePath = finalPathFor(dir, id);
+  if (!regularArtifact(filePath)) throw catalogError('CATALOG_GENERATION_MISSING', 'Exact generation file does not exist', { generation_id: id });
+  if (fileSidecars(filePath).some(candidate => fs.existsSync(candidate))) throw catalogError('CATALOG_PUBLISHED_SIDECAR_PRESENT', 'Published generation has sidecars', { path: filePath });
+  const db = new DatabaseSync(filePath, { readOnly: true, create: false });
+  try {
+    db.exec('PRAGMA foreign_keys=ON; PRAGMA query_only=ON;');
+    const metadata = validateDbHandle(db, { expectedGenerationId: id, requireReady: true, requireStandalone: true });
+    const result = callback(db, { ...metadata, path: filePath });
+    if (result && typeof result.then === 'function') throw catalogError('CATALOG_INVALID_ARGUMENT', 'Exact-generation callback must be synchronous');
+    return result;
+  } finally { db.close(); }
+}
+
 export class CatalogGenerationBuilder {
   static recoverSeal({ storageDir, generationId, expectedRunId,
     expectedRunDigest, expectedFinalSeq, failpoint } = {}) {

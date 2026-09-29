@@ -57,6 +57,27 @@ export function readVerifiedChunk(spool, chunk, { validateSemantic = false } = {
 
 export function verifySpool(spoolPath, options = {}) {
   if (!path.isAbsolute(spoolPath) || !spoolPath.endsWith('.ready')) fail('D2B_SPOOL_PATH_INVALID', 'Spool path must be an absolute .ready directory');
+  const frozen = verifyFrozenSpoolArtifact(spoolPath);
+  const { manifest } = frozen;
+  const releaseRoot = options.releaseRoot ? path.resolve(options.releaseRoot) : RUNTIME_RELEASE_ROOT;
+  const releasePath = options.releasePath ?? (options.releaseRoot ? path.join(releaseRoot, 'RELEASE.json') : RUNTIME_RELEASE_PROVENANCE_PATH);
+  const packageLockPath = options.packageLockPath ?? (options.releaseRoot ? path.join(releaseRoot, 'apps/drupal-exporter/package-lock.json') : RUNTIME_PACKAGE_LOCK_PATH);
+  const release = loadReleaseProvenance(releasePath, { expectedPath: releasePath, expectedPackageLockPath: packageLockPath });
+  if (manifest.producer_commit !== release.document.commit || manifest.producer_release_provenance_sha256 !== release.sha256) fail('D2B_RELEASE_PARITY_MISMATCH', 'Spool was not produced by this immutable release');
+  const configs = [
+    ['collision_config_sha256', 'config/drupal/legacy-sku-collisions.yaml'],
+    ['anomaly_publication_policy_sha256', 'config/catalog-anomalies/publication-policy.yaml'],
+  ];
+  for (const [field, relative] of configs) {
+    const digest = sha256(fs.readFileSync(path.join(releaseRoot, relative)));
+    if (!HASH.test(manifest[field] || '') || digest !== manifest[field]) fail('D2B_CONFIG_AUTHORITY_MISMATCH', `${relative} does not match spool authority`);
+  }
+  return { ...frozen, release };
+}
+
+// This boundary deliberately contains no producer-host release or local-config reads.
+export function verifyFrozenSpoolArtifact(spoolPath) {
+  if (!path.isAbsolute(spoolPath)) fail('D2B_SPOOL_PATH_INVALID', 'Spool artifact path must be absolute');
   privateEntry(spoolPath, 'directory');
   const manifestBytes = readFile(path.join(spoolPath, 'manifest.json'));
   const manifest = parseJson(manifestBytes, 'manifest.json');
@@ -87,19 +108,6 @@ export function verifySpool(spoolPath, options = {}) {
     if (!HASH.test(manifest[field] || '') || sha256(bytes) !== manifest[field]) fail('D2B_SPOOL_EVIDENCE_MISMATCH', `${name} hash mismatch`);
     evidence[name] = parseJson(bytes, name);
   }
-  const releaseRoot = options.releaseRoot ? path.resolve(options.releaseRoot) : RUNTIME_RELEASE_ROOT;
-  const releasePath = options.releasePath ?? (options.releaseRoot ? path.join(releaseRoot, 'RELEASE.json') : RUNTIME_RELEASE_PROVENANCE_PATH);
-  const packageLockPath = options.packageLockPath ?? (options.releaseRoot ? path.join(releaseRoot, 'apps/drupal-exporter/package-lock.json') : RUNTIME_PACKAGE_LOCK_PATH);
-  const release = loadReleaseProvenance(releasePath, { expectedPath: releasePath, expectedPackageLockPath: packageLockPath });
-  if (manifest.producer_commit !== release.document.commit || manifest.producer_release_provenance_sha256 !== release.sha256) fail('D2B_RELEASE_PARITY_MISMATCH', 'Spool was not produced by this immutable release');
-  const configs = [
-    ['collision_config_sha256', 'config/drupal/legacy-sku-collisions.yaml'],
-    ['anomaly_publication_policy_sha256', 'config/catalog-anomalies/publication-policy.yaml'],
-  ];
-  for (const [field, relative] of configs) {
-    const digest = sha256(fs.readFileSync(path.join(releaseRoot, relative)));
-    if (!HASH.test(manifest[field] || '') || digest !== manifest[field]) fail('D2B_CONFIG_AUTHORITY_MISMATCH', `${relative} does not match spool authority`);
-  }
   const anomaly = evidence['anomaly-report.json'];
   const preflight = parseJson(fs.readFileSync(path.join(spoolPath, 'preflight.json')), 'preflight.json');
   const sourceAcceptance = evidence['source-acceptance.json'];
@@ -108,5 +116,6 @@ export function verifySpool(spoolPath, options = {}) {
     if (Object.hasOwn(anomaly, field) && anomaly[field] !== manifest[field]) fail('D2B_REPORT_CROSSLINK_MISMATCH', `anomaly report ${field} mismatch`);
     if (Object.hasOwn(preflight, field) && preflight[field] !== manifest[field]) fail('D2B_REPORT_CROSSLINK_MISMATCH', `preflight report ${field} mismatch`);
   }
-  return { path: spoolPath, manifest, manifestBytes, spoolManifestSha256: sha256(manifestBytes), release };
+  return { path: spoolPath, manifest, manifestBytes, spoolManifestSha256: sha256(manifestBytes),
+    anomalyReport: anomaly, sourceAcceptance, chunks: manifest.chunks.map(chunk => ({ ...chunk })) };
 }
