@@ -23,6 +23,8 @@ There is deliberately no `preflight_sha256`. `preflight.json` and
 `collision-report.json` are diagnostics, not semantic acceptance authorities. The
 hash-bound anomaly report supplies quarantine evidence. Exact collision YAML bytes
 must hash to `manifest.collision_config_sha256` before semantic checking starts.
+The YAML is decoded by a verifier-owned parser restricted to the frozen mapping
+vocabulary, so Link B has no runtime dependency on an exporter `node_modules` tree.
 
 ## Additive source-acceptance/1 evidence profile
 
@@ -59,6 +61,19 @@ currency, PHP-variable, and money business modules.
 Chunks are processed sequentially. Only bounded selected products, expected
 dimensions, and bounded mismatch details are retained. Mismatch detail is capped at
 100 entries and 48 KiB; `mismatch_count` continues counting beyond either cap.
+
+Before projection, Link B validates the complete evidence envelope and anomaly
+report cross-links. It reconstructs selected raw SKU collisions, proves every
+represented retain/exclude mapping and its cardinality, rejects stale mappings and
+residual reviewed collisions, and promotes a retained variant only when the excluded
+variant was the old default. Missing, excluded, and product-kit products plus
+unexpected or duplicate selected rows are failures. Selected raw states that should
+have blocked spool creation also fail closed.
+
+The work root must already be a real, non-symlink mode-0700 directory outside the
+frozen spool. Equal, nested, and symlink-parent aliases into the spool are rejected;
+the mode-0600 report is written through an exclusive temporary file, fsync, and
+atomic rename.
 
 ## Operator CLI
 
