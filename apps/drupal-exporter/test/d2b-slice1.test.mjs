@@ -257,6 +257,16 @@ test('production source-acceptance selector keeps reviewed, deterministic and hi
     sourceEpoch: 'drupal-prod-v1',
     snapshotWatermark: '123456',
     stockSyncUnix: 1700000000,
+    producerInputs: {
+      public_site_url: 'https://example.test',
+      public_files_url: 'https://files.example.test',
+      source_currency: { code: 'UAH', precision: 0 },
+    },
+    variableRows: [
+      { name: 'uc_currency_prec', value: Buffer.from('s:1:"0";') },
+      { name: 'babypark_sync_stock_time_sync', value: 'i:1700000000;' },
+      { name: 'uc_currency_code', value: Buffer.from('s:3:"UAH";') },
+    ],
     acceptanceCases,
   });
 
@@ -268,6 +278,13 @@ test('production source-acceptance selector keeps reviewed, deterministic and hi
   assert.deepEqual(evidence.selection.deterministic_product_ids, ['12']);
   assert.deepEqual(evidence.selection.high_cardinality_product_ids, ['13', '14']);
   assert.deepEqual(evidence.selection.selected_product_ids, ['10', '11', '12', '13', '14']);
+  assert.deepEqual(evidence.selection.expanded_selected_node_ids, ['10', '11', '12', '13', '14']);
+  assert.deepEqual(evidence.producer_inputs.source_currency, { code: 'UAH', precision: 0 });
+  assert.deepEqual(evidence.raw.drupal_variables.map(row => row.name), [
+    'babypark_sync_stock_time_sync', 'uc_currency_code', 'uc_currency_prec',
+  ]);
+  assert.equal(Buffer.from(evidence.raw.drupal_variables[0].value_base64, 'base64').toString(), 'i:1700000000;');
+  assert.deepEqual(evidence.raw.active_stores, [{ shop_id: 1 }]);
   assert.equal(evidence.raw.nodes.length, 5);
   assert.deepEqual(evidence.raw.category_terms, [
     { tid: 601, vid: 8, name: 'Cat', language: 'ru', i18n_tsid: 9001 },

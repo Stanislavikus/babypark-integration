@@ -134,6 +134,12 @@ export async function extractSnapshotToNdjson({
       sourceEpoch: config.sourceEpoch,
       snapshotWatermark,
       stockSyncUnix,
+      producerInputs: {
+        public_site_url: config.publicSiteUrl,
+        public_files_url: config.publicFilesUrl,
+        source_currency: sourceCurrency,
+      },
+      variableRows,
       acceptanceCases,
     });
     finishStage(stageTimings, 'source_acceptance_ms', acceptanceStarted);

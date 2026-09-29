@@ -132,11 +132,19 @@ export async function runExportPipeline({
     stockSyncUnix = 1700000000;
     buildingPath = resolveSpoolPaths(config.spoolRoot, snapshotWatermark).building;
     const fixtureAcceptanceStarted = startStage();
+    const fixtureSourceCurrency = config.sourceCurrency ?? JSON.parse(
+      fs.readFileSync(path.join(sourceDir, 'source-currency.json'), 'utf8')
+    );
     sourceAcceptance = await collectFixtureSourceAcceptance(sourceDir, {
       provider: config.provider,
       sourceEpoch: config.sourceEpoch,
       snapshotWatermark,
       stockSyncUnix,
+      producerInputs: {
+        public_site_url: config.publicSiteUrl,
+        public_files_url: config.publicFilesUrl,
+        source_currency: fixtureSourceCurrency,
+      },
     });
     finishStage(stageTimings, 'source_acceptance_ms', fixtureAcceptanceStarted);
   }
