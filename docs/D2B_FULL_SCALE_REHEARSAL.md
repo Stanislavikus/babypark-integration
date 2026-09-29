@@ -46,14 +46,20 @@ sudo rm -f /etc/ssh/authorized_keys/babypark-exporter-link-a
 ```
 
 The trusted accepted/run authority supplies the manifest SHA; it is never learned
-from remote. The adapter spawns argv arrays.
+from remote. Root also installs a one-use mode-0755 SSH wrapper containing only
+`exec /usr/bin/ssh -i /root/<KEY> -oBatchMode=yes -oPasswordAuthentication=no
+-oKbdInteractiveAuthentication=no "$@"`; the rsync adapter receives that absolute
+wrapper as `--rsh`, and spawns rsync with an argv array and `shell:false`. Remote and
+local paths are never interpolated into a shell command. Remove the wrapper with the
+key after transfer.
 
 ## Runtime and clean-state drills
 
 Use `BABYPARK_REHEARSAL=1`, an absolute `BABYPARK_REHEARSAL_ROOT`, loopback, a
 non-production port, audience `babypark-catalog-rehearsal-v1`, rehearsal-prefixed
 KIDs, ingest enabled, and all state/backup paths canonicalized below the root.
-CatalogService uses MemoryMax=1G and MemoryHigh=768M.
+The dedicated port is exactly 18081. CatalogService uses MemoryMax=1G and
+MemoryHigh=768M.
 
 Run clean-state drills: A baseline; B terminate sender after durable non-final ACK,
 `lock-inspect`, prove owner dead, explicit `lock-break`, restart and prove identical
