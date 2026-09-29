@@ -24,7 +24,9 @@ reused and failures are retained for diagnosis.
 ready, standalone integrity and supplies the handle only to a synchronous callback.
 It never reads `CURRENT`, follows a pointer, or constructs builder/publisher paths.
 Link A separately requires `CURRENT` to name the expected ID at admission, between
-chunks, and before PASS.
+chunks, and before PASS. It keeps the admission `CURRENT` file descriptor open and
+requires every checkpoint pathname to retain the same device/inode and exact bytes,
+so an atomic A-to-B-to-A pointer replacement is still detected.
 
 The caller supplies one absolute, existing, non-symlink mode-`0700` working root.
 It must not be Catalog storage, the identity authority location, or the staged spool
@@ -36,7 +38,9 @@ are therefore outside the only Link A write boundary.
 
 Chunks are decoded sequentially. Expected keys, source identities, and quarantine
 identities live in verifier-owned `link-a-work.sqlite`, rather than unbounded JS key
-sets. Each unique expected row is compared immediately by indexed primary/composite
+sets. Source brand/category text used by bounded FTS probes is also stored there by
+provider/native key; it is not accumulated in process-wide JavaScript maps. Each
+unique expected row is compared immediately by indexed primary/composite
 key lookup. The final unique expected count for every canonical table is read from
 the work database and must equal the generation row count. JS memory holds at most
 the current bounded FULL chunk, 200 mismatch details, and three deterministic
@@ -55,6 +59,8 @@ incremental SHA-256 updates; neither SQLite file is loaded into a proportional-s
 JavaScript buffer. Accepted FULL evidence requires exact run ID/digest/final sequence,
 `layer=full`, `run_kind=full`, `status=ACCEPTED`, and `source_watermark=NULL`. The
 snapshot watermark is instead bound by all four `sync_state.accepted_watermark` rows.
+The supplied accepted-run object has exactly `run_id`, `run_digest`, and `final_seq`;
+its final sequence must equal the staged chunk count plus one.
 
 ## Report schema
 
@@ -91,7 +97,8 @@ The private, atomic mode-0600 report has this exact top-level shape:
 }
 ```
 
-Mismatch detail storage is capped at 200 while `mismatch_count` remains unbounded.
+Mismatch detail storage is capped at 200, 4 KiB per detail, and 256 KiB total while
+`mismatch_count` remains unbounded. Oversized values are summarized before retention.
 FTS smoke uses at most 16 exact-SKU, 16 title/text, and 16 category-facing probes.
 This core does not implement Link B, acceptance-package sealing, SSH credentials,
 deployment, rehearsal, or FULL transmission.

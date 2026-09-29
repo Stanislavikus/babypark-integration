@@ -12,7 +12,10 @@ function syncDirectory(directory) { const fd = fs.openSync(directory, 'r'); try 
 
 /** Copy a locally supplied complete .ready artifact; transfer adapters remain outside this boundary. */
 export function stageFrozenSpool({ sourcePath, stagingRoot }) {
-  if (!path.isAbsolute(stagingRoot)) fail('LINK_A_STAGING_PATH_INVALID', 'stagingRoot must be absolute');
+  if (!path.isAbsolute(sourcePath) || !path.isAbsolute(stagingRoot)) fail('LINK_A_STAGING_PATH_INVALID', 'Source and staging root must be absolute');
+  const sourceResolved=path.resolve(sourcePath),rootResolved=path.resolve(stagingRoot);
+  if(rootResolved===sourceResolved||rootResolved.startsWith(`${sourceResolved}${path.sep}`))fail('LINK_A_STAGING_PATH_INVALID','Staging root must be disjoint from the frozen source spool');
+  stagingRoot=rootResolved;
   if (!fs.existsSync(stagingRoot)) privateDirectory(stagingRoot, true); else privateDirectory(stagingRoot);
   const source = verifyFrozenSpoolArtifact(sourcePath);
   const building = path.join(stagingRoot, `${source.spoolManifestSha256}.building`);
