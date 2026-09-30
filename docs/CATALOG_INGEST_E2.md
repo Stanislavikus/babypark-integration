@@ -79,7 +79,10 @@ CatalogReader produces evidence. There is no public completion or ACK
 resolution method accepting caller-supplied evidence. The store writes the
 ledger outside the retryable `withDb` callback, then reads CURRENT again.
 It reconstructs the response ACK from CURRENT, including its
-`source_watermark`, and rejects a different ACK stored in the ledger.
+`source_watermark`, and rejects a different ACK stored in the ledger. For a FULL
+run that value is intentionally `null`; FULL watermark authority lives in the four
+`sync_state.accepted_watermark` rows and the signed run header, not in
+`ingest_runs.source_watermark`.
 Rejected, failed, and abandoned runs yield RUN_REJECTED; only staging yields
 IN_PROGRESS. Roll-forward can restore an ACK because RUN_SUPERSEDED is derived,
 not stored in the receipt.
