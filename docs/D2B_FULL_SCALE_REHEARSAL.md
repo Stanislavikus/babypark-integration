@@ -283,9 +283,11 @@ BP_D2B_TIMEOUT_MS=60000
 
 Baseline send:
 
+Do not execute `src/drupal-d2b/cli.mjs` directly; it exports the CLI `main()` for the pinned launcher and does not self-invoke.
+
 ```sh
 sudo -u babypark-exporter env $(sudo cat /run/babypark-sender-rehearsal.env | xargs) \
-  "$SENDER_NODE" "$RELEASE/src/drupal-d2b/cli.mjs" \
+  "$SENDER_NODE" "$RELEASE/scripts/run-drupal-d2b-sender.mjs" \
   send "$RROOT/sender-spool/<RUN>.ready"
 ```
 
@@ -338,14 +340,14 @@ the sender process. Do not delete its lock.
 Inspect:
 
 ```sh
-sudo -u babypark-exporter "$SENDER_NODE" "$RELEASE/src/drupal-d2b/cli.mjs" \
+sudo -u babypark-exporter "$SENDER_NODE" "$RELEASE/scripts/run-drupal-d2b-sender.mjs" \
   lock-inspect "$RROOT/sender-spool/<RUN>.ready"
 ```
 
 Prove `alive:false`, record the reason, then explicitly break:
 
 ```sh
-sudo -u babypark-exporter "$SENDER_NODE" "$RELEASE/src/drupal-d2b/cli.mjs" \
+sudo -u babypark-exporter "$SENDER_NODE" "$RELEASE/scripts/run-drupal-d2b-sender.mjs" \
   lock-break "$RROOT/sender-spool/<RUN>.ready"
 ```
 
