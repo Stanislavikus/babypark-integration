@@ -47,7 +47,7 @@ export function createRunState(spool, kid, { randomUUID = crypto.randomUUID, now
 function iso(value) { return typeof value === 'string' && /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}Z$/.test(value) && new Date(value).toISOString() === value; }
 function validateFinalAck(ack, state, spool) {
   const keys = ['accepted','generation_id','layer','run_id','run_digest','source_watermark'];
-  if (!exactKeys(ack, keys) || ack.accepted !== true || !ID.test(ack.generation_id || '') || ack.layer !== 'full' || ack.run_id !== state.run_id || ack.run_digest !== state.run_digest || ack.source_watermark !== spool.manifest.snapshot_watermark) fail('D2B_RUN_STATE_INVALID', 'Persisted final ACK is invalid');
+  if (!exactKeys(ack, keys) || ack.accepted !== true || !ID.test(ack.generation_id || '') || ack.layer !== 'full' || ack.run_id !== state.run_id || ack.run_digest !== state.run_digest || ack.source_watermark !== null) fail('D2B_RUN_STATE_INVALID', 'Persisted final ACK is invalid');
 }
 function validatePostAckState(value, state, spool) {
   const keys = ['schema','state','accepting_ingest','blockers','current_generation','source_epoch','published_identity_revision','accepted_run','layers'];

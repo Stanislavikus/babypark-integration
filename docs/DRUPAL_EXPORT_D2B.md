@@ -900,6 +900,8 @@ No automatic new FULL is created on terminal/protocol/state errors.
 
 ## Post-ACK acceptance gate
 
+For a FULL run, the final ACK's scalar `source_watermark` is `null` by design: the accepted FULL run row has no single source watermark. The exact snapshot is already bound by the run digest/header, and the following authenticated `/state` gate must prove all four layer `accepted_watermark` values equal the frozen spool watermark.
+
 After final `ACKED`:
 
 1. fetch authenticated `/state`;
