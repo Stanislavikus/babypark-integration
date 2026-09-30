@@ -119,6 +119,15 @@ export function validateRehearsalSender({ spoolPath, config, env = process.env }
   if (typeof config.kid !== 'string' || !config.kid.startsWith('rehearsal-')) {
     fail('rehearsal sender KID must use rehearsal- prefix');
   }
+  if (config.producerReleaseRoot !== null && config.producerReleaseRoot !== undefined) {
+    const releaseRoot = path.resolve(config.producerReleaseRoot);
+    const allowedRoot = '/opt/babypark-rehearsal/releases';
+    if (!path.isAbsolute(config.producerReleaseRoot) ||
+        releaseRoot !== config.producerReleaseRoot ||
+        !releaseRoot.startsWith(allowedRoot + path.sep)) {
+      fail('rehearsal producer release root must be an exact immutable rehearsal release');
+    }
+  }
   return { root, spoolPath: spool, stateDir };
 }
 

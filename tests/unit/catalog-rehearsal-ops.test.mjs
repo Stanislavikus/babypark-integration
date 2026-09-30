@@ -318,6 +318,22 @@ test('lost-final sender guard rejects every production-like sender boundary', t 
     config,
     env,
   }), /inside rehearsal root/);
+  assert.doesNotThrow(() => validateRehearsalSender({
+    spoolPath: fixture.spool,
+    config: { ...config, producerReleaseRoot: '/opt/babypark-rehearsal/releases/release-a' },
+    env,
+  }));
+  for (const producerReleaseRoot of [
+    '/opt/babypark-exporter/current',
+    '/opt/babypark-rehearsal/releases/../production',
+    'relative/release',
+  ]) {
+    assert.throws(() => validateRehearsalSender({
+      spoolPath: fixture.spool,
+      config: { ...config, producerReleaseRoot },
+      env,
+    }), /producer release root/);
+  }
 });
 
 test('exact rehearsal failpoints fire only at the named hook', () => {

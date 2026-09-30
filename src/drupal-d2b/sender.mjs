@@ -32,7 +32,11 @@ function throwCatalogError(response) { const remote=catalogError(response); if(!
 async function attempt(config, operation, sleep) { let last; for(let i=0;i<config.maxAttempts;i++){ try { const r=await operation(); if(!retryable(r, operation.final)){throwCatalogError(r);return r;} last=r; if(i+1<config.maxAttempts) await sleep((r.retryAfter ?? Math.min(2**i,30))*1000); } catch(e){ if(!e.retryable) throw e; last=e; if(i+1<config.maxAttempts) await sleep(Math.min(2**i,30)*1000); } } fail('D2B_RETRY_BUDGET_EXHAUSTED','Retry budget exhausted; invoke again to resume exact run',{retryable:true,details:{last:last?.code??last?.status}}); }
 
 export async function sendSpool({ spoolPath, config, verification = {}, client = null, now = () => new Date(), sleep = ms => new Promise(r => setTimeout(r, ms)) }) {
-  const spool = verifySpool(spoolPath, verification); const lock = acquireSenderLock(config.stateDir, spool.spoolManifestSha256, now);
+  const effectiveVerification = {
+    ...(config.producerReleaseRoot ? { releaseRoot: config.producerReleaseRoot } : {}),
+    ...verification,
+  };
+  const spool = verifySpool(spoolPath, effectiveVerification); const lock = acquireSenderLock(config.stateDir, spool.spoolManifestSha256, now);
   try {
     let run = readRunState(config.stateDir, spool); const http = client ?? new D2bClient(config);
     const stateResponse = await attempt(config, () => http.state(), sleep); if (stateResponse.status !== 200) fail('D2B_STATE_HTTP_FAILED', 'Authenticated /state request failed');
