@@ -398,27 +398,22 @@ unchanged. A read-only live-source probe on 2026-09-28 found source group/node
 `139026` absent; current `511000` rows belong only to product group `79252`.
 `80401mc02` still appears under groups `12605` and `118670`.
 
-Before first controlled FULL, D2b must cryptographically bind
-`anomaly_report_sha256` and behavior-affecting publication-policy digest.
-Before production anomaly persistence, a separate `anomalies.sqlite`
-backup/restore slice is required.
+The accepted first controlled FULL cryptographically bound its anomaly report and
+behavior-affecting publication-policy authority through the signed D2b publication
+evidence. Persistent production `anomalies.sqlite` remains a separate later capability
+and still requires its own backup/restore slice before deployment.
 
-Next operational steps:
-- exporter slice 1 + runtime hardening are merged, deployed and production-preflighted;
-- preserve the established live baseline: zero hard blockers, one residual anomaly
-  (`80401mc02`), quarantined groups `118670`/`12605`, warning_count 78;
-- receiver-side D2b authority/recovery foundation is merged in PR #33 at
-  `54763804fbceb34ab107d94d44bdf993b59d3152`, but is intentionally not deployed
-  to production CatalogService yet;
-- D2b HTTP sender/control with durable exact run-state and one exclusive sender
-  lock per ready spool is merged in PR #35 at
-  `46cc19e3389efdf202be6ad8aed21c05c45c693a`, but is intentionally not deployed;
-- Link A staging/exhaustive verification is merged in PR #37 and independent
-  Link B verification is merged in PR #38; neither is deployed or rehearsed;
-- PR #39 is the remaining rehearsal-operations hardening gate before the isolated
-  production-shape rehearsal; still no production FULL;
-- keep CatalogService production cutover, isolated full-scale rehearsal and first
-  controlled FULL behind their existing explicit gates.
+Current operational state:
+- exporter/runtime hardening and the D2b producer/sender path have completed the first
+  controlled production FULL;
+- the accepted generation intentionally excludes the residual live anomaly
+  `80401mc02` through quarantine; source groups `118670`/`12605` remain the
+  current known incident scope from the accepted source evidence;
+- receiver authority/recovery, sender/control, Link A and Link B have all been exercised
+  on the accepted production run;
+- the acceptance tail and first canonical downstream snapshot are closed/verified;
+- persistent anomaly application/Requires Attention and reviewed identity-resolution
+  application remain separate later work.
 
 Product Identity Resolution v1 is already frozen/merged. Its two original cases
 remain historical acceptance fixtures, while the current live incident set is
@@ -546,8 +541,9 @@ Status: **PRODUCTION FULL ACCEPTED / RECOVERY + LINK A + LINK B PASS / OWNER ACC
 Design source:
 `docs/DRUPAL_EXPORT_D2B.md`
 
-Research after Product Identity Resolution v1 freeze found four material gates on the
-critical ingestion path:
+Historical pre-FULL research after Product Identity Resolution v1 identified four
+material gates on the critical ingestion path; all four were subsequently closed for
+the accepted first production FULL:
 
 1. production CatalogService is still on FULL record v1 / catalog schema 5 /
    production mapper 1, while current exporter/main emits FULL record v2 and expects
@@ -564,14 +560,14 @@ critical ingestion path:
    admission/state revalidates it. Production CatalogService remains on the previous
    release until the one planned D2b cutover.
 
-Verified production capability facts:
+Current production capability facts:
 - CatalogService host supports `node:sqlite` and SQLite FTS5;
-- CatalogService is BOOTSTRAP and `/health` is green;
+- CatalogService is `CURRENT`, `/health` is green, ingest is enabled and there are
+  no current health blockers;
 - current service has no systemd `MemoryMax`/`MemoryHigh` envelope;
 - catalog Nginx `proxy_read_timeout` is 300 seconds;
-- full-scale production-shape certification/seal/publication has not yet been timed;
-- first full-scale isolated rehearsal is therefore mandatory before production
-  CatalogService cutover.
+- the production FULL, certification/seal/publication and post-ACK acceptance path
+  have completed successfully for the accepted generation.
 
 Receiver implementation status:
 - PR #33 merged at `54763804fbceb34ab107d94d44bdf993b59d3152`;
@@ -587,7 +583,8 @@ Receiver implementation status:
   coverage is invalidated live; CURRENT recovery semantics remain unchanged;
 - explicit D2b HTTP authority/config/version errors are non-500;
 - no ReplayStore, recovery-set, Catalog DB or IdentityStore schema bump was required;
-- this code has NOT been deployed to production CatalogService and no FULL was sent.
+- this receiver support is deployed in the current production CatalogService release
+  and was exercised by the accepted first FULL.
 
 Frozen direction:
 - keep BP1 transport v1 and existing `/api/catalog/ingest/v1/full` route;
@@ -649,11 +646,12 @@ are separate owner/operator decisions and must preserve the accepted authority a
 recovery invariants.
 
 Repository receiver support for run-header/2, publication-authority validation,
-accepted-generation authority binding and BOOTSTRAP recovery correction is merged by
+accepted-generation authority binding and BOOTSTRAP recovery correction was merged by
 PR #33. Repository sender/control support with exact durable run-state, exclusive
-per-spool ownership, bounded retry/resume and authenticated BP1 transport is merged
-by PR #35. Both remain intentionally undeployed until Link A/rehearsal gates are
-closed.
+per-spool ownership, bounded retry/resume and authenticated BP1 transport was merged
+by PR #35. These capabilities were subsequently deployed/exercised for the accepted
+first production FULL; their original PR-level non-production claims below remain
+historical closure evidence for those individual PRs.
 
 Production exporter cutover remains at
 `/opt/babypark-exporter/releases/20260928T195344Z-8c78bd5`
