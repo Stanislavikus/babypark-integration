@@ -545,20 +545,20 @@ Historical pre-FULL research after Product Identity Resolution v1 identified fou
 material gates on the critical ingestion path; all four were subsequently closed for
 the accepted first production FULL:
 
-1. production CatalogService is still on FULL record v1 / catalog schema 5 /
-   production mapper 1, while current exporter/main emits FULL record v2 and expects
-   catalog schema 6 / mapper 2; D2b server support and that compatibility upgrade must
-   be deployed together before first FULL;
-2. exporter payload spool lifecycle is now represented in repository storage policy
+1. before the D2b cutover, production CatalogService was on FULL record v1 /
+   catalog schema 5 / production mapper 1, while the candidate exporter emitted FULL
+   record v2 and required catalog schema 6 / mapper 2; receiver compatibility therefore
+   had to be deployed with the planned cutover;
+2. exporter payload spool lifecycle had been represented in repository storage policy
    by dedicated transient `exporter_ready_spools` and `catalog_link_a_staging`
-   objects; production directories/retention are not yet activated;
-3. sender retry durability is now implemented in repository by PR #35:
+   objects before their production activation;
+3. sender retry durability had been implemented by PR #35:
    `bp.drupal-d2b.run-state/1` freezes one run ID plus exact header/chunk/trailer
    semantics across restart, and one cross-process sender lock owns each ready spool;
-4. the BOOTSTRAP config-state recovery gap is now corrected in repository by PR #33:
-   verified recovery sets derive the snapshot config-state digest and live BOOTSTRAP
-   admission/state revalidates it. Production CatalogService remains on the previous
-   release until the one planned D2b cutover.
+4. the BOOTSTRAP config-state recovery gap had been corrected by PR #33: verified
+   recovery sets derive the snapshot config-state digest and live BOOTSTRAP
+   admission/state revalidates it; production CatalogService stayed on the previous
+   release until the planned D2b cutover.
 
 Current production capability facts:
 - CatalogService host supports `node:sqlite` and SQLite FTS5;
@@ -586,7 +586,7 @@ Receiver implementation status:
 - this receiver support is deployed in the current production CatalogService release
   and was exercised by the accepted first FULL.
 
-Frozen direction:
+Frozen direction used for the completed first-FULL campaign (historical design record):
 - keep BP1 transport v1 and existing `/api/catalog/ingest/v1/full` route;
 - introduce exact signed `bp.catalog.run-header/2` with
   `bp.catalog.publication-authority/1`;
