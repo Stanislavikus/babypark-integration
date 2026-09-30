@@ -2,6 +2,10 @@ import { skuKey } from '../domain/sku.mjs';
 import { normalizeLanguageTag } from '../domain/language.mjs';
 import { serviceError } from './errors.mjs';
 import {
+  canonicalBoolean as boolean,
+  parseCanonicalJson as parseJson,
+} from '../domain/canonical-values.mjs';
+import {
   ALL_AVAILABILITY,
   MAX_BATCH_SIZE,
   MAX_COMPARE_PRODUCTS,
@@ -13,25 +17,6 @@ import {
   placeholders,
   validateAvailability,
 } from './query.mjs';
-
-function parseJson(value, field, fallback = null) {
-  if (value === null || value === undefined || value === '') {
-    return fallback;
-  }
-  try {
-    return JSON.parse(value);
-  } catch {
-    throw serviceError(
-      'CATALOG_DATA_INVALID',
-      field + ' contains invalid JSON',
-      { field }
-    );
-  }
-}
-
-function boolean(value) {
-  return Number(value) === 1;
-}
 
 function validateMoney(value, name) {
   if (value === undefined || value === null) return null;
