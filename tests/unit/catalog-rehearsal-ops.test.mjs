@@ -410,7 +410,7 @@ test('real sendSpool + D2bClient lost-final retry preserves exact final request 
         layer: 'full',
         run_id: runId,
         run_digest: trailer.run_digest,
-        source_watermark: spool.manifest.snapshot_watermark,
+        source_watermark: null,
       },
     });
   };
