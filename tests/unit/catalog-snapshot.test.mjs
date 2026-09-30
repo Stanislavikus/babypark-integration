@@ -108,6 +108,49 @@ test('snapshot is private, immutable by name, rejects unsafe roots, and does not
   reader.close();
 });
 
+test('existing public output root fails closed without chmod or artifacts', t => {
+  const f = fixture(); t.after(f.cleanup); build(f, 'g1'); const reader = open(f);
+  fs.mkdirSync(f.snapshots, { mode: 0o755 });
+  fs.chmodSync(f.snapshots, 0o755);
+  assert.throws(
+    () => snapshot(f, reader, {
+      outputDir: f.snapshots,
+      snapshotId: 'public-root',
+    }),
+    /must already have private permissions/
+  );
+  assert.equal(fs.statSync(f.snapshots).mode & 0o777, 0o755);
+  assert.deepEqual(fs.readdirSync(f.snapshots), []);
+  reader.close();
+});
+
+test('failure after rename removes ready and permits exact-name retry', t => {
+  const f = fixture(); t.after(f.cleanup); build(f, 'g1'); const reader = open(f);
+  const publicationLock = new CatalogPublicationLock(f.catalog);
+  const options = {
+    outputDir: f.snapshots,
+    snapshotId: 'fsync-failure',
+    release: release(),
+    publicationLock,
+  };
+  assert.throws(
+    () => exportCatalogSnapshot(reader, {
+      ...options,
+      failpoint(name) {
+        if (name === 'snapshot.parentFsync') {
+          throw new Error('simulated parent fsync failure');
+        }
+      },
+    }),
+    /simulated parent fsync failure/
+  );
+  assert.equal(fs.existsSync(path.join(f.snapshots, 'fsync-failure.ready')), false);
+  assert.equal(fs.existsSync(path.join(f.snapshots, 'fsync-failure.building')), false);
+  const retry = exportCatalogSnapshot(reader, options);
+  assert.equal(verifyCatalogSnapshot(retry.path).generation_id, 'g1');
+  publicationLock.close(); reader.close();
+});
+
 test('verifier binds snapshot metadata and counts to sealed generation authority', t => {
   const cases = [
     ['metadata', manifest => { manifest.identity_revision += 1; }],

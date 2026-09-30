@@ -61,10 +61,14 @@ function assertSafeRoot(outputDir) {
     if (stat.isSymbolicLink() || !stat.isDirectory()) {
       throw new Error('snapshot output root must be a real directory');
     }
+    if ((stat.mode & 0o077) !== 0) {
+      throw new Error(
+        'existing snapshot output root must already have private permissions'
+      );
+    }
   } else {
     fs.mkdirSync(resolved, { recursive: true, mode: 0o700 });
   }
-  fs.chmodSync(resolved, 0o700);
   return resolved;
 }
 
@@ -124,6 +128,7 @@ export function exportCatalogSnapshot(reader, {
   release,
   publicationLock,
   beforePublish = null,
+  failpoint = null,
 } = {}) {
   if (!reader || typeof reader.withPinnedDb !== 'function') throw new TypeError('CatalogReader with pinned reads is required');
   if (!(publicationLock instanceof CatalogPublicationLock)) throw new TypeError('CatalogPublicationLock is required');
@@ -137,6 +142,7 @@ export function exportCatalogSnapshot(reader, {
   return publicationLock.withLock(() => {
     fs.mkdirSync(building, { mode: 0o700 });
     let generationId;
+    let renamed = false;
     try {
       const manifest = reader.withPinnedDb((db, pinnedGenerationId) => {
         generationId = pinnedGenerationId;
@@ -187,10 +193,21 @@ export function exportCatalogSnapshot(reader, {
         throw new Error('snapshot ready artifact already exists');
       }
       fs.renameSync(building, ready);
+      renamed = true;
+      if (failpoint) failpoint('snapshot.parentFsync');
       fsyncDirectory(root);
       return { path: ready, manifest };
     } catch (error) {
-      fs.rmSync(building, { recursive: true, force: true });
+      if (renamed) {
+        try {
+          fs.rmSync(ready, { recursive: true, force: true });
+        } catch (cleanupError) {
+          error.snapshotCleanupError = cleanupError;
+        }
+        try { fsyncDirectory(root); } catch {}
+      } else {
+        fs.rmSync(building, { recursive: true, force: true });
+      }
       throw error;
     }
   });
