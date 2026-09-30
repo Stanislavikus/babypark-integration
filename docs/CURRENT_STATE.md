@@ -9,11 +9,19 @@ Source of truth: production runtime + this repository
 
 Link A PR #37 merged at `c89fd25a6fac2f48d025527531b9601bdf817d22` and
 Link B PR #38 merged at `ca8b748aa8e845403debf31b6133b08d0e59e640`.
-The first controlled production FULL is complete and CURRENT now points to its exact
-accepted immutable generation. Its generation ID, source epoch, accepted run ID,
-run digest, final sequence, and spool-manifest SHA-256 are bound in the generation's
-sealed `catalog_meta.manifest_json`; that sealed manifest is the authority for those
-exact values rather than a second manually copied identifier list.
+The first controlled production FULL is complete. Its operational truth snapshot is:
+- CURRENT generation: `g_3f82b2487806f6caaea95ad9aca94552f2eeb39844a2de87`;
+- source epoch: `drupal-prod-v1`;
+- accepted run: `d946fe5d_e1e6_4cc0_88a2_1cde031a81d1`;
+- run digest: `43306e8b47ab9ad618376f168f552b2a24f79e98a292098ba9301a583479ccc6`;
+- final sequence: `176`;
+- production spool manifest SHA-256:
+  `c18bbb1740e7722f2c0f0138b37bf162dbedd1874b481cdde505bd4fa3491935`.
+
+These exact documentation values are an operational truth snapshot, not a new
+authority. The sealed generation `catalog_meta.manifest_json` and its SHA-256 remain
+the machine authority for generation, source, accepted run, digest, final sequence,
+and spool provenance.
 
 Current accepted entity counts are:
 - products: 16,245;

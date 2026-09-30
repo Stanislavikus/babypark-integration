@@ -8,6 +8,9 @@ import {
 } from './contract.mjs';
 import { verifyCatalogSnapshot } from './verifier.mjs';
 import { canonicalBoolean, parseCanonicalJson } from '../domain/canonical-values.mjs';
+import { CatalogPublicationLock } from '../sqlite/publication-lock.mjs';
+import { assertNoSymlinkPathComponents } from './filesystem.mjs';
+import { validateReleaseProvenance } from '../../release-provenance.mjs';
 
 const QUERIES = Object.freeze({
   products: 'SELECT product_id,kind,product_type,brand_id,default_variant_id,lifecycle,provenance_json,updated_at FROM products ORDER BY product_id',
@@ -29,13 +32,19 @@ const JSON_FIELDS = new Set([
   'provenance_json', 'options_json', 'name_json', 'metadata_json',
   'label_json', 'value_json',
 ]);
+const JSON_OUTPUT_FIELDS = Object.freeze({
+  name_json: 'names',
+  label_json: 'labels',
+  value_json: 'value',
+});
 const BOOLEAN_FIELDS = new Set(['is_default', 'on_sale', 'tax_included', 'is_primary', 'active', 'mutable']);
 
 function canonicalRow(row) {
   const result = {};
   for (const [key, value] of Object.entries(row)) {
     if (key.endsWith('_json') && JSON_FIELDS.has(key)) {
-      result[key.slice(0, -5)] = parseCanonicalJson(value, key);
+      result[JSON_OUTPUT_FIELDS[key] || key.slice(0, -5)] =
+        parseCanonicalJson(value, key);
     } else if (BOOLEAN_FIELDS.has(key)) {
       result[key] = value === null ? null : canonicalBoolean(value);
     } else {
@@ -46,18 +55,7 @@ function canonicalRow(row) {
 }
 
 function assertSafeRoot(outputDir) {
-  const resolved = path.resolve(outputDir);
-  let cursor = path.parse(resolved).root;
-  for (const component of resolved.slice(cursor.length).split(path.sep).filter(Boolean)) {
-    cursor = path.join(cursor, component);
-    try {
-      if (fs.lstatSync(cursor).isSymbolicLink()) {
-        throw new Error('snapshot output path must not contain symlinks');
-      }
-    } catch (error) {
-      if (error.code !== 'ENOENT') throw error;
-    }
-  }
+  const resolved = assertNoSymlinkPathComponents(outputDir, 'snapshot output path');
   if (fs.existsSync(resolved)) {
     const stat = fs.lstatSync(resolved);
     if (stat.isSymbolicLink() || !stat.isDirectory()) {
@@ -123,60 +121,77 @@ export function exportCatalogSnapshot(reader, {
   outputDir,
   snapshotId,
   createdAt = new Date().toISOString(),
-  exporter = {},
+  release,
+  publicationLock,
   beforePublish = null,
 } = {}) {
   if (!reader || typeof reader.withPinnedDb !== 'function') throw new TypeError('CatalogReader with pinned reads is required');
+  if (!(publicationLock instanceof CatalogPublicationLock)) throw new TypeError('CatalogPublicationLock is required');
+  if (!release || typeof release.sha256 !== 'string' || !/^[0-9a-f]{64}$/.test(release.sha256)) throw new TypeError('validated release provenance is required');
+  validateReleaseProvenance(release.document);
   if (!/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/.test(snapshotId || '')) throw new Error('invalid snapshot id');
   const root = assertSafeRoot(outputDir);
   const building = path.join(root, snapshotId + '.building');
   const ready = path.join(root, snapshotId + '.ready');
   if (fs.existsSync(building) || fs.existsSync(ready)) throw new Error('snapshot artifact already exists');
-  fs.mkdirSync(building, { mode: 0o700 });
-  let generationId;
-  try {
-    const manifest = reader.withPinnedDb((db, pinnedGenerationId) => {
-      generationId = pinnedGenerationId;
-      const { meta, layers } = readMetadata(db);
-      if (meta.generation_id !== pinnedGenerationId) throw new Error('generation metadata mismatch');
-      const files = SNAPSHOT_STREAMS.map(([filename, entity]) => writeStream(db, building, filename, entity));
-      const document = {
-        schema: SNAPSHOT_SCHEMA,
-        generation_id: meta.generation_id,
-        source_epoch: meta.source_epoch,
-        identity_revision: Number(meta.identity_revision),
-        dependency_fingerprint: meta.dependency_fingerprint,
-        sealed_at: meta.sealed_at,
-        source_manifest_sha256: meta.manifest_sha256,
-        source_manifest: meta.manifest_json ? JSON.parse(meta.manifest_json) : null,
-        layers,
-        created_at: createdAt,
-        exporter: {
-          name: 'babypark-integration',
-          release: null,
-          ...exporter,
-        },
-        files,
-        total_records: files.reduce((sum, file) => sum + file.records, 0),
-      };
-      const manifestPath = path.join(building, MANIFEST_FILE);
-      const fd = fs.openSync(manifestPath, 'wx', 0o600);
-      try {
-        fs.writeSync(fd, JSON.stringify(document, null, 2) + '\n');
-        fs.fsyncSync(fd);
-      } finally { fs.closeSync(fd); }
-      fsyncDirectory(building);
-      return document;
-    });
-    verifyCatalogSnapshot(building, { expectedGenerationId: generationId, allowBuilding: true });
-    if (beforePublish) beforePublish({ generationId, building, ready });
-    reader.assertCurrent(generationId);
-    if (fs.existsSync(ready)) throw new Error('snapshot ready artifact already exists');
-    fs.renameSync(building, ready);
-    fsyncDirectory(root);
-    return { path: ready, manifest };
-  } catch (error) {
-    fs.rmSync(building, { recursive: true, force: true });
-    throw error;
-  }
+  return publicationLock.withLock(() => {
+    fs.mkdirSync(building, { mode: 0o700 });
+    let generationId;
+    try {
+      const manifest = reader.withPinnedDb((db, pinnedGenerationId) => {
+        generationId = pinnedGenerationId;
+        const { meta, layers } = readMetadata(db);
+        if (meta.generation_id !== pinnedGenerationId) {
+          throw new Error('generation metadata mismatch');
+        }
+        const files = SNAPSHOT_STREAMS.map(
+          ([filename, entity]) =>
+            writeStream(db, building, filename, entity)
+        );
+        const document = {
+          schema: SNAPSHOT_SCHEMA,
+          generation_id: meta.generation_id,
+          source_epoch: meta.source_epoch,
+          identity_revision: Number(meta.identity_revision),
+          dependency_fingerprint: meta.dependency_fingerprint,
+          sealed_at: meta.sealed_at,
+          source_manifest_sha256: meta.manifest_sha256,
+          source_manifest: meta.manifest_json
+            ? JSON.parse(meta.manifest_json)
+            : null,
+          layers,
+          created_at: createdAt,
+          exporter: { name: 'babypark-integration', release },
+          files,
+          total_records: files.reduce(
+            (sum, file) => sum + file.records,
+            0
+          ),
+        };
+        const manifestPath = path.join(building, MANIFEST_FILE);
+        const fd = fs.openSync(manifestPath, 'wx', 0o600);
+        try {
+          fs.writeSync(fd, JSON.stringify(document, null, 2) + '\n');
+          fs.fsyncSync(fd);
+        } finally { fs.closeSync(fd); }
+        fsyncDirectory(building);
+        return document;
+      });
+      verifyCatalogSnapshot(building, {
+        expectedGenerationId: generationId,
+        allowBuilding: true,
+      });
+      if (beforePublish) beforePublish({ generationId, building, ready });
+      reader.assertCurrent(generationId);
+      if (fs.existsSync(ready)) {
+        throw new Error('snapshot ready artifact already exists');
+      }
+      fs.renameSync(building, ready);
+      fsyncDirectory(root);
+      return { path: ready, manifest };
+    } catch (error) {
+      fs.rmSync(building, { recursive: true, force: true });
+      throw error;
+    }
+  });
 }

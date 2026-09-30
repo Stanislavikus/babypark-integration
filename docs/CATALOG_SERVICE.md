@@ -36,18 +36,28 @@ one aggregate lookup per product. JSON and boolean conversion uses the same cano
 value helpers as the service DTO mapper. Money is serialized only as integer minor
 units.
 
-The exporter pins one CatalogReader handle without retry, writes and fsyncs a private
-`.building` directory, independently verifies it, checks CURRENT again, then atomically
-renames it to `.ready` and fsyncs the parent. A CURRENT change discards the build.
+The exporter holds the existing `CatalogPublicationLock` for the complete export,
+pins one CatalogReader handle without retry, writes and fsyncs a private `.building`
+directory, independently verifies it, checks CURRENT again, then atomically renames it
+to `.ready` and fsyncs the parent. Holding the lock makes the proof linearizable with
+normal Catalog publication and prevents an invisible A→B→A transition; operationally,
+generation publication waits or receives the existing bounded lock-busy result while
+a snapshot is running. The lock is coordination only and the exporter does not mutate
+publication authority.
 Existing `.ready` names and symlink artifact paths are rejected. The operation never
 writes the catalog, identity, replay, recovery, publication, or source-acceptance
 authorities.
 
 `scripts/verify-catalog-snapshot.mjs` is the independent consumer-side invocation.
-It checks schema and generation binding, the exact file set, private regular-file
-paths, hashes, byte/record/total counts, NDJSON validity, strictly ordered unique
-identities, and integer money. Verification is also streaming and accepts empty
-optional domains.
+It checks schema and generation binding, the exact file set and every parent path
+component, private regular-file paths, hashes, byte/record/total counts, NDJSON
+validity, strictly ordered unique identities, and integer money. It independently
+hashes and validates the embedded sealed generation manifest, reconciles source/layer
+metadata and compares every stream count with the sealed generation table counts.
+Verification is also streaming and accepts empty optional domains. Both exporter and
+verifier require canonical `bp.release-provenance/1`; the production CLI refuses to
+run without the immutable release's validated `RELEASE.json` and matching package
+lock.
 
 ## Public methods
 

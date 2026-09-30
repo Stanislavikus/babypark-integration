@@ -389,6 +389,7 @@ function createReleaseGeneratorFixtureRepo() {
   const repo = fs.mkdtempSync(path.join(os.tmpdir(), 'd2b-release-repo-'));
   fs.mkdirSync(path.join(repo, 'scripts'), { recursive: true });
   fs.mkdirSync(path.join(repo, 'apps/drupal-exporter/src'), { recursive: true });
+  fs.mkdirSync(path.join(repo, 'src'), { recursive: true });
   fs.copyFileSync(
     path.resolve(process.cwd(), '../../scripts/create-exporter-release-provenance.mjs'),
     path.join(repo, 'scripts/create-exporter-release-provenance.mjs')
@@ -396,6 +397,10 @@ function createReleaseGeneratorFixtureRepo() {
   fs.copyFileSync(
     path.resolve(process.cwd(), 'src/release-provenance.mjs'),
     path.join(repo, 'apps/drupal-exporter/src/release-provenance.mjs')
+  );
+  fs.copyFileSync(
+    path.resolve(process.cwd(), '../../src/release-provenance.mjs'),
+    path.join(repo, 'src/release-provenance.mjs')
   );
   fs.writeFileSync(
     path.join(repo, 'apps/drupal-exporter/package-lock.json'),
