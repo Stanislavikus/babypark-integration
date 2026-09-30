@@ -422,13 +422,15 @@ function cleanupTransientUnit(run, unit, sleep, { polls = 40, pollMs = 250 } = {
       { allow: [5] },
     ));
   }
-  remember('reset-failed', () => runChecked(
-    run,
-    'systemctl',
-    ['reset-failed', unit],
-    'systemctl reset-failed',
-    { allow: [5] },
-  ));
+  remember('reset-failed', () => {
+    const result = run('systemctl', ['reset-failed', unit], { encoding: 'utf8', shell: false });
+    if (result.error) throw result.error;
+    if (result.status !== 0) {
+      const stderr = String(result.stderr ?? '');
+      const alreadyRemoved = /\bUnit\s+\S+\s+(?:not loaded|could not be found)\.?\s*$/m.test(stderr);
+      if (!alreadyRemoved) fail(`systemctl reset-failed failed: ${stderr || result.status}`);
+    }
+  });
   let removed = false;
   for (let attempt = 0; attempt < polls; attempt += 1) {
     const final = showUnit(run, unit);
