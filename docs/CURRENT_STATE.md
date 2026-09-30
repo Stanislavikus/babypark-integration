@@ -36,9 +36,35 @@ Current accepted entity counts are:
 
 Post-FULL local recovery coverage is `COVERED`. Production Link A is `PASS`, and the
 independent Link B is `PASS`, both against the accepted generation and frozen spool.
-This does not close the separate acceptance tail: encrypted off-host recovery copy,
-scratch restore proof, SEALED acceptance package, and explicit owner acceptance are
-still outstanding and are not part of issue #44.
+
+The first-FULL acceptance tail is now **CLOSED / ACCEPTED**:
+- covering recovery set:
+  `set-20260930T181032Z-d5f1cd5906a4a838`;
+- encrypted off-host recovery copy: PASS;
+- scratch restore from that off-host ciphertext on a separate host: PASS;
+- SEALED technical acceptance package: PASS;
+- explicit BabyPark owner acceptance: ACCEPTED;
+- immutable owner-acceptance record SHA-256:
+  `47d55de9d653fff14302bd15f22a9193ebdaa848172072c0902bd1de6707b1f4`.
+
+The first owner-authorized production canonical downstream snapshot is also complete:
+- snapshot ID:
+  `full-g3f82b248-d946fe5d-20260930T2128Z`;
+- generation:
+  `g_3f82b2487806f6caaea95ad9aca94552f2eeb39844a2de87`;
+- snapshot manifest SHA-256:
+  `6dac402a0f423cf2b77d82114c262df5565855233c78252718fd5d74f32b8883`;
+- source generation manifest SHA-256:
+  `067cb115aff02ef7e53cdefa405e7f8cc29b1087f94000aad9bd7f5504123a19`;
+- total canonical records: 274,231;
+- artifact bytes: 220,908,827;
+- export: 13.16 s wall, max RSS 112,332 KiB, swap 0;
+- independent verifier: PASS, 2.55 s wall, max RSS 96,580 KiB, swap 0.
+
+The snapshot exporter/verifier ran from a separate immutable release at commit
+`3076b03c508eb4c4517579aaea70c1ae6dfd5832`, tree
+`5846bb45d8e24d2f1d6695e1b9737432018dfadc`. The operation did not switch the
+running CatalogService release and did not change CURRENT.
 
 ## Viber gateway
 
@@ -101,11 +127,17 @@ Current row-count baseline immediately after cutover:
 
 D1 deployment completed on 2026-09-26.
 
-Merged deployment source:
+Initial D1 deployment source (historical):
 `1956aba235f1771262235881701186cbc5bd884d`
 
-Production release:
-`/opt/babypark-integration/releases/20260926T205420Z-1956aba`
+Current production runtime source:
+- commit: `7d98905b6538b395488bf69f318b56f683569bcd`;
+- tree: `849154c233ebf2fa0491822fe6c67a7a061e0804`;
+- release provenance SHA-256:
+  `39de7b5782e73fedf138c20236cba48be6fff3954989441bf4663f6388bccef4`.
+
+Current production release:
+`/opt/babypark-integration/releases/20260930T1718Z-7d98905b`
 
 Catalog release symlink:
 `/opt/babypark-integration/catalog-current`
@@ -143,9 +175,11 @@ recorded here.
 Recovery:
 - authority: `CURRENT`
 - replay schema: `7`
-- covering recovery set: `set-20260926T205746Z-35f3395efc6f8994`
+- published/live identity revision: `65504`
+- covering recovery set: `set-20260930T181032Z-d5f1cd5906a4a838`
 - coverage: `COVERED`
 - post-FULL local coverage: `COVERED`
+- off-host encrypted recovery + separate scratch restore: `PASS`
 
 Public Catalog ingress on `https://chat.babypark.ua`:
 - `/api/catalog/ingest/v1/full`
@@ -189,8 +223,8 @@ Normal Viber rollback does NOT restore the old database backup after v2 has acce
 The additive schema is intentionally compatible with the retained legacy gateway.
 
 Catalog application rollback and catalog data/recovery rollback are separate operations.
-Before the first FULL, `/var/lib/babypark-catalog` is preserved for diagnosis rather than
-deleted automatically.
+The accepted CURRENT generation, recovery evidence and derived snapshot artifacts are
+preserved under explicit operator control; no age-only cleanup is authorized.
 
 ## Drupal exporter production preflight
 
@@ -395,24 +429,19 @@ prerequisite for exporter candidate preflight or the remaining D2b implementatio
 
 ## Catalog / AI next state
 
-No AI copilot is active.
-No Drupal FULL has been sent.
+No customer-facing AI catalog answering is active.
 
 Two independent tracks are active:
 
-1. **Operational ingestion**
-   - exporter spool/3 + anomaly quarantine + pinned Node 24 production rollout is
-     complete;
-   - the current live-source baseline is established by both pre- and post-cutover
-     preflight;
-   - receiver-side run-header/2/publication-authority/BOOTSTRAP recovery support is
-     merged in repository but not deployed to production;
-   - D2b sender/control + durable/exclusive sender run-state are merged in repository
-     but not deployed;
-   - Link A and Link B verifier code is merged but not deployed/rehearsed;
-   - close PR #39 rehearsal-operations hardening, then run the isolated rehearsal;
-   - do not create/send production FULL until the rehearsal and remaining
-     acceptance/cutover gates are closed.
+1. **Operational ingestion / downstream boundary**
+   - the first controlled Drupal FULL is accepted as CURRENT;
+   - production Link A and independent Link B are both PASS;
+   - encrypted off-host recovery, separate scratch restore, SEALED evidence and
+     explicit owner acceptance are complete;
+   - the first generation-bound canonical downstream snapshot is independently
+     verified and available as the provider-neutral consumer boundary;
+   - further consumers must use the verified snapshot/Catalog boundary rather than
+     live Drupal or Catalog SQLite internals.
 
 2. **Identity-resolution application (later)**
    - frozen design: `docs/PRODUCT_IDENTITY_RESOLUTION_V1.md`;
@@ -436,13 +465,14 @@ state:
 
 No untracked ambiguity may silently enter the first canonical generation.
 
-That exporter gate is now closed:
-- immutable merged exporter/runtime release is production `current`;
-- pre- and post-switch production preflight both have zero unaccounted hard blockers;
-- receiver-side D2b authority/recovery implementation is merged and reviewed;
-- D2b sender/control transport with durable/exclusive run-state is merged and reviewed;
-- next critical path is Link A staging/exhaustive verification, then isolated
-  full-scale rehearsal before any first controlled FULL.
+That first-FULL gate is now closed:
+- immutable exporter/runtime release remains production `current`;
+- the controlled production FULL completed and published one CURRENT generation;
+- receiver authority/recovery and sender/control paths were exercised in production;
+- Link A and Link B both passed against the accepted generation/frozen source evidence;
+- the off-host restore and owner-acceptance tail is closed;
+- the first verified canonical downstream snapshot has been produced without changing
+  CURRENT.
 
 Two mandatory future research/design gates exist before customer-facing AI catalog
 answers are production-ready:
@@ -511,7 +541,7 @@ No production deployment or FULL is part of this design slice.
 
 ## D2b / first controlled FULL
 
-Status: **FROZEN DESIGN / EXPORTER DEPLOYED / RECEIVER + SENDER + LINK A + LINK B MERGED NOT DEPLOYED / REHEARSAL OPERATIONS IN REVIEW**
+Status: **PRODUCTION FULL ACCEPTED / RECOVERY + LINK A + LINK B PASS / OWNER ACCEPTED / CANONICAL SNAPSHOT VERIFIED**
 
 Design source:
 `docs/DRUPAL_EXPORT_D2B.md`
@@ -612,11 +642,11 @@ Implementation slice 1 now changes repository exporter/storage-policy code only:
 - production storage ownership is recorded as
   `babypark-exporter:babypark-exporter`.
 
-Still not completed/deployed on the critical path:
-- PR #39 rehearsal-operations hardening and its final review;
-- isolated full-scale rehearsal and failure drills;
-- the one D2b-capable production CatalogService cutover;
-- first controlled FULL and post-ACK acceptance package/off-host restore gates.
+The original first-FULL critical path is complete. Rehearsal hardening, production
+CatalogService cutover, the controlled FULL, post-ACK two-link acceptance, off-host
+recovery/restore and owner acceptance have all been completed. Future ingestion runs
+are separate owner/operator decisions and must preserve the accepted authority and
+recovery invariants.
 
 Repository receiver support for run-header/2, publication-authority validation,
 accepted-generation authority binding and BOOTSTRAP recovery correction is merged by
@@ -625,11 +655,13 @@ per-spool ownership, bounded retry/resume and authenticated BP1 transport is mer
 by PR #35. Both remain intentionally undeployed until Link A/rehearsal gates are
 closed.
 
-Production exporter cutover is complete at
+Production exporter cutover remains at
 `/opt/babypark-exporter/releases/20260928T195344Z-8c78bd5`
 (commit `8c78bd51a7b73a0a29209d5f6c43f6f13ad09bc3`). Both pre-cutover and
-post-switch preflight passed with the established live-source baseline. No FULL has
-been sent and CatalogService remains BOOTSTRAP.
+post-switch preflight passed with the established live-source baseline. A later
+owner-authorized D2b producer/sender release sent the accepted first FULL; CatalogService
+is now CURRENT at generation
+`g_3f82b2487806f6caaea95ad9aca94552f2eeb39844a2de87`.
 
 PR #33 receiver closure evidence:
 - reviewed PR HEAD `43974f1105bf11276dbe24cdf7e73b8590358cd0`,
