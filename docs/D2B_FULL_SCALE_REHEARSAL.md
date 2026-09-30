@@ -266,6 +266,8 @@ sha256sum "$RROOT/sender-spool/<RUN>.ready/manifest.json"
 
 The manifest SHA must equal the trusted `MANIFEST_SHA`.
 
+`BP_D2B_PRODUCER_RELEASE_ROOT` identifies the immutable release that produced the frozen spool. It does not weaken verification: producer commit, canonical `RELEASE.json`, package-lock hash and config hashes must still match the spool exactly. This permits a reviewed sender-only hotfix to resume a frozen run without pretending that the hotfix produced that spool.
+
 Create root-owned mode-0600 sender environment material and run the sender as
 `babypark-exporter`:
 
@@ -277,6 +279,7 @@ BP_CATALOG_AUDIENCE=babypark-catalog-rehearsal-v1
 BP_CATALOG_KID=rehearsal-<KID>
 BP_CATALOG_SECRET=<SAME_REHEARSAL_SECRET>
 BP_D2B_STATE_DIR=/srv/babypark-rehearsal/sender-state
+BP_D2B_PRODUCER_RELEASE_ROOT=/opt/babypark-rehearsal/releases/<IMMUTABLE_PRODUCER_RELEASE>
 BP_D2B_MAX_ATTEMPTS=4
 BP_D2B_TIMEOUT_MS=60000
 ```

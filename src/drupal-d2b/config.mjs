@@ -26,6 +26,14 @@ export function loadSenderConfig(env = process.env) {
   };
   const maxAttempts = Number(env.BP_D2B_MAX_ATTEMPTS ?? 4);
   const timeoutMs = Number(env.BP_D2B_TIMEOUT_MS ?? 60_000);
+  const producerReleaseRoot = env.BP_D2B_PRODUCER_RELEASE_ROOT === undefined
+    ? null
+    : env.BP_D2B_PRODUCER_RELEASE_ROOT;
+  if (producerReleaseRoot !== null &&
+      (!path.isAbsolute(producerReleaseRoot) ||
+       path.resolve(producerReleaseRoot) !== producerReleaseRoot)) {
+    fail('D2B_CONFIG_INVALID', 'BP_D2B_PRODUCER_RELEASE_ROOT must be a canonical absolute path');
+  }
   if (!Number.isSafeInteger(maxAttempts) || maxAttempts < 1 || maxAttempts > 20 ||
       !Number.isSafeInteger(timeoutMs) || timeoutMs < 1_000 || timeoutMs > 600_000) {
     fail('D2B_CONFIG_INVALID', 'Retry and timeout configuration is invalid');
@@ -36,6 +44,7 @@ export function loadSenderConfig(env = process.env) {
     kid: required('BP_CATALOG_KID'),
     secret: required('BP_CATALOG_SECRET'),
     stateDir: path.resolve(env.BP_D2B_STATE_DIR ?? DEFAULT_STATE_DIR),
+    producerReleaseRoot,
     maxAttempts,
     timeoutMs,
   };

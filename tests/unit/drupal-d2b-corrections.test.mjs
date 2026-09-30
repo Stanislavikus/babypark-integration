@@ -41,6 +41,18 @@ for (const [name, mutate] of [
   ['spool rejects rehashed empty production chunk before network', f => rewriteChunk(f, canonicalJson({ rows: [] }), { rows: 0 })],
 ]) test(name, t => { const f=fixture(); t.after(()=>fs.rmSync(f.root,{recursive:true,force:true})); mutate(f); assert.throws(()=>verifySpool(f.spool,f.options), error => /^D2B_CHUNK_/.test(error.code)); });
 
+test('explicit producer release root controls spool parity before any HTTP', async t => {
+  const f=fixture(); t.after(()=>fs.rmSync(f.root,{recursive:true,force:true}));
+  const stateDir=path.join(f.root,'state'); let stateCalls=0;
+  const client={async state(){stateCalls++;return{status:200,body:bootstrap}},async full(){throw new Error('network reached after verified spool')}};
+  const config={stateDir,kid:'kid',maxAttempts:1,producerReleaseRoot:f.release};
+  await assert.rejects(()=>sendSpool({spoolPath:f.spool,config,client,now:()=>new Date('2026-09-28T00:01:00.000Z')}),/network reached after verified spool/);
+  assert.equal(stateCalls,1);
+  stateCalls=0;
+  await assert.rejects(()=>sendSpool({spoolPath:f.spool,config:{...config,producerReleaseRoot:path.join(f.root,'missing')},client,now:()=>new Date('2026-09-28T00:01:00.000Z')}),error=>error.code==='RELEASE_PROVENANCE_INVALID');
+  assert.equal(stateCalls,0);
+});
+
 test('malformed lock evidence always refuses explicit stale break', t => {
   const root=fs.mkdtempSync(path.join(os.tmpdir(),'d2b-lock-evidence-')); t.after(()=>fs.rmSync(root,{recursive:true,force:true})); const hash='a'.repeat(64);
   for (const mutate of [o=>{o.boot_id=null},o=>{o.acquired_at='yesterday'},o=>{o.process_start_ticks='01x'},o=>{delete o.pid}]) {

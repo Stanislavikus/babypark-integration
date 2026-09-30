@@ -1,5 +1,5 @@
 import test from 'node:test'; import assert from 'node:assert/strict'; import crypto from 'node:crypto'; import fs from 'node:fs'; import os from 'node:os'; import path from 'node:path';
-import { validateOrigin } from '../../src/drupal-d2b/config.mjs';
+import { loadSenderConfig, validateOrigin } from '../../src/drupal-d2b/config.mjs';
 import { verifySpool, readVerifiedChunk } from '../../src/drupal-d2b/spool.mjs';
 import { createRunState, readRunState, updateRunState, validateRunState, writeRunState } from '../../src/drupal-d2b/run-state.mjs';
 import { acquireSenderLock, breakStaleSenderLock, inspectSenderLock } from '../../src/drupal-d2b/spool-lock.mjs';
@@ -17,3 +17,23 @@ test('atomic failpoints leave old or next complete JSON',t=>{const f=fixture();t
 test('exclusive lock refuses a second owner and stale break refuses live process',t=>{const root=fs.mkdtempSync(path.join(os.tmpdir(),'d2b-lock-'));t.after(()=>fs.rmSync(root,{recursive:true,force:true}));const h='a'.repeat(64);const lock=acquireSenderLock(root,h);assert.equal(inspectSenderLock(root,h).alive,true);assert.throws(()=>acquireSenderLock(root,h),e=>e.code==='D2B_SENDER_LOCKED');assert.throws(()=>breakStaleSenderLock(root,h),e=>e.code==='D2B_LOCK_OWNER_ALIVE');lock.release();assert.doesNotThrow(()=>acquireSenderLock(root,h).release())});
 test('transport origin permits HTTPS and loopback HTTP only',()=>{assert.equal(validateOrigin('https://catalog.example'),'https://catalog.example');assert.equal(validateOrigin('http://127.0.0.1:8080'),'http://127.0.0.1:8080');for(const url of ['http://example.com','https://u:p@example.com','https://example.com/path','https://example.com?q=1'])assert.throws(()=>validateOrigin(url))});
 test('sender sends exact sequence once, persists ACK/state, and is terminal on resume',async t=>{const f=fixture();t.after(()=>fs.rmSync(f.root,{recursive:true,force:true}));const stateDir=path.join(f.root,'sender');const config={stateDir,kid:'kid',maxAttempts:2};const bootstrap={schema:'bp.catalog.state/1',state:'BOOTSTRAP',accepting_ingest:true,blockers:[],current_generation:null,source_epoch:null,published_identity_revision:null,accepted_run:null,layers:Object.fromEntries(['taxonomy','content','commercial','stock'].map(x=>[x,{accepted_watermark:null,need_full:false,need_reconcile:false}]))};let accepted=null;const sent=[];const client={async state(){return{status:200,body:accepted??bootstrap,retryAfter:null}},async full(runId,seq,final,body){sent.push({runId,seq,final,body:Buffer.from(body)});if(!final)return{status:200,body:{schema:'bp.catalog.ingest-response/1',status:'STAGED',ack:{staged:true,run_id:runId,layer:'full',seq,body_sha256:hash(body)}}};const run=readRunState(stateDir,verifySpool(f.spool,f.options));const ack={accepted:true,generation_id:'generation',layer:'full',run_id:runId,run_digest:run.run_digest,source_watermark:null};accepted={...bootstrap,state:'CURRENT',current_generation:'generation',source_epoch:'epoch',published_identity_revision:1,accepted_run:{run_id:runId,run_digest:run.run_digest,final_seq:2,accepted_at:'2026-09-28T00:02:00.000Z'},layers:Object.fromEntries(['taxonomy','content','commercial','stock'].map(x=>[x,{accepted_watermark:f.manifest.snapshot_watermark,need_full:false,need_reconcile:false}]))};return{status:200,body:{schema:'bp.catalog.ingest-response/1',status:'ACKED',ack}}}};const args={spoolPath:f.spool,config,verification:f.options,client,now:()=>new Date('2026-09-28T00:01:00.000Z'),sleep:async()=>{}};const result=await sendSpool(args);assert.equal(result.status,'STATE_CONFIRMED');assert.deepEqual(sent.map(x=>[x.seq,x.final]),[[0,false],[1,false],[2,true]]);const state=readRunState(stateDir,verifySpool(f.spool,f.options));assert.equal(state.transport_state,'STATE_CONFIRMED');assert.equal(state.first_seq0_attempt_started_at,'2026-09-28T00:01:00.000Z');await sendSpool(args);assert.equal(sent.length,3)});
+
+
+test('sender config admits only canonical absolute explicit producer release roots', () => {
+  const base = {
+    BP_CATALOG_ORIGIN: 'http://127.0.0.1:18081',
+    BP_CATALOG_AUDIENCE: 'aud',
+    BP_CATALOG_KID: 'kid',
+    BP_CATALOG_SECRET: 'x'.repeat(32),
+  };
+  assert.equal(
+    loadSenderConfig({ ...base, BP_D2B_PRODUCER_RELEASE_ROOT: '/opt/releases/producer' }).producerReleaseRoot,
+    '/opt/releases/producer',
+  );
+  for (const value of ['relative', '/opt/releases/../producer']) {
+    assert.throws(
+      () => loadSenderConfig({ ...base, BP_D2B_PRODUCER_RELEASE_ROOT: value }),
+      error => error.code === 'D2B_CONFIG_INVALID',
+    );
+  }
+});
