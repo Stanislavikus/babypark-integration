@@ -27,13 +27,27 @@ function isInside(parent, child) {
 
 const output = arg('--output');
 if (!output) {
-  fail('Usage: node scripts/create-exporter-release-provenance.mjs --output /absolute/RELEASE.json', 2);
+  fail(
+    'Usage: node scripts/create-exporter-release-provenance.mjs ' +
+    '--output /absolute/RELEASE.json ' +
+    '[--repo /absolute/repository --ref approved-ref ' +
+    '--package-lock /absolute/release/package-lock.json]',
+    2
+  );
 }
 if (!path.isAbsolute(output)) {
   fail('--output must be absolute', 2);
 }
 
-const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const explicitRef = arg('--ref');
+const requestedRepo = arg('--repo');
+const deployedPackageLock = arg('--package-lock');
+const repoRoot = requestedRepo
+  ? path.resolve(requestedRepo)
+  : path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+if (requestedRepo && !path.isAbsolute(requestedRepo)) {
+  fail('--repo must be absolute', 2);
+}
 const repoReal = fs.realpathSync(repoRoot);
 const outputPath = path.resolve(output);
 if (isInside(repoRoot, outputPath)) {
@@ -50,28 +64,59 @@ const git = (...args) => execFileSync('git', args, {
   encoding: 'utf8',
 }).trim();
 
-const specialIndexFlags = git('ls-files', '-v')
-  .split('\n')
-  .filter(Boolean)
-  .filter(line => line[0] !== 'H');
-if (specialIndexFlags.length) {
-  fail('refusing release provenance with assume-unchanged/skip-worktree or other non-normal index flags');
+if (!explicitRef) {
+  const specialIndexFlags = git('ls-files', '-v')
+    .split('\n')
+    .filter(Boolean)
+    .filter(line => line[0] !== 'H');
+  if (specialIndexFlags.length) {
+    fail('refusing release provenance with assume-unchanged/skip-worktree or other non-normal index flags');
+  }
+
+  const dirty = git('status', '--porcelain=v1', '--untracked-files=all');
+  if (dirty) {
+    fail('refusing release provenance from dirty Git worktree');
+  }
 }
 
-const dirty = git('status', '--porcelain=v1', '--untracked-files=all');
-if (dirty) {
-  fail('refusing release provenance from dirty Git worktree');
+let commit;
+try {
+  commit = git('rev-parse', '--verify', `${explicitRef || 'HEAD'}^{commit}`);
+} catch {
+  fail('approved release ref does not resolve to a commit');
 }
-
-const commit = git('rev-parse', 'HEAD');
-const tree = git('rev-parse', 'HEAD^{tree}');
-const lockPath = path.join(repoRoot, 'apps/drupal-exporter/package-lock.json');
-const lockHash = crypto.createHash('sha256').update(fs.readFileSync(lockPath)).digest('hex');
+if (!/^[0-9a-f]{40}$/.test(commit)) {
+  fail('approved release ref did not resolve to an exact commit');
+}
+const exactTree = git('rev-parse', `${commit}^{tree}`);
+let lockBytes;
+try {
+  lockBytes = execFileSync(
+    'git',
+    ['show', `${commit}:apps/drupal-exporter/package-lock.json`],
+    { cwd: repoRoot }
+  );
+} catch {
+  fail('approved release ref is missing the required package lock');
+}
+const lockHash = crypto.createHash('sha256').update(lockBytes).digest('hex');
+if (deployedPackageLock) {
+  if (!path.isAbsolute(deployedPackageLock)) {
+    fail('--package-lock must be absolute', 2);
+  }
+  let deployedBytes;
+  try { deployedBytes = fs.readFileSync(deployedPackageLock); } catch {
+    fail('deployed package lock cannot be read');
+  }
+  if (!deployedBytes.equals(lockBytes)) {
+    fail('deployed package lock does not match approved release ref');
+  }
+}
 const document = {
   schema: RELEASE_PROVENANCE_SCHEMA,
   repository: RELEASE_REPOSITORY,
   commit,
-  tree,
+  tree: exactTree,
   package_lock_sha256: lockHash,
   created_at: new Date().toISOString(),
 };
@@ -85,6 +130,6 @@ fs.renameSync(temp, outputPath);
 process.stdout.write(`${JSON.stringify({
   output: outputPath,
   commit,
-  tree,
+  tree: exactTree,
   package_lock_sha256: lockHash,
 })}\n`);

@@ -74,6 +74,7 @@ for (const id of [
   'catalog_publication_lock_db',
   'catalog_publication_lock_sidecars',
   'exporter_ready_spools',
+  'catalog_downstream_snapshots',
   'catalog_link_a_staging',
   'exporter_sender_run_state',
 ]) {
@@ -89,7 +90,7 @@ for (const id of [
 
 test('private payload storage requires 0700 directories and 0600 files', () => {
   const policy = loadStoragePolicy(POLICY);
-  for (const id of ['exporter_ready_spools', 'catalog_link_a_staging', 'exporter_sender_run_state']) {
+  for (const id of ['exporter_ready_spools', 'catalog_downstream_snapshots', 'catalog_link_a_staging', 'exporter_sender_run_state']) {
     const entry = policy.objects.find(item => item.id === id);
     assert.equal(entry.permissions.directory_mode, '0700');
     assert.equal(entry.permissions.file_mode, '0600');
@@ -98,6 +99,15 @@ test('private payload storage requires 0700 directories and 0600 files', () => {
     policy.objects.find(item => item.id === 'exporter_ready_spools').owner,
     'babypark-exporter:babypark-exporter'
   );
+  const snapshots = policy.objects.find(
+    item => item.id === 'catalog_downstream_snapshots'
+  );
+  assert.equal(snapshots.location, '/var/lib/babypark-catalog/snapshots');
+  assert.equal(snapshots.owner, 'babypark-catalog:babypark-catalog');
+  assert.equal(snapshots.state_class, 'rebuildable');
+  assert.equal(snapshots.cleanup.automatic, false);
+  assert.match(snapshots.cleanup.delete_guard, /Never delete by age alone/);
+  assert.equal(snapshots.backup.required, false);
 
   const weakened = clone(policy);
   weakened.objects.find(item => item.id === 'exporter_ready_spools')

@@ -630,6 +630,44 @@
       "pii": "none_expected"
     },
     {
+      "id": "catalog_downstream_snapshots",
+      "host_role": "integration",
+      "status": "PLANNED",
+      "scope": "directory",
+      "location": "/var/lib/babypark-catalog/snapshots",
+      "owner": "babypark-catalog:babypark-catalog",
+      "permissions": {
+        "directory_mode": "0700",
+        "file_mode": "0600"
+      },
+      "purpose": "Private immutable canonical downstream snapshots derived from one sealed CURRENT Catalog generation; not Catalog authority or an identity backup.",
+      "state_class": "rebuildable",
+      "thresholds": {
+        "metric": "bytes_total",
+        "basis": "provisional envelope; replace after the first owner-authorized measured production snapshot",
+        "expected": 1073741824,
+        "warning": 2147483648,
+        "critical": 4294967296
+      },
+      "retention": {
+        "mode": "explicit_downstream_lifecycle",
+        "ttl_days": null
+      },
+      "cleanup": {
+        "automatic": false,
+        "mechanism": "Explicit operator removal only after the downstream materialization/evidence need has ended and the exact source generation remains recoverable or superseded by an accepted snapshot.",
+        "dry_run_required": true,
+        "delete_guard": "Never delete by age alone; never delete .building during a live export; verify the target is a snapshot artifact and not CURRENT, a generation DB, identity, replay, recovery, publication, or acceptance state."
+      },
+      "recovery": "Re-export from the exact still-available sealed generation under CatalogPublicationLock. If that generation is unavailable, treat the artifact as non-recoverable derived output; never substitute a different generation under the same snapshot identity.",
+      "backup": {
+        "required": false,
+        "off_host": false,
+        "status": "REBUILDABLE_DERIVED_ARTIFACT"
+      },
+      "pii": "none_expected"
+    },
+    {
       "id": "catalog_link_a_staging",
       "host_role": "integration",
       "status": "PLANNED",

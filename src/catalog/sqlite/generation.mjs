@@ -1154,6 +1154,49 @@ export class CatalogReader {
     );
   }
 
+  /**
+   * Run one synchronous, read-only operation against the generation which is
+   * CURRENT at entry. Unlike withDb(), this deliberately never retries: a
+   * caller producing an external artifact must discard its work rather than
+   * repeat it against a different generation.
+   */
+  withPinnedDb(fn) {
+    if (typeof fn !== 'function') {
+      throw catalogError(
+        'CATALOG_READER_CALLBACK_INVALID',
+        'Catalog reader callback must be a function'
+      );
+    }
+    this.ensureCurrent();
+    const filename = this.filename;
+    const generationId = this.generationId;
+    const result = fn(this.db, generationId);
+    if (result && typeof result.then === 'function') {
+      throw catalogError(
+        'CATALOG_READER_ASYNC_CALLBACK_FORBIDDEN',
+        'Catalog reader callback must complete synchronously'
+      );
+    }
+    this.assertCurrent(generationId, filename);
+    return result;
+  }
+
+  assertCurrent(expectedGenerationId, expectedFilename = this.filename) {
+    const pointer = readCatalogPointer(this.storageDir, 'CURRENT');
+    const actual = pointer ? generationIdFromFilename(pointer) : null;
+    if (
+      pointer !== expectedFilename ||
+      actual !== expectedGenerationId
+    ) {
+      throw catalogError(
+        'CATALOG_CURRENT_UNEXPECTED',
+        'CURRENT does not point to the pinned generation',
+        { expected: expectedGenerationId, actual }
+      );
+    }
+    return this.info;
+  }
+
   close() {
     if (this.db) {
       this.db.close();

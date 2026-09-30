@@ -1,7 +1,7 @@
 # Catalog Service
 
-Status: CURRENT (code) / NOT DEPLOYED (catalog data)
-Last verified: 2026-09-24
+Status: CURRENT (code and production canonical data)
+Last verified: 2026-09-30
 Owner: BabyPark
 Source of truth: src/catalog/service/
 
@@ -18,7 +18,46 @@ It never exposes:
 - provider-specific field names;
 - catalog write operations.
 
-No production catalog generation or Drupal source access is enabled by this code.
+The first production FULL is accepted and CURRENT. CatalogService remains a
+provider-neutral reader; it does not obtain live Drupal access.
+
+## Private downstream snapshot
+
+`scripts/catalog-snapshot.mjs` materializes the exact CURRENT generation as a local,
+private, immutable `<snapshot-id>.ready` directory. It does not add an HTTP route.
+Thirteen normalized NDJSON streams cover products, localized text, variants and
+availability, offers, brands, category hierarchy/membership, stores and stock,
+attribute definitions/values, images, and kit components. Empty optional streams are
+present and valid.
+
+Every stream is read in canonical key order with SQLite's row iterator. Thus memory
+is bounded by one SQLite row plus write buffers, and there is one scan per domain—not
+one aggregate lookup per product. JSON and boolean conversion uses the same canonical
+value helpers as the service DTO mapper. Money is serialized only as integer minor
+units.
+
+The exporter holds the existing `CatalogPublicationLock` for the complete export,
+pins one CatalogReader handle without retry, writes and fsyncs a private `.building`
+directory, independently verifies it, checks CURRENT again, then atomically renames it
+to `.ready` and fsyncs the parent. Holding the lock makes the proof linearizable with
+normal Catalog publication and prevents an invisible A→B→A transition; operationally,
+generation publication waits or receives the existing bounded lock-busy result while
+a snapshot is running. The lock is coordination only and the exporter does not mutate
+publication authority.
+Existing `.ready` names and symlink artifact paths are rejected. The operation never
+writes the catalog, identity, replay, recovery, publication, or source-acceptance
+authorities.
+
+`scripts/verify-catalog-snapshot.mjs` is the independent consumer-side invocation.
+It checks schema and generation binding, the exact file set and every parent path
+component, private regular-file paths, hashes, byte/record/total counts, NDJSON
+validity, strictly ordered unique identities, and integer money. It independently
+hashes and validates the embedded sealed generation manifest, reconciles source/layer
+metadata and compares every stream count with the sealed generation table counts.
+Verification is also streaming and accepts empty optional domains. Both exporter and
+verifier require canonical `bp.release-provenance/1`; the production CLI refuses to
+run without the immutable release's validated `RELEASE.json` and matching package
+lock.
 
 ## Public methods
 

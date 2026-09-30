@@ -1,17 +1,44 @@
 # CURRENT_STATE
 
 Status: CURRENT
-Last verified: 2026-09-29
+Last verified: 2026-09-30
 Owner: BabyPark
 Source of truth: production runtime + this repository
 
-## D2b acceptance status (2026-09-29)
+## D2b acceptance status (2026-09-30)
 
 Link A PR #37 merged at `c89fd25a6fac2f48d025527531b9601bdf817d22` and
 Link B PR #38 merged at `ca8b748aa8e845403debf31b6133b08d0e59e640`.
-Both are reviewed but not deployed or rehearsed. Production CatalogService remains
-the older BOOTSTRAP release; no production FULL has occurred. The next gate is final
-operations tooling, then the exact-release full-scale isolated rehearsal.
+The first controlled production FULL is complete. Its operational truth snapshot is:
+- CURRENT generation: `g_3f82b2487806f6caaea95ad9aca94552f2eeb39844a2de87`;
+- source epoch: `drupal-prod-v1`;
+- accepted run: `d946fe5d_e1e6_4cc0_88a2_1cde031a81d1`;
+- run digest: `43306e8b47ab9ad618376f168f552b2a24f79e98a292098ba9301a583479ccc6`;
+- final sequence: `176`;
+- production spool manifest SHA-256:
+  `c18bbb1740e7722f2c0f0138b37bf162dbedd1874b481cdde505bd4fa3491935`.
+
+These exact documentation values are an operational truth snapshot, not a new
+authority. The sealed generation `catalog_meta.manifest_json` and its SHA-256 remain
+the machine authority for generation, source, accepted run, digest, final sequence,
+and spool provenance.
+
+Current accepted entity counts are:
+- products: 16,245;
+- variants: 49,257;
+- categories: 92;
+- brands: 821;
+- images: 136,241;
+- offers: 8,673;
+- store-stock rows: 14,364;
+- localized product-text rows: 32,311;
+- attributes / attribute definitions: 0 (valid optional domains).
+
+Post-FULL local recovery coverage is `COVERED`. Production Link A is `PASS`, and the
+independent Link B is `PASS`, both against the accepted generation and frozen spool.
+This does not close the separate acceptance tail: encrypted off-host recovery copy,
+scratch restore proof, SEALED acceptance package, and explicit owner acceptance are
+still outstanding and are not part of issue #44.
 
 ## Viber gateway
 
@@ -108,23 +135,17 @@ Environment:
 - mode: `0600`
 - secret values are NOT in Git
 
-Current authenticated state:
-- schema: `bp.catalog.state/1`
-- state: `BOOTSTRAP`
-- accepting_ingest: `true`
-- blockers: `[]`
-- current_generation: `null`
-- accepted_run: `null`
-
-No Drupal FULL has been sent yet.
+Current authenticated state is post-FULL and bound to the exact CURRENT generation
+and accepted run. Operational identifiers are read from authenticated state and the
+sealed generation manifest; no credentials or private authentication material are
+recorded here.
 
 Recovery:
-- authority: `BOOTSTRAP`
-- identity revision: `0`
+- authority: `CURRENT`
 - replay schema: `7`
 - covering recovery set: `set-20260926T205746Z-35f3395efc6f8994`
 - coverage: `COVERED`
-- BOOTSTRAP `validate-restore`: PASS
+- post-FULL local coverage: `COVERED`
 
 Public Catalog ingress on `https://chat.babypark.ua`:
 - `/api/catalog/ingest/v1/full`

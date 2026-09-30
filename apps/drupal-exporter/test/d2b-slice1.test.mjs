@@ -389,6 +389,7 @@ function createReleaseGeneratorFixtureRepo() {
   const repo = fs.mkdtempSync(path.join(os.tmpdir(), 'd2b-release-repo-'));
   fs.mkdirSync(path.join(repo, 'scripts'), { recursive: true });
   fs.mkdirSync(path.join(repo, 'apps/drupal-exporter/src'), { recursive: true });
+  fs.mkdirSync(path.join(repo, 'src'), { recursive: true });
   fs.copyFileSync(
     path.resolve(process.cwd(), '../../scripts/create-exporter-release-provenance.mjs'),
     path.join(repo, 'scripts/create-exporter-release-provenance.mjs')
@@ -396,6 +397,10 @@ function createReleaseGeneratorFixtureRepo() {
   fs.copyFileSync(
     path.resolve(process.cwd(), 'src/release-provenance.mjs'),
     path.join(repo, 'apps/drupal-exporter/src/release-provenance.mjs')
+  );
+  fs.copyFileSync(
+    path.resolve(process.cwd(), '../../src/release-provenance.mjs'),
+    path.join(repo, 'src/release-provenance.mjs')
   );
   fs.writeFileSync(
     path.join(repo, 'apps/drupal-exporter/package-lock.json'),
@@ -416,13 +421,59 @@ function createReleaseGeneratorFixtureRepo() {
   return { repo, git };
 }
 
-function runReleaseGenerator(repo, output) {
+function runReleaseGenerator(repo, output, extra = []) {
   return spawnSync('node', [
     path.join(repo, 'scripts/create-exporter-release-provenance.mjs'),
     '--output',
     output,
+    ...extra,
   ], { cwd: repo, encoding: 'utf8' });
 }
+
+test('release provenance explicit ref is independent from working HEAD', () => {
+  const { repo, git } = createReleaseGeneratorFixtureRepo();
+  const approved = git('rev-parse', 'HEAD');
+  const approvedTree = git('rev-parse', `${approved}^{tree}`);
+  const approvedLock = fs.readFileSync(
+    path.join(repo, 'apps/drupal-exporter/package-lock.json')
+  );
+  fs.writeFileSync(path.join(repo, 'tracked.txt'), 'new HEAD\n');
+  git('add', 'tracked.txt');
+  git('commit', '-qm', 'new head');
+  assert.notEqual(git('rev-parse', 'HEAD'), approved);
+
+  const release = fs.mkdtempSync(path.join(os.tmpdir(), 'bp-catalog-release-'));
+  const lockPath = path.join(release, 'package-lock.json');
+  const output = path.join(release, 'RELEASE.json');
+  fs.writeFileSync(lockPath, approvedLock);
+  const result = runReleaseGenerator(repo, output, [
+    '--repo', repo,
+    '--ref', approved,
+    '--package-lock', lockPath,
+  ]);
+  assert.equal(result.status, 0, result.stderr);
+  const document = JSON.parse(fs.readFileSync(output));
+  assert.equal(document.commit, approved);
+  assert.equal(document.tree, approvedTree);
+
+  const missing = runReleaseGenerator(repo, path.join(release, 'missing.json'), [
+    '--repo', repo,
+    '--ref', 'refs/heads/does-not-exist',
+  ]);
+  assert.notEqual(missing.status, 0);
+  assert.match(missing.stderr, /does not resolve/);
+
+  fs.writeFileSync(lockPath, 'wrong\n');
+  const mismatch = runReleaseGenerator(repo, path.join(release, 'wrong.json'), [
+    '--repo', repo,
+    '--ref', approved,
+    '--package-lock', lockPath,
+  ]);
+  assert.notEqual(mismatch.status, 0);
+  assert.match(mismatch.stderr, /does not match approved release ref/);
+  fs.rmSync(repo, { recursive: true, force: true });
+  fs.rmSync(release, { recursive: true, force: true });
+});
 
 test('release provenance generator refuses dirty and hidden-index worktree states', () => {
   const { repo, git } = createReleaseGeneratorFixtureRepo();
