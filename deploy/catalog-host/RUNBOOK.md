@@ -149,9 +149,23 @@ RELEASE_DIR=/opt/babypark-integration/releases/$(date -u +%Y%m%dT%H%M%SZ)-${SHOR
 
 mkdir "$RELEASE_DIR"
 git -C /path/to/babypark-integration archive "$APPROVED_SHA" | tar -x -C "$RELEASE_DIR"
+/usr/bin/node "$RELEASE_DIR/scripts/create-exporter-release-provenance.mjs" \
+  --repo /path/to/babypark-integration \
+  --ref "$APPROVED_SHA" \
+  --package-lock "$RELEASE_DIR/apps/drupal-exporter/package-lock.json" \
+  --output "$RELEASE_DIR/RELEASE.json"
 chown -R root:root "$RELEASE_DIR"
 chmod -R a+rX "$RELEASE_DIR"
 ```
+
+The explicit `--ref` contract is mandatory for Catalog releases. The generator
+resolves that ref to an exact 40-character commit, derives its tree, reads the
+required package-lock bytes directly from that commit, and compares them with the
+archived release before writing canonical `bp.release-provenance/1`. It does not use
+the checkout's `HEAD`; therefore a repository checked out on a historical branch
+cannot mislabel the approved archive. Missing refs, non-commit refs, missing lock
+content, or archive/ref lock mismatch fail closed. `RELEASE.json` must be created
+before the root-owned/read-only transition.
 
 `mkdir "$RELEASE_DIR"` must fail if the release path already exists. Do not delete or
 reuse an existing immutable release automatically.
@@ -199,6 +213,8 @@ getent passwd babypark-catalog >/dev/null || useradd --system --gid babypark-cat
 
 ```sh
 install -d -o babypark-catalog -g babypark-catalog -m 0700 /var/lib/babypark-catalog
+install -d -o babypark-catalog -g babypark-catalog -m 0700 \
+  /var/lib/babypark-catalog/snapshots
 ```
 
 5. Create `/etc/babypark-catalog-ingest.env` (see Environment file below).
@@ -648,6 +664,48 @@ accepted_run = null
 ```
 
 No FULL request is sent during D1. D1 ends here.
+
+## Canonical downstream snapshot (separate owner-authorized operation)
+
+The dedicated derived-artifact location is:
+
+```text
+/var/lib/babypark-catalog/snapshots
+```
+
+It is owned by `babypark-catalog:babypark-catalog`, has directory mode `0700`, and
+snapshot files have mode `0600`. It is not Link A staging, Catalog authority, or a
+durable identity/recovery backup. Do not run this procedure as part of deployment.
+
+For a separately owner-authorized snapshot operation, choose a new immutable name
+that includes the expected exact generation and run:
+
+```sh
+set -euo pipefail
+
+CATALOG_RELEASE=/opt/babypark-integration/catalog-current
+CATALOG_DATA=/var/lib/babypark-catalog
+SNAPSHOT_ID=<new-snapshot-id-bound-to-expected-generation-and-run>
+
+runuser -u babypark-catalog -- \
+  /usr/bin/node "$CATALOG_RELEASE/scripts/catalog-snapshot.mjs" \
+  "$CATALOG_DATA/catalog" \
+  "$CATALOG_DATA/snapshots" \
+  "$SNAPSHOT_ID"
+
+runuser -u babypark-catalog -- \
+  /usr/bin/node "$CATALOG_RELEASE/scripts/verify-catalog-snapshot.mjs" \
+  "$CATALOG_DATA/snapshots/${SNAPSHOT_ID}.ready" \
+  <exact-generation-id>
+```
+
+The exporter holds `CatalogPublicationLock` for the complete bounded streaming
+operation, validates the immutable release's root `RELEASE.json`, refuses reuse of a
+`.ready` name, and publishes only after independent verification. Preserve an
+artifact while its downstream materialization or evidence is required. Cleanup is an
+explicit recorded operator decision—never age-only—and must not target a live
+`.building` directory. A deleted snapshot may be rebuilt only from the same still
+available sealed generation under a new artifact name.
 
 ## Recovery operations
 
