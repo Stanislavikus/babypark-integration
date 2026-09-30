@@ -1,9 +1,17 @@
 # CURRENT_STATE
 
 Status: CURRENT
-Last verified: 2026-09-28
+Last verified: 2026-09-29
 Owner: BabyPark
 Source of truth: production runtime + this repository
+
+## D2b acceptance status (2026-09-29)
+
+Link A PR #37 merged at `c89fd25a6fac2f48d025527531b9601bdf817d22` and
+Link B PR #38 merged at `ca8b748aa8e845403debf31b6133b08d0e59e640`.
+Both are reviewed but not deployed or rehearsed. Production CatalogService remains
+the older BOOTSTRAP release; no production FULL has occurred. The next gate is final
+operations tooling, then the exact-release full-scale isolated rehearsal.
 
 ## Viber gateway
 
@@ -350,8 +358,10 @@ Next operational steps:
 - D2b HTTP sender/control with durable exact run-state and one exclusive sender
   lock per ready spool is merged in PR #35 at
   `46cc19e3389efdf202be6ad8aed21c05c45c693a`, but is intentionally not deployed;
-- next critical implementation slice is Link A staging + exhaustive spool-to-catalog
-  verification, still without any production FULL;
+- Link A staging/exhaustive verification is merged in PR #37 and independent
+  Link B verification is merged in PR #38; neither is deployed or rehearsed;
+- PR #39 is the remaining rehearsal-operations hardening gate before the isolated
+  production-shape rehearsal; still no production FULL;
 - keep CatalogService production cutover, isolated full-scale rehearsal and first
   controlled FULL behind their existing explicit gates.
 
@@ -378,9 +388,10 @@ Two independent tracks are active:
      merged in repository but not deployed to production;
    - D2b sender/control + durable/exclusive sender run-state are merged in repository
      but not deployed;
-   - implement Link A staging/exhaustive verifier next;
-   - do not create/send production FULL until Link A implementation, isolated
-     rehearsal and the remaining acceptance/cutover gates are closed.
+   - Link A and Link B verifier code is merged but not deployed/rehearsed;
+   - close PR #39 rehearsal-operations hardening, then run the isolated rehearsal;
+   - do not create/send production FULL until the rehearsal and remaining
+     acceptance/cutover gates are closed.
 
 2. **Identity-resolution application (later)**
    - frozen design: `docs/PRODUCT_IDENTITY_RESOLUTION_V1.md`;
@@ -479,7 +490,7 @@ No production deployment or FULL is part of this design slice.
 
 ## D2b / first controlled FULL
 
-Status: **FROZEN DESIGN / EXPORTER DEPLOYED / RECEIVER + SENDER D2b SLICES MERGED NOT DEPLOYED / LINK A NOT IMPLEMENTED**
+Status: **FROZEN DESIGN / EXPORTER DEPLOYED / RECEIVER + SENDER + LINK A + LINK B MERGED NOT DEPLOYED / REHEARSAL OPERATIONS IN REVIEW**
 
 Design source:
 `docs/DRUPAL_EXPORT_D2B.md`
@@ -580,8 +591,8 @@ Implementation slice 1 now changes repository exporter/storage-policy code only:
 - production storage ownership is recorded as
   `babypark-exporter:babypark-exporter`.
 
-Still not implemented/deployed on the critical path:
-- Link A staging/exhaustive verifier;
+Still not completed/deployed on the critical path:
+- PR #39 rehearsal-operations hardening and its final review;
 - isolated full-scale rehearsal and failure drills;
 - the one D2b-capable production CatalogService cutover;
 - first controlled FULL and post-ACK acceptance package/off-host restore gates.

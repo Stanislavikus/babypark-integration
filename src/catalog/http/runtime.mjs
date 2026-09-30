@@ -31,7 +31,8 @@ export function openCatalogHttpRuntime(config, { logger=createCatalogLogger(), i
       mutex,
     });
     if (config.backupRoot) recoveryGate.startupInspect();
-    const http=createCatalogHttpRuntime({config,identityStore,replayStore,mutex,reader,publisher,recoveryGate,logger});
+    const coordinator=implementations.coordinator;
+    const http=createCatalogHttpRuntime({config,identityStore,replayStore,mutex,reader,publisher,recoveryGate,logger,...(coordinator?{coordinator}:{})});
     return { ...http, identityStore,replayStore,mutex,reader,publisher,recoveryGate, async shutdown(){ await http.close(); for(const handle of [reader,replayStore,mutex,identityStore]) { try { handle.close(); } catch {} } } };
   } catch(error) { for(const handle of opened.reverse()) { try { handle.close(); } catch {} } throw error; }
 }

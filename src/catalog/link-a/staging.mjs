@@ -9,6 +9,38 @@ function privateDirectory(directory, create = false) {
   if (stat.isSymbolicLink() || !stat.isDirectory() || (stat.mode & 0o777) !== 0o700) fail('LINK_A_STAGING_UNSAFE', `${directory} must be a private non-symlink directory`);
 }
 function syncDirectory(directory) { const fd = fs.openSync(directory, 'r'); try { fs.fsyncSync(fd); } finally { fs.closeSync(fd); } }
+function canonicalStagingRoot(stagingRoot) {
+  if (!path.isAbsolute(stagingRoot)) fail('LINK_A_STAGING_PATH_INVALID','Staging root must be absolute');
+  const resolved=path.resolve(stagingRoot);let canonical;
+  if(fs.existsSync(resolved)){canonical=fs.realpathSync(resolved);if(canonical!==resolved)fail('LINK_A_STAGING_PATH_INVALID','Symlinked staging paths are forbidden');}
+  else {const parent=fs.realpathSync(path.dirname(resolved));if(parent!==path.resolve(path.dirname(resolved)))fail('LINK_A_STAGING_PATH_INVALID','Symlinked staging parent paths are forbidden');canonical=path.join(parent,path.basename(resolved));fs.mkdirSync(canonical,{mode:0o700});syncDirectory(parent);}
+  privateDirectory(canonical);return canonical;
+}
+function applyOwnership(directory, owner) {
+  if (owner == null) return;
+  if (!Number.isSafeInteger(owner.uid) || owner.uid < 0 || !Number.isSafeInteger(owner.gid) || owner.gid < 0) fail('LINK_A_STAGING_OWNER_INVALID','Staging owner uid/gid are invalid');
+  fs.chownSync(directory, owner.uid, owner.gid);
+  for (const name of fs.readdirSync(directory)) {
+    const entry=path.join(directory,name),stat=fs.lstatSync(entry);
+    if (stat.isSymbolicLink() || !stat.isFile()) fail('LINK_A_STAGING_SOURCE_INVALID','Transfer entries must be regular files before ownership handoff');
+    fs.chownSync(entry, owner.uid, owner.gid);
+  }
+}
+
+export async function stageFrozenSpoolFromTransfer({stagingRoot,expectedManifestSha256,transfer,owner=null}) {
+  if(!/^[a-f0-9]{64}$/.test(expectedManifestSha256??'')||typeof transfer!=='function')fail('LINK_A_STAGING_INPUT_INVALID','Trusted manifest hash and transfer callback are required');
+  const root=canonicalStagingRoot(stagingRoot),building=path.join(root,`${expectedManifestSha256}.building`),staged=path.join(root,`${expectedManifestSha256}.staged`);
+  if(owner){const rootStat=fs.lstatSync(root);if(rootStat.uid!==owner.uid||rootStat.gid!==owner.gid)fail('LINK_A_STAGING_OWNER_INVALID','Staging root must be owned by the Link A service account');}
+  if(fs.existsSync(building)||fs.existsSync(staged))fail('LINK_A_STAGING_EXISTS','Staging artifact already exists; overwrite/reuse is forbidden');
+  fs.mkdirSync(building,{mode:0o700});syncDirectory(root);
+  await transfer(building);
+  applyOwnership(building,owner);
+  privateDirectory(building);
+  for(const name of fs.readdirSync(building)){if(path.basename(name)!==name)fail('LINK_A_STAGING_PATH_INVALID','Unsafe transfer entry');const file=path.join(building,name),stat=fs.lstatSync(file);if(stat.isSymbolicLink()||!stat.isFile())fail('LINK_A_STAGING_SOURCE_INVALID','Transfer entries must be regular files');if((stat.mode&0o777)!==0o600)fail('LINK_A_STAGING_UNSAFE','Transfer files must be mode 0600');if(owner&&(stat.uid!==owner.uid||stat.gid!==owner.gid))fail('LINK_A_STAGING_OWNER_INVALID','Transferred files must be owned by the Link A service account');const fd=fs.openSync(file,'r');try{fs.fsyncSync(fd);}finally{fs.closeSync(fd);}}
+  if(owner){const stat=fs.lstatSync(building);if(stat.uid!==owner.uid||stat.gid!==owner.gid)fail('LINK_A_STAGING_OWNER_INVALID','Staging directory must be owned by the Link A service account');}
+  syncDirectory(building);const verified=verifyFrozenSpoolArtifact(building);if(verified.spoolManifestSha256!==expectedManifestSha256)fail('LINK_A_STAGING_VERIFY_FAILED','Transferred manifest digest differs from trusted authority');
+  fs.renameSync(building,staged);syncDirectory(root);return verifyFrozenSpoolArtifact(staged);
+}
 
 /** Copy a locally supplied complete .ready artifact; transfer adapters remain outside this boundary. */
 export function stageFrozenSpool({ sourcePath, stagingRoot }) {
