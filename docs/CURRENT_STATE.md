@@ -515,10 +515,10 @@ reviewed publication/collision authority during controlled batch runs; persisten
 Catalog anomaly-store/application runtime remains a later deployment.
 
 The two identifiers `511000` and `80401mc02` remain intentionally unmapped in
-configuration and useful historical acceptance cases. They are no longer both assumed
-to be live duplicate incidents: the 2026-09-28 read-only source probe found the former
-Joolz duplicate group `139026` absent. Candidate preflight must determine the current
-runtime incident set.
+configuration and useful historical acceptance cases. They are no longer both live
+duplicate incidents: the 2026-09-28 read-only source probe found the former Joolz
+duplicate group `139026` absent, while the accepted first-FULL source evidence retains
+`80401mc02` as the residual quarantined incident under groups `118670`/`12605`.
 
 Current design slice:
 - `docs/PRODUCT_IDENTITY_RESOLUTION_V1.md`;
