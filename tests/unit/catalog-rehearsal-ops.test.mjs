@@ -108,7 +108,15 @@ function systemdRunner(states, { failures = {} } = {}) {
     calls.push([command, [...argv]]);
     const key = `${command} ${argv[0] ?? ''}`;
     if (Object.hasOwn(failures, key)) {
-      return { status: failures[key], stdout: '', stderr: 'injected failure' };
+      const failure = failures[key];
+      if (typeof failure === 'number') {
+        return { status: failure, stdout: '', stderr: 'injected failure' };
+      }
+      return {
+        status: failure.status ?? 1,
+        stdout: failure.stdout ?? '',
+        stderr: failure.stderr ?? 'injected failure',
+      };
     }
     if (command === 'systemd-run') return { status: 0, stdout: '', stderr: '' };
     if (command === 'systemctl' && argv[0] === 'show') {
@@ -714,6 +722,28 @@ test('systemd controller exposes failed unit metrics but cleanup failure is fata
     sleep() {},
     writeGate() {},
   }), /cleanup failed/);
+
+  const alreadyUnloaded = systemdRunner([
+    { LoadState: 'loaded', ActiveState: 'activating', User: 'babypark-catalog' },
+    { LoadState: 'loaded', ActiveState: 'active', SubState: 'exited' },
+    { LoadState: 'loaded', ActiveState: 'inactive' },
+    null,
+  ], { failures: {
+    'systemctl reset-failed': {
+      status: 1,
+      stderr: 'Failed to reset failed state of unit babypark-link-a-deadbeef.service: Unit babypark-link-a-deadbeef.service not loaded.\n',
+    },
+  } });
+  const cleaned = await executeLinkASystemdUnit({
+    built,
+    unit: 'babypark-link-a-deadbeef',
+    gatePath: '/work/gate',
+    run: alreadyUnloaded.run,
+    sleep() {},
+    writeGate() {},
+    onCompleted: async show => show.SubState,
+  });
+  assert.equal(cleaned, 'exited');
 });
 
 test('resource evidence cannot turn Link A PASS into unchanged authority evidence', () => {
