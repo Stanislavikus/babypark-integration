@@ -80,7 +80,7 @@ test('send never auto-breaks a stale-looking lock and performs zero HTTP/state c
 });
 
 function terminalEvidence(run, spool) {
-  const final_ack={accepted:true,generation_id:'generation',layer:'full',run_id:run.run_id,run_digest:run.run_digest,source_watermark:spool.manifest.snapshot_watermark};
+  const final_ack={accepted:true,generation_id:'generation',layer:'full',run_id:run.run_id,run_digest:run.run_digest,source_watermark:null};
   const post_ack_state={...bootstrap,state:'CURRENT',current_generation:'generation',source_epoch:spool.manifest.source_epoch,published_identity_revision:1,accepted_run:{run_id:run.run_id,run_digest:run.run_digest,final_seq:run.ordered_chunks.length+1,accepted_at:'2026-09-28T00:02:00.000Z'},layers:layers(spool.manifest.snapshot_watermark)};
   return { final_ack, post_ack_state };
 }
@@ -88,7 +88,7 @@ function terminalEvidence(run, spool) {
 test('terminal run state rejects corrupt final ACK and post-ACK state evidence', t => {
   const f=fixture(); t.after(()=>fs.rmSync(f.root,{recursive:true,force:true})); const spool=verifySpool(f.spool,f.options); const run=createRunState(spool,'kid',{randomUUID:()=> 'run',now:()=>new Date('2026-09-28T00:00:00.000Z')}); const evidence=terminalEvidence(run,spool); const finalSeq=run.ordered_chunks.length+1;
   const acked={...run,first_seq0_attempt_started_at:'2026-09-28T00:01:00.000Z',last_durably_acked_sequence:finalSeq,transport_state:'ACKED',final_ack:evidence.final_ack}; assert.doesNotThrow(()=>validateRunState(acked,spool));
-  for(const final_ack of [{totally:'bogus'},{...evidence.final_ack,run_id:'other'},{...evidence.final_ack,extra:true}]) assert.throws(()=>validateRunState({...acked,final_ack},spool),e=>e.code==='D2B_RUN_STATE_INVALID');
+  for(const final_ack of [{totally:'bogus'},{...evidence.final_ack,run_id:'other'},{...evidence.final_ack,source_watermark:spool.manifest.snapshot_watermark},{...evidence.final_ack,extra:true}]) assert.throws(()=>validateRunState({...acked,final_ack},spool),e=>e.code==='D2B_RUN_STATE_INVALID');
   const confirmed={...acked,transport_state:'STATE_CONFIRMED',post_ack_state:evidence.post_ack_state}; assert.doesNotThrow(()=>validateRunState(confirmed,spool));
   for(const post_ack_state of [{also:'bogus'},{...evidence.post_ack_state,current_generation:'other'},{...evidence.post_ack_state,extra:true}]) assert.throws(()=>validateRunState({...confirmed,post_ack_state},spool),e=>e.code==='D2B_RUN_STATE_INVALID');
 });
