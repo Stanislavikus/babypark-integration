@@ -1,3 +1,5 @@
+[Reading 34 lines from start (total: 34 lines, 0 remaining)]
+
 #!/usr/bin/env node
 import fs from 'node:fs';
 import { copilotConfig } from '../src/copilot/config.mjs';
@@ -19,16 +21,18 @@ if (command === 'ingress') {
   server.listen(config.port, '127.0.0.1', () => output({ event: 'copilot_lab_listening', port: config.port }));
 } else if (command === 'worker' || command === 'reconcile') {
   const authorityReader = createChatwootAuthorityReader({ baseUrl: config.baseUrl, accountId: config.accountId,
-    readToken: config.readToken });
+    readToken: config.readToken, requestTimeoutMs: config.chatwootRequestTimeoutMs });
   let result;
   if (command === 'worker') {
     result = await runWorkerOnce({ store, authorityReader, config });
   } else {
     const agentBotActions = createAgentBotActionClient({ baseUrl: config.baseUrl, accountId: config.accountId,
-      agentBotToken: config.agentBotToken });
+      agentBotToken: config.agentBotToken, requestTimeoutMs: config.chatwootRequestTimeoutMs });
     result = await runReconcilerOnce({ store, authorityReader, agentBotActions, config });
   }
   output(result); store.close();
 } else {
   store.close(); throw new Error('usage: copilot-lab.mjs ingress|worker|reconcile');
 }
+
+[executed on device: chatwoot-fra1-01 (ffb62f19-a7b9-4c48-90bc-fdc677129931)]
