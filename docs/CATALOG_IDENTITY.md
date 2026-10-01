@@ -86,9 +86,13 @@ and approximate similarity are never automatic mapping authority.
 
 New source-store mappings require reviewed_source provenance. An existing
 provider/native store xref cannot be rebound. Tombstoned store IDs cannot be
-reactivated or reused. Slice A v1 additionally permits at most one Magento
-source_code for one canonical physical store; ambiguous multi-source topology
-fails closed until a separately reviewed contract exists.
+reactivated or reused.
+
+The durable xref registry may retain multiple reviewed historical provider IDs
+for one canonical store. It does not infer which provider locations are active.
+Current-provider topology is a separate cutover/preflight concern. In particular,
+Magento v1 must fail preflight if more than one active physical MSI Source claims
+the same canonical physical store; that rule must not erase durable xref history.
 
 A provider-native ID cannot silently move to a different canonical identity.
 
@@ -309,7 +313,7 @@ Automated tests cover:
 - explicit additive v1 -> v2 migration with legacy-row preservation;
 - reviewed canonical store creation and cross-provider continuity;
 - provider/native store reassociation rejection;
-- Magento one-source-per-physical-store v1 constraint;
+- separation of durable store xref history from active-provider preflight;
 - store tombstone non-reactivation;
 - idempotent store observation without identity revision churn;
 - missing/corrupt/unsafe/future-schema fail-closed;

@@ -556,25 +556,6 @@ export class IdentityStore {
         created = true;
       }
 
-      if (provider === 'magento') {
-        const existingMagento = this.db.prepare(`
-          SELECT native_store_id
-          FROM source_stores
-          WHERE provider='magento' AND store_id=?
-        `).get(canonicalId);
-        if (existingMagento) {
-          throw identityError(
-            'IDENTITY_MAGENTO_STORE_XREF_CONFLICT',
-            'Canonical physical store already has a Magento source binding',
-            {
-              store_id: canonicalId,
-              existing_native_store_id: existingMagento.native_store_id,
-              requested_native_store_id: nativeStoreId,
-            }
-          );
-        }
-      }
-
       this.db.prepare(`
         INSERT INTO source_stores(
           provider, native_store_id, store_id, reviewed_source,

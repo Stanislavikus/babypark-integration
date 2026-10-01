@@ -800,7 +800,7 @@ test('tombstoned canonical store cannot reactivate through any provider xref', t
   store.close();
 });
 
-test('v1 Magento store mapping rejects two source codes for one physical store', t => {
+test('store registry retains reviewed provider history without active-source inference', t => {
   const f = fixture();
   t.after(() => f.cleanup());
   const store = IdentityStore.createNew(f.dbPath, f.options);
@@ -810,30 +810,36 @@ test('v1 Magento store mapping rejects two source codes for one physical store',
     nativeStoreId: 'tid:7',
     reviewedSource: 'review:bootstrap',
   });
-  store.ensureStore({
+  const oldSource = store.ensureStore({
     provider: 'magento',
-    nativeStoreId: 'source_a',
+    nativeStoreId: 'source_old',
     storeId: physical.store_id,
-    reviewedSource: 'review:cutover-a',
+    reviewedSource: 'review:historical-source',
   });
-  const before = store.metadata().revision;
+  const currentSource = store.ensureStore({
+    provider: 'magento',
+    nativeStoreId: 'source_current',
+    storeId: physical.store_id,
+    reviewedSource: 'review:replacement-source',
+  });
 
-  assert.throws(
-    () => store.ensureStore({
-      provider: 'magento',
-      nativeStoreId: 'source_b',
-      storeId: physical.store_id,
-      reviewedSource: 'review:cutover-b',
-    }),
-    identityCode('IDENTITY_MAGENTO_STORE_XREF_CONFLICT')
-  );
-  assert.equal(store.metadata().revision, before);
+  assert.equal(oldSource.store_id, physical.store_id);
+  assert.equal(currentSource.store_id, physical.store_id);
+  assert.equal(store.stats().stores, 1);
+  assert.equal(store.stats().source_stores, 3);
   assert.equal(
     store.lookupStoreBySource({
       provider: 'magento',
-      nativeStoreId: 'source_b',
-    }),
-    undefined
+      nativeStoreId: 'source_old',
+    }).store_id,
+    physical.store_id
+  );
+  assert.equal(
+    store.lookupStoreBySource({
+      provider: 'magento',
+      nativeStoreId: 'source_current',
+    }).store_id,
+    physical.store_id
   );
   store.close();
 });
@@ -865,7 +871,7 @@ test('idempotent store observation updates last_seen without identity revision',
     store.lookupStoreBySource({
       provider: 'drupal',
       nativeStoreId: 'tid:7',
-    }).last_seeen_at,
+    }).last_seen_at,
     seenBefore
   );
   store.close();
