@@ -62,7 +62,7 @@ test('explicit bootstrap creates once; status opens existing read-only logically
   const createJson = JSON.parse(created.stdout);
   assert.equal(createJson.ok, true);
   assert.equal(createJson.mode, '600');
-  assert.equal(createJson.metadata.schema_version, 1);
+  assert.equal(createJson.metadata.schema_version, 2);
   assert.equal(createJson.metadata.revision, 0);
   assert.equal(createJson.stats.products, 0);
 

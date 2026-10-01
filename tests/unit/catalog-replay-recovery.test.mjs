@@ -12,7 +12,7 @@ import { CatalogPublisher, CatalogReader } from '../../src/catalog/sqlite/genera
 import { CatalogPublicationLock } from '../../src/catalog/sqlite/publication-lock.mjs';
 import { openCatalogHttpRuntime } from '../../src/catalog/http/runtime.mjs';
 import { readRecoveryAuthority, recoverReplay } from '../../src/catalog/recovery/core.mjs';
-import { phase0Records, phase1Records, phase2Records } from '../helpers/catalog-e6a1-fixture.mjs';
+import { phase0Records, phase1Records, phase2Records, seedFixtureStoreIdentity } from '../helpers/catalog-e6a1-fixture.mjs';
 import { seedD2bConfig, TEST_PUBLICATION_AUTHORITY } from '../helpers/catalog-d2b-fixture.mjs';
 
 const hash = value => crypto.createHash('sha256').update(value).digest('hex');
@@ -51,7 +51,7 @@ test('R1-R8 replay loss preserves CURRENT, classifies, abandons partial work, an
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'bp-replay-recovery-'));
   const catalog = path.join(root, 'catalog'); fs.mkdirSync(catalog, { mode: 0o700 });
   const identityPath = path.join(root, 'identity.sqlite');
-  const identity = seedD2bConfig(IdentityStore.createNew(identityPath));
+  const identity = seedFixtureStoreIdentity(seedD2bConfig(IdentityStore.createNew(identityPath)));
   const mutex = new CatalogPublicationLock(catalog); const reader = new CatalogReader(catalog);
   const publisher = new CatalogPublisher(catalog, { mutex, readers: [reader] });
   const oldPath = path.join(root, 'replay-old.sqlite');

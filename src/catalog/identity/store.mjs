@@ -5,8 +5,11 @@ import { DatabaseSync } from 'node:sqlite';
 import { normalizeSku } from '../domain/sku.mjs';
 import { identityError } from './errors.mjs';
 import {
+  IDENTITY_PREVIOUS_SCHEMA_VERSION,
   IDENTITY_REQUIRED_TABLES,
+  IDENTITY_REQUIRED_TABLES_V1,
   IDENTITY_SCHEMA_VERSION,
+  identityMigrationSqlV1ToV2,
   identitySchemaSql,
 } from './schema.mjs';
 
@@ -28,6 +31,9 @@ function defaultIdFactory() {
     },
     variant() {
       return `var_${crypto.randomUUID()}`;
+    },
+    store() {
+      return `store_${crypto.randomUUID()}`;
     },
   };
 }
@@ -107,6 +113,116 @@ export class IdentityStore {
       try { fs.unlinkSync(resolved); } catch {}
       throw error;
     }
+  }
+
+  static migrateExisting(filePath, {
+    now = () => new Date().toISOString(),
+    idFactory = defaultIdFactory(),
+  } = {}) {
+    const resolved = path.resolve(filePath);
+    if (!fs.existsSync(resolved)) {
+      throw identityError(
+        'IDENTITY_MISSING',
+        'Identity database is missing; automatic recreation is forbidden',
+        { path: resolved }
+      );
+    }
+    if (!fs.statSync(resolved).isFile()) {
+      throw identityError(
+        'IDENTITY_NOT_FILE',
+        'Identity database path is not a regular file',
+        { path: resolved }
+      );
+    }
+
+    const mode = fs.statSync(resolved).mode & 0o777;
+    if ((mode & 0o077) !== 0) {
+      throw identityError(
+        'IDENTITY_PERMISSIONS_UNSAFE',
+        'Identity database must not be group/world accessible',
+        { path: resolved, mode: mode.toString(8) }
+      );
+    }
+
+    const db = new DatabaseSync(resolved);
+    try {
+      db.exec(`
+        PRAGMA foreign_keys=ON;
+        PRAGMA busy_timeout=5000;
+      `);
+
+      const integrity = integrityCheck(db);
+      if (integrity.length !== 1 || integrity[0] !== 'ok') {
+        throw identityError(
+          'IDENTITY_INTEGRITY_FAILED',
+          'Identity database integrity check failed before migration',
+          { integrity }
+        );
+      }
+
+      const journalMode = String(
+        db.prepare('PRAGMA journal_mode').get()?.journal_mode || ''
+      ).toLowerCase();
+      if (journalMode !== 'delete') {
+        throw identityError(
+          'IDENTITY_JOURNAL_MODE_UNSAFE',
+          'Identity database must use DELETE journal mode',
+          { journal_mode: journalMode }
+        );
+      }
+
+      const version = Number(
+        db.prepare('PRAGMA user_version').get()?.user_version || 0
+      );
+      if (version === IDENTITY_SCHEMA_VERSION) {
+        db.close();
+        return IdentityStore.openExisting(resolved, { now, idFactory });
+      }
+      if (version !== IDENTITY_PREVIOUS_SCHEMA_VERSION) {
+        throw identityError(
+          'IDENTITY_SCHEMA_MISMATCH',
+          'Identity database schema cannot be migrated by this release',
+          {
+            expected_from: IDENTITY_PREVIOUS_SCHEMA_VERSION,
+            expected_to: IDENTITY_SCHEMA_VERSION,
+            actual: version,
+          }
+        );
+      }
+
+      const missingTables = IDENTITY_REQUIRED_TABLES_V1.filter(
+        table => !tableExists(db, table)
+      );
+      if (missingTables.length) {
+        throw identityError(
+          'IDENTITY_SCHEMA_INCOMPLETE',
+          'Identity database is missing required pre-migration tables',
+          { missing_tables: missingTables }
+        );
+      }
+
+      const meta = db.prepare(
+        'SELECT schema_version FROM identity_meta WHERE singleton=1'
+      ).get();
+      if (
+        !meta ||
+        Number(meta.schema_version) !== IDENTITY_PREVIOUS_SCHEMA_VERSION
+      ) {
+        throw identityError(
+          'IDENTITY_META_INVALID',
+          'Identity metadata is incompatible with the migration source'
+        );
+      }
+
+      transaction(db, () => {
+        db.exec(identityMigrationSqlV1ToV2(now()));
+      });
+    } finally {
+      try { db.close(); } catch {}
+    }
+
+    fs.chmodSync(resolved, 0o600);
+    return IdentityStore.openExisting(resolved, { now, idFactory });
   }
 
   static openExisting(filePath, {
@@ -319,6 +435,187 @@ export class IdentityStore {
       matched_by: 'alias',
       matched_sku: alias_sku,
     };
+  }
+
+  getStore(storeId) {
+    return this.db.prepare(
+      'SELECT * FROM stores WHERE store_id=?'
+    ).get(storeId);
+  }
+
+  lookupStoreBySource({ provider, nativeStoreId }) {
+    requireText('provider', provider);
+    requireText('nativeStoreId', nativeStoreId);
+    return this.db.prepare(`
+      SELECT ss.store_id, s.lifecycle, ss.reviewed_source,
+             ss.first_seen_at, ss.last_seen_at
+      FROM source_stores ss
+      JOIN stores s ON s.store_id=ss.store_id
+      WHERE ss.provider=? AND ss.native_store_id=?
+    `).get(provider, nativeStoreId);
+  }
+
+  ensureStore({
+    provider,
+    nativeStoreId,
+    storeId = null,
+    reviewedSource = null,
+  }) {
+    this.assertWritable();
+    requireText('provider', provider);
+    requireText('nativeStoreId', nativeStoreId);
+    if (storeId !== null) requireText('storeId', storeId);
+
+    return transaction(this.db, () => {
+      const existingXref = this.db.prepare(`
+        SELECT ss.provider, ss.native_store_id, ss.store_id,
+               ss.reviewed_source, s.lifecycle
+        FROM source_stores ss
+        JOIN stores s ON s.store_id=ss.store_id
+        WHERE ss.provider=? AND ss.native_store_id=?
+      `).get(provider, nativeStoreId);
+
+      if (existingXref) {
+        if (storeId && existingXref.store_id !== storeId) {
+          throw identityError(
+            'IDENTITY_STORE_XREF_CONFLICT',
+            'Provider-native store is already bound to another store',
+            {
+              provider,
+              native_store_id: nativeStoreId,
+              existing_store_id: existingXref.store_id,
+              requested_store_id: storeId,
+            }
+          );
+        }
+        if (existingXref.lifecycle !== 'active') {
+          throw identityError(
+            'IDENTITY_STORE_TOMBSTONED',
+            'Provider-native store resolves to a tombstoned store',
+            {
+              provider,
+              native_store_id: nativeStoreId,
+              store_id: existingXref.store_id,
+            }
+          );
+        }
+
+        this.db.prepare(`
+          UPDATE source_stores
+          SET last_seen_at=?
+          WHERE provider=? AND native_store_id=?
+        `).run(this.now(), provider, nativeStoreId);
+
+        return {
+          store_id: existingXref.store_id,
+          created: false,
+          xref_created: false,
+          reviewed_source: existingXref.reviewed_source,
+          revision: this.metadata().revision,
+        };
+      }
+
+      requireText('reviewedSource', reviewedSource);
+      const at = this.now();
+      let canonicalId = storeId;
+      let created = false;
+
+      if (canonicalId) {
+        const canonical = this.getStore(canonicalId);
+        if (!canonical) {
+          throw identityError(
+            'IDENTITY_STORE_NOT_FOUND',
+            'Requested canonical store does not exist',
+            { store_id: canonicalId }
+          );
+        }
+        if (canonical.lifecycle !== 'active') {
+          throw identityError(
+            'IDENTITY_STORE_TOMBSTONED',
+            'Requested canonical store is tombstoned',
+            { store_id: canonicalId }
+          );
+        }
+      } else {
+        canonicalId = requireText(
+          'generatedStoreId',
+          this.idFactory.store()
+        );
+        if (this.getStore(canonicalId)) {
+          throw identityError(
+            'IDENTITY_GENERATED_ID_COLLISION',
+            'Generated store ID already exists',
+            { store_id: canonicalId }
+          );
+        }
+        this.db.prepare(`
+          INSERT INTO stores(
+            store_id, lifecycle, created_at, updated_at
+          ) VALUES(?, 'active', ?, ?)
+        `).run(canonicalId, at, at);
+        created = true;
+      }
+
+      this.db.prepare(`
+        INSERT INTO source_stores(
+          provider, native_store_id, store_id, reviewed_source,
+          first_seen_at, last_seen_at
+        ) VALUES(?,?,?,?,?,?)
+      `).run(
+        provider,
+        nativeStoreId,
+        canonicalId,
+        reviewedSource,
+        at,
+        at
+      );
+      this.bumpRevision(at);
+
+      return {
+        store_id: canonicalId,
+        created,
+        xref_created: true,
+        reviewed_source: reviewedSource,
+        revision: this.metadata().revision,
+      };
+    });
+  }
+
+  tombstoneStore(storeId) {
+    this.assertWritable();
+    requireText('storeId', storeId);
+
+    return transaction(this.db, () => {
+      const store = this.getStore(storeId);
+      if (!store) {
+        throw identityError(
+          'IDENTITY_STORE_NOT_FOUND',
+          'Store does not exist',
+          { store_id: storeId }
+        );
+      }
+      if (store.lifecycle === 'tombstoned') {
+        return {
+          store_id: storeId,
+          changed: false,
+          revision: this.metadata().revision,
+        };
+      }
+
+      const at = this.now();
+      this.db.prepare(`
+        UPDATE stores
+        SET lifecycle='tombstoned', updated_at=?
+        WHERE store_id=?
+      `).run(at, storeId);
+      this.bumpRevision(at);
+
+      return {
+        store_id: storeId,
+        changed: true,
+        revision: this.metadata().revision,
+      };
+    });
   }
 
   lookupProductBySource({ provider, nativeProductId }) {
@@ -963,6 +1260,16 @@ export class IdentityStore {
       ),
       source_variants: scalar(
         'SELECT COUNT(*) c FROM source_variants'
+      ),
+      stores: scalar('SELECT COUNT(*) c FROM stores'),
+      stores_active: scalar(
+        "SELECT COUNT(*) c FROM stores WHERE lifecycle='active'"
+      ),
+      stores_tombstoned: scalar(
+        "SELECT COUNT(*) c FROM stores WHERE lifecycle='tombstoned'"
+      ),
+      source_stores: scalar(
+        'SELECT COUNT(*) c FROM source_stores'
       ),
       sku_aliases: scalar('SELECT COUNT(*) c FROM sku_aliases'),
       config_entries: scalar(

@@ -5,6 +5,40 @@ Last verified: 2026-09-30
 Owner: BabyPark
 Source of truth: production runtime + this repository
 
+## AI First Line Slice A state (2026-10-01)
+
+Frozen v0.5 design authority is consolidated in main at
+`644708f739e4999b7604c505bee253df193e16b2`:
+- `docs/AI_FIRST_LINE_DESIGN.md`;
+- `docs/AI_FIRST_LINE_ACCEPTANCE.md`.
+
+There are no normative v0.5 delta files.
+
+Implementation issue: #53.
+Draft implementation PR: #54.
+
+Repository Slice A currently contains:
+- IdentityStore schema-v2 migration and canonical physical-store xrefs;
+- explicit reviewed store binding;
+- mapper-v3 canonical physical-store boundary;
+- store-identity topology bound into production dependency fingerprint, fencing
+  any reviewed store-map drift after seq0;
+- independent Link A canonical-store verification.
+
+These Slice A changes are **not deployed to production**.
+
+Production `identity.sqlite` and the current accepted catalog generation still
+predate the canonical physical-store cutover. A production migration requires the
+recovery-gated sequence in `docs/CATALOG_IDENTITY.md`: migrate IdentityStore,
+review/bind current Drupal stores, deploy mapper-v3, run a new FULL, require Link A
+PASS, validate CatalogService canonical store IDs, then establish fresh recovery
+coverage.
+
+Store-scoped Knowledge must not be declared CURRENT before that gate passes.
+
+Deferred Slice E Seller Assist is frozen in the v0.5 design but is not part of
+current Slice A implementation.
+
 ## D2b acceptance status (2026-09-30)
 
 Link A PR #37 merged at `c89fd25a6fac2f48d025527531b9601bdf817d22` and

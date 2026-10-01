@@ -60,6 +60,7 @@ test('staging rejects a symlink-parent alias into source before mutation',t=>{co
 test('independent Link A ID formulas have frozen golden vectors', () => {
   assert.equal(linkADimensionId('brand','drupal','42'),'brand_cff7bfb8163c34618fdd47e8511727f6');
   assert.equal(linkADimensionId('category','drupal','123'),'cat_88975c3a1d402d73c5492804decba552');
+  assert.throws(() => linkADimensionId('store','drupal','7'), /invalid dimension type/);
   assert.equal(linkAImageId('drupal','product:7','image:9'),'img_a469248ad72411fc5d2a1ba92f503699');
   assert.equal(MAX_MISMATCH_DETAILS,200);assert.deepEqual(FTS_PROBE_LIMITS,{exact_sku:16,text:16,category:16});
 });
@@ -74,6 +75,17 @@ test('exact generation callback opens only the named ready standalone database r
 test('exact spool plus real accepted v2 FULL generation passes Link A',t=>{const f=createAcceptedLinkAFixture();t.after(()=>f.close());const report=verifyLinkA({stagedSpoolPath:f.staged.path,workRoot:f.work,catalogStorageDir:f.harness.catalogDir,identityPath:f.harness.identity.filePath,expectedGenerationId:'link-a-generation',acceptedRun:f.acceptedRun});assert.equal(report.status,'PASS');assert.equal(report.mismatch_count,0);assert.equal(report.fts.status,'COMPLETE');assert.ok(report.fts.probes.some(probe=>probe.source==='brand'));});
 
 test('Link A rejects pre-existing unrelated IdentityStore revision drift without changing spool xrefs',t=>{const f=createAcceptedLinkAFixture();t.after(()=>f.close());const products=['stroller','toy','kit'],variants=['stroller-blue','stroller-red','toy-one','kit-one'];const beforeProducts=Object.fromEntries(products.map(nativeProductId=>[nativeProductId,f.harness.identity.lookupProductBySource({provider:'fixture',nativeProductId}).product_id]));const beforeVariants=Object.fromEntries(variants.map(nativeVariantId=>[nativeVariantId,f.harness.identity.lookupVariantBySource({provider:'fixture',nativeVariantId}).variant_id]));const acceptedRevision=withExactCatalogGeneration(f.harness.catalogDir,'link-a-generation',(_db,metadata)=>metadata.identity_revision);assert.equal(f.harness.identity.metadata().revision,acceptedRevision);f.harness.identity.ensureProduct({provider:'unrelated-provider',nativeProductId:'unrelated-product'});assert.equal(f.harness.identity.metadata().revision,acceptedRevision+1);assert.deepEqual(Object.fromEntries(products.map(nativeProductId=>[nativeProductId,f.harness.identity.lookupProductBySource({provider:'fixture',nativeProductId}).product_id])),beforeProducts);assert.deepEqual(Object.fromEntries(variants.map(nativeVariantId=>[nativeVariantId,f.harness.identity.lookupVariantBySource({provider:'fixture',nativeVariantId}).variant_id])),beforeVariants);const identityBefore=sha256FileBounded(f.harness.identity.filePath);const report=verifyLinkA({stagedSpoolPath:f.staged.path,workRoot:f.work,catalogStorageDir:f.harness.catalogDir,identityPath:f.harness.identity.filePath,expectedGenerationId:'link-a-generation',acceptedRun:f.acceptedRun});assert.equal(report.status,'FAIL');assert.notEqual(report.status,'PASS');assert.equal(report.mismatch_count,1);assert.ok(report.mismatches.some(row=>row.code==='LINK_A_IDENTITY_REVISION_MISMATCH'&&row.expected===acceptedRevision&&row.actual===acceptedRevision+1));assert.equal(sha256FileBounded(f.harness.identity.filePath),identityBefore);});
+
+test('Link A rejects missing reviewed store xref even when identity revision is unchanged',t=>{
+  const f=createAcceptedLinkAFixture();t.after(()=>f.close());
+  const acceptedRevision=withExactCatalogGeneration(f.harness.catalogDir,'link-a-generation',(_db,metadata)=>metadata.identity_revision);
+  assert.equal(f.harness.identity.metadata().revision,acceptedRevision);
+  f.harness.identity.db.prepare('DELETE FROM source_stores WHERE provider=? AND native_store_id=?').run('fixture','kyiv');
+  assert.equal(f.harness.identity.metadata().revision,acceptedRevision);
+  const report=verifyLinkA({stagedSpoolPath:f.staged.path,workRoot:f.work,catalogStorageDir:f.harness.catalogDir,identityPath:f.harness.identity.filePath,expectedGenerationId:'link-a-generation',acceptedRun:f.acceptedRun});
+  assert.equal(report.status,'FAIL');
+  assert.ok(report.mismatches.some(row=>row.code==='LINK_A_STORE_IDENTITY_UNRESOLVED'&&row.key==='fixture:kyiv'));
+});
 
 test('matching accepted generation and live IdentityStore revisions pass Link A',t=>{const f=createAcceptedLinkAFixture();t.after(()=>f.close());const acceptedRevision=withExactCatalogGeneration(f.harness.catalogDir,'link-a-generation',(_db,metadata)=>metadata.identity_revision);assert.equal(f.harness.identity.metadata().revision,acceptedRevision);const report=verifyLinkA({stagedSpoolPath:f.staged.path,workRoot:f.work,catalogStorageDir:f.harness.catalogDir,identityPath:f.harness.identity.filePath,expectedGenerationId:'link-a-generation',acceptedRun:f.acceptedRun});assert.equal(report.status,'PASS');assert.equal(report.generation.identity_revision,acceptedRevision);});
 

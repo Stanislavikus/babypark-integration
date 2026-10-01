@@ -1,14 +1,18 @@
 # Catalog Identity Registry
 
-Status: CURRENT (code and production durable identity state)
+Status: CURRENT production durable identity state; Slice A schema-v2 code NOT DEPLOYED
 Last verified: 2026-10-01
 Owner: BabyPark
 Source of truth: src/catalog/domain/sku.mjs, src/catalog/identity/
 
+Production schema remains v1 until a separately owner-authorized, recovery-gated
+v1 -> v2 migration. Repository Slice A targets schema v2; merge does not itself
+authorize or perform that production migration.
+
 ## Purpose
 
-The identity registry preserves BabyPark-owned product and variant identity
-across catalog rebuilds and provider cutovers.
+The identity registry preserves BabyPark-owned product, variant and physical-store
+identity across catalog rebuilds and provider cutovers.
 
 It is deliberately separate from rebuildable catalog generations.
 
@@ -72,10 +76,27 @@ Default generated shapes:
 
     prod_<uuid>
     var_<uuid>
+    store_<uuid>
 
 Provider IDs stay in:
 - source_products(provider, native_product_id, product_id)
 - source_variants(provider, native_variant_id, variant_id)
+- source_stores(provider, native_store_id, store_id)
+
+Physical-store identity follows the same rule as product identity: provider-native
+location IDs are xrefs only. A reviewed Drupal store/location ID and a future
+Magento MSI source_code may point to the same BabyPark store_id. Names, addresses
+and approximate similarity are never automatic mapping authority.
+
+New source-store mappings require reviewed_source provenance. An existing
+provider/native store xref cannot be rebound. Tombstoned store IDs cannot be
+reactivated or reused.
+
+The durable xref registry may retain multiple reviewed historical provider IDs
+for one canonical store. It does not infer which provider locations are active.
+Current-provider topology is a separate cutover/preflight concern. In particular,
+Magento v1 must fail preflight if more than one active physical MSI Source claims
+the same canonical physical store; that rule must not erase durable xref history.
 
 A provider-native ID cannot silently move to a different canonical identity.
 
@@ -150,8 +171,31 @@ The parent directory must already exist.
 Bootstrap:
 - fails if the file already exists;
 - creates mode 0600;
-- initializes schema version 1;
+- initializes the current schema version (v2 in the Slice A implementation);
 - returns revision 0.
+
+Existing schema-v1 production state is never upgraded by openExisting().
+Migration is a separate owner/operator action:
+
+```bash
+npm run identity:migrate -- \
+  --path=/absolute/path/identity.sqlite \
+  --apply
+```
+
+The v1 -> v2 migration is additive: it preserves product/variant/config rows,
+adds stores/source_stores, and leaves identity_meta.revision unchanged because
+an empty schema capability is not an identity mapping. It is idempotent once v2
+is reached.
+
+Before any production migration:
+- take and verify recovery coverage for the current identity.sqlite;
+- stop/fence writers that could mutate IdentityStore during the migration;
+- run the explicit migration;
+- validate status/integrity and the expected empty/bootstrapped store mappings;
+- create fresh verified recovery coverage before enabling a release that requires v2.
+
+No runtime process is allowed to silently migrate durable authority state.
 
 Read status:
 
@@ -169,13 +213,99 @@ Revision increments for:
 - new provider product xref;
 - new canonical variant;
 - new provider variant xref;
+- new canonical physical store;
+- new reviewed provider store xref;
+- physical-store tombstone transition;
 - reviewed SKU alias;
 - reviewed SKU rename;
-- tombstone transition;
+- product/variant tombstone transition;
 - reviewed config hash change.
 
-A repeated observation of the same provider-native mapping updates last_seen_at
-but does not increment canonical revision.
+A repeated observation of the same provider-native product/variant/store mapping
+updates last_seen_at but does not increment canonical revision.
+
+Reviewed physical-store binding is explicit:
+
+```bash
+npm run identity:store-bind -- \
+  --path=/absolute/path/identity.sqlite \
+  --provider=drupal \
+  --native-store-id=<provider-id> \
+  --reviewed-source=<review-or-ticket> \
+  --apply
+```
+
+To bind a second provider to an already reviewed physical store, pass its
+canonical --store-id. There is no fuzzy name/address fallback.
+
+## Catalog physical-store boundary
+
+Slice A A2 changes production mapping semantics for physical stores only.
+
+Brand/category/attribute dimensions may still use deterministic provider-derived
+dimension IDs. Physical stores may not.
+
+The production FULL mapper now resolves every source `native_store_id` through
+the reviewed IdentityStore xref:
+
+```
+(provider, native_store_id)
+  -> source_stores
+  -> canonical store_id
+  -> catalog stores/store_stock
+```
+
+The mapper:
+- never creates a store xref;
+- never hashes a provider-native store ID into a catalog store ID;
+- rejects an unmapped provider-native store;
+- rejects a mapping to a tombstoned canonical store;
+- writes both `stores.store_id` and `store_stock.store_id` using canonical IDs.
+
+The production dependency fingerprint also binds a deterministic store-identity
+state hash over:
+- canonical `store_id + lifecycle`;
+- `provider + native_store_id + store_id + reviewed_source`.
+
+Observation timestamps such as `last_seen_at` are deliberately excluded.
+Product/variant identity changes are deliberately excluded from this store-state
+hash because normal FULL ingest may create those identities.
+
+The store-state hash is fixed when seq0 creates/opens the target generation.
+Any reviewed store mapping addition, remap-relevant topology change or store
+tombstone after seq0 changes the dependency fingerprint and fences that FULL with
+`FULL_DEPENDENCY_MISMATCH` before a later mapper invocation.
+
+Link A independently repeats the same authority check from the frozen source
+records and the read-only IdentityStore. A missing reviewed xref therefore cannot
+be hidden by a catalog row that merely looks structurally valid.
+
+### Production cutover gate
+
+The current production generation predates this canonical-store boundary and must
+not be described as migrated merely because repository code has changed.
+
+Before deploying a mapper-v3 release that can accept a new FULL:
+
+1. verify current recovery coverage;
+2. fence IdentityStore/catalog writers;
+3. explicitly migrate production `identity.sqlite` v1 -> v2;
+4. enumerate current Drupal physical store native IDs from frozen/current source evidence;
+5. review and bind every applicable Drupal store to a canonical BabyPark `store_id`;
+6. verify mappings and take fresh recovery coverage;
+7. deploy code requiring IdentityStore v2 / mapper v3;
+8. run a complete FULL so the new generation contains canonical store IDs;
+9. require independent Link A PASS against the exact frozen spool and exact
+   IdentityStore revision;
+10. verify CatalogService store/stock responses expose only canonical `store_id`;
+11. take fresh post-FULL recovery coverage before store-scoped Knowledge may be
+    declared CURRENT.
+
+If any source store used by the FULL is unmapped or tombstoned, ingest fails closed
+before the affected source record is committed. The authenticated ingest surface
+returns a sanitized `409 STORE_IDENTITY_UNRESOLVED` with `action=operator`;
+provider/native identifiers remain in internal diagnostics rather than the public
+error body.
 
 ## SKU rename and aliases
 
@@ -253,6 +383,12 @@ recovery discipline.
 
 Automated tests cover:
 - explicit bootstrap only;
+- explicit additive v1 -> v2 migration with legacy-row preservation;
+- reviewed canonical store creation and cross-provider continuity;
+- provider/native store reassociation rejection;
+- separation of durable store xref history from active-provider preflight;
+- store tombstone non-reactivation;
+- idempotent store observation without identity revision churn;
 - missing/corrupt/unsafe/future-schema fail-closed;
 - persistent stable IDs across reopen;
 - cross-provider xrefs;

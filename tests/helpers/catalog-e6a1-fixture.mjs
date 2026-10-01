@@ -53,12 +53,27 @@ export function phase1Records() {
 }
 export function phase2Records() { return [{ schema: 'bp.catalog.full-record/2', type: 'kit_component', phase: 2, provider: 'fixture', kit_native_product_id: 'kit', component_native_variant_id: 'stroller-blue', quantity: 1, discount_minor: 5000, mutable: false, metadata: { provider: 'cannot-overwrite' } }]; }
 
+export function seedFixtureStoreIdentity(identity) {
+  for (const [nativeStoreId, reviewedSource] of [
+    ['kyiv', 'fixture:reviewed-store:kyiv'],
+    ['warehouse', 'fixture:reviewed-store:warehouse'],
+  ]) {
+    if (!identity.lookupStoreBySource({ provider: 'fixture', nativeStoreId })) {
+      identity.ensureStore({ provider: 'fixture', nativeStoreId, reviewedSource });
+    }
+  }
+  return identity;
+}
+
 export function createE6aHarness({ generationId = 'e6a1', runId = 'e6a-run', headerSchema = 'bp.catalog.run-header/1', publicationAuthority = null, sourceEpoch = 'epoch-e6a', watermark = '9' } = {}) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'bp-e6a1-')); const catalogDir = path.join(root, 'catalog'); fs.mkdirSync(catalogDir);
-  let productSequence = 0; let variantSequence = 0;
+  let productSequence = 0; let variantSequence = 0; let storeSequence = 0;
   const identity = IdentityStore.createNew(path.join(root, 'identity.sqlite'), { idFactory: {
-    product: () => `prod_e6a_${++productSequence}`, variant: () => `var_e6a_${++variantSequence}`,
+    product: () => `prod_e6a_${++productSequence}`,
+    variant: () => `var_e6a_${++variantSequence}`,
+    store: () => `store_e6a_${++storeSequence}`,
   } });
+  seedFixtureStoreIdentity(identity);
   if (publicationAuthority) for (const [key,digest] of Object.entries(publicationAuthority.config_digests)) identity.setConfigHash(key,digest);
   const dependencyFingerprint = productionDependencyFingerprint(identity);
   const builder = CatalogGenerationBuilder.create({ storageDir: catalogDir, generationId, sourceEpoch, identityRevision: identity.metadata().revision, dependencyFingerprint });

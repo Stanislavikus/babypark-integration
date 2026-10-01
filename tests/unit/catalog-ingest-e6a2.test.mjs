@@ -14,7 +14,7 @@ import { processProductionFullChunk } from '../../src/catalog/ingest/production-
 import { productionGenerationId } from '../../src/catalog/ingest/production-generation.mjs';
 import { CatalogService } from '../../src/catalog/service/catalog-service.mjs';
 import { productionDependencyFingerprint } from '../../src/catalog/ingest/dependency-fingerprint.mjs';
-import { phase0Records, phase1Records, phase2Records } from '../helpers/catalog-e6a1-fixture.mjs';
+import { phase0Records, phase1Records, phase2Records, seedFixtureStoreIdentity } from '../helpers/catalog-e6a1-fixture.mjs';
 import { seedD2bConfig, TEST_PUBLICATION_AUTHORITY } from '../helpers/catalog-d2b-fixture.mjs';
 
 const hash = value => crypto.createHash('sha256').update(value).digest('hex');
@@ -37,7 +37,7 @@ function child(config, t) {
 function persistedHarness(t, leaseSeconds = 1) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'bp-e6a2-process-'));
   const catalog = path.join(root, 'catalog'); fs.mkdirSync(catalog);
-  { const identity = seedD2bConfig(IdentityStore.createNew(path.join(root, 'identity.sqlite'))); identity.close(); }
+  { const identity = seedFixtureStoreIdentity(seedD2bConfig(IdentityStore.createNew(path.join(root, 'identity.sqlite')))); identity.close(); }
   ReplayStore.createNew(path.join(root, 'replay.sqlite'), { catalogStorageDir: catalog, leaseSeconds }).close();
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   const runId = 'process-run';
@@ -81,10 +81,41 @@ test('exact pending v2 seq0 retry revalidates config authority before takeover o
     'pending');
 });
 
+test('store identity topology drift after seq0 fences the FULL before mapper', t => {
+  const f = persistedHarness(t);
+  const store = ReplayStore.openExisting(path.join(f.root, 'replay.sqlite'), { catalogStorageDir: f.catalog, leaseSeconds: 1 });
+  const identity = IdentityStore.openExisting(path.join(f.root, 'identity.sqlite'));
+  const mutex = new CatalogPublicationLock(f.catalog); const reader = new CatalogReader(f.catalog);
+  const publisher = new CatalogPublisher(f.catalog, { mutex, readers: [reader] });
+  t.after(() => { reader.close(); mutex.close(); identity.close(); store.close(); });
+
+  const seq0 = { ...f.base, seq: 0, bodySha256: hash(f.header) };
+  assert.equal(processProductionFullChunk({ store, publisher, mutex, reader,
+    identityStore: identity, key: seq0, verifiedBody: f.header, now: 100 }).status, 'COMMITTED');
+
+  identity.ensureStore({
+    provider: 'fixture',
+    nativeStoreId: 'new-after-seq0',
+    reviewedSource: 'fixture:test:mid-run-store-drift',
+  });
+
+  const phase0 = bytes({ rows: phase0Records() });
+  const key = { ...f.base, seq: 1, bodySha256: hash(phase0) };
+  assert.throws(() => processProductionFullChunk({ store, publisher, mutex, reader,
+    identityStore: identity, key, verifiedBody: phase0, now: 101 }),
+  error => error.code === 'FULL_DEPENDENCY_MISMATCH');
+
+  const generation = productionGenerationId({ kid: f.base.kid, runId: f.base.runId, seq0BodySha256: hash(f.header) });
+  const db = new DatabaseSync(path.join(f.catalog, `catalog.${generation}.building.sqlite`), { readOnly: true });
+  assert.equal(db.prepare('SELECT count(*) n FROM stores').get().n, 0);
+  assert.equal(db.prepare('SELECT count(*) n FROM run_chunks WHERE seq=1').get().n, 0);
+  db.close();
+});
+
 test('coordinator owns seq0, all production phases and E5a finalization', t => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'bp-e6a2-'));
   const catalog = path.join(root, 'catalog'); fs.mkdirSync(catalog);
-  const identity = seedD2bConfig(IdentityStore.createNew(path.join(root, 'identity.sqlite')));
+  const identity = seedFixtureStoreIdentity(seedD2bConfig(IdentityStore.createNew(path.join(root, 'identity.sqlite'))));
   const mutex = new CatalogPublicationLock(catalog);
   const reader = new CatalogReader(catalog);
   const publisher = new CatalogPublisher(catalog, { mutex, readers: [reader] });
@@ -276,7 +307,7 @@ test('dependency fingerprint change after restart fences mapper and preserves bu
 test('second replacement FULL preserves identities and publishes changed business data', t => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'bp-e6a2-g2-'));
   const catalog = path.join(root, 'catalog'); fs.mkdirSync(catalog);
-  const identity = seedD2bConfig(IdentityStore.createNew(path.join(root, 'identity.sqlite')));
+  const identity = seedFixtureStoreIdentity(seedD2bConfig(IdentityStore.createNew(path.join(root, 'identity.sqlite'))));
   const mutex = new CatalogPublicationLock(catalog); let reader = new CatalogReader(catalog);
   const publisher = new CatalogPublisher(catalog, { mutex, readers: [reader] });
   const store = ReplayStore.createNew(path.join(root, 'replay.sqlite'), { catalogStorageDir: catalog });

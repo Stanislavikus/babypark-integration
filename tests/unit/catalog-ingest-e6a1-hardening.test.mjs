@@ -33,11 +33,46 @@ test('SQLite constraints translate FK and dimension conflicts', t => {
   const brand = createE6aHarness({ runId: 'brand-fk' }); t.after(() => brand.close()); const missingBrand = product({ brand_native_id: 'missing', categories: [], attributes: [], images: [], variants: [{ native_variant_id: 'one', sku: 'ONE', is_default: true, commercial_availability: 'IN_STOCK', updated_at: '2026-01-01T00:00:00Z', stock: [] }] });
   assert.throws(() => brand.apply([missingBrand], 1), code('FULL_MAPPER_REFERENCE_MISSING'));
   const stock = createE6aHarness({ runId: 'stock-fk' }); t.after(() => stock.close()); stock.apply([{ schema: 'bp.catalog.full-record/2', type: 'brand', phase: 0, provider: 'fixture', native_brand_id: 'acme', name: 'Acme Baby' }], 1);
+  stock.identity.ensureStore({ provider: 'fixture', nativeStoreId: 'missing', reviewedSource: 'fixture:test:missing-catalog-dimension' });
   const missingStore = product({ categories: [], attributes: [], images: [], variants: [{ native_variant_id: 'one', sku: 'ONE-STOCK', is_default: true, commercial_availability: 'IN_STOCK', updated_at: '2026-01-01T00:00:00Z', stock: [{ store_native_id: 'missing', quantity: 1 }] }] });
   assert.throws(() => stock.apply([missingStore], 2), code('FULL_MAPPER_REFERENCE_MISSING'));
   const unique = createE6aHarness({ runId: 'attribute-unique' }); t.after(() => unique.close()); const base = { schema: 'bp.catalog.full-record/2', type: 'attribute_definition', phase: 0, provider: 'fixture', value_type: 'TEXT', localized_labels: { uk: 'Label' } };
   assert.throws(() => unique.apply([{ ...base, native_attribute_id: 'a', code: 'same' }, { ...base, native_attribute_id: 'b', code: 'same' }], 1), code('FULL_DIMENSION_CONFLICT'));
 });
+test('store dimensions and stock expose canonical IdentityStore IDs only', t => {
+  const fixture = createE6aHarness({ runId: 'canonical-store-boundary' }); t.after(() => fixture.close());
+  fixture.apply(phase0Records(), 1);
+  const stores = fixture.builder.db.prepare('SELECT store_id,name FROM stores ORDER BY store_id').all()
+    .map(row => ({ store_id: row.store_id, name: row.name }));
+  assert.deepEqual(stores, [
+    { store_id: 'store_e6a_1', name: 'Kyiv' },
+    { store_id: 'store_e6a_2', name: 'Warehouse' },
+  ]);
+  assert.equal(fixture.identity.lookupStoreBySource({ provider: 'fixture', nativeStoreId: 'kyiv' }).store_id, 'store_e6a_1');
+  assert.throws(() => dimensionId('store', 'fixture', 'kyiv'), /invalid dimension type/);
+
+  fixture.apply(phase1Records(), 2);
+  const stockIds = [...new Set(fixture.builder.db.prepare('SELECT store_id FROM store_stock ORDER BY store_id').all().map(row => row.store_id))];
+  assert.deepEqual(stockIds, ['store_e6a_1', 'store_e6a_2']);
+});
+
+test('unreviewed or tombstoned provider store mappings fail closed before catalog mutation', t => {
+  const unmapped = createE6aHarness({ runId: 'store-unmapped' }); t.after(() => unmapped.close());
+  const before = unmapped.identity.metadata().revision;
+  const row = [{ schema: 'bp.catalog.full-record/2', type: 'store', phase: 0, provider: 'fixture', native_store_id: 'unreviewed', name: 'Unknown', active: true }];
+  assert.throws(() => unmapped.apply(row, 1), code('FULL_MAPPER_STORE_IDENTITY_UNRESOLVED'));
+  assert.equal(unmapped.identity.metadata().revision, before);
+  assert.equal(unmapped.builder.db.prepare('SELECT count(*) n FROM stores').get().n, 0);
+  assert.equal(unmapped.builder.db.prepare('SELECT count(*) n FROM run_chunks WHERE seq=1').get().n, 0);
+
+  const tombstoned = createE6aHarness({ runId: 'store-tombstoned' }); t.after(() => tombstoned.close());
+  const mapping = tombstoned.identity.lookupStoreBySource({ provider: 'fixture', nativeStoreId: 'kyiv' });
+  tombstoned.identity.tombstoneStore(mapping.store_id);
+  const kyiv = phase0Records().filter(record => record.type === 'store' && record.native_store_id === 'kyiv');
+  assert.throws(() => tombstoned.apply(kyiv, 1), code('FULL_MAPPER_STORE_IDENTITY_UNRESOLVED'));
+  assert.equal(tombstoned.builder.db.prepare('SELECT count(*) n FROM stores').get().n, 0);
+});
+
 test('dimensions tolerate exact replay across chunks and reject changed canonical fields', t => {
   const exact = createE6aHarness({ runId: 'dimension-exact' }); t.after(() => exact.close()); const brand = [{ schema: 'bp.catalog.full-record/2', type: 'brand', phase: 0, provider: 'fixture', native_brand_id: 'b', name: 'Brand' }]; exact.apply(brand, 1); assert.equal(exact.apply(brand, 2).status, 'COMMITTED'); assert.equal(exact.builder.db.prepare('SELECT count(*) n FROM brands').get().n, 1);
   const changed = createE6aHarness({ runId: 'dimension-changed' }); t.after(() => changed.close()); const parent = { schema: 'bp.catalog.full-record/2', type: 'category', phase: 0, provider: 'fixture', native_category_id: 'p', parent_native_category_id: null, localized_names: { uk: 'P' } }; const child = { ...parent, native_category_id: 'c', parent_native_category_id: 'p', localized_names: { uk: 'C' } }; changed.apply([parent, child], 1); assert.throws(() => changed.apply([{ ...child, localized_names: { uk: 'Changed' } }], 2), code('FULL_DIMENSION_CONFLICT'));

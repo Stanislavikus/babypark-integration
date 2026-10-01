@@ -5,13 +5,39 @@ import { frameUtf8 } from '../../src/catalog/ingest/framing.mjs';
 import { dimensionId,imageId } from '../../src/catalog/ingest/production-full-mapper.mjs';
 import { validateFullRecords } from '../../src/catalog/ingest/full-record-v2.mjs';
 import { IdentityStore } from '../../src/catalog/identity/store.mjs';
-import { identityConfigStateSha256,productionDependencyFingerprint } from '../../src/catalog/ingest/dependency-fingerprint.mjs';
+import { identityConfigStateSha256,identityStoreStateSha256,productionDependencyFingerprint } from '../../src/catalog/ingest/dependency-fingerprint.mjs';
 import { CatalogGenerationBuilder } from '../../src/catalog/sqlite/generation.mjs';
 import crypto from 'node:crypto';
 
 test('E6a framing and derived IDs are deterministic and unambiguous',()=>{assert.equal(frameUtf8('é').toString('hex'),'00000002c3a9');assert.equal(dimensionId('brand','a','bc'),dimensionId('brand','a','bc'));assert.notEqual(dimensionId('brand','ab','c'),dimensionId('brand','a','bc'));assert.match(imageId('p','x','i'),/^img_[a-f0-9]{32}$/);});
 test('E6a validator normalizes language and rejects mixed phase before mutation',()=>{const rows=[{schema:'bp.catalog.full-record/2',type:'brand',phase:0,provider:'p',native_brand_id:'b',name:'B'}];assert.equal(validateFullRecords(rows),rows);assert.throws(()=>validateFullRecords([...rows,{schema:'bp.catalog.full-record/2',type:'product',phase:1,provider:'p',native_product_id:'x',kind:'SIMPLE',localized:{uk:{title:'X'}},variants:[],updated_at:new Date().toISOString()}]),e=>e.code==='FULL_RECORD_PHASE_INVALID');});
 test('source resolvers are read-only and fingerprint is deterministic',t=>{const dir=fs.mkdtempSync(path.join(os.tmpdir(),'e6a-'));t.after(()=>fs.rmSync(dir,{recursive:true,force:true}));const file=path.join(dir,'identity.sqlite');const s=IdentityStore.createNew(file,{idFactory:{product:()=> 'prod_1',variant:()=> 'var_1'}});const p=s.ensureProduct({provider:'p',nativeProductId:'np'});s.ensureVariant({provider:'p',nativeVariantId:'nv',productId:p.product_id,sku:' SKU '});const productSeen=s.db.prepare('SELECT last_seen_at FROM source_products').get().last_seen_at,variantSeen=s.db.prepare('SELECT last_seen_at FROM source_variants').get().last_seen_at,rev=s.metadata().revision;assert.equal(s.lookupProductBySource({provider:'p',nativeProductId:'np'}).product_id,'prod_1');assert.equal(s.lookupProductBySource({provider:'p',nativeProductId:'missing'}),undefined);assert.deepEqual({...s.lookupVariantBySource({provider:'p',nativeVariantId:'nv'})},{variant_id:'var_1',product_id:'prod_1',sku:' SKU ',sku_key:'sku',lifecycle:'active'});assert.equal(s.lookupVariantBySource({provider:'p',nativeVariantId:'missing'}),undefined);assert.equal(s.db.prepare('SELECT last_seen_at FROM source_products').get().last_seen_at,productSeen);assert.equal(s.db.prepare('SELECT last_seen_at FROM source_variants').get().last_seen_at,variantSeen);assert.equal(s.metadata().revision,rev);assert.equal(identityConfigStateSha256(s),identityConfigStateSha256(s));assert.match(productionDependencyFingerprint(s),/^[a-f0-9]{64}$/);s.close();const ro=IdentityStore.openExisting(file,{readOnly:true});assert.equal(ro.lookupProductBySource({provider:'p',nativeProductId:'np'}).product_id,'prod_1');assert.equal(ro.lookupVariantBySource({provider:'p',nativeVariantId:'nv'}).variant_id,'var_1');ro.close();});
+
+test('store identity topology is a dependency while product identity and last_seen are not', t => {
+  const root=fs.mkdtempSync(path.join(os.tmpdir(),'e6a-store-fp-'));t.after(()=>fs.rmSync(root,{recursive:true,force:true}));
+  let clock=0;
+  const identity=IdentityStore.createNew(path.join(root,'identity.sqlite'),{
+    now:()=>new Date(Date.UTC(2026,0,1,0,0,clock++)).toISOString(),
+    idFactory:{product:()=> 'prod_fp',variant:()=> 'var_fp',store:()=> 'store_fp'},
+  });
+  const emptyStoreHash=identityStoreStateSha256(identity);
+  const emptyFingerprint=productionDependencyFingerprint(identity);
+
+  identity.ensureProduct({provider:'fixture',nativeProductId:'product'});
+  assert.equal(identityStoreStateSha256(identity),emptyStoreHash);
+  assert.equal(productionDependencyFingerprint(identity),emptyFingerprint);
+
+  identity.ensureStore({provider:'fixture',nativeStoreId:'kyiv',reviewedSource:'review:kyiv'});
+  const mappedStoreHash=identityStoreStateSha256(identity);
+  const mappedFingerprint=productionDependencyFingerprint(identity);
+  assert.notEqual(mappedStoreHash,emptyStoreHash);
+  assert.notEqual(mappedFingerprint,emptyFingerprint);
+
+  identity.ensureStore({provider:'fixture',nativeStoreId:'kyiv'});
+  assert.equal(identityStoreStateSha256(identity),mappedStoreHash);
+  assert.equal(productionDependencyFingerprint(identity),mappedFingerprint);
+  identity.close();
+});
 
 test('dependency fingerprint versions, config ordering, builder and manifest are covered', t => {
   const root=fs.mkdtempSync(path.join(os.tmpdir(),'e6a-fp-'));t.after(()=>fs.rmSync(root,{recursive:true,force:true}));
