@@ -8,7 +8,7 @@ export async function runWorkerOnce({ store, authorityReader, config }) {
     const gate = evaluateOwnership({ ...current, targetMessageId: work.target_message_id,
       inboxId: config.inboxId, botId: config.botId,
       authorityWindowComplete: current.authorityWindowComplete, targetPresent: current.targetPresent });
-    if (gate.code === 'authority_window_incomplete') {
+    if (['authority_window_incomplete', 'target_message_missing'].includes(gate.code)) {
       store.failClaim(work.id, work.lease_token, gate.code);
       return { action: 'error', gate: gate.code };
     }
@@ -29,7 +29,7 @@ export async function runReconcilerOnce({ store, authorityReader, agentBotAction
     const gate = evaluateOwnership({ ...current, targetMessageId: work.target_message_id,
       inboxId: config.inboxId, botId: config.botId, rejectAnyLaterPublicOutgoing: true,
       authorityWindowComplete: current.authorityWindowComplete, targetPresent: current.targetPresent });
-    if (gate.code === 'authority_window_incomplete') {
+    if (['authority_window_incomplete', 'target_message_missing'].includes(gate.code)) {
       store.releaseReconcile(work.id, work.reconcile_token, gate.code);
       return { action: 'error', gate: gate.code };
     }

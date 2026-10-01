@@ -27,19 +27,18 @@ function normalizeConversation(wire) {
 }
 
 function normalizeMessage(wire) {
+  const types = ['incoming', 'outgoing', 'activity', 'template'];
   return {
     id: positiveId(wire?.id),
-    message_type: wire?.message_type,
+    message_type: Number.isInteger(wire?.message_type) ? (types[wire.message_type] ?? null) : wire?.message_type,
     private: wire?.private === true,
     sender: { type: wire?.sender?.type ?? null },
   };
 }
 
-export function createChatwootAuthorityReader({ baseUrl, accountId, readToken, fetchImpl = fetch,
-  maxMessagePages = 5, messagePageSize = 20 }) {
+export function createChatwootAuthorityReader({ baseUrl, accountId, readToken, fetchImpl = fetch }) {
   requireHttps(baseUrl);
   if (!readToken) throw new Error('chatwoot_read_token_required');
-  if (!Number.isSafeInteger(maxMessagePages) || maxMessagePages < 1 || maxMessagePages > 20) throw new Error('authority_max_pages_invalid');
 
   async function get(path) {
     return jsonRequest(fetchImpl, baseUrl, path, readToken, { method: 'GET' });
@@ -47,23 +46,14 @@ export function createChatwootAuthorityReader({ baseUrl, accountId, readToken, f
 
   async function readConversation(conversationId, targetMessageId) {
     const wireConversation = await get(`/api/v1/accounts/${accountId}/conversations/${conversationId}`);
-    const messages = [];
-    let before = null;
-    let authorityWindowComplete = false;
-    let targetPresent = false;
-    for (let page = 0; page < maxMessagePages; page++) {
-      const suffix = before === null ? '' : `?before=${before}`;
-      const wirePage = await get(`/api/v1/accounts/${accountId}/conversations/${conversationId}/messages${suffix}`);
-      const rows = Array.isArray(wirePage?.payload) ? wirePage.payload : (Array.isArray(wirePage) ? wirePage : []);
-      const normalized = rows.map(normalizeMessage).filter(message => message.id !== null);
-      if (normalized.some(message => message.id === targetMessageId)) targetPresent = true;
-      messages.push(...normalized.filter(message => message.id > targetMessageId));
-      if (normalized.length === 0 || normalized.some(message => message.id <= targetMessageId) || normalized.length < messagePageSize) {
-        authorityWindowComplete = true;
-        break;
-      }
-      before = Math.min(...normalized.map(message => message.id));
-    }
+    const targetWire = await get(`/api/v1/accounts/${accountId}/conversations/${conversationId}/messages?after=${targetMessageId}&before=${targetMessageId + 1}`);
+    const targetRows = Array.isArray(targetWire?.payload) ? targetWire.payload : (Array.isArray(targetWire) ? targetWire : []);
+    const targetPresent = targetRows.some(message => positiveId(message?.id) === targetMessageId);
+    const laterWire = await get(`/api/v1/accounts/${accountId}/conversations/${conversationId}/messages?after=${targetMessageId}`);
+    const laterRows = Array.isArray(laterWire?.payload) ? laterWire.payload : (Array.isArray(laterWire) ? laterWire : []);
+    const authorityWindowComplete = laterRows.length < 100;
+    const messages = laterRows.map(normalizeMessage)
+      .filter(message => message.id !== null && message.id > targetMessageId);
     return { conversation: normalizeConversation(wireConversation), messages,
       authorityWindowComplete, targetPresent };
   }

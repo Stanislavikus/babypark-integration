@@ -112,10 +112,33 @@ test('rapid incoming supersedes old/leased target and control event invalidates 
   now++; store.recordDelivery({ deliveryId: 'two', payload: incoming(102), target, deadlineMs: 60_000 });
   assert.deepEqual(store.work().map(x => [x.target_message_id, x.state]), [[101, 'superseded'], [102, 'queued']]);
   assert.equal(store.finishClaim(claim.id, claim.lease_token, 'accepted_no_public_action'), false);
+  store.recordDelivery({ deliveryId: 'benign-control', payload: { event: 'conversation_updated', id: 55,
+    account: { id: 11 }, inbox_id: 99, status: 'pending',
+    meta: { assignee: { id: 7, type: 'agent_bot' }, assignee_type: 'AgentBot' }, waiting_since: 123 },
+  target, deadlineMs: 60_000 });
+  assert.equal(store.work()[1].state, 'queued');
   store.recordDelivery({ deliveryId: 'control', payload: { event: 'conversation_opened', id: 55,
     account: { id: 11 }, inbox_id: 99, status: 'open',
     meta: { assignee: { id: 44, type: 'user' }, assignee_type: 'User' } }, target, deadlineMs: 60_000 });
   assert.equal(store.work()[1].state, 'superseded'); store.close(); fs.rmSync(dir, { recursive: true });
+});
+
+test('control events preserve only pending same-bot ownership and invalidate every authority loss', t => {
+  const { store } = tempStore(t);
+  const controls = [
+    { status: 'open', assignee: { id: 7, type: 'agent_bot' }, assignee_type: 'AgentBot' },
+    { status: 'resolved', assignee: { id: 7, type: 'agent_bot' }, assignee_type: 'AgentBot' },
+    { status: 'pending', assignee: { id: 44, type: 'user' }, assignee_type: 'User' },
+    { status: 'pending', assignee: { id: 8, type: 'agent_bot' }, assignee_type: 'AgentBot' },
+  ];
+  for (const [index, control] of controls.entries()) {
+    const conversationId = 200 + index;
+    store.recordDelivery({ deliveryId: `incoming-${index}`, payload: incoming(300 + index, conversationId), target, deadlineMs: 60_000 });
+    store.recordDelivery({ deliveryId: `control-${index}`, payload: { event: 'conversation_status_changed',
+      id: conversationId, account: { id: 11 }, inbox_id: 99, status: control.status,
+      meta: { assignee: control.assignee, assignee_type: control.assignee_type } }, target, deadlineMs: 60_000 });
+    assert.equal(store.work().at(-1).state, 'superseded');
+  }
 });
 
 test('durable ID-only state, terminal/supersede truth and leases survive reopen', t => {
@@ -240,9 +263,10 @@ test('reconciler rejects any later public outgoing message, including bot/templa
 
 test('authority GETs use only read token while native handoff uses only AgentBot token', async () => {
   const calls = []; const fetchImpl = async (url, options) => { calls.push({ url, options });
-    if (url.includes('/messages')) return new Response(JSON.stringify({ payload: [
-      { id: 101, message_type: 'incoming', private: false, sender: { type: 'Contact' }, content: 'not retained' },
+    if (url.includes('after=101&before=102')) return new Response(JSON.stringify({ payload: [
+      { id: 101, message_type: 0, private: false, sender: { type: 'Contact' }, content: 'not retained' },
     ] }), { status: 200 });
+    if (url.includes('/messages?after=101')) return new Response(JSON.stringify({ payload: [] }), { status: 200 });
     if (options.method === 'GET') return new Response(JSON.stringify({ inbox_id: 99, status: 'pending',
       meta: { assignee: { id: 7, type: 'agent_bot' }, assignee_type: 'AgentBot' } }), { status: 200 });
     return new Response(JSON.stringify({ status: 'open', meta: { assignee: null, assignee_type: null } }), { status: 200 }); };
@@ -257,26 +281,55 @@ test('authority GETs use only read token while native handoff uses only AgentBot
   const result = await actions.handoff(55); assert.equal(result.status, 'open');
   assert.equal(calls[0].options.headers.api_access_token, 'read-token');
   assert.equal(calls[1].options.headers.api_access_token, 'read-token');
-  const handoff = calls[2]; assert.match(handoff.url, /conversations\/55\/toggle_status$/);
+  assert.equal(calls[2].options.headers.api_access_token, 'read-token');
+  const handoff = calls[3]; assert.match(handoff.url, /conversations\/55\/toggle_status$/);
   assert.equal(handoff.options.headers.api_access_token, 'bot-token'); assert.equal(JSON.parse(handoff.options.body).status, 'open');
   assert.equal(Object.hasOwn(actions, 'createMessage'), false); assert.equal(Object.hasOwn(reader, 'handoff'), false);
 });
 
-test('authority reader fails closed when bounded message pages cannot reach target', async () => {
-  const fetchImpl = async (url) => url.includes('/messages')
-    ? new Response(JSON.stringify({ payload: Array.from({ length: 20 }, (_, i) => ({
-      id: 200 - i, message_type: 'incoming', private: false, sender: { type: 'Contact' },
-    })) }), { status: 200 })
+test('authority reader fails closed when the ID-safe later window reaches backend limit', async () => {
+  const fetchImpl = async (url) => url.includes('before=102')
+    ? new Response(JSON.stringify({ payload: [{ id: 101, message_type: 0, private: false }] }), { status: 200 })
+    : url.includes('/messages?after=101')
+      ? new Response(JSON.stringify({ payload: Array.from({ length: 100 }, (_, i) => ({
+        id: 102 + i, message_type: 0, private: false, sender: { type: 'Contact' },
+      })) }), { status: 200 })
     : new Response(JSON.stringify({ inbox_id: 99, status: 'pending',
       meta: { assignee: { id: 7 }, assignee_type: 'AgentBot' } }), { status: 200 });
   const reader = createChatwootAuthorityReader({ baseUrl: 'https://chat.example', accountId: 11,
-    readToken: 'read-token', fetchImpl, maxMessagePages: 1 });
+    readToken: 'read-token', fetchImpl });
   const authority = await reader.readConversation(55, 101);
   assert.equal(authority.authorityWindowComplete, false);
   assert.equal(evaluateOwnership({ ...authority, targetMessageId: 101, inboxId: 99, botId: 7 }).code,
     'authority_window_incomplete');
   assert.throws(() => createChatwootAuthorityReader({ baseUrl: 'https://chat.example', accountId: 11,
     readToken: '', agentBotToken: 'must-not-fallback' }), /read_token_required/);
+});
+
+test('numeric REST message types detect newer incoming, human reply, and block template handoff', async t => {
+  const read = async message => {
+    const fetchImpl = async url => url.includes('before=102')
+      ? new Response(JSON.stringify({ payload: [{ id: 101, message_type: 0, private: false }] }), { status: 200 })
+      : url.includes('/messages?after=101')
+        ? new Response(JSON.stringify({ payload: [message] }), { status: 200 })
+        : new Response(JSON.stringify({ inbox_id: 99, status: 'pending',
+          meta: { assignee: { id: 7 }, assignee_type: 'AgentBot' } }), { status: 200 });
+    return createChatwootAuthorityReader({ baseUrl: 'https://chat.example', accountId: 11,
+      readToken: 'read-token', fetchImpl }).readConversation(55, 101);
+  };
+  const newer = await read({ id: 102, message_type: 0, private: false, sender: { type: 'Contact' } });
+  assert.equal(evaluateOwnership({ ...newer, targetMessageId: 101, inboxId: 99, botId: 7 }).code, 'stale_target');
+  const human = await read({ id: 102, message_type: 1, private: false, sender: { type: 'User' } });
+  assert.equal(evaluateOwnership({ ...human, targetMessageId: 101, inboxId: 99, botId: 7 }).code, 'later_human_reply');
+  const template = await read({ id: 102, message_type: 3, private: false, sender: null });
+  assert.equal(evaluateOwnership({ ...template, targetMessageId: 101, inboxId: 99, botId: 7,
+    rejectAnyLaterPublicOutgoing: true }).code, 'later_public_outgoing');
+  let now = NOW; const { store } = tempStore(t, { now: () => now });
+  store.recordDelivery({ deliveryId: 'template-target', payload: incoming(), target, deadlineMs: 1 }); now += 2;
+  let handoffs = 0;
+  const result = await runReconcilerOnce({ store, authorityReader: { readConversation: async () => template },
+    agentBotActions: { handoff: async () => { handoffs++; } }, config: target });
+  assert.equal(result.gate, 'later_public_outgoing'); assert.equal(handoffs, 0);
 });
 
 test('incomplete authority window remains non-terminal for fail-open reconciliation', async t => {
@@ -289,15 +342,34 @@ test('incomplete authority window remains non-terminal for fail-open reconciliat
   assert.equal(store.work()[0].terminal, 0); assert.equal(store.work()[0].state, 'error');
 });
 
+test('missing authoritative target remains non-terminal for worker and reconciler', async t => {
+  let now = NOW; const { store } = tempStore(t, { now: () => now });
+  store.recordDelivery({ deliveryId: 'worker', payload: incoming(101, 55), target, deadlineMs: 1 });
+  const missing = { ...owned(), targetPresent: false };
+  let result = await runWorkerOnce({ store, authorityReader: { readConversation: async () => missing },
+    config: { ...target, leaseMs: 1000 } });
+  assert.deepEqual(result, { action: 'error', gate: 'target_message_missing' });
+  assert.equal(store.work()[0].terminal, 0); assert.equal(store.work()[0].state, 'error');
+  now += 2;
+  let handoffs = 0;
+  result = await runReconcilerOnce({ store, authorityReader: { readConversation: async () => missing },
+    agentBotActions: { handoff: async () => { handoffs++; } }, config: target });
+  assert.deepEqual(result, { action: 'error', gate: 'target_message_missing' });
+  assert.equal(store.work()[0].terminal, 0); assert.equal(store.work()[0].state, 'error');
+  assert.equal(handoffs, 0);
+});
+
 test('cleanup deletes old terminal rows but protects active/non-terminal leased work', t => {
   let now = NOW; const { store } = tempStore(t, { now: () => now });
   store.recordDelivery({ deliveryId: 'done', payload: incoming(101, 55), target, deadlineMs: 1 });
   const done = store.claimNext({ leaseMs: 10, token: 'done' }); store.finishClaim(done.id, 'done', 'accepted_no_public_action');
+  store.recordDelivery({ deliveryId: 'orphan', payload: { ...incoming(999, 99), event: 'message_updated' }, target, deadlineMs: 1 });
   store.recordDelivery({ deliveryId: 'active', payload: incoming(102, 56), target, deadlineMs: 1 }); store.claimNext({ leaseMs: 999_999, token: 'active' });
   now += 15 * 86400_000;
-  assert.deepEqual(store.cleanup(), { applied: false, jobIds: [done.id], deliveryIds: [] });
+  assert.deepEqual(store.cleanup(), { applied: false, jobIds: [done.id], deliveryIds: ['done', 'orphan'] });
   assert.equal(store.work().length, 2);
-  assert.deepEqual(store.cleanup({ apply: true }), { applied: true, deletedJobs: 1, deletedDeliveries: 1 });
+  assert.deepEqual(store.cleanup({ apply: true }), { applied: true, jobIds: [done.id],
+    deliveryIds: ['done', 'orphan'], deletedJobs: 1, deletedDeliveries: 2 });
   assert.equal(store.work().length, 1); assert.equal(store.work()[0].terminal, 0);
 });
 

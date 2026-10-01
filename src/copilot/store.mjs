@@ -62,7 +62,11 @@ export function classifyDelivery(payload, target) {
   if (!configured) return { ...m, action: 'ignore', outcome: 'non_target' };
   if (m.event !== 'message_created') {
     const control = typeof m.event === 'string' && m.event.startsWith('conversation_');
-    return { ...m, action: control ? 'invalidate' : 'ignore', outcome: control ? 'control_invalidated' : 'filtered_event' };
+    if (!control) return { ...m, action: 'ignore', outcome: 'filtered_event' };
+    const ownershipPreserved = payload.status === 'pending' &&
+      m.assigneeType === 'AgentBot' && m.assigneeId === target.botId;
+    return { ...m, action: ownershipPreserved ? 'ignore' : 'invalidate',
+      outcome: ownershipPreserved ? 'control_preserved' : 'control_invalidated' };
   }
   const messageType = payload.message_type ?? payload.message?.message_type;
   const privateMessage = (payload.private ?? payload.message?.private) === true;
@@ -193,18 +197,23 @@ export class CopilotStore {
 
   cleanup({ terminalTtlMs = 14 * 86400_000, apply = false } = {}) {
     const cutoff = this.now() - terminalTtlMs;
-    const jobIds = this.db.prepare(`SELECT id FROM jobs WHERE terminal=1 AND completed_at<?
-      AND lease_token IS NULL AND reconcile_token IS NULL ORDER BY id`).all(cutoff).map(row => row.id);
-    const deliveryIds = this.db.prepare(`SELECT delivery_id FROM deliveries WHERE received_at<? AND NOT EXISTS
-      (SELECT 1 FROM jobs WHERE jobs.delivery_id=deliveries.delivery_id) ORDER BY delivery_id`)
-      .all(cutoff).map(row => row.delivery_id);
-    if (!apply) return { applied: false, jobIds, deliveryIds };
+    const plan = () => {
+      const jobIds = this.db.prepare(`SELECT id FROM jobs WHERE terminal=1 AND completed_at<?
+        AND lease_token IS NULL AND reconcile_token IS NULL ORDER BY id`).all(cutoff).map(row => row.id);
+      const deliveryIds = this.db.prepare(`SELECT d.delivery_id FROM deliveries d WHERE d.received_at<?
+        AND NOT EXISTS (SELECT 1 FROM jobs j WHERE j.delivery_id=d.delivery_id AND NOT
+          (j.terminal=1 AND j.completed_at<? AND j.lease_token IS NULL AND j.reconcile_token IS NULL))
+        ORDER BY d.delivery_id`).all(cutoff, cutoff).map(row => row.delivery_id);
+      return { jobIds, deliveryIds };
+    };
+    if (!apply) return { applied: false, ...plan() };
     return tx(this.db, () => {
-      const deleted = this.db.prepare(`DELETE FROM jobs WHERE terminal=1 AND completed_at<?
-        AND lease_token IS NULL AND reconcile_token IS NULL`).run(cutoff).changes;
-      const receipts = this.db.prepare(`DELETE FROM deliveries WHERE received_at<? AND NOT EXISTS
-        (SELECT 1 FROM jobs WHERE jobs.delivery_id=deliveries.delivery_id)`).run(cutoff).changes;
-      return { applied: true, deletedJobs: deleted, deletedDeliveries: receipts };
+      const selected = plan();
+      const remove = (table, column, ids) => ids.length === 0 ? 0 :
+        this.db.prepare(`DELETE FROM ${table} WHERE ${column} IN (${ids.map(() => '?').join(',')})`).run(...ids).changes;
+      const deletedJobs = remove('jobs', 'id', selected.jobIds);
+      const deletedDeliveries = remove('deliveries', 'delivery_id', selected.deliveryIds);
+      return { applied: true, ...selected, deletedJobs, deletedDeliveries };
     });
   }
 

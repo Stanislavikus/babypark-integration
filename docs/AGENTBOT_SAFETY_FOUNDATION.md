@@ -14,8 +14,9 @@ Status: MERGED-CANDIDATE / NOT DEPLOYED / LAB ONLY
   message, exact Chatwoot 4.17.1 ownership is
   `conversation.meta.assignee_type == "AgentBot"` plus the configured ID in
   `conversation.meta.assignee.id`; `inbox` itself contains only ID/name. Conversation
-  control events use their top-level conversation `id`/`inbox_id` and invalidate
-  local work even after ownership has moved to a human.
+  control events use their top-level conversation `id`/`inbox_id`. A benign update
+  preserves work only when the payload still proves pending ownership by that bot;
+  missing/changed ownership, open, or resolved state invalidates local work.
 - `copilot.sqlite` stores delivery/conversation/message identifiers and redacted
   state only. A partial unique index permits one non-terminal job per conversation;
   short SQLite CAS transactions provide cross-process claims. No transaction spans
@@ -23,6 +24,11 @@ Status: MERGED-CANDIDATE / NOT DEPLOYED / LAB ONLY
 - Immediately before action, Chatwoot is authoritative: configured inbox, pending,
   configured bot assignee, no human assignee, highest non-private incoming message
   ID, and no later public human answer are all required.
+- REST message types are normalized from Chatwoot's numeric `0` incoming, `1`
+  outgoing, `2` activity and `3` template values. Target presence is proven with the
+  exact `after=target&before=target+1` ID interval, then the bounded `after=target`
+  response proves later IDs. A 100-row later response fails closed as an incomplete
+  authority window. A later public outgoing or template blocks reconciler handoff.
 - The foundation worker never writes a Chatwoot message. A healthy job ends as
   `accepted_no_public_action`.
 - The independent reconciler considers only expired non-terminal jobs and ignores
@@ -47,9 +53,8 @@ All commands require `COPILOT_LAB_MODE=true` and refuse inbox `2`.
 - ingress: `COPILOT_WEBHOOK_SECRET`, optional `COPILOT_REPLAY_WINDOW_SEC` (default
   300, maximum 900), `COPILOT_DEADLINE_MS` (lab default 60000), and `COPILOT_PORT`
 - worker/reconciler reads: public HTTPS `CHATWOOT_BASE_URL` and the distinct,
-  read-only `COPILOT_CHATWOOT_READ_TOKEN`; bounded message-history inspection uses
-  `COPILOT_AUTHORITY_MAX_PAGES` (default 5, maximum 20) and fails closed when it
-  cannot reach the target window
+  read-only `COPILOT_CHATWOOT_READ_TOKEN`; bounded ID-safe message inspection fails
+  closed when the backend's 100-row later-message limit prevents completeness proof
 - reconciler action only: `COPILOT_AGENT_BOT_TOKEN`; this token is never used for
   message-index GETs, while the read token cannot reach the handoff client
 - optional bounded `COPILOT_LEASE_MS`

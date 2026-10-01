@@ -19,7 +19,7 @@ if (command === 'ingress') {
   server.listen(config.port, '127.0.0.1', () => output({ event: 'copilot_lab_listening', port: config.port }));
 } else if (command === 'worker' || command === 'reconcile') {
   const authorityReader = createChatwootAuthorityReader({ baseUrl: config.baseUrl, accountId: config.accountId,
-    readToken: config.readToken, maxMessagePages: config.authorityMaxPages });
+    readToken: config.readToken });
   let result;
   if (command === 'worker') {
     result = await runWorkerOnce({ store, authorityReader, config });

@@ -21,7 +21,7 @@ export function evaluateOwnership({ conversation, messages, targetMessageId, inb
     m.private !== true && !['agentbot', 'agent_bot'].includes(String(m.sender?.type ?? '').toLowerCase()));
   if (laterHuman) return { ok: false, code: 'later_human_reply' };
   if (rejectAnyLaterPublicOutgoing && list.some(m => id(m.id) > Number(targetMessageId) &&
-      messageType(m) === 'outgoing' && m.private !== true)) {
+      ['outgoing', 'template'].includes(messageType(m)) && m.private !== true)) {
     return { ok: false, code: 'later_public_outgoing' };
   }
   return { ok: true, code: 'owned_latest_incoming' };
