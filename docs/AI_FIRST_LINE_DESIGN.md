@@ -1,4 +1,4 @@
-# BabyPark AI First Line — Frozen Design v0.3
+# BabyPark AI First Line — Frozen Design v0.4
 
 Status: DESIGN REVIEW — blocker-only review pending
 Implementation: NOT AUTHORIZED
@@ -215,19 +215,56 @@ Temporary overlays never supersede baseline namespaces.
 
 ## 7. Time semantics
 
-Persist absolute UTC instants.
+All revisions require `effective_from_utc`.
 
-`Europe/Kyiv` is only the input interpretation timezone for human input such as "до кінця дня".
+Persist authority boundaries as absolute UTC instants.
 
-Active interval:
+General active-revision predicate:
 
 ```
-effective_from <= now < expires_at
+effective_from_utc <= now
+AND
+(expires_at_utc IS NULL OR now < expires_at_utc)
 ```
 
-`now == expires_at` means inactive.
+`expires_at_utc = NULL` means an open-ended interval and is allowed only where the publication policy permits an open-ended authority, such as reviewed baselines or long-lived CommercePolicy.
+
+Direct-publish temporary overlays always require finite `expires_at_utc`.
+
+All expiry boundaries are exclusive:
+
+```
+now == expires_at_utc
+```
+
+means inactive.
 
 No cron job is authority for expiry.
+
+### Business-calendar timezone
+
+`Europe/Kyiv` is the canonical business-calendar timezone for store schedules.
+
+It is used for:
+- interpreting weekly weekday/hour schedules;
+- converting a selected local civil date into UTC revision bounds;
+- evaluating "today", weekday and local clock time for store-hours answers;
+- parsing human input such as "до кінця дня".
+
+Stored revision bounds remain UTC instants.
+
+For a civil-day `store.special_hours` or `store.temporary_closure` overlay, the revision envelope is:
+
+```
+[start of local date D in Europe/Kyiv,
+ start of local date D+1 in Europe/Kyiv)
+```
+
+converted to UTC.
+
+The overlay `expires_at_utc` is therefore the end of the local civil day, **not** the early-closing clock time contained in the effect.
+
+This rule intentionally handles 23/25-hour DST days through timezone conversion rather than fixed 24-hour arithmetic.
 
 ## 8. Publication workflow
 
@@ -263,40 +300,104 @@ Author and approver must differ by stable BabyPark actor_id.
 
 ## 9. Operational resolver composition
 
-Operational state is not a simple "overlay else baseline" scalar.
+Operational state is not a scalar "overlay else baseline".
+A store answer composes operating-state and hours effect families.
 
-A store operating answer composes multiple effect families.
+Only identifiers may survive from an earlier clarification turn; the operational resolver itself is rerun for the current answer using the current `now` and current published authority.
 
-### 9.1 Resolve closing state
+### 9.1 Peer conflict rule across namespaces
 
-Resolve active closure/status overlays for the store.
+For active revisions sharing:
+- the same subject; and
+- the same `effect_family`;
 
-If multiple active overlays in the same namespace/effect family yield different canonical effects:
-`POLICY_CONFLICT`.
+conflicting canonical effects are checked **regardless of namespace**.
 
-A closing overlay, including:
-- store.temporary_closure;
-- store.status_override with canonical CLOSED effect;
+Different namespaces do not hide a conflict in the same effect family.
 
-suppresses:
-- store.special_hours;
-- store.weekly_hours;
+Example:
+- `store.temporary_closure = CLOSED`;
+- overlapping `store.status_override = OPEN`;
+
+for the same store and operating-state effect family:
+
+```
+HUMAN / POLICY_CONFLICT
+```
+
+Two active peer overlays in the same overlay namespace/effect family with different canonical effects also conflict.
+
+This conflict rule does not convert temporary overlays into successors of baseline authority.
+
+### 9.2 Resolve operating state first
+
+Resolve active closing/status overlays for the store.
+
+If the resolved operating state is `CLOSED`, it suppresses:
+- `store.special_hours`;
+- `store.weekly_hours`;
 
 for the overlapping interval.
 
 A customer must never receive opening hours for a store resolved CLOSED.
 
-### 9.2 Resolve hours only when not closed
+An OPEN/non-closing status does not itself invent opening hours; if non-conflicting, hours are still resolved by the hours resolver.
 
-If no closing overlay applies:
-- one valid active store.special_hours overlay overrides baseline hours for its interval;
-- otherwise use approved store.weekly_hours baseline.
+### 9.3 Resolve special hours as a full civil-day replacement
 
-Conflicting active special-hours overlays fail closed.
+Only when the store is not resolved CLOSED:
+
+1. find active `store.special_hours` overlays for the current local civil day;
+2. conflicting peer special-hours effects fail closed;
+3. if one canonical special-hours effect applies, it replaces `store.weekly_hours` for the **entire overlay revision envelope**;
+4. within that civil day, local times outside the explicit opening interval(s) in the special-hours effect are CLOSED;
+5. baseline weekly hours do not fill those gaps;
+6. only after the special-hours revision expires at the next local civil-day boundary may weekly baseline apply again.
+
+Example:
+
+```
+weekly baseline: 10:00–20:00
+special hours for local date D: 11:00–18:00
+special-hours revision envelope: whole local date D
+```
+
+At 18:30 on D:
+- the special-hours revision is still active;
+- 18:30 is outside its opening interval;
+- the store resolves CLOSED;
+- baseline 10:00–20:00 does not reopen it.
+
+### 9.4 Weekly baseline
+
+If:
+- no closing overlay applies; and
+- no active special-hours overlay applies;
+
+resolve approved `store.weekly_hours` baseline using the current weekday and local time in `Europe/Kyiv`.
+
+An open-ended baseline with `expires_at_utc = NULL` is active whenever:
+
+```
+effective_from_utc <= now
+```
+
+and its ledger/publication state is authoritative.
+
+### 9.5 Overlay/baseline lifecycle
 
 Temporary overlay and baseline coexist.
+
 Overlay expiry reveals baseline again.
-Overlay never SUPERSEDES baseline.
+
+Temporary overlays never `SUPERSEDED`:
+- weekly-hours baseline;
+- baseline-status authority.
+
+`SUPERSEDED` remains allowed only within the same:
+- namespace;
+- subject identity;
+- effect_family.
 
 ## 10. Commerce conflict rule
 
@@ -717,23 +818,68 @@ Silent constraint removal is not.
 
 ## 29. Clarification episode
 
-Episode stores:
-- normalized slots;
+Episode state may persist **stable identifiers and customer selections only**.
+
+It stores:
+- normalized stable slots such as product_id/category_id/brand_id/store_id;
 - source_message_ids[];
 - presented candidates;
 - requested missing slot;
 - clarification_count.
 
-Clarification does not restart extraction from zero.
+It must **not** persist dynamic factual authority from an earlier turn as truth for a later answer.
 
-Next customer turn after candidate presentation may:
-- choose one presented candidate;
-- fill only the requested missing slot.
+Specifically, never reuse an earlier-turn cached:
+- price;
+- offer completeness;
+- commercial availability;
+- stock quantity;
+- catalog freshness state;
+- `need_reconcile` / `need_full`;
+- resolved OperationalFact effect;
+- resolved CommercePolicy effect;
+- operational `now` evaluation.
 
-Previously resolved slots remain fixed.
+Before every public `ANSWER`, and before any `CLARIFY` that displays dynamic customer-facing catalog/operational facts, rerun the relevant authority reads against state current for that specific response.
 
-One clarification round is allowed.
-Second unresolved clarification => HUMAN / CLARIFY_EXHAUSTED.
+For CatalogFact this means:
+- reopen/read the currently accepted catalog generation;
+- revalidate the preserved identifiers against that generation;
+- reread relevant commercial/offer/stock layers;
+- re-evaluate freshness and completeness.
+
+For OperationalFact / CommercePolicy this means:
+- reread current published authority;
+- evaluate the current `now`;
+- run the resolver again.
+
+A preserved identifier that no longer resolves safely in current authority fails closed rather than reviving stale facts.
+
+The final `decision_context_id` is built from the authority actually reread for the final response, not from the earlier clarification turn.
+
+Clarification does not restart intent extraction from zero.
+
+When the system presents candidates, the next customer message may only:
+- choose one of the presented candidates;
+- or fill the explicitly requested missing slot.
+
+Previously resolved stable identifier slots remain fixed unless the user explicitly changes them.
+
+One failed clarification round is allowed.
+
+Second unresolved clarification attempt:
+
+```
+HUMAN / CLARIFY_EXHAUSTED
+```
+
+An unresolved catalog identity collision is:
+
+```
+HUMAN / CATALOG_IDENTITY_COLLISION
+```
+
+and internal collision candidates are not exposed to the customer.
 
 ## 30. Shortlist minimum anchor
 
@@ -1158,6 +1304,25 @@ No customer messages.
 - separate message-create certification.
 
 ## 51. Review status
+
+Sonnet v0.3 blocker-only review found one blocker:
+- dynamic Catalog/Operational authority could be ambiguously cached across clarification turns.
+
+Grok v0.3 blocker-only review found two blockers:
+- open-ended baselines were not covered by the activity predicate;
+- early-closing `store.special_hours` could accidentally fall back to weekly baseline later the same civil day.
+
+All three are incorporated into v0.4:
+1. clarification episodes persist stable identifiers only; every customer-facing fact reruns current authority/freshness;
+2. general activity predicate explicitly supports `expires_at_utc = NULL` for approved open-ended authority;
+3. `Europe/Kyiv` is the store business-calendar timezone and special-hours overlays cover the entire local civil day, suppressing weekly baseline for that whole envelope;
+4. peer operating-state conflicts are checked by subject + effect_family regardless of namespace.
+
+Pending action: blocker-only review of v0.4.
+
+If reviewers return zero concrete blockers, open Slice A implementation issue without reopening general market/RAG research.
+
+
 
 Sonnet v0.2 review: no blockers; READY TO OPEN SLICE A.
 Grok v0.2 review found three blockers, all incorporated into this v0.3:
