@@ -426,6 +426,21 @@ prerequisite for exporter candidate preflight or the remaining D2b implementatio
 
 No customer-facing AI catalog answering is active.
 
+### Website AgentBot safety foundation (repository only)
+
+Issue #49 adds a non-public lab-only AgentBot ingress, ID-only durable delivery/job
+queue, authoritative ownership worker, AgentBot-authenticated handoff client,
+independent deadline reconciler and SafeFetch/retry certification seams. The worker
+is intentionally publicly silent and successful work ends as
+`accepted_no_public_action`; there is no LLM, RAG, prompt, or Chatwoot message-create
+path. See `docs/AGENTBOT_SAFETY_FOUNDATION.md`.
+
+This code is **not deployed**. It is not imported by the production gateway, no
+Nginx/systemd route was added, and no AgentBot is attached to Website inbox `2`.
+`copilot_jobs` and `ai_trace_metadata` therefore remain **PLANNED** in storage policy.
+Real Chatwoot 4.17.1 lab certification remains a post-merge activity requiring
+explicit BabyPark authorization and a dedicated non-production inbox/bot.
+
 Two independent tracks are active:
 
 1. **Operational ingestion / downstream boundary**

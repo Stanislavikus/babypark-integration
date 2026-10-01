@@ -119,9 +119,14 @@ Full builds stream into generation-specific SQLite rather than retaining duplica
 
 ## Planned copilot storage
 
-The queue stores identifiers/state, not routine customer message bodies.
+The implemented, non-deployed foundation schema uses an ID-only `deliveries` receipt
+table and `jobs` reply-work table in `copilot.sqlite`. It stores identifiers,
+filter/gate outcomes, bounded leases/deadlines and redacted error codes, never the
+webhook JSON or routine customer message bodies. Terminal jobs retain the planned
+14-day TTL and cleanup excludes active/non-terminal leased work.
 
 AI trace storage is intended for redacted evaluation/tool/latency metadata.
+It is not created by this foundation slice.
 
 Before real-customer shadow mode:
 - privacy/legal gate;

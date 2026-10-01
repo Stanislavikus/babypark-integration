@@ -23,6 +23,9 @@
     "catalog:snapshot": "node scripts/catalog-snapshot.mjs",
     "catalog:snapshot:verify": "node scripts/verify-catalog-snapshot.mjs",
     "catalog:bp1-vectors": "php scripts/catalog-bp1-reference.php tests/fixtures/catalog-bp1-v1-vectors.json",
+    "copilot:lab": "node scripts/copilot-lab.mjs",
+    "copilot:probe": "node scripts/copilot-delivery-probe.mjs",
+    "copilot:failure-harness": "node scripts/copilot-failure-harness.mjs",
     "storage:validate": "node scripts/validate-storage-policy.mjs"
   }
 }
