@@ -1,9 +1,13 @@
 # Catalog Identity Registry
 
-Status: CURRENT (code and production durable identity state)
+Status: CURRENT production durable identity state; Slice A schema-v2 code NOT DEPLOYED
 Last verified: 2026-10-01
 Owner: BabyPark
 Source of truth: src/catalog/domain/sku.mjs, src/catalog/identity/
+
+Production schema remains v1 until a separately owner-authorized, recovery-gated
+v1 -> v2 migration. Repository Slice A targets schema v2; merge does not itself
+authorize or perform that production migration.
 
 ## Purpose
 
