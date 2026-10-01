@@ -1,3 +1,5 @@
+[Reading 95 lines from start (total: 95 lines, 0 remaining)]
+
 # AgentBot safety foundation
 
 Status: MERGED-CANDIDATE / NOT DEPLOYED / LAB ONLY
@@ -62,7 +64,10 @@ All commands require `COPILOT_LAB_MODE=true` and refuse inbox `2`.
   closed when the backend's 100-row later-message limit prevents completeness proof
 - reconciler action only: `COPILOT_AGENT_BOT_TOKEN`; this token is never used for
   message-index GETs, while the read token cannot reach the handoff client
-- optional bounded `COPILOT_LEASE_MS`
+- `COPILOT_CHATWOOT_TIMEOUT_MS` (default 5000), `COPILOT_LEASE_MS` (default 30000),
+  and `COPILOT_RECONCILE_CLAIM_MS` (default 30000). Privileged Chatwoot requests
+  reject redirects and are abort-bounded. Three read timeouts must fit strictly
+  inside the worker lease, and four request timeouts inside the reconcile claim.
 
 The 60-second deadline is a lab guard, not a response SLA. Recalibrate it from
 measured processing before any live-customer use. Secrets are environment-only.
@@ -90,3 +95,5 @@ dedicated non-production inbox and AgentBot. Never use Website inbox `2`.
 No deployment, production routing/attachment, SafeFetch private-network exception,
 LLM, prompt, RAG/catalog answer, Chatwoot message creation, Telegram/Viber change,
 Chatwoot upgrade, human-presence policy, or customer-facing AI is included.
+
+[executed on device: chatwoot-fra1-01 (ffb62f19-a7b9-4c48-90bc-fdc677129931)]
