@@ -39,20 +39,26 @@ function int(value) {
 }
 
 export function deliveryMetadata(payload) {
-  if (!payload || typeof payload !== 'object') return { event: null, accountId: null, inboxId: null, conversationId: null, messageId: null, botId: null };
+  if (!payload || typeof payload !== 'object') return { event: null, accountId: null, inboxId: null, conversationId: null, messageId: null, assigneeType: null, assigneeId: null };
+  const event = typeof payload.event === 'string' ? payload.event : null;
+  const conversationEvent = event?.startsWith('conversation_');
+  const conversation = conversationEvent ? payload : payload.conversation;
   return {
-    event: typeof payload.event === 'string' ? payload.event : null,
+    event,
     accountId: int(payload.account?.id ?? payload.account_id),
-    inboxId: int(payload.inbox?.id ?? payload.conversation?.inbox_id ?? payload.inbox_id),
-    conversationId: int(payload.conversation?.id ?? payload.conversation_id),
-    messageId: int(payload.id ?? payload.message?.id),
-    botId: int(payload.agent_bot?.id ?? payload.inbox?.agent_bot?.id ?? payload.conversation?.assignee_agent_bot_id ?? payload.agent_bot_id),
+    inboxId: int(conversationEvent ? payload.inbox_id : payload.inbox?.id),
+    conversationId: int(conversation?.id),
+    messageId: conversationEvent ? null : int(payload.id),
+    assigneeType: typeof conversation?.meta?.assignee_type === 'string' ? conversation.meta.assignee_type : null,
+    assigneeId: int(conversation?.meta?.assignee?.id),
   };
 }
 
 export function classifyDelivery(payload, target) {
   const m = deliveryMetadata(payload);
-  const configured = m.accountId === target.accountId && m.inboxId === target.inboxId && m.botId === target.botId;
+  // The verified endpoint secret binds the delivery to the configured AgentBot.
+  // Payload ownership is required only when deciding whether an incoming message is actionable.
+  const configured = m.accountId === target.accountId && m.inboxId === target.inboxId;
   if (!configured) return { ...m, action: 'ignore', outcome: 'non_target' };
   if (m.event !== 'message_created') {
     const control = typeof m.event === 'string' && m.event.startsWith('conversation_');
@@ -65,6 +71,7 @@ export function classifyDelivery(payload, target) {
   const actionable = messageType === 'incoming' && !privateMessage &&
     senderType !== 'agentbot' && senderType !== 'agent_bot' &&
     contentType !== 'activity' && contentType !== 'template' &&
+    m.assigneeType === 'AgentBot' && m.assigneeId === target.botId &&
     m.conversationId !== null && m.messageId !== null;
   return { ...m, action: actionable ? 'enqueue' : 'ignore', outcome: actionable ? 'enqueued' : 'filtered_message' };
 }
@@ -106,11 +113,13 @@ export class CopilotStore {
       if (inserted.changes === 0) return { duplicate: true, outcome: 'duplicate' };
       if (meta.action === 'invalidate' && meta.conversationId) {
         this.db.prepare(`UPDATE jobs SET state='superseded',terminal=1,updated_at=?,completed_at=?,
-          lease_token=NULL,lease_expires_at=NULL WHERE conversation_id=? AND terminal=0`).run(at, at, meta.conversationId);
+          lease_token=NULL,lease_expires_at=NULL,reconcile_token=NULL,reconcile_claim_until=NULL
+          WHERE conversation_id=? AND terminal=0`).run(at, at, meta.conversationId);
       }
       if (meta.action === 'enqueue') {
         this.db.prepare(`UPDATE jobs SET state='superseded',terminal=1,updated_at=?,completed_at=?,
-          lease_token=NULL,lease_expires_at=NULL WHERE conversation_id=? AND terminal=0`).run(at, at, meta.conversationId);
+          lease_token=NULL,lease_expires_at=NULL,reconcile_token=NULL,reconcile_claim_until=NULL
+          WHERE conversation_id=? AND terminal=0`).run(at, at, meta.conversationId);
         this.db.prepare(`INSERT INTO jobs
           (conversation_id,target_message_id,delivery_id,state,accepted_at,updated_at,deadline_at)
           VALUES (?,?,?,'queued',?,?,?)`).run(meta.conversationId, meta.messageId, deliveryId, at, at, at + deadlineMs);
@@ -136,27 +145,36 @@ export class CopilotStore {
     if (!TERMINAL_STATES.has(state)) throw new Error('invalid_terminal_state');
     const at = this.now();
     return this.db.prepare(`UPDATE jobs SET state=?,terminal=1,updated_at=?,completed_at=?,gate_result=?,error_code=?,
-      lease_token=NULL,lease_expires_at=NULL WHERE id=? AND terminal=0 AND lease_token=?`)
+      lease_token=NULL,lease_expires_at=NULL WHERE id=? AND terminal=0 AND lease_token=?
+      AND reconcile_token IS NULL AND state='processing'`)
       .run(state, at, at, gateResult, errorCode, id, token).changes === 1;
   }
 
   failClaim(id, token, errorCode) {
     const at = this.now();
     return this.db.prepare(`UPDATE jobs SET state='error',updated_at=?,error_code=?,lease_token=NULL,
-      lease_expires_at=NULL WHERE id=? AND terminal=0 AND lease_token=?`).run(at, errorCode, id, token).changes === 1;
+      lease_expires_at=NULL WHERE id=? AND terminal=0 AND lease_token=?
+      AND reconcile_token IS NULL AND state='processing'`).run(at, errorCode, id, token).changes === 1;
   }
 
   claimExpiredForReconcile({ claimMs = 30_000, token = crypto.randomUUID() } = {}) {
     const at = this.now();
     return tx(this.db, () => {
       const row = this.db.prepare(`SELECT * FROM jobs WHERE terminal=0 AND deadline_at<=?
-        AND (reconcile_claim_until IS NULL OR reconcile_claim_until<=?) ORDER BY deadline_at,id LIMIT 1`).get(at, at);
+        AND (state!='reconciling' OR reconcile_claim_until<=?) ORDER BY deadline_at,id LIMIT 1`).get(at, at);
       if (!row) return null;
-      const changed = this.db.prepare(`UPDATE jobs SET reconcile_token=?,reconcile_claim_until=?,updated_at=?
-        WHERE id=? AND terminal=0 AND (reconcile_claim_until IS NULL OR reconcile_claim_until<=?)`)
+      const changed = this.db.prepare(`UPDATE jobs SET state='reconciling',reconcile_token=?,reconcile_claim_until=?,
+        lease_token=NULL,lease_expires_at=NULL,updated_at=? WHERE id=? AND terminal=0
+        AND (state!='reconciling' OR reconcile_claim_until<=?)`)
         .run(token, at + claimMs, at, row.id, at).changes;
       return changed === 1 ? { ...row, reconcile_token: token } : null;
     });
+  }
+
+  confirmReconcile(id, token, conversationId, targetMessageId) {
+    return Boolean(this.db.prepare(`SELECT 1 FROM jobs WHERE id=? AND conversation_id=?
+      AND target_message_id=? AND terminal=0 AND state='reconciling' AND reconcile_token=?`)
+      .get(id, conversationId, targetMessageId, token));
   }
 
   finishReconcile(id, token, state, gateResult) {
@@ -164,22 +182,29 @@ export class CopilotStore {
     const at = this.now();
     return this.db.prepare(`UPDATE jobs SET state=?,terminal=1,updated_at=?,completed_at=?,gate_result=?,
       lease_token=NULL,lease_expires_at=NULL,reconcile_token=NULL,reconcile_claim_until=NULL
-      WHERE id=? AND terminal=0 AND reconcile_token=?`).run(state, at, at, gateResult, id, token).changes === 1;
+      WHERE id=? AND terminal=0 AND state='reconciling' AND reconcile_token=?`)
+      .run(state, at, at, gateResult, id, token).changes === 1;
   }
 
   releaseReconcile(id, token, errorCode) {
-    return this.db.prepare(`UPDATE jobs SET error_code=?,reconcile_token=NULL,reconcile_claim_until=NULL
-      WHERE id=? AND terminal=0 AND reconcile_token=?`).run(errorCode, id, token).changes === 1;
+    return this.db.prepare(`UPDATE jobs SET state='error',error_code=?,reconcile_token=NULL,reconcile_claim_until=NULL
+      WHERE id=? AND terminal=0 AND state='reconciling' AND reconcile_token=?`).run(errorCode, id, token).changes === 1;
   }
 
-  cleanup({ terminalTtlMs = 14 * 86400_000 } = {}) {
+  cleanup({ terminalTtlMs = 14 * 86400_000, apply = false } = {}) {
     const cutoff = this.now() - terminalTtlMs;
+    const jobIds = this.db.prepare(`SELECT id FROM jobs WHERE terminal=1 AND completed_at<?
+      AND lease_token IS NULL AND reconcile_token IS NULL ORDER BY id`).all(cutoff).map(row => row.id);
+    const deliveryIds = this.db.prepare(`SELECT delivery_id FROM deliveries WHERE received_at<? AND NOT EXISTS
+      (SELECT 1 FROM jobs WHERE jobs.delivery_id=deliveries.delivery_id) ORDER BY delivery_id`)
+      .all(cutoff).map(row => row.delivery_id);
+    if (!apply) return { applied: false, jobIds, deliveryIds };
     return tx(this.db, () => {
       const deleted = this.db.prepare(`DELETE FROM jobs WHERE terminal=1 AND completed_at<?
         AND lease_token IS NULL AND reconcile_token IS NULL`).run(cutoff).changes;
-      this.db.prepare(`DELETE FROM deliveries WHERE received_at<? AND NOT EXISTS
-        (SELECT 1 FROM jobs WHERE jobs.delivery_id=deliveries.delivery_id)`).run(cutoff);
-      return deleted;
+      const receipts = this.db.prepare(`DELETE FROM deliveries WHERE received_at<? AND NOT EXISTS
+        (SELECT 1 FROM jobs WHERE jobs.delivery_id=deliveries.delivery_id)`).run(cutoff).changes;
+      return { applied: true, deletedJobs: deleted, deletedDeliveries: receipts };
     });
   }
 

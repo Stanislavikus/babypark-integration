@@ -7,7 +7,7 @@ import path from 'node:path';
 import { spawn, spawnSync } from 'node:child_process';
 import test from 'node:test';
 import { verifyAgentBotDelivery } from '../../src/copilot/auth.mjs';
-import { createAgentBotChatwootClient } from '../../src/copilot/chatwoot-client.mjs';
+import { createAgentBotActionClient, createChatwootAuthorityReader } from '../../src/copilot/chatwoot-client.mjs';
 import { copilotConfig } from '../../src/copilot/config.mjs';
 import { createCopilotIngress } from '../../src/copilot/http.mjs';
 import { evaluateOwnership } from '../../src/copilot/ownership.mjs';
@@ -26,14 +26,16 @@ function tempStore(t, { now = () => NOW } = {}) {
 }
 function incoming(id = 101, conversationId = 55, extra = {}) {
   return { event: 'message_created', id, message_type: 'incoming', private: false,
-    sender: { type: 'Contact' }, account: { id: 11 }, inbox: { id: 99, agent_bot: { id: 7 } },
-    conversation: { id: conversationId }, content: 'DO NOT STORE customer body', ...extra };
+    sender: { type: 'Contact' }, account: { id: 11 }, inbox: { id: 99, name: 'Lab' },
+    conversation: { id: conversationId, inbox_id: 99, status: 'pending',
+      meta: { assignee: { id: 7, type: 'agent_bot' }, assignee_type: 'AgentBot' } }, content: 'DO NOT STORE customer body', ...extra };
 }
 function sign(raw, timestamp = String(NOW / 1000)) {
   return `sha256=${crypto.createHmac('sha256', SECRET).update(Buffer.concat([Buffer.from(`${timestamp}.`), raw])).digest('hex')}`;
 }
 function owned(messages = [{ id: 101, message_type: 'incoming', private: false }]) {
-  return { conversation: { inbox_id: 99, status: 'pending', assignee_agent_bot_id: 7, assignee_id: null }, messages };
+  return { conversation: { inboxId: 99, status: 'pending', agentBotId: 7, humanAssigneeId: null },
+    messages, authorityWindowComplete: true };
 }
 async function listen(server) {
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
@@ -82,15 +84,16 @@ test('only target public incoming message_created enqueues; loop and event filte
   t.after(() => server.close()); const base = await listen(server);
   const fixtures = [
     { name: 'outgoing bot', value: incoming(201, 60, { message_type: 'outgoing', sender: { type: 'AgentBot' } }) },
-    { name: 'outgoing human', value: incoming(202, 61, { message_type: 'outgoing', sender: { type: 'User' } }) },
+    { name: 'outgoing after human takeover', value: incoming(202, 61, { message_type: 'outgoing', sender: { type: 'User' },
+      conversation: { id: 61, inbox_id: 99, status: 'open', meta: { assignee: { id: 44, type: 'user' }, assignee_type: 'User' } } }) },
     { name: 'private note', value: incoming(203, 62, { message_type: 'outgoing', private: true }) },
     { name: 'template', value: incoming(204, 63, { message_type: 'incoming', content_type: 'template' }) },
     { name: 'activity', value: incoming(205, 64, { content_type: 'activity' }) },
     { name: 'message updated', value: { ...incoming(206, 65), event: 'message_updated' } },
     { name: 'webwidget', value: { ...incoming(207, 66), event: 'webwidget_triggered' } },
-    { name: 'wrong inbox', value: incoming(208, 67, { inbox: { id: 98, agent_bot: { id: 7 } } }) },
+    { name: 'wrong inbox', value: incoming(208, 67, { inbox: { id: 98, name: 'Other' } }) },
     { name: 'wrong account', value: incoming(209, 68, { account: { id: 12 } }) },
-    { name: 'wrong bot', value: incoming(210, 69, { inbox: { id: 99, agent_bot: { id: 8 } } }) },
+    { name: 'human-owned incoming', value: incoming(210, 69, { conversation: { id: 69, inbox_id: 99, status: 'pending', meta: { assignee: { id: 44, type: 'user' }, assignee_type: 'User' } } }) },
   ];
   for (const [i, fixture] of fixtures.entries()) {
     const response = await deliver(base, fixture.value, { delivery: `filtered-${i}` });
@@ -109,7 +112,9 @@ test('rapid incoming supersedes old/leased target and control event invalidates 
   now++; store.recordDelivery({ deliveryId: 'two', payload: incoming(102), target, deadlineMs: 60_000 });
   assert.deepEqual(store.work().map(x => [x.target_message_id, x.state]), [[101, 'superseded'], [102, 'queued']]);
   assert.equal(store.finishClaim(claim.id, claim.lease_token, 'accepted_no_public_action'), false);
-  store.recordDelivery({ deliveryId: 'control', payload: { ...incoming(999), event: 'conversation_opened' }, target, deadlineMs: 60_000 });
+  store.recordDelivery({ deliveryId: 'control', payload: { event: 'conversation_opened', id: 55,
+    account: { id: 11 }, inbox_id: 99, status: 'open',
+    meta: { assignee: { id: 44, type: 'user' }, assignee_type: 'User' } }, target, deadlineMs: 60_000 });
   assert.equal(store.work()[1].state, 'superseded'); store.close(); fs.rmSync(dir, { recursive: true });
 });
 
@@ -127,12 +132,14 @@ test('durable ID-only state, terminal/supersede truth and leases survive reopen'
 test('ownership gate requires pending configured bot, no human, highest incoming id and no later human answer', () => {
   assert.equal(evaluateOwnership({ ...owned(), targetMessageId: 101, inboxId: 99, botId: 7 }).ok, true);
   assert.equal(evaluateOwnership({ ...owned(), conversation: { ...owned().conversation, status: 'open' }, targetMessageId: 101, inboxId: 99, botId: 7 }).code, 'not_pending');
-  assert.equal(evaluateOwnership({ ...owned(), conversation: { ...owned().conversation, assignee_agent_bot_id: null }, targetMessageId: 101, inboxId: 99, botId: 7 }).code, 'wrong_bot_owner');
-  assert.equal(evaluateOwnership({ ...owned(), conversation: { ...owned().conversation, assignee_id: 4 }, targetMessageId: 101, inboxId: 99, botId: 7 }).code, 'human_assigned');
+  assert.equal(evaluateOwnership({ ...owned(), conversation: { ...owned().conversation, agentBotId: null }, targetMessageId: 101, inboxId: 99, botId: 7 }).code, 'wrong_bot_owner');
+  assert.equal(evaluateOwnership({ ...owned(), conversation: { ...owned().conversation, humanAssigneeId: 4 }, targetMessageId: 101, inboxId: 99, botId: 7 }).code, 'human_assigned');
   const unordered = owned([{ id: 105, message_type: 'incoming', private: false, created_at: 1 }, { id: 101, message_type: 'incoming', private: false, created_at: 999 }]);
   assert.equal(evaluateOwnership({ ...unordered, targetMessageId: 101, inboxId: 99, botId: 7 }).code, 'stale_target');
   const answered = owned([{ id: 101, message_type: 'incoming', private: false }, { id: 102, message_type: 'outgoing', private: false, sender: { type: 'User' } }]);
   assert.equal(evaluateOwnership({ ...answered, targetMessageId: 101, inboxId: 99, botId: 7 }).code, 'later_human_reply');
+  assert.equal(evaluateOwnership({ ...owned(), authorityWindowComplete: false,
+    targetMessageId: 101, inboxId: 99, botId: 7 }).code, 'authority_window_incomplete');
 });
 
 test('two store connections cannot claim the same conversation target', t => {
@@ -159,7 +166,7 @@ test('worker only reads authority and records accepted_no_public_action without 
   const { store } = tempStore(t); store.recordDelivery({ deliveryId: 'one', payload: incoming(), target, deadlineMs: 60_000 });
   let reads = 0; const chatwoot = { readConversation: async () => { reads++; return owned(); },
     handoff: async () => assert.fail('worker must not handoff'), createMessage: async () => assert.fail('must never create message') };
-  assert.equal((await runWorkerOnce({ store, chatwoot, config: { ...target, leaseMs: 1000 } })).action, 'accepted_no_public_action');
+  assert.equal((await runWorkerOnce({ store, authorityReader: chatwoot, config: { ...target, leaseMs: 1000 } })).action, 'accepted_no_public_action');
   assert.equal(reads, 1); assert.equal(store.work()[0].state, 'accepted_no_public_action');
 });
 
@@ -167,21 +174,57 @@ test('independent reconciler ignores non-expired and terminal work and fail-open
   let now = NOW; const { store } = tempStore(t, { now: () => now });
   store.recordDelivery({ deliveryId: 'one', payload: incoming(), target, deadlineMs: 60_000 });
   store.claimNext({ leaseMs: 999_999, token: 'dead-worker' });
-  let opens = 0; const chatwoot = { readConversation: async () => owned(), handoff: async () => { opens++; } };
-  assert.equal((await runReconcilerOnce({ store, chatwoot, config: target })).action, 'idle');
+  let opens = 0; const authorityReader = { readConversation: async () => owned() };
+  const agentBotActions = { handoff: async () => { opens++; } };
+  assert.equal((await runReconcilerOnce({ store, authorityReader, agentBotActions, config: target })).action, 'idle');
   now += 60_001;
-  assert.equal((await runReconcilerOnce({ store, chatwoot, config: target })).action, 'handoff_opened');
-  assert.equal((await runReconcilerOnce({ store, chatwoot, config: target })).action, 'idle'); assert.equal(opens, 1);
+  assert.equal((await runReconcilerOnce({ store, authorityReader, agentBotActions, config: target })).action, 'handoff_opened');
+  assert.equal((await runReconcilerOnce({ store, authorityReader, agentBotActions, config: target })).action, 'idle'); assert.equal(opens, 1);
   assert.equal(store.work()[0].state, 'handoff_opened');
+});
+
+test('reconcile claim atomically revokes worker ownership and excludes worker completion', t => {
+  let now = NOW; const { store } = tempStore(t, { now: () => now });
+  store.recordDelivery({ deliveryId: 'one', payload: incoming(), target, deadlineMs: 10 });
+  const worker = store.claimNext({ leaseMs: 999_999, token: 'worker-token' });
+  now += 11;
+  const reconcile = store.claimExpiredForReconcile({ token: 'reconcile-token' });
+  assert.equal(reconcile.id, worker.id);
+  const row = store.work()[0];
+  assert.equal(row.state, 'reconciling'); assert.equal(row.lease_token, null);
+  assert.equal(row.reconcile_token, 'reconcile-token');
+  assert.equal(store.finishClaim(worker.id, 'worker-token', 'accepted_no_public_action'), false);
+  assert.equal(store.failClaim(worker.id, 'worker-token', 'late_worker'), false);
+  assert.equal(store.claimNext({ leaseMs: 1000, token: 'other-worker' }), null);
+  assert.equal(store.confirmReconcile(row.id, 'reconcile-token', 55, 101), true);
+});
+
+test('supersession clears reconcile authority and blocks stale pre-handoff action', async t => {
+  let now = NOW; const { store } = tempStore(t, { now: () => now });
+  store.recordDelivery({ deliveryId: 'old', payload: incoming(101), target, deadlineMs: 1 }); now += 2;
+  let opens = 0;
+  const result = await runReconcilerOnce({ store, authorityReader: {
+    readConversation: async () => {
+      store.recordDelivery({ deliveryId: 'new', payload: incoming(102), target, deadlineMs: 60_000 });
+      return owned();
+    },
+  }, agentBotActions: { handoff: async () => { opens++; } }, config: target });
+  assert.equal(result.action, 'stale_claim'); assert.equal(opens, 0);
+  const [old, current] = store.work();
+  assert.equal(old.state, 'superseded'); assert.equal(old.reconcile_token, null);
+  assert.equal(old.reconcile_claim_until, null); assert.equal(current.state, 'queued');
+  now += 15 * 86400_000;
+  assert.deepEqual(store.cleanup().jobIds, [old.id]);
 });
 
 test('reconciler never opens after human takeover or accepted terminal state', async t => {
   let now = NOW; const { store } = tempStore(t, { now: () => now });
   store.recordDelivery({ deliveryId: 'one', payload: incoming(), target, deadlineMs: 60_000 }); now += 60_001;
-  let opens = 0; const human = owned(); human.conversation.assignee_id = 44;
-  assert.equal((await runReconcilerOnce({ store, chatwoot: { readConversation: async () => human, handoff: async () => { opens++; } }, config: target })).action, 'not_owned');
+  let opens = 0; const human = owned(); human.conversation.agentBotId = null; human.conversation.humanAssigneeId = 44;
+  const agentBotActions = { handoff: async () => { opens++; } };
+  assert.equal((await runReconcilerOnce({ store, authorityReader: { readConversation: async () => human }, agentBotActions, config: target })).action, 'not_owned');
   assert.equal(opens, 0); assert.equal(store.work()[0].state, 'ignored');
-  assert.equal((await runReconcilerOnce({ store, chatwoot: { readConversation: async () => owned(), handoff: async () => { opens++; } }, config: target })).action, 'idle');
+  assert.equal((await runReconcilerOnce({ store, authorityReader: { readConversation: async () => owned() }, agentBotActions, config: target })).action, 'idle');
 });
 
 test('reconciler rejects any later public outgoing message, including bot/template output', async t => {
@@ -189,20 +232,61 @@ test('reconciler rejects any later public outgoing message, including bot/templa
   store.recordDelivery({ deliveryId: 'one', payload: incoming(), target, deadlineMs: 1 }); now += 2;
   const state = owned([{ id: 101, message_type: 'incoming', private: false },
     { id: 102, message_type: 'outgoing', private: false, sender: { type: 'AgentBot' } }]);
-  let opens = 0; const result = await runReconcilerOnce({ store, chatwoot: {
-    readConversation: async () => state, handoff: async () => { opens++; },
-  }, config: target });
+  let opens = 0; const result = await runReconcilerOnce({ store, authorityReader: {
+    readConversation: async () => state,
+  }, agentBotActions: { handoff: async () => { opens++; } }, config: target });
   assert.equal(result.gate, 'later_public_outgoing'); assert.equal(opens, 0);
 });
 
-test('AgentBot client reads state and handoff uses AgentBot token with native pending-to-open endpoint even without humans', async () => {
+test('authority GETs use only read token while native handoff uses only AgentBot token', async () => {
   const calls = []; const fetchImpl = async (url, options) => { calls.push({ url, options });
-    if (url.endsWith('/messages')) return new Response(JSON.stringify({ payload: [] }), { status: 200 });
-    return new Response(JSON.stringify({ status: 'open', assignee_id: null }), { status: 200 }); };
-  const client = createAgentBotChatwootClient({ baseUrl: 'https://chat.example', accountId: 11, agentBotToken: 'bot-token', fetchImpl });
-  await client.readConversation(55); const result = await client.handoff(55); assert.equal(result.status, 'open');
+    if (url.includes('/messages')) return new Response(JSON.stringify({ payload: [
+      { id: 101, message_type: 'incoming', private: false, sender: { type: 'Contact' }, content: 'not retained' },
+    ] }), { status: 200 });
+    if (options.method === 'GET') return new Response(JSON.stringify({ inbox_id: 99, status: 'pending',
+      meta: { assignee: { id: 7, type: 'agent_bot' }, assignee_type: 'AgentBot' } }), { status: 200 });
+    return new Response(JSON.stringify({ status: 'open', meta: { assignee: null, assignee_type: null } }), { status: 200 }); };
+  const reader = createChatwootAuthorityReader({ baseUrl: 'https://chat.example', accountId: 11,
+    readToken: 'read-token', fetchImpl });
+  const actions = createAgentBotActionClient({ baseUrl: 'https://chat.example', accountId: 11,
+    agentBotToken: 'bot-token', fetchImpl });
+  const authority = await reader.readConversation(55, 101);
+  assert.deepEqual(authority.conversation, { inboxId: 99, status: 'pending', agentBotId: 7, humanAssigneeId: null });
+  assert.equal(authority.authorityWindowComplete, true); assert.equal(authority.targetPresent, true);
+  assert.deepEqual(authority.messages, []);
+  const result = await actions.handoff(55); assert.equal(result.status, 'open');
+  assert.equal(calls[0].options.headers.api_access_token, 'read-token');
+  assert.equal(calls[1].options.headers.api_access_token, 'read-token');
   const handoff = calls[2]; assert.match(handoff.url, /conversations\/55\/toggle_status$/);
   assert.equal(handoff.options.headers.api_access_token, 'bot-token'); assert.equal(JSON.parse(handoff.options.body).status, 'open');
+  assert.equal(Object.hasOwn(actions, 'createMessage'), false); assert.equal(Object.hasOwn(reader, 'handoff'), false);
+});
+
+test('authority reader fails closed when bounded message pages cannot reach target', async () => {
+  const fetchImpl = async (url) => url.includes('/messages')
+    ? new Response(JSON.stringify({ payload: Array.from({ length: 20 }, (_, i) => ({
+      id: 200 - i, message_type: 'incoming', private: false, sender: { type: 'Contact' },
+    })) }), { status: 200 })
+    : new Response(JSON.stringify({ inbox_id: 99, status: 'pending',
+      meta: { assignee: { id: 7 }, assignee_type: 'AgentBot' } }), { status: 200 });
+  const reader = createChatwootAuthorityReader({ baseUrl: 'https://chat.example', accountId: 11,
+    readToken: 'read-token', fetchImpl, maxMessagePages: 1 });
+  const authority = await reader.readConversation(55, 101);
+  assert.equal(authority.authorityWindowComplete, false);
+  assert.equal(evaluateOwnership({ ...authority, targetMessageId: 101, inboxId: 99, botId: 7 }).code,
+    'authority_window_incomplete');
+  assert.throws(() => createChatwootAuthorityReader({ baseUrl: 'https://chat.example', accountId: 11,
+    readToken: '', agentBotToken: 'must-not-fallback' }), /read_token_required/);
+});
+
+test('incomplete authority window remains non-terminal for fail-open reconciliation', async t => {
+  const { store } = tempStore(t);
+  store.recordDelivery({ deliveryId: 'one', payload: incoming(), target, deadlineMs: 60_000 });
+  const result = await runWorkerOnce({ store, authorityReader: {
+    readConversation: async () => ({ ...owned(), authorityWindowComplete: false }),
+  }, config: { ...target, leaseMs: 1000 } });
+  assert.deepEqual(result, { action: 'error', gate: 'authority_window_incomplete' });
+  assert.equal(store.work()[0].terminal, 0); assert.equal(store.work()[0].state, 'error');
 });
 
 test('cleanup deletes old terminal rows but protects active/non-terminal leased work', t => {
@@ -210,7 +294,11 @@ test('cleanup deletes old terminal rows but protects active/non-terminal leased 
   store.recordDelivery({ deliveryId: 'done', payload: incoming(101, 55), target, deadlineMs: 1 });
   const done = store.claimNext({ leaseMs: 10, token: 'done' }); store.finishClaim(done.id, 'done', 'accepted_no_public_action');
   store.recordDelivery({ deliveryId: 'active', payload: incoming(102, 56), target, deadlineMs: 1 }); store.claimNext({ leaseMs: 999_999, token: 'active' });
-  now += 15 * 86400_000; assert.equal(store.cleanup(), 1); assert.equal(store.work().length, 1); assert.equal(store.work()[0].terminal, 0);
+  now += 15 * 86400_000;
+  assert.deepEqual(store.cleanup(), { applied: false, jobIds: [done.id], deliveryIds: [] });
+  assert.equal(store.work().length, 2);
+  assert.deepEqual(store.cleanup({ apply: true }), { applied: true, deletedJobs: 1, deletedDeliveries: 1 });
+  assert.equal(store.work().length, 1); assert.equal(store.work()[0].terminal, 0);
 });
 
 test('lab config requires explicit flag, rejects inbox 2, bounds replay window and defaults deadline to 60 seconds', () => {

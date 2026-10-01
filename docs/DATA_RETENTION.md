@@ -123,7 +123,8 @@ The implemented, non-deployed foundation schema uses an ID-only `deliveries` rec
 table and `jobs` reply-work table in `copilot.sqlite`. It stores identifiers,
 filter/gate outcomes, bounded leases/deadlines and redacted error codes, never the
 webhook JSON or routine customer message bodies. Terminal jobs retain the planned
-14-day TTL and cleanup excludes active/non-terminal leased work.
+14-day TTL and cleanup excludes active/non-terminal leased work. Cleanup is a
+non-mutating plan/dry-run by default and requires explicit `apply: true` to delete.
 
 AI trace storage is intended for redacted evaluation/tool/latency metadata.
 It is not created by this foundation slice.
