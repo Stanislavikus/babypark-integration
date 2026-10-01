@@ -1,3 +1,5 @@
+[Reading 502 lines from start (total: 502 lines, 0 remaining)]
+
 import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
@@ -359,9 +361,31 @@ test('authority GETs use only read token while native handoff uses only AgentBot
   assert.equal(calls[0].options.headers.api_access_token, 'read-token');
   assert.equal(calls[1].options.headers.api_access_token, 'read-token');
   assert.equal(calls[2].options.headers.api_access_token, 'read-token');
+  assert.equal(calls.every(call => call.options.redirect === 'manual'), true);
+  assert.equal(calls.every(call => call.options.signal instanceof AbortSignal), true);
   const handoff = calls[3]; assert.match(handoff.url, /conversations\/55\/toggle_status$/);
   assert.equal(handoff.options.headers.api_access_token, 'bot-token'); assert.equal(JSON.parse(handoff.options.body).status, 'open');
   assert.equal(Object.hasOwn(actions, 'createMessage'), false); assert.equal(Object.hasOwn(reader, 'handoff'), false);
+});
+
+test('privileged Chatwoot requests reject redirects and fail within the configured timeout', async () => {
+  const redirectFetch = async (_url, options) => {
+    assert.equal(options.redirect, 'manual');
+    return new Response(null, { status: 302, headers: { location: 'https://evil.example/' } });
+  };
+  const reader = createChatwootAuthorityReader({ baseUrl: 'https://chat.example', accountId: 11,
+    readToken: 'read-token', requestTimeoutMs: 50, fetchImpl: redirectFetch });
+  const actions = createAgentBotActionClient({ baseUrl: 'https://chat.example', accountId: 11,
+    agentBotToken: 'bot-token', requestTimeoutMs: 50, fetchImpl: redirectFetch });
+  await assert.rejects(() => reader.readConversation(55, 101), /chatwoot_redirect_forbidden/);
+  await assert.rejects(() => actions.handoff(55), /chatwoot_redirect_forbidden/);
+
+  const hangingFetch = async (_url, options) => new Promise((_resolve, reject) => {
+    options.signal.addEventListener('abort', () => reject(new Error('aborted')), { once: true });
+  });
+  const bounded = createChatwootAuthorityReader({ baseUrl: 'https://chat.example', accountId: 11,
+    readToken: 'read-token', requestTimeoutMs: 10, fetchImpl: hangingFetch });
+  await assert.rejects(() => bounded.readConversation(55, 101), /chatwoot_request_timeout/);
 });
 
 test('authority reader fails closed when the ID-safe later window reaches backend limit', async () => {
@@ -455,7 +479,14 @@ test('lab config requires explicit flag, rejects inbox 2, bounds replay window a
   const base = { COPILOT_LAB_MODE: 'true', COPILOT_ACCOUNT_ID: '1', COPILOT_AGENT_BOT_ID: '3' };
   assert.throws(() => copilotConfig({ ...base, COPILOT_INBOX_ID: '2' }), /production_website_inbox_forbidden/);
   assert.throws(() => copilotConfig({ ...base, COPILOT_INBOX_ID: '4', COPILOT_REPLAY_WINDOW_SEC: '901' }), /replay_window_invalid/);
-  assert.equal(copilotConfig({ ...base, COPILOT_INBOX_ID: '4' }).deadlineMs, 60_000);
+  const defaults = copilotConfig({ ...base, COPILOT_INBOX_ID: '4' });
+  assert.equal(defaults.deadlineMs, 60_000);
+  assert.equal(defaults.chatwootRequestTimeoutMs, 5_000);
+  assert.equal(defaults.reconcileClaimMs, 30_000);
+  assert.throws(() => copilotConfig({ ...base, COPILOT_INBOX_ID: '4',
+    COPILOT_CHATWOOT_TIMEOUT_MS: '10000', COPILOT_LEASE_MS: '60000' }), /reconcile_request_budget_invalid/);
+  assert.throws(() => copilotConfig({ ...base, COPILOT_INBOX_ID: '4',
+    COPILOT_CHATWOOT_TIMEOUT_MS: '4000', COPILOT_LEASE_MS: '10000' }), /worker_request_budget_invalid/);
 });
 
 test('lab commands are isolated from gateway and refuse absent lab mode / production inbox', () => {
@@ -471,3 +502,5 @@ test('lab commands are isolated from gateway and refuse absent lab mode / produc
   }
   assert.equal(fs.readFileSync('src/gateway/index.mjs', 'utf8').includes('copilot'), false);
 });
+
+[executed on device: chatwoot-fra1-01 (ffb62f19-a7b9-4c48-90bc-fdc677129931)]
