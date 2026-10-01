@@ -218,6 +218,59 @@ test('control event revokes reconcile ownership and prevents stale handoff', asy
   assert.equal(row.reconcile_token, null); assert.equal(row.reconcile_claim_until, null);
 });
 
+test('native handoff feedback cannot revoke a post-confirm reconcile commit', async t => {
+  let now = NOW; const { store } = tempStore(t, { now: () => now });
+  store.recordDelivery({ deliveryId: 'target', payload: incoming(), target, deadlineMs: 1 }); now += 2;
+  let handoffs = 0;
+  const result = await runReconcilerOnce({
+    store,
+    authorityReader: { readConversation: async () => owned() },
+    agentBotActions: { handoff: async () => {
+      handoffs++;
+      store.recordDelivery({ deliveryId: 'handoff-feedback', payload: {
+        event: 'conversation_opened', id: 55, account: { id: 11 }, inbox_id: 99, status: 'open',
+        meta: { assignee: null, assignee_type: null },
+      }, target, deadlineMs: 1 });
+      return { payload: { current_status: 'open' } };
+    } },
+    config: target,
+  });
+  assert.equal(result.action, 'handoff_opened'); assert.equal(handoffs, 1);
+  const row = store.work()[0];
+  assert.equal(row.terminal, 1); assert.equal(row.state, 'handoff_opened');
+  assert.equal(row.reconcile_token, null); assert.equal(row.reconcile_claim_until, null);
+});
+
+test('handoff-committing claim is exclusive until expiry and then recoverable', t => {
+  let now = NOW; const { store } = tempStore(t, { now: () => now });
+  store.recordDelivery({ deliveryId: 'target', payload: incoming(), target, deadlineMs: 1 }); now += 2;
+  const first = store.claimExpiredForReconcile({ claimMs: 1000, token: 'first-reconcile' });
+  assert.ok(first);
+  assert.equal(store.beginHandoff(first.id, 'first-reconcile', 55, 101), true);
+  assert.equal(store.work()[0].state, 'handoff_committing');
+  assert.equal(store.claimExpiredForReconcile({ claimMs: 1000, token: 'second-reconcile' }), null);
+  now += 1001;
+  const recovered = store.claimExpiredForReconcile({ claimMs: 1000, token: 'recovered-reconcile' });
+  assert.equal(recovered.id, first.id);
+  assert.equal(recovered.state, 'handoff_committing');
+});
+
+test('failed handoff releases post-confirm claim back to recheckable error', async t => {
+  let now = NOW; const { store } = tempStore(t, { now: () => now });
+  store.recordDelivery({ deliveryId: 'target', payload: incoming(), target, deadlineMs: 1 }); now += 2;
+  const result = await runReconcilerOnce({
+    store,
+    authorityReader: { readConversation: async () => owned() },
+    agentBotActions: { handoff: async () => { throw new Error('handoff_failed'); } },
+    config: target,
+  });
+  assert.equal(result.action, 'error');
+  const row = store.work()[0];
+  assert.equal(row.terminal, 0); assert.equal(row.state, 'error');
+  assert.equal(row.error_code, 'handoff_failed');
+  assert.equal(row.reconcile_token, null); assert.equal(row.reconcile_claim_until, null);
+});
+
 test('durable ID-only state, terminal/supersede truth and leases survive reopen', t => {
   const { store, file } = tempStore(t); store.recordDelivery({ deliveryId: 'one', payload: incoming(), target, deadlineMs: 60_000 });
   const claim = store.claimNext({ leaseMs: 30_000, token: 'lease' });
