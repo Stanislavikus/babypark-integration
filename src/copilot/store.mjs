@@ -194,6 +194,14 @@ export class CopilotStore {
       .get(id, conversationId, targetMessageId, token));
   }
 
+  beginHandoff(id, token, conversationId, targetMessageId) {
+    const at = this.now();
+    return this.db.prepare(`UPDATE jobs SET state='handoff_committing',updated_at=?
+      WHERE id=? AND conversation_id=? AND target_message_id=? AND terminal=0
+      AND state='reconciling' AND reconcile_token=?`)
+      .run(at, id, conversationId, targetMessageId, token).changes === 1;
+  }
+
   finishReconcile(id, token, state, gateResult) {
     if (!TERMINAL_STATES.has(state)) throw new Error('invalid_terminal_state');
     const at = this.now();
