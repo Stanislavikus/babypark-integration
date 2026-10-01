@@ -1321,15 +1321,3 @@ All three are incorporated into v0.4:
 Pending action: blocker-only review of v0.4.
 
 If reviewers return zero concrete blockers, open Slice A implementation issue without reopening general market/RAG research.
-
-
-
-Sonnet v0.2 review: no blockers; READY TO OPEN SLICE A.
-Grok v0.2 review found three blockers, all incorporated into this v0.3:
-1. operational overlay composition + supersession boundary;
-2. formal strict scope partial order for exception_of;
-3. multi-variant specific-store stock ambiguity.
-
-Pending action: blocker-only review of v0.3.
-
-If reviewer returns zero concrete blockers, open Slice A implementation issue without reopening general market/RAG research.
