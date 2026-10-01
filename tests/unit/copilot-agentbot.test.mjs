@@ -1,5 +1,3 @@
-[Reading 502 lines from start (total: 502 lines, 0 remaining)]
-
 import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
@@ -502,5 +500,3 @@ test('lab commands are isolated from gateway and refuse absent lab mode / produc
   }
   assert.equal(fs.readFileSync('src/gateway/index.mjs', 'utf8').includes('copilot'), false);
 });
-
-[executed on device: chatwoot-fra1-01 (ffb62f19-a7b9-4c48-90bc-fdc677129931)]
