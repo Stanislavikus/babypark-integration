@@ -1,0 +1,1170 @@
+# BabyPark AI First Line — Frozen Design v0.3
+
+Status: DESIGN REVIEW — blocker-only review pending
+Implementation: NOT AUTHORIZED
+Repository baseline: main `e4b3989f852d5de4a868a6f72867b87cb64f8b2d`
+Chatwoot runtime verified: v4.18.0, `9f920b549c14491a4e587687a3eed5d21c6ccc7d`
+
+This document is the repository source of truth for the first customer-facing BabyPark AI design.
+It consolidates the research and review rounds that followed AgentBot safety foundation #49 and race fix #51/#52.
+Do not reconstruct this design from chat history.
+
+## 1. Product objective
+
+The first customer-facing AI answers a narrow set of factual ecommerce questions from typed, reviewed authority.
+It must not behave as a universal sales consultant.
+
+Priorities:
+1. factual correctness;
+2. deterministic financial/operational values;
+3. explicit authority/freshness;
+4. human handoff on uncertainty;
+5. traceability;
+6. low operational burden;
+7. Drupal → Magento portability;
+8. no BabyPark patches inside Chatwoot core.
+
+## 2. Authority domains
+
+There is no global priority ladder across all knowledge.
+
+### 2.1 OperationalFact
+Typed operational truth:
+- store temporary closure/status overlay;
+- special opening hours;
+- reviewed baseline hours/status;
+- call-center hours;
+- approved phones/addresses;
+- temporary operational outages.
+
+### 2.2 CommercePolicy
+Typed reviewed business commitments:
+- payment;
+- prepayment;
+- delivery;
+- return policy;
+- warranty;
+- reviewed scoped exceptions.
+
+### 2.3 CatalogFact
+Never copied into knowledge authority.
+Always read through CatalogService from one accepted canonical generation:
+- products/variants;
+- trusted offers;
+- commercial availability;
+- physical store stock;
+- images/URLs;
+- categories/brands;
+- variant option labels;
+- catalog freshness metadata.
+
+### 2.4 KnowledgeContent
+Future lower-authority RAG layer for articles/manuals/site/manufacturer prose.
+Out of scope.
+
+### 2.5 Guidance
+Behavior/policy: clarify, handoff, templates, tool policy.
+Guidance cannot create or override facts.
+
+## 3. Storage
+
+Create `knowledge.sqlite` as durable business authority.
+It is separate from `copilot.sqlite`.
+
+`copilot.sqlite` remains execution/idempotency state.
+Knowledge publication history is not disposable/rebuildable execution state.
+
+## 4. Immutable revision model
+
+### knowledge_revisions
+
+Revision body is immutable after insert.
+
+Conceptual fields:
+
+```
+revision_id
+record_type
+schema_version
+namespace
+effect_family
+subject_type
+subject_id
+scope_json
+effect_type
+effect_value_json
+effective_from_utc
+expires_at_utc
+parent_revision_id
+exception_of_revision_id
+author_actor_id
+created_at_utc
+revision_hash
+```
+
+Initial record types:
+- OPERATIONAL_FACT
+- COMMERCE_POLICY
+- VOCABULARY_ENTRY
+
+Editing a draft creates a new revision.
+No UPDATE rewrites a revision body.
+
+### knowledge_events
+
+Append-only publication ledger:
+
+```
+event_id
+event_seq
+revision_id
+event_type
+actor_id
+occurred_at_utc
+reason
+metadata_json
+previous_event_hash
+event_hash
+```
+
+Event types:
+- DRAFT_CREATED
+- APPROVED
+- PUBLISHED
+- REVOKED
+- SUPERSEDED
+- optionally WITHDRAWN
+
+Revision authority state is derived from the ledger.
+
+## 5. Canonical hashing
+
+Do not leave revision/event hash encoding implementation-defined.
+
+Use BabyPark canonical JSON v1:
+- UTF-8;
+- recursive lexicographic object-key ordering;
+- array order preserved;
+- no insignificant whitespace;
+- integer values as canonical decimal integers;
+- timestamps normalized to RFC3339 UTC with `Z`;
+- no floating money;
+- explicit null where schema requires null;
+- hash algorithm SHA-256.
+
+`revision_hash` = SHA-256 of canonical authoritative revision body excluding `revision_hash`.
+
+`event_hash` = SHA-256 of canonical event body excluding `event_hash`, including `previous_event_hash`.
+
+Restore verification validates:
+- chain linkage;
+- hashes;
+- event state-machine validity;
+- resolver semantics on known verification vectors.
+
+## 6. Event state machine
+
+Append-only alone is not sufficient. Event writes are atomically validated.
+
+Approval-required revision:
+
+```
+DRAFT_CREATED
+  -> APPROVED
+  -> PUBLISHED
+  -> REVOKED | SUPERSEDED
+```
+
+Direct-publish temporary revision:
+
+```
+DRAFT_CREATED
+  -> PUBLISHED
+  -> REVOKED | SUPERSEDED
+```
+
+Optional:
+```
+DRAFT_CREATED -> WITHDRAWN
+APPROVED -> WITHDRAWN
+```
+
+Rules:
+- DRAFT_CREATED is first and unique.
+- APPROVED requires existing draft.
+- Commerce author cannot approve own revision.
+- KNOWLEDGE_ADMIN does not bypass self-approval.
+- Approval-required namespace cannot publish without valid APPROVED.
+- PUBLISHED is unique.
+- REVOKED only from PUBLISHED.
+- SUPERSEDED only from PUBLISHED.
+- terminal revisions cannot be resurrected.
+- parent_revision_id is lineage only and changes no authority.
+- resolver independently validates event history; corrupt/manual ledgers fail closed.
+
+Publishing a replacement and superseding its predecessor occurs in one SQLite transaction.
+
+SUPERSEDED must reference an already-published successor.
+
+SUPERSEDED is allowed only when predecessor and successor share:
+- namespace;
+- subject identity;
+- effect_family.
+
+Temporary overlays never supersede baseline namespaces.
+
+## 7. Time semantics
+
+Persist absolute UTC instants.
+
+`Europe/Kyiv` is only the input interpretation timezone for human input such as "до кінця дня".
+
+Active interval:
+
+```
+effective_from <= now < expires_at
+```
+
+`now == expires_at` means inactive.
+
+No cron job is authority for expiry.
+
+## 8. Publication workflow
+
+Publication policy is namespace-risk based.
+
+### Direct publish allowlist — temporary overlays only
+
+Initial allowlist:
+- store.status_override
+- store.special_hours
+- store.temporary_closure
+
+Requirements:
+- authorized OPERATIONAL_EDITOR grant;
+- `expires_at_utc` mandatory;
+- effective_from < expires_at;
+- no null expiry.
+
+### Approval-required baseline/identity facts
+
+Examples:
+- store.weekly_hours
+- store.baseline_status
+- store.address
+- store.phone
+- call_center.hours
+
+### CommercePolicy
+
+Always approval-required.
+
+Author and approver must differ by stable BabyPark actor_id.
+
+## 9. Operational resolver composition
+
+Operational state is not a simple "overlay else baseline" scalar.
+
+A store operating answer composes multiple effect families.
+
+### 9.1 Resolve closing state
+
+Resolve active closure/status overlays for the store.
+
+If multiple active overlays in the same namespace/effect family yield different canonical effects:
+`POLICY_CONFLICT`.
+
+A closing overlay, including:
+- store.temporary_closure;
+- store.status_override with canonical CLOSED effect;
+
+suppresses:
+- store.special_hours;
+- store.weekly_hours;
+
+for the overlapping interval.
+
+A customer must never receive opening hours for a store resolved CLOSED.
+
+### 9.2 Resolve hours only when not closed
+
+If no closing overlay applies:
+- one valid active store.special_hours overlay overrides baseline hours for its interval;
+- otherwise use approved store.weekly_hours baseline.
+
+Conflicting active special-hours overlays fail closed.
+
+Temporary overlay and baseline coexist.
+Overlay expiry reveals baseline again.
+Overlay never SUPERSEDES baseline.
+
+## 10. Commerce conflict rule
+
+No hidden:
+- latest wins;
+- most specific wins;
+- priority number wins.
+
+Multiple applicable equal canonical effects are compatible.
+
+Different applicable effects produce:
+`HUMAN / POLICY_CONFLICT`
+unless a valid explicit exception resolves the overlap.
+
+Canonical effect equality:
+```
+effect_type + canonical normalized effect_value
+```
+
+Customer wording comes from templates, not policy prose.
+
+## 11. Exception scope model
+
+v1 CommercePolicy scope is a conjunction of optional exact bindings:
+
+```
+category_id
+brand_id
+product_id
+variant_id
+store_id
+```
+
+Empty conjunction = global.
+
+A child scope is strictly narrower than parent iff:
+1. every binding present in parent is present in child with the same value;
+2. child adds at least one additional binding.
+
+Equal binding sets are not an exception.
+
+Category descendants do NOT implicitly make CommercePolicy scope narrower.
+Catalog taxonomy changes across generations; exception validity must not depend on a changing tree.
+
+Example:
+parent: category_id=furniture
+child: category_id=furniture + brand_id=Veres
+=> valid narrower scope.
+
+Equal scope with changed effect requires SUPERSEDED or yields POLICY_CONFLICT.
+
+## 12. Exception temporal rules
+
+Authority intervals are half-open:
+`[effective_from, expires_at)`.
+
+Exception interval must be a non-empty subset of parent interval.
+
+Rules:
+- child.from >= parent.from;
+- if parent.to finite, child.to finite and child.to <= parent.to;
+- if child.to finite, child.from < child.to;
+- exception graph acyclic;
+- compatible effect_family;
+- strict scope narrowing.
+
+## 13. Employee control plane
+
+BabyPark AI/Knowledge Control is an independent BabyPark Web App.
+
+Preferred host:
+`ai.babypark.ua`
+
+Chatwoot Dashboard App is an embedding/container, not authority storage.
+
+Zoho is not part of this authority path.
+
+The first working UI must remain usable directly at ai.babypark.ua even if iframe login/session behavior is unreliable.
+
+## 14. Authentication and authorization
+
+### Authentication
+Preferred first implementation:
+Cloudflare Tunnel + Cloudflare Access.
+
+Origin should not expose a public bypass around Access.
+
+Backend validates:
+- JWT signature;
+- issuer;
+- audience;
+- expiry.
+
+Verified Access identity maps to stable BabyPark actor_id.
+
+### Authorization
+BabyPark backend owns RBAC.
+
+Initial logical roles:
+- VIEWER
+- OPERATIONAL_EDITOR
+- COMMERCE_DRAFTER
+- COMMERCE_APPROVER
+- KNOWLEDGE_ADMIN
+
+Grants may be scoped by namespace and subject/store.
+
+Chatwoot Dashboard App `currentAgent` is display/diagnostic context only.
+It never authorizes a write.
+
+Before declaring iframe the primary UI, test:
+- Chrome;
+- Edge;
+- normal mode;
+- relevant private/incognito behavior;
+- Access login and renewal inside iframe;
+- CSP.
+
+Embedded response:
+`frame-ancestors https://chat.babypark.ua`.
+
+## 15. Durable backup requirement
+
+`knowledge.sqlite` is not production-ready until recovery is proven.
+
+Implement/reuse a generic Durable SQLite Backup Profile:
+1. consistent SQLite backup;
+2. integrity check;
+3. manifest/checksum;
+4. encryption;
+5. off-host copy;
+6. independent verification;
+7. restore into scratch;
+8. semantic integrity verification.
+
+Knowledge restore proof validates revision hashes, event hash chain and resolver outputs.
+
+No age-only deletion may remove the only verified recovery copy.
+
+## 16. Decision classes
+
+Only:
+- ANSWER
+- CLARIFY
+- HUMAN
+
+Reason codes are machine-level.
+
+Required examples:
+
+ANSWER:
+- OPERATIONAL_FACT
+- COMMERCE_POLICY
+- PRODUCT_PRICE_SINGLE
+- PRODUCT_PRICE_RANGE
+- PRODUCT_NOT_IN_STOCK
+- VARIANT_LIST
+- VARIANT_LIST_PARTIAL
+- VARIANT_PRICE_LIST
+- OBJECTIVE_SHORTLIST
+- OBJECTIVE_SHORTLIST_EMPTY
+- STORE_STOCK
+
+CLARIFY:
+- AMBIGUOUS_PRODUCT
+- AMBIGUOUS_VARIANT
+- AMBIGUOUS_CATEGORY
+- AMBIGUOUS_BRAND
+- AMBIGUOUS_STORE
+- AMBIGUOUS_MONEY
+- MISSING_SHORTLIST_ANCHOR
+
+HUMAN:
+- POLICY_CONFLICT
+- POLICY_NOT_FOUND
+- CATALOG_COMMERCIAL_STALE
+- CATALOG_STOCK_STALE
+- PRICE_COHORT_INCOMPLETE
+- ZERO_PRICE_UNVERIFIED
+- MIXED_CURRENCY
+- UNSUPPORTED_CONSTRAINT
+- UNSUPPORTED_EXCLUSION
+- SUBJECTIVE_RECOMMENDATION
+- PRODUCT_ATTRIBUTE_NOT_AUTHORITATIVE
+- COMPATIBILITY_NOT_AUTHORITATIVE
+- RETURN_CASE_SPECIFIC
+- ORDER_SPECIFIC
+- CATALOG_IDENTITY_COLLISION
+- CLARIFY_EXHAUSTED
+- PRODUCT_VARIANT_NOT_RESOLVABLE
+
+## 17. Catalog freshness
+
+Only relevant layers gate an answer.
+
+Price / general objective shortlist:
+- commercial/offer authority must be answerable.
+
+Specific-store stock or store-filter shortlist:
+- commercial/offer authority;
+- stock authority.
+
+An unrelated stale layer does not fail the answer.
+
+Relevant `need_reconcile` / `need_full` fails closed.
+
+## 18. Current verified production catalog evidence
+
+At research time:
+- 16,245 active products;
+- 49,257 variants;
+- 8,223 multi-variant products;
+- 1,776 products with multiple priced variants;
+- about 87.5% of variants have option labels;
+- IN_STOCK variants: 8,673;
+- trusted-price IN_STOCK variants: 8,673;
+- current price currency in that cohort: UAH;
+- EXPECTED variants: 468 with no trusted offers;
+- MADE_TO_ORDER variants: 160 with no trusted offers.
+
+These are evidence, not permanent invariants.
+Runtime always rechecks completeness.
+
+## 19. Price-now cohort
+
+Current customer price uses:
+- active variant;
+- commercial_availability == IN_STOCK;
+- trusted offer exists;
+- one currency;
+- relevant commercial authority answerable.
+
+EXPECTED and MADE_TO_ORDER do not enter "price now".
+
+Missing trusted offer in relevant IN_STOCK cohort:
+`HUMAN / PRICE_COHORT_INCOMPLETE`.
+
+Mixed currencies:
+`HUMAN / MIXED_CURRENCY`.
+
+Zero IN_STOCK variants with fresh commercial authority:
+`ANSWER / PRODUCT_NOT_IN_STOCK`.
+
+## 20. Zero price
+
+Canonical schema permits `current_minor >= 0`.
+
+But v1 has no semantic authority proving that zero means "free".
+
+Therefore:
+trusted offer with `current_minor == 0`
+=> `HUMAN / ZERO_PRICE_UNVERIFIED`.
+
+Do not silently remove it from the cohort.
+Do not render "free" without an explicit future authority contract.
+
+## 21. Product-level price summary
+
+Natural customer product/model queries are product-level, not SKU-only.
+
+For unique product:
+1. identify relevant active IN_STOCK variant cohort;
+2. verify offer completeness/currency;
+3. compute min/max trusted current price.
+
+If min == max:
+`ANSWER / PRODUCT_PRICE_SINGLE`.
+
+If min != max:
+`ANSWER / PRODUCT_PRICE_RANGE`.
+
+Range template may offer a deterministic supported follow-up:
+"Могу показать доступные варианты с точной ценой каждого."
+
+That follow-up exists as `VARIANT_PRICE_LIST`.
+
+## 22. Product resolution
+
+1 credible canonical product => continue.
+
+0 or multiple unresolved customer-level candidates => CLARIFY.
+
+Unresolved catalog identity corruption/collision => HUMAN / CATALOG_IDENTITY_COLLISION.
+Never expose internal identity-collision candidates.
+
+## 23. Variant labels
+
+Raw Drupal option labels may be shown only as sanitized factual labels.
+Do not infer universal COLOR/SIZE/MATERIAL semantics.
+
+`displayable_variant_label()` minimum:
+- non-empty;
+- valid text;
+- bounded length;
+- whitespace normalization;
+- no control characters;
+- no URL/blob/debug-like value;
+- no raw internal ID.
+
+Completeness is explicit.
+
+If 7 relevant variants but only 5 safe labels:
+do not imply that only 5 variants exist.
+
+## 24. "Available now" variant cohort
+
+Question like:
+"Какие варианты сейчас есть?"
+
+uses:
+- active;
+- IN_STOCK.
+
+EXPECTED and MADE_TO_ORDER are not "available now".
+
+## 25. Variant price list
+
+Explicit contract:
+`ANSWER / VARIANT_PRICE_LIST`.
+
+Cohort:
+- active;
+- IN_STOCK;
+- trusted offer;
+- safe currency;
+- commercial layer answerable.
+
+Stable order:
+`current_minor ASC, variant_id ASC`.
+
+Display count and label completeness are explicit.
+
+## 26. Objective shortlist
+
+Allowed as factual filtering, not recommendation.
+
+Examples:
+- "Прогулочные коляски до 20 000 грн"
+- "Покажи Cybex до 30 000"
+
+No:
+- popularity;
+- margin;
+- conversion;
+- "best";
+- recommendation ranker.
+
+## 27. Closed-world resolvers
+
+LLM never chooses authority IDs.
+
+It may identify raw spans/phrases.
+Deterministic reviewed resolvers produce canonical IDs.
+
+### Category
+Reviewed vocabulary returns 0/1/many category candidates.
+
+Every vocabulary entry includes explicit:
+- canonical_category_id;
+- match_mode: NODE_ONLY | INCLUDE_DESCENDANTS.
+
+No default match mode.
+
+### Brand
+Same 0/1/many rule.
+LLM never emits brand_id as authority.
+
+### Money
+Deterministic parser maps approved forms such as:
+- 20 000 грн
+- 20 тысяч
+- 20 тисяч
+- 20к
+to integer minor units.
+
+Ambiguous => CLARIFY / AMBIGUOUS_MONEY.
+
+### Store
+Natural store phrase must resolve to exactly one canonical active store.
+Failure never silently removes store constraint.
+
+Vocabulary is durable reviewed authority and has revision IDs.
+
+## 28. ObjectiveConstraintLatch
+
+Protect not only extracted slots but constraints the model failed to extract.
+
+Latch runs on the full current bot episode and tracks original normalized customer text plus consumed spans.
+
+Supported resolvers consume:
+- product;
+- category;
+- brand;
+- money;
+- store.
+
+Latch detects at minimum:
+- negation/exclusion;
+- subjective/recommendation language;
+- age/suitability markers;
+- compatibility markers;
+- order-specific markers;
+- return-case markers;
+- other unconsumed contentful constraints.
+
+Examples:
+"до 20 000, но не Cybex"
+=> HUMAN / UNSUPPORTED_EXCLUSION.
+
+"для ребёнка 6 месяцев"
+=> HUMAN / UNSUPPORTED_CONSTRAINT.
+
+"какая лучше"
+=> HUMAN / SUBJECTIVE_RECOMMENDATION.
+
+False-positive HUMAN is acceptable.
+Silent constraint removal is not.
+
+## 29. Clarification episode
+
+Episode stores:
+- normalized slots;
+- source_message_ids[];
+- presented candidates;
+- requested missing slot;
+- clarification_count.
+
+Clarification does not restart extraction from zero.
+
+Next customer turn after candidate presentation may:
+- choose one presented candidate;
+- fill only the requested missing slot.
+
+Previously resolved slots remain fixed.
+
+One clarification round is allowed.
+Second unresolved clarification => HUMAN / CLARIFY_EXHAUSTED.
+
+## 30. Shortlist minimum anchor
+
+Price-only browse is forbidden.
+
+Require at least:
+- exact category;
+OR
+- exact brand.
+
+Optional:
+- min/max price;
+- store.
+
+Missing anchor:
+CLARIFY / MISSING_SHORTLIST_ANCHOR.
+
+## 31. Dedicated objective CatalogService contract
+
+Do not reuse current `searchProducts()` as factual shortlist authority.
+
+Current code can match through a non-default variant while top-level product price remains default-variant price.
+
+Create a dedicated provider-neutral contract, conceptually:
+
+```
+searchObjectiveProducts({
+  categoryId?,
+  categoryMatchMode?,
+  brandId?,
+  minPriceMinor?,
+  maxPriceMinor?,
+  storeId?,
+  limit
+})
+```
+
+Require categoryId OR brandId.
+
+## 32. Objective cohort
+
+Relevant variants:
+- active;
+- IN_STOCK;
+- satisfy exact canonical filters.
+
+With price filter:
+- matching membership and presentation derive from the same trusted-price cohort.
+
+If relevant anchored IN_STOCK universe contains an offer hole that prevents proving complete result membership:
+HUMAN / PRICE_COHORT_INCOMPLETE.
+
+Zero price:
+HUMAN / ZERO_PRICE_UNVERIFIED.
+
+Mixed relevant currency:
+HUMAN / MIXED_CURRENCY.
+
+Do not silently remove incomplete products from total count.
+
+## 33. Category tree semantics for objective search
+
+NODE_ONLY:
+match direct category membership only.
+
+INCLUDE_DESCENDANTS:
+expand descendants from the same pinned catalog generation.
+
+Vocabulary revision and match mode are part of decision provenance.
+
+This category-tree rule applies to objective search.
+It does NOT define CommercePolicy exception-scope narrowing.
+
+## 34. Store-filter objective search
+
+With storeId:
+- stock layer must be answerable;
+- participating variant must have quantity > 0 at that exact store.
+
+Commercial IN_STOCK does not substitute for store stock.
+
+Stale/blocking stock layer:
+HUMAN / CATALOG_STOCK_STALE.
+
+Unknown store never falls back to general availability.
+
+## 35. Objective result DTO
+
+Conceptually:
+
+```
+ObjectiveProductMatch {
+  product_id
+  title
+  image_url
+  product_url
+
+  matched_variant_count
+
+  matching_price_min_minor
+  matching_price_max_minor
+  currency
+
+  matching_variant_ids[]
+  displayable_variant_labels[]
+  total_matching_variant_labels
+  displayable_variant_label_count
+
+  all_product_variants_match_filters
+
+  matched_store_id?
+}
+```
+
+Response also includes total_product_count before display limit.
+
+## 36. Shortlist ranking
+
+Stable deterministic ordering:
+`matching_price_min_minor ASC, product_id ASC`.
+
+Display limit: 3.
+
+No hidden recommendation score.
+
+## 37. Shortlist count wording
+
+0:
+ANSWER / OBJECTIVE_SHORTLIST_EMPTY.
+No automatic widening.
+
+1–3:
+show all and state exact count.
+
+>3:
+state total and that only top 3 by deterministic price ordering are shown.
+
+Never say "нашёл 3" if total is 47.
+
+## 38. Matched-cohort presentation
+
+Example:
+- default variant 27,300;
+- another IN_STOCK variant 19,300;
+- filter <=20,000.
+
+Product may match.
+
+Card must show the matched cohort (19,300), not default 27,300 and not full 19,300–27,300 range.
+
+Set:
+`all_product_variants_match_filters=false`.
+
+## 39. Specific-store stock semantics
+
+"Есть эта модель в магазине X?" is not automatically answerable for a multi-variant model.
+
+ANSWER / STORE_STOCK is allowed when:
+- an exact variant was already selected; OR
+- the resolved product has exactly one active IN_STOCK variant.
+
+Then:
+- store resolves exactly;
+- stock layer answerable;
+- return factual yes/no based on quantity > 0.
+
+If product has multiple active IN_STOCK variants and no variant selected:
+- CLARIFY / AMBIGUOUS_VARIANT if all customer-selectable candidate variants can be safely presented;
+- otherwise HUMAN / PRODUCT_VARIANT_NOT_RESOLVABLE.
+
+If clarification remains unresolved:
+HUMAN / CLARIFY_EXHAUSTED.
+
+Do not aggregate "one color exists" into "the model is in the store".
+
+Do not expose quantity.
+Do not claim "можно забрать сегодня".
+
+## 40. Neutral presentation model
+
+Business logic returns neutral `ProductPresentation`, not Chatwoot-specific cards.
+
+Initial adapters:
+- WebsiteRenderer;
+- TextRenderer.
+
+TextRenderer is implemented/tested in Slice C but not connected to Viber/Telegram production.
+
+## 41. Critical-value rendering
+
+LLM does not rewrite:
+- prices;
+- stock;
+- opening hours;
+- phones;
+- policy money/dates;
+- factual product lists.
+
+LLM may participate in intent/raw-span extraction.
+Authority comes from deterministic tools/resolvers.
+
+## 42. Mixed supported + unsupported customer turn
+
+v1 does not partially answer a mixed turn.
+
+Example:
+"Сколько стоит и совместима ли с адаптером X?"
+
+=> HUMAN / COMPATIBILITY_NOT_AUTHORITATIVE.
+
+No partial public price before handoff.
+
+## 43. Handoff v1
+
+Existing AgentBot safety foundation remains authoritative.
+
+Current reconciler rejects any later public outgoing/template after target message.
+
+Therefore v1 HUMAN path creates NO public AI handoff preface.
+
+Flow:
+1. no public AI handoff message;
+2. native pending -> open;
+3. after successful open: absolute public AI silence.
+
+If handoff fails:
+- work stays non-terminal/retryable;
+- reconciler remains fail-open path;
+- no false claim to customer.
+
+Public handoff preface is deferred until a separately designed durable exactly-once message-action protocol exists.
+
+Chatwoot message `source_id` is indexed but not unique and is not enough for that protocol.
+
+## 44. Private handoff note — Slice D only
+
+Private note is a separate capability.
+
+Expose only:
+`createHandoffNote(note)`.
+
+There is no `private` argument.
+
+Wire payload hardcodes:
+`private: true`.
+
+Note is best-effort at-most-once:
+- durable job records note attempt before network call;
+- ambiguous/failing result is not retried;
+- note failure does not block handoff.
+
+Deterministic content only:
+- intent;
+- already answered fact codes;
+- unresolved reason;
+- product_id;
+- decision_context_id;
+- used revision IDs;
+- catalog generation.
+
+No LLM conversation summary.
+
+## 45. Decision context
+
+Every AI decision receives `decision_context_id`.
+
+Canonical input includes only authority that affected the decision:
+- knowledge_resolver_contract_version;
+- intent_schema_version;
+- tool_contract_version;
+- template_id;
+- template_version;
+- used operational revision IDs;
+- used commerce revision IDs;
+- used vocabulary revision IDs;
+- catalog_generation_id;
+- used catalog layers + freshness;
+- need_reconcile / need_full;
+- normalized tool arguments;
+- resolver outcome/reason;
+- model_id only if model participated.
+
+Canonicalization:
+- IDs sorted and unique;
+- object keys stable;
+- money integer minor units;
+- enum values canonical strings.
+
+Excluded:
+- raw customer body;
+- final message text;
+- current timestamp;
+- unrelated knowledge state.
+
+source_message_ids[] live in trace metadata, not fingerprint.
+
+## 46. Trace metadata
+
+Redacted metadata only:
+- conversation_id;
+- message_id/source_message_ids;
+- decision_context_id;
+- intent;
+- decision/reason;
+- template;
+- tool/resolver versions;
+- catalog generation;
+- used revision IDs;
+- model ID if used;
+- tool calls;
+- latency;
+- handoff result.
+
+No routine raw customer message storage.
+
+## 47. Resolver versioning
+
+Introduce:
+`KNOWLEDGE_RESOLVER_CONTRACT_VERSION`.
+
+Golden decision vectors enforce semantic version discipline.
+
+If canonical observable result changes:
+- ANSWER/CLARIFY/HUMAN;
+- reason;
+- resolved canonical effect;
+
+CI requires version bump.
+
+Pure refactor with identical behavior does not.
+
+## 48. Metrics
+
+Initial:
+- containment_rate;
+- human_correction_rate;
+- post_answer_human_request_rate.
+
+human_correction_rate uses explicit employee action:
+"AI відповів неправильно"
+linked to decision_context_id.
+
+Do not infer correction from next seller message.
+
+Chatwoot First Response Time is used for human-response latency.
+No arbitrary 10-second threshold.
+
+## 49. Explicit v1 non-goals
+
+No:
+- broad site RAG;
+- description-to-fact extraction;
+- compatibility reasoning;
+- age suitability;
+- subjective recommendation;
+- margin/popularity ranker;
+- order/1C customer lookups;
+- individual return eligibility;
+- Telegram/Viber customer AI;
+- voice/Asterisk AI;
+- automatic bot re-entry after handoff;
+- raw option -> COLOR/SIZE inference;
+- public handoff preface;
+- sale/promotion interpretation;
+- general multi-variant "stock anywhere" aggregation.
+
+## 50. Slice decomposition
+
+### Slice A — Knowledge Authority
+- knowledge.sqlite;
+- canonical hashing;
+- immutable revisions;
+- validated event state machine;
+- OperationalFact/CommercePolicy/Vocabulary;
+- overlay composition/expiry;
+- strict exception scope;
+- approval/self-approval;
+- explicit supersession;
+- resolver/versioning;
+- RBAC;
+- direct ai.babypark.ua UI;
+- Cloudflare Tunnel/Access boundary;
+- durable backup/off-host/restore proof.
+
+No Chatwoot message creation.
+
+Dashboard embedding is tested but direct UI works independently.
+
+### Slice B — Catalog factual/query contracts
+- product price summary;
+- zero-price handling;
+- variant-now list;
+- variant-price list;
+- deterministic category/brand/money/store resolvers;
+- category match mode;
+- ObjectiveConstraintLatch prerequisites/data contract;
+- dedicated matched-cohort objective search;
+- store-aware query semantics;
+- neutral ProductPresentation.
+
+No customer messages.
+
+### Slice C — Website First Line
+- episode state;
+- structured extraction;
+- ObjectiveConstraintLatch;
+- clarification state;
+- ANSWER/CLARIFY/HUMAN;
+- deterministic templates;
+- WebsiteRenderer;
+- unconnected TextRenderer;
+- public messages only for ANSWER/CLARIFY;
+- HUMAN sends no AI preface;
+- native handoff;
+- decision trace.
+
+### Slice D — Private Handoff Note
+- createHandoffNote();
+- hardcoded private:true;
+- at-most-once attempt;
+- deterministic body;
+- separate message-create certification.
+
+## 51. Review status
+
+Sonnet v0.2 review: no blockers; READY TO OPEN SLICE A.
+Grok v0.2 review found three blockers, all incorporated into this v0.3:
+1. operational overlay composition + supersession boundary;
+2. formal strict scope partial order for exception_of;
+3. multi-variant specific-store stock ambiguity.
+
+Pending action: blocker-only review of v0.3.
+
+If reviewer returns zero concrete blockers, open Slice A implementation issue without reopening general market/RAG research.
