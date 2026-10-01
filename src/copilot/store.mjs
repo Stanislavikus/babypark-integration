@@ -119,7 +119,7 @@ export class CopilotStore {
       if (meta.action === 'recheck' && meta.conversationId) {
         this.db.prepare(`UPDATE jobs SET state='error',updated_at=?,error_code='control_recheck_required',
           lease_token=NULL,lease_expires_at=NULL,reconcile_token=NULL,reconcile_claim_until=NULL
-          WHERE conversation_id=? AND terminal=0`).run(at, meta.conversationId);
+          WHERE conversation_id=? AND terminal=0 AND state!='handoff_committing'`).run(at, meta.conversationId);
       }
       if (meta.action === 'enqueue') {
         const active = this.db.prepare(`SELECT id,target_message_id FROM jobs
@@ -177,11 +177,12 @@ export class CopilotStore {
     const at = this.now();
     return tx(this.db, () => {
       const row = this.db.prepare(`SELECT * FROM jobs WHERE terminal=0 AND deadline_at<=?
-        AND (state!='reconciling' OR reconcile_claim_until<=?) ORDER BY deadline_at,id LIMIT 1`).get(at, at);
+        AND (state NOT IN ('reconciling','handoff_committing') OR reconcile_claim_until<=?)
+        ORDER BY deadline_at,id LIMIT 1`).get(at, at);
       if (!row) return null;
       const changed = this.db.prepare(`UPDATE jobs SET state='reconciling',reconcile_token=?,reconcile_claim_until=?,
         lease_token=NULL,lease_expires_at=NULL,updated_at=? WHERE id=? AND terminal=0
-        AND (state!='reconciling' OR reconcile_claim_until<=?)`)
+        AND (state NOT IN ('reconciling','handoff_committing') OR reconcile_claim_until<=?)`)
         .run(token, at + claimMs, at, row.id, at).changes;
       return changed === 1 ? { ...row, reconcile_token: token } : null;
     });
@@ -198,13 +199,14 @@ export class CopilotStore {
     const at = this.now();
     return this.db.prepare(`UPDATE jobs SET state=?,terminal=1,updated_at=?,completed_at=?,gate_result=?,
       lease_token=NULL,lease_expires_at=NULL,reconcile_token=NULL,reconcile_claim_until=NULL
-      WHERE id=? AND terminal=0 AND state='reconciling' AND reconcile_token=?`)
+      WHERE id=? AND terminal=0 AND state IN ('reconciling','handoff_committing') AND reconcile_token=?`)
       .run(state, at, at, gateResult, id, token).changes === 1;
   }
 
   releaseReconcile(id, token, errorCode) {
     return this.db.prepare(`UPDATE jobs SET state='error',error_code=?,reconcile_token=NULL,reconcile_claim_until=NULL
-      WHERE id=? AND terminal=0 AND state='reconciling' AND reconcile_token=?`).run(errorCode, id, token).changes === 1;
+      WHERE id=? AND terminal=0 AND state IN ('reconciling','handoff_committing') AND reconcile_token=?`)
+      .run(errorCode, id, token).changes === 1;
   }
 
   cleanup({ terminalTtlMs = 14 * 86400_000, apply = false } = {}) {
