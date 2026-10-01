@@ -1,5 +1,3 @@
-[Reading 34 lines from start (total: 34 lines, 0 remaining)]
-
 #!/usr/bin/env node
 import fs from 'node:fs';
 import { copilotConfig } from '../src/copilot/config.mjs';
@@ -34,5 +32,3 @@ if (command === 'ingress') {
 } else {
   store.close(); throw new Error('usage: copilot-lab.mjs ingress|worker|reconcile');
 }
-
-[executed on device: chatwoot-fra1-01 (ffb62f19-a7b9-4c48-90bc-fdc677129931)]
