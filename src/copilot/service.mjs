@@ -38,7 +38,7 @@ export async function runReconcilerOnce({ store, authorityReader, agentBotAction
         gate.code === 'stale_target' ? 'superseded' : 'ignored', gate.code);
       return { action: 'not_owned', gate: gate.code };
     }
-    if (!store.confirmReconcile(work.id, work.reconcile_token, work.conversation_id, work.target_message_id)) {
+    if (!store.beginHandoff(work.id, work.reconcile_token, work.conversation_id, work.target_message_id)) {
       return { action: 'stale_claim' };
     }
     await agentBotActions.handoff(work.conversation_id);
