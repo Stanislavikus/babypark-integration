@@ -1,5 +1,3 @@
-[Reading 95 lines from start (total: 95 lines, 0 remaining)]
-
 # AgentBot safety foundation
 
 Status: MERGED-CANDIDATE / NOT DEPLOYED / LAB ONLY
@@ -95,5 +93,3 @@ dedicated non-production inbox and AgentBot. Never use Website inbox `2`.
 No deployment, production routing/attachment, SafeFetch private-network exception,
 LLM, prompt, RAG/catalog answer, Chatwoot message creation, Telegram/Viber change,
 Chatwoot upgrade, human-presence policy, or customer-facing AI is included.
-
-[executed on device: chatwoot-fra1-01 (ffb62f19-a7b9-4c48-90bc-fdc677129931)]
