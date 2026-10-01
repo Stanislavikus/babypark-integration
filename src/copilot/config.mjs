@@ -1,5 +1,3 @@
-[Reading 24 lines from start (total: 24 lines, 0 remaining)]
-
 export function copilotConfig(env = process.env) {
   const number = (name, fallback) => env[name] === undefined ? fallback : Number(env[name]);
   const cfg = {
@@ -24,5 +22,3 @@ export function copilotConfig(env = process.env) {
   if (cfg.chatwootRequestTimeoutMs * 4 >= cfg.reconcileClaimMs) throw new Error('copilot_reconcile_request_budget_invalid');
   return cfg;
 }
-
-[executed on device: chatwoot-fra1-01 (ffb62f19-a7b9-4c48-90bc-fdc677129931)]
