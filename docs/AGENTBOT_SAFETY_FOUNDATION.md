@@ -16,11 +16,16 @@ Status: MERGED-CANDIDATE / NOT DEPLOYED / LAB ONLY
   `conversation.meta.assignee.id`; `inbox` itself contains only ID/name. Conversation
   control events use their top-level conversation `id`/`inbox_id`. A benign update
   preserves work only when the payload still proves pending ownership by that bot;
-  missing/changed ownership, open, or resolved state invalidates local work.
+  missing/changed ownership, open, or resolved snapshots revoke local claims and
+  move work to non-terminal `error` for an authoritative REST recheck. A control
+  webhook snapshot never terminalizes work by itself.
 - `copilot.sqlite` stores delivery/conversation/message identifiers and redacted
   state only. A partial unique index permits one non-terminal job per conversation;
   short SQLite CAS transactions provide cross-process claims. No transaction spans
   a Chatwoot request.
+- Webhook arrival order is not message order. For an active conversation target,
+  only a strictly greater incoming message ID supersedes it; equal or lower IDs are
+  retained as `same_target`/`stale_incoming` receipts without changing any claim.
 - Immediately before action, Chatwoot is authoritative: configured inbox, pending,
   configured bot assignee, no human assignee, highest non-private incoming message
   ID, and no later public human answer are all required.

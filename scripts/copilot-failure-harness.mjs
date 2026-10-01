@@ -9,4 +9,3 @@ http.createServer(async (req, res) => {
   if (req.url === '/timeout') { await new Promise(resolve => setTimeout(resolve, Number(process.env.COPILOT_FAILURE_DELAY_MS ?? 10_000))); res.writeHead(200); return res.end('late'); }
   res.writeHead(404); res.end();
 }).listen(port, '127.0.0.1', () => process.stdout.write(`${JSON.stringify({ event: 'failure_harness_listening', port })}\n`));
-

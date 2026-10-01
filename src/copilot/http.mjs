@@ -29,4 +29,3 @@ export function createCopilotIngress({ store, config, nowMs = () => Date.now(), 
     return json(res, 200, { ok: true, duplicate: recorded.duplicate, outcome: recorded.outcome });
   });
 }
-

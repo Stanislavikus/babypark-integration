@@ -28,4 +28,3 @@ export function verifyAgentBotDelivery({ raw, headers, secret, nowMs = Date.now(
   }
   return { ok: true, deliveryId, timestamp: seconds };
 }
-

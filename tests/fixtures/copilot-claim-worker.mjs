@@ -7,4 +7,3 @@ const store = CopilotStore.open(database, { now: () => 2_000_000_000_000 });
 const claimed = store.claimNext({ leaseMs: 60_000, token });
 store.close();
 process.stdout.write(claimed ? `${claimed.id}\n` : 'none\n');
-

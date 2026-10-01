@@ -104,7 +104,7 @@ test('only target public incoming message_created enqueues; loop and event filte
   assert.equal(store.work().length, 1);
 });
 
-test('rapid incoming supersedes old/leased target and control event invalidates current work', () => {
+test('rapid incoming supersedes old target and control event schedules authoritative recheck', () => {
   let now = NOW; const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'copilot-super-'));
   const store = CopilotStore.create(path.join(dir, 'db.sqlite'), { now: () => now });
   store.recordDelivery({ deliveryId: 'one', payload: incoming(101), target, deadlineMs: 60_000 });
@@ -120,10 +120,12 @@ test('rapid incoming supersedes old/leased target and control event invalidates 
   store.recordDelivery({ deliveryId: 'control', payload: { event: 'conversation_opened', id: 55,
     account: { id: 11 }, inbox_id: 99, status: 'open',
     meta: { assignee: { id: 44, type: 'user' }, assignee_type: 'User' } }, target, deadlineMs: 60_000 });
-  assert.equal(store.work()[1].state, 'superseded'); store.close(); fs.rmSync(dir, { recursive: true });
+  assert.equal(store.work()[1].state, 'error'); assert.equal(store.work()[1].terminal, 0);
+  assert.equal(store.work()[1].error_code, 'control_recheck_required');
+  store.close(); fs.rmSync(dir, { recursive: true });
 });
 
-test('control events preserve only pending same-bot ownership and invalidate every authority loss', t => {
+test('control events preserve only pending same-bot ownership and recheck every snapshot authority loss', t => {
   const { store } = tempStore(t);
   const controls = [
     { status: 'open', assignee: { id: 7, type: 'agent_bot' }, assignee_type: 'AgentBot' },
@@ -137,8 +139,83 @@ test('control events preserve only pending same-bot ownership and invalidate eve
     store.recordDelivery({ deliveryId: `control-${index}`, payload: { event: 'conversation_status_changed',
       id: conversationId, account: { id: 11 }, inbox_id: 99, status: control.status,
       meta: { assignee: control.assignee, assignee_type: control.assignee_type } }, target, deadlineMs: 60_000 });
-    assert.equal(store.work().at(-1).state, 'superseded');
+    assert.equal(store.work().at(-1).state, 'error');
+    assert.equal(store.work().at(-1).terminal, 0);
   }
+});
+
+test('out-of-order and equal incoming deliveries never replace or revoke the highest active target', t => {
+  let now = NOW; const { store } = tempStore(t, { now: () => now });
+  store.recordDelivery({ deliveryId: 'high-queued', payload: incoming(102, 301), target, deadlineMs: 1 });
+  let result = store.recordDelivery({ deliveryId: 'low-queued', payload: incoming(101, 301), target, deadlineMs: 1 });
+  assert.equal(result.outcome, 'stale_incoming');
+  assert.equal(store.work().find(row => row.conversation_id === 301).target_message_id, 102);
+  const queued = store.claimNext({ leaseMs: 1000, token: 'worker-301' });
+  store.finishClaim(queued.id, 'worker-301', 'accepted_no_public_action');
+
+  store.recordDelivery({ deliveryId: 'high-worker', payload: incoming(102, 302), target, deadlineMs: 1 });
+  const worker = store.claimNext({ leaseMs: 999_999, token: 'worker-302' });
+  result = store.recordDelivery({ deliveryId: 'low-worker', payload: incoming(101, 302), target, deadlineMs: 1 });
+  assert.equal(result.outcome, 'stale_incoming');
+  assert.equal(store.work().find(row => row.conversation_id === 302).lease_token, 'worker-302');
+  assert.equal(store.finishClaim(worker.id, 'worker-302', 'accepted_no_public_action'), true);
+
+  store.recordDelivery({ deliveryId: 'high-reconcile', payload: incoming(102, 303), target, deadlineMs: 1 });
+  now += 2;
+  const reconcile = store.claimExpiredForReconcile({ token: 'reconcile-303' });
+  result = store.recordDelivery({ deliveryId: 'low-reconcile', payload: incoming(101, 303), target, deadlineMs: 1 });
+  assert.equal(result.outcome, 'stale_incoming');
+  assert.equal(store.work().find(row => row.conversation_id === 303).reconcile_token, 'reconcile-303');
+  assert.equal(store.confirmReconcile(reconcile.id, 'reconcile-303', 303, 102), true);
+
+  store.recordDelivery({ deliveryId: 'high-equal', payload: incoming(102, 304), target, deadlineMs: 1 });
+  const equalWorker = store.claimNext({ leaseMs: 999_999, token: 'worker-304' });
+  result = store.recordDelivery({ deliveryId: 'equal-repeat', payload: incoming(102, 304), target, deadlineMs: 1 });
+  assert.equal(result.outcome, 'same_target');
+  const equal = store.work().find(row => row.conversation_id === 304);
+  assert.equal(equal.id, equalWorker.id); assert.equal(equal.lease_token, 'worker-304');
+  assert.equal(store.deliveries().find(row => row.delivery_id === 'equal-repeat').outcome, 'same_target');
+});
+
+test('control recheck revokes claims, recovers current bot ownership, and safely terminalizes takeover', async t => {
+  const control = conversationId => ({ event: 'conversation_opened', id: conversationId,
+    account: { id: 11 }, inbox_id: 99, status: 'open',
+    meta: { assignee: { id: 44, type: 'user' }, assignee_type: 'User' } });
+  const { store } = tempStore(t);
+  store.recordDelivery({ deliveryId: 'recover', payload: incoming(101, 401), target, deadlineMs: 60_000 });
+  const oldWorker = store.claimNext({ leaseMs: 999_999, token: 'old-worker' });
+  store.recordDelivery({ deliveryId: 'recover-control', payload: control(401), target, deadlineMs: 60_000 });
+  let row = store.work().find(item => item.conversation_id === 401);
+  assert.equal(row.terminal, 0); assert.equal(row.state, 'error'); assert.equal(row.lease_token, null);
+  assert.equal(store.finishClaim(oldWorker.id, 'old-worker', 'accepted_no_public_action'), false);
+  let result = await runWorkerOnce({ store, authorityReader: { readConversation: async () => owned() },
+    config: { ...target, leaseMs: 1000 } });
+  assert.equal(result.action, 'accepted_no_public_action');
+
+  store.recordDelivery({ deliveryId: 'takeover', payload: incoming(101, 402), target, deadlineMs: 60_000 });
+  store.recordDelivery({ deliveryId: 'takeover-control', payload: control(402), target, deadlineMs: 60_000 });
+  const human = owned(); human.conversation.status = 'open'; human.conversation.agentBotId = null;
+  human.conversation.humanAssigneeId = 44;
+  result = await runWorkerOnce({ store, authorityReader: { readConversation: async () => human },
+    config: { ...target, leaseMs: 1000 } });
+  assert.equal(result.action, 'ignored');
+  row = store.work().find(item => item.conversation_id === 402);
+  assert.equal(row.terminal, 1); assert.equal(row.state, 'ignored');
+});
+
+test('control event revokes reconcile ownership and prevents stale handoff', async t => {
+  let now = NOW; const { store } = tempStore(t, { now: () => now });
+  store.recordDelivery({ deliveryId: 'target', payload: incoming(), target, deadlineMs: 1 }); now += 2;
+  let handoffs = 0;
+  const result = await runReconcilerOnce({ store, authorityReader: { readConversation: async () => {
+    store.recordDelivery({ deliveryId: 'control-during-reconcile', payload: { event: 'conversation_opened', id: 55,
+      account: { id: 11 }, inbox_id: 99, status: 'open',
+      meta: { assignee: { id: 44, type: 'user' }, assignee_type: 'User' } }, target, deadlineMs: 1 });
+    return owned();
+  } }, agentBotActions: { handoff: async () => { handoffs++; } }, config: target });
+  assert.equal(result.action, 'stale_claim'); assert.equal(handoffs, 0);
+  const row = store.work()[0]; assert.equal(row.terminal, 0); assert.equal(row.state, 'error');
+  assert.equal(row.reconcile_token, null); assert.equal(row.reconcile_claim_until, null);
 });
 
 test('durable ID-only state, terminal/supersede truth and leases survive reopen', t => {

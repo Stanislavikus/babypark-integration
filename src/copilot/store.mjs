@@ -65,8 +65,8 @@ export function classifyDelivery(payload, target) {
     if (!control) return { ...m, action: 'ignore', outcome: 'filtered_event' };
     const ownershipPreserved = payload.status === 'pending' &&
       m.assigneeType === 'AgentBot' && m.assigneeId === target.botId;
-    return { ...m, action: ownershipPreserved ? 'ignore' : 'invalidate',
-      outcome: ownershipPreserved ? 'control_preserved' : 'control_invalidated' };
+    return { ...m, action: ownershipPreserved ? 'ignore' : 'recheck',
+      outcome: ownershipPreserved ? 'control_preserved' : 'control_recheck_required' };
   }
   const messageType = payload.message_type ?? payload.message?.message_type;
   const privateMessage = (payload.private ?? payload.message?.private) === true;
@@ -115,20 +115,32 @@ export class CopilotStore {
         VALUES (?,?,?,?,?,?,?,?)`).run(deliveryId, meta.event, meta.accountId, meta.inboxId,
         meta.conversationId, meta.messageId, at, meta.outcome);
       if (inserted.changes === 0) return { duplicate: true, outcome: 'duplicate' };
-      if (meta.action === 'invalidate' && meta.conversationId) {
-        this.db.prepare(`UPDATE jobs SET state='superseded',terminal=1,updated_at=?,completed_at=?,
+      let outcome = meta.outcome;
+      if (meta.action === 'recheck' && meta.conversationId) {
+        this.db.prepare(`UPDATE jobs SET state='error',updated_at=?,error_code='control_recheck_required',
           lease_token=NULL,lease_expires_at=NULL,reconcile_token=NULL,reconcile_claim_until=NULL
-          WHERE conversation_id=? AND terminal=0`).run(at, at, meta.conversationId);
+          WHERE conversation_id=? AND terminal=0`).run(at, meta.conversationId);
       }
       if (meta.action === 'enqueue') {
-        this.db.prepare(`UPDATE jobs SET state='superseded',terminal=1,updated_at=?,completed_at=?,
-          lease_token=NULL,lease_expires_at=NULL,reconcile_token=NULL,reconcile_claim_until=NULL
-          WHERE conversation_id=? AND terminal=0`).run(at, at, meta.conversationId);
-        this.db.prepare(`INSERT INTO jobs
-          (conversation_id,target_message_id,delivery_id,state,accepted_at,updated_at,deadline_at)
-          VALUES (?,?,?,'queued',?,?,?)`).run(meta.conversationId, meta.messageId, deliveryId, at, at, at + deadlineMs);
+        const active = this.db.prepare(`SELECT id,target_message_id FROM jobs
+          WHERE conversation_id=? AND terminal=0`).get(meta.conversationId);
+        if (!active || meta.messageId > active.target_message_id) {
+          if (active) {
+            this.db.prepare(`UPDATE jobs SET state='superseded',terminal=1,updated_at=?,completed_at=?,
+              lease_token=NULL,lease_expires_at=NULL,reconcile_token=NULL,reconcile_claim_until=NULL
+              WHERE id=? AND terminal=0`).run(at, at, active.id);
+          }
+          this.db.prepare(`INSERT INTO jobs
+            (conversation_id,target_message_id,delivery_id,state,accepted_at,updated_at,deadline_at)
+            VALUES (?,?,?,'queued',?,?,?)`).run(meta.conversationId, meta.messageId, deliveryId, at, at, at + deadlineMs);
+        } else {
+          outcome = meta.messageId === active.target_message_id ? 'same_target' : 'stale_incoming';
+        }
       }
-      return { duplicate: false, outcome: meta.outcome };
+      if (outcome !== meta.outcome) {
+        this.db.prepare('UPDATE deliveries SET outcome=? WHERE delivery_id=?').run(outcome, deliveryId);
+      }
+      return { duplicate: false, outcome };
     });
   }
 
