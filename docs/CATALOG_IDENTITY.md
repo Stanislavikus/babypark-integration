@@ -7,8 +7,8 @@ Source of truth: src/catalog/domain/sku.mjs, src/catalog/identity/
 
 ## Purpose
 
-The identity registry preserves BabyPark-owned product and variant identity
-across catalog rebuilds and provider cutovers.
+The identity registry preserves BabyPark-owned product, variant and physical-store
+identity across catalog rebuilds and provider cutovers.
 
 It is deliberately separate from rebuildable catalog generations.
 
@@ -72,10 +72,23 @@ Default generated shapes:
 
     prod_<uuid>
     var_<uuid>
+    store_<uuid>
 
 Provider IDs stay in:
 - source_products(provider, native_product_id, product_id)
 - source_variants(provider, native_variant_id, variant_id)
+- source_stores(provider, native_store_id, store_id)
+
+Physical-store identity follows the same rule as product identity: provider-native
+location IDs are xrefs only. A reviewed Drupal store/location ID and a future
+Magento MSI source_code may point to the same BabyPark store_id. Names, addresses
+and approximate similarity are never automatic mapping authority.
+
+New source-store mappings require reviewed_source provenance. An existing
+provider/native store xref cannot be rebound. Tombstoned store IDs cannot be
+reactivated or reused. Slice A v1 additionally permits at most one Magento
+source_code for one canonical physical store; ambiguous multi-source topology
+fails closed until a separately reviewed contract exists.
 
 A provider-native ID cannot silently move to a different canonical identity.
 
@@ -150,8 +163,31 @@ The parent directory must already exist.
 Bootstrap:
 - fails if the file already exists;
 - creates mode 0600;
-- initializes schema version 1;
+- initializes the current schema version (v2 in the Slice A implementation);
 - returns revision 0.
+
+Existing schema-v1 production state is never upgraded by openExisting().
+Migration is a separate owner/operator action:
+
+```bash
+npm run identity:migrate -- \
+  --path=/absolute/path/identity.sqlite \
+  --apply
+```
+
+The v1 -> v2 migration is additive: it preserves product/variant/config rows,
+adds stores/source_stores, and leaves identity_meta.revision unchanged because
+an empty schema capability is not an identity mapping. It is idempotent once v2
+is reached.
+
+Before any production migration:
+- take and verify recovery coverage for the current identity.sqlite;
+- stop/fence writers that could mutate IdentityStore during the migration;
+- run the explicit migration;
+- validate status/integrity and the expected empty/bootstrapped store mappings;
+- create fresh verified recovery coverage before enabling a release that requires v2.
+
+No runtime process is allowed to silently migrate durable authority state.
 
 Read status:
 
@@ -169,13 +205,30 @@ Revision increments for:
 - new provider product xref;
 - new canonical variant;
 - new provider variant xref;
+- new canonical physical store;
+- new reviewed provider store xref;
+- physical-store tombstone transition;
 - reviewed SKU alias;
 - reviewed SKU rename;
-- tombstone transition;
+- product/variant tombstone transition;
 - reviewed config hash change.
 
-A repeated observation of the same provider-native mapping updates last_seen_at
-but does not increment canonical revision.
+A repeated observation of the same provider-native product/variant/store mapping
+updates last_seen_at but does not increment canonical revision.
+
+Reviewed physical-store binding is explicit:
+
+```bash
+npm run identity:store-bind -- \
+  --path=/absolute/path/identity.sqlite \
+  --provider=drupal \
+  --native-store-id=<provider-id> \
+  --reviewed-source=<review-or-ticket> \
+  --apply
+```
+
+To bind a second provider to an already reviewed physical store, pass its
+canonical --store-id. There is no fuzzy name/address fallback.
 
 ## SKU rename and aliases
 
@@ -253,6 +306,12 @@ recovery discipline.
 
 Automated tests cover:
 - explicit bootstrap only;
+- explicit additive v1 -> v2 migration with legacy-row preservation;
+- reviewed canonical store creation and cross-provider continuity;
+- provider/native store reassociation rejection;
+- Magento one-source-per-physical-store v1 constraint;
+- store tombstone non-reactivation;
+- idempotent store observation without identity revision churn;
 - missing/corrupt/unsafe/future-schema fail-closed;
 - persistent stable IDs across reopen;
 - cross-provider xrefs;

@@ -6,12 +6,14 @@ import path from 'node:path';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
 import { IdentityStore } from '../../src/catalog/identity/store.mjs';
+import { identitySchemaSqlV1 } from '../../src/catalog/identity/schema.mjs';
 
 function fixture() {
   const dir = mkdtempSync(path.join(os.tmpdir(), 'bp-identity-'));
   const dbPath = path.join(dir, 'identity.sqlite');
   let productSeq = 0;
   let variantSeq = 0;
+  let storeSeq = 0;
   let clock = 0;
 
   return {
@@ -30,6 +32,10 @@ function fixture() {
         variant() {
           variantSeq += 1;
           return `var_test_${variantSeq}`;
+        },
+        store() {
+          storeSeq += 1;
+          return `store_test_${storeSeq}`;
         },
       },
     },
@@ -60,7 +66,7 @@ test('identity bootstrap is explicit, mode 0600 and cannot overwrite', t => {
 
   const store = IdentityStore.createNew(f.dbPath, f.options);
   assert.deepEqual(store.metadata(), {
-    schema_version: 1,
+    schema_version: 2,
     revision: 0,
     created_at: '2026-09-24T00:00:01.000Z',
     updated_at: '2026-09-24T00:00:01.000Z',
@@ -623,4 +629,244 @@ test('read-only identity store rejects mutations with stable error', t => {
   );
   assert.equal(readOnly.metadata().revision, 0);
   readOnly.close();
+});
+
+
+test('schema v1 requires explicit additive migration to v2', t => {
+  const f = fixture();
+  t.after(() => f.cleanup());
+
+  const legacy = new DatabaseSync(f.dbPath);
+  legacy.exec(identitySchemaSqlV1('2026-09-23T00:00:00.000Z'));
+  legacy.prepare(`
+    INSERT INTO products(product_id,lifecycle,created_at,updated_at)
+    VALUES(?, 'active', ?, ?)
+  `).run(
+    'prod_legacy',
+    '2026-09-23T00:00:01.000Z',
+    '2026-09-23T00:00:01.000Z'
+  );
+  legacy.close();
+  fs.chmodSync(f.dbPath, 0o600);
+
+  assert.throws(
+    () => IdentityStore.openExisting(f.dbPath, f.options),
+    identityCode('IDENTITY_SCHEMA_MISMATCH')
+  );
+
+  let store = IdentityStore.migrateExisting(f.dbPath, f.options);
+  assert.equal(store.metadata().schema_version, 2);
+  assert.equal(store.metadata().revision, 0);
+  assert.equal(store.getProduct('prod_legacy').lifecycle, 'active');
+  assert.equal(store.stats().stores, 0);
+  store.close();
+
+  store = IdentityStore.migrateExisting(f.dbPath, f.options);
+  assert.equal(store.metadata().schema_version, 2);
+  assert.equal(store.getProduct('prod_legacy').product_id, 'prod_legacy');
+  store.close();
+});
+
+test('canonical store identity survives provider cutover without changing store_id', t => {
+  const f = fixture();
+  t.after(() => f.cleanup());
+  const store = IdentityStore.createNew(f.dbPath, f.options);
+
+  const drupal = store.ensureStore({
+    provider: 'drupal',
+    nativeStoreId: 'tid:7',
+    reviewedSource: 'review:store-bootstrap-1',
+  });
+  assert.equal(drupal.store_id, 'store_test_1');
+  assert.equal(drupal.created, true);
+  assert.equal(drupal.revision, 1);
+
+  const magento = store.ensureStore({
+    provider: 'magento',
+    nativeStoreId: 'kyiv_pickup',
+    storeId: drupal.store_id,
+    reviewedSource: 'review:magento-cutover-1',
+  });
+  assert.equal(magento.store_id, drupal.store_id);
+  assert.equal(magento.created, false);
+  assert.equal(magento.xref_created, true);
+  assert.equal(magento.revision, 2);
+
+  assert.equal(
+    store.lookupStoreBySource({
+      provider: 'drupal',
+      nativeStoreId: 'tid:7',
+    }).store_id,
+    drupal.store_id
+  );
+  assert.equal(
+    store.lookupStoreBySource({
+      provider: 'magento',
+      nativeStoreId: 'kyiv_pickup',
+    }).store_id,
+    drupal.store_id
+  );
+  assert.equal(store.stats().stores, 1);
+  assert.equal(store.stats().source_stores, 2);
+  store.close();
+});
+
+test('store xref reassociation is rejected atomically', t => {
+  const f = fixture();
+  t.after(() => f.cleanup());
+  const store = IdentityStore.createNew(f.dbPath, f.options);
+
+  const first = store.ensureStore({
+    provider: 'drupal',
+    nativeStoreId: 'tid:7',
+    reviewedSource: 'review:first',
+  });
+  const second = store.ensureStore({
+    provider: 'drupal',
+    nativeStoreId: 'tid:8',
+    reviewedSource: 'review:second',
+  });
+  const before = store.metadata().revision;
+
+  assert.throws(
+    () => store.ensureStore({
+      provider: 'drupal',
+      nativeStoreId: 'tid:7',
+      storeId: second.store_id,
+      reviewedSource: 'review:bad-rebind',
+    }),
+    identityCode('IDENTITY_STORE_XREF_CONFLICT')
+  );
+  assert.equal(store.metadata().revision, before);
+  assert.equal(
+    store.lookupStoreBySource({
+      provider: 'drupal',
+      nativeStoreId: 'tid:7',
+    }).store_id,
+    first.store_id
+  );
+  store.close();
+});
+
+test('new canonical store xref requires explicit review provenance', t => {
+  const f = fixture();
+  t.after(() => f.cleanup());
+  const store = IdentityStore.createNew(f.dbPath, f.options);
+
+  assert.throws(
+    () => store.ensureStore({
+      provider: 'drupal',
+      nativeStoreId: 'tid:7',
+    }),
+    identityCode('IDENTITY_INVALID_ARGUMENT')
+  );
+  assert.equal(store.stats().stores, 0);
+  assert.equal(store.stats().source_stores, 0);
+  assert.equal(store.metadata().revision, 0);
+  store.close();
+});
+
+test('tombstoned canonical store cannot reactivate through any provider xref', t => {
+  const f = fixture();
+  t.after(() => f.cleanup());
+  const store = IdentityStore.createNew(f.dbPath, f.options);
+
+  const current = store.ensureStore({
+    provider: 'drupal',
+    nativeStoreId: 'tid:7',
+    reviewedSource: 'review:bootstrap',
+  });
+  store.tombstoneStore(current.store_id);
+  const before = store.metadata().revision;
+
+  assert.throws(
+    () => store.ensureStore({
+      provider: 'drupal',
+      nativeStoreId: 'tid:7',
+    }),
+    identityCode('IDENTITY_STORE_TOMBSTONED')
+  );
+  assert.throws(
+    () => store.ensureStore({
+      provider: 'magento',
+      nativeStoreId: 'kyiv_pickup',
+      storeId: current.store_id,
+      reviewedSource: 'review:bad-reactivation',
+    }),
+    identityCode('IDENTITY_STORE_TOMBSTONED')
+  );
+  assert.equal(store.metadata().revision, before);
+  assert.equal(store.getStore(current.store_id).lifecycle, 'tombstoned');
+  store.close();
+});
+
+test('v1 Magento store mapping rejects two source codes for one physical store', t => {
+  const f = fixture();
+  t.after(() => f.cleanup());
+  const store = IdentityStore.createNew(f.dbPath, f.options);
+
+  const physical = store.ensureStore({
+    provider: 'drupal',
+    nativeStoreId: 'tid:7',
+    reviewedSource: 'review:bootstrap',
+  });
+  store.ensureStore({
+    provider: 'magento',
+    nativeStoreId: 'source_a',
+    storeId: physical.store_id,
+    reviewedSource: 'review:cutover-a',
+  });
+  const before = store.metadata().revision;
+
+  assert.throws(
+    () => store.ensureStore({
+      provider: 'magento',
+      nativeStoreId: 'source_b',
+      storeId: physical.store_id,
+      reviewedSource: 'review:cutover-b',
+    }),
+    identityCode('IDENTITY_MAGENTO_STORE_XREF_CONFLICT')
+  );
+  assert.equal(store.metadata().revision, before);
+  assert.equal(
+    store.lookupStoreBySource({
+      provider: 'magento',
+      nativeStoreId: 'source_b',
+    }),
+    undefined
+  );
+  store.close();
+});
+
+test('idempotent store observation updates last_seen without identity revision', t => {
+  const f = fixture();
+  t.after(() => f.cleanup());
+  const store = IdentityStore.createNew(f.dbPath, f.options);
+
+  const physical = store.ensureStore({
+    provider: 'drupal',
+    nativeStoreId: 'tid:7',
+    reviewedSource: 'review:bootstrap',
+  });
+  const before = store.metadata().revision;
+  const seenBefore = store.lookupStoreBySource({
+    provider: 'drupal',
+    nativeStoreId: 'tid:7',
+  }).last_seen_at;
+
+  const repeat = store.ensureStore({
+    provider: 'drupal',
+    nativeStoreId: 'tid:7',
+  });
+  assert.equal(repeat.store_id, physical.store_id);
+  assert.equal(repeat.xref_created, false);
+  assert.equal(store.metadata().revision, before);
+  assert.notEqual(
+    store.lookupStoreBySource({
+      provider: 'drupal',
+      nativeStoreId: 'tid:7',
+    }).last_seeen_at,
+    seenBefore
+  );
+  store.close();
 });

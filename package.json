@@ -26,6 +26,8 @@
     "copilot:lab": "node scripts/copilot-lab.mjs",
     "copilot:probe": "node scripts/copilot-delivery-probe.mjs",
     "copilot:failure-harness": "node scripts/copilot-failure-harness.mjs",
-    "storage:validate": "node scripts/validate-storage-policy.mjs"
+    "storage:validate": "node scripts/validate-storage-policy.mjs",
+    "identity:migrate": "node scripts/identity-migrate.mjs",
+    "identity:store-bind": "node scripts/identity-store-bind.mjs"
   }
 }
