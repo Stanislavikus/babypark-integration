@@ -238,6 +238,75 @@ npm run identity:store-bind -- \
 To bind a second provider to an already reviewed physical store, pass its
 canonical --store-id. There is no fuzzy name/address fallback.
 
+## Catalog physical-store boundary
+
+Slice A A2 changes production mapping semantics for physical stores only.
+
+Brand/category/attribute dimensions may still use deterministic provider-derived
+dimension IDs. Physical stores may not.
+
+The production FULL mapper now resolves every source `native_store_id` through
+the reviewed IdentityStore xref:
+
+```
+(provider, native_store_id)
+  -> source_stores
+  -> canonical store_id
+  -> catalog stores/store_stock
+```
+
+The mapper:
+- never creates a store xref;
+- never hashes a provider-native store ID into a catalog store ID;
+- rejects an unmapped provider-native store;
+- rejects a mapping to a tombstoned canonical store;
+- writes both `stores.store_id` and `store_stock.store_id` using canonical IDs.
+
+The production dependency fingerprint also binds a deterministic store-identity
+state hash over:
+- canonical `store_id + lifecycle`;
+- `provider + native_store_id + store_id + reviewed_source`.
+
+Observation timestamps such as `last_seen_at` are deliberately excluded.
+Product/variant identity changes are deliberately excluded from this store-state
+hash because normal FULL ingest may create those identities.
+
+The store-state hash is fixed when seq0 creates/opens the target generation.
+Any reviewed store mapping addition, remap-relevant topology change or store
+tombstone after seq0 changes the dependency fingerprint and fences that FULL with
+`FULL_DEPENDENCY_MISMATCH` before a later mapper invocation.
+
+Link A independently repeats the same authority check from the frozen source
+records and the read-only IdentityStore. A missing reviewed xref therefore cannot
+be hidden by a catalog row that merely looks structurally valid.
+
+### Production cutover gate
+
+The current production generation predates this canonical-store boundary and must
+not be described as migrated merely because repository code has changed.
+
+Before deploying a mapper-v3 release that can accept a new FULL:
+
+1. verify current recovery coverage;
+2. fence IdentityStore/catalog writers;
+3. explicitly migrate production `identity.sqlite` v1 -> v2;
+4. enumerate current Drupal physical store native IDs from frozen/current source evidence;
+5. review and bind every applicable Drupal store to a canonical BabyPark `store_id`;
+6. verify mappings and take fresh recovery coverage;
+7. deploy code requiring IdentityStore v2 / mapper v3;
+8. run a complete FULL so the new generation contains canonical store IDs;
+9. require independent Link A PASS against the exact frozen spool and exact
+   IdentityStore revision;
+10. verify CatalogService store/stock responses expose only canonical `store_id`;
+11. take fresh post-FULL recovery coverage before store-scoped Knowledge may be
+    declared CURRENT.
+
+If any source store used by the FULL is unmapped or tombstoned, ingest fails closed
+before the affected source record is committed. The authenticated ingest surface
+returns a sanitized `409 STORE_IDENTITY_UNRESOLVED` with `action=operator`;
+provider/native identifiers remain in internal diagnostics rather than the public
+error body.
+
 ## SKU rename and aliases
 
 A normal ensureVariant call cannot change the SKU identity of an existing

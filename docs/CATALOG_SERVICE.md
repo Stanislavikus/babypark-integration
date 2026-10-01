@@ -1,9 +1,14 @@
 # Catalog Service
 
-Status: CURRENT (code and production canonical data)
+Status: CURRENT production read contract; Slice A canonical-store cutover NOT DEPLOYED
 Last verified: 2026-10-01
 Owner: BabyPark
 Source of truth: src/catalog/service/
+
+The current production generation was accepted before Slice A A2 and therefore
+still reflects the pre-cutover store-identity boundary. Repository A2 code changes
+the next accepted FULL to canonical BabyPark physical `store_id`; merge alone does
+not migrate production data.
 
 ## Purpose
 
@@ -151,7 +156,10 @@ getStoreStock:
 - resolves by stable variant_id or canonical SKU;
 - hides inactive stores by default;
 - can explicitly include inactive stores for diagnostics/admin use;
-- never invents stock for KIT products.
+- never invents stock for KIT products;
+- after the Slice A A2 production cutover, accepts/returns BabyPark canonical
+  physical `store_id` only; provider-native Drupal/Magento IDs are adapter/xref
+  inputs and never CatalogService authority IDs.
 
 ## Product DTO
 

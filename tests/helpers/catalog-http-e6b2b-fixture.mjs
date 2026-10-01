@@ -11,7 +11,7 @@ import { CatalogPublicationLock } from '../../src/catalog/sqlite/publication-loc
 import { createCatalogHttpRuntime } from '../../src/catalog/http/app.mjs';
 import { createRecoveryGate } from '../../src/catalog/http/recovery-gate.mjs';
 import { backupCatalog, bootstrapCatalogRecovery } from '../../src/catalog/recovery/operations.mjs';
-import { phase0Records, phase1Records, phase2Records } from './catalog-e6a1-fixture.mjs';
+import { phase0Records, phase1Records, phase2Records, seedFixtureStoreIdentity } from './catalog-e6a1-fixture.mjs';
 import { seedD2bConfig, TEST_PUBLICATION_AUTHORITY } from './catalog-d2b-fixture.mjs';
 
 export const secret1 = 'e6b2b-test-secret-one-at-least-32-chars';
@@ -38,6 +38,7 @@ export function createHttpE6b2Fixture({
   bootstrapCatalogRecovery(paths);
   const identity = IdentityStore.openExisting(paths.identityPath);
   seedD2bConfig(identity);
+  seedFixtureStoreIdentity(identity);
   if (withCoveringSet) backupCatalog(paths);
   const store = ReplayStore.openExisting(paths.replayPath, {
     catalogStorageDir: paths.catalogStorageDir,
