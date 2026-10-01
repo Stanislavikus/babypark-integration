@@ -1,7 +1,7 @@
 # Catalog Service
 
 Status: CURRENT (code and production canonical data)
-Last verified: 2026-09-30
+Last verified: 2026-10-01
 Owner: BabyPark
 Source of truth: src/catalog/service/
 
@@ -230,13 +230,20 @@ Synthetic tests cover:
 - lookupSku FOUND/NOT_FOUND;
 - invalid availability/price ranges.
 
-## Next boundary
+## Provider boundary and source cutover
 
-Phase E ingest will be responsible for populating this schema safely.
-
-CatalogService does not know whether canonical rows originated from:
+Production ingest now populates this schema through an accepted canonical generation.
+CatalogService still does not know whether canonical rows originated from:
 - Drupal;
 - Magento;
-- future SaaS source.
+- a future first-party/source platform.
 
 That provider boundary remains outside this service.
+
+A source change must not require a CatalogService product/read-contract redesign.
+Provider-specific admission, evidence and translation into the canonical contract belong
+on the source-ingestion side. A transition to a different accepted `source_epoch` is a
+separately reviewed controlled migration, not a CatalogService setting or hot switch.
+
+CatalogService must continue to expose only canonical IDs and provider-neutral facts
+before, during and after such a cutover.
