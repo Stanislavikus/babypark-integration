@@ -1,7 +1,7 @@
 # Catalog Identity Registry
 
-Status: CURRENT (code) / NOT DEPLOYED (production data)
-Last verified: 2026-09-28
+Status: CURRENT (code and production durable identity state)
+Last verified: 2026-10-01
 Owner: BabyPark
 Source of truth: src/catalog/domain/sku.mjs, src/catalog/identity/
 
@@ -34,9 +34,11 @@ Rebuildable database:
 
     catalog.<generation_id>.sqlite
 
-Production `identity.sqlite` exists on the CatalogService host and is covered by
-the current recovery set. Its identity revision remains 0 because no Drupal FULL
-has been accepted yet.
+Production `identity.sqlite` exists on the CatalogService host. The accepted first
+production FULL advanced the published/live identity revision to `65504`. The current
+covering local recovery set is
+`set-20260930T181032Z-d5f1cd5906a4a838`, with the accepted off-host encrypted
+recovery/restore evidence recorded in `docs/CURRENT_STATE.md`.
 
 ## SKU contract
 
@@ -91,6 +93,30 @@ Current v1 limitations are deliberate:
   this store cannot represent.
 
 See `docs/PRODUCT_IDENTITY_RESOLUTION_V1.md` for the reviewed-resolution boundary.
+
+## Source-provider cutover and identity continuity
+
+The existing source xref schema is already provider-keyed and can represent more than one
+provider identity pointing at one BabyPark canonical product when the new source side is
+still unbound. That representational capability is not permission to infer continuity.
+
+A new source/provider may bind to an existing canonical product or variant only through
+explicit reviewed authority. SKU/article equality, labels, approximate similarity or an
+LLM decision are evidence at most; none is durable identity authority.
+
+The current `ensureProduct({ provider, nativeProductId, productId })` API is therefore a
+low-level primitive, not a source-cutover policy. The reviewed-resolution application
+layer described in `docs/PRODUCT_IDENTITY_RESOLUTION_V1.md` must supply the missing
+evidence binding, provenance, transport/mapper contract and recovery coverage before that
+primitive can be used for controlled cross-provider continuity in production.
+
+Changing `source_epoch` does not itself create, merge, rebind or authorize identity
+mappings. Every source cutover remains a separately reviewed migration with an explicit
+identity-continuity plan.
+
+The residual production incident `80401mc02` remains quarantined and is a separate
+present-day driver for the future resolution-application layer; it is not dependent on a
+future provider cutover.
 
 ## Fail-closed behavior
 
@@ -208,18 +234,20 @@ Unknown collision:
 Future provider-independent anomaly behavior is specified in
 `docs/CATALOG_IDENTITY_ANOMALY_MANAGEMENT.md`.
 
-## Backup requirement before production use
+## Backup and recovery requirement
 
-identity.sqlite is durable state.
+`identity.sqlite` is durable state.
 
-Before any production ingest is allowed to mutate it, operations must provide:
-- verified local backup after every identity-mutating accepted run;
-- encrypted off-host copy;
-- backup age monitoring;
-- restore drill;
-- reconciliation check against active catalog references.
+Every production identity-mutating accepted run requires:
+- verified local recovery coverage after the mutation;
+- encrypted off-host copy according to the accepted recovery procedure;
+- backup-age/coverage monitoring;
+- restore proof;
+- reconciliation against the accepted catalog authority.
 
-Phase D1 intentionally does not enable production identity ingestion.
+The first production FULL satisfied the local/off-host/restore acceptance tail recorded
+in `docs/CURRENT_STATE.md`. Future identity mutations must preserve the same fail-closed
+recovery discipline.
 
 ## Phase D1 test coverage
 
