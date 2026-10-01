@@ -1,7 +1,7 @@
 # SYSTEM_MAP
 
 Status: CURRENT + PLANNED
-Last verified: 2026-09-27
+Last verified: 2026-10-01
 Owner: BabyPark
 
 ## Current
@@ -35,7 +35,52 @@ Seller outgoing message
       -> Chatwoot private note
 ```
 
-Future Magento replaces only the catalog source/provider side; CatalogService, AI tools and Chatwoot flow stay stable.
+If Magento later becomes the catalog source, it replaces only the source/provider side;
+CatalogService, AI tools and the Chatwoot flow remain stable. This is an allowed future
+source role, not a committed migration design or a requirement to build a Magento source
+adapter now.
+
+## Source/provider seam and controlled epoch cutover
+
+The production source profile is currently Drupal/Ubercart with source epoch
+`drupal-prod-v1`.
+
+The current production admission code intentionally supports the exact reviewed Drupal
+profile (`bp.drupal-exporter.spool/3`, `bp.drupal.native-identity/1` and the reviewed
+Drupal behavior-config authority). These values are **capability gates**, not free-form
+operator configuration. A future source profile requires reviewed code, tests,
+certification and deployment proving that the receiver understands that profile; changing
+an environment/config value alone must never make an unknown source profile acceptable.
+
+**Role over brand:** classify an integration by the role it plays. A commerce platform
+used as a downstream target/channel is not part of the Catalog source boundary. The same
+platform may later act as a SOURCE only through a separately reviewed source-ingestion
+profile. Provider-specific IDs, fields and business semantics must not become canonical
+Catalog semantics.
+
+A transition from one accepted `source_epoch` to another is a rare **controlled source
+cutover**, not a normal runtime/configuration operation. The current
+`INGEST_RUN_SOURCE_EPOCH_CHANGED` rejection is therefore intentional and must remain
+fail-closed until a separately reviewed cutover slice exists.
+
+Before any source-epoch cutover, that slice must define and prove at least:
+- the exact new supported source profile and source-acceptance evidence;
+- canonical identity continuity for products and variants;
+- explicit reviewed authority for every new source identity that binds to an existing
+  canonical identity;
+- recovery/rollback behavior and acceptance/certification gates;
+- explicit BabyPark owner authorization for the cutover.
+
+Matching SKU/article, labels or model inference alone never authorizes cross-provider
+identity continuity. `IdentityStore.ensureProduct(..., productId)` is only a low-level
+binding primitive; reviewed resolution/application authority is defined by
+`docs/PRODUCT_IDENTITY_RESOLUTION_V1.md` and its still-unimplemented application
+prerequisites.
+
+The current quarantined `80401mc02` incident is an independent, already-real reason to
+eventually implement that reviewed identity-resolution application layer. It must not be
+used as justification to weaken source-epoch protection or to invent a future provider
+contract prematurely.
 
 ## Future research gate — Product Presentation Projection
 
