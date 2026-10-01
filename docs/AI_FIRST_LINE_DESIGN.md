@@ -1,13 +1,17 @@
-# BabyPark AI First Line — Frozen Design v0.4
+# BabyPark AI First Line — Frozen Design v0.5
 
-Status: DESIGN REVIEW — blocker-only review pending
-Implementation: NOT AUTHORIZED
+Status: FROZEN — blocker review complete
+Implementation: Slice A authorized via #53
 Repository baseline: main `e4b3989f852d5de4a868a6f72867b87cb64f8b2d`
 Chatwoot runtime verified: v4.18.0, `9f920b549c14491a4e587687a3eed5d21c6ccc7d`
 
-This document is the repository source of truth for the first customer-facing BabyPark AI design.
-It consolidates the research and review rounds that followed AgentBot safety foundation #49 and race fix #51/#52.
-Do not reconstruct this design from chat history.
+This document is the single normative repository source of truth for the first
+customer-facing BabyPark AI design. It incorporates the complete v0.5 design
+delta; no separate delta document is required to interpret it.
+
+It consolidates the research and review rounds that followed AgentBot safety
+foundation #49 and race fix #51/#52. Do not reconstruct this design from chat
+history.
 
 ## 1. Product objective
 
@@ -73,6 +77,100 @@ It is separate from `copilot.sqlite`.
 
 `copilot.sqlite` remains execution/idempotency state.
 Knowledge publication history is not disposable/rebuildable execution state.
+
+### 3.1 Canonical physical-store identity
+
+Before store-scoped OperationalFacts become production authority, BabyPark must
+have provider-neutral stable store identities.
+
+Extend the existing IdentityStore with canonical physical stores and provider
+xrefs:
+
+```
+stores {
+  store_id
+  lifecycle
+  created_at
+  updated_at
+}
+
+source_stores {
+  provider
+  native_store_id
+  store_id
+  reviewed_source
+  first_seen_at
+  last_seen_at
+}
+```
+
+Frozen invariants:
+- `store_id` is BabyPark canonical identity.
+- Provider-native IDs are xrefs, never customer-facing authority IDs.
+- Current Drupal store/location identifiers map to canonical `store_id`.
+- Future Magento MSI `source_code` maps to the same canonical `store_id`.
+- Future 1C/SaaS warehouse/store identifiers may map to the same canonical `store_id`.
+- Mapping is reviewed/deterministic; no fuzzy automatic matching by name/address.
+- One provider-native source maps to exactly one canonical store.
+- v1 requires one active physical Magento source per canonical physical store;
+  ambiguous active many-to-one/one-to-many topology fails cutover preflight.
+- Durable xref history may retain reviewed historical provider IDs; preflight
+  determines which provider locations are active.
+- Retired stores are tombstoned; stable IDs are never reused.
+
+### 3.2 Field-level source-of-truth matrix
+
+Similar-looking data in different systems must not compete.
+
+| Fact family | AI authority | Rule |
+|---|---|---|
+| Canonical physical-store identity | BabyPark IdentityStore | Stable across Drupal/Magento/provider cutover |
+| Physical-store weekly hours | BabyPark Knowledge | Reviewed baseline |
+| Physical-store special hours / closure / temporary status | BabyPark Knowledge | Typed temporal overlays |
+| Physical-store customer address / phone | BabyPark Knowledge | Reviewed store facts; commerce systems may receive projections |
+| Product price / commercial availability | CatalogService | Accepted provider-neutral catalog |
+| Physical per-store stock | CatalogService | Always keyed by canonical `store_id` |
+| Website-chat support hours | Chatwoot inbox working-hours config | Applies to chat/support channel only |
+| Magento MSI `source_code` | Provider xref | Never canonical BabyPark identity |
+| Magento source address/phone | Projection/cross-check by default | Not AI authority unless a future explicit authority migration changes the contract |
+| Magento pickup `frontend_description` | Presentation only | Never parsed into schedule/policy authority |
+| Magento general Store Hours of Operation text | Presentation/config text only | Never physical-store schedule authority |
+
+Examples:
+- “Когда открыт магазин X?” → BabyPark Knowledge by canonical `store_id`.
+- “Когда отвечает чат?” → Chatwoot inbox working hours.
+- “Есть товар в магазине X?” → CatalogService stock by the same canonical `store_id`.
+
+No resolver may answer a physical-store-hours question from Chatwoot or Magento
+text fields.
+
+### 3.3 Magento cutover contract
+
+Magento does not redefine BabyPark stores.
+
+Before an accepted Magento-derived catalog/stock generation can replace the
+current provider:
+
+1. enumerate every Magento MSI Source used as a physical BabyPark inventory/pickup location;
+2. explicitly bind every applicable `source_code` to an existing canonical `store_id`;
+3. reject unmapped, duplicate or conflicting active bindings;
+4. emit canonical Catalog `stores.store_id` / `store_stock.store_id` using those stable IDs;
+5. keep all existing store-scoped Knowledge revisions valid unchanged;
+6. keep AI tools provider-neutral: no prompt/template/resolver branches on Drupal vs Magento.
+
+Magento provider cutover changes the adapter/xref layer, not the AI fact model.
+
+### 3.4 Magento evidence behind the boundary
+
+Adobe Commerce / Magento Inventory models physical inventory locations as MSI
+Sources. Source data includes provider `source_code`, name, address/geolocation,
+contact information, enabled state and pickup metadata. Source Items carry
+SKU/source quantity and status.
+
+The native Source/Pickup structures do not provide a typed structured weekly
+opening-hours model. Pickup `frontend_description` and general Store Hours of
+Operation are presentation/free-form text. They are deliberately not machine
+schedule authority.
 
 ## 4. Immutable revision model
 
@@ -227,7 +325,9 @@ AND
 (expires_at_utc IS NULL OR now < expires_at_utc)
 ```
 
-`expires_at_utc = NULL` means an open-ended interval and is allowed only where the publication policy permits an open-ended authority, such as reviewed baselines or long-lived CommercePolicy.
+`expires_at_utc = NULL` means an open-ended interval and is allowed only where
+the publication policy permits an open-ended authority, such as reviewed
+baselines or long-lived CommercePolicy.
 
 Direct-publish temporary overlays always require finite `expires_at_utc`.
 
@@ -247,24 +347,53 @@ No cron job is authority for expiry.
 
 It is used for:
 - interpreting weekly weekday/hour schedules;
-- converting a selected local civil date into UTC revision bounds;
+- converting selected local civil dates into UTC revision bounds;
 - evaluating "today", weekday and local clock time for store-hours answers;
 - parsing human input such as "до кінця дня".
 
-Stored revision bounds remain UTC instants.
+Stored revision bounds remain absolute UTC instants.
 
-For a civil-day `store.special_hours` or `store.temporary_closure` overlay, the revision envelope is:
+### store.special_hours civil-day invariant
+
+`store.special_hours` is a daily schedule replacement and must cover exactly one
+local civil day.
+
+For declared local date D:
 
 ```
-[start of local date D in Europe/Kyiv,
- start of local date D+1 in Europe/Kyiv)
+effective_from_utc =
+  instant(start of D in Europe/Kyiv)
+
+expires_at_utc =
+  instant(start of D+1 in Europe/Kyiv)
 ```
 
-converted to UTC.
+Publication rejects any other revision envelope.
 
-The overlay `expires_at_utc` is therefore the end of the local civil day, **not** the early-closing clock time contained in the effect.
+Opening intervals, for example 11:00–18:00, live inside the effect. They are not
+revision expiry boundaries. A multi-day special schedule is represented as one
+immutable revision per local civil day.
 
-This rule intentionally handles 23/25-hour DST days through timezone conversion rather than fixed 24-hour arithmetic.
+This deliberately handles 23/25-hour DST civil days through timezone conversion
+rather than fixed 24-hour arithmetic.
+
+### Other temporary overlays
+
+`store.temporary_closure` and `store.status_override` are state-like overlays,
+not daily opening schedules.
+
+They may span any finite interval satisfying:
+
+```
+effective_from_utc < expires_at_utc
+```
+
+Legitimate examples include:
+- closure for three whole days;
+- closure from 15:00 today until 10:00 tomorrow;
+- status override until 16:00.
+
+They remain subject to the subject + effect_family conflict rules below.
 
 ## 8. Publication workflow
 
@@ -280,8 +409,12 @@ Initial allowlist:
 Requirements:
 - authorized OPERATIONAL_EDITOR grant;
 - `expires_at_utc` mandatory;
-- effective_from < expires_at;
-- no null expiry.
+- `effective_from_utc < expires_at_utc`;
+- no null expiry;
+- `store.special_hours` must use exactly one Europe/Kyiv local civil-day
+  envelope from local midnight D to local midnight D+1;
+- `store.temporary_closure` and `store.status_override` may use any finite
+  interval and are not forced into civil-day envelopes.
 
 ### Approval-required baseline/identity facts
 
@@ -825,7 +958,7 @@ It stores:
 - source_message_ids[];
 - presented candidates;
 - requested missing slot;
-- clarification_count.
+- `clarification_prompts_sent`.
 
 It must **not** persist dynamic factual authority from an earlier turn as truth for a later answer.
 
@@ -865,13 +998,23 @@ When the system presents candidates, the next customer message may only:
 
 Previously resolved stable identifier slots remain fixed unless the user explicitly changes them.
 
-One failed clarification round is allowed.
+Clarification counting is prompt-based, not attempt/round-based.
 
-Second unresolved clarification attempt:
+Rules:
+- initial episode: `clarification_prompts_sent=0`;
+- BabyPark may emit at most one `CLARIFY` prompt;
+- after that prompt is emitted: `clarification_prompts_sent=1`;
+- the next customer reply must resolve the requested slot by selecting an
+  offered candidate or supplying a valid requested value;
+- if it remains unresolved, do not emit a second CLARIFY.
+
+Outcome:
 
 ```
 HUMAN / CLARIFY_EXHAUSTED
 ```
+
+Thus there is exactly one assistant clarification prompt per episode.
 
 An unresolved catalog identity collision is:
 
@@ -1249,6 +1392,10 @@ No:
 ## 50. Slice decomposition
 
 ### Slice A — Knowledge Authority
+- additive canonical physical-store identity in IdentityStore;
+- reviewed bootstrap of current BabyPark physical stores;
+- proof that Catalog store IDs resolve through canonical `store_id`;
+- deployment gate forbidding provider-native store IDs as Knowledge subjects;
 - knowledge.sqlite;
 - canonical hashing;
 - immutable revisions;
@@ -1303,21 +1450,44 @@ No customer messages.
 - deterministic body;
 - separate message-create certification.
 
+### Slice E — Seller Assist (deferred)
+- starts only after native HUMAN handoff / operator ownership;
+- autonomous AI remains forbidden from sending public customer messages;
+- reuses the same BabyPark Knowledge/Catalog/Policy engine rather than creating
+  a second AI brain;
+- may answer operator questions, propose one or more grounded reply drafts, and
+  rewrite/fix/translate operator text;
+- operator explicitly chooses, edits or ignores a suggestion before sending;
+- Chatwoot Dashboard App or equivalent operator UI is presentation only; factual
+  authority remains BabyPark services;
+- not part of current Slice A implementation.
+
 ## 51. Review status
 
-Sonnet v0.3 blocker-only review found one blocker:
-- dynamic Catalog/Operational authority could be ambiguously cached across clarification turns.
+v0.3 blocker review found:
+- dynamic Catalog/Operational authority could be ambiguously cached across clarification turns;
+- open-ended baselines were not fully covered by the activity predicate;
+- early-closing `store.special_hours` could fall back to weekly baseline later
+  the same civil day.
 
-Grok v0.3 blocker-only review found two blockers:
-- open-ended baselines were not covered by the activity predicate;
-- early-closing `store.special_hours` could accidentally fall back to weekly baseline later the same civil day.
+v0.4 incorporated those fixes, but blocker review then found:
+- the civil-day invariant for `store.special_hours` existed in resolver
+  semantics but was not enforced at publication;
+- clarification-count wording was inconsistent;
+- Drupal → Magento required an explicit provider-neutral physical-store identity
+  and field-level source-of-truth contract.
 
-All three are incorporated into v0.4:
-1. clarification episodes persist stable identifiers only; every customer-facing fact reruns current authority/freshness;
-2. general activity predicate explicitly supports `expires_at_utc = NULL` for approved open-ended authority;
-3. `Europe/Kyiv` is the store business-calendar timezone and special-hours overlays cover the entire local civil day, suppressing weekly baseline for that whole envelope;
-4. peer operating-state conflicts are checked by subject + effect_family regardless of namespace.
+v0.5 resolves those blockers by:
+1. enforcing exactly one Europe/Kyiv civil-day revision envelope for
+   `store.special_hours`;
+2. keeping `store.temporary_closure` / `store.status_override` as arbitrary
+   finite state overlays;
+3. defining prompt-based `clarification_prompts_sent` with at most one CLARIFY
+   prompt per episode;
+4. introducing canonical BabyPark `store_id` + reviewed provider xrefs and a
+   fail-closed Magento cutover preflight;
+5. freezing the field-level authority split between Knowledge, CatalogService
+   and Chatwoot support-hours configuration.
 
-Pending action: blocker-only review of v0.4.
-
-If reviewers return zero concrete blockers, open Slice A implementation issue without reopening general market/RAG research.
+Blocker review is complete. Slice A implementation issue #53 is authorized.
+This v0.5 file is the single normative design source; no delta document applies.

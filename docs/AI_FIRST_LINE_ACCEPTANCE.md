@@ -1,12 +1,17 @@
-# BabyPark AI First Line — Acceptance Corpus v0.4
+# BabyPark AI First Line — Acceptance Corpus v0.5
 
-Status: DESIGN REVIEW
+Status: FROZEN — blocker review complete
 Companion: `docs/AI_FIRST_LINE_DESIGN.md`
 Repository baseline used for research: `e4b3989f852d5de4a868a6f72867b87cb64f8b2d`
 
+This file is the single normative acceptance corpus for AI First Line v0.5. It
+incorporates the complete v0.5 acceptance delta; no separate delta document is
+required to interpret expected behavior.
+
 This file is intended to become executable golden test data.
 Do not silently change classifications while implementing.
-A semantic change requires review and, where applicable, `KNOWLEDGE_RESOLVER_CONTRACT_VERSION` bump.
+A semantic change requires review and, where applicable,
+`KNOWLEDGE_RESOLVER_CONTRACT_VERSION` bump.
 
 ## A. Verified implementation facts that motivated this corpus
 
@@ -205,6 +210,18 @@ Expected:
 - HUMAN / POLICY_CONFLICT;
 - conflict detection is by subject + effect_family regardless of namespace.
 
+### O08 — special-hours publication owns the whole local civil day
+Fixture:
+- weekly baseline 10:00–20:00;
+- valid `store.special_hours` revision for date D has effect 11:00–18:00;
+- revision envelope is local midnight D through local midnight D+1.
+
+Expected:
+- 17:30 local => OPEN;
+- 18:30 local => CLOSED;
+- 19:30 local => CLOSED;
+- only at start of D+1 may weekly baseline participate again.
+
 ## E. Commerce scope/exception vectors
 
 ### E01 — valid narrower scope
@@ -306,6 +323,25 @@ effective_from >= expires_at => reject.
 ### D04
 baseline weekly_hours attempts direct publish => reject; approval required.
 
+### D05
+`store.special_hours` spanning more than one Europe/Kyiv civil day => reject.
+
+### D06
+`store.special_hours` for date D with effect 11:00–18:00 but revision
+`expires_at_utc` = 18:00 D => reject. Valid envelope is local midnight D
+through local midnight D+1.
+
+### D07
+Exactly one Europe/Kyiv civil-day envelope for `store.special_hours` => accept
+if ordinary RBAC/conflict checks pass.
+
+### D08
+`store.temporary_closure` spanning Friday 00:00 to Monday 00:00 => allowed
+finite overlay.
+
+### D09
+`store.temporary_closure` for 15:00–17:00 => allowed partial-day overlay.
+
 ## H. Clarification / episode vectors
 
 ### Q01
@@ -315,8 +351,13 @@ Second turn chooses one offered store.
 Previously resolved category+price remain fixed.
 
 ### Q02
-After candidate list, customer chooses a value not in presented candidates.
-Expected: unresolved clarification; second failure => HUMAN / CLARIFY_EXHAUSTED.
+BabyPark has emitted one CLARIFY prompt, so
+`clarification_prompts_sent=1`. The next customer reply does not select an
+offered candidate and does not validly fill the requested slot.
+
+Expected:
+- no second CLARIFY;
+- HUMAN / CLARIFY_EXHAUSTED.
 
 ### Q03
 First message contains "не Cybex"; model extractor omits the negation.
@@ -376,6 +417,17 @@ Expected:
 - final operational resolver rereads current published authority and current `now`;
 - closure suppresses any previously observed hours;
 - no earlier-turn "open" fact is reused.
+
+### Q08 — successful response to the single clarification prompt
+BabyPark has emitted one CLARIFY prompt and presented a bounded candidate list.
+The next customer reply selects exactly one offered candidate.
+
+Expected:
+- preserve stable identifier slots;
+- reread current dynamic authority/freshness;
+- continue only if current gates pass;
+- do not treat the successful selection as permission for another CLARIFY later
+  in the same episode.
 
 ## I. Handoff vectors
 
@@ -541,4 +593,88 @@ Future corpus additions should especially target:
 - negation;
 - ambiguous product naming;
 - real seller corrections.
+
+## Q. Canonical store identity / Magento cutover
+
+### M01
+Reviewed xrefs:
+
+```
+(drupal, native_store_A) -> store_X
+(magento, source_code_A) -> store_X
+```
+
+Expected: accepted Catalog before/after cutover exposes `store_X`; Knowledge
+keyed by `store_X` needs no rewrite.
+
+### M02
+Active Magento physical source has no reviewed canonical store mapping.
+
+Expected: cutover/acceptance fails closed; no fuzzy mapping by name/address.
+
+### M03
+Same provider-native source mapped to two canonical stores.
+
+Expected: reject identity conflict.
+
+### M04
+Two active Magento physical sources claim one canonical physical store in v1.
+
+Expected: cutover preflight fails unless a future explicit
+multi-source-per-store contract exists. Durable reviewed historical xrefs are
+not erased merely because only one source may be active in v1.
+
+### M05
+Tombstoned physical store ID is never reused.
+
+## R. Field-level authority
+
+### A01
+Chatwoot inbox hours = 10:00–20:00.
+Physical Store X Knowledge hours = 10:00–18:00.
+Question: "До скольки открыт магазин X?"
+
+Expected: physical-store Knowledge authority, never Chatwoot.
+
+### A02
+Same fixture.
+Question: "До скольки отвечает чат?"
+
+Expected: Chatwoot inbox working-hours authority, never physical-store schedule.
+
+### A03
+Knowledge says Store X = 10:00–18:00.
+Magento pickup `frontend_description` says "Open until 20:00".
+
+Expected: AI store-hours answer uses Knowledge; Magento prose does not override.
+
+### A04
+Magento general Store Hours text conflicts with per-store Knowledge.
+
+Expected: per-store Knowledge remains authority.
+
+### A05
+Knowledge says Store X is OPEN, CatalogService selected-variant stock at Store X
+= 0. Question: "Есть этот вариант в магазине X?"
+
+Expected: stock answer comes from CatalogService; open hours cannot invent stock.
+
+### A06
+After Drupal -> Magento provider cutover, Magento source maps to the same
+canonical `store_X`.
+
+Expected:
+- store-hours answer unchanged because Knowledge remains authority;
+- stock uses current accepted Catalog;
+- AI tool/resolver contract does not branch on provider.
+
+## S. Store-identity deployment gate
+
+### I01
+Attempt to make store-scoped Knowledge CURRENT while subject uses
+provider-native Drupal/Magento ID rather than canonical `store_id`.
+
+Expected: reject/block deployment.
+
+The v0.5 acceptance corpus is frozen for Slice A implementation issue #53.
 
