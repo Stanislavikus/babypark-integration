@@ -6,9 +6,11 @@ Canonical integration source for BabyPark customer messaging, catalog synchroniz
 
 - self-hosted Chatwoot 4.17.1
 - custom Viber ↔ Chatwoot gateway
-- deployed local canonical CatalogService (BOOTSTRAP; no FULL accepted yet)
-- deployed isolated read-only Drupal catalog exporter/preflight path
-- future seller-facing and customer-facing AI layers
+- deployed local canonical CatalogService with an accepted controlled FULL generation
+  and independently verified downstream snapshot
+- deployed isolated read-only Drupal catalog exporter and controlled batch path
+- merged-candidate, non-deployed Website AgentBot safety foundation (lab only; no
+  customer-facing AI or Chatwoot message creation)
 
 ## Start here
 
@@ -21,6 +23,7 @@ Canonical integration source for BabyPark customer messaging, catalog synchroniz
 7. `docs/CATALOG_ANOMALY_RUNTIME_V1.md` — frozen implementation contract for Anomaly Runtime v1
 8. `legacy/current/` — exact captured production Viber implementation
 9. `deploy/chatwoot-host/` — sanitized current deployment snapshots
+10. `docs/AGENTBOT_SAFETY_FOUNDATION.md` — non-public AgentBot invariants and lab runbook
 
 
 ## Definition of Done — keep CURRENT_STATE current

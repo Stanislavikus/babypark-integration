@@ -422,9 +422,9 @@
       "host_role": "integration",
       "status": "PLANNED",
       "scope": "database_or_table",
-      "location": "/var/lib/babypark-integration/copilot.sqlite:jobs",
+      "location": "/var/lib/babypark-integration/copilot.sqlite:{deliveries,jobs}",
       "owner": "copilot worker",
-      "purpose": "Bounded ID-only webhook work queue.",
+      "purpose": "Bounded ID-only webhook delivery receipts and reply-work queue.",
       "state_class": "transient",
       "thresholds": {
         "metric": "rows",
@@ -439,7 +439,7 @@
       },
       "cleanup": {
         "automatic": true,
-        "mechanism": "Terminal-job TTL; unresolved jobs protected by attempt/lease state.",
+        "mechanism": "Planned terminal-job and associated delivery-receipt TTL cleanup; dry-run before explicit apply.",
         "dry_run_required": true,
         "delete_guard": "Active leased jobs excluded."
       },
