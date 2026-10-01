@@ -1,4 +1,4 @@
-# BabyPark AI First Line — Acceptance Corpus v0.3
+# BabyPark AI First Line — Acceptance Corpus v0.4
 
 Status: DESIGN REVIEW
 Companion: `docs/AI_FIRST_LINE_DESIGN.md`
@@ -122,6 +122,9 @@ For multi-turn cases, `customer_messages[]` preserves episode history.
 | C58 | C56 second clarification attempt still unresolved. | HUMAN / CLARIFY_EXHAUSTED |
 | C59 | Product has multiple IN_STOCK variants but candidate labels cannot safely identify all. | HUMAN / PRODUCT_VARIANT_NOT_RESOLVABLE |
 | C60 | Catalog identity corruption gives multiple internal identities for a supposedly canonical selector. | HUMAN / CATALOG_IDENTITY_COLLISION; do not expose internal candidates |
+| C61 | Approved `store.weekly_hours` baseline has `expires_at_utc = NULL`, effective_from is in the past, and no overlay applies. | ANSWER / OPERATIONAL_FACT using baseline |
+| C62 | Weekly baseline 10:00–20:00; civil-day `store.special_hours` says 11:00–18:00 for date D; customer asks at 18:30 Europe/Kyiv on D. | ANSWER / OPERATIONAL_FACT = closed; baseline must not reopen the store |
+| C63 | Same store/time has `store.temporary_closure=CLOSED` and overlapping `store.status_override=OPEN` in the same operating-state effect family. | HUMAN / POLICY_CONFLICT even though namespaces differ |
 
 ## D. Operational-composition vectors
 
@@ -161,6 +164,46 @@ Attempt SUPERSEDED between different:
 
 Expected:
 - event write rejected atomically.
+
+
+### O05 — open-ended baseline activity
+Fixture:
+- reviewed weekly baseline;
+- `effective_from_utc <= now`;
+- `expires_at_utc = NULL`;
+- no overlay.
+
+Expected:
+- baseline is active;
+- no `POLICY_NOT_FOUND`.
+
+### O06 — early closing owns the whole local civil day
+Fixture:
+- weekly baseline 10:00–20:00;
+- `store.special_hours` for local date D has opening interval 11:00–18:00;
+- revision envelope is local midnight D through local midnight D+1 in `Europe/Kyiv`.
+
+At 17:30 local:
+- open under special hours.
+
+At 18:30 local:
+- closed under special hours;
+- weekly baseline must not fill 18:00–20:00.
+
+At next local civil day:
+- overlay expired;
+- baseline may apply again.
+
+### O07 — cross-namespace operating-state conflict
+Fixture:
+- same store/overlapping interval;
+- `store.temporary_closure=CLOSED`;
+- `store.status_override=OPEN`;
+- both belong to the same operating-state effect family.
+
+Expected:
+- HUMAN / POLICY_CONFLICT;
+- conflict detection is by subject + effect_family regardless of namespace.
 
 ## E. Commerce scope/exception vectors
 
@@ -284,6 +327,55 @@ Expected HUMAN / UNSUPPORTED_EXCLUSION.
 First message says "для 6 месяцев"; second message only supplies a brand.
 Episode latch preserves unsupported age constraint.
 Expected HUMAN; it does not disappear between turns.
+
+
+### Q05 — dynamic stock is reread after clarification
+Turn 1:
+- product/store identifiers resolve;
+- multiple variants cause `CLARIFY / AMBIGUOUS_VARIANT`;
+- stock layer is fresh;
+- candidate variant A currently has quantity > 0.
+
+Between turns:
+- current accepted Catalog state changes;
+- selected variant A now has quantity = 0;
+- stock layer remains answerable/fresh.
+
+Turn 2:
+- customer selects variant A.
+
+Expected:
+- preserved product/store/variant identifiers are used;
+- stock is reread from current authority;
+- answer reflects current quantity=0;
+- stale turn-1 stock is never reused.
+
+### Q06 — freshness is reread after clarification
+Turn 1:
+- clarification candidates are shown while stock layer is answerable.
+
+Between turns:
+- stock layer becomes STALE/BLOCKED or relevant `need_reconcile/need_full` becomes unsafe.
+
+Turn 2:
+- customer selects a candidate.
+
+Expected:
+- final answer reruns freshness;
+- HUMAN / CATALOG_STOCK_STALE;
+- no cached turn-1 freshness is reused.
+
+### Q07 — operational now/state is rerun after clarification
+Turn 1:
+- a stable store identifier is resolved.
+
+Before the final answer:
+- a newly published temporary closure becomes active.
+
+Expected:
+- final operational resolver rereads current published authority and current `now`;
+- closure suppresses any previously observed hours;
+- no earlier-turn "open" fact is reused.
 
 ## I. Handoff vectors
 
