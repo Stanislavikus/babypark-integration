@@ -1,13 +1,40 @@
+[Reading 102 lines from start (total: 102 lines, 0 remaining)]
+
 function requireHttps(baseUrl) {
   if (!/^https:\/\//.test(baseUrl)) throw new Error('chatwoot_https_required');
 }
 
-async function jsonRequest(fetchImpl, baseUrl, path, token, options = {}) {
-  const response = await fetchImpl(`${baseUrl}${path}`, { ...options, headers: {
-    api_access_token: token, 'content-type': 'application/json', ...(options.headers || {}),
-  }});
-  if (!response.ok) { const error = new Error(`chatwoot_http_${response.status}`); error.status = response.status; throw error; }
-  return response.status === 204 ? null : response.json();
+function requireTimeout(value) {
+  if (!Number.isSafeInteger(value) || value < 1) throw new Error('chatwoot_request_timeout_invalid');
+  return value;
+}
+
+async function jsonRequest(fetchImpl, baseUrl, path, token, requestTimeoutMs, options = {}) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), requestTimeoutMs);
+  timer.unref?.();
+  try {
+    const response = await fetchImpl(`${baseUrl}${path}`, { ...options, redirect: 'manual',
+      signal: controller.signal, headers: {
+        api_access_token: token, 'content-type': 'application/json', ...(options.headers || {}),
+      }});
+    if (response.status >= 300 && response.status < 400) {
+      const error = new Error('chatwoot_redirect_forbidden'); error.status = response.status; throw error;
+    }
+    if (!response.ok) {
+      const error = new Error(`chatwoot_http_${response.status}`); error.status = response.status; throw error;
+    }
+    return response.status === 204 ? null : await response.json();
+  } catch (error) {
+    if (controller.signal.aborted) {
+      const timeout = new Error('chatwoot_request_timeout');
+      timeout.code = 'chatwoot_request_timeout';
+      throw timeout;
+    }
+    throw error;
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 function positiveId(value) {
@@ -36,12 +63,14 @@ function normalizeMessage(wire) {
   };
 }
 
-export function createChatwootAuthorityReader({ baseUrl, accountId, readToken, fetchImpl = fetch }) {
+export function createChatwootAuthorityReader({ baseUrl, accountId, readToken,
+  requestTimeoutMs = 5_000, fetchImpl = fetch }) {
   requireHttps(baseUrl);
   if (!readToken) throw new Error('chatwoot_read_token_required');
+  requireTimeout(requestTimeoutMs);
 
   async function get(path) {
-    return jsonRequest(fetchImpl, baseUrl, path, readToken, { method: 'GET' });
+    return jsonRequest(fetchImpl, baseUrl, path, readToken, requestTimeoutMs, { method: 'GET' });
   }
 
   async function readConversation(conversationId, targetMessageId) {
@@ -61,13 +90,17 @@ export function createChatwootAuthorityReader({ baseUrl, accountId, readToken, f
   return Object.freeze({ readConversation });
 }
 
-export function createAgentBotActionClient({ baseUrl, accountId, agentBotToken, fetchImpl = fetch }) {
+export function createAgentBotActionClient({ baseUrl, accountId, agentBotToken,
+  requestTimeoutMs = 5_000, fetchImpl = fetch }) {
   requireHttps(baseUrl);
   if (!agentBotToken) throw new Error('agent_bot_token_required');
+  requireTimeout(requestTimeoutMs);
   async function handoff(conversationId) {
     return jsonRequest(fetchImpl, baseUrl,
       `/api/v1/accounts/${accountId}/conversations/${conversationId}/toggle_status`, agentBotToken,
-      { method: 'POST', body: JSON.stringify({ status: 'open' }) });
+      requestTimeoutMs, { method: 'POST', body: JSON.stringify({ status: 'open' }) });
   }
   return Object.freeze({ handoff });
 }
+
+[executed on device: chatwoot-fra1-01 (ffb62f19-a7b9-4c48-90bc-fdc677129931)]
