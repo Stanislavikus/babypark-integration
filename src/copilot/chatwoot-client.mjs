@@ -1,5 +1,3 @@
-[Reading 102 lines from start (total: 102 lines, 0 remaining)]
-
 function requireHttps(baseUrl) {
   if (!/^https:\/\//.test(baseUrl)) throw new Error('chatwoot_https_required');
 }
@@ -102,5 +100,3 @@ export function createAgentBotActionClient({ baseUrl, accountId, agentBotToken,
   }
   return Object.freeze({ handoff });
 }
-
-[executed on device: chatwoot-fra1-01 (ffb62f19-a7b9-4c48-90bc-fdc677129931)]
