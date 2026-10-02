@@ -193,6 +193,15 @@ test('direct temporary overlay publishes without APPROVED but requires finite ex
     actorId: 'actor_author',
   });
 
+  const multiDay = store.createDraft(temporary('store.temporary_closure', {
+    effectiveFromUtc: '2026-10-02T00:00:00Z',
+    expiresAtUtc: '2026-10-05T00:00:00Z',
+  }));
+  store.publishRevision({
+    revisionId: multiDay.revision_id,
+    actorId: 'actor_author',
+  });
+
   const bad = store.createDraft(temporary('store.temporary_closure', {
     expiresAtUtc: null,
   }));
