@@ -205,66 +205,54 @@ Malformed, overlapping or incomplete current-day intervals fail closed.
 
 ## A7 direct control plane, Access identity and grants
 
-The direct control plane runs with:
+The direct control plane runs with npm run knowledge:serve.
 
-`npm run knowledge:serve`
+Production deployment on 2026-10-02:
+- public origin: https://ai.babypark.ua;
+- local listener: 127.0.0.1:3210 only;
+- systemd: babypark-knowledge.service, enabled + active;
+- production DB: /var/lib/babypark-integration/knowledge.sqlite;
+- exposure: Cloudflare proxied public DNS + Cloudflare Access;
+- no Cloudflare Tunnel is required for the current deployment because the origin itself independently validates Access JWT and direct-origin bypass fails closed.
 
-Default origin/listener intent:
-- public origin: `https://ai.babypark.ua`;
-- local origin listener: `127.0.0.1:3210`;
-- intended exposure: Cloudflare Tunnel + Cloudflare Access.
+Cloudflare Access production objects:
+- team domain: babypark.cloudflareaccess.com;
+- application: BabyPark AI Knowledge;
+- destination: ai.babypark.ua;
+- policy: Allow BabyPark AI Admins;
+- exact approved identities only;
+- current mapping includes approved Cloudflare identity -> actor_stanislav.
 
 Authentication:
-- only the `Cf-Access-Jwt-Assertion` request header is authority input;
-- RS256 signature, `kid`, issuer, audience, expiry and nbf are verified;
-- signing JWKs are fetched from the Access `/cdn-cgi/access/certs` endpoint,
-  cached and refreshed automatically on TTL expiry or an unknown rotated `kid`;
-- verified Access subject/email maps to exactly one stable BabyPark `actor_id`;
-- Chatwoot `currentAgent` is never accepted by the authorization path.
+- only the Cf-Access-Jwt-Assertion request header is authority input;
+- RS256 signature, kid, issuer, audience, expiry and nbf are verified;
+- signing JWKs are fetched from the Access /cdn-cgi/access/certs endpoint, cached and refreshed automatically on TTL expiry or unknown rotated kid;
+- verified Access subject/email maps to exactly one stable BabyPark actor_id;
+- Chatwoot currentAgent is never accepted by the authorization path.
 
-Authorization is deny-by-default and BabyPark-owned. Grants contain:
-- logical role;
-- explicit actions;
-- namespace scope;
-- subject_type scope;
-- subject_id/store scope.
+Authorization remains deny-by-default and BabyPark-owned. Grants contain logical role, explicit actions, namespace scope, subject_type scope and subject_id/store scope. Role labels do not silently imply unspecified permissions. Direct temporary PUBLISH requires a matching OPERATIONAL_EDITOR grant and state-machine self-approval remains an independent guard.
 
-Role labels do not silently imply unspecified permissions. The frozen special
-rule is enforced explicitly: direct temporary PUBLISH requires a matching
-`OPERATIONAL_EDITOR` grant. State-machine self-approval remains an independent
-second guard.
+The browser/API control plane provides revision list/detail and event provenance, draft creation, approve/publish/withdraw/revoke, atomic publish+supersede, operational store resolution and CommercePolicy resolution.
 
-The browser/API control plane provides:
-- visible revision list;
-- revision detail + full event provenance;
-- draft creation;
-- approve/publish/withdraw/revoke;
-- atomic publish+supersede through publish payload;
-- operational store resolution;
-- CommercePolicy resolution.
+Production security proof:
+- unauthenticated public request redirects to Cloudflare Access;
+- authenticated browser reached the direct UI and resolved to actor_stanislav;
+- direct-origin HTTPS without Access JWT returns 401 ACCESS_JWT_MISSING;
+- external /health returns 404;
+- application listener is not bound publicly.
 
-Mutations require JSON, reject cross-site Origin/Sec-Fetch-Site requests and are
-re-authorized on every request. The HTML response uses a nonce CSP and
-`frame-ancestors https://chat.babypark.ua`; the direct page remains usable
-without iframe embedding.
+Required production env remains:
+- BP_KNOWLEDGE_DB;
+- BP_AI_ACCESS_ISSUER;
+- BP_AI_ACCESS_AUDIENCE;
+- BP_AI_ACTORS_JSON;
+- BP_AI_GRANTS_JSON.
 
-Required production env:
-- `BP_KNOWLEDGE_DB`;
-- `BP_AI_ACCESS_ISSUER`;
-- `BP_AI_ACCESS_AUDIENCE`;
-- `BP_AI_ACTORS_JSON`;
-- `BP_AI_GRANTS_JSON`.
-
-Optional:
-- `BP_AI_PUBLIC_ORIGIN`;
-- `BP_AI_HOST`;
-- `BP_AI_PORT`;
-- `BP_AI_ACCESS_CERTS_URL`;
-- `BP_AI_ACCESS_KEYS_JSON` for explicit static/test/emergency keys.
+Optional runtime env remains BP_AI_PUBLIC_ORIGIN, BP_AI_HOST, BP_AI_PORT, BP_AI_ACCESS_CERTS_URL and BP_AI_ACCESS_KEYS_JSON for explicit static/test/emergency keys.
 
 ## A8 durable recovery
 
-Knowledge recovery uses a generic encrypted Durable SQLite Backup Profile:
+Knowledge recovery uses the generic encrypted Durable SQLite Backup Profile:
 - consistent SQLite backup;
 - standalone DELETE-journal normalization;
 - SQLite integrity verification;
@@ -272,26 +260,35 @@ Knowledge recovery uses a generic encrypted Durable SQLite Backup Profile:
 - AES-256-GCM ciphertext;
 - ciphertext SHA-256;
 - HMAC-SHA-256 signed canonical manifest using a derived manifest key;
-- off-host copy of ciphertext + signed manifest only;
+- off-host copy;
 - scratch restore;
-- Knowledge ledger + authority snapshot + operational/Commerce semantic replay.
+- Knowledge ledger + authority snapshot + operational/Commerce semantic verification.
 
-The first real off-host drill on 2026-10-02 copied an encrypted synthetic
-Knowledge authority backup from `chatwoot-fra1-01` to
-`server2181.babypark.ua` and restored it successfully on exact repository
-commit `6f3caf07b5db380337f0c3aa033530a6011a586f`.
+The first synthetic off-host drill remains recorded in docs/KNOWLEDGE_RECOVERY.md and docs/KNOWLEDGE_RECOVERY_DRILL_20261002.json.
 
-See:
-- `docs/KNOWLEDGE_RECOVERY.md`;
-- `docs/KNOWLEDGE_RECOVERY_DRILL_20261002.json`.
+The real production authority then passed the same gate on 2026-10-02:
+- source DB: /var/lib/babypark-integration/knowledge.sqlite;
+- off-host target: server2181.babypark.ua;
+- off-host path: /var/backups/babypark-knowledge/20261002;
+- ciphertext SHA-256: 72ce2db14c2b14afb84b93fc0e8a5fc6f1f7db1a840fd2eb6237194824b9ec62;
+- restored plaintext SHA-256: c74864a4cc12744d6572724ab1f4a43b76ad2b52d33bd4dfa1eb24800ed55f7e;
+- SQLite integrity: ok;
+- semantic evidence SHA-256: 94344d926936e457997ca587ad2d6afbc827fb85c7fcb99b9e9d2252008dac80;
+- scratch restore: PASS.
 
-This verifies the recovery mechanism. It does not make production Knowledge
-CURRENT: after production deployment, the real production authority must pass
-the same encrypted off-host scratch-restore drill.
+The production bootstrap ledger intentionally contains 0 revisions / 0 events; no business facts were invented merely to make the authority non-empty.
 
-## Not in A4a/A4b/A5/A6/A7/A8
+## Slice A boundary after production closeout
 
+Slice A is deployed and production-accepted.
+
+Still outside Slice A:
 - customer-facing AI messages;
-- production Cloudflare Tunnel/Access deployment proof;
-- canonical physical-store production cutover;
-- production Knowledge deployment and production-authority restore drill.
+- LLM calls for customer answering;
+- Chatwoot AgentBot response generation;
+- private handoff note;
+- Slice B Catalog factual/query contracts;
+- Slice C Website First Line;
+- Slice D private handoff note;
+- deferred Slice E Seller Assist;
+- future BabyPark AI HUB implementation.
