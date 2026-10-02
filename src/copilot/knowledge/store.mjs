@@ -15,6 +15,11 @@ import {
   KNOWLEDGE_SCHEMA_VERSION,
   knowledgeSchemaSql,
 } from './schema.mjs';
+import {
+  assertSupersessionCompatible,
+  knowledgeRequiresApproval,
+  validateKnowledgePublishEnvelope,
+} from './publication-policy.mjs';
 
 export class KnowledgeStoreError extends Error {
   constructor(code, message, details = {}) {
@@ -153,6 +158,153 @@ function eventBody(row) {
     ),
     previous_event_hash: row.previous_event_hash,
   };
+}
+
+function policyGuard(fn) {
+  try { return fn(); }
+  catch (error) {
+    if (error?.code) {
+      fail(error.code, error.message, error.details ?? {});
+    }
+    throw error;
+  }
+}
+
+function revisionHistoryState(revision, events, {
+  revisionsById,
+  publishedSeqByRevision,
+} = {}) {
+  if (!events.length || events[0].event_type !== 'DRAFT_CREATED') {
+    fail(
+      'KNOWLEDGE_DRAFT_EVENT_INVALID',
+      'Every revision must begin with DRAFT_CREATED',
+      { revision_id: revision.revision_id }
+    );
+  }
+  if (events.filter(row => row.event_type === 'DRAFT_CREATED').length !== 1) {
+    fail(
+      'KNOWLEDGE_DRAFT_EVENT_INVALID',
+      'Every revision must contain exactly one DRAFT_CREATED',
+      { revision_id: revision.revision_id }
+    );
+  }
+  if (events[0].actor_id !== revision.author_actor_id) {
+    fail(
+      'KNOWLEDGE_DRAFT_AUTHOR_MISMATCH',
+      'DRAFT_CREATED actor must match revision author',
+      { revision_id: revision.revision_id }
+    );
+  }
+
+  const approvalRequired = knowledgeRequiresApproval(revision);
+  let index = 1;
+  let approved = false;
+
+  if (events[index]?.event_type === 'APPROVED') {
+    if (!approvalRequired) {
+      fail(
+        'KNOWLEDGE_APPROVAL_NOT_REQUIRED',
+        'Direct-publish revision cannot enter APPROVED state',
+        { revision_id: revision.revision_id }
+      );
+    }
+    if (
+      revision.record_type === 'COMMERCE_POLICY' &&
+      events[index].actor_id === revision.author_actor_id
+    ) {
+      fail(
+        'KNOWLEDGE_SELF_APPROVAL_FORBIDDEN',
+        'CommercePolicy author cannot approve own revision',
+        { revision_id: revision.revision_id }
+      );
+    }
+    approved = true;
+    index += 1;
+  }
+
+  if (events[index]?.event_type === 'WITHDRAWN') {
+    if (index !== events.length - 1) {
+      fail(
+        'KNOWLEDGE_TERMINAL_STATE_VIOLATION',
+        'No event may follow WITHDRAWN',
+        { revision_id: revision.revision_id }
+      );
+    }
+    return 'WITHDRAWN';
+  }
+
+  if (!events[index]) {
+    return approved ? 'APPROVED' : 'DRAFT';
+  }
+
+  if (events[index].event_type !== 'PUBLISHED') {
+    fail(
+      'KNOWLEDGE_STATE_TRANSITION_INVALID',
+      'Invalid Knowledge revision state transition',
+      {
+        revision_id: revision.revision_id,
+        event_type: events[index].event_type,
+      }
+    );
+  }
+
+  if (approvalRequired && !approved) {
+    fail(
+      'KNOWLEDGE_APPROVAL_REQUIRED',
+      'Revision requires APPROVED before PUBLISHED',
+      { revision_id: revision.revision_id }
+    );
+  }
+  policyGuard(() => validateKnowledgePublishEnvelope(revision));
+  index += 1;
+
+  if (!events[index]) return 'PUBLISHED';
+  if (index !== events.length - 1) {
+    fail(
+      'KNOWLEDGE_TERMINAL_STATE_VIOLATION',
+      'Authority-changing terminal event must be final',
+      { revision_id: revision.revision_id }
+    );
+  }
+
+  const terminal = events[index];
+  if (terminal.event_type === 'REVOKED') return 'REVOKED';
+
+  if (terminal.event_type === 'SUPERSEDED') {
+    const metadata = parseCanonicalKnowledgeJson(
+      terminal.metadata_json,
+      'metadata_json'
+    );
+    const successorId = metadata?.successor_revision_id;
+    text('successor_revision_id', successorId);
+    const successor = revisionsById?.get(successorId);
+    if (!successor) {
+      fail(
+        'KNOWLEDGE_SUPERSESSION_SUCCESSOR_MISSING',
+        'SUPERSEDED must reference an existing successor revision',
+        { revision_id: revision.revision_id, successor_revision_id: successorId }
+      );
+    }
+    policyGuard(() => assertSupersessionCompatible(revision, successor));
+    const successorPublishedSeq = publishedSeqByRevision?.get(successorId);
+    if (
+      !Number.isSafeInteger(successorPublishedSeq) ||
+      successorPublishedSeq >= terminal.event_seq
+    ) {
+      fail(
+        'KNOWLEDGE_SUPERSESSION_SUCCESSOR_NOT_PUBLISHED',
+        'SUPERSEDED successor must already be published',
+        { revision_id: revision.revision_id, successor_revision_id: successorId }
+      );
+    }
+    return 'SUPERSEDED';
+  }
+
+  fail(
+    'KNOWLEDGE_STATE_TRANSITION_INVALID',
+    'PUBLISHED revision may only become REVOKED or SUPERSEDED',
+    { revision_id: revision.revision_id, event_type: terminal.event_type }
+  );
 }
 
 function inspectFile(resolved) {
@@ -361,6 +513,7 @@ export class KnowledgeStore {
     const eventId = text('generated event id', this.idFactory.event());
 
     return tx(this.db, () => {
+      this.verifyLedger();
       if (parentRevisionId && !this.getRevision(parentRevisionId)) {
         fail('KNOWLEDGE_PARENT_MISSING', 'Parent revision does not exist');
       }
@@ -428,13 +581,270 @@ export class KnowledgeStore {
         createdAt, reason, metadataJson, previousEventHash, eventHash
       );
 
-      return Object.freeze({
+      const result = Object.freeze({
         revision_id: revisionId,
         revision_hash: revisionHash,
         event_id: eventId,
         event_seq: eventSeq,
         event_hash: eventHash,
       });
+      this.verifyLedger();
+      return result;
+    });
+  }
+
+  #requireRevisionLocked(revisionId) {
+    text('revisionId', revisionId);
+    const revision = this.getRevision(revisionId);
+    if (!revision) {
+      fail(
+        'KNOWLEDGE_REVISION_NOT_FOUND',
+        'Knowledge revision does not exist',
+        { revision_id: revisionId }
+      );
+    }
+    return revision;
+  }
+
+  #currentStateLocked(revisionId) {
+    const last = this.db.prepare(
+      'SELECT event_type FROM knowledge_events WHERE revision_id=? ORDER BY event_seq DESC LIMIT 1'
+    ).get(revisionId);
+    return {
+      DRAFT_CREATED: 'DRAFT',
+      APPROVED: 'APPROVED',
+      PUBLISHED: 'PUBLISHED',
+      WITHDRAWN: 'WITHDRAWN',
+      REVOKED: 'REVOKED',
+      SUPERSEDED: 'SUPERSEDED',
+    }[last?.event_type] ?? null;
+  }
+
+  #appendEventLocked({
+    revisionId,
+    eventType,
+    actorId,
+    reason = null,
+    metadata = {},
+  }) {
+    text('revisionId', revisionId);
+    if (!KNOWLEDGE_EVENT_TYPES.includes(eventType) || eventType === 'DRAFT_CREATED') {
+      throw new TypeError('eventType is not a supported authority transition');
+    }
+    text('actorId', actorId);
+    optionalText('reason', reason);
+    const metadataJson = canonicalKnowledgeJson(metadata);
+    const occurredAt = canonicalKnowledgeTimestamp(this.now(), 'occurred_at_utc');
+    const eventId = text('generated event id', this.idFactory.event());
+    const head = this.db.prepare(
+      'SELECT event_seq,event_hash FROM knowledge_events ORDER BY event_seq DESC LIMIT 1'
+    ).get();
+    const eventSeq = Number(head?.event_seq ?? 0) + 1;
+    const previousEventHash = head?.event_hash ?? null;
+    const event = {
+      event_id: eventId,
+      event_seq: eventSeq,
+      revision_id: revisionId,
+      event_type: eventType,
+      actor_id: actorId,
+      occurred_at_utc: occurredAt,
+      reason,
+      metadata_json: JSON.parse(metadataJson),
+      previous_event_hash: previousEventHash,
+    };
+    const eventHash = knowledgeSha256(event);
+    this.db.prepare(`
+      INSERT INTO knowledge_events(
+        event_seq,event_id,revision_id,event_type,actor_id,occurred_at_utc,
+        reason,metadata_json,previous_event_hash,event_hash
+      ) VALUES(?,?,?,?,?,?,?,?,?,?)
+    `).run(
+      eventSeq, eventId, revisionId, eventType, actorId, occurredAt,
+      reason, metadataJson, previousEventHash, eventHash
+    );
+    return Object.freeze({
+      event_id: eventId,
+      event_seq: eventSeq,
+      event_hash: eventHash,
+      event_type: eventType,
+      revision_id: revisionId,
+    });
+  }
+
+  approveRevision({
+    revisionId,
+    actorId,
+    reason = null,
+    metadata = {},
+  }) {
+    this.assertWritable();
+    return tx(this.db, () => {
+      this.verifyLedger();
+      const revision = this.#requireRevisionLocked(revisionId);
+      if (!knowledgeRequiresApproval(revision)) {
+        fail(
+          'KNOWLEDGE_APPROVAL_NOT_REQUIRED',
+          'Direct-publish revision does not accept APPROVED',
+          { revision_id: revisionId }
+        );
+      }
+      if (this.#currentStateLocked(revisionId) !== 'DRAFT') {
+        fail(
+          'KNOWLEDGE_STATE_TRANSITION_INVALID',
+          'APPROVED requires DRAFT state',
+          { revision_id: revisionId }
+        );
+      }
+      if (
+        revision.record_type === 'COMMERCE_POLICY' &&
+        actorId === revision.author_actor_id
+      ) {
+        fail(
+          'KNOWLEDGE_SELF_APPROVAL_FORBIDDEN',
+          'CommercePolicy author cannot approve own revision',
+          { revision_id: revisionId }
+        );
+      }
+      const event = this.#appendEventLocked({
+        revisionId,
+        eventType: 'APPROVED',
+        actorId,
+        reason,
+        metadata,
+      });
+      this.verifyLedger();
+      return event;
+    });
+  }
+
+  withdrawRevision({
+    revisionId,
+    actorId,
+    reason = null,
+    metadata = {},
+  }) {
+    this.assertWritable();
+    return tx(this.db, () => {
+      this.verifyLedger();
+      this.#requireRevisionLocked(revisionId);
+      const state = this.#currentStateLocked(revisionId);
+      if (state !== 'DRAFT' && state !== 'APPROVED') {
+        fail(
+          'KNOWLEDGE_STATE_TRANSITION_INVALID',
+          'WITHDRAWN requires DRAFT or APPROVED state',
+          { revision_id: revisionId, state }
+        );
+      }
+      const event = this.#appendEventLocked({
+        revisionId,
+        eventType: 'WITHDRAWN',
+        actorId,
+        reason,
+        metadata,
+      });
+      this.verifyLedger();
+      return event;
+    });
+  }
+
+  publishRevision({
+    revisionId,
+    actorId,
+    reason = null,
+    metadata = {},
+    supersedeRevisionId = null,
+  }) {
+    this.assertWritable();
+    return tx(this.db, () => {
+      this.verifyLedger();
+      const revision = this.#requireRevisionLocked(revisionId);
+      const required = knowledgeRequiresApproval(revision);
+      const state = this.#currentStateLocked(revisionId);
+      if (
+        (required && state !== 'APPROVED') ||
+        (!required && state !== 'DRAFT')
+      ) {
+        fail(
+          required ? 'KNOWLEDGE_APPROVAL_REQUIRED' : 'KNOWLEDGE_STATE_TRANSITION_INVALID',
+          required
+            ? 'Revision requires APPROVED before PUBLISHED'
+            : 'Direct-publish revision requires DRAFT state',
+          { revision_id: revisionId, state }
+        );
+      }
+      policyGuard(() => validateKnowledgePublishEnvelope(revision));
+
+      let predecessor = null;
+      if (supersedeRevisionId !== null) {
+        text('supersedeRevisionId', supersedeRevisionId);
+        if (supersedeRevisionId === revisionId) {
+          fail(
+            'KNOWLEDGE_SUPERSESSION_SELF',
+            'Revision cannot supersede itself',
+            { revision_id: revisionId }
+          );
+        }
+        predecessor = this.#requireRevisionLocked(supersedeRevisionId);
+        if (this.#currentStateLocked(supersedeRevisionId) !== 'PUBLISHED') {
+          fail(
+            'KNOWLEDGE_SUPERSESSION_PREDECESSOR_NOT_PUBLISHED',
+            'Supersession predecessor must be PUBLISHED',
+            { predecessor_revision_id: supersedeRevisionId }
+          );
+        }
+        policyGuard(() => assertSupersessionCompatible(predecessor, revision));
+      }
+
+      const published = this.#appendEventLocked({
+        revisionId,
+        eventType: 'PUBLISHED',
+        actorId,
+        reason,
+        metadata,
+      });
+      if (!predecessor) {
+        this.verifyLedger();
+        return Object.freeze({ published, superseded: null });
+      }
+      const superseded = this.#appendEventLocked({
+        revisionId: predecessor.revision_id,
+        eventType: 'SUPERSEDED',
+        actorId,
+        reason,
+        metadata: { successor_revision_id: revisionId },
+      });
+      this.verifyLedger();
+      return Object.freeze({ published, superseded });
+    });
+  }
+
+  revokeRevision({
+    revisionId,
+    actorId,
+    reason = null,
+    metadata = {},
+  }) {
+    this.assertWritable();
+    return tx(this.db, () => {
+      this.verifyLedger();
+      this.#requireRevisionLocked(revisionId);
+      const state = this.#currentStateLocked(revisionId);
+      if (state !== 'PUBLISHED') {
+        fail(
+          'KNOWLEDGE_STATE_TRANSITION_INVALID',
+          'REVOKED requires PUBLISHED state',
+          { revision_id: revisionId, state }
+        );
+      }
+      const event = this.#appendEventLocked({
+        revisionId,
+        eventType: 'REVOKED',
+        actorId,
+        reason,
+        metadata,
+      });
+      this.verifyLedger();
+      return event;
     });
   }
 
@@ -463,8 +873,8 @@ export class KnowledgeStore {
     const events = this.db.prepare(
       'SELECT * FROM knowledge_events ORDER BY event_seq'
     ).all();
-    const firstEvent = new Map();
-    const draftCounts = new Map();
+    const eventsByRevision = new Map();
+    const publishedSeqByRevision = new Map();
     let previousHash = null;
 
     for (let index = 0; index < events.length; index++) {
@@ -498,41 +908,27 @@ export class KnowledgeStore {
           event_seq: row.event_seq,
         });
       }
-      if (!firstEvent.has(row.revision_id)) {
-        firstEvent.set(row.revision_id, row);
-      }
-      if (row.event_type === 'DRAFT_CREATED') {
-        draftCounts.set(
-          row.revision_id,
-          (draftCounts.get(row.revision_id) ?? 0) + 1
-        );
+      const revisionEvents = eventsByRevision.get(row.revision_id) ?? [];
+      revisionEvents.push(row);
+      eventsByRevision.set(row.revision_id, revisionEvents);
+      if (
+        row.event_type === 'PUBLISHED' &&
+        !publishedSeqByRevision.has(row.revision_id)
+      ) {
+        publishedSeqByRevision.set(row.revision_id, row.event_seq);
       }
       previousHash = row.event_hash;
     }
 
     for (const revision of revisions) {
-      const first = firstEvent.get(revision.revision_id);
-      if (
-        !first ||
-        first.event_type !== 'DRAFT_CREATED' ||
-        draftCounts.get(revision.revision_id) !== 1
-      ) {
-        fail(
-          'KNOWLEDGE_DRAFT_EVENT_INVALID',
-          'Every revision must begin with exactly one DRAFT_CREATED',
-          {
-            revision_id: revision.revision_id,
-            draft_count: draftCounts.get(revision.revision_id) ?? 0,
-          }
-        );
-      }
-      if (first.actor_id !== revision.author_actor_id) {
-        fail(
-          'KNOWLEDGE_DRAFT_AUTHOR_MISMATCH',
-          'DRAFT_CREATED actor must match revision author',
-          { revision_id: revision.revision_id }
-        );
-      }
+      revisionHistoryState(
+        revision,
+        eventsByRevision.get(revision.revision_id) ?? [],
+        {
+          revisionsById: byRevision,
+          publishedSeqByRevision,
+        }
+      );
     }
 
     return Object.freeze({

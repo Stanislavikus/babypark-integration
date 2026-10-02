@@ -1,6 +1,6 @@
 # Knowledge Authority
 
-Status: PLANNED / repository A4a foundation only
+Status: PLANNED / repository A4a+A4b foundation only
 Last verified: 2026-10-02
 Owner: BabyPark
 Normative design:
@@ -13,8 +13,9 @@ Normative design:
 execution state and must never be treated as disposable or rebuildable from
 Chatwoot.
 
-A4a implements only the immutable ledger foundation. It does not yet authorize
-publication, resolution or customer answers.
+A4a implements the immutable ledger foundation. A4b adds the deterministic
+publication state machine and publication-envelope checks. Neither slice deploys
+production Knowledge authority or enables customer answers.
 
 ## A4a schema
 
@@ -38,9 +39,14 @@ publication, resolution or customer answers.
 - previous event hash;
 - SHA-256 event hash.
 
-A4a creates only `DRAFT_CREATED` events. APPROVED/PUBLISHED/terminal state
-transitions are intentionally deferred to A4b so state-machine/RBAC rules are
-reviewed separately.
+A4a creates `DRAFT_CREATED`. A4b adds validated transitions:
+- approval-required: `DRAFT_CREATED -> APPROVED -> PUBLISHED -> REVOKED|SUPERSEDED`;
+- direct temporary: `DRAFT_CREATED -> PUBLISHED -> REVOKED|SUPERSEDED`;
+- optional withdrawal from DRAFT or APPROVED.
+
+CommercePolicy author and approver must differ by stable `actor_id`.
+RBAC/grant lookup remains deferred; A4b validates state semantics, not permission
+source.
 
 ## Immutability
 
@@ -74,7 +80,15 @@ Opening the database verifies:
 - contiguous global event sequence;
 - previous-hash linkage;
 - every event hash;
-- every revision begins with DRAFT_CREATED by its author.
+- every revision begins with exactly one DRAFT_CREATED by its author;
+- legal per-revision state-machine history;
+- CommercePolicy self-approval prohibition;
+- approval-required publication;
+- SUPERSEDED successor existence/publication and identity boundary;
+- direct-publish temporal-envelope rules.
+
+Every authority write revalidates the existing ledger before mutation and validates
+the resulting ledger again before COMMIT.
 
 Hash/state-machine verification is a recovery gate, not a replacement for backup.
 ## Storage and deployment
@@ -91,12 +105,30 @@ Repository merge does not create or modify production `knowledge.sqlite`.
 Store-scoped Knowledge must remain non-CURRENT until the canonical physical-store
 production cutover documented in `docs/CATALOG_IDENTITY.md` has passed.
 
-## Not in A4a
+## A4b publication policy
 
-- approval/publish/revoke/supersede transitions;
-- namespace publication policy;
-- self-approval prevention;
-- RBAC;
+Direct publish is limited to:
+- `store.status_override`;
+- `store.special_hours`;
+- `store.temporary_closure`.
+
+All other namespaces default to approval-required. `COMMERCE_POLICY` is always
+approval-required.
+
+Direct temporary overlays require finite expiry. `store.special_hours` must span
+exactly one Europe/Kyiv local civil day, including 23/25-hour DST days.
+`store.temporary_closure` and `store.status_override` may span any finite
+partial-day or multi-day interval.
+
+Replacement publication and predecessor SUPERSEDED are one transaction.
+Supersession requires identical namespace, subject type/id and effect_family.
+The predecessor SUPERSEDED event carries canonical hashed
+`successor_revision_id` metadata and is valid only after that successor is
+PUBLISHED.
+
+## Not in A4a/A4b
+
+- RBAC/grant authority and actor-role lookup;
 - OperationalFact / CommercePolicy resolver;
 - conflict/exception resolution;
 - HTTP/admin UI;
