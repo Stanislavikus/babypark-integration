@@ -1100,12 +1100,22 @@ It does NOT define CommercePolicy exception-scope narrowing.
 
 With storeId:
 - stock layer must be answerable;
+- every anchored active IN_STOCK variant must have an explicit store_stock row
+  for that exact store before the exact-store cohort is considered complete;
+- quantity = 0 is a confirmed non-participating store state;
 - participating variant must have quantity > 0 at that exact store.
+
+A missing exact-store row is not interpreted as quantity = 0. It means the
+store-filtered cohort cannot be proven complete and fails closed as:
+HUMAN / CATALOG_STOCK_STALE.
 
 Commercial IN_STOCK does not substitute for store stock.
 
 Stale/blocking stock layer:
 HUMAN / CATALOG_STOCK_STALE.
+
+Store-stock freshness in v1 is layer authority. source_updated_at is retained
+evidence but there is no independent row-level stale state/TTL contract.
 
 Unknown store never falls back to general availability.
 
@@ -1131,11 +1141,19 @@ ObjectiveProductMatch {
   total_matching_variant_labels
   displayable_variant_label_count
 
-  all_product_variants_match_filters
+  all_available_variants_match_filters
 
   matched_store_id?
 }
 ```
+
+The `all_available_variants_match_filters` flag is evaluated only against the same
+customer-purchasable availability universe used by objective search: active +
+IN_STOCK variants, plus quantity > 0 at the exact canonical store when storeId
+participates. EXPECTED, MADE_TO_ORDER, OUT_OF_STOCK, DISCONTINUED and confirmed
+quantity = 0 exact-store variants are outside this denominator and do not turn
+the flag false merely because such variants exist. A missing exact-store row
+makes the denominator unprovable and fails the whole store-filtered answer closed.
 
 Response also includes total_product_count before display limit.
 
@@ -1174,7 +1192,10 @@ Product may match.
 Card must show the matched cohort (19,300), not default 27,300 and not full 19,300–27,300 range.
 
 Set:
-`all_product_variants_match_filters=false`.
+`all_available_variants_match_filters=false`.
+
+This means that only part of the active + IN_STOCK purchasable cohort matched
+the objective filters. It does not describe non-purchasable lifecycle variants.
 
 ## 39. Specific-store stock semantics
 
@@ -1281,7 +1302,23 @@ Deterministic content only:
 - product_id;
 - decision_context_id;
 - used revision IDs;
-- catalog generation.
+- catalog generation;
+- confirmed_context facts that were independently reread and remain safe despite
+  the unresolved HUMAN reason.
+
+For HUMAN / CATALOG_STOCK_STALE, the private note must preserve all useful facts
+that are independently authoritative without claiming exact-store availability.
+For an already resolved exact product/variant this may include:
+- current general commercial availability;
+- current B1 price fact;
+- current reviewed delivery CommercePolicy, when one independently applies.
+
+These facts must be reread from their own current authority. A failed
+store-filtered B3 shortlist is not itself a confirmed partial shortlist: unknown
+exact-store membership must never be converted into a seller-visible claim that
+a particular product/variant is in that store.
+
+confirmed_context is seller-only context, never a public handoff preface.
 
 No LLM conversation summary.
 
@@ -1448,6 +1485,8 @@ No customer messages.
 - hardcoded private:true;
 - at-most-once attempt;
 - deterministic body;
+- confirmed_context enrichment for independently authoritative facts on HUMAN,
+  including CATALOG_STOCK_STALE without inventing exact-store availability;
 - separate message-create certification.
 
 ### Slice E — Seller Assist (deferred)

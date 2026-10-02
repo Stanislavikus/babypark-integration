@@ -707,7 +707,7 @@ function normalizeVariantLabelPart(raw, {
     /[\u0000-\u001f\u007f]/u.test(value) ||
     /^https?:\/\//iu.test(value) ||
     /^(?:data|blob):/iu.test(value) ||
-    /^(?:id|oid|aid|nid|vid|fid)\s*[:=#-]\s*\S+$/iu.test(value) ||
+    /(?:^|[^\p{L}\p{N}_])(?:id|oid|aid|nid|vid|fid)\s*[:=#-]\s*\S+/iu.test(value) ||
     /^(?:a|O|s|i|b|d):\d+[:;{]/u.test(value) ||
     (!allowBareNumeric && /^\d+$/u.test(value))
   ) {
@@ -887,6 +887,188 @@ function notFoundFact(base) {
     ...base,
     status: 'NOT_FOUND',
     reason: 'PRODUCT_NOT_FOUND',
+  };
+}
+
+const OBJECTIVE_CATEGORY_MATCH_MODES = new Set([
+  'NODE_ONLY',
+  'INCLUDE_DESCENDANTS',
+]);
+
+function stockLayerSafe(catalog) {
+  const layer = catalog.layers.stock;
+  return Boolean(
+    layer &&
+    layer.freshness_state === 'FRESH' &&
+    layer.need_reconcile === false &&
+    layer.need_full === false
+  );
+}
+
+function normalizeObjectiveId(value, name) {
+  if (value === undefined || value === null) return null;
+  if (typeof value !== 'string' || value.trim() === '') {
+    throw serviceError(
+      'CATALOG_INPUT_INVALID',
+      name + ' must be a non-empty string',
+      { field: name }
+    );
+  }
+  return value.trim();
+}
+
+function objectiveCategoryScope(db, categoryId, matchMode) {
+  if (!categoryId) {
+    if (matchMode !== undefined && matchMode !== null) {
+      throw serviceError(
+        'CATALOG_OBJECTIVE_CATEGORY_MODE_INVALID',
+        'categoryMatchMode requires categoryId'
+      );
+    }
+    return [];
+  }
+
+  if (!OBJECTIVE_CATEGORY_MATCH_MODES.has(matchMode)) {
+    throw serviceError(
+      'CATALOG_OBJECTIVE_CATEGORY_MODE_INVALID',
+      'categoryMatchMode must be NODE_ONLY or INCLUDE_DESCENDANTS',
+      { categoryMatchMode: matchMode }
+    );
+  }
+
+  const exists = db.prepare(
+    'SELECT 1 ok FROM categories WHERE category_id=?'
+  ).get(categoryId);
+  if (!exists) {
+    throw serviceError(
+      'CATALOG_OBJECTIVE_TARGET_INVALID',
+      'categoryId is not present in the current catalog generation',
+      { target: 'category', category_id: categoryId }
+    );
+  }
+
+  if (matchMode === 'NODE_ONLY') return [categoryId];
+
+  return db.prepare(
+    'WITH RECURSIVE category_scope(category_id) AS (' +
+    'SELECT category_id FROM categories WHERE category_id=? ' +
+    'UNION ' +
+    'SELECT c.category_id FROM categories c ' +
+    'JOIN category_scope s ON c.parent_id=s.category_id' +
+    ') SELECT category_id FROM category_scope ORDER BY category_id'
+  ).all(categoryId).map(row => row.category_id);
+}
+
+function requireCurrentBrand(db, brandId) {
+  if (!brandId) return;
+  if (!db.prepare(
+    'SELECT 1 ok FROM brands WHERE brand_id=?'
+  ).get(brandId)) {
+    throw serviceError(
+      'CATALOG_OBJECTIVE_TARGET_INVALID',
+      'brandId is not present in the current catalog generation',
+      { target: 'brand', brand_id: brandId }
+    );
+  }
+}
+
+function requireCurrentStore(db, storeId) {
+  if (!storeId) return;
+  if (!db.prepare(
+    'SELECT 1 ok FROM stores WHERE store_id=? AND active=1'
+  ).get(storeId)) {
+    throw serviceError(
+      'CATALOG_OBJECTIVE_TARGET_INVALID',
+      'storeId is not an active canonical store in the current generation',
+      { target: 'store', store_id: storeId }
+    );
+  }
+}
+
+function objectiveAnchorSql(categoryIds, brandId) {
+  const clauses = ["p.lifecycle='active'"];
+  const params = [];
+
+  if (categoryIds.length) {
+    clauses.push(
+      'EXISTS (SELECT 1 FROM product_categories pc ' +
+      'WHERE pc.product_id=p.product_id AND pc.category_id IN (' +
+      placeholders(categoryIds.length) + '))'
+    );
+    params.push(...categoryIds);
+  }
+
+  if (brandId) {
+    clauses.push('p.brand_id=?');
+    params.push(brandId);
+  }
+
+  return {
+    sql: clauses.join(' AND '),
+    params,
+  };
+}
+
+function objectivePresentation(
+  db,
+  productId,
+  language,
+  matchedVariantIds
+) {
+  const requested = db.prepare(
+    'SELECT title,url FROM product_text ' +
+    'WHERE product_id=? AND language=? LIMIT 1'
+  ).get(productId, language) || null;
+
+  const fallback = db.prepare(
+    'SELECT title,url FROM product_text ' +
+    'WHERE product_id=? ORDER BY language LIMIT 1'
+  ).get(productId) || null;
+
+  let image = db.prepare(
+    'SELECT url FROM images WHERE product_id=? AND variant_id IS NULL ' +
+    'ORDER BY position,image_id LIMIT 1'
+  ).get(productId) || null;
+
+  if (!image && matchedVariantIds.length) {
+    image = db.prepare(
+      'SELECT url FROM images WHERE product_id=? AND variant_id IN (' +
+      placeholders(matchedVariantIds.length) + ') ' +
+      'ORDER BY position,image_id LIMIT 1'
+    ).get(productId, ...matchedVariantIds) || null;
+  }
+
+  return {
+    title: requested?.title || fallback?.title || null,
+    product_url: requested?.url || fallback?.url || null,
+    image_url: image?.url || null,
+  };
+}
+
+function objectiveBase(catalog, {
+  categoryId,
+  categoryMatchMode,
+  brandId,
+  minPriceMinor,
+  maxPriceMinor,
+  storeId,
+  limit,
+}) {
+  return {
+    contract: 'bp.catalog.objective-search/1',
+    catalog,
+    relevant_layers: storeId
+      ? ['commercial', 'stock']
+      : ['commercial'],
+    constraints: {
+      category_id: categoryId,
+      category_match_mode: categoryMatchMode,
+      brand_id: brandId,
+      min_price_minor: minPriceMinor,
+      max_price_minor: maxPriceMinor,
+      store_id: storeId,
+      display_limit: limit,
+    },
   };
 }
 
@@ -1077,6 +1259,254 @@ export class CatalogService {
         label_complete: displayable === variants.length,
         currency: inspected.currency,
         variants,
+      };
+    });
+  }
+
+  searchObjectiveProducts({
+    categoryId = null,
+    categoryMatchMode = null,
+    brandId = null,
+    minPriceMinor = null,
+    maxPriceMinor = null,
+    storeId = null,
+    language = this.defaultLanguage,
+    limit = 3,
+  } = {}) {
+    return this.reader.withDb(db => {
+      const category = normalizeObjectiveId(categoryId, 'categoryId');
+      const brand = normalizeObjectiveId(brandId, 'brandId');
+      const store = normalizeObjectiveId(storeId, 'storeId');
+      const lang = validateLanguage(language);
+      const min = validateMoney(minPriceMinor, 'minPriceMinor');
+      const max = validateMoney(maxPriceMinor, 'maxPriceMinor');
+      if (min !== null && max !== null && min > max) {
+        throw serviceError(
+          'CATALOG_PRICE_RANGE_INVALID',
+          'minPriceMinor cannot exceed maxPriceMinor'
+        );
+      }
+      const bounded = boundedPositiveInt(limit, {
+        name: 'limit',
+        defaultValue: 3,
+        max: 20,
+      });
+
+      const mode = category ? categoryMatchMode : null;
+      const catalog = catalogSnapshot(db);
+      const base = objectiveBase(catalog, {
+        categoryId: category,
+        categoryMatchMode: mode,
+        brandId: brand,
+        minPriceMinor: min,
+        maxPriceMinor: max,
+        storeId: store,
+        limit: bounded,
+      });
+
+      if (!category && !brand) {
+        return unavailableFact(
+          base,
+          'MISSING_SHORTLIST_ANCHOR',
+          {
+            total_product_count: null,
+            displayed_product_count: 0,
+            products: [],
+          }
+        );
+      }
+
+      const categoryIds = objectiveCategoryScope(
+        db,
+        category,
+        categoryMatchMode
+      );
+      requireCurrentBrand(db, brand);
+      requireCurrentStore(db, store);
+
+      if (!commercialLayerSafe(catalog)) {
+        return unavailableFact(
+          base,
+          'CATALOG_COMMERCIAL_STALE'
+        );
+      }
+      if (store && !stockLayerSafe(catalog)) {
+        return unavailableFact(
+          base,
+          'CATALOG_STOCK_STALE'
+        );
+      }
+
+      const anchor = objectiveAnchorSql(categoryIds, brand);
+      let relevantSql =
+        'SELECT p.product_id,v.variant_id,v.options_json,' +
+        'CAST(o.current_minor AS TEXT) current_minor_text,o.currency';
+      const relevantParams = [];
+
+      if (store) {
+        relevantSql += ',ss.quantity store_quantity';
+      }
+
+      relevantSql +=
+        ' FROM products p JOIN variants v ON v.product_id=p.product_id ' +
+        'LEFT JOIN variant_offers o ON o.variant_id=v.variant_id ';
+
+      if (store) {
+        relevantSql +=
+          'LEFT JOIN store_stock ss ON ss.variant_id=v.variant_id ' +
+          'AND ss.store_id=? ';
+        relevantParams.push(store);
+      }
+
+      relevantSql +=
+        'WHERE ' + anchor.sql + ' ' +
+        "AND v.lifecycle='active' " +
+        "AND v.commercial_availability='IN_STOCK' " +
+        'ORDER BY p.product_id,v.variant_id';
+      relevantParams.push(...anchor.params);
+
+      const anchoredRows = db.prepare(relevantSql).all(
+        ...relevantParams
+      );
+
+      if (store) {
+        const missingStoreStockVariantIds = anchoredRows
+          .filter(row =>
+            row.store_quantity === null ||
+            row.store_quantity === undefined
+          )
+          .map(row => row.variant_id)
+          .sort();
+
+        if (missingStoreStockVariantIds.length) {
+          return unavailableFact(
+            base,
+            'CATALOG_STOCK_STALE',
+            {
+              missing_store_stock_variant_ids:
+                missingStoreStockVariantIds,
+            }
+          );
+        }
+      }
+
+      const relevantRows = store
+        ? anchoredRows.filter(row => row.store_quantity > 0)
+        : anchoredRows;
+
+      if (!relevantRows.length) {
+        return {
+          ...base,
+          status: 'FACT',
+          reason: 'OBJECTIVE_SHORTLIST_EMPTY',
+          total_product_count: 0,
+          displayed_product_count: 0,
+          products: [],
+        };
+      }
+
+      const inspected = inspectTrustedPriceCohort(base, relevantRows);
+      if (inspected.problem) return inspected.problem;
+
+      if (
+        (min !== null || max !== null) &&
+        inspected.currency !== 'UAH'
+      ) {
+        return unavailableFact(
+          base,
+          'UNSUPPORTED_CONSTRAINT',
+          {
+            constraint: 'PRICE_CURRENCY',
+            currency: inspected.currency,
+            expected_currency: 'UAH',
+          }
+        );
+      }
+
+      const matchedRows = inspected.rows.filter(row =>
+        (min === null || row.current_minor >= min) &&
+        (max === null || row.current_minor <= max)
+      );
+
+      if (!matchedRows.length) {
+        return {
+          ...base,
+          status: 'FACT',
+          reason: 'OBJECTIVE_SHORTLIST_EMPTY',
+          total_product_count: 0,
+          displayed_product_count: 0,
+          products: [],
+        };
+      }
+
+      const availableByProduct = new Map();
+      for (const row of relevantRows) {
+        availableByProduct.set(
+          row.product_id,
+          (availableByProduct.get(row.product_id) || 0) + 1
+        );
+      }
+
+      const grouped = new Map();
+      for (const row of matchedRows) {
+        if (!grouped.has(row.product_id)) {
+          grouped.set(row.product_id, []);
+        }
+        grouped.get(row.product_id).push(row);
+      }
+
+      const matches = [];
+      for (const [productId, rows] of grouped.entries()) {
+        const prices = rows.map(row => row.current_minor);
+        const labels = rows
+          .map(row => displayableVariantLabel(row.options_json))
+          .filter(label => label !== null);
+        const matchedVariantIds = rows
+          .map(row => row.variant_id)
+          .sort();
+        const allAvailableCount =
+          availableByProduct.get(productId) || 0;
+
+        matches.push({
+          product_id: productId,
+          matched_variant_count: rows.length,
+          matching_price_min_minor: Math.min(...prices),
+          matching_price_max_minor: Math.max(...prices),
+          currency: inspected.currency,
+          matching_variant_ids: matchedVariantIds,
+          displayable_variant_labels: labels,
+          total_matching_variant_labels: rows.length,
+          displayable_variant_label_count: labels.length,
+          label_complete: labels.length === rows.length,
+          all_available_variants_match_filters:
+            rows.length === allAvailableCount,
+          ...(store ? { matched_store_id: store } : {}),
+        });
+      }
+
+      matches.sort((a, b) =>
+        a.matching_price_min_minor - b.matching_price_min_minor ||
+        a.product_id.localeCompare(b.product_id)
+      );
+
+      const totalProductCount = matches.length;
+      const displayed = matches.slice(0, bounded).map(match => ({
+        ...match,
+        ...objectivePresentation(
+          db,
+          match.product_id,
+          lang,
+          match.matching_variant_ids
+        ),
+      }));
+
+      return {
+        ...base,
+        status: 'FACT',
+        reason: 'OBJECTIVE_SHORTLIST',
+        total_product_count: totalProductCount,
+        displayed_product_count: displayed.length,
+        products: displayed,
       };
     });
   }

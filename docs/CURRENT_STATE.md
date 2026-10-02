@@ -134,12 +134,12 @@ Read-only evidence against CURRENT generation
 
 ### B2 — deterministic category/brand/money/store resolvers
 
-Status: REPOSITORY CANDIDATE / NOT DEPLOYED.
+Status: MERGED / repository contract; no new production service release required yet.
 
-Branch:
-`feat/ai-first-line-slice-b2-resolvers`.
+PR #71 merged at:
+`f4b36e59ae29c9107ff9583017f6429b3f3afd4f`.
 
-Delivered candidate:
+Delivered:
 - exact current-generation Catalog dictionary lookup by reviewed canonical IDs;
 - immutable approval-required `VOCABULARY_ENTRY` schema in Knowledge;
 - category resolver with explicit `NODE_ONLY | INCLUDE_DESCENDANTS`;
@@ -164,7 +164,44 @@ reviewed business content is explicitly published.
 
 B1/B2 do not create customer-facing Chatwoot messages and do not invoke an LLM.
 
-Next after B2 merge/review: B3 — objective matched-cohort search.
+### B3 — objective matched-cohort search
+
+Status: REPOSITORY CANDIDATE / NOT DEPLOYED.
+
+Branch:
+`feat/ai-first-line-slice-b3-objective-search`.
+
+Delivered candidate:
+- dedicated `searchObjectiveProducts(...)` contract; no reuse of broad
+  `searchProducts()` as factual shortlist authority;
+- exact category/brand anchor semantics and explicit category match mode;
+- same-cohort membership and price presentation;
+- exact-store cohort requires an explicit row for every anchored active IN_STOCK
+  variant; qty=0 is confirmed exclusion, qty>0 participates, missing row fails
+  the whole store-filtered result closed;
+- commercial + stock freshness gates, with stock freshness authoritative at the
+  layer level in v1;
+- fail-closed offer-hole, zero-price and mixed-currency handling;
+- no UAH/non-UAH numeric comparison or invented currency conversion;
+- deterministic price/product ordering and total count before display limit;
+- matched-cohort image safety and sanitized variant-label completeness;
+- `all_available_variants_match_filters` defined against active + IN_STOCK
+  purchasable variants only; non-purchasable lifecycle variants are outside its
+  denominator.
+
+Contract:
+`docs/CATALOG_OBJECTIVE_SEARCH.md`.
+
+B3 is query-layer/repository work only. It creates no customer-facing Chatwoot
+message, constructs no decision_context_id or handoff note, and invokes no LLM.
+
+The frozen downstream Slice D contract now requires HUMAN / CATALOG_STOCK_STALE
+private notes to retain independently authoritative confirmed facts when
+available, while never representing failed exact-store B3 membership as a
+confirmed partial shortlist.
+
+Next after B3 merge/review: B4 — specific-store stock factual contract + neutral
+ProductPresentation, followed by final Slice B closeout.
 
 ## D2b acceptance status (2026-09-30)
 
