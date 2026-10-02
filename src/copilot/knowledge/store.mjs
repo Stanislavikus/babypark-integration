@@ -9,6 +9,7 @@ import {
   parseCanonicalKnowledgeJson,
 } from './canonical.mjs';
 import {
+  KNOWLEDGE_EVENT_TYPES,
   KNOWLEDGE_RECORD_TYPES,
   KNOWLEDGE_REQUIRED_TABLES,
   KNOWLEDGE_SCHEMA_VERSION,
@@ -70,7 +71,37 @@ function defaultIds() {
   };
 }
 
+function storedTimestamp(name, value) {
+  const normalized = canonicalKnowledgeTimestamp(value, name);
+  if (normalized !== value) {
+    throw new TypeError(`${name} must be canonical UTC Z`);
+  }
+  return value;
+}
+
 function revisionBody(row) {
+  if (!KNOWLEDGE_RECORD_TYPES.includes(row.record_type)) {
+    throw new TypeError('record_type is not supported');
+  }
+  positiveInt('schema_version', row.schema_version);
+  for (const [name, value] of [
+    ['revision_id', row.revision_id],
+    ['namespace', row.namespace],
+    ['effect_family', row.effect_family],
+    ['subject_type', row.subject_type],
+    ['subject_id', row.subject_id],
+    ['effect_type', row.effect_type],
+    ['author_actor_id', row.author_actor_id],
+  ]) text(name, value);
+  optionalText('parent_revision_id', row.parent_revision_id);
+  optionalText('exception_of_revision_id', row.exception_of_revision_id);
+  const effective = storedTimestamp('effective_from_utc', row.effective_from_utc);
+  const expires = row.expires_at_utc === null
+    ? null
+    : storedTimestamp('expires_at_utc', row.expires_at_utc);
+  if (expires !== null && Date.parse(effective) >= Date.parse(expires)) {
+    throw new TypeError('stored expiry must be after effective_from_utc');
+  }
   return {
     revision_id: row.revision_id,
     record_type: row.record_type,
@@ -85,22 +116,36 @@ function revisionBody(row) {
       row.effect_value_json,
       'effect_value_json'
     ),
-    effective_from_utc: row.effective_from_utc,
-    expires_at_utc: row.expires_at_utc,
+    effective_from_utc: effective,
+    expires_at_utc: expires,
     parent_revision_id: row.parent_revision_id,
     exception_of_revision_id: row.exception_of_revision_id,
     author_actor_id: row.author_actor_id,
-    created_at_utc: row.created_at_utc,
+    created_at_utc: storedTimestamp('created_at_utc', row.created_at_utc),
   };
 }
 function eventBody(row) {
+  text('event_id', row.event_id);
+  positiveInt('event_seq', row.event_seq);
+  text('revision_id', row.revision_id);
+  if (!KNOWLEDGE_EVENT_TYPES.includes(row.event_type)) {
+    throw new TypeError('event_type is not supported');
+  }
+  text('actor_id', row.actor_id);
+  optionalText('reason', row.reason);
+  if (
+    row.previous_event_hash !== null &&
+    !/^[a-f0-9]{64}$/.test(row.previous_event_hash)
+  ) {
+    throw new TypeError('previous_event_hash must be null or lowercase SHA-256');
+  }
   return {
     event_id: row.event_id,
     event_seq: row.event_seq,
     revision_id: row.revision_id,
     event_type: row.event_type,
     actor_id: row.actor_id,
-    occurred_at_utc: row.occurred_at_utc,
+    occurred_at_utc: storedTimestamp('occurred_at_utc', row.occurred_at_utc),
     reason: row.reason,
     metadata_json: parseCanonicalKnowledgeJson(
       row.metadata_json,
@@ -414,6 +459,7 @@ export class KnowledgeStore {
       'SELECT * FROM knowledge_events ORDER BY event_seq'
     ).all();
     const firstEvent = new Map();
+    const draftCounts = new Map();
     let previousHash = null;
 
     for (let index = 0; index < events.length; index++) {
@@ -450,16 +496,29 @@ export class KnowledgeStore {
       if (!firstEvent.has(row.revision_id)) {
         firstEvent.set(row.revision_id, row);
       }
+      if (row.event_type === 'DRAFT_CREATED') {
+        draftCounts.set(
+          row.revision_id,
+          (draftCounts.get(row.revision_id) ?? 0) + 1
+        );
+      }
       previousHash = row.event_hash;
     }
 
     for (const revision of revisions) {
       const first = firstEvent.get(revision.revision_id);
-      if (!first || first.event_type !== 'DRAFT_CREATED') {
+      if (
+        !first ||
+        first.event_type !== 'DRAFT_CREATED' ||
+        draftCounts.get(revision.revision_id) !== 1
+      ) {
         fail(
-          'KNOWLEDGE_DRAFT_EVENT_MISSING',
-          'Every revision must begin with DRAFT_CREATED',
-          { revision_id: revision.revision_id }
+          'KNOWLEDGE_DRAFT_EVENT_INVALID',
+          'Every revision must begin with exactly one DRAFT_CREATED',
+          {
+            revision_id: revision.revision_id,
+            draft_count: draftCounts.get(revision.revision_id) ?? 0,
+          }
         );
       }
       if (first.actor_id !== revision.author_actor_id) {

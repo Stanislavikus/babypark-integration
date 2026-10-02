@@ -85,6 +85,7 @@ test('draft creation atomically stores immutable revision and first chained even
   const created = store.createDraft(draft({
     scope: { z: 2, a: 1 },
     effectValue: { z: 9, a: [1, 2] },
+    effectiveFromUtc: '2026-10-01T03:00:00+03:00',
   }));
   assert.equal(created.revision_id, 'kr_test_1');
   assert.equal(created.event_id, 'ke_test_1');
@@ -92,6 +93,7 @@ test('draft creation atomically stores immutable revision and first chained even
   const row = store.getRevision(created.revision_id);
   assert.equal(row.scope_json, '{"a":1,"z":2}');
   assert.equal(row.effect_value_json, '{"a":[1,2],"z":9}');
+  assert.equal(row.effective_from_utc, '2026-10-01T00:00:00.000Z');
   assert.match(row.revision_hash, /^[a-f0-9]{64}$/);
 
   const events = store.eventsForRevision(created.revision_id);
@@ -230,5 +232,53 @@ test('reopen fails closed after out-of-band revision tamper', t => {
   assert.throws(
     () => KnowledgeStore.openExisting(f.file, f.config),
     error => error.code === 'KNOWLEDGE_REVISION_HASH_MISMATCH'
+  );
+});
+
+test('reopen rejects a second DRAFT_CREATED even with a valid event hash', t => {
+  const f = fixture();
+  t.after(f.cleanup);
+  const store = KnowledgeStore.createNew(f.file, f.config);
+  const first = store.createDraft(draft());
+  const revision = store.getRevision(first.revision_id);
+  store.close();
+
+  const occurred = '2026-10-02T06:00:02.000Z';
+  const event = {
+    event_id: 'ke_manual_second_draft',
+    event_seq: 2,
+    revision_id: revision.revision_id,
+    event_type: 'DRAFT_CREATED',
+    actor_id: revision.author_actor_id,
+    occurred_at_utc: occurred,
+    reason: 'manual duplicate',
+    metadata_json: {},
+    previous_event_hash: first.event_hash,
+  };
+  const eventHash = knowledgeSha256(event);
+
+  const raw = new DatabaseSync(f.file);
+  raw.prepare(`
+    INSERT INTO knowledge_events(
+      event_seq,event_id,revision_id,event_type,actor_id,occurred_at_utc,
+      reason,metadata_json,previous_event_hash,event_hash
+    ) VALUES(?,?,?,?,?,?,?,?,?,?)
+  `).run(
+    2,
+    event.event_id,
+    event.revision_id,
+    event.event_type,
+    event.actor_id,
+    occurred,
+    event.reason,
+    '{}',
+    event.previous_event_hash,
+    eventHash
+  );
+  raw.close();
+
+  assert.throws(
+    () => KnowledgeStore.openExisting(f.file, f.config),
+    error => error.code === 'KNOWLEDGE_DRAFT_EVENT_INVALID'
   );
 });
