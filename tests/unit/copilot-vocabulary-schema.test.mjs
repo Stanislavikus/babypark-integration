@@ -204,4 +204,21 @@ test('brand and store vocabulary schemas require exact canonical target keys', (
     }),
     error => error?.code === 'VOCABULARY_SCHEMA_INVALID'
   );
+
+  assert.throws(
+    () => validateVocabularyRevision({
+      record_type: 'VOCABULARY_ENTRY',
+      schema_version: 1,
+      namespace: 'vocabulary.brand',
+      effect_family: 'vocabulary.brand_resolution',
+      subject_type: 'phrase',
+      subject_id: 'cybex',
+      scope_json: {},
+      effect_type: 'BRAND_BINDING',
+      effect_value_json: {
+        canonical_brand_id: ' brand-cybex ',
+      },
+    }),
+    error => error?.code === 'VOCABULARY_CANONICAL_ID_INVALID'
+  );
 });
