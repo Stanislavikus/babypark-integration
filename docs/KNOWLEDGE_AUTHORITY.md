@@ -203,9 +203,67 @@ next lower authority layer immediately.
 
 Malformed, overlapping or incomplete current-day intervals fail closed.
 
-## Not in A4a/A4b/A5/A6
+## A7 direct control plane, Access identity and grants
 
-- RBAC/grant authority and actor-role lookup;
-- HTTP/admin UI;
-- AI/customer messaging;
-- production backup/restore deployment.
+The direct control plane runs with:
+
+`npm run knowledge:serve`
+
+Default origin/listener intent:
+- public origin: `https://ai.babypark.ua`;
+- local origin listener: `127.0.0.1:3210`;
+- intended exposure: Cloudflare Tunnel + Cloudflare Access.
+
+Authentication:
+- only the `Cf-Access-Jwt-Assertion` request header is authority input;
+- RS256 signature, `kid`, issuer, audience, expiry and nbf are verified;
+- signing JWKs are fetched from the Access `/cdn-cgi/access/certs` endpoint,
+  cached and refreshed automatically on TTL expiry or an unknown rotated `kid`;
+- verified Access subject/email maps to exactly one stable BabyPark `actor_id`;
+- Chatwoot `currentAgent` is never accepted by the authorization path.
+
+Authorization is deny-by-default and BabyPark-owned. Grants contain:
+- logical role;
+- explicit actions;
+- namespace scope;
+- subject_type scope;
+- subject_id/store scope.
+
+Role labels do not silently imply unspecified permissions. The frozen special
+rule is enforced explicitly: direct temporary PUBLISH requires a matching
+`OPERATIONAL_EDITOR` grant. State-machine self-approval remains an independent
+second guard.
+
+The browser/API control plane provides:
+- visible revision list;
+- revision detail + full event provenance;
+- draft creation;
+- approve/publish/withdraw/revoke;
+- atomic publish+supersede through publish payload;
+- operational store resolution;
+- CommercePolicy resolution.
+
+Mutations require JSON, reject cross-site Origin/Sec-Fetch-Site requests and are
+re-authorized on every request. The HTML response uses a nonce CSP and
+`frame-ancestors https://chat.babypark.ua`; the direct page remains usable
+without iframe embedding.
+
+Required production env:
+- `BP_KNOWLEDGE_DB`;
+- `BP_AI_ACCESS_ISSUER`;
+- `BP_AI_ACCESS_AUDIENCE`;
+- `BP_AI_ACTORS_JSON`;
+- `BP_AI_GRANTS_JSON`.
+
+Optional:
+- `BP_AI_PUBLIC_ORIGIN`;
+- `BP_AI_HOST`;
+- `BP_AI_PORT`;
+- `BP_AI_ACCESS_CERTS_URL`;
+- `BP_AI_ACCESS_KEYS_JSON` for explicit static/test/emergency keys.
+
+## Not in A4a/A4b/A5/A6/A7
+
+- customer-facing AI messages;
+- production Cloudflare Tunnel/Access deployment proof;
+- production backup/restore deployment and off-host restore drill.
