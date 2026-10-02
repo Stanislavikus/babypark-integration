@@ -33,9 +33,13 @@ Repository Slice A now contains:
   independent restore verification of the same rules;
 - A5a verified active-authority projection: half-open activity window, exclusion
   of non-PUBLISHED/terminal revisions, deterministic subject/effect-family
-  projection, and namespace-independent peer `POLICY_CONFLICT` detection.
+  projection, and namespace-independent peer `POLICY_CONFLICT` detection;
+- A5b CommercePolicy exception/resolution contract: exact v1 scope bindings,
+  strict explicit narrowing, temporal subset, cycle-safe exception graph,
+  equal-effect compatibility and fail-closed `POLICY_CONFLICT` without
+  latest-wins/implicit-specificity behavior.
 
-A4a/A4b/A5a are repository foundation only. RBAC/grant authority, concrete
+A4a/A4b/A5 are repository foundation only. RBAC/grant authority, concrete
 hours/status effect schemas, semantic operational resolver and durable
 backup/restore deployment remain subsequent Slice A work.
 
