@@ -49,6 +49,21 @@ function text(name, value) {
   return value;
 }
 
+function canonicalId(name, value) {
+  const id = text(name, value);
+  if (
+    id !== id.trim() ||
+    id.length > 256 ||
+    /[\u0000-\u001f\u007f]/u.test(id)
+  ) {
+    fail(
+      'VOCABULARY_CANONICAL_ID_INVALID',
+      `${name} must be a bounded canonical ID without outer whitespace`
+    );
+  }
+  return id;
+}
+
 function object(name, value) {
   if (
     !value ||
@@ -163,7 +178,10 @@ export function validateVocabularyRevision(revision) {
     ? [contract.target_key, 'match_mode']
     : [contract.target_key];
   exactKeys('Vocabulary effect_value', effect, expected);
-  text(`effect_value.${contract.target_key}`, effect[contract.target_key]);
+  canonicalId(
+    `effect_value.${contract.target_key}`,
+    effect[contract.target_key]
+  );
 
   if (
     revision.namespace === 'vocabulary.category' &&
