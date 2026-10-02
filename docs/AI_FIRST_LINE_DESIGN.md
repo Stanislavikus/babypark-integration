@@ -1112,6 +1112,13 @@ wraps each public multi-query read in one deferred read transaction; private
 `#readEpisode` remains transaction-neutral so write transactions can reuse it
 without nested `BEGIN`.
 
+Every EpisodeStore connection MUST explicitly set SQLite `busy_timeout=5000`.
+C1 MUST NOT rely on the Node `DatabaseSync` constructor's version-dependent
+`timeout` option: a concurrent writer that has already acquired a RESERVED lock
+must wait for the reader snapshot to release before COMMIT rather than fail
+immediately with `SQLITE_BUSY` on runtimes where that constructor option is not
+implemented.
+
 C1 never persists:
 - raw/normalized customer message bodies;
 - prices or offer completeness;

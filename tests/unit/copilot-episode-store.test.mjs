@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
-import { EpisodeStore, EpisodeStoreError } from '../../src/copilot/episode-store.mjs';
+import { BUSY_TIMEOUT_MS, EpisodeStore, EpisodeStoreError } from '../../src/copilot/episode-store.mjs';
 
 const NOW = 2_000_000_000_000;
 
@@ -113,6 +113,7 @@ test('episode store is durable, private-mode SQLite with one active episode per 
   let nextId = 1;
   const { store, file } = tempEpisodeStore(t, { idFactory: () => `episode-${nextId++}` });
   assert.equal(fs.statSync(file).mode & 0o777, 0o600);
+  assert.equal(store.db.prepare('PRAGMA busy_timeout').get().timeout, BUSY_TIMEOUT_MS);
 
   const first = store.beginEpisode({
     conversationId: 55,

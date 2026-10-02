@@ -5,6 +5,7 @@ import { DatabaseSync } from 'node:sqlite';
 
 const SCHEMA_VERSION = 1;
 const MAX_PRESENTED_CANDIDATES = 20;
+const BUSY_TIMEOUT_MS = 5000;
 
 const SCHEMA = `
 PRAGMA foreign_keys=ON;
@@ -258,8 +259,8 @@ export class EpisodeStore {
     this.file = file;
     this.now = now;
     this.idFactory = idFactory;
-    this.db = new DatabaseSync(file, { timeout: 5000 });
-    this.db.exec('PRAGMA foreign_keys=ON');
+    this.db = new DatabaseSync(file);
+    this.db.exec(`PRAGMA foreign_keys=ON; PRAGMA busy_timeout=${BUSY_TIMEOUT_MS}`);
   }
 
   close() {
@@ -487,4 +488,4 @@ export class EpisodeStore {
   }
 }
 
-export { SCHEMA_VERSION, SLOT_SPECS, MAX_PRESENTED_CANDIDATES };
+export { SCHEMA_VERSION, SLOT_SPECS, MAX_PRESENTED_CANDIDATES, BUSY_TIMEOUT_MS };

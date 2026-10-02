@@ -247,6 +247,8 @@ C1 — durable logical episode state is the active implementation slice:
 - every mutation requires explicit optimistic `expectedVersion`; stale writers are rejected;
 - public `loadActive` / `getEpisode` reads are one committed SQLite snapshot, so
   row metadata and child state cannot be torn across concurrent commits;
+- EpisodeStore explicitly sets SQLite `busy_timeout=5000`, avoiding Node-version
+  dependence in concurrent reader/writer COMMIT behavior;
 - no raw/normalized customer body, dynamic Catalog/Knowledge facts,
   resolver/vocabulary state, or Chatwoot reopen-causality marker is persisted;
 - `NON_ACTIONABLE_ACK` and standalone/dependent episode-boundary behavior are

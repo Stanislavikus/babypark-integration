@@ -528,6 +528,8 @@ Expected:
 - `getEpisode` never combines version/budget/requested-slot metadata from one
   commit with candidates or slots from another;
 - the writer may complete only after the reader releases its snapshot;
+- every EpisodeStore connection reports `PRAGMA busy_timeout = 5000`, independent
+  of Node runtime support for any `DatabaseSync` constructor timeout option;
 - write transactions continue to use private transaction-neutral
   `#readEpisode` without nested transactions.
 
