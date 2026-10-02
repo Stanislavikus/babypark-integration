@@ -160,6 +160,16 @@ function eventBody(row) {
   };
 }
 
+function deepFreezeJson(value) {
+  if (!value || typeof value !== 'object' || Object.isFrozen(value)) return value;
+  if (Array.isArray(value)) {
+    for (const item of value) deepFreezeJson(item);
+  } else {
+    for (const item of Object.values(value)) deepFreezeJson(item);
+  }
+  return Object.freeze(value);
+}
+
 function policyGuard(fn) {
   try { return fn(); }
   catch (error) {
@@ -877,11 +887,15 @@ export class KnowledgeStore {
         effect_family: row.effect_family,
         subject_type: row.subject_type,
         subject_id: row.subject_id,
-        scope: parseCanonicalKnowledgeJson(row.scope_json, 'scope_json'),
+        scope: deepFreezeJson(
+          parseCanonicalKnowledgeJson(row.scope_json, 'scope_json')
+        ),
         effect_type: row.effect_type,
-        effect_value: parseCanonicalKnowledgeJson(
-          row.effect_value_json,
-          'effect_value_json'
+        effect_value: deepFreezeJson(
+          parseCanonicalKnowledgeJson(
+            row.effect_value_json,
+            'effect_value_json'
+          )
         ),
         effective_from_utc: row.effective_from_utc,
         expires_at_utc: row.expires_at_utc,

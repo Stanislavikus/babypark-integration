@@ -80,6 +80,13 @@ test('open-ended PUBLISHED baseline is active after effective_from', t => {
 
   assert.deepEqual(projection.active.map(x => x.revision_id), [rev.revision_id]);
   assert.equal(projection.conflicts.length, 0);
+  assert.equal(Object.isFrozen(projection.active[0]), true);
+  assert.equal(Object.isFrozen(projection.active[0].scope), true);
+  assert.equal(Object.isFrozen(projection.active[0].effect_value), true);
+  assert.equal(Object.isFrozen(projection.active[0].effect_value.monday), true);
+  assert.throws(() => {
+    projection.active[0].effect_value.monday.push({ open: '00:00', close: '01:00' });
+  }, TypeError);
   store.close();
 });
 
