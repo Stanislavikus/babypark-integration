@@ -79,10 +79,11 @@ Current v1 surface:
 - getOffers(variantIds | skus) — returns variant-level `commercial_availability`
   beside an optional price-only `offer` (or `offer: null`)
 - getStoreStock(variantId | sku, storeIds?)
-- listCategories(...)
+- listCategories(..., categoryIds?)
+- listBrands(brandIds?)
 - listAttributes(...)
 - compareProducts(...)
-- getStores(...)
+- getStores(..., storeIds?)
 - lookupSku(...)
 - getProductPriceFact(productId)
 - getAvailableVariantsFact(productId)
@@ -92,6 +93,21 @@ The three `*Fact` methods are Slice B1 decision-ready factual contracts. They
 remain provider-neutral, execute through the same one-generation CatalogReader
 boundary and do not create customer-facing text. Their frozen semantics are
 documented in `docs/CATALOG_FACTUAL_CONTRACTS.md`.
+
+Slice B2 adds exact dictionary filters for current-target validation by the
+reviewed Vocabulary resolver layer:
+
+- `listCategories({ categoryIds })`;
+- `listBrands({ brandIds })`;
+- `getStores({ storeIds, activeOnly })`.
+
+These methods do not perform customer phrase matching. Knowledge Vocabulary remains
+the authority that maps a phrase to canonical IDs; CatalogService only confirms that
+the reviewed target exists in the currently accepted generation (and, for stores,
+is active when requested).
+
+The closed-world resolver semantics are documented in
+`docs/CATALOG_RESOLVERS.md`.
 
 Every response includes catalog metadata from the same active SQLite handle used for
 the returned data.
