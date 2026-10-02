@@ -35,11 +35,15 @@ function activeAt(row, nowMs) {
   return from <= nowMs && (until === null || nowMs < until);
 }
 
+function compareUtf8(a, b) {
+  return Buffer.compare(Buffer.from(a, 'utf8'), Buffer.from(b, 'utf8'));
+}
+
 function stableRows(rows) {
   return [...rows].sort((a, b) =>
-    a.effect_family.localeCompare(b.effect_family) ||
-    a.namespace.localeCompare(b.namespace) ||
-    a.revision_id.localeCompare(b.revision_id)
+    compareUtf8(a.effect_family, b.effect_family) ||
+    compareUtf8(a.namespace, b.namespace) ||
+    compareUtf8(a.revision_id, b.revision_id)
   );
 }
 

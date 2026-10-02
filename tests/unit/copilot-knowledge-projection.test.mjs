@@ -239,3 +239,49 @@ test('projection fails closed when current ledger was manually made semantically
   );
   store.close();
 });
+
+
+test('parent_revision_id lineage alone does not deactivate published predecessor', t => {
+  const f = fixture(); t.after(f.cleanup);
+  const store = f.store();
+  const first = publishReviewed(store, baseline());
+  const child = store.createDraft(baseline({
+    effectValue: { monday: [{ open: '09:00', close: '19:00' }] },
+    parentRevisionId: first.revision_id,
+  }));
+
+  const projection = projectActiveKnowledge(store, {
+    nowUtc: '2026-10-02T09:00:00Z',
+    subjectType: 'store',
+    subjectId: 'store_1',
+  });
+
+  assert.deepEqual(projection.active.map(x => x.revision_id), [first.revision_id]);
+  assert.equal(store.getRevision(child.revision_id).parent_revision_id, first.revision_id);
+  store.close();
+});
+
+test('namespace filter is explicit and does not alter conflict semantics', t => {
+  const f = fixture(); t.after(f.cleanup);
+  const store = f.store();
+  direct(store, {
+    namespace: 'store.temporary_closure',
+    effectValue: { status: 'CLOSED' },
+  });
+  direct(store, {
+    namespace: 'store.status_override',
+    effectValue: { status: 'OPEN' },
+  });
+
+  const onlyClosure = projectActiveKnowledge(store, {
+    nowUtc: '2026-10-02T11:00:00Z',
+    subjectType: 'store',
+    subjectId: 'store_1',
+    namespaces: ['store.temporary_closure'],
+  });
+
+  assert.equal(onlyClosure.active.length, 1);
+  assert.equal(onlyClosure.active[0].namespace, 'store.temporary_closure');
+  assert.equal(onlyClosure.conflicts.length, 0);
+  store.close();
+});
