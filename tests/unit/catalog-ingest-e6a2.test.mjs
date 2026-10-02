@@ -112,6 +112,60 @@ test('store identity topology drift after seq0 fences the FULL before mapper', t
   db.close();
 });
 
+test('store identity topology drift after data chunks blocks final certification', t => {
+  const f = persistedHarness(t);
+  const store = ReplayStore.openExisting(path.join(f.root, 'replay.sqlite'), { catalogStorageDir: f.catalog, leaseSeconds: 1 });
+  const identity = IdentityStore.openExisting(path.join(f.root, 'identity.sqlite'));
+  const mutex = new CatalogPublicationLock(f.catalog); const reader = new CatalogReader(f.catalog);
+  const publisher = new CatalogPublisher(f.catalog, { mutex, readers: [reader] });
+  t.after(() => { reader.close(); mutex.close(); identity.close(); store.close(); });
+
+  const rows = [phase0Records(), phase1Records(), phase2Records()];
+  const bodies = [f.header, ...rows.map(value => bytes({ rows: value }))];
+  for (let seq = 0; seq < bodies.length; seq++) {
+    const body = bodies[seq];
+    assert.equal(processProductionFullChunk({ store, publisher, mutex, reader,
+      identityStore: identity, key: { ...f.base, seq, bodySha256: hash(body) },
+      verifiedBody: body, now: 100 + seq }).status, 'COMMITTED');
+  }
+
+  identity.ensureStore({
+    provider: 'fixture',
+    nativeStoreId: 'new-before-final',
+    reviewedSource: 'fixture:test:pre-final-store-drift',
+  });
+
+  const count = rows.reduce((sum, value) => sum + value.length, 0);
+  const digest = computeRunDigestV2({
+    headerHash: hash(f.header),
+    chunkHashes: bodies.slice(1).map(hash),
+    finalSeq: 4,
+    count,
+  });
+  const finalBody = bytes({ trailer: {
+    count,
+    final_seq: 4,
+    run_digest: digest,
+    run_header_sha256: hash(f.header),
+    schema: 'bp.catalog.trailer/2',
+  } });
+  const finalKey = { ...f.base, seq: 4, final: true, bodySha256: hash(finalBody) };
+
+  assert.throws(() => processProductionFullChunk({ store, publisher, mutex, reader,
+    identityStore: identity, key: finalKey, verifiedBody: finalBody, now: 110 }),
+  error => error.code === 'FULL_DEPENDENCY_MISMATCH');
+
+  assert.equal(publisher.state().current_generation, null);
+  const generation = productionGenerationId({
+    kid: f.base.kid,
+    runId: f.base.runId,
+    seq0BodySha256: hash(f.header),
+  });
+  const db = new DatabaseSync(path.join(f.catalog, `catalog.${generation}.building.sqlite`), { readOnly: true });
+  assert.equal(db.prepare('SELECT count(*) n FROM ingest_runs').get().n, 0);
+  db.close();
+});
+
 test('coordinator owns seq0, all production phases and E5a finalization', t => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'bp-e6a2-'));
   const catalog = path.join(root, 'catalog'); fs.mkdirSync(catalog);
