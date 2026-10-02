@@ -155,7 +155,7 @@ function resolveProductId(db, selector) {
     ).all(key);
     if (rows.length > 1) {
       throw serviceError(
-        'CATALOG_LOOKUP_AMBIGUOUS',
+        'CATALOG_IDENTITY_COLLISION',
         'SKU resolved to multiple products',
         { sku_key: key, count: rows.length }
       );
@@ -168,7 +168,7 @@ function resolveProductId(db, selector) {
   ).all(String(selector.url));
   if (rows.length > 1) {
     throw serviceError(
-      'CATALOG_LOOKUP_AMBIGUOUS',
+      'CATALOG_IDENTITY_COLLISION',
       'URL resolved to multiple products',
       { url: selector.url, count: rows.length }
     );

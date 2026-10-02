@@ -91,10 +91,11 @@ Current v1 surface:
 - getStoreStockFact(...)
 - searchObjectiveProducts(...)
 
-The three `*Fact` methods are Slice B1 decision-ready factual contracts. They
-remain provider-neutral, execute through the same one-generation CatalogReader
-boundary and do not create customer-facing text. Their frozen semantics are
-documented in `docs/CATALOG_FACTUAL_CONTRACTS.md`.
+The first three product/variant `*Fact` methods are Slice B1
+decision-ready factual contracts. They remain provider-neutral, execute through
+the same one-generation CatalogReader boundary and do not create customer-facing
+text. Their frozen semantics are documented in
+`docs/CATALOG_FACTUAL_CONTRACTS.md`.
 
 Slice B2 adds exact dictionary filters for current-target validation by the
 reviewed Vocabulary resolver layer:
@@ -146,6 +147,11 @@ Exact SKU lookup has priority over text search.
 If a known SKU is unavailable and default search is sellable-only, the result is
 reported as EXACT_SKU_FILTERED rather than silently falling through to unrelated
 text results.
+
+A supposedly canonical product selector that resolves to multiple canonical
+product IDs is identity corruption, not a customer ambiguity. CatalogService
+fails closed as `CATALOG_IDENTITY_COLLISION` and reports only bounded selector
+metadata/count; it never exposes the internal candidate IDs.
 
 ## Search
 

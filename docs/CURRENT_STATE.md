@@ -202,12 +202,12 @@ confirmed partial shortlist.
 
 ### B4 — specific-store stock + ProductPresentation
 
-Status: REPOSITORY CANDIDATE / NOT DEPLOYED.
+Status: MERGED / repository contract; no new production service release required yet.
 
-Branch:
-`feat/ai-first-line-slice-b4-stock-presentation`.
+PR #73 merged at:
+`d971c53a4fdc42251c85c8901cf847afbc36f174`.
 
-Delivered candidate:
+Delivered:
 - `getStoreStockFact(...)` with canonical product/variant/store authority only;
 - exact variant or deterministic single active IN_STOCK variant resolution;
 - `STORE_STOCK` boolean fact without exposing quantity;
@@ -222,9 +222,21 @@ Delivered candidate:
 Contract:
 `docs/CATALOG_STORE_STOCK.md`.
 
-Next after B4 merge/review: final Slice B regression/acceptance closeout, then
+### Slice B final closeout
+
+Status: CLOSEOUT CANDIDATE on
+`docs/ai-first-line-slice-b-closeout`.
+
+Closeout adds the missing frozen C60 machine boundary:
+`CATALOG_IDENTITY_COLLISION` for a supposedly canonical product selector that
+resolves to multiple internal product identities, without exposing candidates.
+
+Final acceptance ownership and Definition-of-Done evidence:
+`docs/AI_FIRST_LINE_SLICE_B_CLOSEOUT.md`.
+
+After closeout merge, Slice B is complete. Next:
 Slice C — Website First Line episode state + ObjectiveConstraintLatch +
-deterministic ANSWER / CLARIFY / HUMAN rendering.
+deterministic ANSWER / CLARIFY / HUMAN + WebsiteRenderer/TextRenderer.
 
 ## D2b acceptance status (2026-09-30)
 

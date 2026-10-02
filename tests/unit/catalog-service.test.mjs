@@ -518,6 +518,31 @@ function buildFixture(storageDir) {
     insertFts(builder, item);
   }
 
+  builder.db.prepare(
+    'INSERT INTO product_text(' +
+    'product_id,language,title,short_description,description,url' +
+    ') VALUES(?,?,?,?,?,?)'
+  ).run(
+    'p-day3',
+    'de',
+    'Identity collision Day3',
+    null,
+    null,
+    '/identity-collision'
+  );
+  builder.db.prepare(
+    'INSERT INTO product_text(' +
+    'product_id,language,title,short_description,description,url' +
+    ') VALUES(?,?,?,?,?,?)'
+  ).run(
+    'p-bug',
+    'fr',
+    'Identity collision Bugaboo',
+    null,
+    null,
+    '/identity-collision'
+  );
+
   for (const layer of [
     'taxonomy',
     'content',
@@ -710,6 +735,28 @@ test('getProduct resolves by product ID, SKU and URL', () => {
   assert.equal(byId.categories[0].category_id, 'cat-strollers');
   assert.equal(byId.attributes.length, 2);
   assert.equal(byId.images.length, 1);
+});
+
+test('C60 canonical product selector collision fails closed without candidates', () => {
+  assert.throws(
+    () => service.getProduct({
+      url: '/identity-collision',
+    }),
+    error => {
+      assert.equal(error?.code, 'CATALOG_IDENTITY_COLLISION');
+      assert.equal(error?.details?.url, '/identity-collision');
+      assert.equal(error?.details?.count, 2);
+      assert.equal(
+        Object.hasOwn(error?.details || {}, 'product_ids'),
+        false
+      );
+      assert.equal(
+        Object.hasOwn(error?.details || {}, 'candidates'),
+        false
+      );
+      return true;
+    }
+  );
 });
 
 test('KIT details expose components without inventing store stock', () => {
