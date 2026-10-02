@@ -108,11 +108,28 @@ Machine-readable evidence:
 
 ## Production CURRENT gate
 
-This drill proves the recovery mechanism; it does **not** authorize production
-Knowledge CURRENT because production `knowledge.sqlite` is not deployed yet.
+The synthetic drill above originally proved only the recovery mechanism and did
+not by itself authorize production Knowledge CURRENT.
 
-After canonical physical-store cutover and production Knowledge deployment, the
-same profile must produce a real encrypted off-host backup and a successful
-scratch restore against the production authority. Until that proof exists,
-storage policy remains `REQUIRED_BEFORE_DEPLOY` and production Knowledge must
-fail closed rather than be declared CURRENT.
+That gate was subsequently satisfied on 2026-10-02 after canonical physical-store
+cutover and production Knowledge deployment. The production-authority proof is
+recorded below; storage policy can therefore mark Knowledge CURRENT with encrypted
+off-host recovery verified.
+
+## Production authority restore proof — 2026-10-02
+
+After canonical-store production cutover, the real production Knowledge authority was created at /var/lib/babypark-integration/knowledge.sqlite and passed the same encrypted off-host recovery gate.
+
+Off-host target: server2181.babypark.ua
+Off-host path: /var/backups/babypark-knowledge/20261002
+
+Proof:
+- encrypted artifact SHA-256: 72ce2db14c2b14afb84b93fc0e8a5fc6f1f7db1a840fd2eb6237194824b9ec62;
+- restored plaintext SHA-256: c74864a4cc12744d6572724ab1f4a43b76ad2b52d33bd4dfa1eb24800ed55f7e;
+- semantic evidence SHA-256: 94344d926936e457997ca587ad2d6afbc827fb85c7fcb99b9e9d2252008dac80;
+- SQLite integrity: ok;
+- scratch restore: PASS.
+
+The production database was intentionally empty at bootstrap (0 revisions / 0 events), so semantic recovery correctly verifies the empty authority snapshot and ledger rather than relying on synthetic business facts.
+
+This proof supersedes the previous REQUIRED_BEFORE_DEPLOY status for knowledge_db. Production storage policy may mark Knowledge CURRENT with encrypted off-host recovery verified.

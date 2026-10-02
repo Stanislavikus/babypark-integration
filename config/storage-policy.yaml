@@ -420,7 +420,7 @@
     {
       "id": "knowledge_db",
       "host_role": "integration",
-      "status": "PLANNED",
+      "status": "CURRENT",
       "scope": "file",
       "location": "/var/lib/babypark-integration/knowledge.sqlite",
       "owner": "knowledge authority runtime",
@@ -428,7 +428,7 @@
       "state_class": "durable",
       "thresholds": {
         "metric": "bytes",
-        "basis": "initial estimate before first reviewed Knowledge bootstrap",
+        "basis": "production authority deployed 2026-10-02; thresholds remain conservative initial operating envelope",
         "expected": 16777216,
         "warning": 67108864,
         "critical": 134217728
@@ -447,7 +447,7 @@
       "backup": {
         "required": true,
         "off_host": true,
-        "status": "REQUIRED_BEFORE_DEPLOY"
+        "status": "ENCRYPTED_OFF_HOST_VERIFIED"
       },
       "pii": "business_contact_and_operational_facts_no_customer_conversation_body"
     },

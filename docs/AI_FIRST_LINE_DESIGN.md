@@ -1462,6 +1462,10 @@ No customer messages.
   authority remains BabyPark services;
 - not part of current Slice A implementation.
 
+Future BabyPark AI HUB direction is tracked separately in
+`docs/AI_HUB_DIRECTION.md`. It is an observability/control plane over existing
+BabyPark authorities, not a new source of truth, and is not part of Slice B.
+
 ## 51. Review status
 
 v0.3 blocker review found:

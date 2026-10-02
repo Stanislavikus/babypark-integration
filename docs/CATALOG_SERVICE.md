@@ -1,14 +1,18 @@
 # Catalog Service
 
-Status: CURRENT production read contract; Slice A canonical-store cutover NOT DEPLOYED
-Last verified: 2026-10-01
+Status: CURRENT production read contract; Slice A canonical-store cutover DEPLOYED
+Last verified: 2026-10-02
 Owner: BabyPark
-Source of truth: src/catalog/service/
+Source of truth: src/catalog/service/ + accepted production generation
 
-The current production generation was accepted before Slice A A2 and therefore
-still reflects the pre-cutover store-identity boundary. Repository A2 code changes
-the next accepted FULL to canonical BabyPark physical `store_id`; merge alone does
-not migrate production data.
+Production canonical-store cutover completed on 2026-10-02. Current accepted
+generation is `g_bcd3c2836b25ab4252f8f5510c769f260e0597092fea8aff`, published
+against IdentityStore revision 65506. Physical store stock now uses BabyPark
+canonical `store_id`; provider-native Drupal IDs are reviewed xrefs only.
+
+Independent production Link A verified the replacement FULL with
+`mismatch_count=0` and 48/48 FTS probes PASS. The previous pre-cutover generation
+remains retained as PREVIOUS for rollback evidence.
 
 ## Purpose
 
