@@ -307,6 +307,71 @@ returns a sanitized `409 STORE_IDENTITY_UNRESOLVED` with `action=operator`;
 provider/native identifiers remain in internal diagnostics rather than the public
 error body.
 
+### A3 read-only store bootstrap / preflight
+
+Do not discover production store IDs by copying names from Drupal UI or by
+guessing taxonomy IDs. Use the exact frozen D2B spool that is intended for the
+cutover.
+
+Discovery works before IdentityStore schema migration and performs no writes:
+
+```bash
+npm run identity:store-plan -- \
+  --spool=/absolute/path/<manifest-sha>.ready \
+  --expected-spool-sha256=<trusted-manifest-sha256>
+```
+
+For a production cutover, `--expected-spool-sha256` must come from already
+trusted operational authority, not from the spool path being inspected. A
+mismatch fails closed before planning.
+
+Expected status is `REVIEW_REQUIRED`. The JSON report contains:
+- exact spool manifest SHA-256, source epoch and snapshot watermark;
+- every canonical FULL `store` record: provider/native ID, source name and
+  active flag;
+- whether each store is referenced by stock and how many stock rows reference it;
+- structural blockers such as stock references without a store record.
+
+The report's `evidence_ref` is evidence only. It does not constitute human
+approval and is not automatically copied into `reviewed_source`.
+
+After the explicit v1 -> v2 IdentityStore migration and reviewed
+`identity:store-bind` operations, rerun with the authority database:
+
+```bash
+npm run identity:store-plan -- \
+  --spool=/absolute/path/<manifest-sha>.ready \
+  --identity=/absolute/path/identity.sqlite \
+  --expected-spool-sha256=<trusted-manifest-sha256>
+```
+
+The preflight is `READY` only when every current source store maps to an active
+reviewed canonical `store_id`, every stock store reference has a source store
+record, and two current source-store records do not claim the same canonical
+store. Missing xrefs, tombstones, current-source canonical collisions, provider
+mismatch, or incomplete source evidence produce `BLOCKED`.
+
+Exit contract:
+- `0`: `REVIEW_REQUIRED` discovery or `READY` preflight;
+- `3`: deterministic `BLOCKED` preflight/evidence result;
+- `2`: CLI usage error;
+- `1`: invalid/unreadable authority artifact.
+
+The planner is read-only by construction and deliberately has no `--apply`
+option. Actual reviewed mappings remain separate explicit
+`identity:store-bind --apply` operations.
+
+For the currently documented production FULL, the operational truth snapshot in
+`docs/CURRENT_STATE.md` freezes:
+
+```
+c18bbb1740e7722f2c0f0138b37bf162dbedd1874b481cdde505bd4fa3491935
+```
+
+Use that value as `--expected-spool-sha256` when inspecting the exact spool for
+that accepted run. The planner still returns the observed
+`spool_manifest_sha256` in its JSON evidence.
+
 ## SKU rename and aliases
 
 A normal ensureVariant call cannot change the SKU identity of an existing

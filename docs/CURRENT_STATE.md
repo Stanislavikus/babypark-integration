@@ -1,11 +1,11 @@
 # CURRENT_STATE
 
 Status: CURRENT
-Last verified: 2026-09-30
+Last verified: 2026-10-02
 Owner: BabyPark
 Source of truth: production runtime + this repository
 
-## AI First Line Slice A state (2026-10-01)
+## AI First Line Slice A state (2026-10-02)
 
 Frozen v0.5 design authority is consolidated in main at
 `644708f739e4999b7604c505bee253df193e16b2`:
@@ -15,24 +15,26 @@ Frozen v0.5 design authority is consolidated in main at
 There are no normative v0.5 delta files.
 
 Implementation issue: #53.
-Draft implementation PR: #54.
+A1+A2 merged in PR #54; the finalization-fence regression merged in PR #56.
 
-Repository Slice A currently contains:
+Repository Slice A now contains:
 - IdentityStore schema-v2 migration and canonical physical-store xrefs;
 - explicit reviewed store binding;
 - mapper-v3 canonical physical-store boundary;
 - store-identity topology bound into production dependency fingerprint, fencing
-  any reviewed store-map drift after seq0;
-- independent Link A canonical-store verification.
+  reviewed store-map drift after seq0 and again before final certification;
+- independent Link A canonical-store verification;
+- read-only A3 store bootstrap/preflight planning from exact frozen D2B evidence.
 
 These Slice A changes are **not deployed to production**.
 
 Production `identity.sqlite` and the current accepted catalog generation still
 predate the canonical physical-store cutover. A production migration requires the
-recovery-gated sequence in `docs/CATALOG_IDENTITY.md`: migrate IdentityStore,
-review/bind current Drupal stores, deploy mapper-v3, run a new FULL, require Link A
-PASS, validate CatalogService canonical store IDs, then establish fresh recovery
-coverage.
+recovery-gated sequence in `docs/CATALOG_IDENTITY.md`: discover exact current
+Drupal store IDs from the frozen spool, migrate IdentityStore, review/bind stores,
+rerun the read-only preflight to READY, deploy mapper-v3, run a new FULL, require
+Link A PASS, validate CatalogService canonical store IDs, then establish fresh
+recovery coverage.
 
 Store-scoped Knowledge must not be declared CURRENT before that gate passes.
 
