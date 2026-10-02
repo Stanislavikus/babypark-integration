@@ -9,11 +9,11 @@ Source of truth: production runtime + this repository
 
 Status: PRODUCTION ACCEPTED / CLOSED
 
-Frozen v0.5 design authority is consolidated in main at 644708f739e4999b7604c505bee253df193e16b2:
+Frozen v0.6 design authority is consolidated in the normative design/acceptance documents:
 - docs/AI_FIRST_LINE_DESIGN.md;
 - docs/AI_FIRST_LINE_ACCEPTANCE.md.
 
-There are no normative v0.5 delta files.
+There are no normative v0.6 delta files.
 
 Slice A implementation issue #53 is CLOSED.
 Repository implementation is complete through A8 and all production deployment gates are complete.
@@ -95,7 +95,7 @@ Production Knowledge recovery proof:
 
 Slice A production gates are therefore complete. Store-scoped Knowledge may now use canonical BabyPark store_id values. No provider-native Drupal/Magento store identifier is allowed as Knowledge authority.
 
-Deferred Slice E Seller Assist remains frozen in the v0.5 design. Future BabyPark AI HUB direction is documented separately in docs/AI_HUB_DIRECTION.md and does not expand Slice B scope.
+Deferred Slice E Seller Assist remains frozen in the v0.6 design. Future BabyPark AI HUB direction is documented separately in docs/AI_HUB_DIRECTION.md and does not expand Slice B scope.
 
 Next implementation slice: Slice B — Catalog factual/query contracts.
 
@@ -233,9 +233,26 @@ resolves to multiple internal product identities, without exposing candidates.
 Final acceptance ownership and Definition-of-Done evidence:
 `docs/AI_FIRST_LINE_SLICE_B_CLOSEOUT.md`.
 
-Slice B is complete. Next:
-Slice C — Website First Line episode state + ObjectiveConstraintLatch +
-deterministic ANSWER / CLARIFY / HUMAN + WebsiteRenderer/TextRenderer.
+Slice B is complete.
+
+Slice C umbrella issue: #75.
+
+C1 — durable logical episode state is the active implementation slice:
+- separate `episode.sqlite`, not a `copilot.sqlite` migration;
+- one active logical episode per Chatwoot conversation;
+- ordered source message IDs;
+- allowlisted canonical stable customer selections only;
+- presented canonical candidates + requested slot;
+- clarification budget constrained to 0/1;
+- optimistic versioning rejects stale writers;
+- no raw/normalized customer body, dynamic Catalog/Knowledge facts,
+  resolver/vocabulary state, or Chatwoot reopen-causality marker is persisted;
+- `NON_ACTIONABLE_ACK` and standalone/dependent episode-boundary behavior are
+  frozen for C2 routing, but C1 does not implement text classification.
+
+After C1:
+C2 structured extraction/episode continuation, then C3 ObjectiveConstraintLatch,
+followed by deterministic ANSWER / CLARIFY / HUMAN and render/wiring slices.
 
 ## D2b acceptance status (2026-09-30)
 

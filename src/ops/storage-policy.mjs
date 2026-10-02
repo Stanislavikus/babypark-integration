@@ -23,6 +23,7 @@ const REQUIRED_IDS = Object.freeze([
   'catalog_publication_lock_sidecars',
   'ingest_staging',
   'copilot_jobs',
+  'episode_state',
   'ai_trace_metadata',
   'integration_releases',
   'exporter_state',

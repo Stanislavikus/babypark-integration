@@ -452,6 +452,40 @@
       "pii": "business_contact_and_operational_facts_no_customer_conversation_body"
     },
     {
+      "id": "episode_state",
+      "host_role": "integration",
+      "status": "PLANNED",
+      "scope": "file",
+      "location": "/var/lib/babypark-integration/episode.sqlite",
+      "owner": "BabyPark First Line episode runtime",
+      "purpose": "Restart-durable logical episode state: canonical stable selections, source message IDs, presented canonical candidates, requested slot and one-prompt clarification budget.",
+      "state_class": "rebuildable",
+      "thresholds": {
+        "metric": "rows",
+        "basis": "initial Slice C pilot budget; closed-episode cleanup is not enabled in C1",
+        "expected": 10000,
+        "warning": 25000,
+        "critical": 50000
+      },
+      "retention": {
+        "mode": "closed_episode_ttl_planned",
+        "ttl_days": 30
+      },
+      "cleanup": {
+        "automatic": false,
+        "mechanism": "No C1 automatic cleanup. A later reviewed cleanup may delete only closed episodes after dry-run; active episodes are never age-deleted.",
+        "dry_run_required": true,
+        "delete_guard": "Never delete an active episode. Loss of episode state must fail closed rather than inventing prior selections or clarification history."
+      },
+      "recovery": "State contains no business authority or raw customer body. If unavailable, do not reconstruct selections from guesswork; later Slice C logic may reread Chatwoot source_message_ids and otherwise fail closed/handoff.",
+      "backup": {
+        "required": false,
+        "off_host": false,
+        "status": "NOT_REQUIRED_REBUILDABLE_FAIL_CLOSED"
+      },
+      "pii": "conversation_and_message_identifiers_plus_canonical_customer_selections_no_raw_message_body"
+    },
+    {
       "id": "copilot_jobs",
       "host_role": "integration",
       "status": "PLANNED",

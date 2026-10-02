@@ -1,11 +1,11 @@
-# BabyPark AI First Line — Acceptance Corpus v0.5
+# BabyPark AI First Line — Acceptance Corpus v0.6
 
 Status: FROZEN — blocker review complete
 Companion: `docs/AI_FIRST_LINE_DESIGN.md`
 Repository baseline used for research: `e4b3989f852d5de4a868a6f72867b87cb64f8b2d`
 
-This file is the single normative acceptance corpus for AI First Line v0.5. It
-incorporates the complete v0.5 acceptance delta; no separate delta document is
+This file is the single normative acceptance corpus for AI First Line v0.6. It
+incorporates the complete v0.6 acceptance delta; no separate delta document is
 required to interpret expected behavior.
 
 This file is intended to become executable golden test data.
@@ -432,6 +432,86 @@ Expected:
 - do not treat the successful selection as permission for another CLARIFY later
   in the same episode.
 
+### Q09 — standalone new query starts fresh logical episode
+An active prior episode exists and may already have
+`clarification_prompts_sent=1`.
+The next customer message is a standalone new request that does not depend on a
+presented candidate, requested slot or explicitly supported follow-up.
+
+Expected:
+- prior logical episode is closed/replaced;
+- a new episode is created;
+- clarification budget starts at 0;
+- old stable slots/candidates/requested slot are not inherited implicitly.
+
+### Q10 — dependent follow-up continues current logical episode
+The next message selects a presented candidate, fills the explicitly requested
+slot, or invokes an explicitly supported deterministic follow-up such as C25.
+
+Expected:
+- same logical episode continues;
+- ordered `source_message_ids` append the newer Chatwoot message id;
+- preserved stable slots remain fixed unless the customer explicitly changes them;
+- dynamic authority is still reread before any factual public response.
+
+### Q11 — Chatwoot status does not revive a closed episode
+A logical episode has closed. Later the same Chatwoot conversation becomes
+`pending` again and the customer sends a new message.
+
+Expected:
+- closed episode state is never reopened/reused solely because of Chatwoot status;
+- apply ordinary standalone/dependent rules to the new message;
+- no old clarification budget or candidates reappear.
+
+### Q12 — pure acknowledgement is no-action, not a fourth decision
+No clarification is pending. Customer sends a confidently pure social
+acknowledgement such as "дякую" with no actionable request or constraint.
+
+Expected:
+- internal `NON_ACTIONABLE_ACK`;
+- no ANSWER / CLARIFY / HUMAN decision is emitted;
+- no public message;
+- no handoff;
+- no Chatwoot resolve;
+- work terminalizes as no-public-action;
+- logical episode closes.
+
+### Q13 — social prefix does not swallow actionable request
+Customer sends:
+"Спасибо, а сколько стоит доставка?"
+
+Expected:
+- not `NON_ACTIONABLE_ACK`;
+- actionable content continues through normal extraction/authority/decision processing;
+- the social prefix does not remove the delivery request.
+
+### Q14 — acknowledgement cannot bypass clarification exhaustion
+BabyPark already emitted its one CLARIFY prompt and waits for a requested slot
+or offered-candidate selection. Customer replies only "ок" / "спасибо" and does
+not supply the requested value.
+
+Expected:
+- not `NON_ACTIONABLE_ACK`;
+- no second CLARIFY;
+- HUMAN / CLARIFY_EXHAUSTED.
+
+### Q15 — C1 persistence contains no customer body or dynamic authority
+Create/update an episode across restart.
+
+Expected durable state contains only:
+- conversation/episode identifiers;
+- ordered source message IDs;
+- allowlisted canonical stable selections;
+- canonical presented candidates;
+- requested slot;
+- 0/1 clarification counter;
+- lifecycle/version metadata.
+
+Attempts to persist raw customer body, presentation label, current price, stock
+quantity, catalog freshness, resolver/vocabulary state such as
+`category_match_mode`, resolved policy/operational effect or Chatwoot
+reopen-causality marker are rejected/not representable.
+
 ## I. Handoff vectors
 
 ### H01 — HUMAN successful
@@ -704,5 +784,5 @@ provider-native Drupal/Magento ID rather than canonical `store_id`.
 
 Expected: reject/block deployment.
 
-The v0.5 acceptance corpus is frozen for Slice A implementation issue #53.
+The v0.6 acceptance corpus is frozen for Slice C umbrella issue #75. C1 implements only the persisted episode-state boundary.
 
