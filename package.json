@@ -30,6 +30,7 @@
     "identity:migrate": "node scripts/identity-migrate.mjs",
     "identity:store-bind": "node scripts/identity-store-bind.mjs",
     "identity:store-plan": "node --no-warnings scripts/identity-store-plan.mjs",
-    "knowledge:serve": "node src/copilot/knowledge-control/index.mjs"
+    "knowledge:serve": "node src/copilot/knowledge-control/index.mjs",
+    "knowledge:backup": "node scripts/knowledge-backup.mjs"
   }
 }

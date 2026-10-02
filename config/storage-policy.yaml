@@ -452,6 +452,40 @@
       "pii": "business_contact_and_operational_facts_no_customer_conversation_body"
     },
     {
+      "id": "knowledge_backups",
+      "host_role": "integration",
+      "status": "PLANNED",
+      "scope": "directory",
+      "location": "/var/backups/babypark-integration/knowledge",
+      "owner": "root:root",
+      "purpose": "Encrypted verified Knowledge Authority recovery packages and manifests before required off-host replication.",
+      "state_class": "durable",
+      "thresholds": {
+        "metric": "count",
+        "basis": "initial verified-generation retention target before production drill",
+        "expected": 5,
+        "warning": 10,
+        "critical": 20
+      },
+      "retention": {
+        "mode": "retain_verified_generations",
+        "ttl_days": null
+      },
+      "cleanup": {
+        "automatic": false,
+        "mechanism": "Manual verified rotation only after a newer encrypted package has a verified off-host copy and successful scratch restore proof.",
+        "dry_run_required": true,
+        "delete_guard": "Never remove the last verified local or off-host recovery package."
+      },
+      "recovery": "Decrypt an off-host package into scratch, verify encrypted/plaintext checksums, SQLite integrity, Knowledge hashes/event chain/state machine and semantic snapshot before controlled restore.",
+      "backup": {
+        "required": true,
+        "off_host": true,
+        "status": "REQUIRED_BEFORE_DEPLOY"
+      },
+      "pii": "inherits_knowledge_business_contact_and_operational_facts"
+    },
+    {
       "id": "copilot_jobs",
       "host_role": "integration",
       "status": "PLANNED",

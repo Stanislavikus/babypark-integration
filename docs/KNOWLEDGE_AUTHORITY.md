@@ -262,8 +262,47 @@ Optional:
 - `BP_AI_ACCESS_CERTS_URL`;
 - `BP_AI_ACCESS_KEYS_JSON` for explicit static/test/emergency keys.
 
-## Not in A4a/A4b/A5/A6/A7
+## A8 durable encrypted backup / restore profile
+
+The repository backup command is:
+
+`npm run knowledge:backup -- --offhost-dir=/mounted/off-host/path`
+
+Encryption key is supplied only through:
+`BP_KNOWLEDGE_BACKUP_KEY_B64`
+and must decode to exactly 32 bytes.
+
+A backup is successful only after this sequence completes:
+1. consistent `node:sqlite backup()` copy of the live Knowledge database;
+2. standalone DELETE-journal normalization and SQLite integrity check;
+3. Knowledge semantic verification (schema, revision hashes, event hash chain,
+   publication state machine and exception graph);
+4. plaintext SHA-256 and semantic snapshot capture;
+5. AES-256-GCM encryption with random IV and authentication tag;
+6. canonical manifest creation with plaintext/encrypted checksums and semantic
+   head/counts;
+7. exact encrypted artifact + manifest copy to the configured off-host
+   destination;
+8. checksum verification of that off-host copy;
+9. scratch decryption from the off-host copy itself;
+10. plaintext checksum and full Knowledge semantic verification after restore.
+
+Wrong keys, encrypted-artifact tampering, semantic mismatch or a local directory
+reused as the off-host destination fail closed.
+
+The application can prove that the configured off-host path is distinct and that
+the restore reads that copy. It cannot prove that a filesystem path is physically
+on another machine. Production deployment must therefore mount/configure a real
+off-host destination and perform a real restore drill before Knowledge becomes
+CURRENT.
+
+Storage policy contains separate durable `knowledge_db` and
+`knowledge_backups` objects; neither may be cleaned by age-only automation.
+
+## Not in A4a/A4b/A5/A6/A7/A8
 
 - customer-facing AI messages;
-- production Cloudflare Tunnel/Access deployment proof;
-- production backup/restore deployment and off-host restore drill.
+- production canonical-store cutover;
+- production Knowledge DB/control-plane deployment;
+- production Cloudflare Tunnel/Access browser proof;
+- real off-host target + production restore drill.
