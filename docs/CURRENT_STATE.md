@@ -40,10 +40,15 @@ Repository Slice A now contains:
   latest-wins/implicit-specificity behavior;
 - A6 operational store resolver: state overlays before baseline state, CLOSED
   suppression, Europe/Kyiv special-hours civil-day replacement, weekly fallback,
-  exact half-open expiry and fail-closed peer conflicts/invalid hours.
+  exact half-open expiry and fail-closed peer conflicts/invalid hours;
+- A7 direct `ai.babypark.ua` control-plane foundation: Cloudflare Access RS256
+  JWT verification with automatic signing-key refresh, stable BabyPark actor
+  mapping, deny-by-default scoped grants, direct-publish OPERATIONAL_EDITOR rule,
+  browser/API revision workflow, provenance and operational/commerce resolution.
 
-A4a/A4b/A5/A6 are repository foundation only. RBAC/grant authority, direct
-control plane and durable backup/restore deployment remain subsequent Slice A work.
+A4a/A4b/A5/A6/A7 are repository foundation only. Production Tunnel/Access
+deployment proof and durable encrypted off-host backup/restore drill remain
+subsequent Slice A work.
 
 These Slice A changes are **not deployed to production**.
 
