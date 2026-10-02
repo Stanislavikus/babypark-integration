@@ -513,6 +513,7 @@ export class KnowledgeStore {
     const eventId = text('generated event id', this.idFactory.event());
 
     return tx(this.db, () => {
+      this.verifyLedger();
       if (parentRevisionId && !this.getRevision(parentRevisionId)) {
         fail('KNOWLEDGE_PARENT_MISSING', 'Parent revision does not exist');
       }
@@ -580,13 +581,15 @@ export class KnowledgeStore {
         createdAt, reason, metadataJson, previousEventHash, eventHash
       );
 
-      return Object.freeze({
+      const result = Object.freeze({
         revision_id: revisionId,
         revision_hash: revisionHash,
         event_id: eventId,
         event_seq: eventSeq,
         event_hash: eventHash,
       });
+      this.verifyLedger();
+      return result;
     });
   }
 
@@ -702,13 +705,15 @@ export class KnowledgeStore {
           { revision_id: revisionId }
         );
       }
-      return this.appendEventLocked({
+      const event = this.appendEventLocked({
         revisionId,
         eventType: 'APPROVED',
         actorId,
         reason,
         metadata,
       });
+      this.verifyLedger();
+      return event;
     });
   }
 
@@ -730,13 +735,15 @@ export class KnowledgeStore {
           { revision_id: revisionId, state }
         );
       }
-      return this.appendEventLocked({
+      const event = this.appendEventLocked({
         revisionId,
         eventType: 'WITHDRAWN',
         actorId,
         reason,
         metadata,
       });
+      this.verifyLedger();
+      return event;
     });
   }
 
@@ -796,6 +803,7 @@ export class KnowledgeStore {
         metadata,
       });
       if (!predecessor) {
+        this.verifyLedger();
         return Object.freeze({ published, superseded: null });
       }
       const superseded = this.appendEventLocked({
@@ -805,6 +813,7 @@ export class KnowledgeStore {
         reason,
         metadata: { successor_revision_id: revisionId },
       });
+      this.verifyLedger();
       return Object.freeze({ published, superseded });
     });
   }
@@ -827,13 +836,15 @@ export class KnowledgeStore {
           { revision_id: revisionId, state }
         );
       }
-      return this.appendEventLocked({
+      const event = this.appendEventLocked({
         revisionId,
         eventType: 'REVOKED',
         actorId,
         reason,
         metadata,
       });
+      this.verifyLedger();
+      return event;
     });
   }
 

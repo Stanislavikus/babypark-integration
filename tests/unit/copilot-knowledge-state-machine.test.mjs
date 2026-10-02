@@ -382,3 +382,136 @@ test('reopen rejects cryptographically valid CommercePolicy self-approval', t =>
     error => error.code === 'KNOWLEDGE_SELF_APPROVAL_FORBIDDEN'
   );
 });
+
+
+test('store.special_hours accepts 23-hour and 25-hour Europe/Kyiv civil days', t => {
+  const f = fixture(); t.after(f.cleanup);
+  const store = f.store();
+
+  const spring = store.createDraft(temporary('store.special_hours', {
+    effectType: 'SPECIAL_HOURS',
+    effectValue: { intervals: [{ open: '11:00', close: '18:00' }] },
+    effectiveFromUtc: '2026-03-28T22:00:00Z',
+    expiresAtUtc: '2026-03-29T21:00:00Z',
+  }));
+  store.publishRevision({
+    revisionId: spring.revision_id,
+    actorId: 'actor_author',
+  });
+
+  const autumn = store.createDraft(temporary('store.special_hours', {
+    effectType: 'SPECIAL_HOURS',
+    effectValue: { intervals: [{ open: '11:00', close: '18:00' }] },
+    effectiveFromUtc: '2026-10-24T21:00:00Z',
+    expiresAtUtc: '2026-10-25T22:00:00Z',
+  }));
+  store.publishRevision({
+    revisionId: autumn.revision_id,
+    actorId: 'actor_author',
+  });
+
+  assert.deepEqual(
+    store.eventsForRevision(spring.revision_id).map(x => x.event_type),
+    ['DRAFT_CREATED', 'PUBLISHED']
+  );
+  assert.deepEqual(
+    store.eventsForRevision(autumn.revision_id).map(x => x.event_type),
+    ['DRAFT_CREATED', 'PUBLISHED']
+  );
+  store.close();
+});
+
+test('restore verifier rejects cryptographically valid PUBLISHED without required approval', t => {
+  const f = fixture(); t.after(f.cleanup);
+  const store = f.store();
+  const rev = store.createDraft(baseline());
+  const first = store.eventsForRevision(rev.revision_id)[0];
+  store.close();
+
+  const event = {
+    event_id: 'ke_manual_unapproved_publish',
+    event_seq: 2,
+    revision_id: rev.revision_id,
+    event_type: 'PUBLISHED',
+    actor_id: 'actor_publisher',
+    occurred_at_utc: '2026-10-02T07:00:10.000Z',
+    reason: 'manual invalid publish',
+    metadata_json: {},
+    previous_event_hash: first.event_hash,
+  };
+  const raw = new DatabaseSync(f.file);
+  raw.prepare(`
+    INSERT INTO knowledge_events(
+      event_seq,event_id,revision_id,event_type,actor_id,occurred_at_utc,
+      reason,metadata_json,previous_event_hash,event_hash
+    ) VALUES(?,?,?,?,?,?,?,?,?,?)
+  `).run(
+    event.event_seq,
+    event.event_id,
+    event.revision_id,
+    event.event_type,
+    event.actor_id,
+    event.occurred_at_utc,
+    event.reason,
+    '{}',
+    event.previous_event_hash,
+    knowledgeSha256(event)
+  );
+  raw.close();
+
+  assert.throws(
+    () => KnowledgeStore.openExisting(f.file, f.config),
+    error => error.code === 'KNOWLEDGE_APPROVAL_REQUIRED'
+  );
+});
+
+test('write path revalidates existing ledger before appending new authority', t => {
+  const f = fixture(); t.after(f.cleanup);
+  const store = f.store();
+  const rev = store.createDraft(baseline());
+  const first = store.eventsForRevision(rev.revision_id)[0];
+
+  const event = {
+    event_id: 'ke_external_unapproved_publish',
+    event_seq: 2,
+    revision_id: rev.revision_id,
+    event_type: 'PUBLISHED',
+    actor_id: 'external_writer',
+    occurred_at_utc: '2026-10-02T07:00:10.000Z',
+    reason: 'external invalid publish',
+    metadata_json: {},
+    previous_event_hash: first.event_hash,
+  };
+  const raw = new DatabaseSync(f.file);
+  raw.prepare(`
+    INSERT INTO knowledge_events(
+      event_seq,event_id,revision_id,event_type,actor_id,occurred_at_utc,
+      reason,metadata_json,previous_event_hash,event_hash
+    ) VALUES(?,?,?,?,?,?,?,?,?,?)
+  `).run(
+    event.event_seq,
+    event.event_id,
+    event.revision_id,
+    event.event_type,
+    event.actor_id,
+    event.occurred_at_utc,
+    event.reason,
+    '{}',
+    event.previous_event_hash,
+    knowledgeSha256(event)
+  );
+  raw.close();
+
+  assert.throws(
+    () => store.createDraft(baseline({
+      namespace: 'store.phone',
+      effectFamily: 'store.identity',
+      effectType: 'PHONE',
+      effectValue: { e164: '+380000000000' },
+    })),
+    error => error.code === 'KNOWLEDGE_APPROVAL_REQUIRED'
+  );
+  assert.equal(store.stats().revisions, 1);
+  assert.equal(store.stats().events, 2);
+  store.close();
+});
