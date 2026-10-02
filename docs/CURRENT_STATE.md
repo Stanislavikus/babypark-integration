@@ -37,11 +37,13 @@ Repository Slice A now contains:
 - A5b CommercePolicy exception/resolution contract: exact v1 scope bindings,
   strict explicit narrowing, temporal subset, cycle-safe exception graph,
   equal-effect compatibility and fail-closed `POLICY_CONFLICT` without
-  latest-wins/implicit-specificity behavior.
+  latest-wins/implicit-specificity behavior;
+- A6 operational store resolver: state overlays before baseline state, CLOSED
+  suppression, Europe/Kyiv special-hours civil-day replacement, weekly fallback,
+  exact half-open expiry and fail-closed peer conflicts/invalid hours.
 
-A4a/A4b/A5 are repository foundation only. RBAC/grant authority, concrete
-hours/status effect schemas, semantic operational resolver and durable
-backup/restore deployment remain subsequent Slice A work.
+A4a/A4b/A5/A6 are repository foundation only. RBAC/grant authority, direct
+control plane and durable backup/restore deployment remain subsequent Slice A work.
 
 These Slice A changes are **not deployed to production**.
 

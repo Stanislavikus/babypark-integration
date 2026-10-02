@@ -180,11 +180,32 @@ At resolution time:
 - an applicable explicit exception suppresses only its explicit ancestor chain;
 - no latest-wins, hidden priority or implicit-specificity rule exists.
 
-## Not in A4a/A4b/A5
+## A6 operational resolver
+
+The repository operational contract now uses:
+- `store.weekly_hours`: object keyed by lowercase English weekday; each value is
+  an array of same-civil-day `{open:"HH:MM", close:"HH:MM"}` intervals;
+- `store.special_hours`: `{intervals:[...]}` with the same interval shape;
+- `store.status_override` / `store.baseline_status`: `{status:"OPEN"|"CLOSED"}`;
+- `store.temporary_closure`: canonical CLOSED state (legacy-compatible
+  `effect_type=CLOSED, effect_value.closed=true` is accepted).
+
+Resolution order for one canonical store at current `Europe/Kyiv` time:
+1. active temporary/status overlays;
+2. baseline status only when no state overlay is active;
+3. active special-hours revision(s);
+4. weekly baseline.
+
+A resolved CLOSED state suppresses all hours. OPEN never invents hours.
+Special-hours owns its full civil-day authority envelope; weekly hours cannot fill
+gaps after the special interval closes. Exact expiry is half-open and reveals the
+next lower authority layer immediately.
+
+Malformed, overlapping or incomplete current-day intervals fail closed.
+
+## Not in A4a/A4b/A5/A6
 
 - RBAC/grant authority and actor-role lookup;
-- hours/status effect JSON schema;
-- CLOSED suppression / special-hours / weekly-hours semantic resolver;
 - HTTP/admin UI;
 - AI/customer messaging;
 - production backup/restore deployment.
