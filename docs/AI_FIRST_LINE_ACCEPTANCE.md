@@ -502,7 +502,7 @@ Expected durable state contains only:
 - conversation/episode identifiers;
 - ordered source message IDs;
 - allowlisted canonical stable selections;
-- canonical presented candidates;
+- canonical presented candidates, at most 20 per clarification;
 - requested slot;
 - 0/1 clarification counter;
 - lifecycle/version metadata.
@@ -511,6 +511,10 @@ Attempts to persist raw customer body, presentation label, current price, stock
 quantity, catalog freshness, resolver/vocabulary state such as
 `category_match_mode`, resolved policy/operational effect or Chatwoot
 reopen-causality marker are rejected/not representable.
+
+Every C1 mutation after episode creation requires an explicit positive
+`expectedVersion`; omitting it is rejected and must not mutate state. More than
+20 presented candidates is rejected before durable mutation.
 
 ## I. Handoff vectors
 

@@ -4,6 +4,7 @@ import crypto from 'node:crypto';
 import { DatabaseSync } from 'node:sqlite';
 
 const SCHEMA_VERSION = 1;
+const MAX_PRESENTED_CANDIDATES = 20;
 
 const SCHEMA = `
 PRAGMA foreign_keys=ON;
@@ -358,6 +359,10 @@ export class EpisodeStore {
     if (!Array.isArray(presentedCandidates)) {
       fail('EPISODE_CANDIDATE_INVALID', 'presentedCandidates must be an array');
     }
+    if (presentedCandidates.length > MAX_PRESENTED_CANDIDATES) {
+      fail('EPISODE_CANDIDATE_LIMIT_EXCEEDED', 'presented candidate list exceeds durable C1 bound',
+        { limit: MAX_PRESENTED_CANDIDATES, count: presentedCandidates.length });
+    }
     const candidates = presentedCandidates.map(normalizeCandidate);
     if (requested === null && candidates.length === 0) {
       fail('EPISODE_CLARIFICATION_INVALID', 'clarification requires a requested slot or presented candidates');
@@ -414,10 +419,14 @@ export class EpisodeStore {
   }
 
   #requireActive(episodeId, expectedVersion) {
+    if (!Number.isSafeInteger(expectedVersion) || expectedVersion < 1) {
+      fail('EPISODE_EXPECTED_VERSION_REQUIRED', 'every episode mutation requires a positive expectedVersion',
+        { episode_id: episodeId });
+    }
     const row = this.db.prepare('SELECT * FROM episodes WHERE episode_id=?').get(episodeId);
     if (!row) fail('EPISODE_NOT_FOUND', 'episode not found', { episode_id: episodeId });
     if (row.state !== 'active') fail('EPISODE_CLOSED', 'episode is already closed', { episode_id: episodeId });
-    if (expectedVersion !== undefined && row.version !== expectedVersion) {
+    if (row.version !== expectedVersion) {
       fail('EPISODE_STALE_WRITE', 'episode version mismatch',
         { episode_id: episodeId, expected_version: expectedVersion, actual_version: row.version });
     }
@@ -461,4 +470,4 @@ export class EpisodeStore {
   }
 }
 
-export { SCHEMA_VERSION, SLOT_SPECS, REQUESTED_SLOTS, CLOSE_REASONS };
+export { SCHEMA_VERSION, SLOT_SPECS, MAX_PRESENTED_CANDIDATES };

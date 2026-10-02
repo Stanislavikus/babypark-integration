@@ -242,9 +242,9 @@ C1 — durable logical episode state is the active implementation slice:
 - one active logical episode per Chatwoot conversation;
 - ordered source message IDs;
 - allowlisted canonical stable customer selections only;
-- presented canonical candidates + requested slot;
+- presented canonical candidates (hard bound 20) + requested slot;
 - clarification budget constrained to 0/1;
-- optimistic versioning rejects stale writers;
+- every mutation requires explicit optimistic `expectedVersion`; stale writers are rejected;
 - no raw/normalized customer body, dynamic Catalog/Knowledge facts,
   resolver/vocabulary state, or Chatwoot reopen-causality marker is persisted;
 - `NON_ACTIONABLE_ACK` and standalone/dependent episode-boundary behavior are

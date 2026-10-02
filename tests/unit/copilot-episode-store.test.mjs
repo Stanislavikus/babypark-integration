@@ -182,6 +182,51 @@ test('candidate storage accepts canonical values only and never presentation lab
   assert.equal(fs.readFileSync(file).includes(Buffer.from(sentinel)), false);
 });
 
+test('every episode mutation requires an explicit optimistic expectedVersion', t => {
+  const { store } = tempEpisodeStore(t);
+  const episode = store.beginEpisode({ conversationId: 55, sourceMessageId: 101 });
+
+  expectCode(() => store.appendSourceMessage(episode.episode_id, 102), 'EPISODE_EXPECTED_VERSION_REQUIRED');
+  expectCode(() => store.setStableSlots(episode.episode_id, { product_id: 100 }),
+    'EPISODE_EXPECTED_VERSION_REQUIRED');
+  expectCode(
+    () => store.recordClarificationPrompt(
+      episode.episode_id,
+      { requestedSlot: 'store_id', presentedCandidates: [] }
+    ),
+    'EPISODE_EXPECTED_VERSION_REQUIRED'
+  );
+  expectCode(() => store.clearClarificationContext(episode.episode_id),
+    'EPISODE_EXPECTED_VERSION_REQUIRED');
+  expectCode(() => store.closeEpisode(episode.episode_id, { reason: 'completed' }),
+    'EPISODE_EXPECTED_VERSION_REQUIRED');
+
+  const unchanged = store.getEpisode(episode.episode_id);
+  assert.equal(unchanged.version, 1);
+  assert.deepEqual(unchanged.source_message_ids, [101]);
+  assert.deepEqual(unchanged.stable_slots, {});
+  assert.equal(unchanged.state, 'active');
+});
+
+test('presented candidate persistence has a hard durable bound', t => {
+  const { store } = tempEpisodeStore(t);
+  const episode = store.beginEpisode({ conversationId: 55, sourceMessageId: 101 });
+  const candidates = Array.from({ length: 21 }, (_, index) => ({
+    slot: 'variant_id',
+    value: index + 1,
+  }));
+
+  expectCode(
+    () => store.recordClarificationPrompt(
+      episode.episode_id,
+      { requestedSlot: 'variant_id', presentedCandidates: candidates },
+      { expectedVersion: 1 }
+    ),
+    'EPISODE_CANDIDATE_LIMIT_EXCEEDED'
+  );
+  assert.equal(store.getEpisode(episode.episode_id).clarification_prompts_sent, 0);
+});
+
 test('stale version cannot overwrite newer episode state across separate connections', t => {
   const { store, file } = tempEpisodeStore(t);
   const episode = store.beginEpisode({ conversationId: 55, sourceMessageId: 101 });

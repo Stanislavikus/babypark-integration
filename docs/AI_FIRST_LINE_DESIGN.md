@@ -1099,11 +1099,11 @@ C1 persists only:
 - one active episode per `conversation_id`;
 - ordered `source_message_ids`;
 - allowlisted canonical stable slots/customer selections;
-- bounded presented canonical candidate values;
+- presented canonical candidate values, hard-bounded to at most 20 per clarification;
 - one requested missing slot;
 - `clarification_prompts_sent` constrained to 0 or 1;
 - lifecycle timestamps/reason;
-- an optimistic episode version for stale-writer rejection.
+- an optimistic episode version for stale-writer rejection; every mutation requires an explicit positive `expectedVersion`.
 
 C1 never persists:
 - raw/normalized customer message bodies;
