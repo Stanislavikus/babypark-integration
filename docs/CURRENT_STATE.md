@@ -44,11 +44,16 @@ Repository Slice A now contains:
 - A7 direct `ai.babypark.ua` control-plane foundation: Cloudflare Access RS256
   JWT verification with automatic signing-key refresh, stable BabyPark actor
   mapping, deny-by-default scoped grants, direct-publish OPERATIONAL_EDITOR rule,
-  browser/API revision workflow, provenance and operational/commerce resolution.
+  browser/API revision workflow, provenance and operational/commerce resolution;
+- A8 encrypted Durable SQLite Backup Profile: consistent Knowledge backup,
+  SQLite integrity verification, AES-256-GCM artifact, HMAC-signed manifest,
+  scratch restore and semantic ledger/operational/commerce verification. A real
+  synthetic-authority off-host drill from chatwoot-fra1-01 to
+  server2181.babypark.ua passed on 2026-10-02.
 
-A4a/A4b/A5/A6/A7 are repository foundation only. Production Tunnel/Access
-deployment proof and durable encrypted off-host backup/restore drill remain
-subsequent Slice A work.
+A4a/A4b/A5/A6/A7/A8 are repository foundation. Production Tunnel/Access proof,
+canonical-store production cutover, production Knowledge deployment and a
+production-authority encrypted off-host restore drill remain deployment gates.
 
 These Slice A changes are **not deployed to production**.
 

@@ -1,0 +1,24 @@
+{
+  "schema": "bp.knowledge-recovery-drill/1",
+  "performed_at_utc": "2026-10-02T09:20:00Z",
+  "source_commit": "6f3caf07b5db380337f0c3aa033530a6011a586f",
+  "source_host_role": "chatwoot-fra1-01",
+  "off_host_target": "server2181.babypark.ua",
+  "data_class": "synthetic Knowledge authority fixture; no customer data",
+  "transport": "encrypted artifact + HMAC-signed manifest only",
+  "artifact_bytes": 40960,
+  "artifact_sha256": "bb7fa5f67d0e5ab1dc3f8d74800acb22b03062f5772ee066f3a5cf088a4722d7",
+  "plaintext_sha256": "7cf330b2a303e46b5fdc405a45db13cc8794bae7a9924db9233c6bd277d1e92b",
+  "restore": {
+    "sqlite_integrity": "ok",
+    "revisions": 3,
+    "events": 8,
+    "event_head_hash": "1c12ce84cbe27713ff39be941e4d23147cebafb1a34768d43e280534f9c42036",
+    "semantic_evidence_sha256": "4a362270385f705a9f26de564571aff7cceac7d2e46460dfeaae2128c854cbb7",
+    "operational_probes": 2,
+    "commerce_probes": 1
+  },
+  "result": "PASS",
+  "production_current_authorized": false,
+  "production_gate_reason": "Production knowledge.sqlite does not exist yet; repeat encrypted off-host restore drill after production deployment and canonical-store cutover."
+}
