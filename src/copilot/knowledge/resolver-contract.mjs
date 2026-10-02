@@ -1,1 +1,5 @@
 export const KNOWLEDGE_RESOLVER_CONTRACT_VERSION = 1;
+
+export const KNOWLEDGE_RESOLVER_GOLDEN_SHA256 = Object.freeze({
+  1: '98b791ce7c9ff22efcb63906858fdacdd7a5674a183790822fb8c59deed83130',
+});
