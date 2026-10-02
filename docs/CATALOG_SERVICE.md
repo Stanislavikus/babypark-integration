@@ -84,6 +84,14 @@ Current v1 surface:
 - compareProducts(...)
 - getStores(...)
 - lookupSku(...)
+- getProductPriceFact(productId)
+- getAvailableVariantsFact(productId)
+- getVariantPriceListFact(productId)
+
+The three `*Fact` methods are Slice B1 decision-ready factual contracts. They
+remain provider-neutral, execute through the same one-generation CatalogReader
+boundary and do not create customer-facing text. Their frozen semantics are
+documented in `docs/CATALOG_FACTUAL_CONTRACTS.md`.
 
 Every response includes catalog metadata from the same active SQLite handle used for
 the returned data.
