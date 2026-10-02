@@ -7,68 +7,96 @@ Source of truth: production runtime + this repository
 
 ## AI First Line Slice A state (2026-10-02)
 
-Frozen v0.5 design authority is consolidated in main at
-`644708f739e4999b7604c505bee253df193e16b2`:
-- `docs/AI_FIRST_LINE_DESIGN.md`;
-- `docs/AI_FIRST_LINE_ACCEPTANCE.md`.
+Status: PRODUCTION ACCEPTED / READY TO CLOSE
+
+Frozen v0.5 design authority is consolidated in main at 644708f739e4999b7604c505bee253df193e16b2:
+- docs/AI_FIRST_LINE_DESIGN.md;
+- docs/AI_FIRST_LINE_ACCEPTANCE.md.
 
 There are no normative v0.5 delta files.
 
 Implementation issue: #53.
-A1+A2 merged in PR #54; the finalization-fence regression merged in PR #56.
+Repository implementation is complete through A8. Production deployment gates are also complete.
 
-Repository Slice A now contains:
-- IdentityStore schema-v2 migration and canonical physical-store xrefs;
-- explicit reviewed store binding;
-- mapper-v3 canonical physical-store boundary;
-- store-identity topology bound into production dependency fingerprint, fencing
-  reviewed store-map drift after seq0 and again before final certification;
+Delivered foundation:
+- canonical BabyPark physical-store identity in IdentityStore schema v2;
+- reviewed provider xrefs and mapper-v3 fail-closed canonical-store boundary;
 - independent Link A canonical-store verification;
-- read-only A3 store bootstrap/preflight planning from exact frozen D2B evidence;
-- A4a immutable `knowledge.sqlite` ledger foundation: canonical JSON/hash,
-  immutable revisions, append-only global event chain, atomic DRAFT_CREATED;
-- A4b deterministic Knowledge publication state machine: APPROVED/PUBLISHED/
-  WITHDRAWN/REVOKED/SUPERSEDED, CommercePolicy self-approval guard, direct
-  temporary publication envelopes, atomic replacement supersession, and
-  independent restore verification of the same rules;
-- A5a verified active-authority projection: half-open activity window, exclusion
-  of non-PUBLISHED/terminal revisions, deterministic subject/effect-family
-  projection, and namespace-independent peer `POLICY_CONFLICT` detection;
-- A5b CommercePolicy exception/resolution contract: exact v1 scope bindings,
-  strict explicit narrowing, temporal subset, cycle-safe exception graph,
-  equal-effect compatibility and fail-closed `POLICY_CONFLICT` without
-  latest-wins/implicit-specificity behavior;
-- A6 operational store resolver: state overlays before baseline state, CLOSED
-  suppression, Europe/Kyiv special-hours civil-day replacement, weekly fallback,
-  exact half-open expiry and fail-closed peer conflicts/invalid hours;
-- A7 direct `ai.babypark.ua` control-plane foundation: Cloudflare Access RS256
-  JWT verification with automatic signing-key refresh, stable BabyPark actor
-  mapping, deny-by-default scoped grants, direct-publish OPERATIONAL_EDITOR rule,
-  browser/API revision workflow, provenance and operational/commerce resolution;
-- A8 encrypted Durable SQLite Backup Profile: consistent Knowledge backup,
-  SQLite integrity verification, AES-256-GCM artifact, HMAC-signed manifest,
-  scratch restore and semantic ledger/operational/commerce verification. A real
-  synthetic-authority off-host drill from chatwoot-fra1-01 to
-  server2181.babypark.ua passed on 2026-10-02.
+- immutable knowledge.sqlite revision/event ledger with canonical hashing;
+- deterministic publication state machine and CommercePolicy exception semantics;
+- operational store resolver with Europe/Kyiv civil-day rules;
+- direct ai.babypark.ua control plane with Cloudflare Access JWT verification, stable actor mapping and BabyPark-owned RBAC;
+- encrypted durable Knowledge recovery with signed manifest and semantic scratch-restore verification.
 
-A4a/A4b/A5/A6/A7/A8 are repository foundation. Production Tunnel/Access proof,
-canonical-store production cutover, production Knowledge deployment and a
-production-authority encrypted off-host restore drill remain deployment gates.
+## Production canonical-store cutover
 
-These Slice A changes are **not deployed to production**.
+Production IdentityStore:
+- schema: v2;
+- identity revision: 65506;
+- SQLite integrity: ok.
 
-Production `identity.sqlite` and the current accepted catalog generation still
-predate the canonical physical-store cutover. A production migration requires the
-recovery-gated sequence in `docs/CATALOG_IDENTITY.md`: discover exact current
-Drupal store IDs from the frozen spool, migrate IdentityStore, review/bind stores,
-rerun the read-only preflight to READY, deploy mapper-v3, run a new FULL, require
-Link A PASS, validate CatalogService canonical store IDs, then establish fresh
-recovery coverage.
+Reviewed current Drupal store mappings:
+- Drupal 1575 -> store_a939ba30-11cb-4a08-b71a-7b7947d44747;
+- Drupal 747 -> store_83cff1ad-fb41-4ec9-aeb1-7c4b184d084c.
 
-Store-scoped Knowledge must not be declared CURRENT before that gate passes.
+Replacement FULL:
+- CURRENT generation: g_bcd3c2836b25ab4252f8f5510c769f260e0597092fea8aff;
+- PREVIOUS generation: g_3f82b2487806f6caaea95ad9aca94552f2eeb39844a2de87;
+- run_id: 79c1d873_0b68_4ac0_94e0_d4a62c573e04;
+- run_digest: 644de366d5f7c2b843daaf4568e4fd0e3bbae1a981469b46310f10f078a5d2ca;
+- final_seq: 176;
+- source spool manifest SHA-256: c18bbb1740e7722f2c0f0138b37bf162dbedd1874b481cdde505bd4fa3491935;
+- published identity revision: 65506.
 
-Deferred Slice E Seller Assist is frozen in the v0.5 design but is not part of
-current Slice A implementation.
+Independent production Link A after cutover:
+- PASS;
+- mismatch_count = 0;
+- FTS probes = 48/48 PASS;
+- generation manifest SHA-256: ba157e2cdc2b01b3ba692ba0a9ef20d17790d2528cc3b0af74969a3b2fb53335.
+
+Recovery coverage exists both before and after the v1->v2 identity migration; the retained v1 cutover backup is explicit rollback evidence, not cleanup material.
+
+## Production Knowledge Authority
+
+Public origin: https://ai.babypark.ua
+
+Runtime:
+- babypark-knowledge.service enabled + active;
+- listener 127.0.0.1:3210 only;
+- production database /var/lib/babypark-integration/knowledge.sqlite;
+- current production bootstrap ledger is valid and intentionally empty: 0 revisions / 0 events.
+
+Cloudflare Access:
+- team domain: babypark.cloudflareaccess.com;
+- application: BabyPark AI Knowledge;
+- destination: ai.babypark.ua;
+- policy: Allow BabyPark AI Admins;
+- policy rule: exact approved email identities;
+- current verified actor mapping: approved Cloudflare identity -> actor_stanislav.
+
+End-to-end production proof:
+- unauthenticated public request is redirected by Cloudflare Access;
+- authenticated browser reaches Knowledge UI and is identified as actor_stanislav;
+- origin independently validates Cloudflare JWT signature/issuer/audience/expiry;
+- direct-origin HTTPS without JWT returns HTTP 401 ACCESS_JWT_MISSING;
+- external /health returns 404;
+- signing JWK refresh is automatic from the team Access certs endpoint.
+
+Production Knowledge recovery proof:
+- real production database encrypted with AES-256-GCM;
+- encrypted artifact copied off-host to server2181.babypark.ua;
+- data key stored locally and an independently held wrapped recovery key is used off-host;
+- off-host scratch restore PASS;
+- SQLite integrity = ok;
+- ciphertext SHA-256: 72ce2db14c2b14afb84b93fc0e8a5fc6f1f7db1a840fd2eb6237194824b9ec62;
+- restored plaintext SHA-256: c74864a4cc12744d6572724ab1f4a43b76ad2b52d33bd4dfa1eb24800ed55f7e;
+- semantic evidence SHA-256: 94344d926936e457997ca587ad2d6afbc827fb85c7fcb99b9e9d2252008dac80.
+
+Slice A production gates are therefore complete. Store-scoped Knowledge may now use canonical BabyPark store_id values. No provider-native Drupal/Magento store identifier is allowed as Knowledge authority.
+
+Deferred Slice E Seller Assist remains frozen in the v0.5 design. Future BabyPark AI HUB direction is documented separately in docs/AI_HUB_DIRECTION.md and does not expand Slice B scope.
+
+Next implementation slice: Slice B — Catalog factual/query contracts.
 
 ## D2b acceptance status (2026-09-30)
 
@@ -190,79 +218,78 @@ Current row-count baseline immediately after cutover:
 
 ## CatalogService production
 
-D1 deployment completed on 2026-09-26.
-
-Initial D1 deployment source (historical):
-`1956aba235f1771262235881701186cbc5bd884d`
+D1 deployment completed on 2026-09-26. Canonical-store runtime cutover completed on 2026-10-02.
 
 Current production runtime source:
-- commit: `7d98905b6538b395488bf69f318b56f683569bcd`;
-- tree: `849154c233ebf2fa0491822fe6c67a7a061e0804`;
-- release provenance SHA-256:
-  `39de7b5782e73fedf138c20236cba48be6fff3954989441bf4663f6388bccef4`.
+- commit: e63a4dfc158ad23ec9de09252e5af3f8bc96eb10;
+- current immutable release: /opt/babypark-integration/releases/20261002T1038Z-e63a4dfc;
+- release symlink: /opt/babypark-integration/catalog-current.
 
-Current production release:
-`/opt/babypark-integration/releases/20260930T1718Z-7d98905b`
-
-Catalog release symlink:
-`/opt/babypark-integration/catalog-current`
-
-Systemd:
-`babypark-catalog-ingest.service`
+Systemd: babypark-catalog-ingest.service
 
 Runtime state:
-- enabled + active
-- service identity: `babypark-catalog`
-- local listener: `127.0.0.1:8081`
-- observed idle RSS after enable: about 20 MiB
-- `CATALOG_INGEST_ENABLED=true`
+- enabled + active;
+- service identity: babypark-catalog;
+- local listener: 127.0.0.1:8081;
+- CATALOG_INGEST_ENABLED=true.
 
 Durable state:
-- parent: `/var/lib/babypark-catalog`
-- owner: `babypark-catalog:babypark-catalog`
-- mode: `0700`
-- identity: `/var/lib/babypark-catalog/identity.sqlite`
-- replay: `/var/lib/babypark-catalog/replay.sqlite`
-- catalog generations: `/var/lib/babypark-catalog/catalog`
-- recovery sets: `/var/lib/babypark-catalog/backup`
+- parent: /var/lib/babypark-catalog;
+- owner: babypark-catalog:babypark-catalog;
+- mode: 0700;
+- identity: /var/lib/babypark-catalog/identity.sqlite;
+- replay: /var/lib/babypark-catalog/replay.sqlite;
+- catalog generations: /var/lib/babypark-catalog/catalog;
+- recovery sets: /var/lib/babypark-catalog/backup.
 
-Environment:
-`/etc/babypark-catalog-ingest.env`
-- owner: `root:root`
-- mode: `0600`
-- secret values are NOT in Git
+IdentityStore:
+- schema v2;
+- revision 65506;
+- integrity ok;
+- Drupal 1575 -> store_a939ba30-11cb-4a08-b71a-7b7947d44747;
+- Drupal 747 -> store_83cff1ad-fb41-4ec9-aeb1-7c4b184d084c.
 
-Current authenticated state is post-FULL and bound to the exact CURRENT generation
-and accepted run. Operational identifiers are read from authenticated state and the
-sealed generation manifest; no credentials or private authentication material are
-recorded here.
+Current publication authority:
+- CURRENT: g_bcd3c2836b25ab4252f8f5510c769f260e0597092fea8aff;
+- PREVIOUS: g_3f82b2487806f6caaea95ad9aca94552f2eeb39844a2de87;
+- accepted run: 79c1d873_0b68_4ac0_94e0_d4a62c573e04;
+- run digest: 644de366d5f7c2b843daaf4568e4fd0e3bbae1a981469b46310f10f078a5d2ca;
+- final sequence: 176;
+- published identity revision: 65506;
+- source epoch: drupal-prod-v1;
+- source spool manifest SHA-256: c18bbb1740e7722f2c0f0138b37bf162dbedd1874b481cdde505bd4fa3491935.
+
+Independent production Link A after canonical-store cutover:
+- status PASS;
+- mismatch_count 0;
+- 48/48 FTS probes PASS;
+- generation manifest SHA-256 ba157e2cdc2b01b3ba692ba0a9ef20d17790d2528cc3b0af74969a3b2fb53335.
 
 Recovery:
-- authority: `CURRENT`
-- replay schema: `7`
-- published/live identity revision: `65504`
-- covering recovery set: `set-20260930T181032Z-d5f1cd5906a4a838`
-- coverage: `COVERED`
-- post-FULL local coverage: `COVERED`
-- off-host encrypted recovery + separate scratch restore: `PASS`
+- authority CURRENT;
+- replay schema 7;
+- published/live identity revision 65506;
+- current post-replacement covering recovery set: set-20261002T110643Z-5714da413a810602;
+- coverage COVERED;
+- pre-cutover v1 and post-migration v2 recovery roots are retained as explicit rollback evidence.
 
-Public Catalog ingress on `https://chat.babypark.ua`:
-- `/api/catalog/ingest/v1/full`
-- `/api/catalog/ingest/v1/state`
+Environment: /etc/babypark-catalog-ingest.env
+- owner root:root;
+- mode 0600;
+- secret values are NOT in Git.
 
-Ingress controls:
-- Nginx exact locations only
-- source allowlist: Drupal outbound IP `77.83.102.249`
-- BP1 authentication remains mandatory
-- Catalog `/health` is not exposed by a Catalog-specific public route
-- public `https://chat.babypark.ua/health` remains Chatwoot and returns `{"status":"woot"}`
+Public Catalog ingress on https://chat.babypark.ua:
+- /api/catalog/ingest/v1/full;
+- /api/catalog/ingest/v1/state.
 
-Production ingress verification on 2026-09-26:
-- allowed Drupal host + unsigned Catalog state request -> HTTP 401 `AUTH_FAILED`
-- different BabyPark host + same request -> HTTP 403 from Nginx
-- `nginx -t` -> PASS
-- Chatwoot root -> HTTP 200
-- Chatwoot public health -> `{"status":"woot"}`
+Ingress controls remain:
+- Nginx exact locations only;
+- source allowlist: Drupal outbound IP 77.83.102.249;
+- BP1 authentication mandatory;
+- Catalog /health is not exposed by a Catalog-specific public route;
+- public https://chat.babypark.ua/health remains Chatwoot.
+
+Canonical physical store_id is now the production Catalog authority. Provider-native Drupal IDs and future Magento source_code values are adapter/xref identifiers only.
 
 ## Rollback assets
 
