@@ -29,7 +29,9 @@ let catalog;
 let knowledge;
 let revisionIds;
 
-function addCatalogFixture(storageDir) {
+function addCatalogFixture(storageDir, {
+  layerOverrides = {},
+} = {}) {
   const builder = CatalogGenerationBuilder.create({
     storageDir,
     generationId: 'resolver-fixture',
@@ -78,9 +80,12 @@ function addCatalogFixture(storageDir) {
       integration_synced_at: '2026-10-02T08:00:02.000Z',
       last_run_id: 'run-' + layer,
       last_ok_at: '2026-10-02T08:00:02.000Z',
-      freshness_state: 'FRESH',
-      need_reconcile: false,
-      need_full: false,
+      freshness_state:
+        layerOverrides[layer]?.freshness_state ?? 'FRESH',
+      need_reconcile:
+        layerOverrides[layer]?.need_reconcile ?? false,
+      need_full:
+        layerOverrides[layer]?.need_full ?? false,
     });
   }
 
@@ -207,6 +212,23 @@ before(() => {
     {
       canonical_category_id: 'cat-strollers',
       match_mode: 'NODE_ONLY',
+    }
+  );
+
+  revisionIds.categoryModeA = publishVocabulary(
+    'vocabulary.category',
+    'одна категория два режима',
+    {
+      canonical_category_id: 'cat-strollers',
+      match_mode: 'NODE_ONLY',
+    }
+  );
+  revisionIds.categoryModeB = publishVocabulary(
+    'vocabulary.category',
+    'одна категория два режима',
+    {
+      canonical_category_id: 'cat-strollers',
+      match_mode: 'INCLUDE_DESCENDANTS',
     }
   );
 
@@ -342,6 +364,30 @@ test('identical reviewed bindings dedupe candidate but retain all revision IDs',
   );
 });
 
+test('same category with two reviewed match modes is ambiguous', () => {
+  const result = resolveCategoryVocabulary(knowledge, catalog, {
+    nowUtc: NOW,
+    phrase: 'одна категория два режима',
+  });
+
+  assert.equal(result.status, 'AMBIGUOUS');
+  assert.equal(result.reason, 'AMBIGUOUS_CATEGORY');
+  assert.deepEqual(
+    result.candidates.map(row => [
+      row.canonical_category_id,
+      row.match_mode,
+    ]),
+    [
+      ['cat-strollers', 'INCLUDE_DESCENDANTS'],
+      ['cat-strollers', 'NODE_ONLY'],
+    ]
+  );
+  assert.deepEqual(
+    result.used_revision_ids,
+    [revisionIds.categoryModeA, revisionIds.categoryModeB].sort()
+  );
+});
+
 test('missing catalog target fails authority instead of becoming not-found', () => {
   const result = resolveCategoryVocabulary(knowledge, catalog, {
     nowUtc: NOW,
@@ -435,6 +481,81 @@ test('inactive store mapping cannot be silently dropped beside a valid mapping',
     result.used_revision_ids,
     [revisionIds.storeMixedValid, revisionIds.storeMixedInactive].sort()
   );
+});
+
+test('resolver identity is not poisoned by unrelated commercial/stock freshness', () => {
+  const staleDir = fs.mkdtempSync(
+    path.join(root, 'catalog-unrelated-stale-')
+  );
+  addCatalogFixture(staleDir, {
+    layerOverrides: {
+      commercial: {
+        freshness_state: 'STALE',
+        need_reconcile: true,
+        need_full: true,
+      },
+      stock: {
+        freshness_state: 'STALE',
+        need_reconcile: true,
+        need_full: true,
+      },
+    },
+  });
+
+  const staleReader = new CatalogReader(staleDir);
+  try {
+    staleReader.reloadExpected('resolver-fixture');
+    const staleCatalog = new CatalogService(staleReader);
+
+    const category = resolveCategoryVocabulary(
+      knowledge,
+      staleCatalog,
+      {
+        nowUtc: NOW,
+        phrase: 'прогулочные коляски',
+      }
+    );
+    const brand = resolveBrandVocabulary(
+      knowledge,
+      staleCatalog,
+      {
+        nowUtc: NOW,
+        phrase: 'cybex',
+      }
+    );
+    const storeResult = resolveStoreVocabulary(
+      knowledge,
+      staleCatalog,
+      {
+        nowUtc: NOW,
+        phrase: 'магазин на глубочицкой',
+      }
+    );
+
+    for (const result of [category, brand, storeResult]) {
+      assert.equal(result.status, 'RESOLVED');
+      assert.equal(
+        result.catalog.layers.commercial.freshness_state,
+        'STALE'
+      );
+      assert.equal(
+        result.catalog.layers.commercial.need_reconcile,
+        true
+      );
+      assert.equal(
+        result.catalog.layers.commercial.need_full,
+        true
+      );
+      assert.equal(
+        result.catalog.layers.stock.freshness_state,
+        'STALE'
+      );
+      assert.equal(result.catalog.layers.stock.need_reconcile, true);
+      assert.equal(result.catalog.layers.stock.need_full, true);
+    }
+  } finally {
+    staleReader.close();
+  }
 });
 
 test('money parser resolves only approved deterministic UAH forms', () => {
