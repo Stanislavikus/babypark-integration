@@ -813,6 +813,7 @@ function factualBase(contract, catalog, productId) {
     contract,
     catalog,
     product_id: productId,
+    relevant_layers: ['commercial'],
   };
 }
 
