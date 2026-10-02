@@ -1250,10 +1250,12 @@ export class CatalogService {
   listCategories({
     language = this.defaultLanguage,
     parentId = undefined,
+    categoryIds = [],
     limit = 100,
   } = {}) {
     return this.reader.withDb(db => {
       const lang = validateLanguage(language);
+      const ids = normalizeIds(categoryIds, 'categoryIds', 100);
       const bounded = boundedPositiveInt(limit, {
         name: 'limit',
         defaultValue: 100,
@@ -1264,12 +1266,20 @@ export class CatalogService {
         'SELECT category_id,parent_id,name_json,provenance_json ' +
         'FROM categories ';
       const params = [];
+      const clauses = [];
       if (parentId === null) {
-        sql += 'WHERE parent_id IS NULL ';
+        clauses.push('parent_id IS NULL');
       } else if (parentId !== undefined) {
-        sql += 'WHERE parent_id=? ';
+        clauses.push('parent_id=?');
         params.push(String(parentId));
       }
+      if (ids.length) {
+        clauses.push(
+          'category_id IN (' + placeholders(ids.length) + ')'
+        );
+        params.push(...ids);
+      }
+      if (clauses.length) sql += 'WHERE ' + clauses.join(' AND ') + ' ';
       sql += 'ORDER BY category_id LIMIT ?';
       params.push(bounded);
 
@@ -1295,6 +1305,43 @@ export class CatalogService {
       return {
         catalog: catalogSnapshot(db),
         categories: rows,
+      };
+    });
+  }
+
+  listBrands({
+    brandIds = [],
+    limit = 100,
+  } = {}) {
+    return this.reader.withDb(db => {
+      const ids = normalizeIds(brandIds, 'brandIds', 100);
+      const bounded = boundedPositiveInt(limit, {
+        name: 'limit',
+        defaultValue: 100,
+        max: 100,
+      });
+
+      let sql =
+        'SELECT brand_id,name,provenance_json FROM brands ';
+      const params = [];
+      if (ids.length) {
+        sql += 'WHERE brand_id IN (' + placeholders(ids.length) + ') ';
+        params.push(...ids);
+      }
+      sql += 'ORDER BY name,brand_id LIMIT ?';
+      params.push(bounded);
+
+      return {
+        catalog: catalogSnapshot(db),
+        brands: db.prepare(sql).all(...params).map(row => ({
+          brand_id: row.brand_id,
+          name: row.name,
+          provenance: parseJson(
+            row.provenance_json,
+            'brands.provenance_json',
+            {}
+          ),
+        })),
       };
     });
   }
@@ -1342,19 +1389,29 @@ export class CatalogService {
 
   getStores({
     activeOnly = true,
+    storeIds = [],
     limit = 100,
   } = {}) {
     return this.reader.withDb(db => {
+      const ids = normalizeIds(storeIds, 'storeIds', 100);
       const bounded = boundedPositiveInt(limit, {
         name: 'limit',
         defaultValue: 100,
         max: 100,
       });
-      const rows = db.prepare(
-        'SELECT store_id,name,active,metadata_json FROM stores ' +
-        (activeOnly ? 'WHERE active=1 ' : '') +
-        'ORDER BY name,store_id LIMIT ?'
-      ).all(bounded).map(row => ({
+      const clauses = [];
+      const params = [];
+      if (activeOnly) clauses.push('active=1');
+      if (ids.length) {
+        clauses.push('store_id IN (' + placeholders(ids.length) + ')');
+        params.push(...ids);
+      }
+      let sql = 'SELECT store_id,name,active,metadata_json FROM stores ';
+      if (clauses.length) sql += 'WHERE ' + clauses.join(' AND ') + ' ';
+      sql += 'ORDER BY name,store_id LIMIT ?';
+      params.push(bounded);
+
+      const rows = db.prepare(sql).all(...params).map(row => ({
         store_id: row.store_id,
         name: row.name,
         active: boolean(row.active),
