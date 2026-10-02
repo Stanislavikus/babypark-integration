@@ -250,8 +250,13 @@ export class KnowledgeStore {
     }
     db.close();
     const store = new KnowledgeStore(resolved, { now, idFactory, readOnly });
-    store.verifyLedger();
-    return store;
+    try {
+      store.verifyLedger();
+      return store;
+    } catch (error) {
+      try { store.close(); } catch {}
+      throw error;
+    }
   }
 
   constructor(filePath, { now, idFactory, readOnly }) {

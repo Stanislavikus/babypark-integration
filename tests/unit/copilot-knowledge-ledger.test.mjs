@@ -6,6 +6,7 @@ import path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import {
   canonicalKnowledgeJson,
+  canonicalKnowledgeTimestamp,
   knowledgeSha256,
 } from '../../src/copilot/knowledge/canonical.mjs';
 import {
@@ -58,6 +59,22 @@ test('BabyPark canonical JSON v1 is stable and forbids floating numbers', () => 
   );
   assert.throws(() => canonicalKnowledgeJson({ x: 1.5 }), /safe integer/);
   assert.throws(() => canonicalKnowledgeJson({ x: undefined }), /undefined/);
+  assert.equal(
+    canonicalKnowledgeJson({ '𐀀': 1, '': 2 }),
+    '{"":2,"𐀀":1}'
+  );
+  assert.equal(
+    canonicalKnowledgeTimestamp('2026-10-01T03:00:00+03:00'),
+    '2026-10-01T00:00:00.000Z'
+  );
+  assert.throws(
+    () => canonicalKnowledgeTimestamp('2026-10-01'),
+    /explicit timezone/
+  );
+  assert.throws(
+    () => canonicalKnowledgeTimestamp('2026-02-30T00:00:00Z'),
+    /invalid civil/
+  );
 });
 test('create/open establishes private durable schema and empty verified ledger', t => {
   const f = fixture();
