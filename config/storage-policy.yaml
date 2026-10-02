@@ -418,6 +418,40 @@
       "pii": "catalog_data_no_customer_pii"
     },
     {
+      "id": "knowledge_db",
+      "host_role": "integration",
+      "status": "PLANNED",
+      "scope": "file",
+      "location": "/var/lib/babypark-integration/knowledge.sqlite",
+      "owner": "knowledge authority runtime",
+      "purpose": "Durable immutable BabyPark OperationalFact, CommercePolicy and Vocabulary revision/event authority.",
+      "state_class": "durable",
+      "thresholds": {
+        "metric": "bytes",
+        "basis": "initial estimate before first reviewed Knowledge bootstrap",
+        "expected": 16777216,
+        "warning": 67108864,
+        "critical": 134217728
+      },
+      "retention": {
+        "mode": "durable_forever",
+        "ttl_days": null
+      },
+      "cleanup": {
+        "automatic": false,
+        "mechanism": "No age-based deletion; revisions and events are immutable ledger authority.",
+        "dry_run_required": true,
+        "delete_guard": "Never delete or rewrite revision/event history as cleanup."
+      },
+      "recovery": "Fail closed; restore a verified backup and validate SQLite integrity, revision hashes, event chain and state-machine semantics before reopening authority.",
+      "backup": {
+        "required": true,
+        "off_host": true,
+        "status": "REQUIRED_BEFORE_DEPLOY"
+      },
+      "pii": "business_contact_and_operational_facts_no_customer_conversation_body"
+    },
+    {
       "id": "copilot_jobs",
       "host_role": "integration",
       "status": "PLANNED",

@@ -24,7 +24,12 @@ Repository Slice A now contains:
 - store-identity topology bound into production dependency fingerprint, fencing
   reviewed store-map drift after seq0 and again before final certification;
 - independent Link A canonical-store verification;
-- read-only A3 store bootstrap/preflight planning from exact frozen D2B evidence.
+- read-only A3 store bootstrap/preflight planning from exact frozen D2B evidence;
+- A4a immutable `knowledge.sqlite` ledger foundation: canonical JSON/hash,
+  immutable revisions, append-only global event chain, atomic DRAFT_CREATED.
+
+A4a is repository foundation only. Approval/publish state machine, RBAC, resolvers
+and durable backup/restore deployment remain subsequent Slice A work.
 
 These Slice A changes are **not deployed to production**.
 
