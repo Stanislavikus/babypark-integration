@@ -327,11 +327,18 @@ function normalizeMoneyInput(raw) {
   if (typeof raw !== 'string') {
     throw new TypeError('money phrase must be text');
   }
-  return raw
+  const normalized = raw
     .normalize('NFC')
     .replace(/\s+/gu, ' ')
     .trim()
     .toLowerCase();
+  if (
+    normalized.length > 80 ||
+    /[\u0000-\u001f\u007f]/u.test(normalized)
+  ) {
+    return null;
+  }
+  return normalized;
 }
 
 function parseMajorInteger(raw) {
@@ -378,7 +385,9 @@ function ambiguousMoney(normalized) {
 
 export function resolveMoneyPhrase(raw) {
   const normalized = normalizeMoneyInput(raw);
-  if (normalized === '') return ambiguousMoney(normalized);
+  if (normalized === null || normalized === '') {
+    return ambiguousMoney(normalized);
+  }
 
   const explicit = normalized.match(
     /^(\d{1,3}(?: \d{3})+|\d+)\s*(грн|₴|uah)$/u
