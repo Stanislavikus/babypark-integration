@@ -1,5 +1,5 @@
 export const KNOWLEDGE_RESOLVER_CONTRACT_VERSION = 1;
 
 export const KNOWLEDGE_RESOLVER_GOLDEN_SHA256 = Object.freeze({
-  1: 'd7e0e2e5765aab7d220b17ef4ca9438141ef9bd65b4e518246a5b5acb67f15a6',
+  1: '09a50e3e6bfe1dffc1f9f0848200d943fe4309c4a34ce3fc9854ae1ebf6d7c0d',
 });

@@ -3,7 +3,9 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { DatabaseSync } from 'node:sqlite';
 import { KnowledgeStore } from '../../src/copilot/knowledge/store.mjs';
+import { knowledgeSha256 } from '../../src/copilot/knowledge/canonical.mjs';
 import {
   normalizeVocabularyPhrase,
   validateVocabularyRevision,
@@ -142,6 +144,72 @@ test('malformed vocabulary draft is rejected atomically', t => {
   );
   assert.equal(store.stats().revisions, 0);
   store.close();
+});
+
+test('restore gate rejects cryptographically valid malformed vocabulary', t => {
+  const f = fixture();
+  t.after(f.cleanup);
+
+  const store = KnowledgeStore.createNew(f.file, f.config);
+  const created = store.createDraft(categoryDraft());
+  store.approveRevision({
+    revisionId: created.revision_id,
+    actorId: 'actor_reviewer',
+  });
+  store.publishRevision({
+    revisionId: created.revision_id,
+    actorId: 'actor_reviewer',
+  });
+  store.close();
+
+  const db = new DatabaseSync(f.file);
+  try {
+    db.exec('DROP TRIGGER knowledge_revisions_no_update');
+    const row = db.prepare(
+      'SELECT * FROM knowledge_revisions WHERE revision_id=?'
+    ).get(created.revision_id);
+
+    const malformedEffect = {
+      canonical_category_id: 'cat-strollers',
+    };
+    const body = {
+      revision_id: row.revision_id,
+      record_type: row.record_type,
+      schema_version: row.schema_version,
+      namespace: row.namespace,
+      effect_family: row.effect_family,
+      subject_type: row.subject_type,
+      subject_id: row.subject_id,
+      scope_json: JSON.parse(row.scope_json),
+      effect_type: row.effect_type,
+      effect_value_json: malformedEffect,
+      effective_from_utc: row.effective_from_utc,
+      expires_at_utc: row.expires_at_utc,
+      parent_revision_id: row.parent_revision_id,
+      exception_of_revision_id: row.exception_of_revision_id,
+      author_actor_id: row.author_actor_id,
+      created_at_utc: row.created_at_utc,
+    };
+
+    db.prepare(
+      'UPDATE knowledge_revisions ' +
+      'SET effect_value_json=?,revision_hash=? ' +
+      'WHERE revision_id=?'
+    ).run(
+      JSON.stringify(malformedEffect),
+      knowledgeSha256(body),
+      created.revision_id
+    );
+  } finally {
+    db.close();
+  }
+
+  assert.throws(
+    () => KnowledgeStore.openExisting(f.file),
+    error =>
+      error?.code === 'KNOWLEDGE_REVISION_INVALID' &&
+      error?.details?.cause_code === 'VOCABULARY_SCHEMA_INVALID'
+  );
 });
 
 test('brand and store vocabulary schemas require exact canonical target keys', () => {

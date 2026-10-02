@@ -41,8 +41,10 @@ Its BabyPark canonical-JSON SHA-256 is pinned in
 `src/copilot/knowledge/resolver-contract.mjs`. Formatting or line-ending changes
 therefore do not create false semantic changes.
 
-The CI/unit contract executes the golden phrase/money vectors and verifies the
-pinned semantic digest.
+The CI/unit contract executes the golden phrase/money vectors plus reviewed
+category/brand/store closed-world vectors covering RESOLVED, AMBIGUOUS,
+NOT_FOUND and INVALID_AUTHORITY outcomes, then verifies the pinned semantic
+digest.
 
 Rule:
 

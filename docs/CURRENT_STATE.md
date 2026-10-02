@@ -150,7 +150,10 @@ Delivered candidate:
 - invalid current Vocabulary target fails closed rather than silently dropping a constraint;
 - all used Vocabulary revision IDs preserved for provenance;
 - `KNOWLEDGE_RESOLVER_CONTRACT_VERSION = 1`;
-- immutable/pinned v1 golden resolver fixture.
+- canonical semantic v1 golden resolver fixture covering phrase/money plus
+  category/brand/store RESOLVED/AMBIGUOUS/NOT_FOUND/INVALID_AUTHORITY outcomes;
+- resolver identity is not poisoned by unrelated commercial/stock stale or
+  reconcile/full flags; those remain gates for the later factual consumer.
 
 Contract:
 `docs/CATALOG_RESOLVERS.md`.
