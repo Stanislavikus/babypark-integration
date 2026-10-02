@@ -30,9 +30,13 @@ Repository Slice A now contains:
 - A4b deterministic Knowledge publication state machine: APPROVED/PUBLISHED/
   WITHDRAWN/REVOKED/SUPERSEDED, CommercePolicy self-approval guard, direct
   temporary publication envelopes, atomic replacement supersession, and
-  independent restore verification of the same rules.
+  independent restore verification of the same rules;
+- A5a verified active-authority projection: half-open activity window, exclusion
+  of non-PUBLISHED/terminal revisions, deterministic subject/effect-family
+  projection, and namespace-independent peer `POLICY_CONFLICT` detection.
 
-A4a/A4b are repository foundation only. RBAC/grant authority, resolvers and durable
+A4a/A4b/A5a are repository foundation only. RBAC/grant authority, concrete
+hours/status effect schemas, semantic operational resolver and durable
 backup/restore deployment remain subsequent Slice A work.
 
 These Slice A changes are **not deployed to production**.
