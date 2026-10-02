@@ -123,10 +123,12 @@ For multi-turn cases, `customer_messages[]` preserves episode history.
 | C53 | Same as C51 but store phrase unresolved. | CLARIFY / AMBIGUOUS_STORE; never rerun without store |
 | C54 | "Есть модель X в магазине A?" Product has exactly one active IN_STOCK variant, stock fresh qty>0. | ANSWER / STORE_STOCK = yes |
 | C55 | Same as C54, qty=0. | ANSWER / STORE_STOCK = no |
+| C55a | Same as C54 but exact variant/store store_stock row is missing while stock layer is otherwise fresh. | HUMAN / CATALOG_STOCK_STALE; missing row is not a silent zero |
 | C56 | "Есть модель X в магазине A?" Product has multiple active IN_STOCK variants and none selected; all candidate labels safe. | CLARIFY / AMBIGUOUS_VARIANT |
 | C57 | C56 follow-up selects one presented variant. | Preserve store/product slots; ANSWER / STORE_STOCK for selected variant |
 | C58 | C56 second clarification attempt still unresolved. | HUMAN / CLARIFY_EXHAUSTED |
 | C59 | Product has multiple IN_STOCK variants but candidate labels cannot safely identify all. | HUMAN / PRODUCT_VARIANT_NOT_RESOLVABLE |
+| C59a | Product has multiple IN_STOCK variants with individually safe but duplicate-equivalent candidate labels. | HUMAN / PRODUCT_VARIANT_NOT_RESOLVABLE; do not offer indistinguishable choices |
 | C60 | Catalog identity corruption gives multiple internal identities for a supposedly canonical selector. | HUMAN / CATALOG_IDENTITY_COLLISION; do not expose internal candidates |
 | C61 | Approved `store.weekly_hours` baseline has `expires_at_utc = NULL`, effective_from is in the past, and no overlay applies. | ANSWER / OPERATIONAL_FACT using baseline |
 | C62 | Weekly baseline 10:00–20:00; civil-day `store.special_hours` says 11:00–18:00 for date D; customer asks at 18:30 Europe/Kyiv on D. | ANSWER / OPERATIONAL_FACT = closed; baseline must not reopen the store |

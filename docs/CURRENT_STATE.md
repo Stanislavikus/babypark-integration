@@ -166,12 +166,12 @@ B1/B2 do not create customer-facing Chatwoot messages and do not invoke an LLM.
 
 ### B3 — objective matched-cohort search
 
-Status: REPOSITORY CANDIDATE / NOT DEPLOYED.
+Status: MERGED / repository contract; no new production service release required yet.
 
-Branch:
-`feat/ai-first-line-slice-b3-objective-search`.
+PR #72 merged at:
+`9ced1e0588e84a55da9b055ae76a233651e993e8`.
 
-Delivered candidate:
+Delivered:
 - dedicated `searchObjectiveProducts(...)` contract; no reuse of broad
   `searchProducts()` as factual shortlist authority;
 - exact category/brand anchor semantics and explicit category match mode;
@@ -195,13 +195,36 @@ Contract:
 B3 is query-layer/repository work only. It creates no customer-facing Chatwoot
 message, constructs no decision_context_id or handoff note, and invokes no LLM.
 
-The frozen downstream Slice D contract now requires HUMAN / CATALOG_STOCK_STALE
+The frozen downstream Slice D contract requires HUMAN / CATALOG_STOCK_STALE
 private notes to retain independently authoritative confirmed facts when
 available, while never representing failed exact-store B3 membership as a
 confirmed partial shortlist.
 
-Next after B3 merge/review: B4 — specific-store stock factual contract + neutral
-ProductPresentation, followed by final Slice B closeout.
+### B4 — specific-store stock + ProductPresentation
+
+Status: REPOSITORY CANDIDATE / NOT DEPLOYED.
+
+Branch:
+`feat/ai-first-line-slice-b4-stock-presentation`.
+
+Delivered candidate:
+- `getStoreStockFact(...)` with canonical product/variant/store authority only;
+- exact variant or deterministic single active IN_STOCK variant resolution;
+- `STORE_STOCK` boolean fact without exposing quantity;
+- explicit missing exact-store row => `CATALOG_STOCK_STALE`;
+- deterministic `AMBIGUOUS_VARIANT` clarification only when all labels are safe
+  and unique;
+- unsafe/missing/duplicate-equivalent labels =>
+  `PRODUCT_VARIANT_NOT_RESOLVABLE`;
+- neutral `bp.catalog.product-presentation/1` model with bounded image fallback;
+- no renderer, Chatwoot message, LLM call or clarification-attempt state.
+
+Contract:
+`docs/CATALOG_STORE_STOCK.md`.
+
+Next after B4 merge/review: final Slice B regression/acceptance closeout, then
+Slice C — Website First Line episode state + ObjectiveConstraintLatch +
+deterministic ANSWER / CLARIFY / HUMAN rendering.
 
 ## D2b acceptance status (2026-09-30)
 
