@@ -1,0 +1,86 @@
+{
+  "schema": "bp.knowledge-resolver-golden/1",
+  "contract_version": 1,
+  "phrase_vectors": [
+    {
+      "input": "  ПРОГУЛОЧНЫЕ   КОЛЯСКИ  ",
+      "expected": "прогулочные коляски"
+    },
+    {
+      "input": "Cybex",
+      "expected": "cybex"
+    },
+    {
+      "input": "МАГАЗИН НА ГЛУБОЧИЦКОЙ",
+      "expected": "магазин на глубочицкой"
+    }
+  ],
+  "money_vectors": [
+    {
+      "input": "20 000 грн",
+      "expected": {
+        "normalized_phrase": "20 000 грн",
+        "status": "RESOLVED",
+        "reason": "MONEY_RESOLVED",
+        "currency": "UAH",
+        "minor_units": 2000000,
+        "form": "UAH_MAJOR"
+      }
+    },
+    {
+      "input": "20к",
+      "expected": {
+        "normalized_phrase": "20к",
+        "status": "RESOLVED",
+        "reason": "MONEY_RESOLVED",
+        "currency": "UAH",
+        "minor_units": 2000000,
+        "form": "UAH_THOUSANDS"
+      }
+    },
+    {
+      "input": "20 тисяч",
+      "expected": {
+        "normalized_phrase": "20 тисяч",
+        "status": "RESOLVED",
+        "reason": "MONEY_RESOLVED",
+        "currency": "UAH",
+        "minor_units": 2000000,
+        "form": "UAH_THOUSANDS"
+      }
+    },
+    {
+      "input": "20 тысяч",
+      "expected": {
+        "normalized_phrase": "20 тысяч",
+        "status": "RESOLVED",
+        "reason": "MONEY_RESOLVED",
+        "currency": "UAH",
+        "minor_units": 2000000,
+        "form": "UAH_THOUSANDS"
+      }
+    },
+    {
+      "input": "20 000",
+      "expected": {
+        "normalized_phrase": "20 000",
+        "status": "AMBIGUOUS",
+        "reason": "AMBIGUOUS_MONEY",
+        "currency": null,
+        "minor_units": null,
+        "form": null
+      }
+    },
+    {
+      "input": "20.000 грн",
+      "expected": {
+        "normalized_phrase": "20.000 грн",
+        "status": "AMBIGUOUS",
+        "reason": "AMBIGUOUS_MONEY",
+        "currency": null,
+        "minor_units": null,
+        "form": null
+      }
+    }
+  ]
+}
