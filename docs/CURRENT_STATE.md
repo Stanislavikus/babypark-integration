@@ -103,17 +103,26 @@ Next implementation slice: Slice B — Catalog factual/query contracts.
 
 Implementation issue: #69.
 
-B1 repository candidate adds provider-neutral, same-generation factual contracts:
-- product current-price single/range/not-in-stock;
+### B1 — price and variant factual contracts
+
+Status: MERGED / repository contract; no new production service release required yet.
+
+PR #70 merged at:
+`1e49421493edf49670de7104de200fbc0c9b7d5b`.
+
+Delivered:
+- product current-price single/range/not-in-stock facts;
 - fail-closed offer-hole / zero-price / mixed-currency handling;
+- safe-integer/current-currency validation;
 - available-now variant list with explicit label completeness;
+- internal/debug option-ID suppression;
 - deterministic variant price list;
 - relevant-layer freshness gating on commercial authority only.
 
 Contract:
 `docs/CATALOG_FACTUAL_CONTRACTS.md`.
 
-Read-only production evidence against CURRENT generation
+Read-only evidence against CURRENT generation
 `g_bcd3c2836b25ab4252f8f5510c769f260e0597092fea8aff`:
 - active IN_STOCK variants: 8,673;
 - missing offer/currency: 0;
@@ -123,8 +132,36 @@ Read-only production evidence against CURRENT generation
 - displayable option-label variants: 7,486;
 - no displayable option label: 1,187.
 
-B1 is repository/query-layer work only. It is not deployed as a new production
-service release and creates no customer-facing Chatwoot messages.
+### B2 — deterministic category/brand/money/store resolvers
+
+Status: REPOSITORY CANDIDATE / NOT DEPLOYED.
+
+Branch:
+`feat/ai-first-line-slice-b2-resolvers`.
+
+Delivered candidate:
+- exact current-generation Catalog dictionary lookup by reviewed canonical IDs;
+- immutable approval-required `VOCABULARY_ENTRY` schema in Knowledge;
+- category resolver with explicit `NODE_ONLY | INCLUDE_DESCENDANTS`;
+- brand resolver;
+- active canonical store resolver;
+- deterministic UAH money parser;
+- 0/1/many closed-world result semantics;
+- invalid current Vocabulary target fails closed rather than silently dropping a constraint;
+- all used Vocabulary revision IDs preserved for provenance;
+- `KNOWLEDGE_RESOLVER_CONTRACT_VERSION = 1`;
+- immutable/pinned v1 golden resolver fixture.
+
+Contract:
+`docs/CATALOG_RESOLVERS.md`.
+
+No Vocabulary revisions have been inserted into the production bootstrap
+`knowledge.sqlite` as part of B2. Production remains 0 revisions / 0 events until
+reviewed business content is explicitly published.
+
+B1/B2 do not create customer-facing Chatwoot messages and do not invoke an LLM.
+
+Next after B2 merge/review: B3 — objective matched-cohort search.
 
 ## D2b acceptance status (2026-09-30)
 
