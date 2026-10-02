@@ -7,7 +7,7 @@ Source of truth: production runtime + this repository
 
 ## AI First Line Slice A state (2026-10-02)
 
-Status: PRODUCTION ACCEPTED / READY TO CLOSE
+Status: PRODUCTION ACCEPTED / CLOSED
 
 Frozen v0.5 design authority is consolidated in main at 644708f739e4999b7604c505bee253df193e16b2:
 - docs/AI_FIRST_LINE_DESIGN.md;
@@ -15,8 +15,9 @@ Frozen v0.5 design authority is consolidated in main at 644708f739e4999b7604c505
 
 There are no normative v0.5 delta files.
 
-Implementation issue: #53.
-Repository implementation is complete through A8. Production deployment gates are also complete.
+Slice A implementation issue #53 is CLOSED.
+Repository implementation is complete through A8 and all production deployment gates are complete.
+Current implementation issue is #69: Slice B — Catalog factual/query contracts.
 
 Delivered foundation:
 - canonical BabyPark physical-store identity in IdentityStore schema v2;
@@ -97,6 +98,33 @@ Slice A production gates are therefore complete. Store-scoped Knowledge may now 
 Deferred Slice E Seller Assist remains frozen in the v0.5 design. Future BabyPark AI HUB direction is documented separately in docs/AI_HUB_DIRECTION.md and does not expand Slice B scope.
 
 Next implementation slice: Slice B — Catalog factual/query contracts.
+
+## AI First Line Slice B state (2026-10-02)
+
+Implementation issue: #69.
+
+B1 repository candidate adds provider-neutral, same-generation factual contracts:
+- product current-price single/range/not-in-stock;
+- fail-closed offer-hole / zero-price / mixed-currency handling;
+- available-now variant list with explicit label completeness;
+- deterministic variant price list;
+- relevant-layer freshness gating on commercial authority only.
+
+Contract:
+`docs/CATALOG_FACTUAL_CONTRACTS.md`.
+
+Read-only production evidence against CURRENT generation
+`g_bcd3c2836b25ab4252f8f5510c769f260e0597092fea8aff`:
+- active IN_STOCK variants: 8,673;
+- missing offer/currency: 0;
+- zero current price: 0;
+- all current-price cohort currency: UAH;
+- mixed-currency products: 0;
+- displayable option-label variants: 7,486;
+- no displayable option label: 1,187.
+
+B1 is repository/query-layer work only. It is not deployed as a new production
+service release and creates no customer-facing Chatwoot messages.
 
 ## D2b acceptance status (2026-09-30)
 

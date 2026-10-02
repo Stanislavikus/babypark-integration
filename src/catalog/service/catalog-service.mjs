@@ -668,6 +668,228 @@ function variantDetails(db, variantId) {
   return row ? variantFromRow(row) : null;
 }
 
+function requireProductId(productId) {
+  if (typeof productId !== 'string' || productId.trim() === '') {
+    throw serviceError(
+      'CATALOG_INPUT_INVALID',
+      'productId must be a non-empty string',
+      { field: 'productId' }
+    );
+  }
+  return productId.trim();
+}
+
+function activeProductExists(db, productId) {
+  return Boolean(db.prepare(
+    "SELECT 1 ok FROM products WHERE product_id=? AND lifecycle='active'"
+  ).get(productId));
+}
+
+function commercialLayerSafe(catalog) {
+  const layer = catalog.layers.commercial;
+  return Boolean(
+    layer &&
+    layer.freshness_state === 'FRESH' &&
+    layer.need_reconcile === false &&
+    layer.need_full === false
+  );
+}
+
+function normalizeVariantLabelPart(raw, {
+  internalIds = [],
+  allowBareNumeric = false,
+} = {}) {
+  if (typeof raw !== 'string') return null;
+  const value = raw.normalize('NFC').replace(/\s+/gu, ' ').trim();
+  if (
+    value === '' ||
+    value.length > 80 ||
+    /[\u0000-\u001f\u007f]/u.test(value) ||
+    /^https?:\/\//iu.test(value) ||
+    /^(?:data|blob):/iu.test(value) ||
+    /^(?:id|oid|aid|nid|vid|fid)\s*[:=#-]\s*\S+$/iu.test(value) ||
+    /^(?:a|O|s|i|b|d):\d+[:;{]/u.test(value) ||
+    (!allowBareNumeric && /^\d+$/u.test(value))
+  ) {
+    return null;
+  }
+
+  const canonical = value.toLowerCase();
+  for (const rawId of internalIds) {
+    if (rawId === undefined || rawId === null) continue;
+    const id = String(rawId)
+      .normalize('NFC')
+      .replace(/\s+/gu, ' ')
+      .trim()
+      .toLowerCase();
+    if (id !== '' && canonical === id) return null;
+  }
+
+  return value;
+}
+
+function displayableVariantLabel(optionsJson) {
+  const options = parseJson(optionsJson, 'variants.options_json', {});
+  if (!options || typeof options !== 'object' || Array.isArray(options)) {
+    return null;
+  }
+
+  const parts = [];
+  for (const key of Object.keys(options).sort()) {
+    const raw = options[key];
+    const isObject = raw && typeof raw === 'object' && !Array.isArray(raw);
+    const candidate = isObject ? raw.option_name : raw;
+    const normalized = normalizeVariantLabelPart(candidate, {
+      internalIds: isObject
+        ? [raw.option_id, raw.attribute_id]
+        : [],
+      allowBareNumeric:
+        isObject &&
+        raw.option_id !== undefined &&
+        raw.option_id !== null,
+    });
+    if (normalized && !parts.includes(normalized)) parts.push(normalized);
+  }
+
+  if (!parts.length) return null;
+  const label = parts.join(' / ');
+  return label.length <= 160 ? label : null;
+}
+
+function activeInStockRows(db, productId) {
+  return db.prepare(
+    'SELECT v.variant_id,v.sku,v.options_json,' +
+    'CAST(o.current_minor AS TEXT) current_minor_text,o.currency ' +
+    'FROM variants v LEFT JOIN variant_offers o ' +
+    'ON o.variant_id=v.variant_id ' +
+    "WHERE v.product_id=? AND v.lifecycle='active' " +
+    "AND v.commercial_availability='IN_STOCK' " +
+    'ORDER BY v.variant_id'
+  ).all(productId);
+}
+
+function inspectTrustedPriceCohort(base, rows) {
+  const missing = [];
+  const invalidPrice = [];
+  const invalidCurrency = [];
+  const normalized = [];
+
+  for (const row of rows) {
+    if (
+      row.current_minor_text === null ||
+      row.current_minor_text === undefined ||
+      row.currency === null || row.currency === undefined
+    ) {
+      missing.push(row.variant_id);
+      continue;
+    }
+
+    const currentText = String(row.current_minor_text);
+    const currency = String(row.currency);
+    if (!/^(?:0|[1-9]\d*)$/u.test(currentText)) {
+      invalidPrice.push(row.variant_id);
+      continue;
+    }
+
+    const currentBig = BigInt(currentText);
+    if (currentBig > BigInt(Number.MAX_SAFE_INTEGER)) {
+      invalidPrice.push(row.variant_id);
+      continue;
+    }
+    const currentMinor = Number(currentBig);
+    if (!/^[A-Z]{3}$/u.test(currency)) {
+      invalidCurrency.push(row.variant_id);
+      continue;
+    }
+
+    normalized.push({
+      ...row,
+      current_minor: currentMinor,
+      currency,
+    });
+  }
+
+  if (missing.length || invalidPrice.length || invalidCurrency.length) {
+    return {
+      problem: unavailableFact(
+        base,
+        'PRICE_COHORT_INCOMPLETE',
+        {
+          in_stock_variant_count: rows.length,
+          priced_variant_count: normalized.length,
+          missing_offer_variant_ids: missing.sort(),
+          invalid_price_variant_ids: invalidPrice.sort(),
+          invalid_currency_variant_ids: invalidCurrency.sort(),
+        }
+      ),
+    };
+  }
+
+  const zero = normalized
+    .filter(row => row.current_minor === 0)
+    .map(row => row.variant_id)
+    .sort();
+  if (zero.length) {
+    return {
+      problem: unavailableFact(
+        base,
+        'ZERO_PRICE_UNVERIFIED',
+        {
+          in_stock_variant_count: rows.length,
+          zero_price_variant_ids: zero,
+        }
+      ),
+    };
+  }
+
+  const currencies = [...new Set(
+    normalized.map(row => row.currency)
+  )].sort();
+  if (currencies.length !== 1) {
+    return {
+      problem: unavailableFact(
+        base,
+        'MIXED_CURRENCY',
+        {
+          in_stock_variant_count: rows.length,
+          currencies,
+        }
+      ),
+    };
+  }
+
+  return {
+    rows: normalized,
+    currency: currencies[0],
+  };
+}
+
+function factualBase(contract, catalog, productId) {
+  return {
+    contract,
+    catalog,
+    product_id: productId,
+    relevant_layers: ['commercial'],
+  };
+}
+
+function unavailableFact(base, reason, details = {}) {
+  return {
+    ...base,
+    status: 'UNANSWERABLE',
+    reason,
+    ...details,
+  };
+}
+
+function notFoundFact(base) {
+  return {
+    ...base,
+    status: 'NOT_FOUND',
+    reason: 'PRODUCT_NOT_FOUND',
+  };
+}
+
 export class CatalogService {
   constructor(reader, {
     defaultLanguage = 'uk',
@@ -686,6 +908,177 @@ export class CatalogService {
     return this.reader.withDb(db => ({
       catalog: catalogSnapshot(db),
     }));
+  }
+
+  getProductPriceFact({ productId } = {}) {
+    return this.reader.withDb(db => {
+      const id = requireProductId(productId);
+      const catalog = catalogSnapshot(db);
+      const base = factualBase(
+        'bp.catalog.product-price-fact/1',
+        catalog,
+        id
+      );
+
+      if (!activeProductExists(db, id)) return notFoundFact(base);
+      if (!commercialLayerSafe(catalog)) {
+        return unavailableFact(
+          base,
+          'CATALOG_COMMERCIAL_STALE',
+          { relevant_layers: ['commercial'] }
+        );
+      }
+
+      const rows = activeInStockRows(db, id);
+      if (!rows.length) {
+        return {
+          ...base,
+          status: 'FACT',
+          reason: 'PRODUCT_NOT_IN_STOCK',
+          in_stock_variant_count: 0,
+          currency: null,
+          min_current_minor: null,
+          max_current_minor: null,
+        };
+      }
+
+      const inspected = inspectTrustedPriceCohort(base, rows);
+      if (inspected.problem) return inspected.problem;
+
+      const prices = inspected.rows.map(row => row.current_minor);
+      const min = Math.min(...prices);
+      const max = Math.max(...prices);
+
+      return {
+        ...base,
+        status: 'FACT',
+        reason: min === max
+          ? 'PRODUCT_PRICE_SINGLE'
+          : 'PRODUCT_PRICE_RANGE',
+        in_stock_variant_count: inspected.rows.length,
+        priced_variant_count: inspected.rows.length,
+        cohort_variant_ids:
+          inspected.rows.map(row => row.variant_id).sort(),
+        currency: inspected.currency,
+        min_current_minor: min,
+        max_current_minor: max,
+      };
+    });
+  }
+
+  getAvailableVariantsFact({ productId } = {}) {
+    return this.reader.withDb(db => {
+      const id = requireProductId(productId);
+      const catalog = catalogSnapshot(db);
+      const base = factualBase(
+        'bp.catalog.available-variants-fact/1',
+        catalog,
+        id
+      );
+
+      if (!activeProductExists(db, id)) return notFoundFact(base);
+      if (!commercialLayerSafe(catalog)) {
+        return unavailableFact(
+          base,
+          'CATALOG_COMMERCIAL_STALE',
+          { relevant_layers: ['commercial'] }
+        );
+      }
+
+      const rows = activeInStockRows(db, id);
+      if (!rows.length) {
+        return {
+          ...base,
+          status: 'FACT',
+          reason: 'PRODUCT_NOT_IN_STOCK',
+          total_variant_count: 0,
+          displayable_label_count: 0,
+          label_complete: true,
+          variants: [],
+        };
+      }
+
+      const variants = rows.map(row => ({
+        variant_id: row.variant_id,
+        sku: row.sku,
+        label: displayableVariantLabel(row.options_json),
+      }));
+      const displayable = variants.filter(row => row.label !== null).length;
+
+      return {
+        ...base,
+        status: 'FACT',
+        reason: displayable === variants.length
+          ? 'VARIANT_LIST'
+          : 'VARIANT_LIST_PARTIAL',
+        total_variant_count: variants.length,
+        displayable_label_count: displayable,
+        label_complete: displayable === variants.length,
+        variants,
+      };
+    });
+  }
+
+  getVariantPriceListFact({ productId } = {}) {
+    return this.reader.withDb(db => {
+      const id = requireProductId(productId);
+      const catalog = catalogSnapshot(db);
+      const base = factualBase(
+        'bp.catalog.variant-price-list-fact/1',
+        catalog,
+        id
+      );
+
+      if (!activeProductExists(db, id)) return notFoundFact(base);
+      if (!commercialLayerSafe(catalog)) {
+        return unavailableFact(
+          base,
+          'CATALOG_COMMERCIAL_STALE',
+          { relevant_layers: ['commercial'] }
+        );
+      }
+
+      const rows = activeInStockRows(db, id);
+      if (!rows.length) {
+        return {
+          ...base,
+          status: 'FACT',
+          reason: 'PRODUCT_NOT_IN_STOCK',
+          total_variant_count: 0,
+          displayable_label_count: 0,
+          label_complete: true,
+          currency: null,
+          variants: [],
+        };
+      }
+
+      const inspected = inspectTrustedPriceCohort(base, rows);
+      if (inspected.problem) return inspected.problem;
+
+      const variants = inspected.rows
+        .map(row => ({
+          variant_id: row.variant_id,
+          sku: row.sku,
+          label: displayableVariantLabel(row.options_json),
+          current_minor: row.current_minor,
+        }))
+        .sort((a, b) =>
+          a.current_minor - b.current_minor ||
+          a.variant_id.localeCompare(b.variant_id)
+        );
+      const displayable = variants.filter(row => row.label !== null).length;
+
+      return {
+        ...base,
+        status: 'FACT',
+        reason: 'VARIANT_PRICE_LIST',
+        total_variant_count: variants.length,
+        displayable_label_count: displayable,
+        label_complete: displayable === variants.length,
+        currency: inspected.currency,
+        variants,
+      };
+    });
   }
 
   lookupSku(rawSku) {
