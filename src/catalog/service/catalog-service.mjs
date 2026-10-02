@@ -707,7 +707,7 @@ function normalizeVariantLabelPart(raw, {
     /[\u0000-\u001f\u007f]/u.test(value) ||
     /^https?:\/\//iu.test(value) ||
     /^(?:data|blob):/iu.test(value) ||
-    /^(?:id|oid|aid|nid|vid|fid)\s*[:=#-]\s*\S+/iu.test(value) ||
+    /(?:^|[^\p{L}\p{N}_])(?:id|oid|aid|nid|vid|fid)\s*[:=#-]\s*\S+/iu.test(value) ||
     /^(?:a|O|s|i|b|d):\d+[:;{]/u.test(value) ||
     (!allowBareNumeric && /^\d+$/u.test(value))
   ) {
@@ -1480,7 +1480,7 @@ export class CatalogService {
           label_complete: labels.length === rows.length,
           all_available_variants_match_filters:
             rows.length === allAvailableCount,
-          matched_store_id: store,
+          ...(store ? { matched_store_id: store } : {}),
         });
       }
 

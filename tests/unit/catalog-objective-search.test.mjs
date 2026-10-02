@@ -258,7 +258,7 @@ function buildFixture(storageDir, {
     id: 'v-partial-cheap',
     productId: 'p-partial',
     price: 1930000,
-    label: 'oid:32974 Blue',
+    label: 'Blue oid:32974',
   });
 
   addProduct(builder, 'p-store', {
@@ -574,6 +574,7 @@ test('S04/S05 matched price cohort never leaks default-variant price', () => {
   assert.equal(row.displayable_variant_label_count, 0);
   assert.equal(row.label_complete, false);
   assert.equal(row.all_available_variants_match_filters, false);
+  assert.equal(Object.hasOwn(row, 'matched_store_id'), false);
   assert.equal(row.title, 'Partial');
   assert.equal(row.product_url, 'https://shop.example/p-partial');
   assert.equal(row.image_url, 'https://img.example/p-partial.jpg');
