@@ -259,6 +259,7 @@ test('product price fact uses only active IN_STOCK cohort', () => {
   assert.equal(fact.max_current_minor, 2499800);
   assert.equal(fact.currency, 'UAH');
   assert.deepEqual(fact.cohort_variant_ids, ['v-single-now']);
+  assert.deepEqual(fact.relevant_layers, ['commercial']);
   assert.equal(fact.catalog.generation_id, 'facts-fresh');
 });
 
