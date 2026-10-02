@@ -25,6 +25,7 @@ import {
   validateCommerceExceptionRelation,
   verifyCommerceExceptionGraph,
 } from './commerce-policy.mjs';
+import { validateVocabularyRevision } from './vocabulary-schema.mjs';
 
 export class KnowledgeStoreError extends Error {
   constructor(code, message, details = {}) {
@@ -598,6 +599,9 @@ export class KnowledgeStore {
       if (exceptionParent) {
         policyGuard(() => validateCommerceExceptionRelation(exceptionParent, revision));
       }
+      if (recordType === 'VOCABULARY_ENTRY') {
+        policyGuard(() => validateVocabularyRevision(revision));
+      }
       const revisionHash = knowledgeSha256(revision);
 
       this.db.prepare(`
@@ -969,10 +973,17 @@ export class KnowledgeStore {
 
     for (const row of revisions) {
       let expected;
-      try { expected = knowledgeSha256(revisionBody(row)); }
+      try {
+        const body = revisionBody(row);
+        if (body.record_type === 'VOCABULARY_ENTRY') {
+          validateVocabularyRevision(body);
+        }
+        expected = knowledgeSha256(body);
+      }
       catch (error) {
         fail('KNOWLEDGE_REVISION_INVALID', error.message, {
           revision_id: row.revision_id,
+          cause_code: error?.code ?? null,
         });
       }
       if (expected !== row.revision_hash) {
