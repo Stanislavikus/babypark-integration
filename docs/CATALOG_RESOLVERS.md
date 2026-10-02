@@ -37,11 +37,12 @@ Version 1 has an immutable golden artifact:
 
 `tests/fixtures/knowledge-resolver-contract-v1.json`
 
-Its raw SHA-256 is pinned in
-`src/copilot/knowledge/resolver-contract.mjs`.
+Its BabyPark canonical-JSON SHA-256 is pinned in
+`src/copilot/knowledge/resolver-contract.mjs`. Formatting or line-ending changes
+therefore do not create false semantic changes.
 
 The CI/unit contract executes the golden phrase/money vectors and verifies the
-pinned digest.
+pinned semantic digest.
 
 Rule:
 
