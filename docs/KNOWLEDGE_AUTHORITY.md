@@ -262,8 +262,36 @@ Optional:
 - `BP_AI_ACCESS_CERTS_URL`;
 - `BP_AI_ACCESS_KEYS_JSON` for explicit static/test/emergency keys.
 
-## Not in A4a/A4b/A5/A6/A7
+## A8 durable recovery
+
+Knowledge recovery uses a generic encrypted Durable SQLite Backup Profile:
+- consistent SQLite backup;
+- standalone DELETE-journal normalization;
+- SQLite integrity verification;
+- plaintext SHA-256;
+- AES-256-GCM ciphertext;
+- ciphertext SHA-256;
+- HMAC-SHA-256 signed canonical manifest using a derived manifest key;
+- off-host copy of ciphertext + signed manifest only;
+- scratch restore;
+- Knowledge ledger + authority snapshot + operational/Commerce semantic replay.
+
+The first real off-host drill on 2026-10-02 copied an encrypted synthetic
+Knowledge authority backup from `chatwoot-fra1-01` to
+`server2181.babypark.ua` and restored it successfully on exact repository
+commit `6f3caf07b5db380337f0c3aa033530a6011a586f`.
+
+See:
+- `docs/KNOWLEDGE_RECOVERY.md`;
+- `docs/KNOWLEDGE_RECOVERY_DRILL_20261002.json`.
+
+This verifies the recovery mechanism. It does not make production Knowledge
+CURRENT: after production deployment, the real production authority must pass
+the same encrypted off-host scratch-restore drill.
+
+## Not in A4a/A4b/A5/A6/A7/A8
 
 - customer-facing AI messages;
 - production Cloudflare Tunnel/Access deployment proof;
-- production backup/restore deployment and off-host restore drill.
+- canonical physical-store production cutover;
+- production Knowledge deployment and production-authority restore drill.
