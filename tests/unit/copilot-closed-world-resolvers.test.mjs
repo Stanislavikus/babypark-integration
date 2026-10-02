@@ -465,6 +465,8 @@ test('ambiguous/malformed/overflow money never guesses', () => {
     '-20 000 грн',
     '20 000.50 грн',
     '90071992547410 тысяч',
+    '9'.repeat(10000) + ' грн',
+    '20\u0000грн',
     '',
   ]) {
     const result = resolveMoneyPhrase(input);
