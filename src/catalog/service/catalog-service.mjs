@@ -695,7 +695,10 @@ function commercialLayerSafe(catalog) {
   );
 }
 
-function normalizeVariantLabelPart(raw) {
+function normalizeVariantLabelPart(raw, {
+  internalIds = [],
+  allowBareNumeric = false,
+} = {}) {
   if (typeof raw !== 'string') return null;
   const value = raw.normalize('NFC').replace(/\s+/gu, ' ').trim();
   if (
@@ -703,10 +706,25 @@ function normalizeVariantLabelPart(raw) {
     value.length > 80 ||
     /[\u0000-\u001f\u007f]/u.test(value) ||
     /^https?:\/\//iu.test(value) ||
-    /^(?:data|blob):/iu.test(value)
+    /^(?:data|blob):/iu.test(value) ||
+    /^(?:id|oid|aid|nid|vid|fid)\s*[:=#-]\s*\S+$/iu.test(value) ||
+    /^(?:a|O|s|i|b|d):\d+[:;{]/u.test(value) ||
+    (!allowBareNumeric && /^\d+$/u.test(value))
   ) {
     return null;
   }
+
+  const canonical = value.toLowerCase();
+  for (const rawId of internalIds) {
+    if (rawId === undefined || rawId === null) continue;
+    const id = String(rawId)
+      .normalize('NFC')
+      .replace(/\s+/gu, ' ')
+      .trim()
+      .toLowerCase();
+    if (id !== '' && canonical === id) return null;
+  }
+
   return value;
 }
 
@@ -719,10 +737,17 @@ function displayableVariantLabel(optionsJson) {
   const parts = [];
   for (const key of Object.keys(options).sort()) {
     const raw = options[key];
-    const candidate = raw && typeof raw === 'object' && !Array.isArray(raw)
-      ? raw.option_name
-      : raw;
-    const normalized = normalizeVariantLabelPart(candidate);
+    const isObject = raw && typeof raw === 'object' && !Array.isArray(raw);
+    const candidate = isObject ? raw.option_name : raw;
+    const normalized = normalizeVariantLabelPart(candidate, {
+      internalIds: isObject
+        ? [raw.option_id, raw.attribute_id]
+        : [],
+      allowBareNumeric:
+        isObject &&
+        raw.option_id !== undefined &&
+        raw.option_id !== null,
+    });
     if (normalized && !parts.includes(normalized)) parts.push(normalized);
   }
 
@@ -734,7 +759,7 @@ function displayableVariantLabel(optionsJson) {
 function activeInStockRows(db, productId) {
   return db.prepare(
     'SELECT v.variant_id,v.sku,v.options_json,' +
-    'o.current_minor,o.currency ' +
+    'CAST(o.current_minor AS TEXT) current_minor_text,o.currency ' +
     'FROM variants v LEFT JOIN variant_offers o ' +
     'ON o.variant_id=v.variant_id ' +
     "WHERE v.product_id=? AND v.lifecycle='active' " +
@@ -744,30 +769,61 @@ function activeInStockRows(db, productId) {
 }
 
 function inspectTrustedPriceCohort(base, rows) {
-  const missing = rows.filter(row =>
-    row.current_minor === null || row.current_minor === undefined ||
-    row.currency === null || row.currency === undefined
-  );
-  if (missing.length) {
+  const missing = [];
+  const invalidPrice = [];
+  const invalidCurrency = [];
+  const normalized = [];
+
+  for (const row of rows) {
+    if (
+      row.current_minor_text === null ||
+      row.current_minor_text === undefined ||
+      row.currency === null || row.currency === undefined
+    ) {
+      missing.push(row.variant_id);
+      continue;
+    }
+
+    const currentText = String(row.current_minor_text);
+    const currency = String(row.currency);
+    if (!/^(?:0|[1-9]\d*)$/u.test(currentText)) {
+      invalidPrice.push(row.variant_id);
+      continue;
+    }
+
+    const currentBig = BigInt(currentText);
+    if (currentBig > BigInt(Number.MAX_SAFE_INTEGER)) {
+      invalidPrice.push(row.variant_id);
+      continue;
+    }
+    const currentMinor = Number(currentBig);
+    if (!/^[A-Z]{3}$/u.test(currency)) {
+      invalidCurrency.push(row.variant_id);
+      continue;
+    }
+
+    normalized.push({
+      ...row,
+      current_minor: currentMinor,
+      currency,
+    });
+  }
+
+  if (missing.length || invalidPrice.length || invalidCurrency.length) {
     return {
       problem: unavailableFact(
         base,
         'PRICE_COHORT_INCOMPLETE',
         {
           in_stock_variant_count: rows.length,
-          priced_variant_count: rows.length - missing.length,
-          missing_offer_variant_ids:
-            missing.map(row => row.variant_id).sort(),
+          priced_variant_count: normalized.length,
+          missing_offer_variant_ids: missing.sort(),
+          invalid_price_variant_ids: invalidPrice.sort(),
+          invalid_currency_variant_ids: invalidCurrency.sort(),
         }
       ),
     };
   }
-
-  const normalized = rows.map(row => ({
-    ...row,
-    current_minor: Number(row.current_minor),
-    currency: String(row.currency),
-  }));
 
   const zero = normalized
     .filter(row => row.current_minor === 0)
