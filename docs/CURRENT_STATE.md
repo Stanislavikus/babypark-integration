@@ -224,8 +224,7 @@ Contract:
 
 ### Slice B final closeout
 
-Status: CLOSEOUT CANDIDATE on
-`docs/ai-first-line-slice-b-closeout`.
+Status: COMPLETE / repository contract.
 
 Closeout adds the missing frozen C60 machine boundary:
 `CATALOG_IDENTITY_COLLISION` for a supposedly canonical product selector that
@@ -234,7 +233,7 @@ resolves to multiple internal product identities, without exposing candidates.
 Final acceptance ownership and Definition-of-Done evidence:
 `docs/AI_FIRST_LINE_SLICE_B_CLOSEOUT.md`.
 
-After closeout merge, Slice B is complete. Next:
+Slice B is complete. Next:
 Slice C — Website First Line episode state + ObjectiveConstraintLatch +
 deterministic ANSWER / CLARIFY / HUMAN + WebsiteRenderer/TextRenderer.
 
