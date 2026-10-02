@@ -70,9 +70,13 @@ EXPECTED, MADE_TO_ORDER, OUT_OF_STOCK and DISCONTINUED do not enter current-pric
 facts.
 
 Before any price is returned, every relevant cohort member must have a trusted
-canonical offer with currency.
+canonical offer with:
+- non-negative safe-integer `current_minor`;
+- safe three-letter uppercase currency code.
 
-If any relevant IN_STOCK variant lacks an offer/currency:
+Missing or malformed price/currency authority is not treated as a usable offer.
+
+If any relevant IN_STOCK variant lacks or fails trusted offer/currency validation:
 
 `UNANSWERABLE / PRICE_COHORT_INCOMPLETE`
 
@@ -116,6 +120,14 @@ The sanitizer:
 - rejects empty/control/URL/blob-like values;
 - bounds individual parts and the combined label;
 - never exposes raw option IDs as labels;
+- suppresses labels equal to their own `option_id` / `attribute_id`;
+- suppresses explicit debug-ID forms such as `oid:...`, `aid:...`,
+  `nid:...`, `vid:...` and serialized/debug-like values;
+- permits a numeric customer label only when structured option metadata proves it
+  differs from the internal IDs (for example size `86` with another
+  `option_id`);
+- suppresses bare numeric primitive option values because their meaning cannot be
+  proven safely;
 - never infers semantic classes such as COLOR/SIZE/MATERIAL.
 
 A missing safe label does **not** remove the variant.
