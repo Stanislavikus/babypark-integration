@@ -184,6 +184,19 @@ function buildFixture(storageDir, {
   });
 
   addVariant(builder, {
+    id: 'v-label-debug-suffix',
+    productId: 'p-label-safety',
+    price: 1000000,
+    options: {
+      771: {
+        attribute_id: '771',
+        option_id: '32975',
+        option_name: 'oid:32975 Blue',
+      },
+    },
+  });
+
+  addVariant(builder, {
     id: 'v-label-primitive-numeric',
     productId: 'p-label-safety',
     price: 1000000,
@@ -409,7 +422,7 @@ test('variant label sanitizer suppresses internal/debug IDs but keeps numeric si
   });
   assert.equal(fact.status, 'FACT');
   assert.equal(fact.reason, 'VARIANT_LIST_PARTIAL');
-  assert.equal(fact.total_variant_count, 5);
+  assert.equal(fact.total_variant_count, 6);
   assert.equal(fact.displayable_label_count, 1);
   assert.equal(fact.label_complete, false);
 
@@ -419,6 +432,7 @@ test('variant label sanitizer suppresses internal/debug IDs but keeps numeric si
   assert.equal(byId['v-label-size'], '86');
   assert.equal(byId['v-label-raw-id'], null);
   assert.equal(byId['v-label-debug'], null);
+  assert.equal(byId['v-label-debug-suffix'], null);
   assert.equal(byId['v-label-primitive-numeric'], null);
   assert.equal(byId['v-label-number-without-option-id'], null);
 });

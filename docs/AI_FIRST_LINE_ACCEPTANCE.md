@@ -119,6 +119,7 @@ For multi-turn cases, `customer_messages[]` preserves episode history.
 | C50 | Price-filter shortlist anchored to category contains relevant IN_STOCK offer hole. | HUMAN / PRICE_COHORT_INCOMPLETE; do not silently reduce total |
 | C51 | Brand=Cybex + price<=30k + exact Store A; stock/commercial fresh. | ANSWER shortlist; only qty>0 variants in Store A |
 | C52 | Same as C51 but stock layer stale/blocked. | HUMAN / CATALOG_STOCK_STALE |
+| C52a | Same as C51; stock layer is fresh but one anchored active IN_STOCK variant has no exact-store store_stock row. | HUMAN / CATALOG_STOCK_STALE; missing row is never a silent zero/exclusion |
 | C53 | Same as C51 but store phrase unresolved. | CLARIFY / AMBIGUOUS_STORE; never rerun without store |
 | C54 | "Есть модель X в магазине A?" Product has exactly one active IN_STOCK variant, stock fresh qty>0. | ANSWER / STORE_STOCK = yes |
 | C55 | Same as C54, qty=0. | ANSWER / STORE_STOCK = no |
@@ -470,6 +471,24 @@ Private note failure never blocks handoff.
 ### N07
 Duplicate webhook does not create second note.
 
+### N08 — stock-stale handoff retains independently confirmed facts
+Final decision is HUMAN / CATALOG_STOCK_STALE.
+
+If an exact product/variant is already resolved and current independent
+authorities confirm general commercial availability, B1 price, and/or an
+applicable reviewed delivery CommercePolicy:
+- private note includes those confirmed facts deterministically;
+- each fact is scoped as general commercial/delivery authority, not exact-store
+  stock;
+- exact-store availability remains unresolved;
+- failed B3 store-filtered shortlist membership is never serialized as a
+  confirmed partial shortlist;
+- there is still no public AI handoff preface.
+
+If no such independent fact is safely available, the note contains only the
+confirmed identifiers/provenance plus unresolved reason. No fact is invented to
+make the note look richer.
+
 ## K. Catalog objective-search vectors
 
 ### S01
@@ -488,10 +507,17 @@ Price membership and displayed price derive from the same matched variant cohort
 Default-variant price outside filter never leaks into matched card.
 
 ### S06
-Store filter requires stock qty>0 at exact store.
+Store filter requires an explicit exact-store row for every anchored active
+IN_STOCK variant. quantity=0 is a confirmed exclusion; quantity>0 participates
+in the exact-store denominator used by all_available_variants_match_filters.
+
+### S06b
+Fresh stock layer but a missing exact-store row for any anchored active IN_STOCK
+variant => HUMAN / CATALOG_STOCK_STALE for the whole store-filtered result.
+The same missing row must not poison a query that has no store constraint.
 
 ### S07
-Store filter with stale stock fails closed.
+Store filter with stale/blocked stock layer fails closed.
 
 ### S08
 Relevant offer hole fails entire price-filter result rather than shrinking total.
