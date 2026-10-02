@@ -26,7 +26,9 @@ is safe, returns deterministic canonical values from one CatalogReader generatio
 All selectors use canonical BabyPark `product_id`. Product resolution from
 customer phrases belongs to later resolver/decision slices.
 
-Every result includes same-generation Catalog metadata.
+Every result includes same-generation Catalog metadata and explicit
+`relevant_layers: ['commercial']` so later decision provenance can bind only the
+authority actually used by the fact.
 
 ## Result envelope
 
