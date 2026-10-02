@@ -88,6 +88,7 @@ Current v1 surface:
 - getProductPriceFact(productId)
 - getAvailableVariantsFact(productId)
 - getVariantPriceListFact(productId)
+- getStoreStockFact(...)
 - searchObjectiveProducts(...)
 
 The three `*Fact` methods are Slice B1 decision-ready factual contracts. They
@@ -115,6 +116,11 @@ Slice B3 adds the dedicated matched-cohort factual shortlist contract
 available-variant completeness, optional exact-store participation, and total count
 from the same accepted generation. Its contract is documented in
 `docs/CATALOG_OBJECTIVE_SEARCH.md`.
+
+Slice B4 adds the exact-store factual contract `getStoreStockFact(...)` and the
+neutral `ProductPresentation` v1 model. It never exposes store quantity and
+requires explicit canonical variant/store authority. Its contract is documented
+in `docs/CATALOG_STORE_STOCK.md`.
 
 Every response includes catalog metadata from the same active SQLite handle used for
 the returned data.

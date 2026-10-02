@@ -1206,13 +1206,23 @@ ANSWER / STORE_STOCK is allowed when:
 - the resolved product has exactly one active IN_STOCK variant.
 
 Then:
-- store resolves exactly;
-- stock layer answerable;
-- return factual yes/no based on quantity > 0.
+- store resolves exactly to an active canonical store_id;
+- commercial and stock layers are answerable;
+- the selected exact variant/store pair must have an explicit store_stock row;
+- quantity > 0 => factual yes;
+- quantity = 0 => factual no.
+
+A missing exact variant/store row is not a confirmed zero. It fails closed as:
+HUMAN / CATALOG_STOCK_STALE.
 
 If product has multiple active IN_STOCK variants and no variant selected:
-- CLARIFY / AMBIGUOUS_VARIANT if all customer-selectable candidate variants can be safely presented;
+- CLARIFY / AMBIGUOUS_VARIANT only when every customer-selectable candidate has
+  a safe, non-empty and unique display label;
 - otherwise HUMAN / PRODUCT_VARIANT_NOT_RESOLVABLE.
+
+If product has zero active IN_STOCK variants and no exact variant is already
+selected, B4 does not invent a model-level store-stock fact:
+HUMAN / PRODUCT_VARIANT_NOT_RESOLVABLE.
 
 If clarification remains unresolved:
 HUMAN / CLARIFY_EXHAUSTED.
@@ -1225,6 +1235,29 @@ Do not claim "можно забрать сегодня".
 ## 40. Neutral presentation model
 
 Business logic returns neutral `ProductPresentation`, not Chatwoot-specific cards.
+
+ProductPresentation v1:
+
+```text
+ProductPresentation {
+  contract = bp.catalog.product-presentation/1
+  product_id
+  variant_id?
+  variant_label?
+  title?
+  product_url?
+  image_url?
+}
+```
+
+Rules:
+- canonical product/variant IDs only;
+- variant_label is sanitized factual text and may be null;
+- product-level image is preferred;
+- variant image fallback may use only the exact selected variant or the already
+  proven matched cohort; never an unrelated/default variant;
+- price, stock quantity and customer wording do not live inside ProductPresentation;
+- exact price/stock facts remain deterministic values in the enclosing factual DTO.
 
 Initial adapters:
 - WebsiteRenderer;
