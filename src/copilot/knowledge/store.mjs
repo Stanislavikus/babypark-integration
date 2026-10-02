@@ -20,6 +20,11 @@ import {
   knowledgeRequiresApproval,
   validateKnowledgePublishEnvelope,
 } from './publication-policy.mjs';
+import {
+  normalizeCommerceScope,
+  validateCommerceExceptionRelation,
+  verifyCommerceExceptionGraph,
+} from './commerce-policy.mjs';
 
 export class KnowledgeStoreError extends Error {
   constructor(code, message, details = {}) {
@@ -515,7 +520,10 @@ export class KnowledgeStore {
       throw new TypeError('expiresAtUtc must be after effectiveFromUtc');
     }
 
-    const scopeJson = canonicalKnowledgeJson(scope);
+    const normalizedScope = recordType === 'COMMERCE_POLICY'
+      ? policyGuard(() => normalizeCommerceScope(scope))
+      : scope;
+    const scopeJson = canonicalKnowledgeJson(normalizedScope);
     const effectJson = canonicalKnowledgeJson(effectValue);
     const metadataJson = canonicalKnowledgeJson(metadata);
     const createdAt = canonicalKnowledgeTimestamp(this.now(), 'created_at_utc');
@@ -527,8 +535,47 @@ export class KnowledgeStore {
       if (parentRevisionId && !this.getRevision(parentRevisionId)) {
         fail('KNOWLEDGE_PARENT_MISSING', 'Parent revision does not exist');
       }
-      if (exceptionOfRevisionId && !this.getRevision(exceptionOfRevisionId)) {
-        fail('KNOWLEDGE_EXCEPTION_PARENT_MISSING', 'Exception parent does not exist');
+      let exceptionParent = null;
+      if (exceptionOfRevisionId) {
+        exceptionParent = this.getRevision(exceptionOfRevisionId);
+        if (!exceptionParent) {
+          fail('KNOWLEDGE_EXCEPTION_PARENT_MISSING', 'Exception parent does not exist');
+        }
+        if (recordType !== 'COMMERCE_POLICY') {
+          fail(
+            'KNOWLEDGE_EXCEPTION_UNSUPPORTED',
+            'exception_of_revision_id is supported only for CommercePolicy v1'
+          );
+        }
+
+        const seen = new Set();
+        let cursor = exceptionParent;
+        while (cursor) {
+          if (seen.has(cursor.revision_id)) {
+            fail(
+              'COMMERCE_EXCEPTION_CYCLE',
+              'Commerce exception chain contains a cycle',
+              { revision_id: cursor.revision_id }
+            );
+          }
+          seen.add(cursor.revision_id);
+          if (cursor.exception_of_revision_id === null) break;
+          const parent = this.getRevision(cursor.exception_of_revision_id);
+          if (!parent) {
+            fail(
+              'COMMERCE_EXCEPTION_PARENT_MISSING',
+              'Commerce exception ancestor is missing',
+              {
+                revision_id: cursor.revision_id,
+                parent_revision_id: cursor.exception_of_revision_id,
+              }
+            );
+          }
+          policyGuard(() => validateCommerceExceptionRelation(parent, {
+            ...cursor,
+          }));
+          cursor = parent;
+        }
       }
       const revision = {
         revision_id: revisionId,
@@ -548,6 +595,9 @@ export class KnowledgeStore {
         author_actor_id: authorActorId,
         created_at_utc: createdAt,
       };
+      if (exceptionParent) {
+        policyGuard(() => validateCommerceExceptionRelation(exceptionParent, revision));
+      }
       const revisionHash = knowledgeSha256(revision);
 
       this.db.prepare(`
@@ -932,6 +982,8 @@ export class KnowledgeStore {
       }
       byRevision.set(row.revision_id, row);
     }
+
+    policyGuard(() => verifyCommerceExceptionGraph(revisions));
 
     const events = this.db.prepare(
       'SELECT * FROM knowledge_events ORDER BY event_seq'

@@ -156,12 +156,35 @@ collation.
 A5a deliberately does not interpret the JSON shape of weekly/special hours or
 status effects. That schema/semantic layer is a separate resolver contract.
 
-## Not in A4a/A4b/A5a
+## A5b CommercePolicy exceptions and resolution
+
+CommercePolicy v1 scope is a conjunction of exact optional bindings:
+- `category_id`;
+- `brand_id`;
+- `product_id`;
+- `variant_id`;
+- `store_id`.
+
+An explicit exception is valid only when the child:
+- keeps the same subject identity and `effect_family`;
+- repeats every parent binding with the same value;
+- adds at least one additional exact binding;
+- has a non-empty authority interval contained by the parent interval.
+
+Equal scope, broader scope, category-tree descendant inference and exception
+cycles are rejected. Restore verification rechecks the complete exception graph.
+
+At resolution time:
+- different applicable canonical effects produce `POLICY_CONFLICT`;
+- equal applicable canonical effects are compatible;
+- an applicable explicit exception suppresses only its explicit ancestor chain;
+- no latest-wins, hidden priority or implicit-specificity rule exists.
+
+## Not in A4a/A4b/A5
 
 - RBAC/grant authority and actor-role lookup;
 - hours/status effect JSON schema;
 - CLOSED suppression / special-hours / weekly-hours semantic resolver;
-- CommercePolicy exception resolution;
 - HTTP/admin UI;
 - AI/customer messaging;
 - production backup/restore deployment.
