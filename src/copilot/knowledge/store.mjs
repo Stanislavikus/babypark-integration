@@ -593,7 +593,7 @@ export class KnowledgeStore {
     });
   }
 
-  requireRevisionLocked(revisionId) {
+  #requireRevisionLocked(revisionId) {
     text('revisionId', revisionId);
     const revision = this.getRevision(revisionId);
     if (!revision) {
@@ -606,7 +606,7 @@ export class KnowledgeStore {
     return revision;
   }
 
-  currentStateLocked(revisionId) {
+  #currentStateLocked(revisionId) {
     const last = this.db.prepare(
       'SELECT event_type FROM knowledge_events WHERE revision_id=? ORDER BY event_seq DESC LIMIT 1'
     ).get(revisionId);
@@ -620,7 +620,7 @@ export class KnowledgeStore {
     }[last?.event_type] ?? null;
   }
 
-  appendEventLocked({
+  #appendEventLocked({
     revisionId,
     eventType,
     actorId,
@@ -680,7 +680,7 @@ export class KnowledgeStore {
     this.assertWritable();
     return tx(this.db, () => {
       this.verifyLedger();
-      const revision = this.requireRevisionLocked(revisionId);
+      const revision = this.#requireRevisionLocked(revisionId);
       if (!knowledgeRequiresApproval(revision)) {
         fail(
           'KNOWLEDGE_APPROVAL_NOT_REQUIRED',
@@ -688,7 +688,7 @@ export class KnowledgeStore {
           { revision_id: revisionId }
         );
       }
-      if (this.currentStateLocked(revisionId) !== 'DRAFT') {
+      if (this.#currentStateLocked(revisionId) !== 'DRAFT') {
         fail(
           'KNOWLEDGE_STATE_TRANSITION_INVALID',
           'APPROVED requires DRAFT state',
@@ -705,7 +705,7 @@ export class KnowledgeStore {
           { revision_id: revisionId }
         );
       }
-      const event = this.appendEventLocked({
+      const event = this.#appendEventLocked({
         revisionId,
         eventType: 'APPROVED',
         actorId,
@@ -726,8 +726,8 @@ export class KnowledgeStore {
     this.assertWritable();
     return tx(this.db, () => {
       this.verifyLedger();
-      this.requireRevisionLocked(revisionId);
-      const state = this.currentStateLocked(revisionId);
+      this.#requireRevisionLocked(revisionId);
+      const state = this.#currentStateLocked(revisionId);
       if (state !== 'DRAFT' && state !== 'APPROVED') {
         fail(
           'KNOWLEDGE_STATE_TRANSITION_INVALID',
@@ -735,7 +735,7 @@ export class KnowledgeStore {
           { revision_id: revisionId, state }
         );
       }
-      const event = this.appendEventLocked({
+      const event = this.#appendEventLocked({
         revisionId,
         eventType: 'WITHDRAWN',
         actorId,
@@ -757,9 +757,9 @@ export class KnowledgeStore {
     this.assertWritable();
     return tx(this.db, () => {
       this.verifyLedger();
-      const revision = this.requireRevisionLocked(revisionId);
+      const revision = this.#requireRevisionLocked(revisionId);
       const required = knowledgeRequiresApproval(revision);
-      const state = this.currentStateLocked(revisionId);
+      const state = this.#currentStateLocked(revisionId);
       if (
         (required && state !== 'APPROVED') ||
         (!required && state !== 'DRAFT')
@@ -784,8 +784,8 @@ export class KnowledgeStore {
             { revision_id: revisionId }
           );
         }
-        predecessor = this.requireRevisionLocked(supersedeRevisionId);
-        if (this.currentStateLocked(supersedeRevisionId) !== 'PUBLISHED') {
+        predecessor = this.#requireRevisionLocked(supersedeRevisionId);
+        if (this.#currentStateLocked(supersedeRevisionId) !== 'PUBLISHED') {
           fail(
             'KNOWLEDGE_SUPERSESSION_PREDECESSOR_NOT_PUBLISHED',
             'Supersession predecessor must be PUBLISHED',
@@ -795,7 +795,7 @@ export class KnowledgeStore {
         policyGuard(() => assertSupersessionCompatible(predecessor, revision));
       }
 
-      const published = this.appendEventLocked({
+      const published = this.#appendEventLocked({
         revisionId,
         eventType: 'PUBLISHED',
         actorId,
@@ -806,7 +806,7 @@ export class KnowledgeStore {
         this.verifyLedger();
         return Object.freeze({ published, superseded: null });
       }
-      const superseded = this.appendEventLocked({
+      const superseded = this.#appendEventLocked({
         revisionId: predecessor.revision_id,
         eventType: 'SUPERSEDED',
         actorId,
@@ -827,8 +827,8 @@ export class KnowledgeStore {
     this.assertWritable();
     return tx(this.db, () => {
       this.verifyLedger();
-      this.requireRevisionLocked(revisionId);
-      const state = this.currentStateLocked(revisionId);
+      this.#requireRevisionLocked(revisionId);
+      const state = this.#currentStateLocked(revisionId);
       if (state !== 'PUBLISHED') {
         fail(
           'KNOWLEDGE_STATE_TRANSITION_INVALID',
@@ -836,7 +836,7 @@ export class KnowledgeStore {
           { revision_id: revisionId, state }
         );
       }
-      const event = this.appendEventLocked({
+      const event = this.#appendEventLocked({
         revisionId,
         eventType: 'REVOKED',
         actorId,
