@@ -109,7 +109,7 @@ test('restore verification rejects cryptographically valid missing exception par
   store.close();
 
   const raw = new DatabaseSync(f.file);
-  raw.exec('DROP TRIGGER knowledge_revisions_no_update');
+  raw.exec('PRAGMA foreign_keys=OFF; DROP TRIGGER knowledge_revisions_no_update');
   raw.prepare(
     'UPDATE knowledge_revisions SET exception_of_revision_id=? WHERE revision_id=?'
   ).run('kr_missing', rev.revision_id);
@@ -138,7 +138,7 @@ test('restore verification rejects cryptographically valid exception cycle', t =
   store.close();
 
   const raw = new DatabaseSync(f.file);
-  raw.exec('DROP TRIGGER knowledge_revisions_no_update');
+  raw.exec('PRAGMA foreign_keys=OFF; DROP TRIGGER knowledge_revisions_no_update');
   raw.prepare(
     'UPDATE knowledge_revisions SET exception_of_revision_id=? WHERE revision_id=?'
   ).run(b.revision_id, a.revision_id);

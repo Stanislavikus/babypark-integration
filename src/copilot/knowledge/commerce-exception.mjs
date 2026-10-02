@@ -95,6 +95,17 @@ export function validateCommerceExceptionRelation(parentRevision, childRevision)
   if (parentId === childId) {
     fail('COMMERCE_EXCEPTION_SELF_REFERENCE', 'Commerce exception cannot reference itself', { revision_id: childId });
   }
+  if (childRevision.exception_of_revision_id !== parentId) {
+    fail(
+      'COMMERCE_EXCEPTION_PARENT_REFERENCE_MISMATCH',
+      'Child exception reference must match the validated parent',
+      {
+        parent_revision_id: parentId,
+        child_revision_id: childId,
+        recorded_parent_revision_id: childRevision.exception_of_revision_id ?? null,
+      }
+    );
+  }
   if (parentRevision.record_type !== 'COMMERCE_POLICY' || childRevision.record_type !== 'COMMERCE_POLICY') {
     fail('COMMERCE_EXCEPTION_RECORD_TYPE_INVALID', 'Commerce exception relation requires COMMERCE_POLICY revisions', { parent_revision_id: parentId, child_revision_id: childId });
   }
