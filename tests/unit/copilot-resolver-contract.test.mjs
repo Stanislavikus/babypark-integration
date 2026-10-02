@@ -12,6 +12,9 @@ import {
 import { CatalogService } from '../../src/catalog/service/catalog-service.mjs';
 import { KnowledgeStore } from '../../src/copilot/knowledge/store.mjs';
 import {
+  canonicalKnowledgeJson,
+} from '../../src/copilot/knowledge/canonical.mjs';
+import {
   KNOWLEDGE_RESOLVER_CONTRACT_VERSION,
   KNOWLEDGE_RESOLVER_GOLDEN_SHA256,
 } from '../../src/copilot/knowledge/resolver-contract.mjs';
@@ -279,7 +282,10 @@ test('resolver v1 golden fixture is pinned by contract version', () => {
     fixture.contract_version,
     KNOWLEDGE_RESOLVER_CONTRACT_VERSION
   );
-  const digest = crypto.createHash('sha256').update(raw).digest('hex');
+  const digest = crypto
+    .createHash('sha256')
+    .update(canonicalKnowledgeJson(fixture))
+    .digest('hex');
   assert.equal(
     digest,
     KNOWLEDGE_RESOLVER_GOLDEN_SHA256[
