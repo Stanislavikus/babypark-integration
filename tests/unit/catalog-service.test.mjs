@@ -785,13 +785,28 @@ test('store stock hides inactive stores by default', () => {
   );
 });
 
-test('category, attribute and store dictionaries are provider-neutral', () => {
+test('category, brand, attribute and store dictionaries are provider-neutral', () => {
   const categories = service.listCategories({
     language: 'uk',
   }).categories;
   assert.equal(
     categories.find(row => row.category_id === 'cat-strollers').name,
     'Коляски'
+  );
+  assert.deepEqual(
+    service.listCategories({
+      language: 'uk',
+      categoryIds: ['cat-strollers', 'missing'],
+    }).categories.map(row => row.category_id),
+    ['cat-strollers']
+  );
+
+  const brands = service.listBrands({
+    brandIds: ['brand-joolz', 'missing'],
+  }).brands;
+  assert.deepEqual(
+    brands.map(row => [row.brand_id, row.name]),
+    [['brand-joolz', 'Joolz']]
   );
 
   const attrs = service.listAttributes({
@@ -802,6 +817,19 @@ test('category, attribute and store dictionaries are provider-neutral', () => {
 
   const stores = service.getStores().stores;
   assert.deepEqual(stores.map(row => row.store_id), ['kyiv']);
+  assert.deepEqual(
+    service.getStores({
+      storeIds: ['kyiv', 'oldshop'],
+    }).stores.map(row => row.store_id),
+    ['kyiv']
+  );
+  assert.deepEqual(
+    service.getStores({
+      activeOnly: false,
+      storeIds: ['oldshop'],
+    }).stores.map(row => row.store_id),
+    ['oldshop']
+  );
 });
 
 test('compareProducts is one-generation and bounded', () => {

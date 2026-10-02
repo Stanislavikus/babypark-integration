@@ -1,6 +1,6 @@
 # Knowledge Authority
 
-Status: PLANNED / repository A4a+A4b+A5a foundation only
+Status: CURRENT production authority; Slice B2 Vocabulary resolver candidate not deployed
 Last verified: 2026-10-02
 Owner: BabyPark
 Normative design:
@@ -13,11 +13,16 @@ Normative design:
 execution state and must never be treated as disposable or rebuildable from
 Chatwoot.
 
-A4a implements the immutable ledger foundation. A4b adds the deterministic
-publication state machine and publication-envelope checks. A5a adds the verified
-active-authority projection and namespace-independent peer-conflict core. These
-repository slices do not deploy production Knowledge authority or enable customer
-answers.
+Slice A ledger, publication, CommercePolicy, operational resolver, RBAC/control
+plane and durable recovery are deployed and production-accepted.
+
+The production bootstrap authority currently remains intentionally empty
+(0 revisions / 0 events). No synthetic business facts or Vocabulary entries were
+published merely to populate it.
+
+Slice B2 adds repository support for reviewed immutable `VOCABULARY_ENTRY`
+authority and deterministic closed-world resolvers. Merge of B2 alone does not
+publish Vocabulary into production and does not enable customer answers.
 
 ## A4a schema
 
@@ -95,17 +100,17 @@ the resulting ledger again before COMMIT.
 Hash/state-machine verification is a recovery gate, not a replacement for backup.
 ## Storage and deployment
 
-Planned production path:
+Production path:
 
 `/var/lib/babypark-integration/knowledge.sqlite`
 
-The DB is durable-forever authority and requires verified off-host backup before
-deployment.
+The DB is durable-forever authority. The 2026-10-02 production deployment has
+verified encrypted off-host backup and scratch restore, and canonical physical
+store cutover has passed.
 
-Repository merge does not create or modify production `knowledge.sqlite`.
-
-Store-scoped Knowledge must remain non-CURRENT until the canonical physical-store
-production cutover documented in `docs/CATALOG_IDENTITY.md` has passed.
+Repository merges do not automatically create, migrate or populate production
+`knowledge.sqlite`. Any future production Knowledge content publication remains
+an explicit reviewed authority action through the deployed control plane.
 
 ## A4b publication policy
 
@@ -202,6 +207,55 @@ gaps after the special interval closes. Exact expiry is half-open and reveals th
 next lower authority layer immediately.
 
 Malformed, overlapping or incomplete current-day intervals fail closed.
+
+## B2 reviewed Vocabulary authority candidate
+
+Slice B2 reuses the existing immutable Knowledge ledger for reviewed phrase-to-ID
+bindings. It does not add a mutable alias table or second database.
+
+Vocabulary record type:
+
+`VOCABULARY_ENTRY`
+
+All Vocabulary namespaces remain approval-required.
+
+Supported v1 namespaces:
+- `vocabulary.category`;
+- `vocabulary.brand`;
+- `vocabulary.store`.
+
+All use:
+- `schema_version = 1`;
+- `subject_type = phrase`;
+- normalized canonical phrase as `subject_id`;
+- exact empty `scope = {}`;
+- namespace-specific effect family/type/value.
+
+Category requires:
+- `canonical_category_id`;
+- explicit `match_mode = NODE_ONLY | INCLUDE_DESCENDANTS`.
+
+Brand requires `canonical_brand_id`.
+
+Store requires canonical BabyPark `canonical_store_id`; provider-native Drupal
+or Magento location identifiers are not accepted.
+
+Vocabulary schema is validated:
+- before draft insertion;
+- during full ledger verification/open/restore.
+
+Therefore even a cryptographically valid malformed Vocabulary revision fails the
+Knowledge recovery gate.
+
+Multiple active reviewed bindings are not resolved by latest-wins or implicit
+priority. Closed-world B2 resolvers return deterministic 0/1/many outcomes and
+retain the actual Vocabulary revision IDs used for provenance.
+
+The complete B2 contract, current Catalog target validation and resolver versioning
+are documented in `docs/CATALOG_RESOLVERS.md`.
+
+No Vocabulary entry has been published to the production bootstrap database as
+part of this repository slice.
 
 ## A7 direct control plane, Access identity and grants
 

@@ -1,0 +1,260 @@
+{
+  "schema": "bp.knowledge-resolver-golden/1",
+  "contract_version": 1,
+  "phrase_vectors": [
+    {
+      "input": "  ПРОГУЛОЧНЫЕ   КОЛЯСКИ  ",
+      "expected": "прогулочные коляски"
+    },
+    {
+      "input": "Cybex",
+      "expected": "cybex"
+    },
+    {
+      "input": "МАГАЗИН НА ГЛУБОЧИЦКОЙ",
+      "expected": "магазин на глубочицкой"
+    }
+  ],
+  "money_vectors": [
+    {
+      "input": "20 000 грн",
+      "expected": {
+        "normalized_phrase": "20 000 грн",
+        "status": "RESOLVED",
+        "reason": "MONEY_RESOLVED",
+        "currency": "UAH",
+        "minor_units": 2000000,
+        "form": "UAH_MAJOR"
+      }
+    },
+    {
+      "input": "20к",
+      "expected": {
+        "normalized_phrase": "20к",
+        "status": "RESOLVED",
+        "reason": "MONEY_RESOLVED",
+        "currency": "UAH",
+        "minor_units": 2000000,
+        "form": "UAH_THOUSANDS"
+      }
+    },
+    {
+      "input": "20 тисяч",
+      "expected": {
+        "normalized_phrase": "20 тисяч",
+        "status": "RESOLVED",
+        "reason": "MONEY_RESOLVED",
+        "currency": "UAH",
+        "minor_units": 2000000,
+        "form": "UAH_THOUSANDS"
+      }
+    },
+    {
+      "input": "20 тысяч",
+      "expected": {
+        "normalized_phrase": "20 тысяч",
+        "status": "RESOLVED",
+        "reason": "MONEY_RESOLVED",
+        "currency": "UAH",
+        "minor_units": 2000000,
+        "form": "UAH_THOUSANDS"
+      }
+    },
+    {
+      "input": "20 000",
+      "expected": {
+        "normalized_phrase": "20 000",
+        "status": "AMBIGUOUS",
+        "reason": "AMBIGUOUS_MONEY",
+        "currency": null,
+        "minor_units": null,
+        "form": null
+      }
+    },
+    {
+      "input": "20.000 грн",
+      "expected": {
+        "normalized_phrase": "20.000 грн",
+        "status": "AMBIGUOUS",
+        "reason": "AMBIGUOUS_MONEY",
+        "currency": null,
+        "minor_units": null,
+        "form": null
+      }
+    }
+  ],
+  "closed_world_vectors": [
+    {
+      "resolver": "CATEGORY_VOCABULARY",
+      "input": "  ПРОГУЛОЧНЫЕ   КОЛЯСКИ ",
+      "expected": {
+        "resolver": "CATEGORY_VOCABULARY",
+        "normalized_phrase": "прогулочные коляски",
+        "status": "RESOLVED",
+        "reason": "CATEGORY_RESOLVED",
+        "used_revision_ids": [
+          "kr_golden_category_unique"
+        ],
+        "catalog_generation_id": "resolver-golden",
+        "resolved": {
+          "canonical_category_id": "cat-strollers",
+          "match_mode": "INCLUDE_DESCENDANTS",
+          "revision_ids": [
+            "kr_golden_category_unique"
+          ],
+          "name": "Прогулянкові коляски"
+        },
+        "candidates": [
+          {
+            "canonical_category_id": "cat-strollers",
+            "match_mode": "INCLUDE_DESCENDANTS",
+            "revision_ids": [
+              "kr_golden_category_unique"
+            ],
+            "name": "Прогулянкові коляски"
+          }
+        ],
+        "invalid_revision_ids": null,
+        "invalid_target_ids": null
+      }
+    },
+    {
+      "resolver": "CATEGORY_VOCABULARY",
+      "input": "коляски",
+      "expected": {
+        "resolver": "CATEGORY_VOCABULARY",
+        "normalized_phrase": "коляски",
+        "status": "AMBIGUOUS",
+        "reason": "AMBIGUOUS_CATEGORY",
+        "used_revision_ids": [
+          "kr_golden_category_ambiguous_a",
+          "kr_golden_category_ambiguous_b"
+        ],
+        "catalog_generation_id": "resolver-golden",
+        "resolved": null,
+        "candidates": [
+          {
+            "canonical_category_id": "cat-prams",
+            "match_mode": "NODE_ONLY",
+            "revision_ids": [
+              "kr_golden_category_ambiguous_a"
+            ],
+            "name": "Коляски"
+          },
+          {
+            "canonical_category_id": "cat-strollers",
+            "match_mode": "NODE_ONLY",
+            "revision_ids": [
+              "kr_golden_category_ambiguous_b"
+            ],
+            "name": "Прогулянкові коляски"
+          }
+        ],
+        "invalid_revision_ids": null,
+        "invalid_target_ids": null
+      }
+    },
+    {
+      "resolver": "BRAND_VOCABULARY",
+      "input": " CYBEX ",
+      "expected": {
+        "resolver": "BRAND_VOCABULARY",
+        "normalized_phrase": "cybex",
+        "status": "RESOLVED",
+        "reason": "BRAND_RESOLVED",
+        "used_revision_ids": [
+          "kr_golden_brand_unique"
+        ],
+        "catalog_generation_id": "resolver-golden",
+        "resolved": {
+          "canonical_brand_id": "brand-cybex",
+          "revision_ids": [
+            "kr_golden_brand_unique"
+          ],
+          "name": "Cybex"
+        },
+        "candidates": [
+          {
+            "canonical_brand_id": "brand-cybex",
+            "revision_ids": [
+              "kr_golden_brand_unique"
+            ],
+            "name": "Cybex"
+          }
+        ],
+        "invalid_revision_ids": null,
+        "invalid_target_ids": null
+      }
+    },
+    {
+      "resolver": "BRAND_VOCABULARY",
+      "input": "несуществующий бренд",
+      "expected": {
+        "resolver": "BRAND_VOCABULARY",
+        "normalized_phrase": "несуществующий бренд",
+        "status": "NOT_FOUND",
+        "reason": "BRAND_NOT_FOUND",
+        "used_revision_ids": [],
+        "catalog_generation_id": null,
+        "resolved": null,
+        "candidates": [],
+        "invalid_revision_ids": null,
+        "invalid_target_ids": null
+      }
+    },
+    {
+      "resolver": "STORE_VOCABULARY",
+      "input": "магазин на глубочицкой",
+      "expected": {
+        "resolver": "STORE_VOCABULARY",
+        "normalized_phrase": "магазин на глубочицкой",
+        "status": "RESOLVED",
+        "reason": "STORE_RESOLVED",
+        "used_revision_ids": [
+          "kr_golden_store_unique"
+        ],
+        "catalog_generation_id": "resolver-golden",
+        "resolved": {
+          "canonical_store_id": "store-a",
+          "revision_ids": [
+            "kr_golden_store_unique"
+          ],
+          "name": "Глибочицька"
+        },
+        "candidates": [
+          {
+            "canonical_store_id": "store-a",
+            "revision_ids": [
+              "kr_golden_store_unique"
+            ],
+            "name": "Глибочицька"
+          }
+        ],
+        "invalid_revision_ids": null,
+        "invalid_target_ids": null
+      }
+    },
+    {
+      "resolver": "STORE_VOCABULARY",
+      "input": "архивный магазин",
+      "expected": {
+        "resolver": "STORE_VOCABULARY",
+        "normalized_phrase": "архивный магазин",
+        "status": "INVALID_AUTHORITY",
+        "reason": "VOCABULARY_TARGET_INVALID",
+        "used_revision_ids": [
+          "kr_golden_store_inactive"
+        ],
+        "catalog_generation_id": "resolver-golden",
+        "resolved": null,
+        "candidates": [],
+        "invalid_revision_ids": [
+          "kr_golden_store_inactive"
+        ],
+        "invalid_target_ids": [
+          "store-old"
+        ]
+      }
+    }
+  ]
+}
