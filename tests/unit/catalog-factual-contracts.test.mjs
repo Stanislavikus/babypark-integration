@@ -145,6 +145,82 @@ function buildFixture(storageDir, {
     options: {},
   });
 
+  addProduct(builder, 'p-label-safety');
+  addVariant(builder, {
+    id: 'v-label-size',
+    productId: 'p-label-safety',
+    price: 1000000,
+    options: {
+      450: {
+        attribute_id: '450',
+        option_id: '16779',
+        option_name: '86',
+      },
+    },
+  });
+  addVariant(builder, {
+    id: 'v-label-raw-id',
+    productId: 'p-label-safety',
+    price: 1000000,
+    options: {
+      771: {
+        attribute_id: '771',
+        option_id: '32973',
+        option_name: '32973',
+      },
+    },
+  });
+  addVariant(builder, {
+    id: 'v-label-debug',
+    productId: 'p-label-safety',
+    price: 1000000,
+    options: {
+      771: {
+        attribute_id: '771',
+        option_id: '32974',
+        option_name: 'oid:32974',
+      },
+    },
+  });
+
+  addVariant(builder, {
+    id: 'v-label-primitive-numeric',
+    productId: 'p-label-safety',
+    price: 1000000,
+    options: { size: '86' },
+  });
+
+  addVariant(builder, {
+    id: 'v-label-number-without-option-id',
+    productId: 'p-label-safety',
+    price: 1000000,
+    options: {
+      450: {
+        attribute_id: '450',
+        option_name: '86',
+      },
+    },
+  });
+
+  addProduct(builder, 'p-invalid-currency');
+  addVariant(builder, {
+    id: 'v-invalid-currency',
+    productId: 'p-invalid-currency',
+    price: 1000000,
+    currency: 'uah',
+  });
+
+  addProduct(builder, 'p-unsafe-price');
+  addVariant(builder, {
+    id: 'v-unsafe-price',
+    productId: 'p-unsafe-price',
+    price: 1,
+  });
+  builder.db.prepare(
+    "UPDATE variant_offers SET current_minor=9007199254740992 " +
+    "WHERE variant_id='v-unsafe-price'"
+  ).run();
+
   addProduct(builder, 'p-incomplete');
   addVariant(builder, {
     id: 'v-incomplete-priced',
@@ -324,6 +400,48 @@ test('available-now list excludes non-IN_STOCK and reports label completeness', 
   assert.equal(
     partial.variants.find(row => row.variant_id === 'v-range-mid').label,
     null
+  );
+});
+
+test('variant label sanitizer suppresses internal/debug IDs but keeps numeric sizes', () => {
+  const fact = service.getAvailableVariantsFact({
+    productId: 'p-label-safety',
+  });
+  assert.equal(fact.status, 'FACT');
+  assert.equal(fact.reason, 'VARIANT_LIST_PARTIAL');
+  assert.equal(fact.total_variant_count, 5);
+  assert.equal(fact.displayable_label_count, 1);
+  assert.equal(fact.label_complete, false);
+
+  const byId = Object.fromEntries(
+    fact.variants.map(row => [row.variant_id, row.label])
+  );
+  assert.equal(byId['v-label-size'], '86');
+  assert.equal(byId['v-label-raw-id'], null);
+  assert.equal(byId['v-label-debug'], null);
+  assert.equal(byId['v-label-primitive-numeric'], null);
+  assert.equal(byId['v-label-number-without-option-id'], null);
+});
+
+test('unsafe price/currency data makes the trusted cohort incomplete', () => {
+  const badCurrency = service.getProductPriceFact({
+    productId: 'p-invalid-currency',
+  });
+  assert.equal(badCurrency.status, 'UNANSWERABLE');
+  assert.equal(badCurrency.reason, 'PRICE_COHORT_INCOMPLETE');
+  assert.deepEqual(
+    badCurrency.invalid_currency_variant_ids,
+    ['v-invalid-currency']
+  );
+
+  const badPrice = service.getProductPriceFact({
+    productId: 'p-unsafe-price',
+  });
+  assert.equal(badPrice.status, 'UNANSWERABLE');
+  assert.equal(badPrice.reason, 'PRICE_COHORT_INCOMPLETE');
+  assert.deepEqual(
+    badPrice.invalid_price_variant_ids,
+    ['v-unsafe-price']
   );
 });
 
