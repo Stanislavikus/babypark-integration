@@ -18,8 +18,26 @@ const exactKeys = (value, keys) => value && typeof value === 'object' && !Array.
 
 export function stateFilePath(stateDir, spoolHash) { return path.join(stateDir, `${spoolHash}.json`); }
 
-export function createRunState(spool, kid, { randomUUID = crypto.randomUUID, now = () => new Date() } = {}) {
+export function createRunState(spool, kid, {
+  randomUUID = crypto.randomUUID,
+  now = () => new Date(),
+  baseGenerationId = null,
+  baseWatermarks = null,
+} = {}) {
   if (!ID.test(kid)) fail('D2B_KID_INVALID', 'KID is invalid');
+  if (baseGenerationId !== null && !ID.test(baseGenerationId)) {
+    fail('D2B_REPLACEMENT_BASE_INVALID', 'Replacement FULL base generation is invalid');
+  }
+  if (baseGenerationId === null && baseWatermarks !== null) {
+    fail('D2B_REPLACEMENT_BASE_INVALID', 'Bootstrap FULL cannot carry base watermarks');
+  }
+  if (baseGenerationId !== null) {
+    if (!exactKeys(baseWatermarks, LAYERS) ||
+        LAYERS.some(layer => typeof baseWatermarks[layer] !== 'string' ||
+          !/^(?:0|[1-9][0-9]{0,19})$/.test(baseWatermarks[layer]))) {
+      fail('D2B_REPLACEMENT_BASE_INVALID', 'Replacement FULL requires exact layer base watermarks');
+    }
+  }
   const runId = randomUUID().replaceAll('-', '_');
   const m = spool.manifest;
   const publication_authority = {
@@ -30,8 +48,23 @@ export function createRunState(spool, kid, { randomUUID = crypto.randomUUID, now
     sku_normalizer_version: SKU_NORMALIZER_VERSION, native_identity_scheme: NATIVE_IDENTITY_SCHEME,
     producer_commit: spool.release.document.commit, producer_release_provenance_sha256: spool.release.sha256,
   };
-  const layers = ['taxonomy','content','commercial','stock'].map(layer => ({ base_watermark: null, layer, mode: 'replace', output_watermark: m.snapshot_watermark, t_high: m.snapshot_watermark, t_low: null }));
-  const headerBytes = Buffer.from(canonicalControlJson({ header: { base_generation_id: null, layers, run_id: runId, run_kind: 'full', schema: HEADER_SCHEMA_V2, publication_authority, source_epoch: m.source_epoch } }));
+  const layers = LAYERS.map(layer => ({
+    base_watermark: baseGenerationId === null ? null : baseWatermarks[layer],
+    layer,
+    mode: 'replace',
+    output_watermark: m.snapshot_watermark,
+    t_high: m.snapshot_watermark,
+    t_low: null,
+  }));
+  const headerBytes = Buffer.from(canonicalControlJson({ header: {
+    base_generation_id: baseGenerationId,
+    layers,
+    run_id: runId,
+    run_kind: 'full',
+    schema: HEADER_SCHEMA_V2,
+    publication_authority,
+    source_epoch: m.source_epoch,
+  } }));
   const headerHash = hash(headerBytes);
   const ordered = m.chunks.map((chunk, index) => ({ seq: index + 1, ...chunk }));
   const finalSeq = ordered.length + 1;
@@ -61,8 +94,18 @@ export function validateRunState(state, spool) {
   if (headerBytes.toString('base64') !== state.run_header_base64 || trailerBytes.toString('base64') !== state.trailer_base64 || hash(headerBytes) !== state.run_header_sha256) fail('D2B_RUN_STATE_INVALID', 'Frozen body encoding/hash is invalid');
   const header = parseRunHeader(headerBytes, { runId: state.run_id });
   const m = spool.manifest; const authority = header.publication_authority;
-  const expectedLayers = ['taxonomy','content','commercial','stock'].map(layer => ({ base_watermark:null, layer, mode:'replace', output_watermark:m.snapshot_watermark, t_high:m.snapshot_watermark, t_low:null }));
-  if (header.base_generation_id !== null || header.run_kind !== 'full' || header.source_epoch !== m.source_epoch || JSON.stringify(header.layers) !== JSON.stringify(expectedLayers) ||
+  const expectedLayers = LAYERS.map((layer, index) => ({
+    base_watermark: header.base_generation_id === null
+      ? null
+      : header.layers[index]?.base_watermark,
+    layer,
+    mode:'replace',
+    output_watermark:m.snapshot_watermark,
+    t_high:m.snapshot_watermark,
+    t_low:null,
+  }));
+  if (header.run_kind !== 'full' || header.source_epoch !== m.source_epoch ||
+      JSON.stringify(header.layers) !== JSON.stringify(expectedLayers) ||
       authority.spool_schema !== DRUPAL_SPOOL_SCHEMA || authority.spool_manifest_sha256 !== spool.spoolManifestSha256 || authority.anomaly_report_sha256 !== m.anomaly_report_sha256 ||
       authority.config_digests?.['drupal-anomaly-publication-policy'] !== m.anomaly_publication_policy_sha256 || authority.config_digests?.['drupal-collisions'] !== m.collision_config_sha256 || Object.keys(authority.config_digests ?? {}).length !== 2 ||
       authority.full_record_contract_version !== FULL_RECORD_CONTRACT_VERSION || authority.record_validator_version !== RECORD_VALIDATOR_VERSION || authority.sku_normalizer_version !== SKU_NORMALIZER_VERSION || authority.native_identity_scheme !== NATIVE_IDENTITY_SCHEME || authority.producer_commit !== spool.release.document.commit || authority.producer_release_provenance_sha256 !== spool.release.sha256) fail('D2B_RUN_STATE_INVALID', 'Header does not bind verified spool/release authority');
