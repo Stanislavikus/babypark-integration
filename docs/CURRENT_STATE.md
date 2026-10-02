@@ -245,6 +245,8 @@ C1 — durable logical episode state is the active implementation slice:
 - presented canonical candidates (hard bound 20) + requested slot;
 - clarification budget constrained to 0/1;
 - every mutation requires explicit optimistic `expectedVersion`; stale writers are rejected;
+- public `loadActive` / `getEpisode` reads are one committed SQLite snapshot, so
+  row metadata and child state cannot be torn across concurrent commits;
 - no raw/normalized customer body, dynamic Catalog/Knowledge facts,
   resolver/vocabulary state, or Chatwoot reopen-causality marker is persisted;
 - `NON_ACTIONABLE_ACK` and standalone/dependent episode-boundary behavior are

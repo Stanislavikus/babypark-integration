@@ -106,6 +106,18 @@ function tx(db, fn) {
   }
 }
 
+function readTx(db, fn) {
+  db.exec('BEGIN');
+  try {
+    const result = fn();
+    db.exec('COMMIT');
+    return result;
+  } catch (error) {
+    try { db.exec('ROLLBACK'); } catch {}
+    throw error;
+  }
+}
+
 function positiveInteger(value, field) {
   const number = Number(value);
   if (!Number.isSafeInteger(number) || number <= 0) {
@@ -227,15 +239,19 @@ export class EpisodeStore {
       fail('EPISODE_DB_PERMISSIONS_UNSAFE', 'episode database must be mode 0600');
     }
     const store = new EpisodeStore(resolved, now, idFactory);
-    const version = store.db.prepare('PRAGMA user_version').get().user_version;
-    const metadata = store.db.prepare('SELECT schema_version FROM metadata WHERE singleton=1').get();
-    const integrity = store.db.prepare('PRAGMA integrity_check').get().integrity_check;
-    if (version !== SCHEMA_VERSION || metadata?.schema_version !== SCHEMA_VERSION || integrity !== 'ok') {
-      store.close();
-      fail('EPISODE_DB_INVALID', 'episode database schema/integrity check failed',
-        { user_version: version, metadata_version: metadata?.schema_version, integrity });
+    try {
+      const version = store.db.prepare('PRAGMA user_version').get().user_version;
+      const metadata = store.db.prepare('SELECT schema_version FROM metadata WHERE singleton=1').get();
+      const integrity = store.db.prepare('PRAGMA integrity_check').get().integrity_check;
+      if (version !== SCHEMA_VERSION || metadata?.schema_version !== SCHEMA_VERSION || integrity !== 'ok') {
+        fail('EPISODE_DB_INVALID', 'episode database schema/integrity check failed',
+          { user_version: version, metadata_version: metadata?.schema_version, integrity });
+      }
+      return store;
+    } catch (error) {
+      try { store.close(); } catch {}
+      throw error;
     }
-    return store;
   }
 
   constructor(file, now, idFactory) {
@@ -284,16 +300,17 @@ export class EpisodeStore {
 
   loadActive(conversationId) {
     const conversation = positiveInteger(conversationId, 'conversation_id');
-    const row = this.db.prepare(
-      "SELECT episode_id FROM episodes WHERE conversation_id=? AND state='active'"
-    ).get(conversation);
-    return row ? this.#readEpisode(row.episode_id) : null;
+    return readTx(this.db, () => {
+      const row = this.db.prepare(
+        "SELECT episode_id FROM episodes WHERE conversation_id=? AND state='active'"
+      ).get(conversation);
+      return row ? this.#readEpisode(row.episode_id) : null;
+    });
   }
 
   getEpisode(episodeId) {
     const id = safeToken(episodeId, 'episode_id');
-    const row = this.db.prepare('SELECT episode_id FROM episodes WHERE episode_id=?').get(id);
-    return row ? this.#readEpisode(id) : null;
+    return readTx(this.db, () => this.#readEpisode(id));
   }
 
   appendSourceMessage(episodeId, sourceMessageId, { expectedVersion } = {}) {

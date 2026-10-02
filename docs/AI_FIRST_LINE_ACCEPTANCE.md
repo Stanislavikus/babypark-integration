@@ -516,6 +516,21 @@ Every C1 mutation after episode creation requires an explicit positive
 `expectedVersion`; omitting it is rejected and must not mutate state. More than
 20 presented candidates is rejected before durable mutation.
 
+### Q16 — public episode reads are one committed snapshot
+Run a reader against `loadActive` or `getEpisode` while a separate process commits
+a replacement episode or clarification update between the reader's first head-row
+SELECT and later child-table SELECTs.
+
+Expected:
+- the public read returns one internally consistent committed state;
+- `loadActive` never returns a closed episode merely because a later replacement
+  committed during the read;
+- `getEpisode` never combines version/budget/requested-slot metadata from one
+  commit with candidates or slots from another;
+- the writer may complete only after the reader releases its snapshot;
+- write transactions continue to use private transaction-neutral
+  `#readEpisode` without nested transactions.
+
 ## I. Handoff vectors
 
 ### H01 — HUMAN successful

@@ -1105,6 +1105,13 @@ C1 persists only:
 - lifecycle timestamps/reason;
 - an optimistic episode version for stale-writer rejection; every mutation requires an explicit positive `expectedVersion`.
 
+Public episode reads (`loadActive` and `getEpisode`) MUST return one committed
+SQLite snapshot. The episode head row, ordered source messages, stable slots and
+presented candidates MUST NOT be assembled from different commits. C1 therefore
+wraps each public multi-query read in one deferred read transaction; private
+`#readEpisode` remains transaction-neutral so write transactions can reuse it
+without nested `BEGIN`.
+
 C1 never persists:
 - raw/normalized customer message bodies;
 - prices or offer completeness;
