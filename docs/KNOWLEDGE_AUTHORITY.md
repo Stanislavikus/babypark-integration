@@ -1,6 +1,6 @@
 # Knowledge Authority
 
-Status: PLANNED / repository A4a+A4b foundation only
+Status: PLANNED / repository A4a+A4b+A5a foundation only
 Last verified: 2026-10-02
 Owner: BabyPark
 Normative design:
@@ -14,8 +14,10 @@ execution state and must never be treated as disposable or rebuildable from
 Chatwoot.
 
 A4a implements the immutable ledger foundation. A4b adds the deterministic
-publication state machine and publication-envelope checks. Neither slice deploys
-production Knowledge authority or enables customer answers.
+publication state machine and publication-envelope checks. A5a adds the verified
+active-authority projection and namespace-independent peer-conflict core. These
+repository slices do not deploy production Knowledge authority or enable customer
+answers.
 
 ## A4a schema
 
@@ -126,11 +128,40 @@ The predecessor SUPERSEDED event carries canonical hashed
 `successor_revision_id` metadata and is valid only after that successor is
 PUBLISHED.
 
-## Not in A4a/A4b
+## A5a active authority projection
+
+Every projection revalidates the ledger before reading authority.
+
+A revision is active only when:
+- derived state is `PUBLISHED`;
+- `effective_from_utc <= now`;
+- `expires_at_utc IS NULL OR now < expires_at_utc`.
+
+This gives exact half-open expiry semantics. Draft, APPROVED, WITHDRAWN,
+REVOKED and SUPERSEDED revisions are not authority.
+
+Projection is always scoped to exact `subject_type + subject_id`; an optional
+namespace filter can narrow a caller's view without changing the underlying
+conflict rules.
+
+For active peer revisions sharing the same subject and `effect_family`, A5a
+compares canonical `effect_type + effect_value` regardless of namespace:
+- identical canonical effects are compatible;
+- two or more different canonical effects produce `POLICY_CONFLICT`.
+
+Projected rows and nested JSON authority objects are deep-frozen in memory.
+Ordering is deterministic UTF-8 byte ordering rather than locale-dependent
+collation.
+
+A5a deliberately does not interpret the JSON shape of weekly/special hours or
+status effects. That schema/semantic layer is a separate resolver contract.
+
+## Not in A4a/A4b/A5a
 
 - RBAC/grant authority and actor-role lookup;
-- OperationalFact / CommercePolicy resolver;
-- conflict/exception resolution;
+- hours/status effect JSON schema;
+- CLOSED suppression / special-hours / weekly-hours semantic resolver;
+- CommercePolicy exception resolution;
 - HTTP/admin UI;
 - AI/customer messaging;
 - production backup/restore deployment.

@@ -160,6 +160,16 @@ function eventBody(row) {
   };
 }
 
+function deepFreezeJson(value) {
+  if (!value || typeof value !== 'object' || Object.isFrozen(value)) return value;
+  if (Array.isArray(value)) {
+    for (const item of value) deepFreezeJson(item);
+  } else {
+    for (const item of Object.values(value)) deepFreezeJson(item);
+  }
+  return Object.freeze(value);
+}
+
 function policyGuard(fn) {
   try { return fn(); }
   catch (error) {
@@ -846,6 +856,59 @@ export class KnowledgeStore {
       this.verifyLedger();
       return event;
     });
+  }
+
+  authoritySnapshot() {
+    this.verifyLedger();
+    const revisions = this.db.prepare(
+      'SELECT * FROM knowledge_revisions ORDER BY revision_id'
+    ).all();
+    const lastEventByRevision = new Map();
+    for (const event of this.db.prepare(
+      'SELECT * FROM knowledge_events ORDER BY event_seq'
+    ).all()) {
+      lastEventByRevision.set(event.revision_id, event);
+    }
+    const stateByEvent = {
+      DRAFT_CREATED: 'DRAFT',
+      APPROVED: 'APPROVED',
+      PUBLISHED: 'PUBLISHED',
+      WITHDRAWN: 'WITHDRAWN',
+      REVOKED: 'REVOKED',
+      SUPERSEDED: 'SUPERSEDED',
+    };
+    return Object.freeze(revisions.map(row => {
+      const last = lastEventByRevision.get(row.revision_id);
+      return Object.freeze({
+        revision_id: row.revision_id,
+        record_type: row.record_type,
+        schema_version: row.schema_version,
+        namespace: row.namespace,
+        effect_family: row.effect_family,
+        subject_type: row.subject_type,
+        subject_id: row.subject_id,
+        scope: deepFreezeJson(
+          parseCanonicalKnowledgeJson(row.scope_json, 'scope_json')
+        ),
+        effect_type: row.effect_type,
+        effect_value: deepFreezeJson(
+          parseCanonicalKnowledgeJson(
+            row.effect_value_json,
+            'effect_value_json'
+          )
+        ),
+        effective_from_utc: row.effective_from_utc,
+        expires_at_utc: row.expires_at_utc,
+        parent_revision_id: row.parent_revision_id,
+        exception_of_revision_id: row.exception_of_revision_id,
+        author_actor_id: row.author_actor_id,
+        created_at_utc: row.created_at_utc,
+        revision_hash: row.revision_hash,
+        state: stateByEvent[last?.event_type] ?? null,
+        last_event_seq: last?.event_seq ?? null,
+        last_event_hash: last?.event_hash ?? null,
+      });
+    }));
   }
 
   verifyLedger() {
