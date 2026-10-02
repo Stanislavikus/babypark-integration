@@ -20,6 +20,10 @@ import {
   knowledgeRequiresApproval,
   validateKnowledgePublishEnvelope,
 } from './publication-policy.mjs';
+import {
+  validateCommerceExceptionGraph,
+  validateCommerceExceptionRelation,
+} from './commerce-exception.mjs';
 
 export class KnowledgeStoreError extends Error {
   constructor(code, message, details = {}) {
@@ -168,6 +172,18 @@ function deepFreezeJson(value) {
     for (const item of Object.values(value)) deepFreezeJson(item);
   }
   return Object.freeze(value);
+}
+
+function commerceExceptionView(row) {
+  return Object.freeze({
+    revision_id: row.revision_id,
+    record_type: row.record_type,
+    effect_family: row.effect_family,
+    scope: parseCanonicalKnowledgeJson(row.scope_json, 'scope_json'),
+    effective_from_utc: row.effective_from_utc,
+    expires_at_utc: row.expires_at_utc,
+    exception_of_revision_id: row.exception_of_revision_id ?? null,
+  });
 }
 
 function policyGuard(fn) {
@@ -527,8 +543,30 @@ export class KnowledgeStore {
       if (parentRevisionId && !this.getRevision(parentRevisionId)) {
         fail('KNOWLEDGE_PARENT_MISSING', 'Parent revision does not exist');
       }
-      if (exceptionOfRevisionId && !this.getRevision(exceptionOfRevisionId)) {
-        fail('KNOWLEDGE_EXCEPTION_PARENT_MISSING', 'Exception parent does not exist');
+      if (exceptionOfRevisionId) {
+        const exceptionParent = this.getRevision(exceptionOfRevisionId);
+        if (!exceptionParent) {
+          fail(
+            'COMMERCE_EXCEPTION_PARENT_MISSING',
+            'Exception parent revision is missing',
+            {
+              revision_id: revisionId,
+              parent_revision_id: exceptionOfRevisionId,
+            }
+          );
+        }
+        policyGuard(() => validateCommerceExceptionRelation(
+          commerceExceptionView(exceptionParent),
+          commerceExceptionView({
+            revision_id: revisionId,
+            record_type: recordType,
+            effect_family: effectFamily,
+            scope_json: scopeJson,
+            effective_from_utc: effective,
+            expires_at_utc: expires,
+            exception_of_revision_id: exceptionOfRevisionId,
+          })
+        ));
       }
       const revision = {
         revision_id: revisionId,
@@ -932,6 +970,10 @@ export class KnowledgeStore {
       }
       byRevision.set(row.revision_id, row);
     }
+
+    policyGuard(() => validateCommerceExceptionGraph(
+      revisions.map(commerceExceptionView)
+    ));
 
     const events = this.db.prepare(
       'SELECT * FROM knowledge_events ORDER BY event_seq'
