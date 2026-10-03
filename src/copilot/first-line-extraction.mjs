@@ -229,15 +229,16 @@ function isWhitespace(value) {
 }
 
 function productOuterBoundary(text, adjacentIndex, outwardStep) {
-  if (adjacentIndex < 0 || adjacentIndex >= text.length) return true;
-  const adjacent = text[adjacentIndex];
-  if (isWhitespace(adjacent)) return true;
-  if (isWordChar(adjacent)) return false;
-
-  const beyondIndex = adjacentIndex + outwardStep;
-  if (beyondIndex < 0 || beyondIndex >= text.length) return true;
-  const beyond = text[beyondIndex];
-  return isWhitespace(beyond) || !isWordChar(beyond);
+  for (
+    let index = adjacentIndex;
+    index >= 0 && index < text.length;
+    index += outwardStep
+  ) {
+    const value = text[index];
+    if (isWhitespace(value)) return true;
+    if (isWordChar(value)) return false;
+  }
+  return true;
 }
 
 function hasSemanticBoundaries(text, quote, located, kind) {
@@ -261,7 +262,9 @@ function hasSemanticBoundaries(text, quote, located, kind) {
 export function transientTurnFromExactRead(turnIndex, exactRead) {
   positiveInteger(turnIndex, 'turn_index');
   if (!exactRead || exactRead.code !== 'SUPPORTED_CUSTOMER_TEXT' ||
-      !exactRead.event || typeof exactRead.transientContent !== 'string') {
+      !exactRead.event || typeof exactRead.transientContent !== 'string' ||
+      exactRead.transientContent.trim().length === 0 ||
+      exactRead.sourceMessageId !== exactRead.event.sourceMessageId) {
     fail('FIRST_LINE_EXTRACTION_UNSUPPORTED_TURN', 'exact Chatwoot read is not supported customer text', {
       turn_index: turnIndex,
       code: exactRead?.code ?? null,

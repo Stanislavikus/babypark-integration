@@ -192,6 +192,7 @@ test('turn adapter accepts only exact-read supported customer text and drops unr
   const adapted = transientTurnFromExactRead(3, {
     code: 'SUPPORTED_CUSTOMER_TEXT',
     sourceConversationId: 55,
+    sourceMessageId: 777,
     event: {
       sourceMessageId: 777,
       eventKind: 'CUSTOMER_MESSAGE',
@@ -259,6 +260,39 @@ test('normal layout whitespace in transient customer text remains certifiable', 
 
   assert.equal(result.certified_spans[0].quote, 'Cybex\nBalios');
   assert.equal(result.certified_spans[0].start_utf16, 8);
+});
+
+
+
+test('exact-read adapter rejects source-id mismatch and empty forged supported text', () => {
+  const base = {
+    code: 'SUPPORTED_CUSTOMER_TEXT',
+    sourceConversationId: 55,
+    sourceMessageId: 777,
+    event: {
+      sourceMessageId: 777,
+      eventKind: 'CUSTOMER_MESSAGE',
+      messageType: 'incoming',
+      senderClass: 'contact',
+      senderId: 9,
+      contentType: 'text',
+      deleted: false,
+      unsupported: false,
+      hasAttachments: false,
+      sourceId: null,
+    },
+    transientContent: 'Cybex',
+  };
+
+  expectCode(() => transientTurnFromExactRead(1, {
+    ...base,
+    sourceMessageId: 778,
+  }), 'FIRST_LINE_EXTRACTION_UNSUPPORTED_TURN');
+
+  expectCode(() => transientTurnFromExactRead(1, {
+    ...base,
+    transientContent: '   ',
+  }), 'FIRST_LINE_EXTRACTION_UNSUPPORTED_TURN');
 });
 
 test('span count, quote length, occurrence and intent hint are bounded', () => {
@@ -420,6 +454,8 @@ test('PRODUCT quote cannot be a partial SKU-like identifier segment', () => {
     'Ціна ABC+123',
     'Ціна ABC@123',
     'Ціна ABC.123',
+    'Ціна foo##ABC',
+    'Ціна ABC##bar',
   ]) {
     expectCode(() => certifyFirstLineExtraction({
       extraction: extraction({

@@ -36,6 +36,7 @@ function exactReadEntry(rawTurn) {
     exactRead: {
       code: 'SUPPORTED_CUSTOMER_TEXT',
       sourceConversationId: rawTurn.sourceConversationId,
+      sourceMessageId: rawTurn.sourceMessageId,
       event: {
         sourceMessageId: rawTurn.sourceMessageId,
         eventKind: rawTurn.eventKind,
