@@ -1,4 +1,5 @@
 import { normalizeSku } from '../domain/sku.mjs';
+import { normalizeTitleKey } from '../domain/title.mjs';
 import { productionDependencyFingerprint } from './dependency-fingerprint.mjs';
 import { FullMapperError } from './production-full-mapper.mjs';
 
@@ -48,6 +49,23 @@ export function certifyProductionFts(db, expected = expectedDocuments(db)) {
     }
   }
 }
+function certifyTitleKeys(db) {
+  for (const row of db.prepare(
+    'SELECT product_id,language,title,title_key FROM product_text ' +
+    'ORDER BY product_id,language'
+  ).iterate()) {
+    let expected;
+    try {
+      expected = normalizeTitleKey(row.title);
+    } catch {
+      fail('FULL_SEMANTIC_CERTIFICATION_FAILED', 'Product title key source is invalid');
+    }
+    if (row.title_key !== expected) {
+      fail('FULL_SEMANTIC_CERTIFICATION_FAILED', 'Product title key differs from canonical title');
+    }
+  }
+}
+
 function certifyCategoryGraph(db) {
   const rows = db.prepare('SELECT category_id,parent_id FROM categories').all(); const parents = new Map(rows.map(row => [row.category_id, row.parent_id]));
   for (const start of parents.keys()) { const seen = new Set(); let current = start; while (current !== null) { if (seen.has(current)) fail('FULL_SEMANTIC_CERTIFICATION_FAILED', 'Category hierarchy contains a cycle'); seen.add(current); current = parents.get(current) ?? null; } }
@@ -100,7 +118,7 @@ export function prepareProductionCertification({ db, identityStore, runId, depen
   }
   const metadata = db.prepare('SELECT dependency_fingerprint FROM catalog_meta WHERE singleton=1').get();
   if (metadata.dependency_fingerprint !== dependencyFingerprint) fail('FULL_DEPENDENCY_MISMATCH', 'Production dependency fingerprint differs');
-  const docs = rebuildProductionFts(db); certifyCategoryGraph(db); certifyAttributes(db); certifyImages(db); certifyIdentityAndKits(db, identityStore); certifyProductionFts(db, docs);
+  certifyTitleKeys(db); const docs = rebuildProductionFts(db); certifyCategoryGraph(db); certifyAttributes(db); certifyImages(db); certifyIdentityAndKits(db, identityStore); certifyProductionFts(db, docs);
   const revision = identityStore.metadata().revision; db.prepare('UPDATE catalog_meta SET identity_revision=? WHERE singleton=1').run(revision);
   return { identityRevision: revision, documents: docs.length };
 }

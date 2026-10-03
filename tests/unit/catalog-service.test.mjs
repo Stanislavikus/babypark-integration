@@ -13,6 +13,7 @@ import {
   CatalogReader,
 } from '../../src/catalog/sqlite/generation.mjs';
 import { CatalogService } from '../../src/catalog/service/catalog-service.mjs';
+import { normalizeTitleKey } from '../../src/catalog/domain/title.mjs';
 import {
   ftsTrigramQuery,
   ftsWordQuery,
@@ -50,12 +51,13 @@ function insertProduct(builder, {
   for (const [language, text] of Object.entries(texts)) {
     builder.db.prepare(
       'INSERT INTO product_text(' +
-      'product_id,language,title,short_description,description,url' +
-      ') VALUES(?,?,?,?,?,?)'
+      'product_id,language,title,title_key,short_description,description,url' +
+      ') VALUES(?,?,?,?,?,?,?)'
     ).run(
       productId,
       language,
       text.title,
+      normalizeTitleKey(text.title),
       text.short_description || null,
       text.description || null,
       text.url || null
@@ -579,60 +581,65 @@ function buildFixture(storageDir) {
 
   builder.db.prepare(
     'INSERT INTO product_text(' +
-    'product_id,language,title,short_description,description,url' +
-    ') VALUES(?,?,?,?,?,?)'
+    'product_id,language,title,title_key,short_description,description,url' +
+    ') VALUES(?,?,?,?,?,?,?)'
   ).run(
     'p-day3',
     'de',
     'Identity collision Day3',
+    normalizeTitleKey('Identity collision Day3'),
     null,
     null,
     '/identity-collision'
   );
   builder.db.prepare(
     'INSERT INTO product_text(' +
-    'product_id,language,title,short_description,description,url' +
-    ') VALUES(?,?,?,?,?,?)'
+    'product_id,language,title,title_key,short_description,description,url' +
+    ') VALUES(?,?,?,?,?,?,?)'
   ).run(
     'p-bug',
     'fr',
     'Identity collision Bugaboo',
+    normalizeTitleKey('Identity collision Bugaboo'),
     null,
     null,
     '/identity-collision'
   );
   builder.db.prepare(
     'INSERT INTO product_text(' +
-    'product_id,language,title,short_description,description,url' +
-    ') VALUES(?,?,?,?,?,?)'
+    'product_id,language,title,title_key,short_description,description,url' +
+    ') VALUES(?,?,?,?,?,?,?)'
   ).run(
     'p-bug',
     'de',
     'Identity collision Day3',
+    normalizeTitleKey('Identity collision Day3'),
     null,
     null,
     '/de/duplicate-title'
   );
   builder.db.prepare(
     'INSERT INTO product_text(' +
-    'product_id,language,title,short_description,description,url' +
-    ') VALUES(?,?,?,?,?,?)'
+    'product_id,language,title,title_key,short_description,description,url' +
+    ') VALUES(?,?,?,?,?,?,?)'
   ).run(
     'p-bug',
     'en',
     'DAY3-BLK',
+    normalizeTitleKey('DAY3-BLK'),
     null,
     null,
     '/en/sku-title-collision'
   );
   builder.db.prepare(
     'INSERT INTO product_text(' +
-    'product_id,language,title,short_description,description,url' +
-    ') VALUES(?,?,?,?,?,?)'
+    'product_id,language,title,title_key,short_description,description,url' +
+    ') VALUES(?,?,?,?,?,?,?)'
   ).run(
     'p-bug',
     'es',
     'Café Bugaboo',
+    normalizeTitleKey('Café Bugaboo'),
     null,
     null,
     '/es/cafe-bugaboo'
@@ -1087,6 +1094,24 @@ test('exact title authority compares canonical NFC even when stored title is dec
   assert.equal(titleOnly.product.product_id, 'p-bug');
   assert.deepEqual(titleOnly.product.matched_languages, ['es']);
 });
+
+test('exact title authority uses the indexed title_key request path', () => {
+  const plan = reader.withDb(db => db.prepare(
+    'EXPLAIN QUERY PLAN ' +
+    'SELECT pt.product_id,pt.language,pt.title FROM product_text pt ' +
+    'JOIN products p ON p.product_id=pt.product_id ' +
+    "WHERE pt.title_key=? AND p.lifecycle='active' " +
+    'ORDER BY pt.product_id,pt.language'
+  ).all('Café Bugaboo'));
+
+  assert.ok(
+    plan.some(row =>
+      String(row.detail).includes('idx_product_text_title_key')
+    ),
+    JSON.stringify(plan)
+  );
+});
+
 
 test('exact product identity excludes tombstoned product and variant rows', () => {
   const title = service.resolveProductIdentityExact('Коляска Joolz Day3');

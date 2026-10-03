@@ -101,6 +101,9 @@ test('source count contract rejects invalid and async callback results safely', 
 });
 function semanticFixture(t, runId) { const fixture = createE6aHarness({ runId }); t.after(() => fixture.close()); fixture.apply(phase0Records(), 1); fixture.apply(phase1Records(), 2); fixture.apply(phase2Records(), 3); return fixture; }
 for (const [name, mutate] of [
+  ['title key mismatch', f => f.builder.db.prepare(
+    "UPDATE product_text SET title_key='tampered' WHERE rowid=(SELECT min(rowid) FROM product_text)"
+  ).run()],
   ['category cycle', f => f.builder.db.prepare('UPDATE categories SET parent_id=? WHERE category_id=?').run(dimensionId('category', 'fixture', 'strollers'), dimensionId('category', 'fixture', 'baby'))],
   ['multiple primary categories', f => { const p = f.identity.lookupProductBySource({ provider: 'fixture', nativeProductId: 'stroller' }).product_id; f.builder.db.prepare('INSERT INTO product_categories(product_id,category_id,is_primary) VALUES(?,?,1)').run(p, dimensionId('category', 'fixture', 'baby')); }],
   ['attribute type mismatch', f => f.builder.db.prepare("UPDATE product_attributes SET value_json='true' WHERE attribute_id=?").run(dimensionId('attribute_definition', 'fixture', 'color'))],

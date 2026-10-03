@@ -8,7 +8,7 @@ const SQL = {
   writeStore: 'INSERT INTO stores(store_id,name,active,metadata_json) VALUES(@store_id,@name,@active,@metadata_json)',
   writeAttributeDefinition: 'INSERT INTO attribute_defs(attribute_id,code,type,label_json,provenance_json) VALUES(@attribute_id,@code,@type,@label_json,@provenance_json)',
   writeProduct: 'INSERT INTO products(product_id,kind,product_type,brand_id,default_variant_id,provenance_json,updated_at) VALUES(@product_id,@kind,@product_type,@brand_id,@default_variant_id,@provenance_json,@updated_at)',
-  writeProductText: 'INSERT INTO product_text(product_id,language,title,short_description,description,url) VALUES(@product_id,@language,@title,@short_description,@description,@url)',
+  writeProductText: 'INSERT INTO product_text(product_id,language,title,title_key,short_description,description,url) VALUES(@product_id,@language,@title,@title_key,@short_description,@description,@url)',
   writeVariant: 'INSERT INTO variants(variant_id,product_id,sku,sku_key,gtin,is_default,commercial_availability,options_json,updated_at) VALUES(@variant_id,@product_id,@sku,@sku_key,@gtin,@is_default,@commercial_availability,@options_json,@updated_at)',
   writeOffer: 'INSERT INTO variant_offers(variant_id,current_minor,regular_minor,currency,on_sale,tax_included,valid_from,valid_to,source_updated_at) VALUES(@variant_id,@current_minor,@regular_minor,@currency,@on_sale,@tax_included,@valid_from,@valid_to,@source_updated_at)',
   writeStoreStock: 'INSERT INTO store_stock(variant_id,store_id,quantity,source_updated_at) VALUES(@variant_id,@store_id,@quantity,@source_updated_at)',
