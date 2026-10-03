@@ -547,7 +547,7 @@ Expected:
 - `conversation_id` / `source_message_id` accept only positive JavaScript safe integers;
 - no coercive `Number(...)` conversion occurs.
 
-### Q18 — consumed-message watermark survives episode closure and cleanup
+### Q18 — C1 historical: consumed-message watermark survives episode closure and cleanup
 Conversation 700 consumes source message 3, uses its one CLARIFY prompt, then closes.
 Later attempts to begin a new episode with message 3 or any lower message ID arrive
 with a fresh webhook delivery identity.
