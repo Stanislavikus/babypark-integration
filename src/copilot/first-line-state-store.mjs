@@ -82,6 +82,8 @@ CREATE TABLE conversation_events (
 );
 CREATE INDEX conversation_events_source
   ON conversation_events(stream_id, source_message_id);
+CREATE INDEX conversation_events_source_id
+  ON conversation_events(stream_id, source_id);
 CREATE TABLE episodes (
   episode_id TEXT PRIMARY KEY,
   stream_id TEXT NOT NULL REFERENCES conversation_streams(stream_id) ON DELETE CASCADE,
@@ -153,6 +155,7 @@ const REQUIRED_INDEXES = new Set([
   'sqlite_autoindex_conversation_streams_2',
   'sqlite_autoindex_conversation_events_2',
   'one_active_episode_per_stream',
+  'conversation_events_source_id',
   'one_live_public_action_per_stream',
   'sqlite_autoindex_public_actions_2',
 ]);
@@ -399,6 +402,50 @@ export class FirstLineStateStore {
     return readTx(this.db, () => {
       const row = this.db.prepare('SELECT * FROM conversation_events WHERE stream_id=? AND source_message_id=?').get(id, source);
       return row ? this.#eventDto(row) : null;
+    });
+  }
+
+  findConversationEventBySourceId(streamId, sourceId) {
+    const id = safeToken(streamId, 'stream_id');
+    const source = safeToken(sourceId, 'source_id');
+    return readTx(this.db, () => {
+      const rows = this.db.prepare(
+        'SELECT * FROM conversation_events WHERE stream_id=? AND source_id=? ORDER BY event_seq'
+      ).all(id, source);
+      if (rows.length > 1) {
+        fail('FIRST_LINE_SOURCE_ID_AMBIGUOUS', 'multiple ledger events share one action/source id',
+          { stream_id: id, source_id: source, count: rows.length });
+      }
+      return rows.length === 1 ? this.#eventDto(rows[0]) : null;
+    });
+  }
+
+  confirmPublicActionFromLedger(actionId) {
+    const id = safeToken(actionId, 'action_id');
+    return tx(this.db, () => {
+      const action = this.#requireAction(id);
+      if (action.state !== 'SENDING' && action.state !== 'UNCERTAIN') {
+        fail('FIRST_LINE_ACTION_STATE_INVALID', 'only SENDING/UNCERTAIN may confirm from ledger',
+          { action_id: id, state: action.state });
+      }
+      const rows = this.db.prepare(
+        'SELECT * FROM conversation_events WHERE stream_id=? AND source_id=? ORDER BY event_seq'
+      ).all(action.stream_id, id);
+      if (rows.length === 0) return null;
+      if (rows.length !== 1) {
+        fail('FIRST_LINE_SOURCE_ID_AMBIGUOUS', 'multiple ledger events share action source id',
+          { action_id: id, count: rows.length });
+      }
+      const event = rows[0];
+      if (event.event_kind !== 'BABYPARK_PUBLIC_REPLY') {
+        fail('FIRST_LINE_ACTION_CONFIRMATION_INVALID', 'action source id is attached to non-BabyPark event',
+          { action_id: id, event_kind: event.event_kind });
+      }
+      const at = this.now();
+      this.db.prepare(`UPDATE public_actions SET state='CONFIRMED',confirmed_source_message_id=?,confirmed_at=?,
+        lease_token=NULL,lease_expires_at=NULL,updated_at=? WHERE action_id=?`)
+        .run(event.source_message_id, at, at, id);
+      return this.#readAction(id);
     });
   }
 
