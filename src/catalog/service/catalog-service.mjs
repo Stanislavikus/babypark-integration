@@ -1111,6 +1111,21 @@ function activeExactVariant(db, variantId) {
   ).get(variantId) || null;
 }
 
+const MAX_EXACT_TITLE_PRODUCTS = 32;
+
+function exactTitleProductCohort(db, normalizedTitle) {
+  const rows = db.prepare(
+    'SELECT pt.product_id,MIN(pt.title) AS title FROM product_text pt ' +
+    'JOIN products p ON p.product_id=pt.product_id ' +
+    "WHERE pt.title_key=? AND p.lifecycle='active' " +
+    'GROUP BY pt.product_id ORDER BY pt.product_id LIMIT ?'
+  ).all(normalizedTitle, MAX_EXACT_TITLE_PRODUCTS + 1);
+  return {
+    overflow: rows.length > MAX_EXACT_TITLE_PRODUCTS,
+    rows: rows.slice(0, MAX_EXACT_TITLE_PRODUCTS),
+  };
+}
+
 function objectiveBase(catalog, {
   categoryId,
   categoryMatchMode,
@@ -1795,6 +1810,136 @@ export class CatalogService {
               lifecycle: row.lifecycle,
             }
           : null,
+      };
+    });
+  }
+
+  resolveProductIdentityExact(raw) {
+    return this.reader.withDb(db => {
+      const normalizedTitle = normalizeSearchText(raw);
+      if (!normalizedTitle) {
+        throw serviceError(
+          'CATALOG_QUERY_INVALID',
+          'product identity phrase must be a non-empty string'
+        );
+      }
+      const catalog = catalogSnapshot(db);
+      const key = skuKey(raw);
+
+      const skuRow = db.prepare(
+        'SELECT v.variant_id,v.product_id,v.sku,v.sku_key,v.lifecycle ' +
+        'FROM variants v JOIN products p ON p.product_id=v.product_id ' +
+        "WHERE v.sku_key=? AND v.lifecycle='active' AND p.lifecycle='active'"
+      ).get(key);
+
+      const titleCohort = exactTitleProductCohort(db, normalizedTitle);
+      const titleRows = titleCohort.rows;
+
+      const byProduct = new Map();
+      function candidate(productId) {
+        const current = byProduct.get(productId) ?? {
+          product_id: productId,
+          variant_id: null,
+          sku: null,
+          sku_key: null,
+          title: null,
+          matched_languages: [],
+          matched_by: [],
+        };
+        byProduct.set(productId, current);
+        return current;
+      }
+
+      if (skuRow) {
+        const current = candidate(skuRow.product_id);
+        current.variant_id = skuRow.variant_id;
+        current.sku = skuRow.sku;
+        current.sku_key = skuRow.sku_key;
+        current.matched_by.push('EXACT_SKU');
+      }
+
+      for (const row of titleRows) {
+        const current = candidate(row.product_id);
+        current.title = row.title;
+        if (!current.matched_by.includes('EXACT_TITLE')) {
+          current.matched_by.push('EXACT_TITLE');
+        }
+      }
+
+      const candidates = [...byProduct.values()]
+        .sort((a, b) => a.product_id.localeCompare(b.product_id))
+        .map(row => ({
+          ...row,
+          matched_languages: [...row.matched_languages].sort(),
+          matched_by: [...row.matched_by].sort(),
+        }));
+
+      const skuTitleConflict =
+        skuRow !== undefined &&
+        titleRows.some(row => row.product_id !== skuRow.product_id);
+
+      return {
+        catalog,
+        status: titleCohort.overflow
+          ? 'IDENTITY_COHORT_OVERFLOW'
+          : skuTitleConflict
+            ? 'IDENTITY_COLLISION'
+            : candidates.length === 0
+              ? 'NOT_FOUND'
+              : candidates.length === 1
+                ? 'FOUND'
+                : 'AMBIGUOUS',
+        normalized_phrase: normalizedTitle,
+        sku_key: key,
+        product:
+          !titleCohort.overflow &&
+          !skuTitleConflict &&
+          candidates.length === 1
+            ? candidates[0]
+            : null,
+        candidates:
+          titleCohort.overflow || skuTitleConflict ? [] : candidates,
+      };
+    });
+  }
+
+  lookupProductTitleExact({
+    title,
+  } = {}) {
+    return this.reader.withDb(db => {
+      const normalizedTitle = normalizeSearchText(title);
+      if (!normalizedTitle) {
+        throw serviceError(
+          'CATALOG_QUERY_INVALID',
+          'title must be a non-empty string'
+        );
+      }
+
+      const catalog = catalogSnapshot(db);
+      const titleCohort = exactTitleProductCohort(db, normalizedTitle);
+      const rows = titleCohort.rows;
+
+      const candidates = rows.map(row => ({
+        product_id: row.product_id,
+        title: row.title,
+        matched_languages: [],
+      }));
+
+      return {
+        catalog,
+        status: titleCohort.overflow
+          ? 'AMBIGUITY_OVERFLOW'
+          : candidates.length === 0
+            ? 'NOT_FOUND'
+            : candidates.length === 1
+              ? 'FOUND'
+              : 'AMBIGUOUS',
+        normalized_title: normalizedTitle,
+        product:
+          !titleCohort.overflow && candidates.length === 1
+            ? candidates[0]
+            : null,
+        candidates: titleCohort.overflow ? [] : candidates,
       };
     });
   }

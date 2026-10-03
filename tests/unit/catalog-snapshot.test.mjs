@@ -6,6 +6,7 @@ import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { CatalogGenerationBuilder, CatalogPublisher, CatalogReader } from '../../src/catalog/sqlite/generation.mjs';
 import { CatalogPublicationLock } from '../../src/catalog/sqlite/publication-lock.mjs';
+import { normalizeTitleKey } from '../../src/catalog/domain/title.mjs';
 import { exportCatalogSnapshot } from '../../src/catalog/snapshot/exporter.mjs';
 import { verifyCatalogSnapshot } from '../../src/catalog/snapshot/verifier.mjs';
 import { canonicalReleaseProvenanceBytes } from '../../src/release-provenance.mjs';
@@ -28,14 +29,14 @@ function build(f, id, count = 2) {
   builder.db.prepare('INSERT INTO categories(category_id,parent_id,name_json,provenance_json) VALUES(?,?,?,?)').run('root', null, '{"uk":"Root"}', '{}');
   builder.db.prepare('INSERT INTO stores(store_id,name,active,metadata_json) VALUES(?,?,?,?)').run('store', 'Store', 1, '{"location":"Kyiv"}');
   const insertProduct = builder.db.prepare('INSERT INTO products(product_id,kind,brand_id,default_variant_id,lifecycle,provenance_json,updated_at) VALUES(?,?,?,?,?,?,?)');
-  const insertText = builder.db.prepare('INSERT INTO product_text(product_id,language,title,url) VALUES(?,?,?,?)');
+  const insertText = builder.db.prepare('INSERT INTO product_text(product_id,language,title,title_key,url) VALUES(?,?,?,?,?)');
   const insertVariant = builder.db.prepare('INSERT INTO variants(variant_id,product_id,sku,sku_key,is_default,commercial_availability,options_json,lifecycle,updated_at) VALUES(?,?,?,?,?,?,?,?,?)');
   for (let index = 0; index < count; index += 1) {
     const suffix = String(index).padStart(6, '0');
     const product = 'product-' + suffix;
     const variant = 'variant-' + suffix;
     insertProduct.run(product, 'SIMPLE', 'brand', variant, 'active', '{}', '2026-09-30T00:00:00Z');
-    insertText.run(product, 'uk', 'Product ' + suffix, '/p/' + suffix);
+    insertText.run(product, 'uk', 'Product ' + suffix, normalizeTitleKey('Product ' + suffix), '/p/' + suffix);
     insertVariant.run(variant, product, 'SKU-' + suffix, 'sku-' + suffix, 1, index ? 'EXPECTED' : 'IN_STOCK', '{"color":"red"}', 'active', '2026-09-30T00:00:00Z');
     builder.db.prepare('INSERT INTO variant_offers(variant_id,current_minor,regular_minor,currency,on_sale,tax_included) VALUES(?,?,?,?,?,?)').run(variant, 9007199254740000 - index, 9007199254740001 - index, 'UAH', 1, 1);
     builder.db.prepare('INSERT INTO product_categories(product_id,category_id,is_primary) VALUES(?,?,?)').run(product, 'root', 1);
