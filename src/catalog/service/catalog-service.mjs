@@ -1799,12 +1799,87 @@ export class CatalogService {
     });
   }
 
+  resolveProductIdentityExact(raw) {
+    return this.reader.withDb(db => {
+      const normalizedTitle = normalizeSearchText(raw);
+      if (!normalizedTitle) {
+        throw serviceError(
+          'CATALOG_QUERY_INVALID',
+          'product identity phrase must be a non-empty string'
+        );
+      }
+      const key = skuKey(raw);
+
+      const skuRow = db.prepare(
+        'SELECT variant_id,product_id,sku,sku_key,lifecycle ' +
+        'FROM variants WHERE sku_key=?'
+      ).get(key);
+
+      const titleRows = db.prepare(
+        'SELECT product_id,language,title FROM product_text ' +
+        'WHERE title=? ORDER BY product_id,language'
+      ).all(normalizedTitle);
+
+      const byProduct = new Map();
+      function candidate(productId) {
+        const current = byProduct.get(productId) ?? {
+          product_id: productId,
+          variant_id: null,
+          sku: null,
+          sku_key: null,
+          title: null,
+          matched_languages: [],
+          matched_by: [],
+        };
+        byProduct.set(productId, current);
+        return current;
+      }
+
+      if (skuRow) {
+        const current = candidate(skuRow.product_id);
+        current.variant_id = skuRow.variant_id;
+        current.sku = skuRow.sku;
+        current.sku_key = skuRow.sku_key;
+        current.matched_by.push('EXACT_SKU');
+      }
+
+      for (const row of titleRows) {
+        const current = candidate(row.product_id);
+        current.title = row.title;
+        current.matched_languages.push(row.language);
+        if (!current.matched_by.includes('EXACT_TITLE')) {
+          current.matched_by.push('EXACT_TITLE');
+        }
+      }
+
+      const candidates = [...byProduct.values()]
+        .sort((a, b) => a.product_id.localeCompare(b.product_id))
+        .map(row => ({
+          ...row,
+          matched_languages: [...row.matched_languages].sort(),
+          matched_by: [...row.matched_by].sort(),
+        }));
+
+      return {
+        catalog: catalogSnapshot(db),
+        status:
+          candidates.length === 0
+            ? 'NOT_FOUND'
+            : candidates.length === 1
+              ? 'FOUND'
+              : 'AMBIGUOUS',
+        normalized_phrase: normalizedTitle,
+        sku_key: key,
+        product: candidates.length === 1 ? candidates[0] : null,
+        candidates,
+      };
+    });
+  }
+
   lookupProductTitleExact({
     title,
-    language = 'uk',
   } = {}) {
     return this.reader.withDb(db => {
-      const lang = validateLanguage(language);
       const normalizedTitle = normalizeSearchText(title);
       if (!normalizedTitle) {
         throw serviceError(
@@ -1814,15 +1889,23 @@ export class CatalogService {
       }
 
       const rows = db.prepare(
-        'SELECT product_id,language,title,url FROM product_text ' +
-        'WHERE language=? AND title=? ORDER BY product_id'
-      ).all(lang, normalizedTitle);
+        'SELECT product_id,language,title FROM product_text ' +
+        'WHERE title=? ORDER BY product_id,language'
+      ).all(normalizedTitle);
 
-      const candidates = rows.map(row => ({
-        product_id: row.product_id,
-        language: row.language,
-        title: row.title,
-        url: row.url,
+      const grouped = new Map();
+      for (const row of rows) {
+        const current = grouped.get(row.product_id) ?? {
+          product_id: row.product_id,
+          title: row.title,
+          matched_languages: [],
+        };
+        current.matched_languages.push(row.language);
+        grouped.set(row.product_id, current);
+      }
+      const candidates = [...grouped.values()].map(row => ({
+        ...row,
+        matched_languages: [...row.matched_languages].sort(),
       }));
 
       return {
@@ -1833,7 +1916,6 @@ export class CatalogService {
             : candidates.length === 1
               ? 'FOUND'
               : 'AMBIGUOUS',
-        language: lang,
         normalized_title: normalizedTitle,
         product: candidates.length === 1 ? candidates[0] : null,
         candidates,

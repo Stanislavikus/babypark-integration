@@ -3,15 +3,14 @@ import { normalizeLanguageTag } from '../catalog/domain/language.mjs';
 export const FIRST_LINE_EXTRACTION_SCHEMA = 'bp.first-line.extraction/1';
 export const FIRST_LINE_INTENT_SCHEMA_VERSION = 'bp.first-line.intent/1';
 
-const MAX_INTENT_HINT_CHARS = 80;
+const MAX_INTENT_HINT_CHARS = 64;
 const MAX_EXTRACTION_SPANS = 24;
 const MAX_QUOTE_CHARS = 256;
 const MAX_TRANSIENT_TURN_CHARS = 20_000;
 const MAX_OCCURRENCE = 32;
 
 const SPAN_KINDS = new Set([
-  'PRODUCT_SKU',
-  'PRODUCT_TITLE',
+  'PRODUCT',
   'CATEGORY',
   'BRAND',
   'STORE',
@@ -56,8 +55,11 @@ function boundedText(value, field, max, { allowEmpty = false, allowLayoutWhitesp
 
 function normalizeIntentHint(value) {
   if (value == null) return null;
-  const hint = boundedText(value, 'intent_hint', MAX_INTENT_HINT_CHARS).trim();
-  if (!hint) fail('FIRST_LINE_EXTRACTION_VALUE_INVALID', 'intent_hint must not be blank');
+  const hint = boundedText(value, 'intent_hint', MAX_INTENT_HINT_CHARS);
+  if (!/^[A-Z][A-Z0-9_]{0,63}$/u.test(hint)) {
+    fail('FIRST_LINE_EXTRACTION_VALUE_INVALID',
+      'intent_hint must be a bounded machine token');
+  }
   return hint;
 }
 

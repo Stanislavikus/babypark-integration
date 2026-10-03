@@ -554,6 +554,18 @@ function buildFixture(storageDir) {
     null,
     '/de/duplicate-title'
   );
+  builder.db.prepare(
+    'INSERT INTO product_text(' +
+    'product_id,language,title,short_description,description,url' +
+    ') VALUES(?,?,?,?,?,?)'
+  ).run(
+    'p-bug',
+    'en',
+    'DAY3-BLK',
+    null,
+    null,
+    '/en/sku-title-collision'
+  );
 
   for (const layer of [
     'taxonomy',
@@ -973,32 +985,46 @@ test('lookupSku distinguishes FOUND and NOT_FOUND with canonical key', () => {
   assert.equal(missing.catalog.generation_id, 'svc1');
 });
 
-test('lookupProductTitleExact is language-scoped, exact, and never ranks ambiguity', () => {
+test('resolveProductIdentityExact combines exact SKU/title in one deterministic identity result', () => {
+  const byTitle = service.resolveProductIdentityExact('Коляска Joolz Day3');
+  assert.equal(byTitle.status, 'FOUND');
+  assert.equal(byTitle.product.product_id, 'p-day3');
+  assert.deepEqual(byTitle.product.matched_by, ['EXACT_TITLE']);
+
+  const conflict = service.resolveProductIdentityExact('DAY3-BLK');
+  assert.equal(conflict.status, 'AMBIGUOUS');
+  assert.equal(conflict.product, null);
+  assert.deepEqual(
+    conflict.candidates.map(row => [row.product_id, row.matched_by]),
+    [
+      ['p-bug', ['EXACT_TITLE']],
+      ['p-day3', ['EXACT_SKU']],
+    ]
+  );
+
+  const missing = service.resolveProductIdentityExact('totally missing product');
+  assert.equal(missing.status, 'NOT_FOUND');
+  assert.deepEqual(missing.candidates, []);
+  assert.equal(missing.catalog.generation_id, 'svc1');
+});
+
+test('lookupProductTitleExact is cross-language exact and never lets language choose identity', () => {
   const found = service.lookupProductTitleExact({
     title: '  Коляска Joolz Day3  ',
-    language: 'uk',
   });
   assert.equal(found.status, 'FOUND');
   assert.equal(found.normalized_title, 'Коляска Joolz Day3');
   assert.equal(found.product.product_id, 'p-day3');
-  assert.deepEqual(found.candidates.map(row => row.product_id), ['p-day3']);
+  assert.deepEqual(found.product.matched_languages, ['uk']);
 
   const differentCase = service.lookupProductTitleExact({
     title: 'коляска Joolz Day3',
-    language: 'uk',
   });
   assert.equal(differentCase.status, 'NOT_FOUND');
   assert.equal(differentCase.product, null);
 
-  const differentLanguage = service.lookupProductTitleExact({
-    title: 'Коляска Joolz Day3',
-    language: 'ru',
-  });
-  assert.equal(differentLanguage.status, 'NOT_FOUND');
-
   const ambiguous = service.lookupProductTitleExact({
     title: 'Identity collision Day3',
-    language: 'de',
   });
   assert.equal(ambiguous.status, 'AMBIGUOUS');
   assert.equal(ambiguous.product, null);
@@ -1008,7 +1034,7 @@ test('lookupProductTitleExact is language-scoped, exact, and never ranks ambigui
   );
 
   assert.throws(
-    () => service.lookupProductTitleExact({ title: '   ', language: 'uk' }),
+    () => service.lookupProductTitleExact({ title: '   ' }),
     error => error?.code === 'CATALOG_QUERY_INVALID'
   );
 });

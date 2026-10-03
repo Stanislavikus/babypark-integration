@@ -16,7 +16,7 @@ function extraction(overrides = {}) {
     language: 'uk',
     spans: [
       {
-        kind: 'PRODUCT_TITLE',
+        kind: 'PRODUCT',
         turn_index: 1,
         quote: 'UPPAbaby Cruz V2',
         occurrence: 1,
@@ -58,7 +58,7 @@ test('certifies exact quote against transient turn and emits no full message bod
   assert.equal(result.language, 'uk');
   assert.equal(result.certified_spans.length, 1);
   assert.deepEqual(result.certified_spans[0], {
-    kind: 'PRODUCT_TITLE',
+    kind: 'PRODUCT',
     turn_index: 1,
     source_message_id: 101,
     quote: 'UPPAbaby Cruz V2',
@@ -94,7 +94,7 @@ test('invented quote, missing occurrence and unknown turn fail closed', () => {
   expectCode(() => certifyFirstLineExtraction({
     extraction: extraction({
       spans: [{
-        kind: 'PRODUCT_TITLE',
+        kind: 'PRODUCT',
         turn_index: 1,
         quote: 'Invented Product',
         occurrence: 1,
@@ -106,7 +106,7 @@ test('invented quote, missing occurrence and unknown turn fail closed', () => {
   expectCode(() => certifyFirstLineExtraction({
     extraction: extraction({
       spans: [{
-        kind: 'PRODUCT_TITLE',
+        kind: 'PRODUCT',
         turn_index: 1,
         quote: 'UPPAbaby Cruz V2',
         occurrence: 2,
@@ -118,7 +118,7 @@ test('invented quote, missing occurrence and unknown turn fail closed', () => {
   expectCode(() => certifyFirstLineExtraction({
     extraction: extraction({
       spans: [{
-        kind: 'PRODUCT_TITLE',
+        kind: 'PRODUCT',
         turn_index: 2,
         quote: 'UPPAbaby Cruz V2',
         occurrence: 1,
@@ -157,7 +157,7 @@ test('schema is closed and model cannot smuggle canonical ids or authority field
   expectCode(() => certifyFirstLineExtraction({
     extraction: extraction({
       spans: [{
-        kind: 'PRODUCT_TITLE',
+        kind: 'PRODUCT',
         turn_index: 1,
         quote: 'UPPAbaby Cruz V2',
         occurrence: 1,
@@ -295,7 +295,12 @@ test('span count, quote length, occurrence and intent hint are bounded', () => {
   }), 'FIRST_LINE_EXTRACTION_VALUE_INVALID');
 
   expectCode(() => certifyFirstLineExtraction({
-    extraction: extraction({ intent_hint: 'x'.repeat(81) }),
+    extraction: extraction({ intent_hint: 'X'.repeat(65) }),
+    turns: [turn()],
+  }), 'FIRST_LINE_EXTRACTION_VALUE_INVALID');
+
+  expectCode(() => certifyFirstLineExtraction({
+    extraction: extraction({ intent_hint: 'customer email secret@example.com' }),
     turns: [turn()],
   }), 'FIRST_LINE_EXTRACTION_VALUE_INVALID');
 });
