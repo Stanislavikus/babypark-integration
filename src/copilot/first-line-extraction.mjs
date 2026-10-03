@@ -228,15 +228,50 @@ function isWhitespace(value) {
   return typeof value === 'string' && value.length > 0 && /\s/u.test(value);
 }
 
-function productOuterBoundary(text, adjacentIndex, outwardStep) {
-  for (
-    let index = adjacentIndex;
-    index >= 0 && index < text.length;
-    index += outwardStep
-  ) {
-    const value = text[index];
-    if (isWhitespace(value)) return true;
-    if (isWordChar(value)) return false;
+function previousCodePoint(text, endExclusive) {
+  if (endExclusive <= 0) return null;
+  let start = endExclusive - 1;
+  const low = text.charCodeAt(start);
+  if (low >= 0xDC00 && low <= 0xDFFF && start > 0) {
+    const high = text.charCodeAt(start - 1);
+    if (high >= 0xD800 && high <= 0xDBFF) start -= 1;
+  }
+  return {
+    value: text.slice(start, endExclusive),
+    nextIndex: start,
+  };
+}
+
+function nextCodePoint(text, start) {
+  if (start < 0 || start >= text.length) return null;
+  const codePoint = text.codePointAt(start);
+  const value = String.fromCodePoint(codePoint);
+  return {
+    value,
+    nextIndex: start + value.length,
+  };
+}
+
+function productLeftBoundary(text, startUtf16) {
+  let end = startUtf16;
+  while (end > 0) {
+    const current = previousCodePoint(text, end);
+    if (!current) return true;
+    if (isWhitespace(current.value)) return true;
+    if (isWordChar(current.value)) return false;
+    end = current.nextIndex;
+  }
+  return true;
+}
+
+function productRightBoundary(text, endUtf16) {
+  let start = endUtf16;
+  while (start < text.length) {
+    const current = nextCodePoint(text, start);
+    if (!current) return true;
+    if (isWhitespace(current.value)) return true;
+    if (isWordChar(current.value)) return false;
+    start = current.nextIndex;
   }
   return true;
 }
@@ -246,12 +281,12 @@ function hasSemanticBoundaries(text, quote, located, kind) {
   const last = quote[quote.length - 1] ?? '';
   const beforeIndex = located.start_utf16 - 1;
   const afterIndex = located.end_utf16;
-  const before = beforeIndex >= 0 ? text[beforeIndex] : '';
-  const after = afterIndex < text.length ? text[afterIndex] : '';
+  const before = beforeIndex >= 0 ? previousCodePoint(text, located.start_utf16)?.value ?? '' : '';
+  const after = afterIndex < text.length ? nextCodePoint(text, afterIndex)?.value ?? '' : '';
 
   if (kind === 'PRODUCT') {
-    return productOuterBoundary(text, beforeIndex, -1) &&
-      productOuterBoundary(text, afterIndex, 1);
+    return productLeftBoundary(text, located.start_utf16) &&
+      productRightBoundary(text, located.end_utf16);
   }
 
   if (isWordChar(first) && isWordChar(before)) return false;

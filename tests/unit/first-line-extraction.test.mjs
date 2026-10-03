@@ -485,6 +485,40 @@ test('PRODUCT quote cannot be a partial SKU-like identifier segment', () => {
 });
 
 
+test('PRODUCT boundary inspects adjacent astral Unicode letters as full code points', () => {
+  for (const text of [
+    'Ціна 𝐀ABC',
+    'Ціна ABC𝐁',
+    'Ціна 𝔸##ABC',
+    'Ціна ABC##𝔹',
+  ]) {
+    expectCode(() => certifyFirstLineExtraction({
+      extraction: extraction({
+        spans: [{
+          kind: 'PRODUCT',
+          turn_index: 1,
+          quote: 'ABC',
+          occurrence: 1,
+        }],
+      }),
+      turns: [turn({ text })],
+    }), 'FIRST_LINE_EXTRACTION_QUOTE_UNCERTIFIED');
+  }
+
+  const standalone = certifyFirstLineExtraction({
+    extraction: extraction({
+      spans: [{
+        kind: 'PRODUCT',
+        turn_index: 1,
+        quote: 'ABC',
+        occurrence: 1,
+      }],
+    }),
+    turns: [turn({ text: 'Ціна 𝔸? ABC!' })],
+  });
+  assert.equal(standalone.certified_spans[0].quote, 'ABC');
+});
+
 test('PRODUCT quote accepts clear outer punctuation delimiters', () => {
   for (const text of [
     'Ціна Joolz Day3?',

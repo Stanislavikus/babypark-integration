@@ -410,6 +410,65 @@ function buildFixture(storageDir) {
   });
 
   insertProduct(builder, {
+    productId: 'p-mixed',
+    brandId: 'brand-joolz',
+    defaultVariantId: 'v-mixed-live',
+    texts: {
+      uk: {
+        title: 'Mixed lifecycle product',
+        url: '/uk/mixed-lifecycle',
+      },
+    },
+  });
+  insertVariant(builder, {
+    variantId: 'v-mixed-live',
+    productId: 'p-mixed',
+    sku: 'MIXED-LIVE',
+    skuKey: 'mixed-live',
+    isDefault: true,
+    currentMinor: 200000,
+    availability: 'IN_STOCK',
+  });
+  insertVariant(builder, {
+    variantId: 'v-mixed-dead',
+    productId: 'p-mixed',
+    sku: 'DEAD-SKU',
+    skuKey: 'dead-sku',
+    currentMinor: 200000,
+    availability: 'IN_STOCK',
+  });
+  builder.db.prepare(
+    "UPDATE variants SET lifecycle='tombstoned' WHERE variant_id='v-mixed-dead'"
+  ).run();
+
+  insertProduct(builder, {
+    productId: 'p-dead-title',
+    brandId: 'brand-joolz',
+    defaultVariantId: 'v-dead-title',
+    texts: {
+      uk: {
+        title: 'Коляска Joolz Day3',
+        url: '/uk/dead-title',
+      },
+    },
+  });
+  insertVariant(builder, {
+    variantId: 'v-dead-title',
+    productId: 'p-dead-title',
+    sku: 'DEAD-TITLE-SKU',
+    skuKey: 'dead-title-sku',
+    isDefault: true,
+    currentMinor: 100000,
+    availability: 'IN_STOCK',
+  });
+  builder.db.prepare(
+    "UPDATE variants SET lifecycle='tombstoned' WHERE variant_id='v-dead-title'"
+  ).run();
+  builder.db.prepare(
+    "UPDATE products SET lifecycle='tombstoned' WHERE product_id='p-dead-title'"
+  ).run();
+
+  insertProduct(builder, {
     productId: 'p-kit',
     kind: 'KIT',
     productType: 'bundle',
@@ -1000,6 +1059,30 @@ test('resolveProductIdentityExact combines exact SKU/title in one deterministic 
   assert.equal(missing.status, 'NOT_FOUND');
   assert.deepEqual(missing.candidates, []);
   assert.equal(missing.catalog.generation_id, 'svc1');
+});
+
+test('exact product identity excludes tombstoned product and variant rows', () => {
+  const title = service.resolveProductIdentityExact('Коляска Joolz Day3');
+  assert.equal(title.status, 'FOUND');
+  assert.equal(title.product.product_id, 'p-day3');
+
+  const deadVariant = service.resolveProductIdentityExact('DEAD-SKU');
+  assert.equal(deadVariant.status, 'NOT_FOUND');
+  assert.equal(deadVariant.product, null);
+  assert.deepEqual(deadVariant.candidates, []);
+
+  const deadProductSku = service.resolveProductIdentityExact('DEAD-TITLE-SKU');
+  assert.equal(deadProductSku.status, 'NOT_FOUND');
+  assert.equal(deadProductSku.product, null);
+});
+
+test('lookupProductTitleExact ignores tombstoned products instead of creating ambiguity', () => {
+  const result = service.lookupProductTitleExact({
+    title: 'Коляска Joolz Day3',
+  });
+  assert.equal(result.status, 'FOUND');
+  assert.equal(result.product.product_id, 'p-day3');
+  assert.deepEqual(result.candidates.map(row => row.product_id), ['p-day3']);
 });
 
 test('lookupProductTitleExact is cross-language exact and never lets language choose identity', () => {

@@ -1811,13 +1811,16 @@ export class CatalogService {
       const key = skuKey(raw);
 
       const skuRow = db.prepare(
-        'SELECT variant_id,product_id,sku,sku_key,lifecycle ' +
-        'FROM variants WHERE sku_key=?'
+        'SELECT v.variant_id,v.product_id,v.sku,v.sku_key,v.lifecycle ' +
+        'FROM variants v JOIN products p ON p.product_id=v.product_id ' +
+        "WHERE v.sku_key=? AND v.lifecycle='active' AND p.lifecycle='active'"
       ).get(key);
 
       const titleRows = db.prepare(
-        'SELECT product_id,language,title FROM product_text ' +
-        'WHERE title=? ORDER BY product_id,language'
+        'SELECT pt.product_id,pt.language,pt.title FROM product_text pt ' +
+        'JOIN products p ON p.product_id=pt.product_id ' +
+        "WHERE pt.title=? AND p.lifecycle='active' " +
+        'ORDER BY pt.product_id,pt.language'
       ).all(normalizedTitle);
 
       const byProduct = new Map();
@@ -1897,8 +1900,10 @@ export class CatalogService {
       }
 
       const rows = db.prepare(
-        'SELECT product_id,language,title FROM product_text ' +
-        'WHERE title=? ORDER BY product_id,language'
+        'SELECT pt.product_id,pt.language,pt.title FROM product_text pt ' +
+        'JOIN products p ON p.product_id=pt.product_id ' +
+        "WHERE pt.title=? AND p.lifecycle='active' " +
+        'ORDER BY pt.product_id,pt.language'
       ).all(normalizedTitle);
 
       const grouped = new Map();
