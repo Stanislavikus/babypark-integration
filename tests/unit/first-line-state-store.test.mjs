@@ -440,3 +440,31 @@ test('episode semantic drift blocks a CLARIFY send even without a new customer e
     'FIRST_LINE_ACTION_STALE_EPISODE');
   assert.equal(store.getPublicAction(action.action_id).state, 'GATING');
 });
+
+
+test('read path rejects manually corrupted ledger event metadata', t => {
+  const { store } = tempStore(t);
+  const stream = makeStream(store);
+  store.ingestConversationEvent(stream.stream_id, customerEvent(101));
+  store.db.prepare(
+    "UPDATE conversation_events SET event_kind='CORRUPT' WHERE stream_id=? AND event_seq=1"
+  ).run(stream.stream_id);
+  expectCode(() => store.listConversationEvents(stream.stream_id), 'FIRST_LINE_DB_CORRUPT');
+});
+
+test('read path rejects manually corrupted public action metadata', t => {
+  const { store } = tempStore(t);
+  const stream = makeStream(store);
+  store.ingestConversationEvent(stream.stream_id, customerEvent(101));
+  const action = store.preparePublicAction({
+    streamId: stream.stream_id,
+    preparedStreamRevision: 1,
+    actionType: 'ANSWER',
+    basisEventSeqs: [1],
+    deadlineAt: NOW + 60_000,
+  });
+  store.db.prepare(
+    "UPDATE public_actions SET requested_slot='totally_invalid' WHERE action_id=?"
+  ).run(action.action_id);
+  expectCode(() => store.getPublicAction(action.action_id), 'FIRST_LINE_DB_CORRUPT');
+});
