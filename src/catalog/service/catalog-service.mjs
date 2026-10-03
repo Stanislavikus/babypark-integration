@@ -1112,17 +1112,63 @@ function activeExactVariant(db, variantId) {
 }
 
 const MAX_EXACT_TITLE_PRODUCTS = 32;
+const MAX_EXACT_TITLE_LANGUAGES_PER_PRODUCT = 16;
 
 function exactTitleProductCohort(db, normalizedTitle) {
-  const rows = db.prepare(
+  const productRows = db.prepare(
     'SELECT pt.product_id,MIN(pt.title) AS title FROM product_text pt ' +
     'JOIN products p ON p.product_id=pt.product_id ' +
     "WHERE pt.title_key=? AND p.lifecycle='active' " +
     'GROUP BY pt.product_id ORDER BY pt.product_id LIMIT ?'
   ).all(normalizedTitle, MAX_EXACT_TITLE_PRODUCTS + 1);
+
+  if (productRows.length > MAX_EXACT_TITLE_PRODUCTS) {
+    return {
+      overflow: true,
+      overflow_reason: 'PRODUCT_LIMIT',
+      rows: [],
+    };
+  }
+  if (productRows.length === 0) {
+    return {
+      overflow: false,
+      overflow_reason: null,
+      rows: [],
+    };
+  }
+
+  const productIds = productRows.map(row => row.product_id);
+  const languageQuery = db.prepare(
+    'SELECT language FROM product_text ' +
+    'WHERE title_key=? AND product_id=? ORDER BY language LIMIT ?'
+  );
+  const languagesByProduct = new Map();
+  for (const productId of productIds) {
+    const languageRows = languageQuery.all(
+      normalizedTitle,
+      productId,
+      MAX_EXACT_TITLE_LANGUAGES_PER_PRODUCT + 1
+    );
+    if (languageRows.length > MAX_EXACT_TITLE_LANGUAGES_PER_PRODUCT) {
+      return {
+        overflow: true,
+        overflow_reason: 'LANGUAGE_LIMIT',
+        rows: [],
+      };
+    }
+    languagesByProduct.set(
+      productId,
+      languageRows.map(row => row.language)
+    );
+  }
+
   return {
-    overflow: rows.length > MAX_EXACT_TITLE_PRODUCTS,
-    rows: rows.slice(0, MAX_EXACT_TITLE_PRODUCTS),
+    overflow: false,
+    overflow_reason: null,
+    rows: productRows.map(row => ({
+      ...row,
+      matched_languages: languagesByProduct.get(row.product_id),
+    })),
   };
 }
 
@@ -1861,6 +1907,7 @@ export class CatalogService {
       for (const row of titleRows) {
         const current = candidate(row.product_id);
         current.title = row.title;
+        current.matched_languages.push(...row.matched_languages);
         if (!current.matched_by.includes('EXACT_TITLE')) {
           current.matched_by.push('EXACT_TITLE');
         }
@@ -1922,7 +1969,7 @@ export class CatalogService {
       const candidates = rows.map(row => ({
         product_id: row.product_id,
         title: row.title,
-        matched_languages: [],
+        matched_languages: [...row.matched_languages],
       }));
 
       return {

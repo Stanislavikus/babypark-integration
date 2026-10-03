@@ -592,6 +592,36 @@ function buildFixture(storageDir) {
     insertFts(builder, item);
   }
 
+  for (let index = 0; index < 17; index += 1) {
+    const language = 'x' + String.fromCharCode(97 + index);
+    builder.db.prepare(
+      'INSERT INTO product_text(' +
+      'product_id,language,title,title_key,short_description,description,url' +
+      ') VALUES(?,?,?,?,?,?,?)'
+    ).run(
+      'p-mixed',
+      language,
+      'Locale cohort overflow',
+      normalizeTitleKey('Locale cohort overflow'),
+      null,
+      null,
+      '/locale-overflow-' + index
+    );
+  }
+
+  builder.db.prepare(
+    'INSERT INTO product_text(' +
+    'product_id,language,title,title_key,short_description,description,url' +
+    ') VALUES(?,?,?,?,?,?,?)'
+  ).run(
+    'p-day3',
+    'pl',
+    'Коляска Joolz Day3',
+    normalizeTitleKey('Коляска Joolz Day3'),
+    null,
+    null,
+    '/pl/joolz-day3'
+  );
   builder.db.prepare(
     'INSERT INTO product_text(' +
     'product_id,language,title,title_key,short_description,description,url' +
@@ -1080,6 +1110,7 @@ test('resolveProductIdentityExact combines exact SKU/title in one deterministic 
   const byTitle = service.resolveProductIdentityExact('Коляска Joolz Day3');
   assert.equal(byTitle.status, 'FOUND');
   assert.equal(byTitle.product.product_id, 'p-day3');
+  assert.deepEqual(byTitle.product.matched_languages, ['pl', 'uk']);
   assert.deepEqual(byTitle.product.matched_by, ['EXACT_TITLE']);
 
   const conflict = service.resolveProductIdentityExact('DAY3-BLK');
@@ -1097,7 +1128,7 @@ test('exact title authority compares canonical NFC even when stored title is dec
   const unified = service.resolveProductIdentityExact('Café Bugaboo');
   assert.equal(unified.status, 'FOUND');
   assert.equal(unified.product.product_id, 'p-bug');
-  assert.deepEqual(unified.product.matched_languages, []);
+  assert.deepEqual(unified.product.matched_languages, ['es']);
   assert.deepEqual(unified.product.matched_by, ['EXACT_TITLE']);
 
   const titleOnly = service.lookupProductTitleExact({
@@ -1105,7 +1136,7 @@ test('exact title authority compares canonical NFC even when stored title is dec
   });
   assert.equal(titleOnly.status, 'FOUND');
   assert.equal(titleOnly.product.product_id, 'p-bug');
-  assert.deepEqual(titleOnly.product.matched_languages, []);
+  assert.deepEqual(titleOnly.product.matched_languages, ['es']);
 });
 
 test('exact title authority uses the indexed title_key request path', () => {
@@ -1150,6 +1181,20 @@ test('lookupProductTitleExact ignores tombstoned products instead of creating am
   assert.deepEqual(result.candidates.map(row => row.product_id), ['p-day3']);
 });
 
+test('exact title authority also caps matching locales per product', () => {
+  const unified = service.resolveProductIdentityExact('Locale cohort overflow');
+  assert.equal(unified.status, 'IDENTITY_COHORT_OVERFLOW');
+  assert.equal(unified.product, null);
+  assert.deepEqual(unified.candidates, []);
+
+  const titleOnly = service.lookupProductTitleExact({
+    title: 'Locale cohort overflow',
+  });
+  assert.equal(titleOnly.status, 'AMBIGUITY_OVERFLOW');
+  assert.equal(titleOnly.product, null);
+  assert.deepEqual(titleOnly.candidates, []);
+});
+
 test('exact title authority caps ambiguity cohort and fails closed on overflow', () => {
   const unified = service.resolveProductIdentityExact('Generic exact title overflow');
   assert.equal(unified.status, 'IDENTITY_COHORT_OVERFLOW');
@@ -1171,7 +1216,7 @@ test('lookupProductTitleExact is cross-language exact and never lets language ch
   assert.equal(found.status, 'FOUND');
   assert.equal(found.normalized_title, 'Коляска Joolz Day3');
   assert.equal(found.product.product_id, 'p-day3');
-  assert.deepEqual(found.product.matched_languages, []);
+  assert.deepEqual(found.product.matched_languages, ['pl', 'uk']);
 
   const differentCase = service.lookupProductTitleExact({
     title: 'коляска Joolz Day3',
