@@ -1,7 +1,7 @@
-# BabyPark AI First Line — Frozen Design v0.6
+# BabyPark AI First Line — Frozen Design v0.7
 
-Status: FROZEN — blocker review complete
-Implementation: Slice C authorized via #75; C1 in progress
+Status: FROZEN — Event Ledger v0.7 architecture freeze complete
+Implementation: Slice C authorized via #75; C1 merged; C2a is the next implementation slice
 Repository baseline: main `b25fca317273526968b7413f25c47dc1303e3424`
 Chatwoot runtime verified: v4.18.0, `9f920b549c14491a4e587687a3eed5d21c6ccc7d`
 
@@ -1168,6 +1168,227 @@ authority: loss of episode state may reduce continuity but must never permit the
 system to guess prior customer selections. If safe reconstruction from current
 Chatwoot history is unavailable, later routing fails closed.
 
+## 29.4 v0.7 pre-production storage supersession
+
+C1 schema v1 remains accepted evidence for its isolated slice, but it was never
+activated as the production First Line runtime. v0.7 therefore makes a clean
+pre-production schema-v2 cut rather than preserving accidental compatibility.
+
+The v0.7 runtime target promotes `episode.sqlite` from rebuildable episode-only
+state to BabyPark's durable semantic conversation database. It contains:
+
+- provider-neutral conversation streams;
+- an append-only metadata-only Conversation Event Ledger;
+- a monotonic `stream_revision`;
+- logical episode/open-turn projections;
+- canonical semantic state with provenance;
+- clarification reservations;
+- durable public-action/outbox state.
+
+`copilot.sqlite` remains disposable delivery/job/lease/reconciler execution
+state. Domain truth MUST be committed in `episode.sqlite` before the originating
+copilot job may be terminalized. Cross-file atomicity is not required: retry
+after a crash is idempotent by stable source/action keys.
+
+Routine raw or normalized customer message bodies, content-derived hashes,
+customer email/phone/avatar and attachment URLs remain forbidden durable state.
+
+## 29.5 Conversation Event Ledger
+
+Each provider conversation maps to one BabyPark conversation stream. The parent
+identity is the conversation/stream, not the customer/contact: one customer may
+have multiple simultaneous conversations or channels.
+
+Every accepted source event receives an immutable local integer `event_seq`.
+This sequence means only:
+
+> the order in which BabyPark authoritatively accepted events into its stream.
+
+It is NOT Chatwoot message-ID order and does not claim source commit order.
+A legal stream may therefore contain:
+
+- event_seq 1 -> source_message_id 98;
+- event_seq 2 -> source_message_id 101;
+- event_seq 3 -> source_message_id 100.
+
+The stable source identity is unique by
+`(source_provider, source_conversation_id, source_message_id)`.
+That unique ledger lookup is the ONLY `ALREADY_KNOWN` test. A source
+message ID at or below any scan cursor/high-water hint MUST still be exact-read
+and ingested if its unique source key is absent.
+
+Any source scan cursor is an optimization hint only. It is never completeness,
+chronology or replay authority. Every newly accepted relevant event increments
+`stream_revision`.
+
+Conversation topology, open-turn membership and response coverage are derived
+from local accepted `event_seq` plus confirmed BabyPark actions, never by
+numeric comparison of Chatwoot source-message IDs.
+
+Event rows persist only bounded metadata required for topology and recovery.
+Customer text remains in Chatwoot and is exact-reread transiently when semantic
+processing needs it.
+
+## 29.6 Chatwoot row authority and default-deny classification
+
+Exact source-message lookup used to distinguish absent/private/activity rows MUST
+be unfiltered where needed. A deleted row is an existing source row; its explicit
+ID may enter the ledger, but its replacement/deleted text MUST NOT enter the
+extractor.
+
+For Website First Line v1, public/non-activity topology is classified
+default-deny. Known categories include:
+
+- public incoming Contact -> customer event;
+- public outgoing from the configured BabyPark AgentBot -> candidate BabyPark
+  response event, subject to BabyPark action provenance;
+- known neutral website template/system rows -> non-customer topology metadata;
+- public human, other-bot, sender-null automation or unknown public row ->
+  continuity/ownership blocker, never silently ignored.
+
+Chatwoot webhook delivery is a trigger/repair channel, not ordering authority and
+not an absolute completeness guarantee. Every webhook target is exact-checked
+regardless of scan cursor. Bounded reconciliation/backfill may discover and append
+a lower source message ID after a higher one has already been accepted.
+
+## 29.7 Authorizing snapshot before public side effects
+
+A multi-query partition walk may ingest/backfill, but it MUST NOT authorize a
+customer-visible AI side effect because its queries do not share one PostgreSQL
+snapshot.
+
+Immediately before every public AI side effect, the PublicActionRelay performs
+one Chatwoot messages query for the whole conversation with:
+
+- `after=0`;
+- `before=2147483648`;
+- `filter_internal_messages=true`.
+
+On verified Chatwoot v4.18.0 this is one messages-between SQL statement scoped to
+the conversation, with `id >= 0`, no upper predicate and `LIMIT 1000`.
+
+If the result count is less than 1000, it is the complete public/non-activity
+conversation topology visible to that statement snapshot. The gate MUST:
+
+1. default-deny classify every row;
+2. idempotently ingest all unseen source keys;
+3. increment `stream_revision` for newly accepted relevant events;
+4. prove every source message covered by the action is still present and not
+   deleted;
+5. revalidate current ownership/action prerequisites;
+6. compare the action's prepared revision with current `stream_revision`.
+
+Any mismatch makes the action stale and forbids POST.
+
+A result count of exactly 1000 is `HISTORY_UNPROVABLE`: it may be exact or
+truncated, so no AI public POST is authorized. Recursive scans may assist
+non-authorizing ingestion only.
+
+Transport/HTTP authority failure is `AUTHORITY_UNAVAILABLE` and is retryable
+within the existing bounded fail-open policy.
+
+A source transaction that commits after this authorizing SELECT but before the
+external POST is the accepted residual cross-system race. Strict elimination
+would require a conditional/CAS send primitive inside Chatwoot; CDC/WAL does not
+remove that final send race and is not required for Website First Line v1.
+
+## 29.8 Durable public-action outbox
+
+Public customer actions are durable domain state in `episode.sqlite`, owned by
+an independent PublicActionRelay rather than by the originating copilot input
+job.
+
+At most one live public action may exist per conversation stream. Storage MUST
+enforce this for PREPARED/GATING/SENDING/UNCERTAIN-like states with a partial
+unique index or an equivalent stronger constraint.
+
+Planning is also permanently idempotent for one stream revision:
+`(stream_id, prepared_stream_revision)` is unique across terminal and
+non-terminal actions. Retrying the same revision reuses the existing action and
+cannot reserve clarification budget or send twice.
+
+A prepared action carries at least:
+
+- stable action ID;
+- stream ID;
+- episode/basis identity;
+- prepared `stream_revision`;
+- action class;
+- source-event coverage needed by the stale-action gate;
+- requested slot/canonical candidate reservation when CLARIFY requires it;
+- lifecycle/lease/deadline metadata.
+
+No raw customer body or content digest is required.
+
+The relay claims an action with CAS/lease semantics. The final
+`GATING -> SENDING` transition MUST atomically verify, inside one
+`BEGIN IMMEDIATE`, the expected action state/claim and that the prepared
+revision still equals current stream revision. A parallel stale/cancel/replan
+transition therefore prevents POST.
+
+If a newer revision appears while an older action is only PREPARED/GATING, the
+older unsent action may be cancelled/staled and replaced atomically. Once an
+action reaches SENDING or UNCERTAIN, no new public AI action may be prepared
+until the old send is reconciled or handed off.
+
+After durable SENDING, an unknown POST result MUST NOT be blindly retried.
+A matching Chatwoot `source_id=action_id` may positively confirm the send;
+absence of that tag does not prove non-send. Unresolved outcome becomes
+UNCERTAIN and fails open to human.
+
+## 29.9 Clarification and semantic provenance under v0.7
+
+A CLARIFY reservation is committed atomically with its PREPARED public action
+before any public send attempt. The reservation includes the one-prompt budget,
+requested slot and canonical candidates required for that prompt.
+
+Before SENDING, that exact reservation may be released only as part of a safe
+atomic cancellation/replacement of the unsent action. After SENDING, the budget
+remains consumed even when the outcome is uncertain. False HUMAN is acceptable;
+duplicate CLARIFY is not.
+
+Semantic interpretations of a still-open unanswered customer turn are proposed
+state until the corresponding customer-facing action is durably handled.
+Durable semantic state carries provenance through accepted event sequence /
+stream revision rather than pretending an unfinished turn was already answered.
+
+HUMAN closes with `human_takeover` only after native Chatwoot handoff succeeds.
+A pure `NON_ACTIONABLE_ACK` may close without an external public-message side
+effect only after the complete open turn and no-newer gate are proven.
+
+## 29.10 C2 implementation decomposition after v0.7 freeze
+
+C2a — Conversation Event Ledger + Durable Action Foundation:
+- EpisodeStore schema/read attestation and clean schema-v2 cut;
+- conversation streams/events and `stream_revision`;
+- unique source-event ingestion and late-lower-ID acceptance;
+- exact Chatwoot row reader/default-deny classification;
+- bounded non-authorizing backfill;
+- one-statement authorizing snapshot contract;
+- durable public-actions/outbox constraints and relay recovery skeleton;
+- no LLM/extraction.
+
+C2b — Structured Extraction + deterministic resolution:
+- versioned extractor schema;
+- turn-index exact-quote certification;
+- language handling;
+- exact SKU/title product identity only;
+- existing category/brand/store/money resolvers;
+- unsupported-marker veto;
+- no public action.
+
+C2c — Episode/open-turn routing planner:
+- accepted-event projection into logical episode/open turn;
+- supported dependent follow-up vs standalone replacement;
+- pending clarification response handling;
+- candidate selection;
+- batch-aware acknowledgement;
+- semantic provenance/limits;
+- stale-plan token feeding the PublicActionRelay.
+
+C3 then runs ObjectiveConstraintLatch over the reconstructed, transient text and
+certified spans.
+
 ## 30. Shortlist minimum anchor
 
 Price-only browse is forbidden.
@@ -1644,13 +1865,17 @@ Dashboard embedding is tested but direct UI works independently.
 No customer messages.
 
 ### Slice C — Website First Line
-- C1 separate restart-durable `episode.sqlite` with ID-only/canonical-selection state;
-- logical episode boundary independent of Chatwoot status;
+- C1 merged evidence: restart-durable ID/canonical-selection episode state;
+- v0.7 pre-production schema-v2 cut promotes `episode.sqlite` to durable semantic state;
+- C2a Conversation Event Ledger + `stream_revision` + durable public-action outbox;
+- local accepted `event_seq` is BabyPark ordering; Chatwoot message ID is source identity only;
+- one-statement whole-conversation authorizing snapshot before any public AI side effect;
+- one live public action per stream and permanent same-revision action idempotency;
+- logical episode/open customer turn independent of Chatwoot status;
 - internal `NON_ACTIONABLE_ACK` no-action disposition; no Chatwoot resolve;
-- episode state;
-- structured extraction;
+- C2b structured extraction and deterministic resolution;
+- C2c episode/open-turn routing and semantic provenance;
 - ObjectiveConstraintLatch;
-- clarification state;
 - ANSWER/CLARIFY/HUMAN;
 - deterministic templates;
 - WebsiteRenderer;
@@ -1722,6 +1947,20 @@ v0.6 closes the pre-Slice-C lifecycle seams found during implementation review:
 6. requires optimistic stale-writer rejection and one active episode per
    conversation.
 
-Slice C umbrella issue #75 is authorized. C1 implements the persisted state
-boundary only; extraction/continuation classification remains C2.
-This v0.6 file is the single normative design source; no delta document applies.
+v0.7 freezes the Conversation Event Ledger / durable action-outbox foundation
+after adversarial review of webhook ordering, PostgreSQL sequence/MVCC visibility,
+rapid customer bursts, automation rows, long-history bootstrap, clarification
+crashes and cross-SQLite recovery.
+
+Key closure invariants are:
+1. BabyPark accepted `event_seq`, not Chatwoot source ID, is durable event order;
+2. unique source-event existence, never a high-water comparison, is replay/dedupe truth;
+3. a single whole-conversation Chatwoot statement snapshot authorizes public sends;
+4. `stream_revision` invalidates stale plans when reconciliation accepts new events;
+5. one live action per stream plus permanent same-revision action uniqueness prevents duplicate public sends;
+6. durable public actions survive input-job/coprocessor loss through the independent relay;
+7. no CDC/WAL, third DB or Chatwoot core patch is required for Website First Line v1.
+
+Slice C umbrella issue #75 remains authorized. C1 is merged historical evidence;
+C2a implements the v0.7 runtime foundation next.
+This v0.7 file is the single normative design source; no delta document applies.
