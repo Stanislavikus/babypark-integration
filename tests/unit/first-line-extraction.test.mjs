@@ -517,6 +517,43 @@ test('symbol-ended non-PRODUCT spans cannot be embedded in word tokens', () => {
   assert.equal(standalone.certified_spans[0].quote, '3000₴');
 });
 
+test('semantic quotes reject leading or trailing whitespace', () => {
+  for (const kind of ['PRODUCT', 'CATEGORY', 'BRAND', 'STORE', 'MONEY']) {
+    for (const quote of [
+      ' Cybex',
+      'Cybex ',
+      '\tCybex',
+      'Cybex\n',
+    ]) {
+      const text = 'show ' + quote + ' please';
+      expectCode(() => certifyFirstLineExtraction({
+        extraction: extraction({
+          spans: [{
+            kind,
+            turn_index: 1,
+            quote,
+            occurrence: 1,
+          }],
+        }),
+        turns: [turn({ text })],
+      }), 'FIRST_LINE_EXTRACTION_VALUE_INVALID');
+    }
+  }
+
+  const internal = certifyFirstLineExtraction({
+    extraction: extraction({
+      spans: [{
+        kind: 'BRAND',
+        turn_index: 1,
+        quote: 'Cybex Gold',
+        occurrence: 1,
+      }],
+    }),
+    turns: [turn({ text: 'show Cybex Gold please' })],
+  });
+  assert.equal(internal.certified_spans[0].quote, 'Cybex Gold');
+});
+
 test('vocabulary spans enforce downstream 160-unit resolver bound', () => {
   const exactly160 = 'A'.repeat(160);
   const accepted = certifyFirstLineExtraction({

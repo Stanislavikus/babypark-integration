@@ -124,6 +124,10 @@ function normalizeSpan(span, index) {
   if (quote.trim() === '') {
     fail('FIRST_LINE_EXTRACTION_VALUE_INVALID', 'quote must contain non-whitespace text', { index });
   }
+  if (quote !== quote.trim()) {
+    fail('FIRST_LINE_EXTRACTION_VALUE_INVALID',
+      'quote must not include leading or trailing whitespace', { index });
+  }
 
   return {
     kind: span.kind,
