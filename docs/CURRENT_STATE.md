@@ -237,28 +237,46 @@ Slice B is complete.
 
 Slice C umbrella issue: #75.
 
-C1 — durable logical episode state is the active implementation slice:
-- separate `episode.sqlite`, not a `copilot.sqlite` migration;
-- one active logical episode per Chatwoot conversation;
-- ordered source message IDs plus a non-cascading per-conversation consumed-message watermark;
-- allowlisted canonical stable customer selections only, with exact domain-tagged ID shapes;
-- presented canonical candidates (hard bound 20) + requested slot;
-- clarification budget constrained to 0/1;
-- every mutation requires explicit optimistic `expectedVersion`; stale writers are rejected;
-- public `loadActive` / `getEpisode` reads are one committed SQLite snapshot, so
-  row metadata and child state cannot be torn across concurrent commits;
-- EpisodeStore explicitly sets SQLite `busy_timeout=5000`, avoiding Node-version
-  dependence in concurrent reader/writer COMMIT behavior;
-- Chatwoot conversation/source message IDs must be positive safe integers without
-  coercion; old/equal messages cannot start a fresh episode after terminal/cleanup;
-- no raw/normalized customer body, dynamic Catalog/Knowledge facts,
-  resolver/vocabulary state, or Chatwoot reopen-causality marker is persisted;
-- `NON_ACTIONABLE_ACK` and standalone/dependent episode-boundary behavior are
-  frozen for C2 routing, but C1 does not implement text classification.
+C1 — durable logical episode state is merged via PR #76.
+Its schema-v1 implementation remains reviewed pre-production evidence:
+- separate `episode.sqlite`;
+- one active episode/conversation;
+- strict canonical IDs and strict Chatwoot integer IDs;
+- optimistic stale-writer protection;
+- committed-snapshot public reads and explicit SQLite busy timeout;
+- no routine raw customer body or dynamic factual authority persistence.
 
-After C1:
-C2 structured extraction/episode continuation, then C3 ObjectiveConstraintLatch,
-followed by deterministic ANSWER / CLARIFY / HUMAN and render/wiring slices.
+C2 architecture is now frozen as **Event Ledger v0.7** before production activation.
+Because C1 was never deployed as the live First Line runtime, C2a makes a clean
+schema-v2 cut rather than preserving the C1 consumed-message watermark as runtime
+authority.
+
+Frozen v0.7 runtime boundary:
+- `copilot.sqlite` remains disposable delivery/job/lease/reconciler state;
+- `episode.sqlite v2` becomes durable semantic truth;
+- each provider conversation maps to a BabyPark conversation stream;
+- immutable local `event_seq` is BabyPark accepted-event order;
+- Chatwoot `source_message_id` is source identity only, never commit chronology;
+- unique source-event existence is the only duplicate/replay test;
+- scan cursors/highwaters are optimization hints only;
+- newly accepted events increment `stream_revision`;
+- unknown public Chatwoot rows are default-deny;
+- immediately before a public AI side effect, one whole-conversation Chatwoot
+  statement snapshot (`after=0,before=2147483648,filter_internal_messages=true`)
+  must return fewer than 1000 rows, ingest unseen events, prove covered messages
+  still valid and leave the prepared stream revision unchanged;
+- exactly 1000 rows => `HISTORY_UNPROVABLE` => no AI POST;
+- durable `public_actions` outbox is owned by an independent relay;
+- one live public action per stream plus permanent
+  `UNIQUE(stream_id, prepared_stream_revision)` prevents duplicate sends;
+- CLARIFY reservation is durable before send; SENDING/UNCERTAIN blocks a second action;
+- uncertain POST outcome is never blindly retried and fails open to HUMAN;
+- no CDC/WAL, third database or Chatwoot core patch is required for Website First Line v1.
+
+Next implementation slice:
+**C2a — Conversation Event Ledger + Durable Action Foundation**.
+C2a contains no LLM. C2b adds structured extraction/deterministic resolution;
+C2c adds episode/open-turn routing; C3 follows with ObjectiveConstraintLatch.
 
 ## D2b acceptance status (2026-09-30)
 
