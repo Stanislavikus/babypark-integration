@@ -35,7 +35,12 @@ function basisStillValid(action, ledgerBasis, snapshotBySource) {
     if (current.deleted) return { ok: false, reason: 'covered_source_deleted', sourceMessageId: event.source_message_id };
     if (current.eventKind !== event.event_kind ||
         current.messageType !== event.message_type ||
-        current.senderClass !== event.sender_class) {
+        current.senderClass !== event.sender_class ||
+        current.senderId !== event.sender_id ||
+        current.contentType !== event.content_type ||
+        current.unsupported !== event.unsupported ||
+        current.hasAttachments !== event.has_attachments ||
+        current.sourceId !== event.source_id) {
       return { ok: false, reason: 'covered_source_reclassified', sourceMessageId: event.source_message_id };
     }
   }
@@ -111,12 +116,15 @@ export async function gatePublicActionToSending({
   } catch (error) {
     if (error instanceof FirstLineStateError &&
         (error.code === 'FIRST_LINE_ACTION_STALE_REVISION' ||
-         error.code === 'FIRST_LINE_ACTION_STALE_EPISODE')) {
+         error.code === 'FIRST_LINE_ACTION_STALE_EPISODE' ||
+         error.code === 'FIRST_LINE_ACTION_DEADLINE_EXPIRED')) {
       const latest = store.getPublicAction(actionId);
       if (latest?.state === 'GATING') {
         const reason = error.code === 'FIRST_LINE_ACTION_STALE_EPISODE'
           ? 'episode_changed_before_sending'
-          : 'stream_revision_changed_before_sending';
+          : error.code === 'FIRST_LINE_ACTION_DEADLINE_EXPIRED'
+            ? 'deadline_expired_before_sending'
+            : 'stream_revision_changed_before_sending';
         const stale = store.markActionStaleBeforeSend(actionId, { reason });
         return { code: 'STALE', action: stale, insertedEvents: inserted, snapshotRowCount: snapshot.rowCount };
       }

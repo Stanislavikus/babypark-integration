@@ -75,7 +75,7 @@ test('exact read distinguishes absent, internal, deleted and attachment input', 
   assert.deepEqual(absent, { code: 'ABSENT', sourceMessageId: 101 });
 
   const internal = await reader(async () => response({ payload: [{
-    id: 101, message_type: 2, private: false, sender: { id: 7, type: 'AgentBot' },
+    id: 101, message_type: 2, private: false, sender: { id: 7, type: 'agent_bot' },
   }] })).readExactSourceMessage(55, 101);
   assert.deepEqual(internal, { code: 'INTERNAL', sourceMessageId: 101 });
 
@@ -124,9 +124,9 @@ test('authorizing snapshot classifies full public topology default-deny without 
   const rows = [
     { id: 1, message_type: 0, private: false, sender: { id: 100, type: 'Contact', email: 'hidden' },
       content_type: 'text', content: 'customer body' },
-    { id: 2, message_type: 1, private: false, sender: { id: 7, type: 'AgentBot' },
+    { id: 2, message_type: 1, private: false, sender: { id: 7, type: 'agent_bot' },
       content_type: 'text', content: 'bot reply', source_id: 'action-1' },
-    { id: 3, message_type: 1, private: false, sender: { id: 8, type: 'AgentBot' },
+    { id: 3, message_type: 1, private: false, sender: { id: 8, type: 'agent_bot' },
       content_type: 'text', content: 'other bot' },
     { id: 4, message_type: 1, private: false, sender: { id: 44, type: 'User' },
       content_type: 'text', content: 'human' },
@@ -183,7 +183,7 @@ test('exactly 1000 authorizing rows are HISTORY_UNPROVABLE', async () => {
 
 test('authorizing snapshot rejects filtered internal rows and duplicate source ids', async () => {
   await expectCode(() => reader(async () => response({ payload: [{
-    id: 1, message_type: 2, private: false, sender: { id: 7, type: 'AgentBot' },
+    id: 1, message_type: 2, private: false, sender: { id: 7, type: 'agent_bot' },
   }] })).readAuthorizingConversationSnapshot(55), 'CHATWOOT_AUTHORITY_FILTER_BROKEN');
 
   await expectCode(() => reader(async () => response({ payload: [
@@ -250,4 +250,59 @@ test('bounded public range is explicitly non-authorizing and reports backend sat
     .readPublicRange(55, { afterInclusive: 0, beforeExclusive: CHATWOOT_AUTHORITATIVE_BEFORE });
   assert.equal(saturated.complete, false);
   assert.equal(saturated.rowCount, CHATWOOT_AUTHORITATIVE_LIMIT);
+});
+
+
+test('nested Chatwoot unsupported marker can never become supported customer text', async () => {
+  const result = await reader(async () => response({ payload: [{
+    id: 301,
+    message_type: 0,
+    private: false,
+    sender: { id: 9001, type: 'Contact' },
+    content_type: 'text',
+    content: 'looks like ordinary text',
+    attachments: [],
+    content_attributes: { is_unsupported: true },
+  }] })).readExactSourceMessage(55, 301);
+
+  assert.equal(result.code, 'PROVEN_UNSUPPORTED_OR_TOPOLOGY');
+  assert.equal(result.event.unsupported, true);
+  assert.equal(result.transientContent, null);
+});
+
+test('template and sender classification is strict default-deny', async () => {
+  const result = await reader(async () => response({ payload: [
+    {
+      id: 401, message_type: 3, private: false,
+      sender: null, content_type: 'text', content_attributes: {}, attachments: [],
+    },
+    {
+      id: 402, message_type: 3, private: false,
+      sender: { id: 9001, type: 'Contact' }, content_type: 'text',
+      content_attributes: {}, attachments: [],
+    },
+    {
+      id: 403, message_type: 3, private: false,
+      sender: null, content_type: 'form', content_attributes: {}, attachments: [],
+    },
+    {
+      id: 404, message_type: 0, private: false,
+      sender: { type: 'Con-tact' }, content_type: 'text', content: 'malformed sender',
+      content_attributes: {}, attachments: [],
+    },
+    {
+      id: 405, message_type: 0, private: false,
+      sender: { id: 9001, type: 'Contact' }, content_type: 'text', content: 'malformed attachments',
+      content_attributes: {}, attachments: {},
+    },
+  ] })).readAuthorizingConversationSnapshot(55);
+
+  assert.deepEqual(result.events.map(event => event.eventKind), [
+    'SYSTEM_TEMPLATE',
+    'UNKNOWN_PUBLIC',
+    'UNKNOWN_PUBLIC',
+    'UNKNOWN_PUBLIC',
+    'CUSTOMER_MESSAGE',
+  ]);
+  assert.equal(result.events[4].hasAttachments, true);
 });

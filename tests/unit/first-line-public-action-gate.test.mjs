@@ -306,3 +306,95 @@ test('closed episode remains immutable when its claimed CLARIFY action becomes s
   assert.equal(closed.clarification_prompts_sent, 1);
   assert.equal(closed.clarification_action_id, action.action_id);
 });
+
+
+test('deadline expiry during final gate stales the action and never reaches SENDING', async t => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'first-line-gate-deadline-'));
+  const file = path.join(dir, 'episode.sqlite');
+  let clock = NOW;
+  const store = FirstLineStateStore.create(file, {
+    now: () => clock,
+    streamIdFactory: () => 'stream-deadline',
+    actionIdFactory: () => 'action-deadline',
+  });
+  t.after(() => {
+    try { store.close(); } catch {}
+    fs.rmSync(dir, { recursive: true, force: true });
+  });
+
+  const stream = store.ensureConversationStream({
+    sourceProvider: 'chatwoot', sourceConversationId: 55,
+  });
+  store.ingestConversationEvent(stream.stream_id, customer(101));
+  const action = store.preparePublicAction({
+    streamId: stream.stream_id,
+    preparedStreamRevision: 1,
+    actionType: 'ANSWER',
+    basisEventSeqs: [1],
+    deadlineAt: NOW + 5,
+  });
+  store.claimNextPublicAction({ leaseMs: 10_000, token: 'relay-deadline' });
+
+  const authorityReader = {
+    readAuthorizingConversationSnapshot: async () => {
+      clock = NOW + 6;
+      return { complete: true, code: 'COMPLETE', rowCount: 1, events: [customer(101)] };
+    },
+  };
+
+  const result = await gatePublicActionToSending({
+    store,
+    authorityReader,
+    actionId: action.action_id,
+    leaseToken: 'relay-deadline',
+  });
+
+  assert.equal(result.code, 'STALE');
+  assert.equal(result.action.state, 'STALE');
+  assert.equal(result.action.terminal_reason, 'deadline_expired_before_sending');
+  assert.equal(result.action.send_started_at, null);
+});
+
+test('authorizing snapshot array order never rewrites prior local acceptance order', async t => {
+  const store = tempStore(t);
+  const { action } = prepareClaim(store);
+
+  const result = await gatePublicActionToSending({
+    store,
+    authorityReader: authority([
+      customer(103),
+      customer(100),
+      customer(102),
+      customer(101),
+    ]),
+    actionId: action.action_id,
+    leaseToken: 'relay-1',
+  });
+
+  assert.equal(result.code, 'STALE');
+  assert.equal(result.insertedEvents, 3);
+  assert.deepEqual(
+    store.listConversationEvents('stream-1').map(event => [event.event_seq, event.source_message_id]),
+    [[1, 101], [2, 100], [3, 102], [4, 103]]
+  );
+});
+
+
+test('covered source unsupported/attachment/content metadata drift invalidates the action basis', async t => {
+  const store = tempStore(t);
+  const { action } = prepareClaim(store);
+  const changed = customer(101);
+  changed.unsupported = true;
+
+  const result = await gatePublicActionToSending({
+    store,
+    authorityReader: authority([changed]),
+    actionId: action.action_id,
+    leaseToken: 'relay-1',
+  });
+
+  assert.equal(result.code, 'STALE');
+  assert.equal(result.coverage.reason, 'covered_source_reclassified');
+  assert.equal(result.coverage.sourceMessageId, 101);
+  assert.equal(result.action.state, 'STALE');
+});

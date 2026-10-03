@@ -256,9 +256,34 @@ function normalizeBasisEventSeqs(value) {
   }
   return out;
 }
+function validateEventTopology(event) {
+  const senderNeedsId = new Set(['contact', 'configured_agent_bot', 'human', 'other_agent_bot']);
+  if (senderNeedsId.has(event.senderClass) && event.senderId == null) {
+    fail('FIRST_LINE_EVENT_TOPOLOGY_INVALID', 'known sender class requires sender id',
+      { event_kind: event.eventKind, sender_class: event.senderClass });
+  }
+  if (event.senderClass === 'none' && event.senderId != null) {
+    fail('FIRST_LINE_EVENT_TOPOLOGY_INVALID', 'sender-none event cannot carry sender id',
+      { event_kind: event.eventKind });
+  }
+  const exact = {
+    CUSTOMER_MESSAGE: ['incoming', 'contact'],
+    BABYPARK_PUBLIC_REPLY: ['outgoing', 'configured_agent_bot'],
+    HUMAN_PUBLIC_REPLY: ['outgoing', 'human'],
+    OTHER_BOT_PUBLIC_REPLY: ['outgoing', 'other_agent_bot'],
+    SYSTEM_TEMPLATE: ['template', 'none'],
+    AUTOMATION_PUBLIC: ['outgoing', 'none'],
+  }[event.eventKind];
+  if (exact && (event.messageType !== exact[0] || event.senderClass !== exact[1])) {
+    fail('FIRST_LINE_EVENT_TOPOLOGY_INVALID', 'event kind conflicts with message/sender topology',
+      { event_kind: event.eventKind, message_type: event.messageType, sender_class: event.senderClass });
+  }
+  return event;
+}
+
 function normalizeEvent(event) {
   if (!event || typeof event !== 'object' || Array.isArray(event)) fail('FIRST_LINE_EVENT_INVALID', 'event must be an object');
-  return {
+  const normalized = {
     sourceMessageId: positiveInteger(event.sourceMessageId, 'source_message_id'),
     eventKind: enumValue(event.eventKind, EVENT_KINDS, 'event_kind'),
     messageType: enumValue(event.messageType, MESSAGE_TYPES, 'message_type'),
@@ -270,6 +295,7 @@ function normalizeEvent(event) {
     hasAttachments: booleanInt(event.hasAttachments ?? false, 'has_attachments'),
     sourceId: optionalToken(event.sourceId, 'source_id'),
   };
+  return validateEventTopology(normalized);
 }
 
 export class FirstLineStateStore {
@@ -436,7 +462,7 @@ export class FirstLineStateStore {
         fail('FIRST_LINE_SOURCE_ID_AMBIGUOUS', 'multiple ledger events share action source id',
           { action_id: id, count: rows.length });
       }
-      const event = rows[0];
+      const event = this.#eventDto(rows[0]);
       if (event.event_kind !== 'BABYPARK_PUBLIC_REPLY') {
         fail('FIRST_LINE_ACTION_CONFIRMATION_INVALID', 'action source id is attached to non-BabyPark event',
           { action_id: id, event_kind: event.event_kind });
@@ -485,6 +511,15 @@ export class FirstLineStateStore {
     const normalized = Object.entries(patch).map(([name, value]) => [name, value == null ? null : normalizeSlotValue(name, value)]);
     return tx(this.db, () => {
       const episode = this.#requireActiveEpisode(id, version);
+      if (derived !== null) {
+        const provenance = this.db.prepare(
+          'SELECT 1 AS ok FROM conversation_events WHERE stream_id=? AND event_seq=?'
+        ).get(episode.stream_id, derived);
+        if (!provenance) {
+          fail('FIRST_LINE_SLOT_PROVENANCE_INVALID', 'stable slot provenance references an unknown stream event',
+            { episode_id: id, stream_id: episode.stream_id, event_seq: derived });
+        }
+      }
       for (const [name, value] of normalized) {
         if (value == null) this.db.prepare('DELETE FROM episode_slots WHERE episode_id=? AND slot_name=?').run(id, name);
         else this.db.prepare(`INSERT INTO episode_slots(episode_id,slot_name,value_json,derived_through_event_seq)
@@ -555,17 +590,6 @@ export class FirstLineStateStore {
         .get(stream, revision);
       if (sameRevision) return this.#readAction(sameRevision.action_id);
 
-      const live = this.db.prepare(`SELECT * FROM public_actions WHERE stream_id=? AND state IN
-        ('PREPARED','GATING','SENDING','UNCERTAIN')`).get(stream);
-      if (live) {
-        if (live.state === 'SENDING' || live.state === 'UNCERTAIN') {
-          fail('FIRST_LINE_ACTION_SEND_UNRESOLVED', 'existing send must be reconciled before another action', {
-            action_id: live.action_id, state: live.state,
-          });
-        }
-        this.#cancelUnsentAction(live, 'newer_stream_revision');
-      }
-
       let episode = null;
       if (epId !== null) {
         episode = this.#requireActiveEpisode(epId, epVersion);
@@ -574,17 +598,49 @@ export class FirstLineStateStore {
             { episode_id: epId, stream_id: stream, episode_stream_id: episode.stream_id });
         }
       }
+
+      const live = this.db.prepare(`SELECT * FROM public_actions WHERE stream_id=? AND state IN
+        ('PREPARED','GATING','SENDING','UNCERTAIN')`).get(stream);
+      if (live && (live.state === 'SENDING' || live.state === 'UNCERTAIN')) {
+        fail('FIRST_LINE_ACTION_SEND_UNRESOLVED', 'existing send must be reconciled before another action', {
+          action_id: live.action_id, state: live.state,
+        });
+      }
+
+      const replacingClarification =
+        Boolean(live && episode && live.action_type === 'CLARIFY' && live.episode_id === epId);
+      if (replacingClarification &&
+          (episode.clarification_prompts_sent !== 1 ||
+           episode.clarification_action_id !== live.action_id)) {
+        fail('FIRST_LINE_ACTION_STALE_EPISODE', 'live clarification no longer owns its episode reservation',
+          { action_id: live.action_id, episode_id: epId });
+      }
+
       if (type === 'CLARIFY') {
         if (!episode) fail('FIRST_LINE_CLARIFICATION_INVALID', 'CLARIFY requires active episode');
-        if (episode.clarification_prompts_sent !== 0 || episode.clarification_action_id !== null) {
+        const reservationFree =
+          episode.clarification_prompts_sent === 0 && episode.clarification_action_id === null;
+        if (!reservationFree && !replacingClarification) {
           fail('FIRST_LINE_CLARIFICATION_LIMIT_REACHED', 'clarification already reserved/sent');
         }
       }
 
+      if (live) {
+        this.#cancelUnsentAction(live, 'newer_stream_revision');
+        if (episode && replacingClarification) {
+          episode = this.#requireActiveEpisode(epId, epVersion + 1);
+        }
+      }
+
+      if (type === 'CLARIFY' &&
+          (episode.clarification_prompts_sent !== 0 || episode.clarification_action_id !== null)) {
+        fail('FIRST_LINE_CLARIFICATION_LIMIT_REACHED', 'clarification reservation was not safely released');
+      }
+
       const actionId = safeToken(this.actionIdFactory(), 'action_id');
-      const actionEpisodeVersion = epId === null
+      const actionEpisodeVersion = episode === null
         ? null
-        : (type === 'CLARIFY' ? epVersion + 1 : epVersion);
+        : (type === 'CLARIFY' ? episode.version + 1 : episode.version);
       this.db.prepare(`INSERT INTO public_actions
         (action_id,stream_id,episode_id,episode_version,prepared_stream_revision,action_type,state,
          basis_event_seqs_json,requested_slot,deadline_at,created_at,updated_at)
@@ -601,7 +657,7 @@ export class FirstLineStateStore {
         const changed = this.db.prepare(`UPDATE episodes SET clarification_prompts_sent=1,requested_slot=?,
           clarification_action_id=?,version=version+1,updated_at=?
           WHERE episode_id=? AND state='active' AND version=? AND clarification_prompts_sent=0 AND clarification_action_id IS NULL`)
-          .run(requested, actionId, at, epId, epVersion).changes;
+          .run(requested, actionId, at, epId, episode.version).changes;
         if (changed !== 1) fail('FIRST_LINE_STALE_WRITE', 'episode changed before clarification reservation');
       }
       return this.#readAction(actionId);
@@ -638,6 +694,10 @@ export class FirstLineStateStore {
       if (!Number.isSafeInteger(action.lease_expires_at) || action.lease_expires_at <= at) {
         fail('FIRST_LINE_ACTION_CLAIM_EXPIRED', 'gating claim expired before SENDING', { action_id: id });
       }
+      if (action.deadline_at <= at) {
+        fail('FIRST_LINE_ACTION_DEADLINE_EXPIRED', 'public action deadline expired before SENDING',
+          { action_id: id, deadline_at: action.deadline_at, now: at });
+      }
       const stream = this.#requireStream(action.stream_id);
       if (stream.stream_revision !== action.prepared_stream_revision) {
         fail('FIRST_LINE_ACTION_STALE_REVISION', 'stream changed before SENDING', { action_id: id });
@@ -654,8 +714,8 @@ export class FirstLineStateStore {
         }
       }
       const changed = this.db.prepare(`UPDATE public_actions SET state='SENDING',send_started_at=?,updated_at=?
-        WHERE action_id=? AND state='GATING' AND lease_token=? AND lease_expires_at>?`)
-        .run(at, at, id, token, at).changes;
+        WHERE action_id=? AND state='GATING' AND lease_token=? AND lease_expires_at>? AND deadline_at>?`)
+        .run(at, at, id, token, at, at).changes;
       if (changed !== 1) fail('FIRST_LINE_STALE_WRITE', 'action changed before SENDING');
       return this.#readAction(id);
     });
@@ -801,6 +861,12 @@ export class FirstLineStateStore {
       if (row.has_attachments !== 0 && row.has_attachments !== 1) fail('FIRST_LINE_VALUE_INVALID', 'attachments flag invalid');
       if (row.source_id !== null) safeToken(row.source_id, 'source_id');
       nonNegativeInteger(row.accepted_at, 'accepted_at');
+      validateEventTopology({
+        eventKind: row.event_kind,
+        messageType: row.message_type,
+        senderClass: row.sender_class,
+        senderId: row.sender_id,
+      });
     }, 'persisted conversation event is invalid',
     { stream_id: row.stream_id, event_seq: row.event_seq, source_message_id: row.source_message_id });
     return {

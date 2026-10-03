@@ -502,3 +502,106 @@ test('cancelling an unsent CLARIFY never mutates an already closed episode', t =
   assert.equal(closed.requested_slot, 'store_id');
   assert.equal(closed.clarification_action_id, action.action_id);
 });
+
+
+test('newer revision atomically replaces an unsent CLARIFY with ANSWER using the observed episode version', t => {
+  const { store } = tempStore(t);
+  const stream = makeStream(store);
+  store.ingestConversationEvent(stream.stream_id, customerEvent(101));
+  let episode = store.beginEpisode({ streamId: stream.stream_id });
+  const oldAction = store.preparePublicAction({
+    streamId: stream.stream_id,
+    episodeId: episode.episode_id,
+    expectedEpisodeVersion: 1,
+    preparedStreamRevision: 1,
+    actionType: 'CLARIFY',
+    basisEventSeqs: [1],
+    requestedSlot: 'store_id',
+    deadlineAt: NOW + 60_000,
+  });
+  episode = store.getEpisode(episode.episode_id);
+  assert.equal(episode.version, 2);
+
+  store.ingestConversationEvent(stream.stream_id, customerEvent(102));
+  const next = store.preparePublicAction({
+    streamId: stream.stream_id,
+    episodeId: episode.episode_id,
+    expectedEpisodeVersion: 2,
+    preparedStreamRevision: 2,
+    actionType: 'ANSWER',
+    basisEventSeqs: [1, 2],
+    deadlineAt: NOW + 60_000,
+  });
+
+  assert.equal(store.getPublicAction(oldAction.action_id).state, 'CANCELLED');
+  assert.equal(next.state, 'PREPARED');
+  assert.equal(next.episode_version, 3);
+  const current = store.getEpisode(episode.episode_id);
+  assert.equal(current.version, 3);
+  assert.equal(current.clarification_prompts_sent, 0);
+  assert.equal(current.clarification_action_id, null);
+});
+
+test('newer revision atomically replaces an unsent CLARIFY with one new CLARIFY reservation', t => {
+  const { store } = tempStore(t);
+  const stream = makeStream(store);
+  store.ingestConversationEvent(stream.stream_id, customerEvent(101));
+  let episode = store.beginEpisode({ streamId: stream.stream_id });
+  const oldAction = store.preparePublicAction({
+    streamId: stream.stream_id,
+    episodeId: episode.episode_id,
+    expectedEpisodeVersion: 1,
+    preparedStreamRevision: 1,
+    actionType: 'CLARIFY',
+    basisEventSeqs: [1],
+    requestedSlot: 'store_id',
+    deadlineAt: NOW + 60_000,
+  });
+  episode = store.getEpisode(episode.episode_id);
+
+  store.ingestConversationEvent(stream.stream_id, customerEvent(102));
+  const next = store.preparePublicAction({
+    streamId: stream.stream_id,
+    episodeId: episode.episode_id,
+    expectedEpisodeVersion: 2,
+    preparedStreamRevision: 2,
+    actionType: 'CLARIFY',
+    basisEventSeqs: [1, 2],
+    requestedSlot: 'product_id',
+    deadlineAt: NOW + 60_000,
+  });
+
+  assert.equal(store.getPublicAction(oldAction.action_id).state, 'CANCELLED');
+  assert.equal(next.state, 'PREPARED');
+  assert.equal(next.episode_version, 4);
+  const current = store.getEpisode(episode.episode_id);
+  assert.equal(current.version, 4);
+  assert.equal(current.clarification_prompts_sent, 1);
+  assert.equal(current.requested_slot, 'product_id');
+  assert.equal(current.clarification_action_id, next.action_id);
+});
+
+test('Event Ledger rejects contradictory event-kind and sender/message topology', t => {
+  const { store } = tempStore(t);
+  const stream = makeStream(store);
+  expectCode(() => store.ingestConversationEvent(stream.stream_id, customerEvent(101, {
+    senderClass: 'none',
+    senderId: null,
+  })), 'FIRST_LINE_EVENT_TOPOLOGY_INVALID');
+  expectCode(() => store.ingestConversationEvent(stream.stream_id, customerEvent(102, {
+    eventKind: 'BABYPARK_PUBLIC_REPLY',
+    messageType: 'outgoing',
+  })), 'FIRST_LINE_EVENT_TOPOLOGY_INVALID');
+});
+
+test('stable slot provenance must reference an accepted event in the episode stream', t => {
+  const { store } = tempStore(t);
+  const stream = makeStream(store);
+  store.ingestConversationEvent(stream.stream_id, customerEvent(101));
+  const episode = store.beginEpisode({ streamId: stream.stream_id });
+  expectCode(() => store.setStableSlots(
+    episode.episode_id,
+    { store_id: STORE_1 },
+    { expectedVersion: 1, derivedThroughEventSeq: 999 }
+  ), 'FIRST_LINE_SLOT_PROVENANCE_INVALID');
+});

@@ -138,7 +138,9 @@ function wireMessageType(value) {
 
 function wireSenderType(value) {
   if (typeof value !== 'string') return null;
-  return value.replace(/[^A-Za-z]/g, '').toLowerCase();
+  const normalized = value.trim().toLowerCase();
+  if (normalized === 'agent_bot' || normalized === 'agentbot') return 'agentbot';
+  return ['contact', 'user'].includes(normalized) ? normalized : null;
 }
 
 function wireSourceId(value) {
@@ -160,13 +162,11 @@ function senderClass(wire, configuredAgentBotId) {
   if (wire?.sender == null) return { senderClass: 'none', senderId: null };
   const type = wireSenderType(wire.sender.type);
   const id = Number.isSafeInteger(wire.sender.id) && wire.sender.id > 0 ? wire.sender.id : null;
+  if (type === null || id === null) return { senderClass: 'unknown', senderId: id };
   if (type === 'contact') return { senderClass: 'contact', senderId: id };
   if (type === 'user') return { senderClass: 'human', senderId: id };
-  if (type === 'agentbot') {
-    if (id !== null && id === configuredAgentBotId) return { senderClass: 'configured_agent_bot', senderId: id };
-    return { senderClass: 'other_agent_bot', senderId: id };
-  }
-  return { senderClass: 'unknown', senderId: id };
+  if (id === configuredAgentBotId) return { senderClass: 'configured_agent_bot', senderId: id };
+  return { senderClass: 'other_agent_bot', senderId: id };
 }
 
 function classifyPublicWireMessage(wire, configuredAgentBotId) {
@@ -185,14 +185,25 @@ function classifyPublicWireMessage(wire, configuredAgentBotId) {
   }
 
   const sender = senderClass(wire, configuredAgentBotId);
-  const deleted = wire?.content_attributes?.deleted === true;
-  const unsupported = wire?.is_unsupported === true;
-  const attachments = Array.isArray(wire?.attachments) && wire.attachments.length > 0;
+  const attrs = wire?.content_attributes;
+  const attrsValid = attrs == null || (typeof attrs === 'object' && !Array.isArray(attrs));
+  const deleted = attrsValid && attrs?.deleted === true;
+  const unsupported = !attrsValid || attrs?.is_unsupported === true;
+  const attachmentsField = wire?.attachments;
+  const attachments = Array.isArray(attachmentsField)
+    ? attachmentsField.length > 0
+    : attachmentsField != null;
   const ctype = wireContentType(wire?.content_type);
   const sourceId = wireSourceId(wire?.source_id);
 
   let eventKind = 'UNKNOWN_PUBLIC';
-  if (messageType === 'template') eventKind = 'SYSTEM_TEMPLATE';
+  const knownNeutralTemplate =
+    messageType === 'template' &&
+    sender.senderClass === 'none' &&
+    ['text', 'input_email', 'input_csat'].includes(ctype) &&
+    unsupported === false &&
+    attachments === false;
+  if (knownNeutralTemplate) eventKind = 'SYSTEM_TEMPLATE';
   else if (messageType === 'incoming' && sender.senderClass === 'contact') eventKind = 'CUSTOMER_MESSAGE';
   else if (messageType === 'outgoing' && sender.senderClass === 'configured_agent_bot') eventKind = 'BABYPARK_PUBLIC_REPLY';
   else if (messageType === 'outgoing' && sender.senderClass === 'human') eventKind = 'HUMAN_PUBLIC_REPLY';
