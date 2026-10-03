@@ -256,7 +256,7 @@ export function createFirstLineChatwootAuthorityReader({
     );
     const rows = payloadRows(wire);
     const matches = rows.filter(row => row?.id === source);
-    if (matches.length === 0) return Object.freeze({ code: 'ABSENT', sourceMessageId: source });
+    if (matches.length === 0) return Object.freeze({ code: 'ABSENT', sourceConversationId: conversation, sourceMessageId: source });
     if (matches.length !== 1 || rows.length !== 1) {
       authorityFail('CHATWOOT_AUTHORITY_EXACT_AMBIGUOUS', 'exact source-message query did not return exactly one row',
         { source_message_id: source, row_count: rows.length, match_count: matches.length });
@@ -264,7 +264,7 @@ export function createFirstLineChatwootAuthorityReader({
 
     const classified = classifyPublicWireMessage(matches[0], botId);
     if (classified.disposition === 'INTERNAL') {
-      return Object.freeze({ code: 'INTERNAL', sourceMessageId: source });
+      return Object.freeze({ code: 'INTERNAL', sourceConversationId: conversation, sourceMessageId: source });
     }
 
     const event = classified.ledgerEvent;
@@ -281,6 +281,7 @@ export function createFirstLineChatwootAuthorityReader({
 
     return Object.freeze({
       code: isSupportedCustomerText ? 'SUPPORTED_CUSTOMER_TEXT' : 'PROVEN_UNSUPPORTED_OR_TOPOLOGY',
+      sourceConversationId: conversation,
       sourceMessageId: source,
       event: Object.freeze({ ...event }),
       transientContent: isSupportedCustomerText ? matches[0].content : null,

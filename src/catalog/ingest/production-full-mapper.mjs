@@ -2,9 +2,10 @@ import crypto from 'node:crypto';
 import { frameUtf8 } from './framing.mjs';
 import { validateFullRecords } from './full-record-v2.mjs';
 import { normalizeSku } from '../domain/sku.mjs';
+import { normalizeTitleKey } from '../domain/title.mjs';
 import { resolveCanonicalStore } from '../identity/store-resolution.mjs';
 
-export const PRODUCTION_MAPPER_VERSION = 3;
+export const PRODUCTION_MAPPER_VERSION = 4;
 export class FullMapperError extends Error { constructor(code,message,details={}){super(message);this.name='FullMapperError';this.code=code;this.details=details;} }
 const fail=(c,m,d)=>{throw new FullMapperError(c,m,d)};
 const canonical=v=>JSON.stringify(sort(v));
@@ -52,7 +53,7 @@ export function mapProductionFullRecords(writer, records, identityStore) {
       const p=identityCall(()=>identityStore.ensureProduct({provider:r.provider,nativeProductId:r.native_product_id}),{type:r.type,provider:r.provider,native_key:r.native_product_id});
       const variants=new Map();for(const v of r.variants){const id=identityCall(()=>identityStore.ensureVariant({provider:r.provider,nativeVariantId:v.native_variant_id,productId:p.product_id,sku:v.sku}),{type:'variant',provider:r.provider,native_key:v.native_variant_id});variants.set(v.native_variant_id,id.variant_id);}
       const def=r.variants.find(v=>v.is_default);writer.writeProduct({product_id:p.product_id,kind:r.kind,product_type:r.product_type??null,brand_id:r.brand_native_id?dimensionId('brand',r.provider,r.brand_native_id):null,default_variant_id:null,provenance_json:provenance(r.provider,r.native_product_id,r.provenance),updated_at:r.updated_at});
-      for(const [language,t] of Object.entries(r.localized))writer.writeProductText({product_id:p.product_id,language,title:t.title,short_description:t.short_description??null,description:t.description??null,url:t.url??null});
+      for(const [language,t] of Object.entries(r.localized))writer.writeProductText({product_id:p.product_id,language,title:t.title,title_key:normalizeTitleKey(t.title),short_description:t.short_description??null,description:t.description??null,url:t.url??null});
       for(const v of r.variants){const variant_id=variants.get(v.native_variant_id), n=normalizeSku(v.sku);writer.writeVariant({variant_id,product_id:p.product_id,sku:v.sku,sku_key:n.sku_key,gtin:v.gtin??null,is_default:+v.is_default,commercial_availability:v.commercial_availability,options_json:canonical(v.options??{}),updated_at:v.updated_at});if(v.offer)writer.writeOffer({variant_id,current_minor:v.offer.current_minor,regular_minor:v.offer.regular_minor??null,currency:v.offer.currency,on_sale:+v.offer.on_sale,tax_included:v.offer.tax_included==null?null:+v.offer.tax_included,valid_from:v.offer.valid_from??null,valid_to:v.offer.valid_to??null,source_updated_at:v.offer.source_updated_at??null});for(const s of v.stock)writer.writeStoreStock({variant_id,store_id:canonicalStoreId(identityStore,r.provider,s.store_native_id),quantity:s.quantity,source_updated_at:s.source_updated_at??null});for(const a of v.attributes){const d=writer.readAttributeDefinition(dimensionId('attribute_definition',r.provider,a.native_attribute_id));writer.writeAttributeValue({owner_type:'VARIANT',owner_id:variant_id,attribute_id:d.attribute_id,value_json:canonical(a.value)});}}
       writer.setDefaultVariant(p.product_id,variants.get(def.native_variant_id));
       for(const c of r.categories)writer.writeProductCategory({product_id:p.product_id,category_id:dimensionId('category',r.provider,c.native_category_id),is_primary:+(c.is_primary??false)});

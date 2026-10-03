@@ -14,6 +14,7 @@ import {
   readCatalogPointer,
   validateGenerationId,
 } from '../../src/catalog/sqlite/generation.mjs';
+import { normalizeTitleKey } from '../../src/catalog/domain/title.mjs';
 
 function fixture() {
   const dir = mkdtempSync(path.join(os.tmpdir(), 'bp-catalog-gen-'));
@@ -65,8 +66,8 @@ function insertSample(builder, suffix, title = 'Коляска тест') {
   ).run(variantId, productId);
 
   builder.db.prepare(
-    'INSERT INTO product_text(product_id,language,title) VALUES(?,?,?)'
-  ).run(productId, 'uk', title);
+    'INSERT INTO product_text(product_id,language,title,title_key) VALUES(?,?,?,?)'
+  ).run(productId, 'uk', title, normalizeTitleKey(title));
 
   builder.db.prepare(
     'INSERT INTO variant_offers(' +
@@ -711,7 +712,7 @@ test('extra manifest data cannot override canonical generation fields', t => {
   });
 
   assert.equal(result.manifest.generation_id, 'manifest1');
-  assert.equal(result.manifest.schema_version, 6);
+  assert.equal(result.manifest.schema_version, 7);
   assert.equal(result.manifest.counts.products, 1);
   assert.equal(result.manifest.extra.generation_id, 'evil');
   assert.equal(result.manifest.extra.note, 'source-extra');

@@ -1,4 +1,4 @@
-export const CATALOG_SCHEMA_VERSION = 6;
+export const CATALOG_SCHEMA_VERSION = 7;
 
 export const CATALOG_LAYERS = Object.freeze([
   'taxonomy',
@@ -96,6 +96,7 @@ const SCHEMA_SQL = `
     product_id TEXT NOT NULL,
     language TEXT NOT NULL,
     title TEXT NOT NULL,
+    title_key TEXT NOT NULL CHECK(length(title_key) > 0),
     short_description TEXT,
     description TEXT,
     url TEXT,
@@ -105,6 +106,9 @@ const SCHEMA_SQL = `
       ON UPDATE RESTRICT
       ON DELETE CASCADE
   );
+
+  CREATE INDEX idx_product_text_title_key
+    ON product_text(title_key, product_id, language);
 
   CREATE TABLE variants (
     variant_id TEXT PRIMARY KEY,
@@ -339,7 +343,7 @@ const SCHEMA_SQL = `
     tokenize='trigram'
   );
 
-  PRAGMA user_version=6;
+  PRAGMA user_version=7;
 `;
 
 export { SCHEMA_SQL };

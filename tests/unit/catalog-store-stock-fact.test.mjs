@@ -13,6 +13,7 @@ import {
   CatalogReader,
 } from '../../src/catalog/sqlite/generation.mjs';
 import { CatalogService } from '../../src/catalog/service/catalog-service.mjs';
+import { normalizeTitleKey } from '../../src/catalog/domain/title.mjs';
 
 const dirs = [];
 const readers = [];
@@ -57,12 +58,13 @@ function addProduct(builder, id, {
 
   builder.db.prepare(
     'INSERT INTO product_text(' +
-    'product_id,language,title,short_description,description,url' +
-    ') VALUES(?,?,?,?,?,?)'
+    'product_id,language,title,title_key,short_description,description,url' +
+    ') VALUES(?,?,?,?,?,?,?)'
   ).run(
     id,
     'uk',
     title,
+    normalizeTitleKey(title),
     null,
     null,
     'https://shop.example/' + id

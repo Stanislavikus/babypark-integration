@@ -13,6 +13,7 @@ import {
   CatalogReader,
 } from '../../src/catalog/sqlite/generation.mjs';
 import { CatalogService } from '../../src/catalog/service/catalog-service.mjs';
+import { normalizeTitleKey } from '../../src/catalog/domain/title.mjs';
 import {
   ftsTrigramQuery,
   ftsWordQuery,
@@ -50,12 +51,13 @@ function insertProduct(builder, {
   for (const [language, text] of Object.entries(texts)) {
     builder.db.prepare(
       'INSERT INTO product_text(' +
-      'product_id,language,title,short_description,description,url' +
-      ') VALUES(?,?,?,?,?,?)'
+      'product_id,language,title,title_key,short_description,description,url' +
+      ') VALUES(?,?,?,?,?,?,?)'
     ).run(
       productId,
       language,
       text.title,
+      normalizeTitleKey(text.title),
       text.short_description || null,
       text.description || null,
       text.url || null
@@ -410,6 +412,78 @@ function buildFixture(storageDir) {
   });
 
   insertProduct(builder, {
+    productId: 'p-mixed',
+    brandId: 'brand-joolz',
+    defaultVariantId: 'v-mixed-live',
+    texts: {
+      uk: {
+        title: 'Mixed lifecycle product',
+        url: '/uk/mixed-lifecycle',
+      },
+    },
+  });
+  insertVariant(builder, {
+    variantId: 'v-mixed-live',
+    productId: 'p-mixed',
+    sku: 'MIXED-LIVE',
+    skuKey: 'mixed-live',
+    isDefault: true,
+    currentMinor: 200000,
+    availability: 'IN_STOCK',
+  });
+  insertVariant(builder, {
+    variantId: 'v-mixed-dead',
+    productId: 'p-mixed',
+    sku: 'DEAD-SKU',
+    skuKey: 'dead-sku',
+    currentMinor: 200000,
+    availability: 'IN_STOCK',
+  });
+  builder.db.prepare(
+    "UPDATE variants SET lifecycle='tombstoned' WHERE variant_id='v-mixed-dead'"
+  ).run();
+
+  insertProduct(builder, {
+    productId: 'p-dead-title',
+    brandId: 'brand-joolz',
+    defaultVariantId: 'v-dead-title',
+    texts: {
+      uk: {
+        title: 'Коляска Joolz Day3',
+        url: '/uk/dead-title',
+      },
+    },
+  });
+  insertVariant(builder, {
+    variantId: 'v-dead-title',
+    productId: 'p-dead-title',
+    sku: 'DEAD-TITLE-SKU',
+    skuKey: 'dead-title-sku',
+    isDefault: true,
+    currentMinor: 100000,
+    availability: 'IN_STOCK',
+  });
+  builder.db.prepare(
+    "UPDATE variants SET lifecycle='tombstoned' WHERE variant_id='v-dead-title'"
+  ).run();
+  builder.db.prepare(
+    "UPDATE products SET lifecycle='tombstoned' WHERE product_id='p-dead-title'"
+  ).run();
+
+  for (let index = 1; index <= 33; index += 1) {
+    insertProduct(builder, {
+      productId: 'p-overflow-' + String(index).padStart(2, '0'),
+      defaultVariantId: null,
+      texts: {
+        uk: {
+          title: 'Generic exact title overflow',
+          url: '/uk/overflow-' + index,
+        },
+      },
+    });
+  }
+
+  insertProduct(builder, {
     productId: 'p-kit',
     kind: 'KIT',
     productType: 'bundle',
@@ -518,29 +592,100 @@ function buildFixture(storageDir) {
     insertFts(builder, item);
   }
 
+  for (let index = 0; index < 17; index += 1) {
+    const language = 'x' + String.fromCharCode(97 + index);
+    builder.db.prepare(
+      'INSERT INTO product_text(' +
+      'product_id,language,title,title_key,short_description,description,url' +
+      ') VALUES(?,?,?,?,?,?,?)'
+    ).run(
+      'p-mixed',
+      language,
+      'Locale cohort overflow',
+      normalizeTitleKey('Locale cohort overflow'),
+      null,
+      null,
+      '/locale-overflow-' + index
+    );
+  }
+
   builder.db.prepare(
     'INSERT INTO product_text(' +
-    'product_id,language,title,short_description,description,url' +
-    ') VALUES(?,?,?,?,?,?)'
+    'product_id,language,title,title_key,short_description,description,url' +
+    ') VALUES(?,?,?,?,?,?,?)'
+  ).run(
+    'p-day3',
+    'pl',
+    'Коляска Joolz Day3',
+    normalizeTitleKey('Коляска Joolz Day3'),
+    null,
+    null,
+    '/pl/joolz-day3'
+  );
+  builder.db.prepare(
+    'INSERT INTO product_text(' +
+    'product_id,language,title,title_key,short_description,description,url' +
+    ') VALUES(?,?,?,?,?,?,?)'
   ).run(
     'p-day3',
     'de',
     'Identity collision Day3',
+    normalizeTitleKey('Identity collision Day3'),
     null,
     null,
     '/identity-collision'
   );
   builder.db.prepare(
     'INSERT INTO product_text(' +
-    'product_id,language,title,short_description,description,url' +
-    ') VALUES(?,?,?,?,?,?)'
+    'product_id,language,title,title_key,short_description,description,url' +
+    ') VALUES(?,?,?,?,?,?,?)'
   ).run(
     'p-bug',
     'fr',
     'Identity collision Bugaboo',
+    normalizeTitleKey('Identity collision Bugaboo'),
     null,
     null,
     '/identity-collision'
+  );
+  builder.db.prepare(
+    'INSERT INTO product_text(' +
+    'product_id,language,title,title_key,short_description,description,url' +
+    ') VALUES(?,?,?,?,?,?,?)'
+  ).run(
+    'p-bug',
+    'de',
+    'Identity collision Day3',
+    normalizeTitleKey('Identity collision Day3'),
+    null,
+    null,
+    '/de/duplicate-title'
+  );
+  builder.db.prepare(
+    'INSERT INTO product_text(' +
+    'product_id,language,title,title_key,short_description,description,url' +
+    ') VALUES(?,?,?,?,?,?,?)'
+  ).run(
+    'p-bug',
+    'en',
+    'DAY3-BLK',
+    normalizeTitleKey('DAY3-BLK'),
+    null,
+    null,
+    '/en/sku-title-collision'
+  );
+  builder.db.prepare(
+    'INSERT INTO product_text(' +
+    'product_id,language,title,title_key,short_description,description,url' +
+    ') VALUES(?,?,?,?,?,?,?)'
+  ).run(
+    'p-bug',
+    'es',
+    'Café Bugaboo',
+    normalizeTitleKey('Café Bugaboo'),
+    null,
+    null,
+    '/es/cafe-bugaboo'
   );
 
   for (const layer of [
@@ -959,6 +1104,140 @@ test('lookupSku distinguishes FOUND and NOT_FOUND with canonical key', () => {
   assert.equal(missing.status, 'NOT_FOUND');
   assert.equal(missing.variant, null);
   assert.equal(missing.catalog.generation_id, 'svc1');
+});
+
+test('resolveProductIdentityExact combines exact SKU/title in one deterministic identity result', () => {
+  const byTitle = service.resolveProductIdentityExact('Коляска Joolz Day3');
+  assert.equal(byTitle.status, 'FOUND');
+  assert.equal(byTitle.product.product_id, 'p-day3');
+  assert.deepEqual(byTitle.product.matched_languages, ['pl', 'uk']);
+  assert.deepEqual(byTitle.product.matched_by, ['EXACT_TITLE']);
+
+  const conflict = service.resolveProductIdentityExact('DAY3-BLK');
+  assert.equal(conflict.status, 'IDENTITY_COLLISION');
+  assert.equal(conflict.product, null);
+  assert.deepEqual(conflict.candidates, []);
+
+  const missing = service.resolveProductIdentityExact('totally missing product');
+  assert.equal(missing.status, 'NOT_FOUND');
+  assert.deepEqual(missing.candidates, []);
+  assert.equal(missing.catalog.generation_id, 'svc1');
+});
+
+test('exact title authority compares canonical NFC even when stored title is decomposed', () => {
+  const unified = service.resolveProductIdentityExact('Café Bugaboo');
+  assert.equal(unified.status, 'FOUND');
+  assert.equal(unified.product.product_id, 'p-bug');
+  assert.deepEqual(unified.product.matched_languages, ['es']);
+  assert.deepEqual(unified.product.matched_by, ['EXACT_TITLE']);
+
+  const titleOnly = service.lookupProductTitleExact({
+    title: 'Café Bugaboo',
+  });
+  assert.equal(titleOnly.status, 'FOUND');
+  assert.equal(titleOnly.product.product_id, 'p-bug');
+  assert.deepEqual(titleOnly.product.matched_languages, ['es']);
+});
+
+test('exact title authority uses the indexed title_key request path', () => {
+  const plan = reader.withDb(db => db.prepare(
+    'EXPLAIN QUERY PLAN ' +
+    'SELECT pt.product_id,pt.language,pt.title FROM product_text pt ' +
+    'JOIN products p ON p.product_id=pt.product_id ' +
+    "WHERE pt.title_key=? AND p.lifecycle='active' " +
+    'ORDER BY pt.product_id,pt.language'
+  ).all('Café Bugaboo'));
+
+  assert.ok(
+    plan.some(row =>
+      String(row.detail).includes('idx_product_text_title_key')
+    ),
+    JSON.stringify(plan)
+  );
+});
+
+
+test('exact product identity excludes tombstoned product and variant rows', () => {
+  const title = service.resolveProductIdentityExact('Коляска Joolz Day3');
+  assert.equal(title.status, 'FOUND');
+  assert.equal(title.product.product_id, 'p-day3');
+
+  const deadVariant = service.resolveProductIdentityExact('DEAD-SKU');
+  assert.equal(deadVariant.status, 'NOT_FOUND');
+  assert.equal(deadVariant.product, null);
+  assert.deepEqual(deadVariant.candidates, []);
+
+  const deadProductSku = service.resolveProductIdentityExact('DEAD-TITLE-SKU');
+  assert.equal(deadProductSku.status, 'NOT_FOUND');
+  assert.equal(deadProductSku.product, null);
+});
+
+test('lookupProductTitleExact ignores tombstoned products instead of creating ambiguity', () => {
+  const result = service.lookupProductTitleExact({
+    title: 'Коляска Joolz Day3',
+  });
+  assert.equal(result.status, 'FOUND');
+  assert.equal(result.product.product_id, 'p-day3');
+  assert.deepEqual(result.candidates.map(row => row.product_id), ['p-day3']);
+});
+
+test('exact title authority also caps matching locales per product', () => {
+  const unified = service.resolveProductIdentityExact('Locale cohort overflow');
+  assert.equal(unified.status, 'IDENTITY_COHORT_OVERFLOW');
+  assert.equal(unified.product, null);
+  assert.deepEqual(unified.candidates, []);
+
+  const titleOnly = service.lookupProductTitleExact({
+    title: 'Locale cohort overflow',
+  });
+  assert.equal(titleOnly.status, 'AMBIGUITY_OVERFLOW');
+  assert.equal(titleOnly.product, null);
+  assert.deepEqual(titleOnly.candidates, []);
+});
+
+test('exact title authority caps ambiguity cohort and fails closed on overflow', () => {
+  const unified = service.resolveProductIdentityExact('Generic exact title overflow');
+  assert.equal(unified.status, 'IDENTITY_COHORT_OVERFLOW');
+  assert.equal(unified.product, null);
+  assert.deepEqual(unified.candidates, []);
+
+  const titleOnly = service.lookupProductTitleExact({
+    title: 'Generic exact title overflow',
+  });
+  assert.equal(titleOnly.status, 'AMBIGUITY_OVERFLOW');
+  assert.equal(titleOnly.product, null);
+  assert.deepEqual(titleOnly.candidates, []);
+});
+
+test('lookupProductTitleExact is cross-language exact and never lets language choose identity', () => {
+  const found = service.lookupProductTitleExact({
+    title: '  Коляска Joolz Day3  ',
+  });
+  assert.equal(found.status, 'FOUND');
+  assert.equal(found.normalized_title, 'Коляска Joolz Day3');
+  assert.equal(found.product.product_id, 'p-day3');
+  assert.deepEqual(found.product.matched_languages, ['pl', 'uk']);
+
+  const differentCase = service.lookupProductTitleExact({
+    title: 'коляска Joolz Day3',
+  });
+  assert.equal(differentCase.status, 'NOT_FOUND');
+  assert.equal(differentCase.product, null);
+
+  const ambiguous = service.lookupProductTitleExact({
+    title: 'Identity collision Day3',
+  });
+  assert.equal(ambiguous.status, 'AMBIGUOUS');
+  assert.equal(ambiguous.product, null);
+  assert.deepEqual(
+    ambiguous.candidates.map(row => row.product_id),
+    ['p-bug', 'p-day3']
+  );
+
+  assert.throws(
+    () => service.lookupProductTitleExact({ title: '   ' }),
+    error => error?.code === 'CATALOG_QUERY_INVALID'
+  );
 });
 
 test('search supports the RU FTS presentation independently', () => {
