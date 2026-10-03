@@ -253,6 +253,7 @@ test('CLARIFY reservation is atomic, one-shot, and releasable only before SENDIN
   assert.equal(episode.clarification_prompts_sent, 1);
   assert.equal(episode.clarification_action_id, action.action_id);
   assert.equal(episode.version, 2);
+  assert.equal(action.episode_version, 2);
 
   const retry = store.preparePublicAction({
     streamId: stream.stream_id,
@@ -391,4 +392,51 @@ test('SENDING/UNCERTAIN action confirms only from unique BabyPark source_id even
   const confirmed = store.confirmPublicActionFromLedger(action.action_id);
   assert.equal(confirmed.state, 'CONFIRMED');
   assert.equal(confirmed.confirmed_source_message_id, 102);
+});
+
+
+test('expired relay lease cannot transition GATING to SENDING', t => {
+  let now = NOW;
+  const { store } = tempStore(t, { now: () => now });
+  const stream = makeStream(store);
+  store.ingestConversationEvent(stream.stream_id, customerEvent(101));
+  const action = store.preparePublicAction({
+    streamId: stream.stream_id, preparedStreamRevision: 1, actionType: 'ANSWER',
+    basisEventSeqs: [1], deadlineAt: NOW + 60_000,
+  });
+  store.claimNextPublicAction({ leaseMs: 10, token: 'relay-expiring' });
+  now += 11;
+  expectCode(() => store.markActionSending(action.action_id, 'relay-expiring'),
+    'FIRST_LINE_ACTION_CLAIM_EXPIRED');
+  assert.equal(store.getPublicAction(action.action_id).state, 'GATING');
+});
+
+test('episode semantic drift blocks a CLARIFY send even without a new customer event', t => {
+  const { store } = tempStore(t);
+  const stream = makeStream(store);
+  store.ingestConversationEvent(stream.stream_id, customerEvent(101));
+  let episode = store.beginEpisode({ streamId: stream.stream_id });
+  const action = store.preparePublicAction({
+    streamId: stream.stream_id,
+    episodeId: episode.episode_id,
+    expectedEpisodeVersion: 1,
+    preparedStreamRevision: 1,
+    actionType: 'CLARIFY',
+    basisEventSeqs: [1],
+    requestedSlot: 'store_id',
+    presentedCandidates: [{ slot: 'store_id', value: STORE_1 }],
+    deadlineAt: NOW + 60_000,
+  });
+  assert.equal(action.episode_version, 2);
+  store.claimNextPublicAction({ leaseMs: 10_000, token: 'relay-episode' });
+
+  episode = store.setStableSlots(
+    episode.episode_id,
+    { product_id: PRODUCT_1 },
+    { expectedVersion: 2, derivedThroughEventSeq: 1 }
+  );
+  assert.equal(episode.version, 3);
+  expectCode(() => store.markActionSending(action.action_id, 'relay-episode'),
+    'FIRST_LINE_ACTION_STALE_EPISODE');
+  assert.equal(store.getPublicAction(action.action_id).state, 'GATING');
 });
