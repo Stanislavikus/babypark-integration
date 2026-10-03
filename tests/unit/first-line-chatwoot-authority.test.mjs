@@ -223,3 +223,31 @@ test('authority inputs are strict and privileged transport remains bounded', asy
   await assert.rejects(() => hanging.readAuthorizingConversationSnapshot(55),
     /chatwoot_request_timeout/);
 });
+
+
+test('bounded public range is explicitly non-authorizing and reports backend saturation', async () => {
+  let called;
+  const rows = [
+    { id: 100, message_type: 0, private: false, sender: { id: 9001, type: 'Contact' }, content_type: 'text' },
+    { id: 101, message_type: 1, private: false, sender: null, content_type: 'text' },
+  ];
+  const complete = await reader(async url => {
+    called = url;
+    return response({ payload: rows });
+  }).readPublicRange(55, { afterInclusive: 90, beforeExclusive: 110 });
+  assert.equal(complete.complete, true);
+  assert.equal(complete.rowCount, 2);
+  assert.deepEqual(complete.events.map(e => [e.sourceMessageId, e.eventKind]), [
+    [100, 'CUSTOMER_MESSAGE'], [101, 'AUTOMATION_PUBLIC'],
+  ]);
+  assert.match(called, /messages\?after=90&before=110&filter_internal_messages=true$/);
+
+  const saturatedRows = Array.from({ length: CHATWOOT_AUTHORITATIVE_LIMIT }, (_, index) => ({
+    id: index + 1, message_type: 0, private: false,
+    sender: { id: 9001, type: 'Contact' }, content_type: 'text',
+  }));
+  const saturated = await reader(async () => response({ payload: saturatedRows }))
+    .readPublicRange(55, { afterInclusive: 0, beforeExclusive: CHATWOOT_AUTHORITATIVE_BEFORE });
+  assert.equal(saturated.complete, false);
+  assert.equal(saturated.rowCount, CHATWOOT_AUTHORITATIVE_LIMIT);
+});
