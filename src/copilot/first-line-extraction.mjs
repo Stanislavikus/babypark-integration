@@ -341,6 +341,92 @@ function productRightBoundary(text, endUtf16) {
   return true;
 }
 
+function isDecimalDigit(value) {
+  return typeof value === 'string' &&
+    value.length > 0 &&
+    /\p{Nd}/u.test(value);
+}
+
+function isMoneyNumericSeparator(value) {
+  return typeof value === 'string' &&
+    value.length > 0 &&
+    (/[,.'’٫٬]/u.test(value) || isWhitespace(value));
+}
+
+function isMoneySign(value) {
+  return value === '+' || value === '-' || value === '−';
+}
+
+function previousSignificantCodePoint(text, endExclusive) {
+  let end = endExclusive;
+  while (end > 0) {
+    const current = previousCodePoint(text, end);
+    if (!current) return null;
+    if (isFormatChar(current.value)) {
+      end = current.nextIndex;
+      continue;
+    }
+    return current;
+  }
+  return null;
+}
+
+function nextSignificantCodePoint(text, startIndex) {
+  let start = startIndex;
+  while (start < text.length) {
+    const current = nextCodePoint(text, start);
+    if (!current) return null;
+    if (isFormatChar(current.value)) {
+      start = current.nextIndex;
+      continue;
+    }
+    return current;
+  }
+  return null;
+}
+
+function moneyLeftBoundary(text, quote, startUtf16) {
+  if (!nonProductLeftBoundary(text, startUtf16)) return false;
+  const first = nextCodePoint(quote, 0)?.value ?? '';
+  if (!isDecimalDigit(first)) return true;
+
+  const before = previousSignificantCodePoint(text, startUtf16);
+  if (!before) return true;
+  if (isMoneySign(before.value)) return false;
+
+  if (isMoneyNumericSeparator(before.value)) {
+    let cursor = before;
+    while (cursor && isMoneyNumericSeparator(cursor.value)) {
+      cursor = previousSignificantCodePoint(text, cursor.nextIndex);
+    }
+    if (cursor && (isDecimalDigit(cursor.value) || isMoneySign(cursor.value))) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function moneyRightBoundary(text, quote, endUtf16) {
+  if (!nonProductRightBoundary(text, endUtf16)) return false;
+  const last = previousCodePoint(quote, quote.length)?.value ?? '';
+  if (!isDecimalDigit(last)) return true;
+
+  const after = nextSignificantCodePoint(text, endUtf16);
+  if (!after) return true;
+  if (isMoneySign(after.value)) return false;
+
+  if (isMoneyNumericSeparator(after.value)) {
+    let cursor = after;
+    while (cursor && isMoneyNumericSeparator(cursor.value)) {
+      cursor = nextSignificantCodePoint(text, cursor.nextIndex);
+    }
+    if (cursor && (isDecimalDigit(cursor.value) || isMoneySign(cursor.value))) {
+      return false;
+    }
+  }
+  return true;
+}
+
 function nonProductLeftBoundary(text, startUtf16) {
   let end = startUtf16;
   while (end > 0) {
@@ -373,6 +459,10 @@ function hasSemanticBoundaries(text, quote, located, kind) {
   if (kind === 'PRODUCT') {
     return productLeftBoundary(text, located.start_utf16) &&
       productRightBoundary(text, located.end_utf16);
+  }
+  if (kind === 'MONEY') {
+    return moneyLeftBoundary(text, quote, located.start_utf16) &&
+      moneyRightBoundary(text, quote, located.end_utf16);
   }
 
   return nonProductLeftBoundary(text, located.start_utf16) &&

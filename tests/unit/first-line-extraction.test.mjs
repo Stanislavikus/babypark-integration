@@ -485,6 +485,57 @@ test('PRODUCT quote cannot be a partial SKU-like identifier segment', () => {
 });
 
 
+test('MONEY spans cannot be split out of a larger numeric token', () => {
+  for (const [text, quote] of [
+    ['бюджет 1,300 грн', '300 грн'],
+    ['бюджет 1.300 грн', '300 грн'],
+    ['бюджет 1 300 грн', '300 грн'],
+    ['бюджет 1  300 грн', '300 грн'],
+    ['бюджет 1 300 грн', '300 грн'],
+    ['бюджет 1’300 грн', '300 грн'],
+    ['бюджет +300 грн', '300 грн'],
+    ['бюджет -300 грн', '300 грн'],
+    ['бюджет −300 грн', '300 грн'],
+    ['бюджет 300,50 грн', '300'],
+    ['бюджет 300.50 грн', '300'],
+    ['бюджет 300 500 грн', '300'],
+    ['бюджет 300  500 грн', '300'],
+    ['бюджет 300 500 грн', '300'],
+  ]) {
+    expectCode(() => certifyFirstLineExtraction({
+      extraction: extraction({
+        spans: [{
+          kind: 'MONEY',
+          turn_index: 1,
+          quote,
+          occurrence: 1,
+        }],
+      }),
+      turns: [turn({ text })],
+    }), 'FIRST_LINE_EXTRACTION_QUOTE_UNCERTIFIED');
+  }
+
+  for (const [text, quote] of [
+    ['до 300 грн', '300 грн'],
+    ['(300 грн)', '300 грн'],
+    ['300 грн, будь ласка', '300 грн'],
+    ['до 1 300 грн', '1 300 грн'],
+  ]) {
+    const result = certifyFirstLineExtraction({
+      extraction: extraction({
+        spans: [{
+          kind: 'MONEY',
+          turn_index: 1,
+          quote,
+          occurrence: 1,
+        }],
+      }),
+      turns: [turn({ text })],
+    });
+    assert.equal(result.certified_spans[0].quote, quote);
+  }
+});
+
 test('symbol-ended non-PRODUCT spans cannot be embedded in word tokens', () => {
   for (const [text, quote] of [
     ['до 3000₴abc', '3000₴'],
