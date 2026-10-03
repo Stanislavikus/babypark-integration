@@ -485,6 +485,38 @@ test('PRODUCT quote cannot be a partial SKU-like identifier segment', () => {
 });
 
 
+test('symbol-ended non-PRODUCT spans cannot be embedded in word tokens', () => {
+  for (const [text, quote] of [
+    ['до 3000₴abc', '3000₴'],
+    ['abc$3000', '$3000'],
+  ]) {
+    expectCode(() => certifyFirstLineExtraction({
+      extraction: extraction({
+        spans: [{
+          kind: 'MONEY',
+          turn_index: 1,
+          quote,
+          occurrence: 1,
+        }],
+      }),
+      turns: [turn({ text })],
+    }), 'FIRST_LINE_EXTRACTION_QUOTE_UNCERTIFIED');
+  }
+
+  const standalone = certifyFirstLineExtraction({
+    extraction: extraction({
+      spans: [{
+        kind: 'MONEY',
+        turn_index: 1,
+        quote: '3000₴',
+        occurrence: 1,
+      }],
+    }),
+    turns: [turn({ text: 'до 3000₴, будь ласка' })],
+  });
+  assert.equal(standalone.certified_spans[0].quote, '3000₴');
+});
+
 test('non-PRODUCT quote endpoints use full Unicode code points', () => {
   for (const kind of ['BRAND', 'CATEGORY', 'STORE']) {
     expectCode(() => certifyFirstLineExtraction({

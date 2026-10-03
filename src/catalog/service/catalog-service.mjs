@@ -1111,6 +1111,21 @@ function activeExactVariant(db, variantId) {
   ).get(variantId) || null;
 }
 
+const MAX_EXACT_TITLE_PRODUCTS = 32;
+
+function exactTitleProductCohort(db, normalizedTitle) {
+  const rows = db.prepare(
+    'SELECT pt.product_id,MIN(pt.title) AS title FROM product_text pt ' +
+    'JOIN products p ON p.product_id=pt.product_id ' +
+    "WHERE pt.title_key=? AND p.lifecycle='active' " +
+    'GROUP BY pt.product_id ORDER BY pt.product_id LIMIT ?'
+  ).all(normalizedTitle, MAX_EXACT_TITLE_PRODUCTS + 1);
+  return {
+    overflow: rows.length > MAX_EXACT_TITLE_PRODUCTS,
+    rows: rows.slice(0, MAX_EXACT_TITLE_PRODUCTS),
+  };
+}
+
 function objectiveBase(catalog, {
   categoryId,
   categoryMatchMode,
@@ -1817,12 +1832,8 @@ export class CatalogService {
         "WHERE v.sku_key=? AND v.lifecycle='active' AND p.lifecycle='active'"
       ).get(key);
 
-      const titleRows = db.prepare(
-        'SELECT pt.product_id,pt.language,pt.title FROM product_text pt ' +
-        'JOIN products p ON p.product_id=pt.product_id ' +
-        "WHERE pt.title_key=? AND p.lifecycle='active' " +
-        'ORDER BY pt.product_id,pt.language'
-      ).all(normalizedTitle);
+      const titleCohort = exactTitleProductCohort(db, normalizedTitle);
+      const titleRows = titleCohort.rows;
 
       const byProduct = new Map();
       function candidate(productId) {
@@ -1850,7 +1861,6 @@ export class CatalogService {
       for (const row of titleRows) {
         const current = candidate(row.product_id);
         current.title = row.title;
-        current.matched_languages.push(row.language);
         if (!current.matched_by.includes('EXACT_TITLE')) {
           current.matched_by.push('EXACT_TITLE');
         }
@@ -1870,20 +1880,25 @@ export class CatalogService {
 
       return {
         catalog,
-        status: skuTitleConflict
-          ? 'IDENTITY_COLLISION'
-          : candidates.length === 0
-            ? 'NOT_FOUND'
-            : candidates.length === 1
-              ? 'FOUND'
-              : 'AMBIGUOUS',
+        status: titleCohort.overflow
+          ? 'IDENTITY_COHORT_OVERFLOW'
+          : skuTitleConflict
+            ? 'IDENTITY_COLLISION'
+            : candidates.length === 0
+              ? 'NOT_FOUND'
+              : candidates.length === 1
+                ? 'FOUND'
+                : 'AMBIGUOUS',
         normalized_phrase: normalizedTitle,
         sku_key: key,
         product:
-          !skuTitleConflict && candidates.length === 1
+          !titleCohort.overflow &&
+          !skuTitleConflict &&
+          candidates.length === 1
             ? candidates[0]
             : null,
-        candidates: skuTitleConflict ? [] : candidates,
+        candidates:
+          titleCohort.overflow || skuTitleConflict ? [] : candidates,
       };
     });
   }
@@ -1901,39 +1916,30 @@ export class CatalogService {
       }
 
       const catalog = catalogSnapshot(db);
-      const rows = db.prepare(
-        'SELECT pt.product_id,pt.language,pt.title FROM product_text pt ' +
-        'JOIN products p ON p.product_id=pt.product_id ' +
-        "WHERE pt.title_key=? AND p.lifecycle='active' " +
-        'ORDER BY pt.product_id,pt.language'
-      ).all(normalizedTitle);
+      const titleCohort = exactTitleProductCohort(db, normalizedTitle);
+      const rows = titleCohort.rows;
 
-      const grouped = new Map();
-      for (const row of rows) {
-        const current = grouped.get(row.product_id) ?? {
-          product_id: row.product_id,
-          title: row.title,
-          matched_languages: [],
-        };
-        current.matched_languages.push(row.language);
-        grouped.set(row.product_id, current);
-      }
-      const candidates = [...grouped.values()].map(row => ({
-        ...row,
-        matched_languages: [...row.matched_languages].sort(),
+      const candidates = rows.map(row => ({
+        product_id: row.product_id,
+        title: row.title,
+        matched_languages: [],
       }));
 
       return {
         catalog,
-        status:
-          candidates.length === 0
+        status: titleCohort.overflow
+          ? 'AMBIGUITY_OVERFLOW'
+          : candidates.length === 0
             ? 'NOT_FOUND'
             : candidates.length === 1
               ? 'FOUND'
               : 'AMBIGUOUS',
         normalized_title: normalizedTitle,
-        product: candidates.length === 1 ? candidates[0] : null,
-        candidates,
+        product:
+          !titleCohort.overflow && candidates.length === 1
+            ? candidates[0]
+            : null,
+        candidates: titleCohort.overflow ? [] : candidates,
       };
     });
   }

@@ -52,6 +52,15 @@ function productIdentityResolution(catalogService, quote) {
       resolved: candidates[0],
     });
   }
+  if (result.status === 'IDENTITY_COHORT_OVERFLOW') {
+    return Object.freeze({
+      status: 'INVALID_AUTHORITY',
+      reason: 'CATALOG_IDENTITY_COHORT_OVERFLOW',
+      catalog: result.catalog,
+      candidates: Object.freeze([]),
+      resolved: null,
+    });
+  }
   if (result.status === 'IDENTITY_COLLISION') {
     return Object.freeze({
       status: 'INVALID_AUTHORITY',

@@ -277,8 +277,6 @@ function productRightBoundary(text, endUtf16) {
 }
 
 function hasSemanticBoundaries(text, quote, located, kind) {
-  const first = nextCodePoint(quote, 0)?.value ?? '';
-  const last = previousCodePoint(quote, quote.length)?.value ?? '';
   const beforeIndex = located.start_utf16 - 1;
   const afterIndex = located.end_utf16;
   const before = beforeIndex >= 0 ? previousCodePoint(text, located.start_utf16)?.value ?? '' : '';
@@ -289,8 +287,7 @@ function hasSemanticBoundaries(text, quote, located, kind) {
       productRightBoundary(text, located.end_utf16);
   }
 
-  if (isWordChar(first) && isWordChar(before)) return false;
-  if (isWordChar(last) && isWordChar(after)) return false;
+  if (isWordChar(before) || isWordChar(after)) return false;
   return true;
 }
 

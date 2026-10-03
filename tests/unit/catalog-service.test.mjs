@@ -470,6 +470,19 @@ function buildFixture(storageDir) {
     "UPDATE products SET lifecycle='tombstoned' WHERE product_id='p-dead-title'"
   ).run();
 
+  for (let index = 1; index <= 33; index += 1) {
+    insertProduct(builder, {
+      productId: 'p-overflow-' + String(index).padStart(2, '0'),
+      defaultVariantId: null,
+      texts: {
+        uk: {
+          title: 'Generic exact title overflow',
+          url: '/uk/overflow-' + index,
+        },
+      },
+    });
+  }
+
   insertProduct(builder, {
     productId: 'p-kit',
     kind: 'KIT',
@@ -1084,7 +1097,7 @@ test('exact title authority compares canonical NFC even when stored title is dec
   const unified = service.resolveProductIdentityExact('Café Bugaboo');
   assert.equal(unified.status, 'FOUND');
   assert.equal(unified.product.product_id, 'p-bug');
-  assert.deepEqual(unified.product.matched_languages, ['es']);
+  assert.deepEqual(unified.product.matched_languages, []);
   assert.deepEqual(unified.product.matched_by, ['EXACT_TITLE']);
 
   const titleOnly = service.lookupProductTitleExact({
@@ -1092,7 +1105,7 @@ test('exact title authority compares canonical NFC even when stored title is dec
   });
   assert.equal(titleOnly.status, 'FOUND');
   assert.equal(titleOnly.product.product_id, 'p-bug');
-  assert.deepEqual(titleOnly.product.matched_languages, ['es']);
+  assert.deepEqual(titleOnly.product.matched_languages, []);
 });
 
 test('exact title authority uses the indexed title_key request path', () => {
@@ -1137,6 +1150,20 @@ test('lookupProductTitleExact ignores tombstoned products instead of creating am
   assert.deepEqual(result.candidates.map(row => row.product_id), ['p-day3']);
 });
 
+test('exact title authority caps ambiguity cohort and fails closed on overflow', () => {
+  const unified = service.resolveProductIdentityExact('Generic exact title overflow');
+  assert.equal(unified.status, 'IDENTITY_COHORT_OVERFLOW');
+  assert.equal(unified.product, null);
+  assert.deepEqual(unified.candidates, []);
+
+  const titleOnly = service.lookupProductTitleExact({
+    title: 'Generic exact title overflow',
+  });
+  assert.equal(titleOnly.status, 'AMBIGUITY_OVERFLOW');
+  assert.equal(titleOnly.product, null);
+  assert.deepEqual(titleOnly.candidates, []);
+});
+
 test('lookupProductTitleExact is cross-language exact and never lets language choose identity', () => {
   const found = service.lookupProductTitleExact({
     title: '  Коляска Joolz Day3  ',
@@ -1144,7 +1171,7 @@ test('lookupProductTitleExact is cross-language exact and never lets language ch
   assert.equal(found.status, 'FOUND');
   assert.equal(found.normalized_title, 'Коляска Joolz Day3');
   assert.equal(found.product.product_id, 'p-day3');
-  assert.deepEqual(found.product.matched_languages, ['uk']);
+  assert.deepEqual(found.product.matched_languages, []);
 
   const differentCase = service.lookupProductTitleExact({
     title: 'коляска Joolz Day3',

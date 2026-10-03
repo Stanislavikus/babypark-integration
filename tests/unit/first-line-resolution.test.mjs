@@ -160,6 +160,14 @@ function catalog(overrides = {}) {
           }],
         };
       }
+      if (raw === 'Overflow title') {
+        return {
+          catalog: { generation_id: 'g1' },
+          status: 'IDENTITY_COHORT_OVERFLOW',
+          product: null,
+          candidates: [],
+        };
+      }
       if (raw === 'Дубль') {
         return {
           catalog: { generation_id: 'g1' },
@@ -606,4 +614,24 @@ test('resolution cannot combine exact reads from different Chatwoot conversation
     error => error instanceof FirstLineExtractionError &&
       error.code === 'FIRST_LINE_EXTRACTION_TURN_INVALID'
   );
+});
+
+
+test('exact product identity cohort overflow becomes invalid authority without candidates', () => {
+  const result = resolveFirstLineExactReads({
+    extraction: extraction([
+      { kind: 'PRODUCT', turn_index: 1, quote: 'Overflow title', occurrence: 1 },
+    ]),
+    exactReads: exactReads(turn({ text: 'Overflow title' })),
+    knowledgeStore: knowledge(),
+    catalogService: catalog(),
+    nowUtc: NOW,
+  });
+
+  assert.equal(result.resolutions[0].authority.status, 'INVALID_AUTHORITY');
+  assert.equal(
+    result.resolutions[0].authority.reason,
+    'CATALOG_IDENTITY_COHORT_OVERFLOW'
+  );
+  assert.deepEqual(result.resolutions[0].authority.candidates, []);
 });
