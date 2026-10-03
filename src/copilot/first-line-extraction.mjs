@@ -219,10 +219,17 @@ function locateOccurrence(text, quote, occurrence) {
 }
 
 function isWordChar(value) {
-  return typeof value === 'string' && value.length > 0 && /[\p{L}\p{N}_]/u.test(value);
+  return typeof value === 'string' &&
+    value.length > 0 &&
+    /[\p{L}\p{N}\p{M}_]/u.test(value);
 }
 
-function hasSemanticBoundaries(text, quote, located) {
+function isProductIdentityChar(value) {
+  return isWordChar(value) ||
+    (typeof value === 'string' && value.length > 0 && /[-./]/u.test(value));
+}
+
+function hasSemanticBoundaries(text, quote, located, kind) {
   const first = quote[0] ?? '';
   const last = quote[quote.length - 1] ?? '';
   const before = located.start_utf16 > 0
@@ -232,8 +239,11 @@ function hasSemanticBoundaries(text, quote, located) {
     ? text[located.end_utf16]
     : '';
 
-  if (isWordChar(first) && isWordChar(before)) return false;
-  if (isWordChar(last) && isWordChar(after)) return false;
+  const boundaryChar = kind === 'PRODUCT'
+    ? isProductIdentityChar
+    : isWordChar;
+  if (boundaryChar(first) && boundaryChar(before)) return false;
+  if (boundaryChar(last) && boundaryChar(after)) return false;
   return true;
 }
 
@@ -317,7 +327,7 @@ export function certifyFirstLineExtraction({
         occurrence: span.occurrence,
       });
     }
-    if (!hasSemanticBoundaries(turn.text, span.quote, located)) {
+    if (!hasSemanticBoundaries(turn.text, span.quote, located, span.kind)) {
       fail('FIRST_LINE_EXTRACTION_QUOTE_UNCERTIFIED',
         'quoted span is embedded inside a larger token',
         {

@@ -399,3 +399,43 @@ test('turn certification rejects cross-conversation mixing', () => {
     ],
   }), 'FIRST_LINE_EXTRACTION_TURN_INVALID');
 });
+
+
+test('PRODUCT quote cannot be a partial SKU-like identifier segment', () => {
+  expectCode(() => certifyFirstLineExtraction({
+    extraction: extraction({
+      spans: [{
+        kind: 'PRODUCT',
+        turn_index: 1,
+        quote: 'DAY3',
+        occurrence: 1,
+      }],
+    }),
+    turns: [turn({ text: 'Скільки коштує DAY3-BLK?' })],
+  }), 'FIRST_LINE_EXTRACTION_QUOTE_UNCERTIFIED');
+
+  expectCode(() => certifyFirstLineExtraction({
+    extraction: extraction({
+      spans: [{
+        kind: 'PRODUCT',
+        turn_index: 1,
+        quote: 'ABC',
+        occurrence: 1,
+      }],
+    }),
+    turns: [turn({ text: 'Ціна ABC/123' })],
+  }), 'FIRST_LINE_EXTRACTION_QUOTE_UNCERTIFIED');
+
+  const full = certifyFirstLineExtraction({
+    extraction: extraction({
+      spans: [{
+        kind: 'PRODUCT',
+        turn_index: 1,
+        quote: 'DAY3-BLK',
+        occurrence: 1,
+      }],
+    }),
+    turns: [turn({ text: 'Скільки коштує DAY3-BLK?' })],
+  });
+  assert.equal(full.certified_spans[0].quote, 'DAY3-BLK');
+});
