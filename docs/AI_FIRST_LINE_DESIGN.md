@@ -1,12 +1,12 @@
-# BabyPark AI First Line — Frozen Design v0.5
+# BabyPark AI First Line — Frozen Design v0.6
 
 Status: FROZEN — blocker review complete
-Implementation: Slice A authorized via #53
-Repository baseline: main `e4b3989f852d5de4a868a6f72867b87cb64f8b2d`
+Implementation: Slice C authorized via #75; C1 in progress
+Repository baseline: main `b25fca317273526968b7413f25c47dc1303e3424`
 Chatwoot runtime verified: v4.18.0, `9f920b549c14491a4e587687a3eed5d21c6ccc7d`
 
 This document is the single normative repository source of truth for the first
-customer-facing BabyPark AI design. It incorporates the complete v0.5 design
+customer-facing BabyPark AI design. It incorporates the complete v0.6 design
 delta; no separate delta document is required to interpret it.
 
 It consolidates the research and review rounds that followed AgentBot safety
@@ -1024,6 +1024,150 @@ HUMAN / CATALOG_IDENTITY_COLLISION
 
 and internal collision candidates are not exposed to the customer.
 
+## 29.1 Logical episode boundary
+
+BabyPark logical episode state is independent of the Chatwoot conversation
+status machine. `pending`, `open` and `resolved` are transport/ownership state;
+they do not define semantic episode identity.
+
+A new actionable customer message starts a new episode when there is no active
+episode.
+
+An existing episode is continued only when the new customer message is proven
+to be semantically dependent on that episode, for example:
+- selecting one of the candidates BabyPark presented;
+- filling the explicitly requested missing slot;
+- invoking an explicitly supported deterministic follow-up that relies on
+  preserved stable slots, such as C25 `VARIANT_PRICE_LIST`.
+
+A standalone new query closes/replaces the prior logical episode and starts a
+new one. Its `clarification_prompts_sent` starts at zero and no old stable slot
+is inherited implicitly.
+
+HUMAN handoff and confirmed human takeover close the logical episode.
+
+A closed episode is never revived merely because Chatwoot later changes from
+`resolved` to `pending` or otherwise returns ownership to the AgentBot. A later
+customer message must satisfy the same new-episode/dependent-follow-up rules.
+
+Dynamic authority is never episode state. Preserved identifiers only constrain
+a later reread of current authority.
+
+## 29.2 Non-actionable acknowledgement
+
+`NON_ACTIONABLE_ACK` is an internal lifecycle disposition, not a fourth AI
+decision class. The public decision taxonomy remains exactly:
+`ANSWER / CLARIFY / HUMAN`.
+
+It is allowed only for a confidently pure social acknowledgement such as a
+brief thank-you/acknowledgement with:
+- no factual or operational request;
+- no unresolved contentful constraint;
+- no pending clarification that requires a customer value.
+
+For `NON_ACTIONABLE_ACK`:
+- emit no public AI message;
+- do not hand off;
+- do not call Chatwoot resolve;
+- terminalize the current work as no-public-action;
+- close the logical BabyPark episode.
+
+A social prefix does not suppress actionable content. For example,
+"Спасибо, а сколько стоит доставка?" remains an ordinary actionable request.
+
+If BabyPark already emitted its one CLARIFY prompt, a reply such as "ок" or
+"спасибо" that does not select an offered candidate or validly fill the
+requested slot does not resolve the clarification. The frozen outcome remains:
+`HUMAN / CLARIFY_EXHAUSTED`.
+
+If a message is not confidently a pure acknowledgement, do not classify it as
+`NON_ACTIONABLE_ACK`; continue ordinary extraction/latch/decision processing.
+
+Automatic Chatwoot pending-conversation cleanup/resolve is not part of Slice C
+v1. No causal "which message reopened the conversation" detector is required by
+the v1 critical path.
+
+## 29.3 C1 persisted episode state
+
+C1 uses a separate `episode.sqlite`. It is not a table in `copilot.sqlite`.
+
+`copilot.sqlite` remains webhook delivery/job execution and idempotency state.
+`episode.sqlite` is restart-durable logical conversation state needed across
+dependent customer turns.
+
+C1 persists only:
+- one active episode per `conversation_id`;
+- ordered `source_message_ids`;
+- a non-cascading per-conversation `max_message_id` watermark that prevents an
+  already-consumed or older Chatwoot message from starting a fresh episode after
+  the prior episode closed or was cleaned up;
+- allowlisted canonical stable slots/customer selections;
+- presented canonical candidate values, hard-bounded to at most 20 per clarification;
+- one requested missing slot;
+- `clarification_prompts_sent` constrained to 0 or 1;
+- lifecycle timestamps/reason;
+- an optimistic episode version for stale-writer rejection; every mutation requires an explicit positive `expectedVersion`.
+
+Canonical identity-shaped slots are domain-tagged and exact-form only:
+- `product_id`: `prod_<lowercase UUID shape>`;
+- `variant_id`: `var_<lowercase UUID shape>`;
+- `store_id`: `store_<lowercase UUID shape>`;
+- `brand_id`: `brand_<32 lowercase hex>`;
+- `category_id`: `cat_<32 lowercase hex>`.
+
+C1 shape validation prevents provider-native IDs, cross-domain IDs and free-form
+text from entering durable identity slots. It is not a substitute for current
+authority validation: C2 and later decision paths must still resolve/revalidate
+that an ID exists and is authoritative before using it.
+
+`conversation_id` and every `source_message_id` are canonical internal integers:
+C1 accepts only positive JavaScript safe integers and performs no `Number(...)`
+coercion from booleans, arrays, hexadecimal/exponent strings or whitespace-padded
+text.
+
+Public episode reads (`loadActive` and `getEpisode`) MUST return one committed
+SQLite snapshot. The episode head row, ordered source messages, stable slots and
+presented candidates MUST NOT be assembled from different commits. C1 therefore
+wraps each public multi-query read in one deferred read transaction; private
+`#readEpisode` remains transaction-neutral so write transactions can reuse it
+without nested `BEGIN`.
+
+Every EpisodeStore connection MUST explicitly set SQLite `busy_timeout=5000`.
+C1 MUST NOT rely on the Node `DatabaseSync` constructor's version-dependent
+`timeout` option: a concurrent writer that has already acquired a RESERVED lock
+must wait for the reader snapshot to release before COMMIT rather than fail
+immediately with `SQLITE_BUSY` on runtimes where that constructor option is not
+implemented.
+
+C1 never persists:
+- raw/normalized customer message bodies;
+- current/dynamic price facts or offer completeness; user-supplied normalized
+  money constraints (`min_price_minor`, `max_price_minor`, `currency`) are stable
+  episode constraints and are allowed;
+- commercial availability;
+- stock quantity;
+- catalog freshness / need flags;
+- resolved OperationalFact/CommercePolicy effects;
+- operational `now` evaluation;
+- Chatwoot reopen/status-causality markers;
+- resolver/vocabulary revision state such as `category_match_mode`;
+- candidate presentation labels or free-form summaries.
+
+Source message bodies required by later Slice C processing are reread from
+Chatwoot by `source_message_ids` and handled transiently. They are not copied
+into `episode.sqlite`.
+
+Closed episodes are immutable. Starting a later episode for the same Chatwoot
+conversation creates fresh state and never revives clarification budget,
+candidate state or stable slots from the closed episode. It also requires a
+strictly newer source message than the retained conversation watermark. Closed
+episode TTL cleanup MUST NOT cascade-delete or reset that watermark.
+
+The storage-policy class is rebuildable/fail-closed rather than business
+authority: loss of episode state may reduce continuity but must never permit the
+system to guess prior customer selections. If safe reconstruction from current
+Chatwoot history is unavailable, later routing fails closed.
+
 ## 30. Shortlist minimum anchor
 
 Price-only browse is forbidden.
@@ -1500,6 +1644,9 @@ Dashboard embedding is tested but direct UI works independently.
 No customer messages.
 
 ### Slice C — Website First Line
+- C1 separate restart-durable `episode.sqlite` with ID-only/canonical-selection state;
+- logical episode boundary independent of Chatwoot status;
+- internal `NON_ACTIONABLE_ACK` no-action disposition; no Chatwoot resolve;
 - episode state;
 - structured extraction;
 - ObjectiveConstraintLatch;
@@ -1565,5 +1712,16 @@ v0.5 resolves those blockers by:
 5. freezing the field-level authority split between Knowledge, CatalogService
    and Chatwoot support-hours configuration.
 
-Blocker review is complete. Slice A implementation issue #53 is authorized.
-This v0.5 file is the single normative design source; no delta document applies.
+v0.6 closes the pre-Slice-C lifecycle seams found during implementation review:
+1. separates Chatwoot conversation status from BabyPark logical episode identity;
+2. defines dependent follow-up versus standalone-new-query boundaries;
+3. introduces internal `NON_ACTIONABLE_ACK` without adding a fourth decision class;
+4. explicitly forbids v1 automatic Chatwoot resolve for acknowledgement/hygiene;
+5. freezes C1 `episode.sqlite` as ID/canonical-selection-only state with no raw
+   message body or dynamic authority persistence;
+6. requires optimistic stale-writer rejection and one active episode per
+   conversation.
+
+Slice C umbrella issue #75 is authorized. C1 implements the persisted state
+boundary only; extraction/continuation classification remains C2.
+This v0.6 file is the single normative design source; no delta document applies.
