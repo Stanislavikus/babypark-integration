@@ -414,17 +414,25 @@ test('PRODUCT quote cannot be a partial SKU-like identifier segment', () => {
     turns: [turn({ text: 'Скільки коштує DAY3-BLK?' })],
   }), 'FIRST_LINE_EXTRACTION_QUOTE_UNCERTIFIED');
 
-  expectCode(() => certifyFirstLineExtraction({
-    extraction: extraction({
-      spans: [{
-        kind: 'PRODUCT',
-        turn_index: 1,
-        quote: 'ABC',
-        occurrence: 1,
-      }],
-    }),
-    turns: [turn({ text: 'Ціна ABC/123' })],
-  }), 'FIRST_LINE_EXTRACTION_QUOTE_UNCERTIFIED');
+  for (const text of [
+    'Ціна ABC/123',
+    'Ціна ABC:123',
+    'Ціна ABC+123',
+    'Ціна ABC@123',
+    'Ціна ABC.123',
+  ]) {
+    expectCode(() => certifyFirstLineExtraction({
+      extraction: extraction({
+        spans: [{
+          kind: 'PRODUCT',
+          turn_index: 1,
+          quote: 'ABC',
+          occurrence: 1,
+        }],
+      }),
+      turns: [turn({ text })],
+    }), 'FIRST_LINE_EXTRACTION_QUOTE_UNCERTIFIED');
+  }
 
   const full = certifyFirstLineExtraction({
     extraction: extraction({
@@ -438,4 +446,27 @@ test('PRODUCT quote cannot be a partial SKU-like identifier segment', () => {
     turns: [turn({ text: 'Скільки коштує DAY3-BLK?' })],
   });
   assert.equal(full.certified_spans[0].quote, 'DAY3-BLK');
+});
+
+
+test('PRODUCT quote accepts clear outer punctuation delimiters', () => {
+  for (const text of [
+    'Ціна Joolz Day3?',
+    'Ціна "Joolz Day3"',
+    'Joolz Day3, скільки коштує?',
+    'Модель Joolz Day3: ціна',
+  ]) {
+    const result = certifyFirstLineExtraction({
+      extraction: extraction({
+        spans: [{
+          kind: 'PRODUCT',
+          turn_index: 1,
+          quote: 'Joolz Day3',
+          occurrence: 1,
+        }],
+      }),
+      turns: [turn({ text })],
+    });
+    assert.equal(result.certified_spans[0].quote, 'Joolz Day3');
+  }
 });

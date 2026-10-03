@@ -224,26 +224,37 @@ function isWordChar(value) {
     /[\p{L}\p{N}\p{M}_]/u.test(value);
 }
 
-function isProductIdentityChar(value) {
-  return isWordChar(value) ||
-    (typeof value === 'string' && value.length > 0 && /[-./]/u.test(value));
+function isWhitespace(value) {
+  return typeof value === 'string' && value.length > 0 && /\s/u.test(value);
+}
+
+function productOuterBoundary(text, adjacentIndex, outwardStep) {
+  if (adjacentIndex < 0 || adjacentIndex >= text.length) return true;
+  const adjacent = text[adjacentIndex];
+  if (isWhitespace(adjacent)) return true;
+  if (isWordChar(adjacent)) return false;
+
+  const beyondIndex = adjacentIndex + outwardStep;
+  if (beyondIndex < 0 || beyondIndex >= text.length) return true;
+  const beyond = text[beyondIndex];
+  return isWhitespace(beyond) || !isWordChar(beyond);
 }
 
 function hasSemanticBoundaries(text, quote, located, kind) {
   const first = quote[0] ?? '';
   const last = quote[quote.length - 1] ?? '';
-  const before = located.start_utf16 > 0
-    ? text[located.start_utf16 - 1]
-    : '';
-  const after = located.end_utf16 < text.length
-    ? text[located.end_utf16]
-    : '';
+  const beforeIndex = located.start_utf16 - 1;
+  const afterIndex = located.end_utf16;
+  const before = beforeIndex >= 0 ? text[beforeIndex] : '';
+  const after = afterIndex < text.length ? text[afterIndex] : '';
 
-  const boundaryChar = kind === 'PRODUCT'
-    ? isProductIdentityChar
-    : isWordChar;
-  if (boundaryChar(first) && boundaryChar(before)) return false;
-  if (boundaryChar(last) && boundaryChar(after)) return false;
+  if (kind === 'PRODUCT') {
+    return productOuterBoundary(text, beforeIndex, -1) &&
+      productOuterBoundary(text, afterIndex, 1);
+  }
+
+  if (isWordChar(first) && isWordChar(before)) return false;
+  if (isWordChar(last) && isWordChar(after)) return false;
   return true;
 }
 
