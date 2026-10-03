@@ -457,33 +457,33 @@
       "status": "PLANNED",
       "scope": "file",
       "location": "/var/lib/babypark-integration/episode.sqlite",
-      "owner": "BabyPark First Line episode runtime",
-      "purpose": "Restart-durable logical episode state: canonical stable selections, source message IDs, non-cascading per-conversation consumed-message watermark, presented canonical candidates, requested slot and one-prompt clarification budget.",
-      "state_class": "rebuildable",
+      "owner": "BabyPark First Line semantic runtime",
+      "purpose": "Durable Event Ledger v0.7 semantic state: conversation streams/events and stream revisions, episode/open-turn projections, canonical semantic provenance, clarification reservations, and public-action/outbox recovery metadata. No routine raw customer body.",
+      "state_class": "durable",
       "thresholds": {
         "metric": "rows",
-        "basis": "initial Slice C pilot budget; closed-episode cleanup is not enabled in C1",
-        "expected": 10000,
-        "warning": 25000,
-        "critical": 50000
+        "basis": "initial Website First Line pilot budget across event, episode and public-action tables; no automatic file-level cleanup",
+        "expected": 50000,
+        "warning": 100000,
+        "critical": 250000
       },
       "retention": {
-        "mode": "closed_episode_ttl_planned",
-        "ttl_days": 30
+        "mode": "durable_semantic_state_reviewed_compaction_only",
+        "ttl_days": null
       },
       "cleanup": {
         "automatic": false,
-        "mechanism": "No C1 automatic cleanup. A later reviewed cleanup may delete only closed episodes after dry-run; active episodes are never age-deleted. conversation_message_watermarks are excluded from closed-episode TTL cleanup until a separate reviewed conversation-retirement rule exists.",
+        "mechanism": "No automatic file-level cleanup. Any future event/closed-episode compaction requires a reviewed dry-run rule that preserves unique source-event replay fences, active episode state, stream revision semantics, and nonterminal/uncertain public actions.",
         "dry_run_required": true,
-        "delete_guard": "Never delete an active episode or reset/delete a consumed-message watermark as part of episode TTL cleanup. Loss of episode state must fail closed rather than inventing prior selections or clarification history."
+        "delete_guard": "Never delete or reset live/nonterminal public actions, active episode state, or source-event identity needed for dedupe/reconciliation. Never infer ALREADY_KNOWN from a scan highwater."
       },
-      "recovery": "State contains no business authority or raw customer body. If unavailable, do not reconstruct selections from guesswork; later Slice C logic may reread Chatwoot source_message_ids and otherwise fail closed/handoff.",
+      "recovery": "Restore from verified durable backup. If unavailable or corrupt, fail First Line closed and hand off; never guess prior semantic selections, event topology, clarification budget, or uncertain send outcome.",
       "backup": {
-        "required": false,
-        "off_host": false,
-        "status": "NOT_REQUIRED_REBUILDABLE_FAIL_CLOSED"
+        "required": true,
+        "off_host": true,
+        "status": "REQUIRED_NOT_CONFIGURED"
       },
-      "pii": "conversation_and_message_identifiers_plus_canonical_customer_selections_no_raw_message_body"
+      "pii": "conversation_and_source_event_identifiers_plus_canonical_customer_selections_and_action_metadata_no_raw_message_body"
     },
     {
       "id": "copilot_jobs",

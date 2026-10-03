@@ -1,6 +1,6 @@
-# BabyPark AI First Line — Acceptance Corpus v0.6
+# BabyPark AI First Line — Acceptance Corpus v0.7
 
-Status: FROZEN — blocker review complete
+Status: FROZEN — Event Ledger v0.7 architecture acceptance freeze
 Companion: `docs/AI_FIRST_LINE_DESIGN.md`
 Repository baseline used for research: `e4b3989f852d5de4a868a6f72867b87cb64f8b2d`
 
@@ -547,7 +547,7 @@ Expected:
 - `conversation_id` / `source_message_id` accept only positive JavaScript safe integers;
 - no coercive `Number(...)` conversion occurs.
 
-### Q18 — consumed-message watermark survives episode closure and cleanup
+### Q18 — C1 historical: consumed-message watermark survives episode closure and cleanup
 Conversation 700 consumes source message 3, uses its one CLARIFY prompt, then closes.
 Later attempts to begin a new episode with message 3 or any lower message ID arrive
 with a fresh webhook delivery identity.
@@ -559,6 +559,150 @@ Expected:
 - appending a newer source message advances the same conversation watermark;
 - deleting closed episode rows in a cleanup simulation does not delete/reset the watermark;
 - a later begin at or below that retained watermark remains rejected.
+
+### Q19 — late lower Chatwoot ID appends as a later BabyPark event
+A source transaction for Chatwoot message 100 remains uncommitted while message
+101 commits and is accepted first.
+
+Expected:
+- 101 is accepted with the next local `event_seq`;
+- later committed 100 is still exact-read even if any scan hint is already above 100;
+- if its unique source key is absent, 100 is appended with a later local `event_seq`;
+- no renumbering/back-insertion occurs;
+- topology reasoning uses accepted `event_seq`, not numeric source-ID comparison.
+
+### Q20 — high-water hints never suppress an unseen webhook target
+Set a scan hint/highwater above source message 100 without inserting 100 into the
+Conversation Event Ledger. Deliver/retry a webhook target for 100.
+
+Expected:
+- no `target <= highwater => ALREADY_KNOWN` shortcut exists;
+- exact source lookup executes;
+- ledger existence by unique source key is the only duplicate test;
+- absent source key is inserted and increments `stream_revision`.
+
+### Q21 — final authorizing snapshot catches late lower source IDs
+Plan an action from a stream containing source 101. Before final action gating,
+a previously uncommitted source message 100 becomes visible and contains a
+constraint that changes the decision.
+
+Expected:
+- one Chatwoot whole-conversation authorizing query uses
+  `after=0,before=2147483648,filter_internal_messages=true`;
+- the snapshot contains both visible 100 and 101 when total public/non-activity
+  rows are below 1000;
+- unseen 100 is ingested and increments `stream_revision`;
+- prepared action becomes STALE and performs zero public POSTs;
+- replanning includes the late constraint.
+
+### Q22 — 1000-row authorizing snapshot fails closed
+The authorizing query returns exactly 1000 public/non-activity rows.
+
+Expected:
+- result is `HISTORY_UNPROVABLE`;
+- no recursive/multi-query scan may authorize the public side effect;
+- no AI POST occurs;
+- routing fails open to HUMAN under the reviewed policy.
+
+### Q23 — unknown public automation row is default-deny
+Conversation topology contains a public outgoing Chatwoot automation message with
+`sender=null`, between customer events.
+
+Expected:
+- row is not silently treated as neutral;
+- continuity/ownership becomes unproven;
+- no append/replace/ACK decision assumes the row is a BabyPark answer;
+- no AI public action is authorized from an ambiguous topology.
+
+### Q24 — covered source rows must still exist and not be deleted
+An action was prepared using source messages that were valid during planning.
+Before POST, an operator deletes one covered message in Chatwoot.
+
+Expected:
+- final authorizing snapshot/reread sees the covered row as deleted or otherwise
+  invalid for the action basis;
+- action is not sent;
+- deleted replacement text is never fed to extraction.
+
+### Q25 — exactly one action for one stream revision
+Run duplicate webhook/job/planner attempts against the same
+`(stream_id, prepared_stream_revision)`.
+
+Expected:
+- storage permits at most one action row for that pair across all states;
+- same-revision retry reuses the existing action;
+- clarification budget/candidates are reserved at most once;
+- at most one public POST can result.
+
+### Q26 — one live public action per stream
+An action is PREPARED or GATING and a newer stream revision requires replanning.
+
+Expected:
+- at most one PREPARED/GATING/SENDING/UNCERTAIN-like action exists for the stream;
+- an unsent PREPARED/GATING action may be atomically marked stale/cancelled and
+  replaced in one `episode.sqlite` transaction;
+- relay claim and replacement race through CAS/`BEGIN IMMEDIATE`, never two sends.
+
+### Q27 — SENDING/UNCERTAIN blocks a newer AI action
+An older action has reached SENDING or UNCERTAIN when a newer customer event is
+accepted.
+
+Expected:
+- no second public AI action can be prepared/sent concurrently;
+- old send is reconciled first;
+- unresolved outcome remains UNCERTAIN and hands off to human;
+- absence of a Chatwoot `source_id` tag does not prove the old POST did not commit.
+
+### Q28 — clarification reservation is crash-safe
+Prepare a CLARIFY action.
+
+Expected:
+- one-prompt budget, requested slot, canonical candidates and PREPARED action are
+  committed atomically before any external send;
+- crash before SENDING leaves a recoverable durable action;
+- safe cancellation before SENDING may release only that unsent reservation;
+- after SENDING the budget remains consumed even if outcome is uncertain;
+- no execution path emits a second CLARIFY for the episode.
+
+### Q29 — durable action survives loss of copilot.sqlite
+Commit PREPARED/GATING action state in `episode.sqlite`, then simulate loss or
+recreation of `copilot.sqlite`.
+
+Expected:
+- PublicActionRelay discovers/reclaims the durable nonterminal action from
+  `episode.sqlite`;
+- the action either confirms, stales/cancels safely, or hands off by deadline;
+- no accepted action is orphaned merely because its originating input job vanished.
+
+### Q30 — semantic commit precedes copilot terminalization
+Crash at each boundary of:
+claim input job -> idempotent episode/event/action commit -> finish input job.
+
+Expected:
+- crash before semantic commit leaves no false domain state and job can retry;
+- crash after semantic commit but before finish causes retry to observe the same
+  unique source/action state idempotently;
+- copilot job is never terminalized before the corresponding durable domain
+  mutation commits.
+
+### Q31 — local event order is independent of Chatwoot created_at/id ordering
+Return Chatwoot rows in a created_at order different from source-ID numeric order.
+
+Expected:
+- API array order never defines BabyPark event order;
+- existing events keep immutable `event_seq`;
+- unseen authoritative rows append in acceptance order;
+- source IDs remain unique identity only.
+
+### Q32 — C1 watermark is historical evidence, not v0.7 runtime authority
+Run the merged C1 Q18 tests unchanged.
+
+Expected:
+- C1 implementation still satisfies its reviewed pre-production invariants;
+- v0.7 runtime C2a does not use `conversation_message_watermarks.max_message_id`
+  as dedupe, completeness or chronology truth;
+- schema-v2 Event Ledger unique source keys + accepted `event_seq` supersede that
+  runtime role before production activation.
 
 ## I. Handoff vectors
 
@@ -832,5 +976,5 @@ provider-native Drupal/Magento ID rather than canonical `store_id`.
 
 Expected: reject/block deployment.
 
-The v0.6 acceptance corpus is frozen for Slice C umbrella issue #75. C1 implements only the persisted episode-state boundary.
+The v0.7 acceptance corpus is frozen for Slice C umbrella issue #75. C1 remains merged pre-production evidence; C2a now owns the Event Ledger + durable public-action runtime foundation.
 

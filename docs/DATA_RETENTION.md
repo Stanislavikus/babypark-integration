@@ -129,39 +129,50 @@ non-mutating plan/dry-run by default and requires explicit `apply: true` to dele
 AI trace storage is intended for redacted evaluation/tool/latency metadata.
 It is not created by this foundation slice.
 
-## Planned Slice C episode state
+## Planned Slice C semantic conversation state
 
-`episode.sqlite` is separate from `copilot.sqlite`.
+`episode.sqlite v2` is separate from `copilot.sqlite`.
 
-It persists restart-durable logical episode continuity only:
-- conversation and episode identifiers;
-- ordered Chatwoot source message IDs;
-- a per-conversation maximum consumed message ID watermark;
-- allowlisted canonical stable customer selections;
-- canonical presented-candidate values;
-- requested slot;
-- one-prompt clarification budget;
-- lifecycle/version metadata.
+Under Event Ledger v0.7 it is no longer merely rebuildable episode continuity.
+It is **durable semantic conversation state** because it may contain accepted
+conversation-event topology, stream revisions, semantic provenance, clarification
+reservations and nonterminal public-action/outbox state whose loss could orphan or
+duplicate customer-visible work.
 
-Canonical identity slots are shape-validated by BabyPark domain (`prod_`, `var_`,
-`store_`, `brand_`, `cat_`) before persistence. Chatwoot conversation/message IDs
-must already be positive JavaScript safe integers; C1 performs no coercive parsing.
+It persists bounded metadata only:
+- provider/BabyPark conversation-stream identifiers;
+- unique source message/event identifiers;
+- immutable local accepted `event_seq`;
+- `stream_revision` and reconciliation hints;
+- logical episode/open-turn projections;
+- allowlisted canonical stable customer selections with provenance;
+- canonical presented candidates/requested slot/clarification reservation;
+- public-action lifecycle/lease/deadline metadata and canonical action IDs.
 
-It never stores routine raw/normalized customer message bodies, candidate display
-labels, current prices, stock quantities, freshness state, resolved policy facts
-or Chatwoot reopen-causality markers.
+It MUST NOT routinely persist:
+- raw or normalized customer body;
+- content-derived message hash/digest;
+- customer email/phone/avatar;
+- attachment URLs or arbitrary Chatwoot payloads;
+- current prices/stock/freshness or resolved dynamic policy/operational effects.
 
-The storage-policy class is `rebuildable`: this is not business authority.
-If episode state is lost, BabyPark must not guess prior selections. Later Slice C
-logic may reread referenced Chatwoot messages where safely available and otherwise
-fails closed.
+Chatwoot remains source authority for message body. Text is exact-reread and
+handled transiently only when semantic processing requires it.
 
-C1 implements no automatic cleanup. A later reviewed cleanup may apply a TTL only
-to closed episodes with a dry-run; active episodes are never deleted by age.
-The per-conversation consumed-message watermark is deliberately non-cascading and
-is not removed by closed-episode TTL cleanup, otherwise an old webhook/message
-could regain a fresh clarification budget after cleanup. Watermark retirement
-requires a separate reviewed conversation-retirement rule.
+The merged C1 `conversation_message_watermarks` invariant remains historical
+pre-production evidence only. Schema-v2 runtime dedupe/replay truth is unique
+source-event existence; source ID high-water/cursor values are scan optimization
+hints and may not suppress a late lower source ID.
+
+Automatic file-level cleanup is forbidden. Future event compaction/retirement
+requires a reviewed rule that preserves source-event uniqueness/replay fences,
+active episode/action recovery and the latest durable topology needed for safe
+returning-customer handling.
+
+Because this DB is durable semantic truth, a verified backup is required before
+production activation. If it is unavailable/corrupt, First Line must fail closed;
+it must not guess prior state or silently reconstruct unresolved public-action
+outcomes.
 
 Before real-customer shadow mode:
 - privacy/legal gate;
