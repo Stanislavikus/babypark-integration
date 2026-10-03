@@ -267,6 +267,12 @@ function isWhitespace(value) {
   return typeof value === 'string' && value.length > 0 && /\s/u.test(value);
 }
 
+function isFormatChar(value) {
+  return typeof value === 'string' &&
+    value.length > 0 &&
+    /\p{Cf}/u.test(value);
+}
+
 function previousCodePoint(text, endExclusive) {
   if (endExclusive <= 0) return null;
   let start = endExclusive - 1;
@@ -315,19 +321,42 @@ function productRightBoundary(text, endUtf16) {
   return true;
 }
 
-function hasSemanticBoundaries(text, quote, located, kind) {
-  const beforeIndex = located.start_utf16 - 1;
-  const afterIndex = located.end_utf16;
-  const before = beforeIndex >= 0 ? previousCodePoint(text, located.start_utf16)?.value ?? '' : '';
-  const after = afterIndex < text.length ? nextCodePoint(text, afterIndex)?.value ?? '' : '';
+function nonProductLeftBoundary(text, startUtf16) {
+  let end = startUtf16;
+  while (end > 0) {
+    const current = previousCodePoint(text, end);
+    if (!current) return true;
+    if (isFormatChar(current.value)) {
+      end = current.nextIndex;
+      continue;
+    }
+    return !isWordChar(current.value);
+  }
+  return true;
+}
 
+function nonProductRightBoundary(text, endUtf16) {
+  let start = endUtf16;
+  while (start < text.length) {
+    const current = nextCodePoint(text, start);
+    if (!current) return true;
+    if (isFormatChar(current.value)) {
+      start = current.nextIndex;
+      continue;
+    }
+    return !isWordChar(current.value);
+  }
+  return true;
+}
+
+function hasSemanticBoundaries(text, quote, located, kind) {
   if (kind === 'PRODUCT') {
     return productLeftBoundary(text, located.start_utf16) &&
       productRightBoundary(text, located.end_utf16);
   }
 
-  if (isWordChar(before) || isWordChar(after)) return false;
-  return true;
+  return nonProductLeftBoundary(text, located.start_utf16) &&
+    nonProductRightBoundary(text, located.end_utf16);
 }
 
 export function transientTurnFromExactRead(turnIndex, exactRead) {

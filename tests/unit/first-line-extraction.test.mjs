@@ -517,6 +517,49 @@ test('symbol-ended non-PRODUCT spans cannot be embedded in word tokens', () => {
   assert.equal(standalone.certified_spans[0].quote, '3000₴');
 });
 
+test('join controls and format characters cannot hide word adjacency', () => {
+  for (const [kind, text, quote] of [
+    ['BRAND', 'Fake‍Cybex', 'Cybex'],
+    ['BRAND', 'Cybex‍Fake', 'Cybex'],
+    ['CATEGORY', 'Fake⁠stroller', 'stroller'],
+    ['STORE', 'store‌Fake', 'store'],
+    ['MONEY', 'до 3000₴‍abc', '3000₴'],
+    ['MONEY', 'abc‍$3000', '$3000'],
+  ]) {
+    expectCode(() => certifyFirstLineExtraction({
+      extraction: extraction({
+        spans: [{
+          kind,
+          turn_index: 1,
+          quote,
+          occurrence: 1,
+        }],
+      }),
+      turns: [turn({ text })],
+    }), 'FIRST_LINE_EXTRACTION_QUOTE_UNCERTIFIED');
+  }
+
+  for (const text of [
+    'до 3000₴, будь ласка',
+    'слово,‍ Cybex',
+  ]) {
+    const quote = text.includes('Cybex') ? 'Cybex' : '3000₴';
+    const kind = text.includes('Cybex') ? 'BRAND' : 'MONEY';
+    const result = certifyFirstLineExtraction({
+      extraction: extraction({
+        spans: [{
+          kind,
+          turn_index: 1,
+          quote,
+          occurrence: 1,
+        }],
+      }),
+      turns: [turn({ text })],
+    });
+    assert.equal(result.certified_spans[0].quote, quote);
+  }
+});
+
 test('non-PRODUCT quote endpoints use full Unicode code points', () => {
   for (const kind of ['BRAND', 'CATEGORY', 'STORE']) {
     expectCode(() => certifyFirstLineExtraction({
