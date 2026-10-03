@@ -517,6 +517,51 @@ test('symbol-ended non-PRODUCT spans cannot be embedded in word tokens', () => {
   assert.equal(standalone.certified_spans[0].quote, '3000₴');
 });
 
+test('vocabulary spans enforce downstream 160-unit resolver bound', () => {
+  const exactly160 = 'A'.repeat(160);
+  const accepted = certifyFirstLineExtraction({
+    extraction: extraction({
+      spans: [{
+        kind: 'BRAND',
+        turn_index: 1,
+        quote: exactly160,
+        occurrence: 1,
+      }],
+    }),
+    turns: [turn({ text: exactly160 })],
+  });
+  assert.equal(accepted.certified_spans[0].quote.length, 160);
+
+  for (const kind of ['CATEGORY', 'BRAND', 'STORE']) {
+    const tooLong = 'A'.repeat(161);
+    expectCode(() => certifyFirstLineExtraction({
+      extraction: extraction({
+        spans: [{
+          kind,
+          turn_index: 1,
+          quote: tooLong,
+          occurrence: 1,
+        }],
+      }),
+      turns: [turn({ text: tooLong })],
+    }), 'FIRST_LINE_EXTRACTION_VALUE_INVALID');
+  }
+
+  const productQuote = 'P'.repeat(200);
+  const product = certifyFirstLineExtraction({
+    extraction: extraction({
+      spans: [{
+        kind: 'PRODUCT',
+        turn_index: 1,
+        quote: productQuote,
+        occurrence: 1,
+      }],
+    }),
+    turns: [turn({ text: productQuote })],
+  });
+  assert.equal(product.certified_spans[0].quote.length, 200);
+});
+
 test('join controls and format characters cannot hide word adjacency', () => {
   for (const [kind, text, quote] of [
     ['BRAND', 'Fake‍Cybex', 'Cybex'],
@@ -525,6 +570,9 @@ test('join controls and format characters cannot hide word adjacency', () => {
     ['STORE', 'store‌Fake', 'store'],
     ['MONEY', 'до 3000₴‍abc', '3000₴'],
     ['MONEY', 'abc‍$3000', '$3000'],
+    ['BRAND', 'Fake‿Cybex', 'Cybex'],
+    ['BRAND', 'Cybex⁀Fake', 'Cybex'],
+    ['CATEGORY', 'Fake﹍stroller', 'stroller'],
   ]) {
     expectCode(() => certifyFirstLineExtraction({
       extraction: extraction({

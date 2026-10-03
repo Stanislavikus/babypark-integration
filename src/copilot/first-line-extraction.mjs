@@ -7,6 +7,7 @@ export const FIRST_LINE_INTENT_SCHEMA_VERSION = 'bp.first-line.intent/1';
 const MAX_INTENT_HINT_CHARS = 64;
 const MAX_EXTRACTION_SPANS = 24;
 const MAX_QUOTE_CHARS = 256;
+const MAX_VOCABULARY_QUOTE_CHARS = 160;
 const MAX_TRANSIENT_TURN_CHARS = 20_000;
 const MAX_OCCURRENCE = 32;
 
@@ -112,7 +113,12 @@ function normalizeSpan(span, index) {
     fail('FIRST_LINE_EXTRACTION_VALUE_INVALID', 'occurrence exceeds bound', { index, max: MAX_OCCURRENCE });
   }
 
-  const quote = boundedText(span.quote, 'quote', MAX_QUOTE_CHARS, {
+  const quoteMax = (
+    span.kind === 'CATEGORY' ||
+    span.kind === 'BRAND' ||
+    span.kind === 'STORE'
+  ) ? MAX_VOCABULARY_QUOTE_CHARS : MAX_QUOTE_CHARS;
+  const quote = boundedText(span.quote, 'quote', quoteMax, {
     allowLayoutWhitespace: true,
   });
   if (quote.trim() === '') {
@@ -260,7 +266,7 @@ function locateOccurrence(text, quote, occurrence) {
 function isWordChar(value) {
   return typeof value === 'string' &&
     value.length > 0 &&
-    /[\p{L}\p{N}\p{M}_]/u.test(value);
+    /[\p{L}\p{N}\p{M}\p{Pc}]/u.test(value);
 }
 
 function isWhitespace(value) {
