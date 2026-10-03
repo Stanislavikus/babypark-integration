@@ -283,6 +283,14 @@ function isFormatChar(value) {
     /\p{Cf}/u.test(value);
 }
 
+function isClearProductDelimiter(value) {
+  return typeof value === 'string' &&
+    value.length > 0 &&
+    (/[\p{Ps}\p{Pe}\p{Pi}\p{Pf}]/u.test(value) ||
+      value === '"' ||
+      value === "'");
+}
+
 function previousCodePoint(text, endExclusive) {
   if (endExclusive <= 0) return null;
   let start = endExclusive - 1;
@@ -313,6 +321,7 @@ function productLeftBoundary(text, startUtf16) {
     const current = previousCodePoint(text, end);
     if (!current) return true;
     if (isWhitespace(current.value)) return true;
+    if (isClearProductDelimiter(current.value)) return true;
     if (isWordChar(current.value)) return false;
     end = current.nextIndex;
   }
@@ -325,6 +334,7 @@ function productRightBoundary(text, endUtf16) {
     const current = nextCodePoint(text, start);
     if (!current) return true;
     if (isWhitespace(current.value)) return true;
+    if (isClearProductDelimiter(current.value)) return true;
     if (isWordChar(current.value)) return false;
     start = current.nextIndex;
   }

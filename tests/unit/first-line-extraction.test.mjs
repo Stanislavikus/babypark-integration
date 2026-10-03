@@ -742,6 +742,53 @@ test('PRODUCT boundary inspects adjacent astral Unicode letters as full code poi
   assert.equal(standalone.certified_spans[0].quote, 'ABC');
 });
 
+test('PRODUCT grouping and quotation punctuation are hard semantic delimiters', () => {
+  for (const text of [
+    'Хочу(Joolz Day3)',
+    'Joolz Day3(чорна)',
+    'Хочу[Joolz Day3]',
+    '«Joolz Day3»',
+    'Хочу“Joolz Day3”',
+    'Хочу"Joolz Day3"',
+    "Хочу'Joolz Day3'",
+  ]) {
+    const result = certifyFirstLineExtraction({
+      extraction: extraction({
+        spans: [{
+          kind: 'PRODUCT',
+          turn_index: 1,
+          quote: 'Joolz Day3',
+          occurrence: 1,
+        }],
+      }),
+      turns: [turn({ text })],
+    });
+    assert.equal(result.certified_spans[0].quote, 'Joolz Day3');
+  }
+
+  for (const text of [
+    'foo##ABC',
+    'ABC##bar',
+    'ABC/123',
+    'ABC:123',
+    'ABC+123',
+    'ABC@123',
+    'ABC.123',
+  ]) {
+    expectCode(() => certifyFirstLineExtraction({
+      extraction: extraction({
+        spans: [{
+          kind: 'PRODUCT',
+          turn_index: 1,
+          quote: 'ABC',
+          occurrence: 1,
+        }],
+      }),
+      turns: [turn({ text })],
+    }), 'FIRST_LINE_EXTRACTION_QUOTE_UNCERTIFIED');
+  }
+});
+
 test('PRODUCT quote accepts clear outer punctuation delimiters', () => {
   for (const text of [
     'Ціна Joolz Day3?',
