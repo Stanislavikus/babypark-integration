@@ -485,6 +485,34 @@ test('PRODUCT quote cannot be a partial SKU-like identifier segment', () => {
 });
 
 
+test('non-PRODUCT quote endpoints use full Unicode code points', () => {
+  for (const kind of ['BRAND', 'CATEGORY', 'STORE']) {
+    expectCode(() => certifyFirstLineExtraction({
+      extraction: extraction({
+        spans: [{
+          kind,
+          turn_index: 1,
+          quote: '𝐀Brand',
+          occurrence: 1,
+        }],
+      }),
+      turns: [turn({ text: 'X𝐀Brand' })],
+    }), 'FIRST_LINE_EXTRACTION_QUOTE_UNCERTIFIED');
+
+    expectCode(() => certifyFirstLineExtraction({
+      extraction: extraction({
+        spans: [{
+          kind,
+          turn_index: 1,
+          quote: 'Brand𝐁',
+          occurrence: 1,
+        }],
+      }),
+      turns: [turn({ text: 'Brand𝐁X' })],
+    }), 'FIRST_LINE_EXTRACTION_QUOTE_UNCERTIFIED');
+  }
+});
+
 test('PRODUCT boundary inspects adjacent astral Unicode letters as full code points', () => {
   for (const text of [
     'Ціна 𝐀ABC',

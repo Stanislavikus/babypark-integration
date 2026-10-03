@@ -625,6 +625,18 @@ function buildFixture(storageDir) {
     null,
     '/en/sku-title-collision'
   );
+  builder.db.prepare(
+    'INSERT INTO product_text(' +
+    'product_id,language,title,short_description,description,url' +
+    ') VALUES(?,?,?,?,?,?)'
+  ).run(
+    'p-bug',
+    'es',
+    'Café Bugaboo',
+    null,
+    null,
+    '/es/cafe-bugaboo'
+  );
 
   for (const layer of [
     'taxonomy',
@@ -1059,6 +1071,21 @@ test('resolveProductIdentityExact combines exact SKU/title in one deterministic 
   assert.equal(missing.status, 'NOT_FOUND');
   assert.deepEqual(missing.candidates, []);
   assert.equal(missing.catalog.generation_id, 'svc1');
+});
+
+test('exact title authority compares canonical NFC even when stored title is decomposed', () => {
+  const unified = service.resolveProductIdentityExact('Café Bugaboo');
+  assert.equal(unified.status, 'FOUND');
+  assert.equal(unified.product.product_id, 'p-bug');
+  assert.deepEqual(unified.product.matched_languages, ['es']);
+  assert.deepEqual(unified.product.matched_by, ['EXACT_TITLE']);
+
+  const titleOnly = service.lookupProductTitleExact({
+    title: 'Café Bugaboo',
+  });
+  assert.equal(titleOnly.status, 'FOUND');
+  assert.equal(titleOnly.product.product_id, 'p-bug');
+  assert.deepEqual(titleOnly.product.matched_languages, ['es']);
 });
 
 test('exact product identity excludes tombstoned product and variant rows', () => {

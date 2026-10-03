@@ -1150,6 +1150,38 @@ export class CatalogService {
     }
     this.reader = reader;
     this.defaultLanguage = validateLanguage(defaultLanguage);
+    this.exactTitleIndexCache = null;
+  }
+
+  exactTitleRows(db, generationId, normalizedTitle) {
+    if (
+      !this.exactTitleIndexCache ||
+      this.exactTitleIndexCache.generationId !== generationId
+    ) {
+      const index = new Map();
+      const rows = db.prepare(
+        'SELECT pt.product_id,pt.language,pt.title FROM product_text pt ' +
+        'JOIN products p ON p.product_id=pt.product_id ' +
+        "WHERE p.lifecycle='active' ORDER BY pt.product_id,pt.language"
+      ).all();
+
+      for (const row of rows) {
+        const key = row.title.normalize('NFC').trim();
+        const existing = index.get(key);
+        if (existing) {
+          existing.push(row);
+        } else {
+          index.set(key, [row]);
+        }
+      }
+
+      this.exactTitleIndexCache = {
+        generationId,
+        index,
+      };
+    }
+
+    return this.exactTitleIndexCache.index.get(normalizedTitle) ?? [];
   }
 
   status() {
@@ -1808,6 +1840,7 @@ export class CatalogService {
           'product identity phrase must be a non-empty string'
         );
       }
+      const catalog = catalogSnapshot(db);
       const key = skuKey(raw);
 
       const skuRow = db.prepare(
@@ -1816,12 +1849,11 @@ export class CatalogService {
         "WHERE v.sku_key=? AND v.lifecycle='active' AND p.lifecycle='active'"
       ).get(key);
 
-      const titleRows = db.prepare(
-        'SELECT pt.product_id,pt.language,pt.title FROM product_text pt ' +
-        'JOIN products p ON p.product_id=pt.product_id ' +
-        "WHERE pt.title=? AND p.lifecycle='active' " +
-        'ORDER BY pt.product_id,pt.language'
-      ).all(normalizedTitle);
+      const titleRows = this.exactTitleRows(
+        db,
+        catalog.generation_id,
+        normalizedTitle
+      );
 
       const byProduct = new Map();
       function candidate(productId) {
@@ -1868,7 +1900,7 @@ export class CatalogService {
         titleRows.some(row => row.product_id !== skuRow.product_id);
 
       return {
-        catalog: catalogSnapshot(db),
+        catalog,
         status: skuTitleConflict
           ? 'IDENTITY_COLLISION'
           : candidates.length === 0
@@ -1899,12 +1931,12 @@ export class CatalogService {
         );
       }
 
-      const rows = db.prepare(
-        'SELECT pt.product_id,pt.language,pt.title FROM product_text pt ' +
-        'JOIN products p ON p.product_id=pt.product_id ' +
-        "WHERE pt.title=? AND p.lifecycle='active' " +
-        'ORDER BY pt.product_id,pt.language'
-      ).all(normalizedTitle);
+      const catalog = catalogSnapshot(db);
+      const rows = this.exactTitleRows(
+        db,
+        catalog.generation_id,
+        normalizedTitle
+      );
 
       const grouped = new Map();
       for (const row of rows) {
@@ -1922,7 +1954,7 @@ export class CatalogService {
       }));
 
       return {
-        catalog: catalogSnapshot(db),
+        catalog,
         status:
           candidates.length === 0
             ? 'NOT_FOUND'
