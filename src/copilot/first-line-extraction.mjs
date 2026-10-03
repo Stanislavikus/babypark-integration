@@ -38,6 +38,31 @@ function positiveInteger(value, field) {
   return value;
 }
 
+function isWellFormedUtf16(value) {
+  for (let index = 0; index < value.length; index += 1) {
+    const code = value.charCodeAt(index);
+    if (code >= 0xD800 && code <= 0xDBFF) {
+      if (index + 1 >= value.length) return false;
+      const next = value.charCodeAt(index + 1);
+      if (next < 0xDC00 || next > 0xDFFF) return false;
+      index += 1;
+    } else if (code >= 0xDC00 && code <= 0xDFFF) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function isCodePointBoundary(value, index) {
+  if (index <= 0 || index >= value.length) return true;
+  const previous = value.charCodeAt(index - 1);
+  const current = value.charCodeAt(index);
+  return !(
+    previous >= 0xD800 && previous <= 0xDBFF &&
+    current >= 0xDC00 && current <= 0xDFFF
+  );
+}
+
 function boundedText(value, field, max, { allowEmpty = false, allowLayoutWhitespace = false } = {}) {
   if (typeof value !== 'string') {
     fail('FIRST_LINE_EXTRACTION_VALUE_INVALID', field + ' must be text', { field });
@@ -45,7 +70,11 @@ function boundedText(value, field, max, { allowEmpty = false, allowLayoutWhitesp
   const forbidden = allowLayoutWhitespace
     ? /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/u
     : /[\u0000-\u001f\u007f]/u;
-  if (value.length > max || forbidden.test(value)) {
+  if (
+    value.length > max ||
+    forbidden.test(value) ||
+    !isWellFormedUtf16(value)
+  ) {
     fail('FIRST_LINE_EXTRACTION_VALUE_INVALID', field + ' is not bounded safe text', { field, max });
   }
   if (!allowEmpty && value.length === 0) {
@@ -207,14 +236,24 @@ function assertSupportedTransientTurn(turn) {
 function locateOccurrence(text, quote, occurrence) {
   let from = 0;
   let found = -1;
+  let end = -1;
   for (let index = 1; index <= occurrence; index += 1) {
-    found = text.indexOf(quote, from);
-    if (found < 0) return null;
-    from = found + 1;
+    while (true) {
+      found = text.indexOf(quote, from);
+      if (found < 0) return null;
+      end = found + quote.length;
+      from = found + 1;
+      if (
+        isCodePointBoundary(text, found) &&
+        isCodePointBoundary(text, end)
+      ) {
+        break;
+      }
+    }
   }
   return {
     start_utf16: found,
-    end_utf16: found + quote.length,
+    end_utf16: end,
   };
 }
 

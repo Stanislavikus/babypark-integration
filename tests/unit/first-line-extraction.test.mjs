@@ -545,6 +545,41 @@ test('non-PRODUCT quote endpoints use full Unicode code points', () => {
   }
 });
 
+test('ill-formed UTF-16 quotes and turns fail before occurrence certification', () => {
+  const loneHigh = String.fromCharCode(0xD835);
+  const loneLow = String.fromCharCode(0xDC00);
+
+  expectCode(() => certifyFirstLineExtraction({
+    extraction: extraction({
+      spans: [{
+        kind: 'PRODUCT',
+        turn_index: 1,
+        quote: loneHigh,
+        occurrence: 1,
+      }],
+    }),
+    turns: [turn({ text: '𝐀ABC' })],
+  }), 'FIRST_LINE_EXTRACTION_VALUE_INVALID');
+
+  expectCode(() => certifyFirstLineExtraction({
+    extraction: extraction({ spans: [] }),
+    turns: [turn({ text: 'ABC' + loneLow })],
+  }), 'FIRST_LINE_EXTRACTION_VALUE_INVALID');
+
+  const validAstral = certifyFirstLineExtraction({
+    extraction: extraction({
+      spans: [{
+        kind: 'PRODUCT',
+        turn_index: 1,
+        quote: '𝐀',
+        occurrence: 1,
+      }],
+    }),
+    turns: [turn({ text: 'Модель 𝐀 окремо' })],
+  });
+  assert.equal(validAstral.certified_spans[0].quote, '𝐀');
+});
+
 test('PRODUCT boundary inspects adjacent astral Unicode letters as full code points', () => {
   for (const text of [
     'Ціна 𝐀ABC',
