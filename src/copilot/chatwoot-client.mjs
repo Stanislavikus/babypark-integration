@@ -276,6 +276,47 @@ export function createFirstLineChatwootAuthorityReader({
     });
   }
 
+  function classifyFilteredRows(rows) {
+    const seen = new Set();
+    return rows.map(row => {
+      const item = classifyPublicWireMessage(row, botId);
+      if (item.disposition === 'INTERNAL') {
+        authorityFail('CHATWOOT_AUTHORITY_FILTER_BROKEN', 'filtered messages response returned internal row',
+          { source_message_id: item.sourceMessageId });
+      }
+      if (seen.has(item.sourceMessageId)) {
+        authorityFail('CHATWOOT_AUTHORITY_DUPLICATE_SOURCE', 'messages response contains duplicate source id',
+          { source_message_id: item.sourceMessageId });
+      }
+      seen.add(item.sourceMessageId);
+      return Object.freeze({ ...item.ledgerEvent });
+    });
+  }
+
+  async function readPublicRange(conversationId, { afterInclusive, beforeExclusive }) {
+    const conversation = strictPositiveId(conversationId, 'conversation_id');
+    if (!Number.isSafeInteger(afterInclusive) || afterInclusive < 0 || afterInclusive > CHATWOOT_MESSAGE_ID_MAX) {
+      authorityFail('CHATWOOT_AUTHORITY_VALUE_INVALID', 'afterInclusive is outside Chatwoot message-id range');
+    }
+    if (!Number.isSafeInteger(beforeExclusive) || beforeExclusive < 1 ||
+        beforeExclusive > CHATWOOT_AUTHORITATIVE_BEFORE || beforeExclusive <= afterInclusive) {
+      authorityFail('CHATWOOT_AUTHORITY_VALUE_INVALID', 'beforeExclusive is outside Chatwoot message-id range');
+    }
+    const wire = await get(
+      `/api/v1/accounts/${account}/conversations/${conversation}/messages?after=${afterInclusive}&before=${beforeExclusive}&filter_internal_messages=true`
+    );
+    const rows = payloadRows(wire);
+    if (rows.length > CHATWOOT_AUTHORITATIVE_LIMIT) {
+      authorityFail('CHATWOOT_AUTHORITY_PAYLOAD_INVALID', 'range payload exceeded backend limit',
+        { row_count: rows.length });
+    }
+    return Object.freeze({
+      complete: rows.length < CHATWOOT_AUTHORITATIVE_LIMIT,
+      rowCount: rows.length,
+      events: Object.freeze(classifyFilteredRows(rows)),
+    });
+  }
+
   async function readAuthorizingConversationSnapshot(conversationId) {
     const conversation = strictPositiveId(conversationId, 'conversation_id');
     const wire = await get(
@@ -287,31 +328,17 @@ export function createFirstLineChatwootAuthorityReader({
         { row_count: rows.length });
     }
 
-    const seen = new Set();
-    const classified = rows.map(row => {
-      const item = classifyPublicWireMessage(row, botId);
-      if (item.disposition === 'INTERNAL') {
-        authorityFail('CHATWOOT_AUTHORITY_FILTER_BROKEN', 'filtered authorizing snapshot returned internal row',
-          { source_message_id: item.sourceMessageId });
-      }
-      if (seen.has(item.sourceMessageId)) {
-        authorityFail('CHATWOOT_AUTHORITY_DUPLICATE_SOURCE', 'authorizing snapshot contains duplicate source id',
-          { source_message_id: item.sourceMessageId });
-      }
-      seen.add(item.sourceMessageId);
-      return Object.freeze({ ...item.ledgerEvent });
-    });
-
     return Object.freeze({
       code: rows.length === CHATWOOT_AUTHORITATIVE_LIMIT ? 'HISTORY_UNPROVABLE' : 'COMPLETE',
       complete: rows.length < CHATWOOT_AUTHORITATIVE_LIMIT,
       rowCount: rows.length,
-      events: Object.freeze(classified),
+      events: Object.freeze(classifyFilteredRows(rows)),
     });
   }
 
   return Object.freeze({
     readExactSourceMessage,
+    readPublicRange,
     readAuthorizingConversationSnapshot,
   });
 }
