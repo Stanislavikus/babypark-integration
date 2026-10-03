@@ -315,3 +315,45 @@ test('one source message cannot masquerade as two different turn indexes', () =>
     ],
   }), 'FIRST_LINE_EXTRACTION_TURN_INVALID');
 });
+
+
+test('exact quote embedded inside a larger Unicode token is not certified', () => {
+  for (const [text, quote] of [
+    ['SuperCybex модель', 'Cybex'],
+    ['CybexPlus модель', 'Cybex'],
+    ['ціна 30000 грн', '3000'],
+    ['брендКібекс', 'Кібекс'],
+  ]) {
+    expectCode(() => certifyFirstLineExtraction({
+      extraction: extraction({
+        spans: [{
+          kind: quote === '3000' ? 'MONEY' : 'BRAND',
+          turn_index: 1,
+          quote,
+          occurrence: 1,
+        }],
+      }),
+      turns: [turn({ text })],
+    }), 'FIRST_LINE_EXTRACTION_QUOTE_UNCERTIFIED');
+  }
+
+  const allowed = certifyFirstLineExtraction({
+    extraction: extraction({
+      spans: [{
+        kind: 'BRAND',
+        turn_index: 1,
+        quote: 'Cybex',
+        occurrence: 1,
+      }],
+    }),
+    turns: [turn({ text: '(Cybex), будь ласка' })],
+  });
+  assert.equal(allowed.certified_spans[0].start_utf16, 1);
+});
+
+test('source message id cannot exceed verified Chatwoot int4 domain', () => {
+  expectCode(() => certifyFirstLineExtraction({
+    extraction: extraction({ spans: [] }),
+    turns: [turn({ sourceMessageId: 2_147_483_648 })],
+  }), 'FIRST_LINE_EXTRACTION_TURN_INVALID');
+});

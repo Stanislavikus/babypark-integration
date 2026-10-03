@@ -1,4 +1,5 @@
 import { normalizeLanguageTag } from '../catalog/domain/language.mjs';
+import { CHATWOOT_MESSAGE_ID_MAX } from './chatwoot-client.mjs';
 
 export const FIRST_LINE_EXTRACTION_SCHEMA = 'bp.first-line.extraction/1';
 export const FIRST_LINE_INTENT_SCHEMA_VERSION = 'bp.first-line.intent/1';
@@ -139,6 +140,11 @@ function assertSupportedTransientTurn(turn) {
 
   const turnIndex = positiveInteger(turn.turnIndex, 'turn_index');
   const sourceMessageId = positiveInteger(turn.sourceMessageId, 'source_message_id');
+  if (sourceMessageId > CHATWOOT_MESSAGE_ID_MAX) {
+    fail('FIRST_LINE_EXTRACTION_TURN_INVALID',
+      'source message id exceeds Chatwoot int4 boundary',
+      { source_message_id: sourceMessageId, max: CHATWOOT_MESSAGE_ID_MAX });
+  }
   const text = boundedText(turn.text, 'turn_text', MAX_TRANSIENT_TURN_CHARS, {
     allowEmpty: true,
     allowLayoutWhitespace: true,
@@ -179,6 +185,25 @@ function locateOccurrence(text, quote, occurrence) {
     start_utf16: found,
     end_utf16: found + quote.length,
   };
+}
+
+function isWordChar(value) {
+  return typeof value === 'string' && value.length > 0 && /[\p{L}\p{N}_]/u.test(value);
+}
+
+function hasSemanticBoundaries(text, quote, located) {
+  const first = quote[0] ?? '';
+  const last = quote[quote.length - 1] ?? '';
+  const before = located.start_utf16 > 0
+    ? text[located.start_utf16 - 1]
+    : '';
+  const after = located.end_utf16 < text.length
+    ? text[located.end_utf16]
+    : '';
+
+  if (isWordChar(first) && isWordChar(before)) return false;
+  if (isWordChar(last) && isWordChar(after)) return false;
+  return true;
 }
 
 export function transientTurnFromExactRead(turnIndex, exactRead) {
@@ -248,6 +273,15 @@ export function certifyFirstLineExtraction({
         turn_index: span.turn_index,
         occurrence: span.occurrence,
       });
+    }
+    if (!hasSemanticBoundaries(turn.text, span.quote, located)) {
+      fail('FIRST_LINE_EXTRACTION_QUOTE_UNCERTIFIED',
+        'quoted span is embedded inside a larger token',
+        {
+          index,
+          turn_index: span.turn_index,
+          occurrence: span.occurrence,
+        });
     }
 
     return Object.freeze({
