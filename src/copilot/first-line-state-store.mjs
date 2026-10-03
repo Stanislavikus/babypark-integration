@@ -759,6 +759,16 @@ export class FirstLineStateStore {
   #readStream(streamId) {
     const row = this.db.prepare('SELECT * FROM conversation_streams WHERE stream_id=?').get(streamId);
     if (!row) return null;
+    persistedGuard(() => {
+      safeToken(row.stream_id, 'stream_id');
+      sourceProvider(row.source_provider);
+      positiveInteger(row.source_conversation_id, 'source_conversation_id');
+      nonNegativeInteger(row.stream_revision, 'stream_revision');
+      nonNegativeInteger(row.last_event_seq, 'last_event_seq');
+      if (row.scan_highwater !== null) positiveInteger(row.scan_highwater, 'scan_highwater');
+      nonNegativeInteger(row.created_at, 'created_at');
+      nonNegativeInteger(row.updated_at, 'updated_at');
+    }, 'persisted conversation stream is invalid', { stream_id: streamId });
     return {
       stream_id: row.stream_id,
       source_provider: row.source_provider,
@@ -772,6 +782,22 @@ export class FirstLineStateStore {
   }
 
   #eventDto(row) {
+    persistedGuard(() => {
+      safeToken(row.stream_id, 'stream_id');
+      positiveInteger(row.event_seq, 'event_seq');
+      positiveInteger(row.source_message_id, 'source_message_id');
+      enumValue(row.event_kind, EVENT_KINDS, 'event_kind');
+      enumValue(row.message_type, MESSAGE_TYPES, 'message_type');
+      enumValue(row.sender_class, SENDER_CLASSES, 'sender_class');
+      if (row.sender_id !== null) positiveInteger(row.sender_id, 'sender_id');
+      contentType(row.content_type);
+      if (row.deleted_flag !== 0 && row.deleted_flag !== 1) fail('FIRST_LINE_VALUE_INVALID', 'deleted flag invalid');
+      if (row.unsupported_flag !== 0 && row.unsupported_flag !== 1) fail('FIRST_LINE_VALUE_INVALID', 'unsupported flag invalid');
+      if (row.has_attachments !== 0 && row.has_attachments !== 1) fail('FIRST_LINE_VALUE_INVALID', 'attachments flag invalid');
+      if (row.source_id !== null) safeToken(row.source_id, 'source_id');
+      nonNegativeInteger(row.accepted_at, 'accepted_at');
+    }, 'persisted conversation event is invalid',
+    { stream_id: row.stream_id, event_seq: row.event_seq, source_message_id: row.source_message_id });
     return {
       stream_id: row.stream_id, event_seq: row.event_seq, source_message_id: row.source_message_id,
       event_kind: row.event_kind, message_type: row.message_type, sender_class: row.sender_class,
@@ -787,6 +813,16 @@ export class FirstLineStateStore {
     let requested;
     try { requested = normalizeRequestedSlot(row.requested_slot); }
     catch { fail('FIRST_LINE_DB_CORRUPT', 'persisted requested slot is invalid', { episode_id: episodeId }); }
+    persistedGuard(() => {
+      safeToken(row.episode_id, 'episode_id');
+      safeToken(row.stream_id, 'stream_id');
+      positiveInteger(row.version, 'version');
+      if (row.clarification_action_id !== null) safeToken(row.clarification_action_id, 'clarification_action_id');
+      nonNegativeInteger(row.created_at, 'created_at');
+      nonNegativeInteger(row.updated_at, 'updated_at');
+      if (row.closed_at !== null) nonNegativeInteger(row.closed_at, 'closed_at');
+      if (row.close_reason !== null) safeToken(row.close_reason, 'close_reason');
+    }, 'persisted episode metadata is invalid', { episode_id: episodeId });
     const slots = {};
     for (const item of this.db.prepare('SELECT * FROM episode_slots WHERE episode_id=? ORDER BY slot_name').all(episodeId)) {
       const value = parseJson(item.value_json);
@@ -807,6 +843,24 @@ export class FirstLineStateStore {
     if (!ACTION_TYPES.has(row.action_type) || (!LIVE_ACTION_STATES.has(row.state) && !TERMINAL_ACTION_STATES.has(row.state))) {
       fail('FIRST_LINE_DB_CORRUPT', 'persisted public action enum is invalid', { action_id: actionId });
     }
+    persistedGuard(() => {
+      safeToken(row.action_id, 'action_id');
+      safeToken(row.stream_id, 'stream_id');
+      if (row.episode_id !== null) safeToken(row.episode_id, 'episode_id');
+      if (row.episode_version !== null) positiveInteger(row.episode_version, 'episode_version');
+      positiveInteger(row.prepared_stream_revision, 'prepared_stream_revision');
+      normalizeRequestedSlot(row.requested_slot);
+      if (row.lease_token !== null) safeToken(row.lease_token, 'lease_token');
+      if (row.lease_expires_at !== null) nonNegativeInteger(row.lease_expires_at, 'lease_expires_at');
+      nonNegativeInteger(row.attempts, 'attempts');
+      positiveInteger(row.deadline_at, 'deadline_at');
+      if (row.confirmed_source_message_id !== null) positiveInteger(row.confirmed_source_message_id, 'confirmed_source_message_id');
+      if (row.terminal_reason !== null) safeToken(row.terminal_reason, 'terminal_reason');
+      nonNegativeInteger(row.created_at, 'created_at');
+      nonNegativeInteger(row.updated_at, 'updated_at');
+      if (row.send_started_at !== null) nonNegativeInteger(row.send_started_at, 'send_started_at');
+      if (row.confirmed_at !== null) nonNegativeInteger(row.confirmed_at, 'confirmed_at');
+    }, 'persisted public action metadata is invalid', { action_id: actionId });
     const basis = parseJson(row.basis_event_seqs_json);
     normalizeBasisEventSeqs(basis);
     const candidates = this.db.prepare('SELECT * FROM public_action_candidates WHERE action_id=? ORDER BY ordinal').all(actionId)
@@ -847,12 +901,22 @@ export class FirstLineStateStore {
   }
 }
 
-function validatePersistedSlot(slotName, value) {
-  try { return normalizeSlotValue(slotName, value); }
+function persistedGuard(fn, message, details = {}) {
+  try { return fn(); }
   catch (error) {
-    if (error instanceof FirstLineStateError) fail('FIRST_LINE_DB_CORRUPT', 'persisted stable/candidate slot is invalid', { slot_name: slotName });
+    if (error instanceof FirstLineStateError) {
+      fail('FIRST_LINE_DB_CORRUPT', message, details);
+    }
     throw error;
   }
+}
+
+function validatePersistedSlot(slotName, value) {
+  return persistedGuard(
+    () => normalizeSlotValue(slotName, value),
+    'persisted stable/candidate slot is invalid',
+    { slot_name: slotName }
+  );
 }
 
 export {
