@@ -174,6 +174,14 @@ function catalog(overrides = {}) {
           ],
         };
       }
+      if (raw === 'COLLIDE-1') {
+        return {
+          catalog: { generation_id: 'g1' },
+          status: 'IDENTITY_COLLISION',
+          product: null,
+          candidates: [],
+        };
+      }
       return {
         catalog: { generation_id: 'g1' },
         status: 'NOT_FOUND',
@@ -557,4 +565,23 @@ test('exact-read turn indexes must be contiguous accepted-turn order', () => {
     error => error instanceof FirstLineResolutionError &&
       error.code === 'FIRST_LINE_RESOLUTION_EXACT_READS_INVALID'
   );
+});
+
+
+test('cross-contract exact product collision fails authority without exposing internal candidates', () => {
+  const result = resolveFirstLineExactReads({
+    extraction: extraction([
+      { kind: 'PRODUCT', turn_index: 1, quote: 'COLLIDE-1', occurrence: 1 },
+    ]),
+    exactReads: exactReads(turn({ text: 'COLLIDE-1' })),
+    knowledgeStore: knowledge(),
+    catalogService: catalog(),
+    nowUtc: NOW,
+  });
+
+  const authority = result.resolutions[0].authority;
+  assert.equal(authority.status, 'INVALID_AUTHORITY');
+  assert.equal(authority.reason, 'CATALOG_IDENTITY_COLLISION');
+  assert.deepEqual(authority.candidates, []);
+  assert.equal(authority.resolved, null);
 });

@@ -1860,18 +1860,26 @@ export class CatalogService {
           matched_by: [...row.matched_by].sort(),
         }));
 
+      const skuTitleConflict =
+        skuRow !== undefined &&
+        titleRows.some(row => row.product_id !== skuRow.product_id);
+
       return {
         catalog: catalogSnapshot(db),
-        status:
-          candidates.length === 0
+        status: skuTitleConflict
+          ? 'IDENTITY_COLLISION'
+          : candidates.length === 0
             ? 'NOT_FOUND'
             : candidates.length === 1
               ? 'FOUND'
               : 'AMBIGUOUS',
         normalized_phrase: normalizedTitle,
         sku_key: key,
-        product: candidates.length === 1 ? candidates[0] : null,
-        candidates,
+        product:
+          !skuTitleConflict && candidates.length === 1
+            ? candidates[0]
+            : null,
+        candidates: skuTitleConflict ? [] : candidates,
       };
     });
   }

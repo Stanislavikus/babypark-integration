@@ -992,15 +992,9 @@ test('resolveProductIdentityExact combines exact SKU/title in one deterministic 
   assert.deepEqual(byTitle.product.matched_by, ['EXACT_TITLE']);
 
   const conflict = service.resolveProductIdentityExact('DAY3-BLK');
-  assert.equal(conflict.status, 'AMBIGUOUS');
+  assert.equal(conflict.status, 'IDENTITY_COLLISION');
   assert.equal(conflict.product, null);
-  assert.deepEqual(
-    conflict.candidates.map(row => [row.product_id, row.matched_by]),
-    [
-      ['p-bug', ['EXACT_TITLE']],
-      ['p-day3', ['EXACT_SKU']],
-    ]
-  );
+  assert.deepEqual(conflict.candidates, []);
 
   const missing = service.resolveProductIdentityExact('totally missing product');
   assert.equal(missing.status, 'NOT_FOUND');

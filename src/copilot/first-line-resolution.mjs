@@ -52,6 +52,15 @@ function productIdentityResolution(catalogService, quote) {
       resolved: candidates[0],
     });
   }
+  if (result.status === 'IDENTITY_COLLISION') {
+    return Object.freeze({
+      status: 'INVALID_AUTHORITY',
+      reason: 'CATALOG_IDENTITY_COLLISION',
+      catalog: result.catalog,
+      candidates: Object.freeze([]),
+      resolved: null,
+    });
+  }
   if (result.status === 'AMBIGUOUS') {
     return Object.freeze({
       status: 'AMBIGUOUS',
