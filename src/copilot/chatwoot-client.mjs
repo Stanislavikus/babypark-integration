@@ -174,7 +174,7 @@ function classifyPublicWireMessage(wire, configuredAgentBotId) {
   const messageType = wireMessageType(wire?.message_type);
   if (messageType === null) {
     return { sourceMessageId: id, disposition: 'UNKNOWN', ledgerEvent: {
-      sourceMessageId: id, eventKind: 'UNKNOWN_PUBLIC', messageType: 'outgoing',
+      sourceMessageId: id, eventKind: 'UNKNOWN_PUBLIC', messageType: 'unknown',
       senderClass: 'unknown', senderId: null, contentType: null, deleted: false,
       unsupported: true, hasAttachments: false, sourceId: null,
     }};
