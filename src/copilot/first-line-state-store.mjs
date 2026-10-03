@@ -494,6 +494,16 @@ export class FirstLineStateStore {
         });
       }
 
+      for (const seq of basis) {
+        const event = this.db.prepare(
+          'SELECT 1 AS ok FROM conversation_events WHERE stream_id=? AND event_seq=?'
+        ).get(stream, seq);
+        if (!event) {
+          fail('FIRST_LINE_ACTION_BASIS_INVALID', 'action basis references an unknown stream event',
+            { stream_id: stream, event_seq: seq });
+        }
+      }
+
       const sameRevision = this.db.prepare('SELECT action_id FROM public_actions WHERE stream_id=? AND prepared_stream_revision=?')
         .get(stream, revision);
       if (sameRevision) return this.#readAction(sameRevision.action_id);
@@ -510,7 +520,13 @@ export class FirstLineStateStore {
       }
 
       let episode = null;
-      if (epId !== null) episode = this.#requireActiveEpisode(epId, epVersion);
+      if (epId !== null) {
+        episode = this.#requireActiveEpisode(epId, epVersion);
+        if (episode.stream_id !== stream) {
+          fail('FIRST_LINE_ACTION_EPISODE_STREAM_MISMATCH', 'episode does not belong to action stream',
+            { episode_id: epId, stream_id: stream, episode_stream_id: episode.stream_id });
+        }
+      }
       if (type === 'CLARIFY') {
         if (!episode) fail('FIRST_LINE_CLARIFICATION_INVALID', 'CLARIFY requires active episode');
         if (episode.clarification_prompts_sent !== 0 || episode.clarification_action_id !== null) {
