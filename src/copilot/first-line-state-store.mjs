@@ -675,17 +675,12 @@ export class FirstLineStateStore {
     });
   }
 
-  cancelActionBeforeSend(actionId, { reason = 'stale' } = {}) {
-    const id = safeToken(actionId, 'action_id');
-    const terminalReason = safeToken(reason, 'terminal_reason');
-    return tx(this.db, () => {
-      const action = this.#requireAction(id);
-      if (action.state !== 'PREPARED' && action.state !== 'GATING') {
-        fail('FIRST_LINE_ACTION_STATE_INVALID', 'only unsent action may be cancelled', { state: action.state });
-      }
-      this.#cancelUnsentAction(action, terminalReason);
-      return this.#readAction(id);
-    });
+  cancelActionBeforeSend(actionId, { reason = 'cancelled_before_send' } = {}) {
+    return this.#finishActionBeforeSend(actionId, 'CANCELLED', reason);
+  }
+
+  markActionStaleBeforeSend(actionId, { reason = 'stale_before_send' } = {}) {
+    return this.#finishActionBeforeSend(actionId, 'STALE', reason);
   }
 
   listRecoverablePublicActions({ now = this.now() } = {}) {
@@ -700,9 +695,26 @@ export class FirstLineStateStore {
     return readTx(this.db, () => this.#readAction(id));
   }
 
+  #finishActionBeforeSend(actionId, terminalState, reason) {
+    const id = safeToken(actionId, 'action_id');
+    const terminalReason = safeToken(reason, 'terminal_reason');
+    if (terminalState !== 'CANCELLED' && terminalState !== 'STALE') {
+      fail('FIRST_LINE_ACTION_STATE_INVALID', 'invalid unsent terminal state', { terminal_state: terminalState });
+    }
+    return tx(this.db, () => {
+      const action = this.#requireAction(id);
+      this.#finishUnsentAction(action, terminalState, terminalReason);
+      return this.#readAction(id);
+    });
+  }
+
   #cancelUnsentAction(action, reason) {
+    this.#finishUnsentAction(action, 'CANCELLED', reason);
+  }
+
+  #finishUnsentAction(action, terminalState, reason) {
     if (action.state !== 'PREPARED' && action.state !== 'GATING') {
-      fail('FIRST_LINE_ACTION_STATE_INVALID', 'only unsent action may be cancelled', { action_id: action.action_id });
+      fail('FIRST_LINE_ACTION_STATE_INVALID', 'only unsent action may become terminal', { action_id: action.action_id });
     }
     if (action.action_type === 'CLARIFY' && action.episode_id) {
       const episode = this.db.prepare('SELECT * FROM episodes WHERE episode_id=?').get(action.episode_id);
@@ -712,8 +724,9 @@ export class FirstLineStateStore {
           .run(this.now(), action.episode_id);
       }
     }
-    this.db.prepare(`UPDATE public_actions SET state='CANCELLED',terminal_reason=?,lease_token=NULL,
-      lease_expires_at=NULL,updated_at=? WHERE action_id=?`).run(reason, this.now(), action.action_id);
+    this.db.prepare(`UPDATE public_actions SET state=?,terminal_reason=?,lease_token=NULL,
+      lease_expires_at=NULL,updated_at=? WHERE action_id=?`)
+      .run(terminalState, reason, this.now(), action.action_id);
   }
 
   #requireStream(streamId) {
