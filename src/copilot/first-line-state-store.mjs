@@ -582,11 +582,14 @@ export class FirstLineStateStore {
       }
 
       const actionId = safeToken(this.actionIdFactory(), 'action_id');
+      const actionEpisodeVersion = epId === null
+        ? null
+        : (type === 'CLARIFY' ? epVersion + 1 : epVersion);
       this.db.prepare(`INSERT INTO public_actions
         (action_id,stream_id,episode_id,episode_version,prepared_stream_revision,action_type,state,
          basis_event_seqs_json,requested_slot,deadline_at,created_at,updated_at)
         VALUES (?,?,?,?,?,?,'PREPARED',?,?,?,?,?)`).run(
-          actionId, stream, epId, epVersion, revision, type, canonicalJson(basis), requested, deadline, at, at
+          actionId, stream, epId, actionEpisodeVersion, revision, type, canonicalJson(basis), requested, deadline, at, at
         );
 
       for (const [index, candidate] of candidates.entries()) {
@@ -632,12 +635,27 @@ export class FirstLineStateStore {
       if (action.state !== 'GATING' || action.lease_token !== token) {
         fail('FIRST_LINE_ACTION_CLAIM_INVALID', 'action is not held by this gating claim', { action_id: id });
       }
+      if (!Number.isSafeInteger(action.lease_expires_at) || action.lease_expires_at <= at) {
+        fail('FIRST_LINE_ACTION_CLAIM_EXPIRED', 'gating claim expired before SENDING', { action_id: id });
+      }
       const stream = this.#requireStream(action.stream_id);
       if (stream.stream_revision !== action.prepared_stream_revision) {
         fail('FIRST_LINE_ACTION_STALE_REVISION', 'stream changed before SENDING', { action_id: id });
       }
+      if (action.episode_id !== null) {
+        const episode = this.db.prepare('SELECT * FROM episodes WHERE episode_id=?').get(action.episode_id);
+        if (!episode || episode.state !== 'active' || episode.version !== action.episode_version) {
+          fail('FIRST_LINE_ACTION_STALE_EPISODE', 'episode changed before SENDING', { action_id: id });
+        }
+        if (action.action_type === 'CLARIFY' &&
+            (episode.clarification_prompts_sent !== 1 || episode.clarification_action_id !== id)) {
+          fail('FIRST_LINE_ACTION_STALE_EPISODE', 'clarification reservation changed before SENDING',
+            { action_id: id });
+        }
+      }
       const changed = this.db.prepare(`UPDATE public_actions SET state='SENDING',send_started_at=?,updated_at=?
-        WHERE action_id=? AND state='GATING' AND lease_token=?`).run(at, at, id, token).changes;
+        WHERE action_id=? AND state='GATING' AND lease_token=? AND lease_expires_at>?`)
+        .run(at, at, id, token, at).changes;
       if (changed !== 1) fail('FIRST_LINE_STALE_WRITE', 'action changed before SENDING');
       return this.#readAction(id);
     });
@@ -660,20 +678,6 @@ export class FirstLineStateStore {
     });
   }
 
-  confirmAction(actionId, { confirmedSourceMessageId } = {}) {
-    const id = safeToken(actionId, 'action_id');
-    const source = positiveInteger(confirmedSourceMessageId, 'confirmed_source_message_id');
-    const at = this.now();
-    return tx(this.db, () => {
-      const action = this.#requireAction(id);
-      if (action.state !== 'SENDING' && action.state !== 'UNCERTAIN') {
-        fail('FIRST_LINE_ACTION_STATE_INVALID', 'only SENDING/UNCERTAIN may confirm', { state: action.state });
-      }
-      this.db.prepare(`UPDATE public_actions SET state='CONFIRMED',confirmed_source_message_id=?,confirmed_at=?,
-        lease_token=NULL,lease_expires_at=NULL,updated_at=? WHERE action_id=?`).run(source, at, at, id);
-      return this.#readAction(id);
-    });
-  }
 
   cancelActionBeforeSend(actionId, { reason = 'cancelled_before_send' } = {}) {
     return this.#finishActionBeforeSend(actionId, 'CANCELLED', reason);
