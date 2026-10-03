@@ -16,6 +16,7 @@ const NOW = '2026-10-03T12:00:00Z';
 function turn(overrides = {}) {
   return {
     turnIndex: 1,
+    sourceConversationId: 55,
     sourceMessageId: 501,
     eventKind: 'CUSTOMER_MESSAGE',
     messageType: 'incoming',
@@ -34,6 +35,7 @@ function exactReadEntry(rawTurn) {
     turnIndex: rawTurn.turnIndex,
     exactRead: {
       code: 'SUPPORTED_CUSTOMER_TEXT',
+      sourceConversationId: rawTurn.sourceConversationId,
       event: {
         sourceMessageId: rawTurn.sourceMessageId,
         eventKind: rawTurn.eventKind,
@@ -266,6 +268,7 @@ test('certified spans resolve only through deterministic authority contracts', (
   });
 
   assert.equal(result.schema, FIRST_LINE_RESOLUTION_SCHEMA);
+  assert.equal(result.source_conversation_id, 55);
   assert.deepEqual(result.resolutions.map(row => [row.kind, row.authority.status]), [
     ['BRAND', 'RESOLVED'],
     ['CATEGORY', 'RESOLVED'],
@@ -584,4 +587,22 @@ test('cross-contract exact product collision fails authority without exposing in
   assert.equal(authority.reason, 'CATALOG_IDENTITY_COLLISION');
   assert.deepEqual(authority.candidates, []);
   assert.equal(authority.resolved, null);
+});
+
+
+test('resolution cannot combine exact reads from different Chatwoot conversations', () => {
+  assert.throws(
+    () => resolveFirstLineExactReads({
+      extraction: extraction([]),
+      exactReads: exactReads(
+        turn({ turnIndex: 1, sourceConversationId: 55, sourceMessageId: 501 }),
+        turn({ turnIndex: 2, sourceConversationId: 56, sourceMessageId: 502 })
+      ),
+      knowledgeStore: knowledge(),
+      catalogService: catalog(),
+      nowUtc: NOW,
+    }),
+    error => error instanceof FirstLineExtractionError &&
+      error.code === 'FIRST_LINE_EXTRACTION_TURN_INVALID'
+  );
 });

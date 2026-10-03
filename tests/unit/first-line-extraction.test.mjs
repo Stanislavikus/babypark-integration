@@ -29,6 +29,7 @@ function extraction(overrides = {}) {
 function turn(overrides = {}) {
   return {
     turnIndex: 1,
+    sourceConversationId: 55,
     sourceMessageId: 101,
     eventKind: 'CUSTOMER_MESSAGE',
     messageType: 'incoming',
@@ -56,6 +57,7 @@ test('certifies exact quote against transient turn and emits no full message bod
   assert.equal(result.schema, FIRST_LINE_EXTRACTION_SCHEMA);
   assert.equal(result.intent_schema_version, FIRST_LINE_INTENT_SCHEMA_VERSION);
   assert.equal(result.language, 'uk');
+  assert.equal(result.source_conversation_id, 55);
   assert.equal(result.certified_spans.length, 1);
   assert.deepEqual(result.certified_spans[0], {
     kind: 'PRODUCT',
@@ -189,6 +191,7 @@ test('language and versions are explicit and bounded', () => {
 test('turn adapter accepts only exact-read supported customer text and drops unrelated payload', () => {
   const adapted = transientTurnFromExactRead(3, {
     code: 'SUPPORTED_CUSTOMER_TEXT',
+    sourceConversationId: 55,
     event: {
       sourceMessageId: 777,
       eventKind: 'CUSTOMER_MESSAGE',
@@ -207,6 +210,7 @@ test('turn adapter accepts only exact-read supported customer text and drops unr
 
   assert.deepEqual(adapted, {
     turnIndex: 3,
+    sourceConversationId: 55,
     sourceMessageId: 777,
     eventKind: 'CUSTOMER_MESSAGE',
     messageType: 'incoming',
@@ -355,5 +359,43 @@ test('source message id cannot exceed verified Chatwoot int4 domain', () => {
   expectCode(() => certifyFirstLineExtraction({
     extraction: extraction({ spans: [] }),
     turns: [turn({ sourceMessageId: 2_147_483_648 })],
+  }), 'FIRST_LINE_EXTRACTION_TURN_INVALID');
+});
+
+
+test('whitespace-only and exact duplicate spans are rejected at schema boundary', () => {
+  expectCode(() => certifyFirstLineExtraction({
+    extraction: extraction({
+      spans: [{
+        kind: 'BRAND',
+        turn_index: 1,
+        quote: '   ',
+        occurrence: 1,
+      }],
+    }),
+    turns: [turn({ text: '   ' })],
+  }), 'FIRST_LINE_EXTRACTION_VALUE_INVALID');
+
+  const duplicate = {
+    kind: 'BRAND',
+    turn_index: 1,
+    quote: 'Cybex',
+    occurrence: 1,
+  };
+  expectCode(() => certifyFirstLineExtraction({
+    extraction: extraction({
+      spans: [duplicate, { ...duplicate }],
+    }),
+    turns: [turn({ text: 'Cybex' })],
+  }), 'FIRST_LINE_EXTRACTION_SCHEMA_INVALID');
+});
+
+test('turn certification rejects cross-conversation mixing', () => {
+  expectCode(() => certifyFirstLineExtraction({
+    extraction: extraction({ spans: [] }),
+    turns: [
+      turn({ turnIndex: 1, sourceConversationId: 55, sourceMessageId: 101 }),
+      turn({ turnIndex: 2, sourceConversationId: 56, sourceMessageId: 102 }),
+    ],
   }), 'FIRST_LINE_EXTRACTION_TURN_INVALID');
 });

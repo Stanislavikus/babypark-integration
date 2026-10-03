@@ -48,6 +48,7 @@ test('exact source read is unfiltered and returns only closed transient customer
 
   const result = await reader(fetchImpl).readExactSourceMessage(55, 101);
   assert.equal(result.code, 'SUPPORTED_CUSTOMER_TEXT');
+  assert.equal(result.sourceConversationId, 55);
   assert.equal(result.transientContent, 'Скільки коштує?');
   assert.deepEqual(result.event, {
     sourceMessageId: 101,
@@ -72,12 +73,12 @@ test('exact source read is unfiltered and returns only closed transient customer
 test('exact read distinguishes absent, internal, deleted and attachment input', async () => {
   const absent = await reader(async () => response({ payload: [] }))
     .readExactSourceMessage(55, 101);
-  assert.deepEqual(absent, { code: 'ABSENT', sourceMessageId: 101 });
+  assert.deepEqual(absent, { code: 'ABSENT', sourceConversationId: 55, sourceMessageId: 101 });
 
   const internal = await reader(async () => response({ payload: [{
     id: 101, message_type: 2, private: false, sender: { id: 7, type: 'agent_bot' },
   }] })).readExactSourceMessage(55, 101);
-  assert.deepEqual(internal, { code: 'INTERNAL', sourceMessageId: 101 });
+  assert.deepEqual(internal, { code: 'INTERNAL', sourceConversationId: 55, sourceMessageId: 101 });
 
   const deleted = await reader(async () => response({ payload: [{
     id: 101, message_type: 0, private: false, sender: { id: 9001, type: 'Contact' },

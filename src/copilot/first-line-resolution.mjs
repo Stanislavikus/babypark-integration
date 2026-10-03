@@ -239,6 +239,7 @@ function resolveFirstLineExtraction({
     intent_schema_version: FIRST_LINE_INTENT_SCHEMA_VERSION,
     intent_hint: certified.intent_hint,
     language: certified.language,
+    source_conversation_id: certified.source_conversation_id,
     catalog_generation_id:
       catalogGenerations.size === 1 ? [...catalogGenerations][0] : null,
     knowledge_resolver_contract_version:

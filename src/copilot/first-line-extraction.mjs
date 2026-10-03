@@ -83,10 +83,17 @@ function normalizeSpan(span, index) {
     fail('FIRST_LINE_EXTRACTION_VALUE_INVALID', 'occurrence exceeds bound', { index, max: MAX_OCCURRENCE });
   }
 
+  const quote = boundedText(span.quote, 'quote', MAX_QUOTE_CHARS, {
+    allowLayoutWhitespace: true,
+  });
+  if (quote.trim() === '') {
+    fail('FIRST_LINE_EXTRACTION_VALUE_INVALID', 'quote must contain non-whitespace text', { index });
+  }
+
   return {
     kind: span.kind,
     turn_index: positiveInteger(span.turn_index, 'turn_index'),
-    quote: boundedText(span.quote, 'quote', MAX_QUOTE_CHARS, { allowLayoutWhitespace: true }),
+    quote,
     occurrence,
   };
 }
@@ -124,12 +131,31 @@ function normalizeExtraction(extraction) {
     });
   }
 
+  const spans = extraction.spans.map(normalizeSpan);
+  const seenSpans = new Set();
+  for (const span of spans) {
+    const key = JSON.stringify([
+      span.kind,
+      span.turn_index,
+      span.quote,
+      span.occurrence,
+    ]);
+    if (seenSpans.has(key)) {
+      fail('FIRST_LINE_EXTRACTION_SCHEMA_INVALID', 'duplicate extraction span', {
+        kind: span.kind,
+        turn_index: span.turn_index,
+        occurrence: span.occurrence,
+      });
+    }
+    seenSpans.add(key);
+  }
+
   return {
     schema: FIRST_LINE_EXTRACTION_SCHEMA,
     intent_schema_version: FIRST_LINE_INTENT_SCHEMA_VERSION,
     intent_hint: normalizeIntentHint(extraction.intent_hint),
     language,
-    spans: extraction.spans.map(normalizeSpan),
+    spans,
   };
 }
 
@@ -139,6 +165,10 @@ function assertSupportedTransientTurn(turn) {
   }
 
   const turnIndex = positiveInteger(turn.turnIndex, 'turn_index');
+  const sourceConversationId = positiveInteger(
+    turn.sourceConversationId,
+    'source_conversation_id'
+  );
   const sourceMessageId = positiveInteger(turn.sourceMessageId, 'source_message_id');
   if (sourceMessageId > CHATWOOT_MESSAGE_ID_MAX) {
     fail('FIRST_LINE_EXTRACTION_TURN_INVALID',
@@ -168,6 +198,7 @@ function assertSupportedTransientTurn(turn) {
 
   return {
     turnIndex,
+    sourceConversationId,
     sourceMessageId,
     text,
   };
@@ -218,6 +249,7 @@ export function transientTurnFromExactRead(turnIndex, exactRead) {
 
   const supported = {
     turnIndex,
+    sourceConversationId: exactRead.sourceConversationId,
     sourceMessageId: exactRead.event.sourceMessageId,
     eventKind: exactRead.event.eventKind,
     messageType: exactRead.event.messageType,
@@ -243,8 +275,19 @@ export function certifyFirstLineExtraction({
 
   const byIndex = new Map();
   const sourceMessageIds = new Set();
+  let sourceConversationId = null;
   for (const rawTurn of turns) {
     const turn = assertSupportedTransientTurn(rawTurn);
+    if (sourceConversationId === null) {
+      sourceConversationId = turn.sourceConversationId;
+    } else if (turn.sourceConversationId !== sourceConversationId) {
+      fail('FIRST_LINE_EXTRACTION_TURN_INVALID',
+        'all turns must belong to one Chatwoot conversation',
+        {
+          expected_conversation_id: sourceConversationId,
+          actual_conversation_id: turn.sourceConversationId,
+        });
+    }
     if (byIndex.has(turn.turnIndex)) {
       fail('FIRST_LINE_EXTRACTION_TURN_INVALID', 'duplicate turn index', { turn_index: turn.turnIndex });
     }
@@ -300,6 +343,7 @@ export function certifyFirstLineExtraction({
     intent_schema_version: normalized.intent_schema_version,
     intent_hint: normalized.intent_hint,
     language: normalized.language,
+    source_conversation_id: sourceConversationId,
     certified_spans: Object.freeze(certified),
   });
 }
