@@ -533,6 +533,33 @@ Expected:
 - write transactions continue to use private transaction-neutral
   `#readEpisode` without nested transactions.
 
+### Q17 — C1 accepts only canonical identity shapes and strict Chatwoot integer IDs
+Attempt to persist:
+- provider-native numeric product ID;
+- free-form token in a category ID slot;
+- a cross-domain ID prefix (for example `cat_...` in `variant_id`);
+- boolean/array/hex/exponent/whitespace-padded values as conversation/message IDs.
+
+Expected:
+- canonical identity slots accept only their exact BabyPark domain-tagged shapes;
+- invalid stable slots and candidates fail before durable mutation;
+- rejected free-form text is absent from SQLite bytes;
+- `conversation_id` / `source_message_id` accept only positive JavaScript safe integers;
+- no coercive `Number(...)` conversion occurs.
+
+### Q18 — consumed-message watermark survives episode closure and cleanup
+Conversation 700 consumes source message 3, uses its one CLARIFY prompt, then closes.
+Later attempts to begin a new episode with message 3 or any lower message ID arrive
+with a fresh webhook delivery identity.
+
+Expected:
+- `EPISODE_MESSAGE_ALREADY_CONSUMED`;
+- no fresh clarification budget is created;
+- a strictly newer source message may begin a fresh episode;
+- appending a newer source message advances the same conversation watermark;
+- deleting closed episode rows in a cleanup simulation does not delete/reset the watermark;
+- a later begin at or below that retained watermark remains rejected.
+
 ## I. Handoff vectors
 
 ### H01 — HUMAN successful

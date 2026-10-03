@@ -136,11 +136,16 @@ It is not created by this foundation slice.
 It persists restart-durable logical episode continuity only:
 - conversation and episode identifiers;
 - ordered Chatwoot source message IDs;
+- a per-conversation maximum consumed message ID watermark;
 - allowlisted canonical stable customer selections;
 - canonical presented-candidate values;
 - requested slot;
 - one-prompt clarification budget;
 - lifecycle/version metadata.
+
+Canonical identity slots are shape-validated by BabyPark domain (`prod_`, `var_`,
+`store_`, `brand_`, `cat_`) before persistence. Chatwoot conversation/message IDs
+must already be positive JavaScript safe integers; C1 performs no coercive parsing.
 
 It never stores routine raw/normalized customer message bodies, candidate display
 labels, current prices, stock quantities, freshness state, resolved policy facts
@@ -153,6 +158,10 @@ fails closed.
 
 C1 implements no automatic cleanup. A later reviewed cleanup may apply a TTL only
 to closed episodes with a dry-run; active episodes are never deleted by age.
+The per-conversation consumed-message watermark is deliberately non-cascading and
+is not removed by closed-episode TTL cleanup, otherwise an old webhook/message
+could regain a fresh clarification budget after cleanup. Watermark retirement
+requires a separate reviewed conversation-retirement rule.
 
 Before real-customer shadow mode:
 - privacy/legal gate;

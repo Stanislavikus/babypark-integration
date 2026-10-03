@@ -458,7 +458,7 @@
       "scope": "file",
       "location": "/var/lib/babypark-integration/episode.sqlite",
       "owner": "BabyPark First Line episode runtime",
-      "purpose": "Restart-durable logical episode state: canonical stable selections, source message IDs, presented canonical candidates, requested slot and one-prompt clarification budget.",
+      "purpose": "Restart-durable logical episode state: canonical stable selections, source message IDs, non-cascading per-conversation consumed-message watermark, presented canonical candidates, requested slot and one-prompt clarification budget.",
       "state_class": "rebuildable",
       "thresholds": {
         "metric": "rows",
@@ -473,9 +473,9 @@
       },
       "cleanup": {
         "automatic": false,
-        "mechanism": "No C1 automatic cleanup. A later reviewed cleanup may delete only closed episodes after dry-run; active episodes are never age-deleted.",
+        "mechanism": "No C1 automatic cleanup. A later reviewed cleanup may delete only closed episodes after dry-run; active episodes are never age-deleted. conversation_message_watermarks are excluded from closed-episode TTL cleanup until a separate reviewed conversation-retirement rule exists.",
         "dry_run_required": true,
-        "delete_guard": "Never delete an active episode. Loss of episode state must fail closed rather than inventing prior selections or clarification history."
+        "delete_guard": "Never delete an active episode or reset/delete a consumed-message watermark as part of episode TTL cleanup. Loss of episode state must fail closed rather than inventing prior selections or clarification history."
       },
       "recovery": "State contains no business authority or raw customer body. If unavailable, do not reconstruct selections from guesswork; later Slice C logic may reread Chatwoot source_message_ids and otherwise fail closed/handoff.",
       "backup": {

@@ -36,6 +36,10 @@ CREATE TABLE episode_messages (
   PRIMARY KEY(episode_id, message_id),
   UNIQUE(episode_id, ordinal)
 );
+CREATE TABLE conversation_message_watermarks (
+  conversation_id INTEGER PRIMARY KEY CHECK(conversation_id >= 1),
+  max_message_id INTEGER NOT NULL CHECK(max_message_id >= 1)
+);
 CREATE TABLE episode_slots (
   episode_id TEXT NOT NULL REFERENCES episodes(episode_id) ON DELETE CASCADE,
   slot_name TEXT NOT NULL,
@@ -60,6 +64,15 @@ const SLOT_SPECS = Object.freeze({
   min_price_minor: 'money_minor',
   max_price_minor: 'money_minor',
   currency: 'currency',
+});
+
+const UUID_SHAPE = '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}';
+const CANONICAL_ID_PATTERNS = Object.freeze({
+  product_id: new RegExp(`^prod_${UUID_SHAPE}$`),
+  variant_id: new RegExp(`^var_${UUID_SHAPE}$`),
+  store_id: new RegExp(`^store_${UUID_SHAPE}$`),
+  brand_id: /^brand_[0-9a-f]{32}$/,
+  category_id: /^cat_[0-9a-f]{32}$/,
 });
 
 const REQUESTED_SLOTS = new Set([
@@ -120,11 +133,10 @@ function readTx(db, fn) {
 }
 
 function positiveInteger(value, field) {
-  const number = Number(value);
-  if (!Number.isSafeInteger(number) || number <= 0) {
+  if (!Number.isSafeInteger(value) || value <= 0) {
     fail('EPISODE_VALUE_INVALID', field + ' must be a positive safe integer', { field, value });
   }
-  return number;
+  return value;
 }
 
 function safeToken(value, field, { max = 128 } = {}) {
@@ -136,17 +148,18 @@ function safeToken(value, field, { max = 128 } = {}) {
 }
 
 function normalizeId(value, field) {
-  if (Number.isSafeInteger(value) && value > 0) return value;
-  if (typeof value === 'string' && /^(?:[1-9][0-9]*)$/.test(value)) {
-    const number = Number(value);
-    if (Number.isSafeInteger(number)) return number;
+  const pattern = CANONICAL_ID_PATTERNS[field];
+  if (!pattern || typeof value !== 'string' || !pattern.test(value)) {
+    fail('EPISODE_VALUE_INVALID', field + ' must be a canonical BabyPark identifier', { field });
   }
-  return safeToken(value, field);
+  return value;
 }
 
 function normalizeSlotValue(slotName, value) {
+  if (!Object.hasOwn(SLOT_SPECS, slotName)) {
+    fail('EPISODE_SLOT_UNSUPPORTED', 'unsupported stable slot', { slot_name: slotName });
+  }
   const kind = SLOT_SPECS[slotName];
-  if (!kind) fail('EPISODE_SLOT_UNSUPPORTED', 'unsupported stable slot', { slot_name: slotName });
 
   if (kind === 'id') return normalizeId(value, slotName);
   if (kind === 'money_minor') {
@@ -195,7 +208,7 @@ function normalizeCandidate(candidate) {
   if (keys.length !== 2 || keys[0] !== 'slot' || keys[1] !== 'value') {
     fail('EPISODE_CANDIDATE_INVALID', 'candidate must contain only slot and value');
   }
-  if (typeof candidate.slot !== 'string' || !(candidate.slot in SLOT_SPECS)) {
+  if (typeof candidate.slot !== 'string' || !Object.hasOwn(SLOT_SPECS, candidate.slot)) {
     fail('EPISODE_CANDIDATE_INVALID', 'candidate slot must be a supported stable slot');
   }
   return { slot: candidate.slot, value: normalizeSlotValue(candidate.slot, candidate.value) };
@@ -207,7 +220,7 @@ function normalizeSlotPatch(patch) {
   }
   const normalized = [];
   for (const [slotName, value] of Object.entries(patch)) {
-    if (!(slotName in SLOT_SPECS)) {
+    if (!Object.hasOwn(SLOT_SPECS, slotName)) {
       fail('EPISODE_SLOT_UNSUPPORTED', 'unsupported stable slot', { slot_name: slotName });
     }
     normalized.push([slotName, value === null ? null : normalizeSlotValue(slotName, value)]);
@@ -281,6 +294,13 @@ export class EpisodeStore {
         fail('EPISODE_ACTIVE_EXISTS', 'conversation already has an active episode',
           { conversation_id: conversation, episode_id: active.episode_id });
       }
+      const watermark = this.db.prepare(
+        'SELECT max_message_id FROM conversation_message_watermarks WHERE conversation_id=?'
+      ).get(conversation);
+      if (watermark && message <= watermark.max_message_id) {
+        fail('EPISODE_MESSAGE_ALREADY_CONSUMED', 'source message was already consumed by this conversation',
+          { conversation_id: conversation, source_message_id: message, max_message_id: watermark.max_message_id });
+      }
       const episodeId = safeToken(this.idFactory(), 'episode_id');
 
       this.db.prepare(`INSERT INTO episodes
@@ -295,6 +315,7 @@ export class EpisodeStore {
           'INSERT INTO episode_slots (episode_id,slot_name,value_json) VALUES (?,?,?)'
         ).run(episodeId, slotName, canonicalJson(value));
       }
+      this.#advanceWatermark(conversation, message);
       return this.#readEpisode(episodeId);
     });
   }
@@ -331,10 +352,18 @@ export class EpisodeStore {
         fail('EPISODE_MESSAGE_OUT_OF_ORDER', 'source message ids must advance monotonically',
           { episode_id: id, last_message_id: last.message_id, source_message_id: message });
       }
+      const watermark = this.db.prepare(
+        'SELECT max_message_id FROM conversation_message_watermarks WHERE conversation_id=?'
+      ).get(episode.conversation_id);
+      if (watermark && message <= watermark.max_message_id) {
+        fail('EPISODE_MESSAGE_ALREADY_CONSUMED', 'source message was already consumed by this conversation',
+          { conversation_id: episode.conversation_id, source_message_id: message, max_message_id: watermark.max_message_id });
+      }
 
       this.db.prepare(
         'INSERT INTO episode_messages (episode_id,message_id,ordinal) VALUES (?,?,?)'
       ).run(id, message, (last?.ordinal ?? 0) + 1);
+      this.#advanceWatermark(episode.conversation_id, message);
       this.#bump(id, episode.version);
       return this.#readEpisode(id);
     });
@@ -392,9 +421,12 @@ export class EpisodeStore {
         fail('EPISODE_CLARIFICATION_LIMIT_REACHED', 'only one clarification prompt is allowed per episode',
           { episode_id: id });
       }
-      this.db.prepare(`UPDATE episodes SET clarification_prompts_sent=1,requested_slot=?,
+      const changed = this.db.prepare(`UPDATE episodes SET clarification_prompts_sent=1,requested_slot=?,
         version=version+1,updated_at=? WHERE episode_id=? AND state='active' AND version=?`)
-        .run(requested, this.now(), id, episode.version);
+        .run(requested, this.now(), id, episode.version).changes;
+      if (changed !== 1) {
+        fail('EPISODE_STALE_WRITE', 'episode changed before clarification write', { episode_id: id });
+      }
       this.db.prepare('DELETE FROM episode_candidates WHERE episode_id=?').run(id);
       for (const [index, candidate] of candidates.entries()) {
         this.db.prepare(`INSERT INTO episode_candidates
@@ -449,6 +481,13 @@ export class EpisodeStore {
         { episode_id: episodeId, expected_version: expectedVersion, actual_version: row.version });
     }
     return row;
+  }
+
+  #advanceWatermark(conversationId, messageId) {
+    this.db.prepare(`INSERT INTO conversation_message_watermarks (conversation_id,max_message_id)
+      VALUES (?,?) ON CONFLICT(conversation_id) DO UPDATE SET max_message_id=excluded.max_message_id
+      WHERE excluded.max_message_id>conversation_message_watermarks.max_message_id`)
+      .run(conversationId, messageId);
   }
 
   #bump(episodeId, version) {

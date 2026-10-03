@@ -1098,12 +1098,32 @@ dependent customer turns.
 C1 persists only:
 - one active episode per `conversation_id`;
 - ordered `source_message_ids`;
+- a non-cascading per-conversation `max_message_id` watermark that prevents an
+  already-consumed or older Chatwoot message from starting a fresh episode after
+  the prior episode closed or was cleaned up;
 - allowlisted canonical stable slots/customer selections;
 - presented canonical candidate values, hard-bounded to at most 20 per clarification;
 - one requested missing slot;
 - `clarification_prompts_sent` constrained to 0 or 1;
 - lifecycle timestamps/reason;
 - an optimistic episode version for stale-writer rejection; every mutation requires an explicit positive `expectedVersion`.
+
+Canonical identity-shaped slots are domain-tagged and exact-form only:
+- `product_id`: `prod_<lowercase UUID shape>`;
+- `variant_id`: `var_<lowercase UUID shape>`;
+- `store_id`: `store_<lowercase UUID shape>`;
+- `brand_id`: `brand_<32 lowercase hex>`;
+- `category_id`: `cat_<32 lowercase hex>`.
+
+C1 shape validation prevents provider-native IDs, cross-domain IDs and free-form
+text from entering durable identity slots. It is not a substitute for current
+authority validation: C2 and later decision paths must still resolve/revalidate
+that an ID exists and is authoritative before using it.
+
+`conversation_id` and every `source_message_id` are canonical internal integers:
+C1 accepts only positive JavaScript safe integers and performs no `Number(...)`
+coercion from booleans, arrays, hexadecimal/exponent strings or whitespace-padded
+text.
 
 Public episode reads (`loadActive` and `getEpisode`) MUST return one committed
 SQLite snapshot. The episode head row, ordered source messages, stable slots and
@@ -1121,7 +1141,9 @@ implemented.
 
 C1 never persists:
 - raw/normalized customer message bodies;
-- prices or offer completeness;
+- current/dynamic price facts or offer completeness; user-supplied normalized
+  money constraints (`min_price_minor`, `max_price_minor`, `currency`) are stable
+  episode constraints and are allowed;
 - commercial availability;
 - stock quantity;
 - catalog freshness / need flags;
@@ -1137,7 +1159,9 @@ into `episode.sqlite`.
 
 Closed episodes are immutable. Starting a later episode for the same Chatwoot
 conversation creates fresh state and never revives clarification budget,
-candidate state or stable slots from the closed episode.
+candidate state or stable slots from the closed episode. It also requires a
+strictly newer source message than the retained conversation watermark. Closed
+episode TTL cleanup MUST NOT cascade-delete or reset that watermark.
 
 The storage-policy class is rebuildable/fail-closed rather than business
 authority: loss of episode state may reduce continuity but must never permit the

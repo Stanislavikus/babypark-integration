@@ -240,8 +240,8 @@ Slice C umbrella issue: #75.
 C1 — durable logical episode state is the active implementation slice:
 - separate `episode.sqlite`, not a `copilot.sqlite` migration;
 - one active logical episode per Chatwoot conversation;
-- ordered source message IDs;
-- allowlisted canonical stable customer selections only;
+- ordered source message IDs plus a non-cascading per-conversation consumed-message watermark;
+- allowlisted canonical stable customer selections only, with exact domain-tagged ID shapes;
 - presented canonical candidates (hard bound 20) + requested slot;
 - clarification budget constrained to 0/1;
 - every mutation requires explicit optimistic `expectedVersion`; stale writers are rejected;
@@ -249,6 +249,8 @@ C1 — durable logical episode state is the active implementation slice:
   row metadata and child state cannot be torn across concurrent commits;
 - EpisodeStore explicitly sets SQLite `busy_timeout=5000`, avoiding Node-version
   dependence in concurrent reader/writer COMMIT behavior;
+- Chatwoot conversation/source message IDs must be positive safe integers without
+  coercion; old/equal messages cannot start a fresh episode after terminal/cleanup;
 - no raw/normalized customer body, dynamic Catalog/Knowledge facts,
   resolver/vocabulary state, or Chatwoot reopen-causality marker is persisted;
 - `NON_ACTIONABLE_ACK` and standalone/dependent episode-boundary behavior are
