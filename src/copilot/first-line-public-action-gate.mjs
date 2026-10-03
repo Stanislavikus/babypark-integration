@@ -47,7 +47,6 @@ export async function gatePublicActionToSending({
   authorityReader,
   actionId,
   leaseToken,
-  sourceConversationId,
 }) {
   const before = store.getPublicAction(actionId);
   if (!before) fail('FIRST_LINE_ACTION_NOT_FOUND', 'public action not found', { action_id: actionId });
@@ -59,7 +58,15 @@ export async function gatePublicActionToSending({
     fail('FIRST_LINE_ACTION_CLAIM_INVALID', 'gate caller does not own action lease', { action_id: actionId });
   }
 
-  const snapshot = await authorityReader.readAuthorizingConversationSnapshot(sourceConversationId);
+  const boundStream = store.getConversationStream(before.stream_id);
+  if (!boundStream || boundStream.source_provider !== 'chatwoot') {
+    fail('FIRST_LINE_ACTION_SOURCE_BINDING_INVALID', 'public action stream is not bound to Chatwoot authority',
+      { action_id: actionId, stream_id: before.stream_id });
+  }
+
+  const snapshot = await authorityReader.readAuthorizingConversationSnapshot(
+    boundStream.source_conversation_id
+  );
   if (!snapshot.complete || snapshot.code !== 'COMPLETE') {
     return { code: 'HISTORY_UNPROVABLE', action: before, snapshotRowCount: snapshot.rowCount };
   }
@@ -75,8 +82,8 @@ export async function gatePublicActionToSending({
   }
 
   const current = store.getPublicAction(actionId);
-  const stream = store.getConversationStream(before.stream_id);
-  if (stream.stream_revision !== current.prepared_stream_revision) {
+  const currentStream = store.getConversationStream(before.stream_id);
+  if (currentStream.stream_revision !== current.prepared_stream_revision) {
     const stale = store.markActionStaleBeforeSend(actionId, { reason: 'stream_revision_changed' });
     return { code: 'STALE', action: stale, insertedEvents: inserted, snapshotRowCount: snapshot.rowCount };
   }
@@ -102,10 +109,15 @@ export async function gatePublicActionToSending({
       snapshotRowCount: snapshot.rowCount,
     };
   } catch (error) {
-    if (error instanceof FirstLineStateError && error.code === 'FIRST_LINE_ACTION_STALE_REVISION') {
+    if (error instanceof FirstLineStateError &&
+        (error.code === 'FIRST_LINE_ACTION_STALE_REVISION' ||
+         error.code === 'FIRST_LINE_ACTION_STALE_EPISODE')) {
       const latest = store.getPublicAction(actionId);
       if (latest?.state === 'GATING') {
-        const stale = store.markActionStaleBeforeSend(actionId, { reason: 'stream_revision_changed_before_sending' });
+        const reason = error.code === 'FIRST_LINE_ACTION_STALE_EPISODE'
+          ? 'episode_changed_before_sending'
+          : 'stream_revision_changed_before_sending';
+        const stale = store.markActionStaleBeforeSend(actionId, { reason });
         return { code: 'STALE', action: stale, insertedEvents: inserted, snapshotRowCount: snapshot.rowCount };
       }
     }

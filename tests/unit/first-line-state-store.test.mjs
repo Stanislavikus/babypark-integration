@@ -468,3 +468,37 @@ test('read path rejects manually corrupted public action metadata', t => {
   ).run(action.action_id);
   expectCode(() => store.getPublicAction(action.action_id), 'FIRST_LINE_DB_CORRUPT');
 });
+
+
+test('cancelling an unsent CLARIFY never mutates an already closed episode', t => {
+  const { store } = tempStore(t);
+  const stream = makeStream(store);
+  store.ingestConversationEvent(stream.stream_id, customerEvent(101));
+  let episode = store.beginEpisode({ streamId: stream.stream_id });
+  const action = store.preparePublicAction({
+    streamId: stream.stream_id,
+    episodeId: episode.episode_id,
+    expectedEpisodeVersion: 1,
+    preparedStreamRevision: 1,
+    actionType: 'CLARIFY',
+    basisEventSeqs: [1],
+    requestedSlot: 'store_id',
+    deadlineAt: NOW + 60_000,
+  });
+  episode = store.closeEpisode(episode.episode_id, {
+    reason: 'human_takeover',
+    expectedVersion: 2,
+  });
+  assert.equal(episode.state, 'closed');
+  assert.equal(episode.version, 3);
+
+  const cancelled = store.cancelActionBeforeSend(action.action_id, { reason: 'episode_closed' });
+  assert.equal(cancelled.state, 'CANCELLED');
+
+  const closed = store.getEpisode(episode.episode_id);
+  assert.equal(closed.state, 'closed');
+  assert.equal(closed.version, 3);
+  assert.equal(closed.clarification_prompts_sent, 1);
+  assert.equal(closed.requested_slot, 'store_id');
+  assert.equal(closed.clarification_action_id, action.action_id);
+});

@@ -722,10 +722,15 @@ export class FirstLineStateStore {
     }
     if (action.action_type === 'CLARIFY' && action.episode_id) {
       const episode = this.db.prepare('SELECT * FROM episodes WHERE episode_id=?').get(action.episode_id);
-      if (episode?.clarification_action_id === action.action_id) {
-        this.db.prepare(`UPDATE episodes SET clarification_prompts_sent=0,requested_slot=NULL,
-          clarification_action_id=NULL,version=version+1,updated_at=? WHERE episode_id=?`)
-          .run(this.now(), action.episode_id);
+      if (episode?.state === 'active' && episode.clarification_action_id === action.action_id) {
+        const changed = this.db.prepare(`UPDATE episodes SET clarification_prompts_sent=0,requested_slot=NULL,
+          clarification_action_id=NULL,version=version+1,updated_at=?
+          WHERE episode_id=? AND state='active' AND clarification_action_id=?`)
+          .run(this.now(), action.episode_id, action.action_id).changes;
+        if (changed !== 1) {
+          fail('FIRST_LINE_STALE_WRITE', 'clarification reservation changed before unsent action terminalization',
+            { action_id: action.action_id, episode_id: action.episode_id });
+        }
       }
     }
     this.db.prepare(`UPDATE public_actions SET state=?,terminal_reason=?,lease_token=NULL,

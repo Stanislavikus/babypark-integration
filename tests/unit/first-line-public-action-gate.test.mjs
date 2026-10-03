@@ -196,3 +196,113 @@ test('new unknown public row increments revision and invalidates prepared action
   assert.equal(result.insertedEvents, 1);
   assert.equal(store.listConversationEvents('stream-1')[1].event_kind, 'UNKNOWN_PUBLIC');
 });
+
+
+test('authorizing snapshot is bound to the action stream and cannot be redirected by caller input', async t => {
+  const store = tempStore(t);
+  const { action } = prepareClaim(store);
+  let readConversationId = null;
+  const authorityReader = {
+    readAuthorizingConversationSnapshot: async conversationId => {
+      readConversationId = conversationId;
+      return { complete: true, code: 'COMPLETE', rowCount: 1, events: [customer(101)] };
+    },
+  };
+
+  const result = await gatePublicActionToSending({
+    store,
+    authorityReader,
+    actionId: action.action_id,
+    leaseToken: 'relay-1',
+    sourceConversationId: 999,
+  });
+
+  assert.equal(readConversationId, 55);
+  assert.equal(result.code, 'READY_TO_SEND');
+  assert.equal(result.action.state, 'SENDING');
+});
+
+test('episode drift stales a claimed CLARIFY action instead of leaving GATING live', async t => {
+  const store = tempStore(t);
+  const stream = store.ensureConversationStream({
+    sourceProvider: 'chatwoot', sourceConversationId: 55,
+  });
+  store.ingestConversationEvent(stream.stream_id, customer(101));
+  let episode = store.beginEpisode({ streamId: stream.stream_id });
+  const action = store.preparePublicAction({
+    streamId: stream.stream_id,
+    episodeId: episode.episode_id,
+    expectedEpisodeVersion: 1,
+    preparedStreamRevision: 1,
+    actionType: 'CLARIFY',
+    basisEventSeqs: [1],
+    requestedSlot: 'store_id',
+    deadlineAt: NOW + 60_000,
+  });
+  store.claimNextPublicAction({ leaseMs: 10_000, token: 'relay-1' });
+
+  episode = store.setStableSlots(
+    episode.episode_id,
+    { product_id: 'prod_11111111-1111-4111-8111-111111111111' },
+    { expectedVersion: 2, derivedThroughEventSeq: 1 }
+  );
+  assert.equal(episode.version, 3);
+
+  const result = await gatePublicActionToSending({
+    store,
+    authorityReader: authority([customer(101)]),
+    actionId: action.action_id,
+    leaseToken: 'relay-1',
+    sourceConversationId: 55,
+  });
+
+  assert.equal(result.code, 'STALE');
+  assert.equal(result.action.state, 'STALE');
+  episode = store.getEpisode(episode.episode_id);
+  assert.equal(episode.state, 'active');
+  assert.equal(episode.clarification_prompts_sent, 0);
+  assert.equal(episode.clarification_action_id, null);
+  assert.equal(episode.version, 4);
+});
+
+test('closed episode remains immutable when its claimed CLARIFY action becomes stale', async t => {
+  const store = tempStore(t);
+  const stream = store.ensureConversationStream({
+    sourceProvider: 'chatwoot', sourceConversationId: 55,
+  });
+  store.ingestConversationEvent(stream.stream_id, customer(101));
+  let episode = store.beginEpisode({ streamId: stream.stream_id });
+  const action = store.preparePublicAction({
+    streamId: stream.stream_id,
+    episodeId: episode.episode_id,
+    expectedEpisodeVersion: 1,
+    preparedStreamRevision: 1,
+    actionType: 'CLARIFY',
+    basisEventSeqs: [1],
+    requestedSlot: 'store_id',
+    deadlineAt: NOW + 60_000,
+  });
+  store.claimNextPublicAction({ leaseMs: 10_000, token: 'relay-1' });
+  episode = store.closeEpisode(episode.episode_id, {
+    reason: 'human_takeover',
+    expectedVersion: 2,
+  });
+  assert.equal(episode.state, 'closed');
+  assert.equal(episode.version, 3);
+
+  const result = await gatePublicActionToSending({
+    store,
+    authorityReader: authority([customer(101)]),
+    actionId: action.action_id,
+    leaseToken: 'relay-1',
+    sourceConversationId: 55,
+  });
+
+  assert.equal(result.code, 'STALE');
+  assert.equal(result.action.state, 'STALE');
+  const closed = store.getEpisode(episode.episode_id);
+  assert.equal(closed.state, 'closed');
+  assert.equal(closed.version, 3);
+  assert.equal(closed.clarification_prompts_sent, 1);
+  assert.equal(closed.clarification_action_id, action.action_id);
+});
