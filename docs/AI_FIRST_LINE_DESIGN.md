@@ -1087,7 +1087,7 @@ Automatic Chatwoot pending-conversation cleanup/resolve is not part of Slice C
 v1. No causal "which message reopened the conversation" detector is required by
 the v1 critical path.
 
-## 29.3 C1 persisted episode state
+## 29.3 C1 persisted episode state (historical pre-production evidence)
 
 C1 uses a separate `episode.sqlite`. It is not a table in `copilot.sqlite`.
 
