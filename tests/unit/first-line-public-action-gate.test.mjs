@@ -138,15 +138,16 @@ test('covered source deletion or reclassification stales the action without a PO
   assert.equal(result.code, 'STALE');
   assert.equal(result.coverage.reason, 'covered_source_deleted');
 
-  const stream2 = store.ensureConversationStream({
+  const store2 = tempStore(t);
+  const stream2 = store2.ensureConversationStream({
     sourceProvider: 'chatwoot', sourceConversationId: 56,
   });
-  store.ingestConversationEvent(stream2.stream_id, customer(201));
-  const action2 = store.preparePublicAction({
+  store2.ingestConversationEvent(stream2.stream_id, customer(201));
+  const action2 = store2.preparePublicAction({
     streamId: stream2.stream_id, preparedStreamRevision: 1, actionType: 'ANSWER',
     basisEventSeqs: [1], deadlineAt: NOW + 60_000,
   });
-  store.claimNextPublicAction({ leaseMs: 10_000, token: 'relay-2' });
+  store2.claimNextPublicAction({ leaseMs: 10_000, token: 'relay-2' });
 
   const authority2 = {
     readAuthorizingConversationSnapshot: async conversationId => {
@@ -160,7 +161,7 @@ test('covered source deletion or reclassification stales the action without a PO
     },
   };
   result = await gatePublicActionToSending({
-    store, authorityReader: authority2, actionId: action2.action_id,
+    store: store2, authorityReader: authority2, actionId: action2.action_id,
     leaseToken: 'relay-2', sourceConversationId: 56,
   });
   assert.equal(result.code, 'STALE');
