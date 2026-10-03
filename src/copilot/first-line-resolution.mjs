@@ -137,12 +137,33 @@ function resolveFirstLineExtraction({
     turns,
   });
 
+  const knowledgeKinds = new Set(['CATEGORY', 'BRAND', 'STORE']);
+  let resolverKnowledgeStore = knowledgeStore;
+  if (certified.certified_spans.some(span => knowledgeKinds.has(span.kind))) {
+    if (!knowledgeStore || typeof knowledgeStore.authoritySnapshot !== 'function') {
+      throw new TypeError('knowledgeStore must provide authoritySnapshot()');
+    }
+    const snapshot = knowledgeStore.authoritySnapshot();
+    if (!Array.isArray(snapshot)) {
+      fail('FIRST_LINE_RESOLUTION_KNOWLEDGE_SNAPSHOT_INVALID',
+        'knowledge authority snapshot must be an array');
+    }
+    const stableSnapshot = Object.freeze([...snapshot]);
+    resolverKnowledgeStore = Object.freeze({
+      authoritySnapshot() {
+        return stableSnapshot;
+      },
+    });
+  }
+
   const catalogGenerations = new Set();
+  const resolverContractVersions = new Set();
+  const usedRevisionIds = new Set();
   const resolutions = certified.certified_spans.map(span => {
     const authority = redactedAuthority(resolveSpan(span, {
       language: certified.language,
       nowUtc,
-      knowledgeStore,
+      knowledgeStore: resolverKnowledgeStore,
       catalogService,
     }));
     if (span.kind !== 'MONEY') {
@@ -162,6 +183,25 @@ function resolveFirstLineExtraction({
         catalogGenerations.add(generationId);
       }
     }
+    if (authority?.resolver_contract_version !== undefined) {
+      if (!Number.isSafeInteger(authority.resolver_contract_version) ||
+          authority.resolver_contract_version < 1) {
+        fail('FIRST_LINE_RESOLUTION_CONTRACT_INVALID',
+          'resolver contract version must be a positive safe integer',
+          { kind: span.kind });
+      }
+      resolverContractVersions.add(authority.resolver_contract_version);
+    }
+    if (Array.isArray(authority?.used_revision_ids)) {
+      for (const revisionId of authority.used_revision_ids) {
+        if (typeof revisionId !== 'string' || revisionId.length === 0) {
+          fail('FIRST_LINE_RESOLUTION_CONTRACT_INVALID',
+            'used revision id must be non-empty text',
+            { kind: span.kind });
+        }
+        usedRevisionIds.add(revisionId);
+      }
+    }
     return Object.freeze({
       kind: span.kind,
       turn_index: span.turn_index,
@@ -178,6 +218,11 @@ function resolveFirstLineExtraction({
       'one extraction cannot combine multiple catalog generations',
       { generation_ids: [...catalogGenerations].sort() });
   }
+  if (resolverContractVersions.size > 1) {
+    fail('FIRST_LINE_RESOLUTION_CONTRACT_DRIFT',
+      'one extraction cannot combine multiple resolver contract versions',
+      { resolver_contract_versions: [...resolverContractVersions].sort((a, b) => a - b) });
+  }
 
   return Object.freeze({
     schema: FIRST_LINE_RESOLUTION_SCHEMA,
@@ -185,6 +230,11 @@ function resolveFirstLineExtraction({
     intent_schema_version: FIRST_LINE_INTENT_SCHEMA_VERSION,
     intent_hint: certified.intent_hint,
     language: certified.language,
+    catalog_generation_id:
+      catalogGenerations.size === 1 ? [...catalogGenerations][0] : null,
+    knowledge_resolver_contract_version:
+      resolverContractVersions.size === 1 ? [...resolverContractVersions][0] : null,
+    used_revision_ids: Object.freeze([...usedRevisionIds].sort()),
     certified_spans: Object.freeze(certified.certified_spans.map(spanEvidence)),
     resolutions: Object.freeze(resolutions),
   });
@@ -208,6 +258,11 @@ export function resolveFirstLineExactReads({
       fail('FIRST_LINE_RESOLUTION_EXACT_READS_INVALID',
         'exact read entry must contain only turnIndex and exactRead',
         { index });
+    }
+    if (entry.turnIndex !== index + 1) {
+      fail('FIRST_LINE_RESOLUTION_EXACT_READS_INVALID',
+        'exact read turn indexes must be contiguous 1..N in accepted turn order',
+        { index, turn_index: entry.turnIndex });
     }
     return transientTurnFromExactRead(entry.turnIndex, entry.exactRead);
   });

@@ -217,12 +217,19 @@ export function certifyFirstLineExtraction({
   }
 
   const byIndex = new Map();
+  const sourceMessageIds = new Set();
   for (const rawTurn of turns) {
     const turn = assertSupportedTransientTurn(rawTurn);
     if (byIndex.has(turn.turnIndex)) {
       fail('FIRST_LINE_EXTRACTION_TURN_INVALID', 'duplicate turn index', { turn_index: turn.turnIndex });
     }
+    if (sourceMessageIds.has(turn.sourceMessageId)) {
+      fail('FIRST_LINE_EXTRACTION_TURN_INVALID', 'duplicate source message id', {
+        source_message_id: turn.sourceMessageId,
+      });
+    }
     byIndex.set(turn.turnIndex, turn);
+    sourceMessageIds.add(turn.sourceMessageId);
   }
 
   const certified = normalized.spans.map((span, index) => {

@@ -304,3 +304,14 @@ test('span count, quote length, occurrence and intent hint are bounded', () => {
     turns: [turn()],
   }), 'FIRST_LINE_EXTRACTION_VALUE_INVALID');
 });
+
+
+test('one source message cannot masquerade as two different turn indexes', () => {
+  expectCode(() => certifyFirstLineExtraction({
+    extraction: extraction({ spans: [] }),
+    turns: [
+      turn({ turnIndex: 1, sourceMessageId: 101 }),
+      turn({ turnIndex: 2, sourceMessageId: 101 }),
+    ],
+  }), 'FIRST_LINE_EXTRACTION_TURN_INVALID');
+});

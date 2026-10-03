@@ -91,9 +91,14 @@ function vocabularyRow(namespace, phrase, effect, revisionId) {
 }
 
 function knowledge(rows = []) {
+  let calls = 0;
   return {
     authoritySnapshot() {
+      calls += 1;
       return rows;
+    },
+    get calls() {
+      return calls;
     },
   };
 }
@@ -272,6 +277,14 @@ test('certified spans resolve only through deterministic authority contracts', (
     result.resolutions[3].authority.resolved.canonical_store_id,
     'store-hlybochytska'
   );
+  assert.equal(store.calls, 1);
+  assert.equal(result.catalog_generation_id, 'g1');
+  assert.equal(result.knowledge_resolver_contract_version, 1);
+  assert.deepEqual(result.used_revision_ids, [
+    'rev-brand-cybex',
+    'rev-category-strollers',
+    'rev-store-hlybochytska',
+  ]);
   const serialized = JSON.stringify(result);
   assert.equal(serialized.includes('Покажи Cybex'), false);
   assert.equal(serialized.includes('прогулочные коляски'), false);
@@ -520,6 +533,23 @@ test('resolution entrypoint accepts only exact-read envelopes', () => {
     () => resolveFirstLineExactReads({
       extraction: extraction([]),
       exactReads: [{ turnIndex: 1, exactRead: exactReadEntry(turn()).exactRead, text: 'bypass' }],
+      knowledgeStore: knowledge(),
+      catalogService: catalog(),
+      nowUtc: NOW,
+    }),
+    error => error instanceof FirstLineResolutionError &&
+      error.code === 'FIRST_LINE_RESOLUTION_EXACT_READS_INVALID'
+  );
+});
+
+
+test('exact-read turn indexes must be contiguous accepted-turn order', () => {
+  const first = exactReadEntry(turn({ turnIndex: 1, sourceMessageId: 501 }));
+  const third = exactReadEntry(turn({ turnIndex: 3, sourceMessageId: 503, text: 'Cybex' }));
+  assert.throws(
+    () => resolveFirstLineExactReads({
+      extraction: extraction([]),
+      exactReads: [first, third],
       knowledgeStore: knowledge(),
       catalogService: catalog(),
       nowUtc: NOW,
