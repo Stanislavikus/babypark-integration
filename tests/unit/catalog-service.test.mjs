@@ -542,6 +542,18 @@ function buildFixture(storageDir) {
     null,
     '/identity-collision'
   );
+  builder.db.prepare(
+    'INSERT INTO product_text(' +
+    'product_id,language,title,short_description,description,url' +
+    ') VALUES(?,?,?,?,?,?)'
+  ).run(
+    'p-bug',
+    'de',
+    'Identity collision Day3',
+    null,
+    null,
+    '/de/duplicate-title'
+  );
 
   for (const layer of [
     'taxonomy',
@@ -959,6 +971,46 @@ test('lookupSku distinguishes FOUND and NOT_FOUND with canonical key', () => {
   assert.equal(missing.status, 'NOT_FOUND');
   assert.equal(missing.variant, null);
   assert.equal(missing.catalog.generation_id, 'svc1');
+});
+
+test('lookupProductTitleExact is language-scoped, exact, and never ranks ambiguity', () => {
+  const found = service.lookupProductTitleExact({
+    title: '  Коляска Joolz Day3  ',
+    language: 'uk',
+  });
+  assert.equal(found.status, 'FOUND');
+  assert.equal(found.normalized_title, 'Коляска Joolz Day3');
+  assert.equal(found.product.product_id, 'p-day3');
+  assert.deepEqual(found.candidates.map(row => row.product_id), ['p-day3']);
+
+  const differentCase = service.lookupProductTitleExact({
+    title: 'коляска Joolz Day3',
+    language: 'uk',
+  });
+  assert.equal(differentCase.status, 'NOT_FOUND');
+  assert.equal(differentCase.product, null);
+
+  const differentLanguage = service.lookupProductTitleExact({
+    title: 'Коляска Joolz Day3',
+    language: 'ru',
+  });
+  assert.equal(differentLanguage.status, 'NOT_FOUND');
+
+  const ambiguous = service.lookupProductTitleExact({
+    title: 'Identity collision Day3',
+    language: 'de',
+  });
+  assert.equal(ambiguous.status, 'AMBIGUOUS');
+  assert.equal(ambiguous.product, null);
+  assert.deepEqual(
+    ambiguous.candidates.map(row => row.product_id),
+    ['p-bug', 'p-day3']
+  );
+
+  assert.throws(
+    () => service.lookupProductTitleExact({ title: '   ', language: 'uk' }),
+    error => error?.code === 'CATALOG_QUERY_INVALID'
+  );
 });
 
 test('search supports the RU FTS presentation independently', () => {

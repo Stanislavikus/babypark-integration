@@ -1799,6 +1799,48 @@ export class CatalogService {
     });
   }
 
+  lookupProductTitleExact({
+    title,
+    language = 'uk',
+  } = {}) {
+    return this.reader.withDb(db => {
+      const lang = validateLanguage(language);
+      const normalizedTitle = normalizeSearchText(title);
+      if (!normalizedTitle) {
+        throw serviceError(
+          'CATALOG_QUERY_INVALID',
+          'title must be a non-empty string'
+        );
+      }
+
+      const rows = db.prepare(
+        'SELECT product_id,language,title,url FROM product_text ' +
+        'WHERE language=? AND title=? ORDER BY product_id'
+      ).all(lang, normalizedTitle);
+
+      const candidates = rows.map(row => ({
+        product_id: row.product_id,
+        language: row.language,
+        title: row.title,
+        url: row.url,
+      }));
+
+      return {
+        catalog: catalogSnapshot(db),
+        status:
+          candidates.length === 0
+            ? 'NOT_FOUND'
+            : candidates.length === 1
+              ? 'FOUND'
+              : 'AMBIGUOUS',
+        language: lang,
+        normalized_title: normalizedTitle,
+        product: candidates.length === 1 ? candidates[0] : null,
+        candidates,
+      };
+    });
+  }
+
   getProduct(selector = {}) {
     return this.reader.withDb(db => {
       const productId = resolveProductId(db, selector);
