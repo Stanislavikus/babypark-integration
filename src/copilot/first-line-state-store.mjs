@@ -6,6 +6,11 @@ import { DatabaseSync } from 'node:sqlite';
 const SCHEMA_VERSION = 2;
 const BUSY_TIMEOUT_MS = 5000;
 const MAX_PRESENTED_CANDIDATES = 20;
+// A whole-conversation authorizing snapshot is unprovable at 1000 public rows;
+// an open semantic turn therefore never needs a planning bound above 999 events.
+const MAX_OPEN_TURN_EVENTS = 999;
+const ROUTING_SUFFIX_FETCH_LIMIT = MAX_OPEN_TURN_EVENTS + 1;
+const ROUTING_SNAPSHOT_SCHEMA = 'bp.first-line.routing-snapshot/1';
 
 const LIVE_ACTION_STATES = new Set(['PREPARED', 'GATING', 'SENDING', 'UNCERTAIN']);
 const TERMINAL_ACTION_STATES = new Set(['CONFIRMED', 'STALE', 'CANCELLED', 'HANDOFF_DONE', 'NOT_SENT']);
@@ -419,6 +424,142 @@ export class FirstLineStateStore {
       this.#requireStream(id);
       return this.db.prepare('SELECT * FROM conversation_events WHERE stream_id=? ORDER BY event_seq').all(id)
         .map(row => this.#eventDto(row));
+    });
+  }
+
+  readRoutingSnapshot(streamId) {
+    const id = safeToken(streamId, 'stream_id');
+    return readTx(this.db, () => {
+      this.#requireStream(id);
+      const stream = this.#readStream(id);
+
+      const rows = this.db.prepare(
+        'SELECT ce.*,' +
+        ' pa.action_id AS confirmed_action_id,' +
+        ' pa.action_type AS confirmed_action_type,' +
+        ' pa.prepared_stream_revision AS confirmed_action_revision,' +
+        ' pa.episode_id AS confirmed_action_episode_id,' +
+        ' pa.episode_version AS confirmed_action_episode_version' +
+        ' FROM conversation_events ce' +
+        ' LEFT JOIN public_actions pa' +
+        ' ON pa.action_id=ce.source_id' +
+        ' AND pa.stream_id=ce.stream_id' +
+        " AND pa.state='CONFIRMED'" +
+        ' AND pa.confirmed_source_message_id=ce.source_message_id' +
+        ' WHERE ce.stream_id=?' +
+        ' ORDER BY ce.event_seq DESC LIMIT ?'
+      ).all(id, ROUTING_SUFFIX_FETCH_LIMIT);
+
+      let expectedSeq = stream.last_event_seq;
+      const descending = rows.map(row => {
+        if (row.event_seq !== expectedSeq) {
+          fail('FIRST_LINE_DB_CORRUPT', 'routing event suffix is not contiguous with stream head', {
+            stream_id: id,
+            expected_event_seq: expectedSeq,
+            actual_event_seq: row.event_seq,
+          });
+        }
+        expectedSeq -= 1;
+
+        const event = this.#eventDto(row);
+        let confirmedAction = null;
+        if (row.confirmed_action_id !== null) {
+          persistedGuard(() => {
+            if (event.event_kind !== 'BABYPARK_PUBLIC_REPLY' ||
+                event.source_id !== row.confirmed_action_id) {
+              fail('FIRST_LINE_VALUE_INVALID', 'confirmed action provenance conflicts with event');
+            }
+            safeToken(row.confirmed_action_id, 'action_id');
+            enumValue(row.confirmed_action_type, ACTION_TYPES, 'action_type');
+            positiveInteger(row.confirmed_action_revision, 'prepared_stream_revision');
+            if ((row.confirmed_action_episode_id === null) !==
+                (row.confirmed_action_episode_version === null)) {
+              fail('FIRST_LINE_VALUE_INVALID', 'confirmed action episode provenance is incomplete');
+            }
+            if (row.confirmed_action_episode_id !== null) {
+              safeToken(row.confirmed_action_episode_id, 'episode_id');
+              positiveInteger(row.confirmed_action_episode_version, 'episode_version');
+            }
+            if (row.confirmed_action_type === 'CLARIFY' &&
+                row.confirmed_action_episode_id === null) {
+              fail('FIRST_LINE_VALUE_INVALID', 'confirmed clarification lacks episode provenance');
+            }
+          }, 'confirmed BabyPark action provenance is invalid', {
+            stream_id: id,
+            event_seq: event.event_seq,
+          });
+          confirmedAction = {
+            action_id: row.confirmed_action_id,
+            action_type: row.confirmed_action_type,
+            prepared_stream_revision: row.confirmed_action_revision,
+            episode_id: row.confirmed_action_episode_id,
+            episode_version: row.confirmed_action_episode_version,
+          };
+        }
+
+        return {
+          event,
+          confirmed_babypark_action: confirmedAction,
+        };
+      });
+
+      if (stream.last_event_seq === 0 && rows.length !== 0) {
+        fail('FIRST_LINE_DB_CORRUPT', 'empty stream head has persisted routing events', {
+          stream_id: id,
+        });
+      }
+      if (stream.last_event_seq > 0 && rows.length === 0) {
+        fail('FIRST_LINE_DB_CORRUPT', 'non-empty stream head has no routing events', {
+          stream_id: id,
+        });
+      }
+
+      const activeRow = this.db.prepare(
+        "SELECT episode_id FROM episodes WHERE stream_id=? AND state='active'"
+      ).get(id);
+      const activeEpisode = activeRow ? this.#readEpisode(activeRow.episode_id) : null;
+      if (activeEpisode && activeEpisode.stream_id !== id) {
+        fail('FIRST_LINE_DB_CORRUPT', 'active episode is bound to another stream', {
+          stream_id: id,
+          episode_id: activeEpisode.episode_id,
+        });
+      }
+
+      const liveRow = this.db.prepare(
+        "SELECT action_id FROM public_actions WHERE stream_id=? " +
+        "AND state IN ('PREPARED','GATING','SENDING','UNCERTAIN') " +
+        'ORDER BY created_at,action_id LIMIT 1'
+      ).get(id);
+      const livePublicAction = liveRow ? this.#readAction(liveRow.action_id) : null;
+
+      let clarificationAction = null;
+      if (activeEpisode?.clarification_action_id) {
+        clarificationAction =
+          livePublicAction?.action_id === activeEpisode.clarification_action_id
+            ? livePublicAction
+            : this.#readAction(activeEpisode.clarification_action_id);
+        if (!clarificationAction ||
+            clarificationAction.stream_id !== id ||
+            clarificationAction.episode_id !== activeEpisode.episode_id ||
+            clarificationAction.action_type !== 'CLARIFY') {
+          fail('FIRST_LINE_DB_CORRUPT', 'active clarification provenance is inconsistent', {
+            stream_id: id,
+            episode_id: activeEpisode.episode_id,
+            clarification_action_id: activeEpisode.clarification_action_id,
+          });
+        }
+      }
+
+      return {
+        schema: ROUTING_SNAPSHOT_SCHEMA,
+        stream,
+        active_episode: activeEpisode,
+        live_public_action: livePublicAction,
+        clarification_action: clarificationAction,
+        event_suffix: descending.reverse(),
+        suffix_truncated: stream.last_event_seq > rows.length,
+        max_open_turn_events: MAX_OPEN_TURN_EVENTS,
+      };
     });
   }
 
@@ -995,7 +1136,9 @@ export {
   BUSY_TIMEOUT_MS,
   EVENT_KINDS,
   LIVE_ACTION_STATES,
+  MAX_OPEN_TURN_EVENTS,
   MAX_PRESENTED_CANDIDATES,
+  ROUTING_SNAPSHOT_SCHEMA,
   SCHEMA_VERSION,
   SLOT_SPECS,
   TERMINAL_ACTION_STATES,
