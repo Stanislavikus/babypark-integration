@@ -357,3 +357,38 @@ test('read path rejects manually corrupted persisted canonical state', t => {
   ).run(episode.episode_id);
   expectCode(() => store.getEpisode(episode.episode_id), 'FIRST_LINE_DB_CORRUPT');
 });
+
+
+test('SENDING/UNCERTAIN action confirms only from unique BabyPark source_id event', t => {
+  const { store } = tempStore(t);
+  const stream = makeStream(store);
+  store.ingestConversationEvent(stream.stream_id, customerEvent(101));
+  const action = store.preparePublicAction({
+    streamId: stream.stream_id, preparedStreamRevision: 1, actionType: 'ANSWER',
+    basisEventSeqs: [1], deadlineAt: NOW + 60_000,
+  });
+  store.claimNextPublicAction({ leaseMs: 10_000, token: 'relay-1' });
+  store.markActionSending(action.action_id, 'relay-1');
+
+  assert.equal(store.confirmPublicActionFromLedger(action.action_id), null);
+  store.markActionUncertain(action.action_id);
+
+  store.ingestConversationEvent(stream.stream_id, {
+    sourceMessageId: 102,
+    eventKind: 'BABYPARK_PUBLIC_REPLY',
+    messageType: 'outgoing',
+    senderClass: 'configured_agent_bot',
+    senderId: 7,
+    contentType: 'text',
+    deleted: false,
+    unsupported: false,
+    hasAttachments: false,
+    sourceId: action.action_id,
+  });
+  const event = store.findConversationEventBySourceId(stream.stream_id, action.action_id);
+  assert.equal(event.source_message_id, 102);
+
+  const confirmed = store.confirmPublicActionFromLedger(action.action_id);
+  assert.equal(confirmed.state, 'CONFIRMED');
+  assert.equal(confirmed.confirmed_source_message_id, 102);
+});
