@@ -19,7 +19,7 @@ const EVENT_KINDS = new Set([
   'AUTOMATION_PUBLIC',
   'UNKNOWN_PUBLIC',
 ]);
-const MESSAGE_TYPES = new Set(['incoming', 'outgoing', 'template']);
+const MESSAGE_TYPES = new Set(['incoming', 'outgoing', 'template', 'unknown']);
 const SENDER_CLASSES = new Set(['contact', 'configured_agent_bot', 'human', 'other_agent_bot', 'none', 'unknown']);
 
 const SLOT_SPECS = Object.freeze({
