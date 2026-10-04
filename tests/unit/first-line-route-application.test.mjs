@@ -282,6 +282,9 @@ test('structured native selection continues same episode and creates no ledger e
   assert.equal(result.transition.episode.version, beforeEpisode.version + 1);
   assert.equal(result.transition.episode.stable_slots.product_id.value, PRODUCT_1);
   assert.equal(result.transition.episode.stable_slots.variant_id.value, VARIANT_2);
+  assert.equal(result.transition.episode.clarification_prompts_sent, 1);
+  assert.equal(result.transition.episode.requested_slot, null);
+  assert.equal(result.transition.episode.clarification_action_id, null);
   assert.equal(
     result.transition.episode.stable_slots.variant_id.derived_through_event_seq,
     2
@@ -399,6 +402,9 @@ test('exact requested ID slot fill commits the canonical requested store', t => 
   const result = applyFirstLineRoute({ store, projection, selectionProof: proof });
   assert.equal(result.code, 'EPISODE_CONTINUED');
   assert.equal(result.transition.episode.stable_slots.store_id.value, STORE_1);
+  assert.equal(result.transition.episode.clarification_prompts_sent, 1);
+  assert.equal(result.transition.episode.requested_slot, null);
+  assert.equal(result.transition.episode.clarification_action_id, null);
   assert.equal(result.transition.episode.stable_slots.store_id.derived_through_event_seq, 3);
 });
 

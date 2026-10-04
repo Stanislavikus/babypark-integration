@@ -1058,7 +1058,8 @@ export class FirstLineStateStore {
         VALUES (?,?,?,?) ON CONFLICT(episode_id,slot_name) DO UPDATE SET
         value_json=excluded.value_json,derived_through_event_seq=excluded.derived_through_event_seq`)
         .run(episodeId, slot, canonicalJson(value), sourceEvent.event_seq);
-      const changed = this.db.prepare(`UPDATE episodes SET version=version+1,updated_at=?
+      const changed = this.db.prepare(`UPDATE episodes SET version=version+1,requested_slot=NULL,
+        clarification_action_id=NULL,updated_at=?
         WHERE episode_id=? AND stream_id=? AND state='active' AND version=?`)
         .run(transitionAt, episodeId, stream, episodeVersion).changes;
       if (changed !== 1) {
