@@ -11,6 +11,7 @@ const MAX_PRESENTED_CANDIDATES = 20;
 const MAX_OPEN_TURN_EVENTS = 999;
 const ROUTING_SUFFIX_FETCH_LIMIT = MAX_OPEN_TURN_EVENTS + 1;
 const ROUTING_SNAPSHOT_SCHEMA = 'bp.first-line.routing-snapshot/1';
+const EPISODE_TRANSITION_SCHEMA = 'bp.first-line.episode-transition/1';
 
 const LIVE_ACTION_STATES = new Set(['PREPARED', 'GATING', 'SENDING', 'UNCERTAIN']);
 const TERMINAL_ACTION_STATES = new Set(['CONFIRMED', 'STALE', 'CANCELLED', 'HANDOFF_DONE', 'NOT_SENT']);
@@ -220,6 +221,47 @@ function contentType(value) {
   return value;
 }
 function canonicalJson(value) { return JSON.stringify(value); }
+
+function routingLedgerFingerprint(entries) {
+  const canonical = entries.map(entry => ({
+    event: {
+      stream_id: entry.event.stream_id,
+      event_seq: entry.event.event_seq,
+      source_message_id: entry.event.source_message_id,
+      event_kind: entry.event.event_kind,
+      message_type: entry.event.message_type,
+      sender_class: entry.event.sender_class,
+      sender_id: entry.event.sender_id,
+      content_type: entry.event.content_type,
+      deleted: entry.event.deleted,
+      unsupported: entry.event.unsupported,
+      has_attachments: entry.event.has_attachments,
+      source_id: entry.event.source_id,
+      accepted_at: entry.event.accepted_at,
+    },
+    confirmed_babypark_action: entry.confirmed_babypark_action == null
+      ? null
+      : {
+          action_id: entry.confirmed_babypark_action.action_id,
+          action_type: entry.confirmed_babypark_action.action_type,
+          prepared_stream_revision:
+            entry.confirmed_babypark_action.prepared_stream_revision,
+          episode_id: entry.confirmed_babypark_action.episode_id,
+          episode_version: entry.confirmed_babypark_action.episode_version,
+        },
+  }));
+  return 'sha256:' + crypto.createHash('sha256')
+    .update(canonicalJson(canonical), 'utf8')
+    .digest('hex');
+}
+
+function routingLedgerFingerprintValue(value, field = 'routing_ledger_fingerprint') {
+  if (typeof value !== 'string' || !/^sha256:[0-9a-f]{64}$/.test(value)) {
+    fail('FIRST_LINE_ROUTING_PLAN_INVALID',
+      field + ' must be a canonical metadata fingerprint', { field });
+  }
+  return value;
+}
 function parseJson(value, code = 'FIRST_LINE_DB_CORRUPT') {
   try { return JSON.parse(value); } catch { fail(code, 'persisted JSON is corrupt'); }
 }
@@ -260,6 +302,30 @@ function normalizeBasisEventSeqs(value) {
     if (out[i] <= out[i - 1]) fail('FIRST_LINE_ACTION_BASIS_INVALID', 'basis event seqs must be strictly increasing');
   }
   return out;
+}
+
+function expectedEpisode(id, version) {
+  if (id == null && version == null) return { id: null, version: null };
+  if (id == null || version == null) {
+    fail('FIRST_LINE_ROUTING_PLAN_INVALID',
+      'expected episode id/version must both be present or both be null');
+  }
+  return {
+    id: safeToken(id, 'expected_episode_id'),
+    version: positiveInteger(version, 'expected_episode_version'),
+  };
+}
+
+function expectedLiveAction(id, state) {
+  if (id == null && state == null) return { id: null, state: null };
+  if (id == null || state == null) {
+    fail('FIRST_LINE_ROUTING_PLAN_INVALID',
+      'expected live action id/state must both be present or both be null');
+  }
+  return {
+    id: safeToken(id, 'expected_live_action_id'),
+    state: enumValue(state, LIVE_ACTION_STATES, 'expected_live_action_state'),
+  };
 }
 function validateEventTopology(event) {
   const senderNeedsId = new Set(['contact', 'configured_agent_bot', 'human', 'other_agent_bot']);
@@ -433,86 +499,7 @@ export class FirstLineStateStore {
       this.#requireStream(id);
       const stream = this.#readStream(id);
 
-      const rows = this.db.prepare(
-        'SELECT ce.*,' +
-        ' pa.action_id AS confirmed_action_id,' +
-        ' pa.action_type AS confirmed_action_type,' +
-        ' pa.prepared_stream_revision AS confirmed_action_revision,' +
-        ' pa.episode_id AS confirmed_action_episode_id,' +
-        ' pa.episode_version AS confirmed_action_episode_version' +
-        ' FROM conversation_events ce' +
-        ' LEFT JOIN public_actions pa' +
-        ' ON pa.action_id=ce.source_id' +
-        ' AND pa.stream_id=ce.stream_id' +
-        " AND pa.state='CONFIRMED'" +
-        ' AND pa.confirmed_source_message_id=ce.source_message_id' +
-        ' WHERE ce.stream_id=?' +
-        ' ORDER BY ce.event_seq DESC LIMIT ?'
-      ).all(id, ROUTING_SUFFIX_FETCH_LIMIT);
-
-      let expectedSeq = stream.last_event_seq;
-      const descending = rows.map(row => {
-        if (row.event_seq !== expectedSeq) {
-          fail('FIRST_LINE_DB_CORRUPT', 'routing event suffix is not contiguous with stream head', {
-            stream_id: id,
-            expected_event_seq: expectedSeq,
-            actual_event_seq: row.event_seq,
-          });
-        }
-        expectedSeq -= 1;
-
-        const event = this.#eventDto(row);
-        let confirmedAction = null;
-        if (row.confirmed_action_id !== null) {
-          persistedGuard(() => {
-            if (event.event_kind !== 'BABYPARK_PUBLIC_REPLY' ||
-                event.source_id !== row.confirmed_action_id) {
-              fail('FIRST_LINE_VALUE_INVALID', 'confirmed action provenance conflicts with event');
-            }
-            safeToken(row.confirmed_action_id, 'action_id');
-            enumValue(row.confirmed_action_type, ACTION_TYPES, 'action_type');
-            positiveInteger(row.confirmed_action_revision, 'prepared_stream_revision');
-            if ((row.confirmed_action_episode_id === null) !==
-                (row.confirmed_action_episode_version === null)) {
-              fail('FIRST_LINE_VALUE_INVALID', 'confirmed action episode provenance is incomplete');
-            }
-            if (row.confirmed_action_episode_id !== null) {
-              safeToken(row.confirmed_action_episode_id, 'episode_id');
-              positiveInteger(row.confirmed_action_episode_version, 'episode_version');
-            }
-            if (row.confirmed_action_type === 'CLARIFY' &&
-                row.confirmed_action_episode_id === null) {
-              fail('FIRST_LINE_VALUE_INVALID', 'confirmed clarification lacks episode provenance');
-            }
-          }, 'confirmed BabyPark action provenance is invalid', {
-            stream_id: id,
-            event_seq: event.event_seq,
-          });
-          confirmedAction = {
-            action_id: row.confirmed_action_id,
-            action_type: row.confirmed_action_type,
-            prepared_stream_revision: row.confirmed_action_revision,
-            episode_id: row.confirmed_action_episode_id,
-            episode_version: row.confirmed_action_episode_version,
-          };
-        }
-
-        return {
-          event,
-          confirmed_babypark_action: confirmedAction,
-        };
-      });
-
-      if (stream.last_event_seq === 0 && rows.length !== 0) {
-        fail('FIRST_LINE_DB_CORRUPT', 'empty stream head has persisted routing events', {
-          stream_id: id,
-        });
-      }
-      if (stream.last_event_seq > 0 && rows.length === 0) {
-        fail('FIRST_LINE_DB_CORRUPT', 'non-empty stream head has no routing events', {
-          stream_id: id,
-        });
-      }
+      const routingLedger = this.#readRoutingLedger(stream);
 
       const activeRow = this.db.prepare(
         "SELECT episode_id FROM episodes WHERE stream_id=? AND state='active'"
@@ -556,8 +543,9 @@ export class FirstLineStateStore {
         active_episode: activeEpisode,
         live_public_action: livePublicAction,
         clarification_action: clarificationAction,
-        event_suffix: descending.reverse(),
-        suffix_truncated: stream.last_event_seq > rows.length,
+        event_suffix: routingLedger.event_suffix,
+        routing_ledger_fingerprint: routingLedger.fingerprint,
+        suffix_truncated: routingLedger.suffix_truncated,
         max_open_turn_events: MAX_OPEN_TURN_EVENTS,
       };
     });
@@ -685,6 +673,193 @@ export class FirstLineStateStore {
         WHERE episode_id=? AND state='active' AND version=?`).run(at, at, closeReason, id, version).changes;
       if (changed !== 1) fail('FIRST_LINE_STALE_WRITE', 'episode changed before close');
       return this.#readEpisode(id);
+    });
+  }
+
+  startStandaloneEpisodeFromRoutingPlan({
+    streamId,
+    expectedStreamRevision,
+    expectedThroughEventSeq,
+    expectedRoutingLedgerFingerprint,
+    expectedEpisodeId = null,
+    expectedEpisodeVersion = null,
+    expectedLiveActionId = null,
+    expectedLiveActionState = null,
+  } = {}) {
+    const stream = safeToken(streamId, 'stream_id');
+    const revision = positiveInteger(expectedStreamRevision, 'expected_stream_revision');
+    const through = positiveInteger(expectedThroughEventSeq, 'expected_through_event_seq');
+    const expectedLedgerFingerprint = routingLedgerFingerprintValue(
+      expectedRoutingLedgerFingerprint,
+      'expected_routing_ledger_fingerprint'
+    );
+    const episodeExpectation = expectedEpisode(expectedEpisodeId, expectedEpisodeVersion);
+    const actionExpectation = expectedLiveAction(expectedLiveActionId, expectedLiveActionState);
+
+    return tx(this.db, () => {
+      const currentStream = this.#readStream(stream);
+      if (!currentStream) {
+        fail('FIRST_LINE_STREAM_NOT_FOUND', 'conversation stream not found', {
+          stream_id: stream,
+        });
+      }
+      if (currentStream.stream_revision !== revision ||
+          currentStream.last_event_seq !== through) {
+        fail('FIRST_LINE_ROUTING_PLAN_STALE', 'stream changed after routing plan', {
+          stream_id: stream,
+          expected_stream_revision: revision,
+          current_stream_revision: currentStream.stream_revision,
+          expected_through_event_seq: through,
+          current_last_event_seq: currentStream.last_event_seq,
+        });
+      }
+
+      const currentLedger = this.#readRoutingLedger(currentStream);
+      if (currentLedger.fingerprint !== expectedLedgerFingerprint) {
+        fail('FIRST_LINE_ROUTING_PLAN_STALE',
+          'routing ledger changed after routing plan', {
+            stream_id: stream,
+            expected_routing_ledger_fingerprint: expectedLedgerFingerprint,
+            current_routing_ledger_fingerprint: currentLedger.fingerprint,
+          });
+      }
+
+      const activeHead = this.db.prepare(
+        "SELECT episode_id FROM episodes WHERE stream_id=? AND state='active'"
+      ).get(stream) ?? null;
+      const activeEpisode = activeHead
+        ? this.#readEpisode(activeHead.episode_id)
+        : null;
+
+      if (episodeExpectation.id === null) {
+        if (activeEpisode !== null) {
+          fail('FIRST_LINE_ROUTING_PLAN_STALE', 'routing plan expected no active episode', {
+            stream_id: stream,
+            current_episode_id: activeEpisode.episode_id,
+          });
+        }
+      } else {
+        if (!activeEpisode ||
+            activeEpisode.stream_id !== stream ||
+            activeEpisode.episode_id !== episodeExpectation.id ||
+            activeEpisode.version !== episodeExpectation.version) {
+          fail('FIRST_LINE_ROUTING_PLAN_STALE', 'active episode changed after routing plan', {
+            stream_id: stream,
+            expected_episode_id: episodeExpectation.id,
+            expected_episode_version: episodeExpectation.version,
+            current_episode_id: activeEpisode?.episode_id ?? null,
+            current_episode_version: activeEpisode?.version ?? null,
+          });
+        }
+      }
+
+      const currentRevisionHead = this.db.prepare(
+        'SELECT action_id FROM public_actions WHERE stream_id=? AND prepared_stream_revision=?'
+      ).get(stream, revision) ?? null;
+      if (currentRevisionHead) {
+        const currentRevisionAction = this.#readAction(currentRevisionHead.action_id);
+        fail('FIRST_LINE_ROUTING_PLAN_STALE',
+          'current stream revision already has a durable public action', {
+            stream_id: stream,
+            action_id: currentRevisionAction.action_id,
+            action_state: currentRevisionAction.state,
+            action_episode_id: currentRevisionAction.episode_id,
+          });
+      }
+
+      const liveHead = this.db.prepare(`SELECT action_id FROM public_actions WHERE stream_id=? AND state IN
+        ('PREPARED','GATING','SENDING','UNCERTAIN')`).get(stream) ?? null;
+      const liveAction = liveHead
+        ? this.#readAction(liveHead.action_id)
+        : null;
+
+      if (actionExpectation.id === null) {
+        if (liveAction !== null) {
+          fail('FIRST_LINE_ROUTING_PLAN_STALE', 'routing plan expected no live public action', {
+            stream_id: stream,
+            current_action_id: liveAction.action_id,
+            current_action_state: liveAction.state,
+          });
+        }
+      } else if (!liveAction ||
+                 liveAction.action_id !== actionExpectation.id ||
+                 liveAction.state !== actionExpectation.state) {
+        fail('FIRST_LINE_ROUTING_PLAN_STALE', 'live public action changed after routing plan', {
+          stream_id: stream,
+          expected_action_id: actionExpectation.id,
+          expected_action_state: actionExpectation.state,
+          current_action_id: liveAction?.action_id ?? null,
+          current_action_state: liveAction?.state ?? null,
+        });
+      }
+
+      if (liveAction &&
+          (liveAction.state === 'SENDING' || liveAction.state === 'UNCERTAIN')) {
+        fail('FIRST_LINE_ACTION_SEND_UNRESOLVED',
+          'unresolved public send blocks standalone episode transition', {
+            action_id: liveAction.action_id,
+            state: liveAction.state,
+          });
+      }
+      if (liveAction && liveAction.prepared_stream_revision >= revision) {
+        fail('FIRST_LINE_ROUTING_PLAN_STALE',
+          'current routing revision already owns a public action', {
+            action_id: liveAction.action_id,
+            action_prepared_stream_revision: liveAction.prepared_stream_revision,
+            current_stream_revision: revision,
+          });
+      }
+
+      const transitionAt = this.now();
+
+      let staledAction = null;
+      if (liveAction) {
+        this.#finishUnsentAction(
+          liveAction,
+          'STALE',
+          'standalone_episode_replaced',
+          transitionAt
+        );
+        staledAction = this.#readAction(liveAction.action_id);
+      }
+
+      let replacedEpisode = null;
+      if (episodeExpectation.id !== null) {
+        const refreshed = this.#readEpisode(episodeExpectation.id);
+        if (!refreshed || refreshed.state !== 'active' || refreshed.stream_id !== stream) {
+          fail('FIRST_LINE_STALE_WRITE', 'active episode changed during standalone transition', {
+            stream_id: stream,
+            episode_id: episodeExpectation.id,
+          });
+        }
+        const changed = this.db.prepare(`UPDATE episodes
+          SET state='closed',version=version+1,updated_at=?,closed_at=?,close_reason='replaced'
+          WHERE episode_id=? AND stream_id=? AND state='active' AND version=?`)
+          .run(transitionAt, transitionAt, refreshed.episode_id, stream, refreshed.version).changes;
+        if (changed !== 1) {
+          fail('FIRST_LINE_STALE_WRITE', 'episode changed before standalone replacement', {
+            stream_id: stream,
+            episode_id: refreshed.episode_id,
+          });
+        }
+        replacedEpisode = this.#readEpisode(refreshed.episode_id);
+      }
+
+      const newEpisodeId = safeToken(this.episodeIdFactory(), 'episode_id');
+      this.db.prepare(`INSERT INTO episodes
+        (episode_id,stream_id,state,version,clarification_prompts_sent,created_at,updated_at)
+        VALUES (?,?,'active',1,0,?,?)`).run(newEpisodeId, stream, transitionAt, transitionAt);
+      const episode = this.#readEpisode(newEpisodeId);
+
+      return {
+        schema: EPISODE_TRANSITION_SCHEMA,
+        stream_id: stream,
+        stream_revision: revision,
+        through_event_seq: through,
+        replaced_episode: replacedEpisode,
+        staled_public_action: staledAction,
+        episode,
+      };
     });
   }
 
@@ -917,7 +1092,7 @@ export class FirstLineStateStore {
     this.#finishUnsentAction(action, 'CANCELLED', reason);
   }
 
-  #finishUnsentAction(action, terminalState, reason) {
+  #finishUnsentAction(action, terminalState, reason, at = this.now()) {
     if (action.state !== 'PREPARED' && action.state !== 'GATING') {
       fail('FIRST_LINE_ACTION_STATE_INVALID', 'only unsent action may become terminal', { action_id: action.action_id });
     }
@@ -927,7 +1102,7 @@ export class FirstLineStateStore {
         const changed = this.db.prepare(`UPDATE episodes SET clarification_prompts_sent=0,requested_slot=NULL,
           clarification_action_id=NULL,version=version+1,updated_at=?
           WHERE episode_id=? AND state='active' AND clarification_action_id=?`)
-          .run(this.now(), action.episode_id, action.action_id).changes;
+          .run(at, action.episode_id, action.action_id).changes;
         if (changed !== 1) {
           fail('FIRST_LINE_STALE_WRITE', 'clarification reservation changed before unsent action terminalization',
             { action_id: action.action_id, episode_id: action.episode_id });
@@ -936,7 +1111,102 @@ export class FirstLineStateStore {
     }
     this.db.prepare(`UPDATE public_actions SET state=?,terminal_reason=?,lease_token=NULL,
       lease_expires_at=NULL,updated_at=? WHERE action_id=?`)
-      .run(terminalState, reason, this.now(), action.action_id);
+      .run(terminalState, reason, at, action.action_id);
+  }
+
+  #readRoutingLedger(stream) {
+    const id = stream.stream_id;
+    const rows = this.db.prepare(
+      'SELECT ce.*,' +
+      ' pa.action_id AS confirmed_action_id,' +
+      ' pa.action_type AS confirmed_action_type,' +
+      ' pa.prepared_stream_revision AS confirmed_action_revision,' +
+      ' pa.episode_id AS confirmed_action_episode_id,' +
+      ' pa.episode_version AS confirmed_action_episode_version' +
+      ' FROM conversation_events ce' +
+      ' LEFT JOIN public_actions pa' +
+      ' ON pa.action_id=ce.source_id' +
+      ' AND pa.stream_id=ce.stream_id' +
+      " AND pa.state='CONFIRMED'" +
+      ' AND pa.confirmed_source_message_id=ce.source_message_id' +
+      ' WHERE ce.stream_id=?' +
+      ' ORDER BY ce.event_seq DESC LIMIT ?'
+    ).all(id, ROUTING_SUFFIX_FETCH_LIMIT);
+
+    let expectedSeq = stream.last_event_seq;
+    const descending = rows.map(row => {
+      if (row.event_seq !== expectedSeq) {
+        fail('FIRST_LINE_DB_CORRUPT',
+          'routing event suffix is not contiguous with stream head', {
+            stream_id: id,
+            expected_event_seq: expectedSeq,
+            actual_event_seq: row.event_seq,
+          });
+      }
+      expectedSeq -= 1;
+
+      const event = this.#eventDto(row);
+      let confirmedAction = null;
+      if (row.confirmed_action_id !== null) {
+        persistedGuard(() => {
+          if (event.event_kind !== 'BABYPARK_PUBLIC_REPLY' ||
+              event.source_id !== row.confirmed_action_id) {
+            fail('FIRST_LINE_VALUE_INVALID',
+              'confirmed action provenance conflicts with event');
+          }
+          safeToken(row.confirmed_action_id, 'action_id');
+          enumValue(row.confirmed_action_type, ACTION_TYPES, 'action_type');
+          positiveInteger(row.confirmed_action_revision, 'prepared_stream_revision');
+          if ((row.confirmed_action_episode_id === null) !==
+              (row.confirmed_action_episode_version === null)) {
+            fail('FIRST_LINE_VALUE_INVALID',
+              'confirmed action episode provenance is incomplete');
+          }
+          if (row.confirmed_action_episode_id !== null) {
+            safeToken(row.confirmed_action_episode_id, 'episode_id');
+            positiveInteger(row.confirmed_action_episode_version, 'episode_version');
+          }
+          if (row.confirmed_action_type === 'CLARIFY' &&
+              row.confirmed_action_episode_id === null) {
+            fail('FIRST_LINE_VALUE_INVALID',
+              'confirmed clarification lacks episode provenance');
+          }
+        }, 'confirmed BabyPark action provenance is invalid', {
+          stream_id: id,
+          event_seq: event.event_seq,
+        });
+        confirmedAction = {
+          action_id: row.confirmed_action_id,
+          action_type: row.confirmed_action_type,
+          prepared_stream_revision: row.confirmed_action_revision,
+          episode_id: row.confirmed_action_episode_id,
+          episode_version: row.confirmed_action_episode_version,
+        };
+      }
+
+      return {
+        event,
+        confirmed_babypark_action: confirmedAction,
+      };
+    });
+
+    if (stream.last_event_seq === 0 && rows.length !== 0) {
+      fail('FIRST_LINE_DB_CORRUPT', 'empty stream head has persisted routing events', {
+        stream_id: id,
+      });
+    }
+    if (stream.last_event_seq > 0 && rows.length === 0) {
+      fail('FIRST_LINE_DB_CORRUPT', 'non-empty stream head has no routing events', {
+        stream_id: id,
+      });
+    }
+
+    const eventSuffix = descending.reverse();
+    return {
+      event_suffix: eventSuffix,
+      suffix_truncated: stream.last_event_seq > rows.length,
+      fingerprint: routingLedgerFingerprint(eventSuffix),
+    };
   }
 
   #requireStream(streamId) {
@@ -1134,6 +1404,7 @@ function validatePersistedSlot(slotName, value) {
 export {
   ACTION_TYPES,
   BUSY_TIMEOUT_MS,
+  EPISODE_TRANSITION_SCHEMA,
   EVENT_KINDS,
   LIVE_ACTION_STATES,
   MAX_OPEN_TURN_EVENTS,
