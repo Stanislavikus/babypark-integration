@@ -423,14 +423,21 @@ Expected:
 
 ### Q08 — successful response to the single clarification prompt
 BabyPark has emitted one CLARIFY prompt and presented a bounded candidate list.
-The next customer reply selects exactly one offered candidate.
+The next customer response selects exactly one offered candidate.
+
+The response may arrive either as:
+- a newer incoming customer message; or
+- a provider-native structured submission tied to the already-confirmed
+  CLARIFY message.
 
 Expected:
 - preserve stable identifier slots;
+- prove the response against the confirmed CLARIFY action/candidate reservation;
 - reread current dynamic authority/freshness;
 - continue only if current gates pass;
 - do not treat the successful selection as permission for another CLARIFY later
-  in the same episode.
+  in the same episode;
+- do not synthesize a customer message when the native transport produced none.
 
 ### Q09 — standalone new query starts fresh logical episode
 An active prior episode exists and may already have
@@ -445,14 +452,61 @@ Expected:
 - old stable slots/candidates/requested slot are not inherited implicitly.
 
 ### Q10 — dependent follow-up continues current logical episode
-The next message selects a presented candidate, fills the explicitly requested
-slot, or invokes an explicitly supported deterministic follow-up such as C25.
+The next customer response selects a presented candidate, fills the explicitly
+requested slot, or invokes an explicitly supported deterministic follow-up such
+as C25.
 
 Expected:
 - same logical episode continues;
-- ordered `source_message_ids` append the newer Chatwoot message id;
+- when Chatwoot creates a newer incoming customer message, ordered
+  `source_message_ids` append that real Chatwoot message id;
+- when a native structured submission updates the already-confirmed CLARIFY
+  message and creates no new customer message, no duplicate/synthetic
+  `source_message_id` is appended;
 - preserved stable slots remain fixed unless the customer explicitly changes them;
 - dynamic authority is still reread before any factual public response.
+
+### Q10a — Web Widget native input_select submission is not a second message event
+Turn 1:
+- BabyPark emits and confirms a CLARIFY `input_select` message with Chatwoot
+  source message id 102;
+- the confirmed action reserves a bounded canonical candidate list.
+
+Turn 2:
+- the customer selects exactly one offered option in the Chatwoot Web Widget;
+- Chatwoot emits authenticated `message_updated` for message 102;
+- exact read of message 102 shows the expected `input_select` plus exactly one
+  `content_attributes.submitted_values` selection.
+
+Expected:
+- webhook delivery is authenticated and deduplicated;
+- message 102 is proven to be the exact confirmed CLARIFY action for the current
+  conversation/episode;
+- the submitted selection maps to exactly one candidate under the confirmed
+  response contract;
+- no second Conversation Event Ledger row is appended for source message 102;
+- no fake/new customer message id is synthesized;
+- only the canonical stable selection/slot is committed;
+- raw title/body/provider callback payload is not persisted;
+- episode version advances under ordinary stale-write protection;
+- current dynamic authority is reread before any factual public response.
+
+### Q10b — invalid structured submission fails closed
+Use the Q10a setup, but one of these holds:
+- `message_updated` targets a different message/action;
+- CLARIFY is not confirmed;
+- submitted values are empty, multiple, unknown or conflict with the confirmed
+  candidate reservation;
+- the current episode/action provenance no longer matches.
+
+Expected:
+- no stable slot/customer selection mutation;
+- no duplicate ledger message row;
+- no synthetic message id;
+- no value is inferred from presentation text;
+- because the episode has already consumed its one CLARIFY prompt, an unresolved
+  customer response proceeds to HUMAN / CLARIFY_EXHAUSTED under the ordinary
+  clarification rule.
 
 ### Q11 — Chatwoot status does not revive a closed episode
 A logical episode has closed. Later the same Chatwoot conversation becomes
