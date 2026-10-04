@@ -730,7 +730,12 @@ export class FirstLineStateStore {
     const at = this.now();
 
     return tx(this.db, () => {
-      const currentStream = this.#requireStream(stream);
+      const currentStream = this.#readStream(stream);
+      if (!currentStream) {
+        fail('FIRST_LINE_STREAM_NOT_FOUND', 'conversation stream not found', {
+          stream_id: stream,
+        });
+      }
       if (currentStream.stream_revision !== revision ||
           currentStream.last_event_seq !== through) {
         fail('FIRST_LINE_ROUTING_PLAN_STALE', 'stream changed after routing plan', {

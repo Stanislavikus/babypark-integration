@@ -336,6 +336,28 @@ test('transaction rollback restores action and episode if fresh episode insert f
   );
 });
 
+test('corrupt persisted stream metadata fails closed before episode mutation', t => {
+  const { store } = tempStore(t);
+  const stream = makeStream(store);
+  store.ingestConversationEvent(stream.stream_id, customerEvent(101));
+  const old = store.beginEpisode({ streamId: stream.stream_id });
+  const projected = projection(store, stream.stream_id);
+
+  store.db.prepare(
+    "UPDATE conversation_streams SET source_provider='corrupt-provider' WHERE stream_id=?"
+  ).run(stream.stream_id);
+
+  expectCode(() => applyStandalone(store, projected), 'FIRST_LINE_DB_CORRUPT');
+  const current = store.getEpisode(old.episode_id);
+  assert.equal(current.state, 'active');
+  assert.equal(current.version, 1);
+  assert.equal(
+    store.db.prepare("SELECT COUNT(*) AS n FROM episodes WHERE stream_id=?")
+      .get(stream.stream_id).n,
+    1
+  );
+});
+
 test('new accepted event makes a routing plan stale before mutation', t => {
   const { store } = tempStore(t);
   const stream = makeStream(store);
