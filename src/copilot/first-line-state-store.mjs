@@ -1404,6 +1404,7 @@ function validatePersistedSlot(slotName, value) {
 export {
   ACTION_TYPES,
   BUSY_TIMEOUT_MS,
+  CANONICAL_ID_PATTERNS,
   EPISODE_TRANSITION_SCHEMA,
   EVENT_KINDS,
   LIVE_ACTION_STATES,
