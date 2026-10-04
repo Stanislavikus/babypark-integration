@@ -7,7 +7,7 @@ import test from 'node:test';
 import {
   FIRST_LINE_DEPENDENCY_PROOF_SCHEMA,
   FirstLineDependencyProofError,
-  proveClarificationDependency,
+  proveClarificationDependencyAnchor,
 } from '../../src/copilot/first-line-dependency-proof.mjs';
 import { FIRST_LINE_RESOLUTION_SCHEMA } from '../../src/copilot/first-line-resolution.mjs';
 import {
@@ -212,7 +212,7 @@ function expectInputError(fn) {
 }
 
 test('exact canonical presented candidate is a positive dependency anchor', () => {
-  const result = proveClarificationDependency({
+  const result = proveClarificationDependencyAnchor({
     projection: projection(),
     resolution: resolution([
       row('PRODUCT', 501, resolvedAuthority('PRODUCT', {
@@ -223,12 +223,12 @@ test('exact canonical presented candidate is a positive dependency anchor', () =
   });
 
   assert.equal(result.schema, FIRST_LINE_DEPENDENCY_PROOF_SCHEMA);
-  assert.equal(result.code, 'DEPENDENCY_PROVEN');
-  assert.equal(result.reason, 'PRESENTED_CANDIDATE_SELECTED');
+  assert.equal(result.code, 'DEPENDENCY_ANCHOR_PROVEN');
+  assert.equal(result.reason, 'PRESENTED_CANDIDATE_REFERENCED');
   assert.deepEqual(result.anchor, {
-    type: 'PRESENTED_CANDIDATE',
+    type: 'PRESENTED_CANDIDATE_REFERENCE',
     slot: 'variant_id',
-    value: VARIANT_2,
+    referenced_value: VARIANT_2,
     candidate_ordinal: 2,
     resolution_kind: 'PRODUCT',
     evidence_source_message_ids: [501],
@@ -238,8 +238,30 @@ test('exact canonical presented candidate is a positive dependency anchor', () =
   assert.equal(result.clarification_action_id, 'action-1');
 });
 
-test('repeated evidence for one candidate still selects one durable candidate', () => {
-  const result = proveClarificationDependency({
+test('candidate reference never asserts affirmative selection semantics', () => {
+  const result = proveClarificationDependencyAnchor({
+    projection: projection(),
+    resolution: resolution([
+      row('PRODUCT', 501, resolvedAuthority('PRODUCT', {
+        canonical_product_id: PRODUCT_1,
+        canonical_variant_id: VARIANT_2,
+      })),
+    ], { intentHint: 'NEGATED_EXCLUSION_DO_NOT_SELECT' }),
+  });
+
+  assert.equal(result.code, 'DEPENDENCY_ANCHOR_PROVEN');
+  assert.equal(result.reason, 'PRESENTED_CANDIDATE_REFERENCED');
+  assert.equal(result.anchor.type, 'PRESENTED_CANDIDATE_REFERENCE');
+  assert.equal(result.anchor.referenced_value, VARIANT_2);
+  assert.equal(Object.hasOwn(result.anchor, 'value'), false);
+  const serialized = JSON.stringify(result);
+  assert.equal(serialized.includes('SELECTED'), false);
+  assert.equal(serialized.includes('FILLED'), false);
+  assert.equal(serialized.includes('NEGATED_EXCLUSION'), false);
+});
+
+test('repeated evidence for one candidate still references one durable candidate', () => {
+  const result = proveClarificationDependencyAnchor({
     projection: projection({ openSourceMessageIds: [501, 502] }),
     resolution: resolution([
       row('PRODUCT', 501, resolvedAuthority('PRODUCT', {
@@ -253,13 +275,13 @@ test('repeated evidence for one candidate still selects one durable candidate', 
     ]),
   });
 
-  assert.equal(result.code, 'DEPENDENCY_PROVEN');
+  assert.equal(result.code, 'DEPENDENCY_ANCHOR_PROVEN');
   assert.equal(result.anchor.candidate_ordinal, 2);
   assert.deepEqual(result.anchor.evidence_source_message_ids, [501, 502]);
 });
 
 test('two distinct current values of one candidate slot are fail-closed', () => {
-  const result = proveClarificationDependency({
+  const result = proveClarificationDependencyAnchor({
     projection: projection({
       candidates: [
         { slot: 'variant_id', value: VARIANT_2 },
@@ -283,7 +305,7 @@ test('two distinct current values of one candidate slot are fail-closed', () => 
 });
 
 test('malformed durable candidate canonical ID cannot become dependency proof', () => {
-  const result = proveClarificationDependency({
+  const result = proveClarificationDependencyAnchor({
     projection: projection({
       candidates: [
         { slot: 'variant_id', value: 'not-a-canonical-variant' },
@@ -302,7 +324,7 @@ test('malformed durable candidate canonical ID cannot become dependency proof', 
 });
 
 test('duplicate durable candidates matching the same value are fail-closed', () => {
-  const result = proveClarificationDependency({
+  const result = proveClarificationDependencyAnchor({
     projection: projection({
       candidates: [
         { slot: 'variant_id', value: VARIANT_2 },
@@ -322,7 +344,7 @@ test('duplicate durable candidates matching the same value are fail-closed', () 
 });
 
 test('ambiguous authority for the candidate slot blocks candidate proof', () => {
-  const result = proveClarificationDependency({
+  const result = proveClarificationDependencyAnchor({
     projection: projection(),
     resolution: resolution([
       row('PRODUCT', 501, resolvedAuthority('PRODUCT', {
@@ -338,7 +360,7 @@ test('ambiguous authority for the candidate slot blocks candidate proof', () => 
 });
 
 test('malformed RESOLVED canonical ID invalidates the whole proof input evidence', () => {
-  const result = proveClarificationDependency({
+  const result = proveClarificationDependencyAnchor({
     projection: projection({
       requestedSlot: 'store_id',
       candidates: [],
@@ -355,7 +377,7 @@ test('malformed RESOLVED canonical ID invalidates the whole proof input evidence
 });
 
 test('requested stable slot is filled only by one exact current canonical value', () => {
-  const result = proveClarificationDependency({
+  const result = proveClarificationDependencyAnchor({
     projection: projection({
       requestedSlot: 'store_id',
       candidates: [],
@@ -365,12 +387,12 @@ test('requested stable slot is filled only by one exact current canonical value'
     ]),
   });
 
-  assert.equal(result.code, 'DEPENDENCY_PROVEN');
-  assert.equal(result.reason, 'REQUESTED_SLOT_FILLED');
+  assert.equal(result.code, 'DEPENDENCY_ANCHOR_PROVEN');
+  assert.equal(result.reason, 'REQUESTED_SLOT_VALUE_REFERENCED');
   assert.deepEqual(result.anchor, {
-    type: 'REQUESTED_SLOT_VALUE',
+    type: 'REQUESTED_SLOT_REFERENCE',
     slot: 'store_id',
-    value: STORE_2,
+    referenced_value: STORE_2,
     candidate_ordinal: null,
     resolution_kind: 'STORE',
     evidence_source_message_ids: [501],
@@ -378,7 +400,7 @@ test('requested stable slot is filled only by one exact current canonical value'
 });
 
 test('multiple distinct values for requested slot are not dependency proof', () => {
-  const result = proveClarificationDependency({
+  const result = proveClarificationDependencyAnchor({
     projection: projection({
       requestedSlot: 'store_id',
       candidates: [],
@@ -395,7 +417,7 @@ test('multiple distinct values for requested slot are not dependency proof', () 
 });
 
 test('ambiguous requested-slot authority cannot be hidden by one resolved value', () => {
-  const result = proveClarificationDependency({
+  const result = proveClarificationDependencyAnchor({
     projection: projection({
       requestedSlot: 'brand_id',
       candidates: [],
@@ -411,7 +433,7 @@ test('ambiguous requested-slot authority cannot be hidden by one resolved value'
 });
 
 test('requested money is customer constraint evidence, not dynamic authority', () => {
-  const result = proveClarificationDependency({
+  const result = proveClarificationDependencyAnchor({
     projection: projection({
       requestedSlot: 'money',
       candidates: [],
@@ -421,16 +443,16 @@ test('requested money is customer constraint evidence, not dynamic authority', (
     ]),
   });
 
-  assert.equal(result.code, 'DEPENDENCY_PROVEN');
-  assert.equal(result.reason, 'REQUESTED_SLOT_FILLED');
-  assert.deepEqual(result.anchor.value, {
+  assert.equal(result.code, 'DEPENDENCY_ANCHOR_PROVEN');
+  assert.equal(result.reason, 'REQUESTED_SLOT_VALUE_REFERENCED');
+  assert.deepEqual(result.anchor.referenced_value, {
     currency: 'UAH',
     minor_units: 2_000_000,
   });
 });
 
 test('shortlist_anchor remains unsupported until a deterministic contract exists', () => {
-  const result = proveClarificationDependency({
+  const result = proveClarificationDependencyAnchor({
     projection: projection({
       requestedSlot: 'shortlist_anchor',
       candidates: [],
@@ -449,7 +471,7 @@ test('shortlist_anchor remains unsupported until a deterministic contract exists
 
 test('unconfirmed clarification is never evidence that candidates were shown', () => {
   for (const actionState of ['PREPARED', 'GATING', 'SENDING', 'UNCERTAIN']) {
-    const result = proveClarificationDependency({
+    const result = proveClarificationDependencyAnchor({
       projection: projection({ actionState }),
       resolution: resolution([
         row('PRODUCT', 501, resolvedAuthority('PRODUCT', {
@@ -464,7 +486,7 @@ test('unconfirmed clarification is never evidence that candidates were shown', (
 });
 
 test('episode mutation after clarification invalidates clarification dependency proof', () => {
-  const result = proveClarificationDependency({
+  const result = proveClarificationDependencyAnchor({
     projection: projection({
       episodeVersion: 3,
       actionEpisodeVersion: 2,
@@ -491,7 +513,7 @@ test('episode and confirmed action must preserve the same requested-slot reserva
     },
   };
 
-  const result = proveClarificationDependency({
+  const result = proveClarificationDependencyAnchor({
     projection: mismatched,
     resolution: resolution([
       row('STORE', 501, resolvedAuthority('STORE', STORE_1)),
@@ -508,7 +530,7 @@ test('open turn must start after the exact confirmed clarification boundary', ()
     { boundaryActionType: 'ANSWER' },
     { boundarySourceMessageId: 999, confirmedSourceMessageId: 500 },
   ]) {
-    const result = proveClarificationDependency({
+    const result = proveClarificationDependencyAnchor({
       projection: projection(patch),
       resolution: resolution([
         row('STORE', 501, resolvedAuthority('STORE', STORE_1)),
@@ -520,7 +542,7 @@ test('open turn must start after the exact confirmed clarification boundary', ()
 });
 
 test('subset C2b coverage cannot prove dependency for a larger open turn', () => {
-  const result = proveClarificationDependency({
+  const result = proveClarificationDependencyAnchor({
     projection: projection({ openSourceMessageIds: [501, 502] }),
     resolution: resolution([
       row('PRODUCT', 501, resolvedAuthority('PRODUCT', {
@@ -535,7 +557,7 @@ test('subset C2b coverage cannot prove dependency for a larger open turn', () =>
 });
 
 test('complete coverage may include a spanless message without inventing evidence', () => {
-  const result = proveClarificationDependency({
+  const result = proveClarificationDependencyAnchor({
     projection: projection({ openSourceMessageIds: [501, 502] }),
     resolution: resolution([
       row('PRODUCT', 501, resolvedAuthority('PRODUCT', {
@@ -545,13 +567,13 @@ test('complete coverage may include a spanless message without inventing evidenc
     ], { sourceMessageIds: [501, 502] }),
   });
 
-  assert.equal(result.code, 'DEPENDENCY_PROVEN');
-  assert.equal(result.reason, 'PRESENTED_CANDIDATE_SELECTED');
+  assert.equal(result.code, 'DEPENDENCY_ANCHOR_PROVEN');
+  assert.equal(result.reason, 'PRESENTED_CANDIDATE_REFERENCED');
   assert.deepEqual(result.anchor.evidence_source_message_ids, [501]);
 });
 
 test('resolution must belong to the current conversation and open turn', () => {
-  const wrongConversation = proveClarificationDependency({
+  const wrongConversation = proveClarificationDependencyAnchor({
     projection: projection(),
     resolution: resolution([
       row('PRODUCT', 501, resolvedAuthority('PRODUCT', {
@@ -563,7 +585,7 @@ test('resolution must belong to the current conversation and open turn', () => {
   assert.equal(wrongConversation.code, 'NO_DEPENDENCY_PROOF');
   assert.equal(wrongConversation.reason, 'RESOLUTION_CONVERSATION_MISMATCH');
 
-  const oldTurn = proveClarificationDependency({
+  const oldTurn = proveClarificationDependencyAnchor({
     projection: projection(),
     resolution: resolution([
       row('PRODUCT', 400, resolvedAuthority('PRODUCT', {
@@ -577,7 +599,7 @@ test('resolution must belong to the current conversation and open turn', () => {
 });
 
 test('resolution rows must stay inside their own declared exact-read coverage', () => {
-  expectInputError(() => proveClarificationDependency({
+  expectInputError(() => proveClarificationDependencyAnchor({
     projection: projection({ openSourceMessageIds: [501, 502] }),
     resolution: resolution([
       row('STORE', 400, resolvedAuthority('STORE', STORE_1)),
@@ -588,7 +610,7 @@ test('resolution rows must stay inside their own declared exact-read coverage', 
 test('resolution turn index must map to the same covered source message', () => {
   const mismatched = row('STORE', 502, resolvedAuthority('STORE', STORE_1));
   mismatched.turn_index = 1;
-  expectInputError(() => proveClarificationDependency({
+  expectInputError(() => proveClarificationDependencyAnchor({
     projection: projection({ openSourceMessageIds: [501, 502] }),
     resolution: resolution([
       mismatched,
@@ -597,7 +619,7 @@ test('resolution turn index must map to the same covered source message', () => 
 });
 
 test('unrelated ambiguous kind does not erase a positive candidate anchor', () => {
-  const result = proveClarificationDependency({
+  const result = proveClarificationDependencyAnchor({
     projection: projection(),
     resolution: resolution([
       row('PRODUCT', 501, resolvedAuthority('PRODUCT', {
@@ -608,12 +630,12 @@ test('unrelated ambiguous kind does not erase a positive candidate anchor', () =
     ]),
   });
 
-  assert.equal(result.code, 'DEPENDENCY_PROVEN');
+  assert.equal(result.code, 'DEPENDENCY_ANCHOR_PROVEN');
   assert.equal(result.anchor.slot, 'variant_id');
 });
 
 test('raw intent hint cannot create a dependency anchor', () => {
-  const result = proveClarificationDependency({
+  const result = proveClarificationDependencyAnchor({
     projection: projection({
       requestedSlot: 'store_id',
       candidates: [],
@@ -628,17 +650,17 @@ test('raw intent hint cannot create a dependency anchor', () => {
 });
 
 test('malformed projection or resolution contracts fail closed', () => {
-  expectInputError(() => proveClarificationDependency({
+  expectInputError(() => proveClarificationDependencyAnchor({
     projection: { ...projection(), code: 'NO_OPEN_TURN' },
     resolution: resolution([]),
   }));
-  expectInputError(() => proveClarificationDependency({
+  expectInputError(() => proveClarificationDependencyAnchor({
     projection: projection(),
     resolution: { ...resolution([]), schema: 'wrong' },
   }));
 
   const tokenMismatch = projection();
-  expectInputError(() => proveClarificationDependency({
+  expectInputError(() => proveClarificationDependencyAnchor({
     projection: {
       ...tokenMismatch,
       plan_token: {
@@ -652,7 +674,7 @@ test('malformed projection or resolution contracts fail closed', () => {
   const certifiedMismatch = resolution([
     row('STORE', 501, resolvedAuthority('STORE', STORE_1)),
   ]);
-  expectInputError(() => proveClarificationDependency({
+  expectInputError(() => proveClarificationDependencyAnchor({
     projection: projection({
       requestedSlot: 'store_id',
       candidates: [],
@@ -750,17 +772,17 @@ test('real store confirmed CLARIFY -> ledger -> open turn proves one candidate',
   assert.equal(projected.boundary.confirmed_action_id, action.action_id);
   assert.equal(projected.clarification_action.state, 'CONFIRMED');
 
-  const proof = proveClarificationDependency({
+  const proof = proveClarificationDependencyAnchor({
     projection: projected,
     resolution: resolution([
       row('STORE', 103, resolvedAuthority('STORE', STORE_2)),
     ]),
   });
 
-  assert.equal(proof.code, 'DEPENDENCY_PROVEN');
-  assert.equal(proof.reason, 'PRESENTED_CANDIDATE_SELECTED');
+  assert.equal(proof.code, 'DEPENDENCY_ANCHOR_PROVEN');
+  assert.equal(proof.reason, 'PRESENTED_CANDIDATE_REFERENCED');
   assert.equal(proof.anchor.slot, 'store_id');
-  assert.equal(proof.anchor.value, STORE_2);
+  assert.equal(proof.anchor.referenced_value, STORE_2);
   assert.equal(proof.anchor.candidate_ordinal, 2);
   assert.deepEqual(proof.anchor.evidence_source_message_ids, [103]);
 

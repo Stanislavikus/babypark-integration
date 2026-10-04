@@ -238,11 +238,11 @@ function freezeValue(value) {
 function proven(projection, reason, anchor) {
   return Object.freeze({
     ...resultBase(projection),
-    code: 'DEPENDENCY_PROVEN',
+    code: 'DEPENDENCY_ANCHOR_PROVEN',
     reason,
     anchor: Object.freeze({
       ...anchor,
-      value: freezeValue(anchor.value),
+      referenced_value: freezeValue(anchor.referenced_value),
       evidence_source_message_ids:
         Object.freeze([...anchor.evidence_source_message_ids]),
     }),
@@ -463,9 +463,9 @@ function candidateProof(projection, action, collected) {
   return {
     ambiguous: false,
     anchor: {
-      type: 'PRESENTED_CANDIDATE',
+      type: 'PRESENTED_CANDIDATE_REFERENCE',
       slot: match.candidate.slot,
-      value: match.candidate.value,
+      referenced_value: match.candidate.value,
       candidate_ordinal: match.ordinal,
       resolution_kind: match.rows[0].resolution_kind,
       evidence_source_message_ids:
@@ -496,9 +496,9 @@ function requestedSlotProof(projection, action, collected) {
   return {
     ambiguous: false,
     anchor: {
-      type: 'REQUESTED_SLOT_VALUE',
+      type: 'REQUESTED_SLOT_REFERENCE',
       slot,
-      value: rows[0].value,
+      referenced_value: rows[0].value,
       candidate_ordinal: null,
       resolution_kind: rows[0].resolution_kind,
       evidence_source_message_ids: orderedEvidenceSources(projection, rows),
@@ -506,7 +506,7 @@ function requestedSlotProof(projection, action, collected) {
   };
 }
 
-export function proveClarificationDependency({
+export function proveClarificationDependencyAnchor({
   projection: rawProjection,
   resolution: rawResolution,
 } = {}) {
@@ -534,7 +534,7 @@ export function proveClarificationDependency({
   if (candidate?.anchor) {
     return proven(
       projection,
-      'PRESENTED_CANDIDATE_SELECTED',
+      'PRESENTED_CANDIDATE_REFERENCED',
       candidate.anchor
     );
   }
@@ -553,7 +553,7 @@ export function proveClarificationDependency({
   if (requested?.anchor) {
     return proven(
       projection,
-      'REQUESTED_SLOT_FILLED',
+      'REQUESTED_SLOT_VALUE_REFERENCED',
       requested.anchor
     );
   }
