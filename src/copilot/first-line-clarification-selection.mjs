@@ -64,12 +64,25 @@ function planTokenFromSnapshot(snapshot) {
   });
 }
 
+function clonePlanToken(planToken) {
+  return Object.freeze({
+    stream_id: planToken?.stream_id ?? null,
+    stream_revision: planToken?.stream_revision ?? null,
+    through_event_seq: planToken?.through_event_seq ?? null,
+    routing_ledger_fingerprint: planToken?.routing_ledger_fingerprint ?? null,
+    episode_id: planToken?.episode_id ?? null,
+    episode_version: planToken?.episode_version ?? null,
+    live_action_id: planToken?.live_action_id ?? null,
+    live_action_state: planToken?.live_action_state ?? null,
+  });
+}
+
 function base({ streamId, conversationId, planToken, episodeId, episodeVersion, actionId }) {
   return {
     schema: FIRST_LINE_CLARIFICATION_SELECTION_SCHEMA,
     stream_id: streamId,
     source_conversation_id: conversationId,
-    plan_token: Object.freeze({ ...planToken }),
+    plan_token: clonePlanToken(planToken),
     episode_id: episodeId,
     episode_version: episodeVersion,
     clarification_action_id: actionId,
@@ -152,7 +165,10 @@ function structuredFailure(snapshot) {
   if (action.action_type !== 'CLARIFY' || action.state !== 'CONFIRMED') return 'CLARIFICATION_NOT_CONFIRMED';
   if (action.stream_id !== snapshot.stream.stream_id ||
       action.episode_id !== episode.episode_id ||
-      action.episode_version !== episode.version) return 'CLARIFICATION_EPISODE_MISMATCH';
+      action.episode_version !== episode.version ||
+      (action.requested_slot ?? null) !== (episode.requested_slot ?? null)) {
+    return 'CLARIFICATION_EPISODE_MISMATCH';
+  }
   if (!Number.isSafeInteger(action.confirmed_source_message_id) ||
       action.confirmed_source_message_id <= 0) return 'CLARIFICATION_CONFIRMATION_MISSING';
   if (!Array.isArray(action.presented_candidates) ||
