@@ -13,6 +13,34 @@ import {
 
 export const FIRST_LINE_RESOLUTION_SCHEMA = 'bp.first-line.resolution/1';
 
+const exactReadBindings = new WeakMap();
+
+export function resolutionUsesExactRead(resolution, turnIndex, exactRead) {
+  if (!resolution || typeof resolution !== 'object' ||
+      !Number.isSafeInteger(turnIndex) || turnIndex < 1 ||
+      !exactRead || typeof exactRead !== 'object') {
+    return false;
+  }
+  const bindings = exactReadBindings.get(resolution);
+  const bound = Array.isArray(bindings) ? bindings[turnIndex - 1] : null;
+  if (!bound || typeof bound !== 'object') return false;
+
+  return bound.code === exactRead.code &&
+    bound.sourceConversationId === exactRead.sourceConversationId &&
+    bound.sourceMessageId === exactRead.sourceMessageId &&
+    bound.transientContent === exactRead.transientContent &&
+    bound.event?.sourceMessageId === exactRead.event?.sourceMessageId &&
+    bound.event?.eventKind === exactRead.event?.eventKind &&
+    bound.event?.messageType === exactRead.event?.messageType &&
+    bound.event?.senderClass === exactRead.event?.senderClass &&
+    bound.event?.senderId === exactRead.event?.senderId &&
+    bound.event?.contentType === exactRead.event?.contentType &&
+    bound.event?.deleted === exactRead.event?.deleted &&
+    bound.event?.unsupported === exactRead.event?.unsupported &&
+    bound.event?.hasAttachments === exactRead.event?.hasAttachments &&
+    bound.event?.sourceId === exactRead.event?.sourceId;
+}
+
 export class FirstLineResolutionError extends Error {
   constructor(code, message, details = {}) {
     super(message);
@@ -292,10 +320,14 @@ export function resolveFirstLineExactReads({
     catalogService,
     nowUtc,
   });
-  return Object.freeze({
+  const output = Object.freeze({
     ...resolved,
     source_message_ids: Object.freeze(
       turns.map(turn => turn.sourceMessageId)
     ),
   });
+  exactReadBindings.set(output, Object.freeze(
+    exactReads.map(entry => entry.exactRead)
+  ));
+  return output;
 }
