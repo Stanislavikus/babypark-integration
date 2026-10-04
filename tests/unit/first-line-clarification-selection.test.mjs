@@ -11,7 +11,14 @@ import {
   proveExactMessageClarificationSelection,
   proveStructuredClarificationSubmission,
 } from '../../src/copilot/first-line-clarification-selection.mjs';
-import { FIRST_LINE_RESOLUTION_SCHEMA } from '../../src/copilot/first-line-resolution.mjs';
+import {
+  FIRST_LINE_RESOLUTION_SCHEMA,
+  resolveFirstLineExactReads,
+} from '../../src/copilot/first-line-resolution.mjs';
+import {
+  FIRST_LINE_EXTRACTION_SCHEMA,
+  FIRST_LINE_INTENT_SCHEMA_VERSION,
+} from '../../src/copilot/first-line-extraction.mjs';
 import { OPEN_TURN_PROJECTION_SCHEMA } from '../../src/copilot/first-line-routing-planner.mjs';
 import { FirstLineStateStore } from '../../src/copilot/first-line-state-store.mjs';
 
@@ -258,6 +265,92 @@ function productAuthority() {
   };
 }
 
+function selectionCatalog() {
+  return {
+    resolveProductIdentityExact(raw) {
+      const variant = raw === 'VARIANT_1' ? VARIANT_1 : raw === 'VARIANT_2' ? VARIANT_2 : null;
+      if (variant === null) {
+        return {
+          catalog: { generation_id: 'g1' },
+          status: 'NOT_FOUND',
+          product: null,
+          candidates: [],
+        };
+      }
+      const row = {
+        product_id: PRODUCT_1,
+        variant_id: variant,
+        sku: raw,
+        sku_key: raw.toLowerCase(),
+        title: null,
+        matched_languages: [],
+        matched_by: ['EXACT_SKU'],
+      };
+      return {
+        catalog: { generation_id: 'g1' },
+        status: 'FOUND',
+        product: row,
+        candidates: [row],
+      };
+    },
+    getStores({ storeIds }) {
+      return {
+        catalog: { generation_id: 'g1' },
+        stores: storeIds
+          .filter(id => id === STORE_1)
+          .map(id => ({ store_id: id, name: 'Store One' })),
+      };
+    },
+    listCategories() {
+      return { catalog: { generation_id: 'g1' }, categories: [] };
+    },
+    listBrands() {
+      return { catalog: { generation_id: 'g1' }, brands: [] };
+    },
+  };
+}
+
+function selectionKnowledge(kind, quote) {
+  const rows = kind === 'STORE' ? [{
+    revision_id: 'rev-store-one',
+    record_type: 'VOCABULARY_ENTRY',
+    schema_version: 1,
+    namespace: 'vocabulary.store',
+    effect_family: 'vocabulary.store_resolution',
+    subject_type: 'phrase',
+    subject_id: quote.toLowerCase(),
+    scope: {},
+    effect_type: 'STORE_BINDING',
+    effect_value: { canonical_store_id: STORE_1 },
+    state: 'PUBLISHED',
+    effective_from_utc: '2026-10-01T00:00:00Z',
+    expires_at_utc: null,
+  }] : [];
+  return {
+    authoritySnapshot() {
+      return rows;
+    },
+  };
+}
+
+function boundResolution(kind, text, quote = text) {
+  const read = exactRead(text);
+  const resolved = resolveFirstLineExactReads({
+    extraction: {
+      schema: FIRST_LINE_EXTRACTION_SCHEMA,
+      intent_schema_version: FIRST_LINE_INTENT_SCHEMA_VERSION,
+      intent_hint: 'UNTRUSTED_HINT',
+      language: 'uk',
+      spans: [{ kind, turn_index: 1, quote, occurrence: 1 }],
+    },
+    exactReads: [{ turnIndex: 1, exactRead: read }],
+    knowledgeStore: selectionKnowledge(kind, quote),
+    catalogService: selectionCatalog(),
+    nowUtc: '2026-10-04T12:00:00Z',
+  });
+  return { read, resolved };
+}
+
 test('choice token is bounded and contains no canonical authority id', () => {
   assert.equal(clarificationChoiceToken(1), 'bp-choice:1');
   assert.equal(clarificationChoiceToken(20), 'bp-choice:20');
@@ -319,10 +412,11 @@ test('structured submission fails closed on wrong action, unknown value, or late
 
 test('exact whole-message offered candidate proves selection', () => {
   const text = 'VARIANT_2';
+  const { read, resolved } = boundResolution('PRODUCT', text);
   const result = proveExactMessageClarificationSelection({
     projection: projection(),
-    resolution: resolution('PRODUCT', productAuthority(), text),
-    exactRead: exactRead(text),
+    resolution: resolved,
+    exactRead: read,
   });
   assert.equal(result.code, 'CLARIFICATION_SELECTION_PROVEN');
   assert.equal(result.evidence_class, 'EXACT_MESSAGE_SELECTION');
@@ -333,20 +427,22 @@ test('exact whole-message offered candidate proves selection', () => {
 
 test('Unicode edge whitespace is allowed but negation/punctuation/prefix/suffix are not', () => {
   const allowed = '\u00a0\u2003VARIANT_2\u202f';
+  const allowedPair = boundResolution('PRODUCT', allowed, 'VARIANT_2');
   assert.equal(
     proveExactMessageClarificationSelection({
       projection: projection(),
-      resolution: resolution('PRODUCT', productAuthority(), allowed, 'VARIANT_2'),
-      exactRead: exactRead(allowed),
+      resolution: allowedPair.resolved,
+      exactRead: allowedPair.read,
     }).code,
     'CLARIFICATION_SELECTION_PROVEN'
   );
 
   for (const text of ['не VARIANT_2', 'VARIANT_2?', 'да, VARIANT_2', 'VARIANT_2 будь ласка']) {
+    const pair = boundResolution('PRODUCT', text, 'VARIANT_2');
     const result = proveExactMessageClarificationSelection({
       projection: projection(),
-      resolution: resolution('PRODUCT', productAuthority(), text, 'VARIANT_2'),
-      exactRead: exactRead(text),
+      resolution: pair.resolved,
+      exactRead: pair.read,
     });
     assert.equal(result.code, 'NO_CLARIFICATION_SELECTION', text);
     assert.equal(result.reason, 'EXACT_SELECTION_SURROUNDING_TEXT', text);
@@ -355,28 +451,21 @@ test('Unicode edge whitespace is allowed but negation/punctuation/prefix/suffix 
 
 test('exact requested store and money values fill only the requested slot', () => {
   const storeText = 'STORE ONE';
+  const storePair = boundResolution('STORE', storeText);
   const storeResult = proveExactMessageClarificationSelection({
     projection: projection({ requestedSlot: 'store_id', candidates: [] }),
-    resolution: resolution('STORE', {
-      status: 'RESOLVED',
-      reason: 'STORE_RESOLVED',
-      resolved: { canonical_store_id: STORE_1 },
-    }, storeText),
-    exactRead: exactRead(storeText),
+    resolution: storePair.resolved,
+    exactRead: storePair.read,
   });
   assert.equal(storeResult.reason, 'REQUESTED_SLOT_FILLED');
   assert.equal(storeResult.selection.value, STORE_1);
 
   const moneyText = '1000 грн';
+  const moneyPair = boundResolution('MONEY', moneyText);
   const moneyResult = proveExactMessageClarificationSelection({
     projection: projection({ requestedSlot: 'money', candidates: [] }),
-    resolution: resolution('MONEY', {
-      status: 'RESOLVED',
-      reason: 'MONEY_RESOLVED',
-      currency: 'UAH',
-      minor_units: 100000,
-    }, moneyText),
-    exactRead: exactRead(moneyText),
+    resolution: moneyPair.resolved,
+    exactRead: moneyPair.read,
   });
   assert.deepEqual(moneyResult.selection.value, { currency: 'UAH', minor_units: 100000 });
 });
@@ -422,10 +511,11 @@ test('multi-message turn, wrong exact-read identity and malicious intent hint ca
 });
 
 test('selection proof serializes no raw body, quote, presentation label, stock or price authority', () => {
+  const pair = boundResolution('PRODUCT', 'VARIANT_2');
   const result = proveExactMessageClarificationSelection({
     projection: projection(),
-    resolution: resolution('PRODUCT', productAuthority(), 'VARIANT_2'),
-    exactRead: exactRead('VARIANT_2'),
+    resolution: pair.resolved,
+    exactRead: pair.read,
   });
   const serialized = JSON.stringify(result);
   for (const forbidden of [
@@ -440,10 +530,11 @@ test('selection proof serializes no raw body, quote, presentation label, stock o
 test('proof output whitelists plan provenance and rejects requested-slot drift', t => {
   const p = projection();
   p.plan_token = { ...p.plan_token, raw_body: 'must-never-escape' };
+  const pair = boundResolution('PRODUCT', 'VARIANT_2');
   const exact = proveExactMessageClarificationSelection({
     projection: p,
-    resolution: resolution('PRODUCT', productAuthority(), 'VARIANT_2'),
-    exactRead: exactRead('VARIANT_2'),
+    resolution: pair.resolved,
+    exactRead: pair.read,
   });
   assert.equal(exact.code, 'CLARIFICATION_SELECTION_PROVEN');
   assert.equal(JSON.stringify(exact).includes('must-never-escape'), false);
@@ -458,4 +549,38 @@ test('proof output whitelists plan provenance and rejects requested-slot drift',
   });
   assert.equal(structured.code, 'NO_CLARIFICATION_SELECTION');
   assert.equal(structured.reason, 'CLARIFICATION_EPISODE_MISMATCH');
+});
+
+test('exact-message proof binds resolution to reread content without durable body digest', () => {
+  const original = boundResolution('PRODUCT', 'VARIANT_2');
+
+  const sameContentReread = exactRead('VARIANT_2');
+  const same = proveExactMessageClarificationSelection({
+    projection: projection(),
+    resolution: original.resolved,
+    exactRead: sameContentReread,
+  });
+  assert.equal(same.code, 'CLARIFICATION_SELECTION_PROVEN');
+
+  const changedRead = exactRead('VARIANT_1');
+  const changed = proveExactMessageClarificationSelection({
+    projection: projection(),
+    resolution: original.resolved,
+    exactRead: changedRead,
+  });
+  assert.equal(changed.code, 'NO_CLARIFICATION_SELECTION');
+  assert.equal(changed.reason, 'EXACT_SELECTION_RESOLUTION_READ_MISMATCH');
+
+  const serializedResolution = structuredClone(original.resolved);
+  const rehydrated = proveExactMessageClarificationSelection({
+    projection: projection(),
+    resolution: serializedResolution,
+    exactRead: sameContentReread,
+  });
+  assert.equal(rehydrated.code, 'NO_CLARIFICATION_SELECTION');
+  assert.equal(rehydrated.reason, 'EXACT_SELECTION_RESOLUTION_READ_MISMATCH');
+  const serialized = JSON.stringify(original.resolved);
+  assert.equal(serialized.includes('transientContent'), false);
+  assert.equal(serialized.includes('quote'), false);
+  assert.equal(serialized.includes('content_digest'), false);
 });
