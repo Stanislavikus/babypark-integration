@@ -10,7 +10,6 @@ function requireTimeout(value) {
 async function jsonRequest(fetchImpl, baseUrl, path, token, requestTimeoutMs, options = {}) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), requestTimeoutMs);
-  timer.unref?.();
   try {
     const response = await fetchImpl(`${baseUrl}${path}`, { ...options, redirect: 'manual',
       signal: controller.signal, headers: {
@@ -248,7 +247,7 @@ export function createFirstLineChatwootAuthorityReader({
     return jsonRequest(fetchImpl, baseUrl, pathname, readToken, requestTimeoutMs, { method: 'GET' });
   }
 
-  async function readExactSourceMessage(conversationId, sourceMessageId) {
+  async function readExactWireMessage(conversationId, sourceMessageId) {
     const conversation = strictPositiveId(conversationId, 'conversation_id');
     const source = strictPositiveId(sourceMessageId, 'source_message_id', { max: CHATWOOT_MESSAGE_ID_MAX });
     const wire = await get(
@@ -256,13 +255,22 @@ export function createFirstLineChatwootAuthorityReader({
     );
     const rows = payloadRows(wire);
     const matches = rows.filter(row => row?.id === source);
-    if (matches.length === 0) return Object.freeze({ code: 'ABSENT', sourceConversationId: conversation, sourceMessageId: source });
+    if (matches.length === 0) return { conversation, source, wireMessage: null };
     if (matches.length !== 1 || rows.length !== 1) {
       authorityFail('CHATWOOT_AUTHORITY_EXACT_AMBIGUOUS', 'exact source-message query did not return exactly one row',
         { source_message_id: source, row_count: rows.length, match_count: matches.length });
     }
+    return { conversation, source, wireMessage: matches[0] };
+  }
 
-    const classified = classifyPublicWireMessage(matches[0], botId);
+  async function readExactSourceMessage(conversationId, sourceMessageId) {
+    const exact = await readExactWireMessage(conversationId, sourceMessageId);
+    const { conversation, source, wireMessage } = exact;
+    if (wireMessage === null) {
+      return Object.freeze({ code: 'ABSENT', sourceConversationId: conversation, sourceMessageId: source });
+    }
+
+    const classified = classifyPublicWireMessage(wireMessage, botId);
     if (classified.disposition === 'INTERNAL') {
       return Object.freeze({ code: 'INTERNAL', sourceConversationId: conversation, sourceMessageId: source });
     }
@@ -276,15 +284,62 @@ export function createFirstLineChatwootAuthorityReader({
       event.unsupported === false &&
       event.hasAttachments === false &&
       event.contentType === 'text' &&
-      typeof matches[0].content === 'string' &&
-      matches[0].content.trim().length > 0;
+      typeof wireMessage.content === 'string' &&
+      wireMessage.content.trim().length > 0;
 
     return Object.freeze({
       code: isSupportedCustomerText ? 'SUPPORTED_CUSTOMER_TEXT' : 'PROVEN_UNSUPPORTED_OR_TOPOLOGY',
       sourceConversationId: conversation,
       sourceMessageId: source,
       event: Object.freeze({ ...event }),
-      transientContent: isSupportedCustomerText ? matches[0].content : null,
+      transientContent: isSupportedCustomerText ? wireMessage.content : null,
+    });
+  }
+
+  async function readExactClarificationSubmission(conversationId, sourceMessageId) {
+    const exact = await readExactWireMessage(conversationId, sourceMessageId);
+    const { conversation, source, wireMessage } = exact;
+    if (wireMessage === null) {
+      return Object.freeze({ code: 'ABSENT', sourceConversationId: conversation, sourceMessageId: source });
+    }
+
+    const classified = classifyPublicWireMessage(wireMessage, botId);
+    if (classified.disposition === 'INTERNAL') {
+      return Object.freeze({ code: 'INTERNAL', sourceConversationId: conversation, sourceMessageId: source });
+    }
+
+    const event = classified.ledgerEvent;
+    const attrs = wireMessage?.content_attributes;
+    const submitted = attrs && typeof attrs === 'object' && !Array.isArray(attrs)
+      ? attrs.submitted_values
+      : null;
+    const one = Array.isArray(submitted) && submitted.length === 1 ? submitted[0] : null;
+    const value = one && typeof one === 'object' && !Array.isArray(one) &&
+      typeof one.value === 'string' &&
+      one.value.length > 0 && one.value.length <= 128 &&
+      !/[\u0000-\u001f\u007f]/u.test(one.value)
+      ? one.value
+      : null;
+
+    const supported =
+      event.eventKind === 'BABYPARK_PUBLIC_REPLY' &&
+      event.messageType === 'outgoing' &&
+      event.senderClass === 'configured_agent_bot' &&
+      event.deleted === false &&
+      event.unsupported === false &&
+      event.hasAttachments === false &&
+      event.contentType === 'input_select' &&
+      event.sourceId !== null &&
+      value !== null;
+
+    return Object.freeze({
+      code: supported
+        ? 'SUPPORTED_CLARIFICATION_SUBMISSION'
+        : 'PROVEN_UNSUPPORTED_OR_TOPOLOGY',
+      sourceConversationId: conversation,
+      sourceMessageId: source,
+      event: Object.freeze({ ...event }),
+      transientSubmittedValue: supported ? value : null,
     });
   }
 
@@ -350,6 +405,7 @@ export function createFirstLineChatwootAuthorityReader({
 
   return Object.freeze({
     readExactSourceMessage,
+    readExactClarificationSubmission,
     readPublicRange,
     readAuthorizingConversationSnapshot,
   });
