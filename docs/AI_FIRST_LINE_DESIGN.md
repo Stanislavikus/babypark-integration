@@ -1088,8 +1088,10 @@ they do not define semantic episode identity.
 A new actionable customer message starts a new episode when there is no active
 episode.
 
-An existing episode is continued only when the new customer message is proven
-to be semantically dependent on that episode, for example:
+An existing episode is continued only when the new customer response is proven
+to be semantically dependent on that episode. A response may be a real newer
+customer message or a verified native structured submission under §29.0.1, for
+example:
 - selecting one of the candidates BabyPark presented;
 - filling the explicitly requested missing slot;
 - invoking an explicitly supported deterministic follow-up that relies on
