@@ -74,6 +74,7 @@ function applyStandalone(store, projected) {
     streamId: token.stream_id,
     expectedStreamRevision: token.stream_revision,
     expectedThroughEventSeq: token.through_event_seq,
+    expectedRoutingLedgerFingerprint: token.routing_ledger_fingerprint,
     expectedEpisodeId: token.episode_id,
     expectedEpisodeVersion: token.episode_version,
     expectedLiveActionId: token.live_action_id,
@@ -356,6 +357,39 @@ test('corrupt persisted stream metadata fails closed before episode mutation', t
       .get(stream.stream_id).n,
     1
   );
+});
+
+test('deleted accepted ledger row invalidates the routing plan before mutation', t => {
+  const { store } = tempStore(t);
+  const stream = makeStream(store);
+  store.ingestConversationEvent(stream.stream_id, customerEvent(101));
+  store.ingestConversationEvent(stream.stream_id, customerEvent(102));
+  const old = store.beginEpisode({ streamId: stream.stream_id });
+  const projected = projection(store, stream.stream_id);
+
+  store.db.prepare(
+    'DELETE FROM conversation_events WHERE stream_id=? AND event_seq=?'
+  ).run(stream.stream_id, 1);
+
+  expectCode(() => applyStandalone(store, projected), 'FIRST_LINE_ROUTING_PLAN_STALE');
+  assert.equal(store.getEpisode(old.episode_id).state, 'active');
+  assert.equal(store.loadActiveEpisode(stream.stream_id).episode_id, old.episode_id);
+});
+
+test('valid-looking ledger metadata mutation invalidates routing fingerprint', t => {
+  const { store } = tempStore(t);
+  const stream = makeStream(store);
+  store.ingestConversationEvent(stream.stream_id, customerEvent(101));
+  const old = store.beginEpisode({ streamId: stream.stream_id });
+  const projected = projection(store, stream.stream_id);
+
+  store.db.prepare(
+    'UPDATE conversation_events SET unsupported_flag=1 WHERE stream_id=? AND event_seq=?'
+  ).run(stream.stream_id, 1);
+
+  expectCode(() => applyStandalone(store, projected), 'FIRST_LINE_ROUTING_PLAN_STALE');
+  assert.equal(store.getEpisode(old.episode_id).state, 'active');
+  assert.equal(store.loadActiveEpisode(stream.stream_id).episode_id, old.episode_id);
 });
 
 test('new accepted event makes a routing plan stale before mutation', t => {

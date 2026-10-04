@@ -149,6 +149,7 @@ test('routing snapshot contains only committed metadata and active episode state
   assert.equal(snapshot.stream.stream_revision, 1);
   assert.equal(snapshot.stream.last_event_seq, 1);
   assert.equal(snapshot.suffix_truncated, false);
+  assert.match(snapshot.routing_ledger_fingerprint, /^sha256:[0-9a-f]{64}$/);
   assert.equal(snapshot.max_open_turn_events, MAX_OPEN_TURN_EVENTS);
   assert.deepEqual(
     snapshot.event_suffix.map(item => [item.event.event_seq, item.event.source_message_id]),
@@ -382,6 +383,7 @@ test('bounded suffix fails closed when complete open-turn provenance is unavaila
     live_public_action: null,
     clarification_action: null,
     event_suffix: events,
+    routing_ledger_fingerprint: 'sha256:' + '0'.repeat(64),
     suffix_truncated: false,
     max_open_turn_events: MAX_OPEN_TURN_EVENTS,
   });

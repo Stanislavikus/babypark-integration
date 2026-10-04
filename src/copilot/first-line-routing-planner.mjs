@@ -43,6 +43,8 @@ function requireSnapshot(snapshot) {
       snapshot.schema !== ROUTING_SNAPSHOT_SCHEMA ||
       !snapshot.stream || typeof snapshot.stream !== 'object' ||
       !Array.isArray(snapshot.event_suffix) ||
+      typeof snapshot.routing_ledger_fingerprint !== 'string' ||
+      !/^sha256:[0-9a-f]{64}$/.test(snapshot.routing_ledger_fingerprint) ||
       typeof snapshot.suffix_truncated !== 'boolean' ||
       snapshot.max_open_turn_events !== MAX_OPEN_TURN_EVENTS ||
       (snapshot.live_public_action !== null &&
@@ -68,6 +70,7 @@ function planToken(snapshot) {
     stream_id: snapshot.stream.stream_id,
     stream_revision: snapshot.stream.stream_revision,
     through_event_seq: snapshot.stream.last_event_seq,
+    routing_ledger_fingerprint: snapshot.routing_ledger_fingerprint,
     episode_id: episode?.episode_id ?? null,
     episode_version: episode?.version ?? null,
     live_action_id: snapshot.live_public_action?.action_id ?? null,
