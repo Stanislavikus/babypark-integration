@@ -318,6 +318,9 @@ test('constraint proof serializes no customer body, residue tokens or digest and
   const result = evaluate(['Не Cybex'], [
     { kind: 'BRAND', turn_index: 1, quote: 'Cybex', occurrence: 1 },
   ]);
+  assert.equal(Object.hasOwn(result, 'decision'), false);
+  assert.equal(Object.hasOwn(result, 'human_reason'), false);
+  assert.equal(Object.hasOwn(result, 'handoff'), false);
   const serialized = JSON.stringify(result);
   for (const forbidden of [
     'Не Cybex',

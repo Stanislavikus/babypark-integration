@@ -950,3 +950,51 @@ test('v2 to v3 migration fails closed before mutation when a required source ind
   ).get();
   assert.equal(latchTable, undefined);
 });
+
+test('schema v3 attestation rejects latch table without primary-key uniqueness', t => {
+  const { store, file } = tempStore(t);
+  store.close();
+
+  const raw = new DatabaseSync(file);
+  raw.exec('PRAGMA foreign_keys=OFF');
+  raw.exec('DROP TABLE episode_constraint_latches');
+  raw.exec(`CREATE TABLE episode_constraint_latches (
+    episode_id TEXT NOT NULL,
+    latch_class TEXT NOT NULL,
+    first_event_seq INTEGER NOT NULL,
+    created_at INTEGER NOT NULL
+  )`);
+  raw.close();
+
+  expectCode(
+    () => FirstLineStateStore.open(file),
+    'FIRST_LINE_DB_INVALID'
+  );
+});
+
+test('persisted constraint latch with missing episode-stream event fails closed as corruption', t => {
+  const { store } = tempStore(t);
+  const stream = makeStream(store);
+  store.ingestConversationEvent(stream.stream_id, customerEvent(101));
+  const plan = store.readRoutingSnapshot(stream.stream_id);
+  const episode = store.startStandaloneEpisodeFromRoutingPlan({
+    streamId: stream.stream_id,
+    expectedStreamRevision: plan.stream.stream_revision,
+    expectedThroughEventSeq: plan.stream.last_event_seq,
+    expectedRoutingLedgerFingerprint: plan.routing_ledger_fingerprint,
+    constraintLatches: [{
+      latch_class: 'RETURN_CASE',
+      source_event_seq: 1,
+    }],
+    constraintBasisEventSeqs: [1],
+  }).episode;
+
+  store.db.prepare(
+    'UPDATE episode_constraint_latches SET first_event_seq=999 WHERE episode_id=?'
+  ).run(episode.episode_id);
+
+  expectCode(
+    () => store.listEpisodeConstraintLatches(episode.episode_id),
+    'FIRST_LINE_DB_CORRUPT'
+  );
+});

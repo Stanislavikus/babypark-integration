@@ -220,13 +220,17 @@ CREATE TABLE episode_constraint_latches (
 );
 `;
 
-const REQUIRED_INDEXES = new Set([
+const REQUIRED_INDEXES_V2 = new Set([
   'sqlite_autoindex_conversation_streams_2',
   'sqlite_autoindex_conversation_events_2',
   'one_active_episode_per_stream',
   'conversation_events_source_id',
   'one_live_public_action_per_stream',
   'sqlite_autoindex_public_actions_2',
+]);
+const REQUIRED_INDEXES = new Set([
+  ...REQUIRED_INDEXES_V2,
+  'sqlite_autoindex_episode_constraint_latches_1',
 ]);
 
 export class FirstLineStateError extends Error {
@@ -569,7 +573,7 @@ export class FirstLineStateStore {
         db.prepare("SELECT name FROM sqlite_master WHERE type='index'").all()
           .map(row => row.name)
       );
-      for (const name of REQUIRED_INDEXES) {
+      for (const name of REQUIRED_INDEXES_V2) {
         if (!sourceIndexes.has(name)) {
           fail('FIRST_LINE_DB_MIGRATION_UNSUPPORTED',
             'migration source required index is missing', { index: name });
@@ -994,6 +998,13 @@ export class FirstLineStateStore {
           enumValue(row.latch_class, CONSTRAINT_LATCH_CLASSES, 'constraint_latch_class');
           positiveInteger(row.first_event_seq, 'first_event_seq');
           nonNegativeInteger(row.created_at, 'created_at');
+          const sourceEvent = this.db.prepare(
+            'SELECT 1 AS ok FROM conversation_events WHERE stream_id=? AND event_seq=?'
+          ).get(episode.stream_id, row.first_event_seq);
+          if (!sourceEvent) {
+            fail('FIRST_LINE_CONSTRAINT_LATCH_PROVENANCE_INVALID',
+              'persisted constraint latch references no event in its episode stream');
+          }
         }, 'persisted constraint latch is invalid', {
           episode_id: id,
           latch_class: row.latch_class,
