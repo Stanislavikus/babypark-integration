@@ -435,3 +435,27 @@ test('selection proof serializes no raw body, quote, presentation label, stock o
   }
   assert.equal(serialized.includes(VARIANT_2), true);
 });
+
+
+test('proof output whitelists plan provenance and rejects requested-slot drift', t => {
+  const p = projection();
+  p.plan_token = { ...p.plan_token, raw_body: 'must-never-escape' };
+  const exact = proveExactMessageClarificationSelection({
+    projection: p,
+    resolution: resolution('PRODUCT', productAuthority(), 'VARIANT_2'),
+    exactRead: exactRead('VARIANT_2'),
+  });
+  assert.equal(exact.code, 'CLARIFICATION_SELECTION_PROVEN');
+  assert.equal(JSON.stringify(exact).includes('must-never-escape'), false);
+  assert.equal(Object.hasOwn(exact.plan_token, 'raw_body'), false);
+
+  const { action, snapshot } = structuredSetup(t);
+  const drifted = structuredClone(snapshot);
+  drifted.clarification_action.requested_slot = 'variant_id';
+  const structured = proveStructuredClarificationSubmission({
+    snapshot: drifted,
+    exactRead: structuredExactRead(action),
+  });
+  assert.equal(structured.code, 'NO_CLARIFICATION_SELECTION');
+  assert.equal(structured.reason, 'CLARIFICATION_EPISODE_MISMATCH');
+});
