@@ -547,3 +547,46 @@ test('forged or serialized positive proof cannot mutate semantic state', t => {
 
   assert.deepEqual(store.loadActiveEpisode(proof.stream_id), before);
 });
+
+
+test('defense-in-depth rejects a persisted mixed-slot clarification before clearing requested slot', t => {
+  const store = tempStore(t);
+  const stream = store.ensureConversationStream({
+    sourceProvider: 'chatwoot',
+    sourceConversationId: 55,
+  });
+  store.ingestConversationEvent(stream.stream_id, customer(101));
+  let episode = store.beginEpisode({ streamId: stream.stream_id });
+  episode = store.setStableSlots(
+    episode.episode_id,
+    { product_id: PRODUCT_1 },
+    { expectedVersion: episode.version, derivedThroughEventSeq: 1 }
+  );
+  const action = confirmClarify(store, stream.stream_id, episode, {
+    requestedSlot: 'variant_id',
+  });
+
+  store.db.prepare('UPDATE public_actions SET requested_slot=? WHERE action_id=?')
+    .run('store_id', action.action_id);
+  store.db.prepare('UPDATE episodes SET requested_slot=? WHERE episode_id=?')
+    .run('store_id', episode.episode_id);
+
+  const snapshot = store.readRoutingSnapshot(stream.stream_id);
+  const proof = proveStructuredClarificationSubmission({
+    snapshot,
+    exactRead: structuredExactRead(store.getPublicAction(action.action_id)),
+  });
+  assert.equal(proof.code, 'CLARIFICATION_SELECTION_PROVEN');
+  assert.equal(proof.selection.slot, 'variant_id');
+
+  const before = store.loadActiveEpisode(stream.stream_id);
+  expectStateCode(
+    () => applyFirstLineRoute({ store, selectionProof: proof }),
+    'FIRST_LINE_SELECTION_PROVENANCE_INVALID'
+  );
+  const after = store.loadActiveEpisode(stream.stream_id);
+  assert.equal(after.version, before.version);
+  assert.equal(after.requested_slot, 'store_id');
+  assert.equal(after.clarification_action_id, action.action_id);
+  assert.equal(after.stable_slots.variant_id, undefined);
+});
