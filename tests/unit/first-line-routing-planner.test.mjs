@@ -309,25 +309,30 @@ test('configured AgentBot reply without confirmed durable action fails closed', 
   assert.equal(projected.boundary.source_message_id, 102);
 });
 
-test('human reply is an explicit boundary but unknown automation blocks ownership', t => {
-  const { store } = tempStore(t);
+test('human and unknown automation rows block continuity ownership', t => {
+  let nextStream = 0;
+  const { store } = tempStore(t, {
+    streamIdFactory: () => 'stream-' + (++nextStream),
+  });
   const stream = makeStream(store);
   store.ingestConversationEvent(stream.stream_id, customerEvent(101));
   store.ingestConversationEvent(stream.stream_id, humanReply(102));
   store.ingestConversationEvent(stream.stream_id, customerEvent(103));
 
   const afterHuman = projectOpenTurn(store.readRoutingSnapshot(stream.stream_id));
-  assert.equal(afterHuman.code, 'OPEN_TURN');
-  assert.equal(afterHuman.reason, 'AFTER_HUMAN_PUBLIC_REPLY');
-  assert.deepEqual(afterHuman.open_turn.source_message_ids, [103]);
+  assert.equal(afterHuman.code, 'TOPOLOGY_UNPROVABLE');
+  assert.equal(afterHuman.reason, 'OWNERSHIP_BLOCKER');
+  assert.equal(afterHuman.boundary.source_message_id, 102);
 
-  store.ingestConversationEvent(stream.stream_id, automationPublic(104));
-  store.ingestConversationEvent(stream.stream_id, customerEvent(105));
+  const second = makeStream(store, 56);
+  store.ingestConversationEvent(second.stream_id, customerEvent(201));
+  store.ingestConversationEvent(second.stream_id, automationPublic(202));
+  store.ingestConversationEvent(second.stream_id, customerEvent(203));
 
-  const blocked = projectOpenTurn(store.readRoutingSnapshot(stream.stream_id));
-  assert.equal(blocked.code, 'TOPOLOGY_UNPROVABLE');
-  assert.equal(blocked.reason, 'OWNERSHIP_BLOCKER');
-  assert.equal(blocked.boundary.source_message_id, 104);
+  const afterAutomation = projectOpenTurn(store.readRoutingSnapshot(second.stream_id));
+  assert.equal(afterAutomation.code, 'TOPOLOGY_UNPROVABLE');
+  assert.equal(afterAutomation.reason, 'OWNERSHIP_BLOCKER');
+  assert.equal(afterAutomation.boundary.source_message_id, 202);
 });
 
 test('unsupported customer metadata fails before semantic extraction', t => {
