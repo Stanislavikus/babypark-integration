@@ -235,9 +235,7 @@ export function projectOpenTurn(rawSnapshot) {
     }
 
     if (event.event_kind === 'HUMAN_PUBLIC_REPLY') {
-      return customerEntries.length > 0
-        ? openTurn(snapshot, customerEntries, 'AFTER_HUMAN_PUBLIC_REPLY', entry)
-        : noOpenTurn(snapshot, 'HUMAN_PUBLIC_REPLY_LAST', entry);
+      return unprovable(snapshot, 'OWNERSHIP_BLOCKER', entry);
     }
 
     if (BLOCKING_PUBLIC_KINDS.has(event.event_kind)) {
