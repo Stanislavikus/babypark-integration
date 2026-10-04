@@ -273,6 +273,42 @@ test('current-revision PREPARED action cannot be cancelled by standalone transit
   assert.equal(current.clarification_action_id, action.action_id);
 });
 
+test('terminal action on the current revision permanently blocks episode replacement', t => {
+  for (const terminalState of ['CANCELLED', 'STALE']) {
+    const { store } = tempStore(t, {
+      streamIdFactory: () => 'stream-terminal-' + terminalState.toLowerCase(),
+      episodeIdFactory: () => 'episode-terminal-' + terminalState.toLowerCase(),
+      actionIdFactory: () => 'action-terminal-' + terminalState.toLowerCase(),
+    });
+    const stream = makeStream(store, terminalState === 'CANCELLED' ? 57 : 58);
+    store.ingestConversationEvent(stream.stream_id, customerEvent(101));
+    const old = store.beginEpisode({ streamId: stream.stream_id });
+    const action = store.preparePublicAction({
+      streamId: stream.stream_id,
+      episodeId: old.episode_id,
+      expectedEpisodeVersion: old.version,
+      preparedStreamRevision: 1,
+      actionType: 'ANSWER',
+      basisEventSeqs: [1],
+      deadlineAt: NOW + 60_000,
+    });
+    if (terminalState === 'CANCELLED') {
+      store.cancelActionBeforeSend(action.action_id, { reason: 'test_cancelled' });
+    } else {
+      store.markActionStaleBeforeSend(action.action_id, { reason: 'test_stale' });
+    }
+
+    const projected = projection(store, stream.stream_id);
+    assert.equal(projected.plan_token.stream_revision, 1);
+    assert.equal(projected.plan_token.live_action_id, null);
+
+    expectCode(() => applyStandalone(store, projected), 'FIRST_LINE_ROUTING_PLAN_STALE');
+    assert.equal(store.getPublicAction(action.action_id).state, terminalState);
+    assert.equal(store.getEpisode(old.episode_id).state, 'active');
+    assert.equal(store.loadActiveEpisode(stream.stream_id).episode_id, old.episode_id);
+  }
+});
+
 test('transaction rollback restores action and episode if fresh episode insert fails', t => {
   const { store } = tempStore(t, {
     episodeIdFactory: () => 'episode-fixed',

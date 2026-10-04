@@ -771,6 +771,20 @@ export class FirstLineStateStore {
         }
       }
 
+      const currentRevisionHead = this.db.prepare(
+        'SELECT action_id FROM public_actions WHERE stream_id=? AND prepared_stream_revision=?'
+      ).get(stream, revision) ?? null;
+      if (currentRevisionHead) {
+        const currentRevisionAction = this.#readAction(currentRevisionHead.action_id);
+        fail('FIRST_LINE_ROUTING_PLAN_STALE',
+          'current stream revision already has a durable public action', {
+            stream_id: stream,
+            action_id: currentRevisionAction.action_id,
+            action_state: currentRevisionAction.state,
+            action_episode_id: currentRevisionAction.episode_id,
+          });
+      }
+
       const liveHead = this.db.prepare(`SELECT action_id FROM public_actions WHERE stream_id=? AND state IN
         ('PREPARED','GATING','SENDING','UNCERTAIN')`).get(stream) ?? null;
       const liveAction = liveHead
