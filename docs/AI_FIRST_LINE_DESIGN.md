@@ -918,7 +918,74 @@ Vocabulary is durable reviewed authority and has revision IDs.
 
 Protect not only extracted slots but constraints the model failed to extract.
 
-Latch runs on the full current bot episode and tracks original normalized customer text plus consumed spans.
+Latch runs after C2c routing and before C4 decision.
+
+For the current accepted semantic basis, customer text is exact-read from Chatwoot
+and held only transiently together with C2-certified consumed spans.
+
+"Full current bot episode" does not require BabyPark to persist or later reconstruct
+the raw/normalized episode body. Episode-wide constraint safety is the union of:
+- previously committed typed constraint latches for the active episode; and
+- the current transient exact-read latch evaluation.
+
+A non-CLEAR latch blocks ANSWER and CLARIFY for that processing attempt. C4 maps
+the latch to HUMAN. Therefore an unsupported constraint discovered on turn 1
+normally prevents an AI clarification on turn 1.
+
+Cross-turn crash/concurrency safety is durable but body-free. C3 maintains a
+**set of typed unsupported latch classes** for the active episode. For each
+distinct class BabyPark may persist only:
+- the latch class;
+- the accepted source event sequence that first proved that class;
+- ordinary episode version/lifecycle metadata.
+
+`CLEAR` is never persisted beside unsupported classes. It means only that the
+effective latch set is empty.
+
+It MUST NOT persist the raw/normalized phrase, leftover text, tokens or a content
+digest merely to remember the constraint.
+
+Unsupported latch classes are monotonic for the active episode:
+- later turns may add a newly proven class;
+- repeated proof of the same class is idempotent;
+- later customer text cannot remove a class;
+- all proven classes remain available to trace/handoff even though C4 emits one
+  primary HUMAN reason.
+
+### 28.1 Pending-HUMAN routing fence
+
+C2c normally runs before C3. Therefore crash/concurrency recovery needs one
+cross-stage fence: if an active episode already has a non-empty unsupported latch
+set and HUMAN/native handoff has not terminalized that episode, a later customer
+event MUST NOT cause C2c route application to close/replace it as a standalone
+new AI episode.
+
+The later event may trigger reprocessing/recovery, but the latched episode remains
+the semantic owner until HUMAN/handoff closes it. No ANSWER or CLARIFY may be
+prepared from that later event.
+
+This is not a new decision class and does not make C3 an ownership machine.
+Chatwoot still owns bot/human assignment; BabyPark only prevents its own semantic
+episode replacement while a previously proven HUMAN blocker is pending.
+
+This is safe for v1 because HUMAN ends the AI episode and automatic bot re-entry
+after handoff is out of scope.
+
+### 28.2 C4 precedence for multiple latch classes
+
+C3 retains the whole set and does **not** choose the final HUMAN reason. C4 maps
+a non-empty set to HUMAN using this fixed primary-reason order:
+
+1. `RETURN_CASE` -> `RETURN_CASE_SPECIFIC`
+2. `ORDER_SPECIFIC` -> `ORDER_SPECIFIC`
+3. `UNSUPPORTED_COMPATIBILITY` -> `COMPATIBILITY_NOT_AUTHORITATIVE`
+4. `SUBJECTIVE_RECOMMENDATION` -> `SUBJECTIVE_RECOMMENDATION`
+5. `UNSUPPORTED_EXCLUSION` -> `UNSUPPORTED_EXCLUSION`
+6. `UNSUPPORTED_AGE_SUITABILITY` -> `UNSUPPORTED_CONSTRAINT`
+7. `OTHER_UNCONSUMED_CONSTRAINT` -> `UNSUPPORTED_CONSTRAINT`
+
+The ordering selects one stable observable reason only; it does not discard the
+other proven latch classes.
 
 Supported resolvers consume:
 - product;
@@ -948,6 +1015,31 @@ Examples:
 
 False-positive HUMAN is acceptable.
 Silent constraint removal is not.
+
+Unknown contentful residue after subtracting:
+- C2-certified resolver spans; and
+- explicitly reviewed **supported-v1 request language** plus glue/social language
+is itself a latch: `OTHER_UNCONSUMED_CONSTRAINT`.
+
+Supported request language is a bounded deterministic validator, not free-form
+LLM permission. The model `intent_hint` may prioritize validator order, but it
+MUST NOT be the sole gate for whether a reviewed validator runs and MUST NOT
+itself mark arbitrary text as consumed.
+
+Every frozen supported-only v1 vector must be recognized by the corresponding
+deterministic request-language validator independently of model hint quality.
+A validator may accept only reviewed language for that v1 intent family. If all
+contentful text is accounted for by certified spans plus reviewed request/glue/
+social validators and no unsupported marker is present, the effective latch set
+MUST be empty (`CLEAR`).
+
+Therefore ordinary supported questions such as payment policy, general return
+policy or store hours do not become HUMAN merely because their request words are
+not product/category/brand/money/store spans. Conversely, extra unsupported
+clauses remain visible residue.
+
+Uncertainty never becomes CLEAR merely because a known marker classifier or
+supported-intent validator did not recognize the residue.
 
 ## 29. Clarification episode
 
