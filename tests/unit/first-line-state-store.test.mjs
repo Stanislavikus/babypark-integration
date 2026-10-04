@@ -605,3 +605,34 @@ test('stable slot provenance must reference an accepted event in the episode str
     { expectedVersion: 1, derivedThroughEventSeq: 999 }
   ), 'FIRST_LINE_SLOT_PROVENANCE_INVALID');
 });
+
+
+test('mixed-slot CLARIFY reservation is rejected before clarification budget mutates', t => {
+  const { store } = tempStore(t);
+  const stream = makeStream(store);
+  store.ingestConversationEvent(stream.stream_id, customerEvent(101));
+  const episode = store.beginEpisode({ streamId: stream.stream_id });
+
+  expectCode(() => store.preparePublicAction({
+    streamId: stream.stream_id,
+    episodeId: episode.episode_id,
+    expectedEpisodeVersion: episode.version,
+    preparedStreamRevision: 1,
+    actionType: 'CLARIFY',
+    basisEventSeqs: [1],
+    requestedSlot: 'store_id',
+    presentedCandidates: [{ slot: 'product_id', value: PRODUCT_1 }],
+    deadlineAt: NOW + 60_000,
+  }), 'FIRST_LINE_CLARIFICATION_INVALID');
+
+  const after = store.getEpisode(episode.episode_id);
+  assert.equal(after.version, episode.version);
+  assert.equal(after.clarification_prompts_sent, 0);
+  assert.equal(after.requested_slot, null);
+  assert.equal(after.clarification_action_id, null);
+  assert.equal(
+    store.db.prepare('SELECT COUNT(*) AS n FROM public_actions WHERE stream_id=?')
+      .get(stream.stream_id).n,
+    0
+  );
+});
