@@ -1,4 +1,5 @@
 import { proveClarificationDependencyAnchor } from './first-line-dependency-proof.mjs';
+import { resolutionUsesExactRead } from './first-line-resolution.mjs';
 import { ROUTING_SNAPSHOT_SCHEMA, CANONICAL_ID_PATTERNS } from './first-line-state-store.mjs';
 
 export const FIRST_LINE_CLARIFICATION_SELECTION_SCHEMA =
@@ -277,6 +278,10 @@ export function proveExactMessageClarificationSelection({ projection, resolution
       exactRead.event?.sourceMessageId !== sourceMessageId ||
       typeof exactRead.transientContent !== 'string') {
     return noProof(meta, 'EXACT_SELECTION_SOURCE_READ_MISMATCH');
+  }
+
+  if (!resolutionUsesExactRead(resolution, 1, exactRead)) {
+    return noProof(meta, 'EXACT_SELECTION_RESOLUTION_READ_MISMATCH');
   }
 
   const span = resolution.certified_spans[0];
