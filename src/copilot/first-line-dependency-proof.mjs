@@ -338,7 +338,7 @@ function resolutionSlots(row) {
         Number.isSafeInteger(authority.minor_units) &&
         authority.minor_units >= 0) {
       return [{
-        slot: 'money',
+        slot: 'max_price_minor',
         value: Object.freeze({
           currency: authority.currency,
           minor_units: authority.minor_units,
@@ -356,7 +356,7 @@ function possibleSlotsForKind(kind) {
     case 'CATEGORY': return ['category_id'];
     case 'BRAND': return ['brand_id'];
     case 'STORE': return ['store_id'];
-    case 'MONEY': return ['money'];
+    case 'MONEY': return ['max_price_minor'];
     default: return [];
   }
 }
@@ -477,8 +477,8 @@ function candidateProof(projection, action, collected) {
 function requestedSlotProof(projection, action, collected) {
   const slot = action.requested_slot;
   if (slot == null) return null;
-  if (slot === 'shortlist_anchor') return { unsupported: true };
-  if (![...ID_SLOTS, 'money'].includes(slot)) return { unsupported: true };
+  if (slot === 'shortlist_anchor' || slot === 'money') return { unsupported: true };
+  if (![...ID_SLOTS, 'max_price_minor'].includes(slot)) return { unsupported: true };
   if (collected.unresolvedSlots.has(slot)) return { ambiguous: true };
 
   const matching = collected.evidence.filter(row => row.slot === slot);

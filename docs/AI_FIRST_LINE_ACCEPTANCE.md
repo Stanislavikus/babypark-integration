@@ -362,6 +362,26 @@ Expected:
 - no second CLARIFY;
 - HUMAN / CLARIFY_EXHAUSTED.
 
+### Q02a — price-ceiling clarification preserves direction
+BabyPark needs one exact upper price bound for an otherwise supported objective
+shortlist and emits its single CLARIFY with
+`requested_slot=max_price_minor`.
+
+Customer replies with one exact supported UAH amount.
+
+Expected:
+- MONEY resolver proves one exact amount;
+- the same active episode continues;
+- `max_price_minor` and `currency=UAH` are committed atomically from that
+  customer selection;
+- no `min_price_minor` is invented;
+- generic `requested_slot=money` is never created by v3.
+
+A migrated legacy active clarification with `requested_slot=money`:
+- remains readable;
+- cannot be mapped to min/max by inference;
+- fails closed to HUMAN / CLARIFY_EXHAUSTED.
+
 ### Q03
 First message contains "не Cybex"; model extractor omits the negation.
 ObjectiveConstraintLatch still detects meaningful unconsumed exclusion.

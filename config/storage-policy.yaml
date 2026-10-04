@@ -458,7 +458,7 @@
       "scope": "file",
       "location": "/var/lib/babypark-integration/episode.sqlite",
       "owner": "BabyPark First Line semantic runtime",
-      "purpose": "Durable Event Ledger v0.7 semantic state: conversation streams/events and stream revisions, episode/open-turn projections, canonical semantic provenance, clarification reservations, and public-action/outbox recovery metadata. No routine raw customer body.",
+      "purpose": "Durable Event Ledger v0.7 semantic state: conversation streams/events and stream revisions, episode/open-turn projections, canonical semantic provenance, typed unsupported-constraint latches with accepted-event provenance, clarification reservations, and public-action/outbox recovery metadata. No routine raw customer body, residue text/tokens or content digest.",
       "state_class": "durable",
       "thresholds": {
         "metric": "rows",
@@ -473,11 +473,11 @@
       },
       "cleanup": {
         "automatic": false,
-        "mechanism": "No automatic file-level cleanup. Any future event/closed-episode compaction requires a reviewed dry-run rule that preserves unique source-event replay fences, active episode state, stream revision semantics, and nonterminal/uncertain public actions.",
+        "mechanism": "No automatic file-level cleanup. Any future event/closed-episode compaction requires a reviewed dry-run rule that preserves unique source-event replay fences, active episode state, typed constraint-latch provenance, stream revision semantics, and nonterminal/uncertain public actions.",
         "dry_run_required": true,
-        "delete_guard": "Never delete or reset live/nonterminal public actions, active episode state, or source-event identity needed for dedupe/reconciliation. Never infer ALREADY_KNOWN from a scan highwater."
+        "delete_guard": "Never delete or reset live/nonterminal public actions, active episode state, typed constraint latches for an active episode, or source-event identity needed for dedupe/reconciliation. Never infer ALREADY_KNOWN from a scan highwater."
       },
-      "recovery": "Restore from verified durable backup. If unavailable or corrupt, fail First Line closed and hand off; never guess prior semantic selections, event topology, clarification budget, or uncertain send outcome.",
+      "recovery": "Restore from verified durable backup. Before schema v2->v3 migration take a verified backup; migration is explicit and additive, never automatic on runtime open. Rollback is old release plus restored v2 backup, not live-table deletion. If state is unavailable or corrupt, fail First Line closed and hand off; never guess prior semantic selections, constraint latches, event topology, clarification budget, or uncertain send outcome.",
       "backup": {
         "required": true,
         "off_host": true,

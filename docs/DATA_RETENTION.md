@@ -129,9 +129,9 @@ non-mutating plan/dry-run by default and requires explicit `apply: true` to dele
 AI trace storage is intended for redacted evaluation/tool/latency metadata.
 It is not created by this foundation slice.
 
-## Planned Slice C semantic conversation state
+## Slice C semantic conversation state
 
-`episode.sqlite v2` is separate from `copilot.sqlite`.
+`episode.sqlite v3` is separate from `copilot.sqlite`. Schema v3 is an additive C3 evolution of the frozen Event Ledger v0.7 schema-v2 base.
 
 Under Event Ledger v0.7 it is no longer merely rebuildable episode continuity.
 It is **durable semantic conversation state** because it may contain accepted
@@ -147,14 +147,16 @@ It persists bounded metadata only:
 - logical episode/open-turn projections;
 - allowlisted canonical stable customer selections with provenance;
 - canonical presented candidates/requested slot/clarification reservation;
-- public-action lifecycle/lease/deadline metadata and canonical action IDs.
+- public-action lifecycle/lease/deadline metadata and canonical action IDs;
+- typed unsupported constraint latches for an episode: latch class plus the accepted source event sequence that first proved that class.
 
 It MUST NOT routinely persist:
 - raw or normalized customer body;
 - content-derived message hash/digest;
 - customer email/phone/avatar;
 - attachment URLs or arbitrary Chatwoot payloads;
-- current prices/stock/freshness or resolved dynamic policy/operational effects.
+- current prices/stock/freshness or resolved dynamic policy/operational effects;
+- raw/normalized unsupported phrases, residue text/tokens, or content-derived latch digests.
 
 Chatwoot remains source authority for message body. Text is exact-reread and
 handled transiently only when semantic processing requires it.
@@ -170,8 +172,18 @@ active episode/action recovery and the latest durable topology needed for safe
 returning-customer handling.
 
 Because this DB is durable semantic truth, a verified backup is required before
-production activation. If it is unavailable/corrupt, First Line must fail closed;
-it must not guess prior state or silently reconstruct unresolved public-action
+production activation and before schema migration. The v2->v3 migration is
+explicit: normal runtime open does not auto-migrate. Migration attests the v2
+source schema, creates only the additive latch table in one transaction, advances
+both SQLite and metadata schema versions, then reopens under ordinary schema-v3
+attestation.
+
+Rollback is operational rather than destructive: stop the v3 runtime, restore the
+verified pre-migration v2 backup, and run the prior release. Do not drop the latch
+table from a live database as a downgrade mechanism.
+
+If durable semantic state is unavailable/corrupt, First Line must fail closed; it
+must not guess prior selections, typed latches or unresolved public-action
 outcomes.
 
 Before real-customer shadow mode:

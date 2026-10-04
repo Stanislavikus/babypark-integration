@@ -449,7 +449,7 @@ test('Unicode edge whitespace is allowed but negation/punctuation/prefix/suffix 
   }
 });
 
-test('exact requested store and money values fill only the requested slot', () => {
+test('exact requested store and max-price values fill only the requested slot', () => {
   const storeText = 'STORE ONE';
   const storePair = boundResolution('STORE', storeText);
   const storeResult = proveExactMessageClarificationSelection({
@@ -463,10 +463,11 @@ test('exact requested store and money values fill only the requested slot', () =
   const moneyText = '1000 грн';
   const moneyPair = boundResolution('MONEY', moneyText);
   const moneyResult = proveExactMessageClarificationSelection({
-    projection: projection({ requestedSlot: 'money', candidates: [] }),
+    projection: projection({ requestedSlot: 'max_price_minor', candidates: [] }),
     resolution: moneyPair.resolved,
     exactRead: moneyPair.read,
   });
+  assert.equal(moneyResult.selection.slot, 'max_price_minor');
   assert.deepEqual(moneyResult.selection.value, { currency: 'UAH', minor_units: 100000 });
 });
 

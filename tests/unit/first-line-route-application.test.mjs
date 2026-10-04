@@ -14,6 +14,9 @@ import {
 } from '../../src/copilot/first-line-clarification-selection.mjs';
 import { resolveFirstLineExactReads } from '../../src/copilot/first-line-resolution.mjs';
 import {
+  evaluateObjectiveConstraintLatch,
+} from '../../src/copilot/first-line-objective-constraint-latch.mjs';
+import {
   applyFirstLineRoute,
   FIRST_LINE_ROUTE_APPLICATION_SCHEMA,
 } from '../../src/copilot/first-line-route-application.mjs';
@@ -236,6 +239,28 @@ function exactRead(text, sourceMessageId = 103) {
   };
 }
 
+function constraintProofFor(projection, text, sourceMessageId) {
+  const read = exactRead(text, sourceMessageId);
+  const resolution = resolveFirstLineExactReads({
+    extraction: {
+      schema: FIRST_LINE_EXTRACTION_SCHEMA,
+      intent_schema_version: FIRST_LINE_INTENT_SCHEMA_VERSION,
+      intent_hint: 'WRONG_BUT_BOUNDED',
+      language: 'ru',
+      spans: [],
+    },
+    exactReads: [{ turnIndex: 1, exactRead: read }],
+    knowledgeStore: knowledge(),
+    catalogService: catalog(),
+    nowUtc: '2026-10-04T12:00:00Z',
+  });
+  return evaluateObjectiveConstraintLatch({
+    projection,
+    resolution,
+    exactReads: [{ turnIndex: 1, exactRead: read }],
+  });
+}
+
 function exactSelectionProof(projection, text = 'VARIANT_2') {
   const read = exactRead(text);
   const resolution = resolveFirstLineExactReads({
@@ -447,7 +472,7 @@ test('ordinary no-proof actionable turn uses existing standalone replacement', t
   assert.notEqual(result.transition.episode.episode_id, old.episode_id);
 });
 
-test('money selection is proven but durable constraint mapping is deferred to C3', t => {
+test('price-ceiling clarification commits max price and currency atomically in C3', t => {
   const store = tempStore(t, { streamSuffix: 'money' });
   const stream = store.ensureConversationStream({
     sourceProvider: 'chatwoot',
@@ -457,7 +482,7 @@ test('money selection is proven but durable constraint mapping is deferred to C3
   const episode = store.beginEpisode({ streamId: stream.stream_id });
   confirmClarify(store, stream.stream_id, episode, {
     candidates: [],
-    requestedSlot: 'money',
+    requestedSlot: 'max_price_minor',
   });
   store.ingestConversationEvent(stream.stream_id, customer(103));
   const projection = projectOpenTurn(store.readRoutingSnapshot(stream.stream_id));
@@ -486,7 +511,7 @@ test('money selection is proven but durable constraint mapping is deferred to C3
     exactRead: read,
   });
   assert.equal(moneyProof.code, 'CLARIFICATION_SELECTION_PROVEN');
-  assert.equal(moneyProof.selection.slot, 'money');
+  assert.equal(moneyProof.selection.slot, 'max_price_minor');
 
   const before = store.loadActiveEpisode(stream.stream_id);
   const result = applyFirstLineRoute({
@@ -495,9 +520,12 @@ test('money selection is proven but durable constraint mapping is deferred to C3
     selectionProof: moneyProof,
   });
 
-  assert.equal(result.code, 'SELECTION_DEFER_TO_C3');
-  assert.equal(result.reason, 'MONEY_CONSTRAINT_MAPPING_OWNED_BY_C3');
-  assert.deepEqual(store.loadActiveEpisode(stream.stream_id), before);
+  assert.equal(result.code, 'EPISODE_CONTINUED');
+  const after = store.loadActiveEpisode(stream.stream_id);
+  assert.equal(after.episode_id, before.episode_id);
+  assert.equal(after.stable_slots.max_price_minor.value, 100000);
+  assert.equal(after.stable_slots.currency.value, 'UAH');
+  assert.equal(after.stable_slots.min_price_minor, undefined);
 });
 
 test('positive proof and projection must share the exact routing token', t => {
@@ -589,4 +617,130 @@ test('defense-in-depth rejects a persisted mixed-slot clarification before clear
   assert.equal(after.requested_slot, 'store_id');
   assert.equal(after.clarification_action_id, action.action_id);
   assert.equal(after.stable_slots.variant_id, undefined);
+});
+
+test('certified C3 latch is committed atomically with standalone episode start', t => {
+  const store = tempStore(t);
+  const stream = store.ensureConversationStream({
+    sourceProvider: 'chatwoot',
+    sourceConversationId: 55,
+  });
+  store.ingestConversationEvent(stream.stream_id, customer(101));
+  const projection = projectOpenTurn(store.readRoutingSnapshot(stream.stream_id));
+  const constraintProof = constraintProofFor(
+    projection,
+    'Какие способы оплаты есть и оформить рассрочку криптовалютой?',
+    101
+  );
+  assert.equal(constraintProof.code, 'CONSTRAINTS_LATCHED');
+
+  const result = applyFirstLineRoute({
+    store,
+    projection,
+    constraintProof,
+  });
+  assert.equal(result.code, 'STANDALONE_EPISODE_STARTED');
+  assert.deepEqual(
+    store.listEpisodeConstraintLatches(result.transition.episode.episode_id)
+      .map(item => item.latch_class),
+    ['OTHER_UNCONSUMED_CONSTRAINT']
+  );
+  assert.throws(
+    () => store.preparePublicAction({
+      streamId: stream.stream_id,
+      episodeId: result.transition.episode.episode_id,
+      expectedEpisodeVersion: result.transition.episode.version,
+      preparedStreamRevision: projection.stream_revision,
+      actionType: 'ANSWER',
+      basisEventSeqs: [1],
+      deadlineAt: NOW + 60_000,
+    }),
+    error => error.code === 'FIRST_LINE_PENDING_HUMAN_LATCH'
+  );
+});
+
+test('unsupported follow-up during confirmed clarification latches same episode before C4 HUMAN', t => {
+  const store = tempStore(t);
+  const stream = store.ensureConversationStream({
+    sourceProvider: 'chatwoot',
+    sourceConversationId: 55,
+  });
+  store.ingestConversationEvent(stream.stream_id, customer(101));
+  const episode = store.beginEpisode({ streamId: stream.stream_id });
+  const action = confirmClarify(store, stream.stream_id, episode, {
+    candidates: [],
+    requestedSlot: 'store_id',
+    replyContentType: 'text',
+  });
+  store.ingestConversationEvent(stream.stream_id, customer(103));
+  const projection = projectOpenTurn(store.readRoutingSnapshot(stream.stream_id));
+  const proof = constraintProofFor(
+    projection,
+    'для ребёнка 6 месяцев',
+    103
+  );
+  assert.equal(
+    proof.latch_classes.includes('UNSUPPORTED_AGE_SUITABILITY'),
+    true
+  );
+
+  const result = applyFirstLineRoute({
+    store,
+    projection,
+    constraintProof: proof,
+  });
+  assert.equal(result.code, 'CLARIFICATION_UNRESOLVED');
+  assert.equal(result.transition.changed, true);
+  assert.deepEqual(
+    store.listEpisodeConstraintLatches(action.episode_id)
+      .map(item => item.latch_class),
+    ['UNSUPPORTED_AGE_SUITABILITY']
+  );
+});
+
+test('forged or serialized C3 proof cannot mutate route state', t => {
+  const store = tempStore(t);
+  const stream = store.ensureConversationStream({
+    sourceProvider: 'chatwoot',
+    sourceConversationId: 55,
+  });
+  store.ingestConversationEvent(stream.stream_id, customer(101));
+  const projection = projectOpenTurn(store.readRoutingSnapshot(stream.stream_id));
+  const certified = constraintProofFor(
+    projection,
+    'Какие способы оплаты есть и криптовалютой?',
+    101
+  );
+  const forged = structuredClone(certified);
+
+  assert.throws(
+    () => applyFirstLineRoute({
+      store,
+      projection,
+      constraintProof: forged,
+    }),
+    error => error.code === 'FIRST_LINE_ROUTE_INPUT_INVALID'
+  );
+  assert.equal(store.loadActiveEpisode(stream.stream_id), null);
+});
+
+test('Q14 pure acknowledgement cannot resolve a pending clarification', t => {
+  const store = tempStore(t);
+  const stream = store.ensureConversationStream({ sourceProvider: 'chatwoot', sourceConversationId: 55 });
+  store.ingestConversationEvent(stream.stream_id, customer(101));
+  const episode = store.beginEpisode({ streamId: stream.stream_id });
+  confirmClarify(store, stream.stream_id, episode, {
+    candidates: [],
+    requestedSlot: 'store_id',
+    replyContentType: 'text',
+  });
+  store.ingestConversationEvent(stream.stream_id, customer(103));
+  const projection = projectOpenTurn(store.readRoutingSnapshot(stream.stream_id));
+  const proof = constraintProofFor(projection, 'спасибо', 103);
+  assert.equal(proof.code, 'CLEAR');
+
+  const result = applyFirstLineRoute({ store, projection, constraintProof: proof });
+  assert.equal(result.code, 'CLARIFICATION_UNRESOLVED');
+  assert.equal(result.reason, 'CLARIFY_EXHAUSTED_PENDING_C4');
+  assert.equal(result.transition, null);
 });
