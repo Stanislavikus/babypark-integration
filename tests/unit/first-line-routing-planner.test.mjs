@@ -519,3 +519,35 @@ test('routing snapshot is one committed SQLite snapshot across stream, events, a
   assert.equal(current.active_episode.version, 2);
   assert.equal(current.active_episode.stable_slots.product_id.value, PRODUCT_1);
 });
+
+
+test('confirmed CLARIFY input_select is a trusted response boundary for text-collapsed channels', t => {
+  const { store } = tempStore(t);
+  const stream = makeStream(store);
+  store.ingestConversationEvent(stream.stream_id, customerEvent(101));
+  const episode = store.beginEpisode({ streamId: stream.stream_id });
+  const action = store.preparePublicAction({
+    streamId: stream.stream_id,
+    episodeId: episode.episode_id,
+    expectedEpisodeVersion: episode.version,
+    preparedStreamRevision: 1,
+    actionType: 'CLARIFY',
+    basisEventSeqs: [1],
+    presentedCandidates: [{ slot: 'store_id', value: STORE_1 }],
+    deadlineAt: NOW + 60_000,
+  });
+  store.claimNextPublicAction({ leaseMs: 30_000, token: 'lease-input-select' });
+  store.markActionSending(action.action_id, 'lease-input-select');
+  store.ingestConversationEvent(stream.stream_id, {
+    ...babyparkReply(102, action.action_id),
+    contentType: 'input_select',
+  });
+  store.confirmPublicActionFromLedger(action.action_id);
+  store.ingestConversationEvent(stream.stream_id, customerEvent(103));
+
+  const projected = projectOpenTurn(store.readRoutingSnapshot(stream.stream_id));
+  assert.equal(projected.code, 'OPEN_TURN');
+  assert.equal(projected.reason, 'AFTER_CONFIRMED_BABYPARK_REPLY');
+  assert.deepEqual(projected.open_turn.source_message_ids, [103]);
+  assert.equal(projected.boundary.confirmed_action_type, 'CLARIFY');
+});

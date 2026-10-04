@@ -6,6 +6,17 @@ export const FIRST_LINE_CLARIFICATION_SELECTION_SCHEMA =
   'bp.first-line.clarification-selection/1';
 export const CLARIFICATION_CHOICE_TOKEN_PREFIX = 'bp-choice:';
 
+const certifiedPositiveProofs = new WeakSet();
+
+export function isCertifiedClarificationSelectionProof(value) {
+  return Boolean(
+    value &&
+    typeof value === 'object' &&
+    value.code === 'CLARIFICATION_SELECTION_PROVEN' &&
+    certifiedPositiveProofs.has(value)
+  );
+}
+
 const MAX_PRESENTED_CANDIDATES = 20;
 const ID_SLOTS = new Set([
   'product_id', 'variant_id', 'category_id', 'brand_id', 'store_id',
@@ -101,7 +112,7 @@ function noProof(meta, reason) {
 }
 
 function proven(meta, evidenceClass, reason, selection) {
-  return Object.freeze({
+  const output = Object.freeze({
     ...base(meta),
     code: 'CLARIFICATION_SELECTION_PROVEN',
     reason,
@@ -114,6 +125,8 @@ function proven(meta, evidenceClass, reason, selection) {
       source_message_id: selection.source_message_id,
     }),
   });
+  certifiedPositiveProofs.add(output);
+  return output;
 }
 
 export function clarificationChoiceToken(ordinal) {

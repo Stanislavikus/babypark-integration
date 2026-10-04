@@ -162,13 +162,19 @@ function supportedNeutralTemplate(event) {
 }
 
 function supportedConfirmedBabyparkReply(event, confirmedAction) {
+  const supportedContentType =
+    confirmedAction?.action_type === 'ANSWER'
+      ? event.content_type === 'text'
+      : confirmedAction?.action_type === 'CLARIFY' &&
+        ['text', 'input_select'].includes(event.content_type);
+
   return event.event_kind === 'BABYPARK_PUBLIC_REPLY' &&
     event.message_type === 'outgoing' &&
     event.sender_class === 'configured_agent_bot' &&
     event.deleted === false &&
     event.unsupported === false &&
     event.has_attachments === false &&
-    event.content_type === 'text' &&
+    supportedContentType &&
     confirmedAction &&
     confirmedAction.action_id === event.source_id &&
     ['ANSWER', 'CLARIFY'].includes(confirmedAction.action_type) &&

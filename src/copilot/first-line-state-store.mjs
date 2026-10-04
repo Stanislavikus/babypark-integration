@@ -12,6 +12,7 @@ const MAX_OPEN_TURN_EVENTS = 999;
 const ROUTING_SUFFIX_FETCH_LIMIT = MAX_OPEN_TURN_EVENTS + 1;
 const ROUTING_SNAPSHOT_SCHEMA = 'bp.first-line.routing-snapshot/1';
 const EPISODE_TRANSITION_SCHEMA = 'bp.first-line.episode-transition/1';
+const EPISODE_CONTINUATION_SCHEMA = 'bp.first-line.episode-continuation/1';
 
 const LIVE_ACTION_STATES = new Set(['PREPARED', 'GATING', 'SENDING', 'UNCERTAIN']);
 const TERMINAL_ACTION_STATES = new Set(['CONFIRMED', 'STALE', 'CANCELLED', 'HANDOFF_DONE', 'NOT_SENT']);
@@ -863,6 +864,219 @@ export class FirstLineStateStore {
     });
   }
 
+  applyClarificationSelectionFromRoutingPlan({
+    streamId,
+    expectedStreamRevision,
+    expectedThroughEventSeq,
+    expectedRoutingLedgerFingerprint,
+    expectedEpisodeId,
+    expectedEpisodeVersion,
+    clarificationActionId,
+    evidenceClass,
+    selectionOrigin,
+    selectionSlot,
+    selectionValue,
+    candidateOrdinal = null,
+    selectionSourceMessageId,
+  } = {}) {
+    const stream = safeToken(streamId, 'stream_id');
+    const revision = positiveInteger(expectedStreamRevision, 'expected_stream_revision');
+    const through = positiveInteger(expectedThroughEventSeq, 'expected_through_event_seq');
+    const expectedLedgerFingerprint = routingLedgerFingerprintValue(
+      expectedRoutingLedgerFingerprint,
+      'expected_routing_ledger_fingerprint'
+    );
+    const episodeId = safeToken(expectedEpisodeId, 'expected_episode_id');
+    const episodeVersion = positiveInteger(expectedEpisodeVersion, 'expected_episode_version');
+    const actionId = safeToken(clarificationActionId, 'clarification_action_id');
+    const evidence = enumValue(
+      evidenceClass,
+      new Set(['STRUCTURED_SUBMISSION', 'EXACT_MESSAGE_SELECTION']),
+      'selection_evidence_class'
+    );
+    const origin = enumValue(
+      selectionOrigin,
+      new Set(['presented_candidate', 'requested_slot']),
+      'selection_origin'
+    );
+    const slot = safeToken(selectionSlot, 'selection_slot');
+    const value = normalizeSlotValue(slot, selectionValue);
+    const sourceMessageId = positiveInteger(selectionSourceMessageId, 'selection_source_message_id');
+    const ordinal = candidateOrdinal == null
+      ? null
+      : positiveInteger(candidateOrdinal, 'candidate_ordinal');
+
+    if (origin === 'presented_candidate' && ordinal === null) {
+      fail('FIRST_LINE_SELECTION_INVALID', 'presented candidate selection requires ordinal');
+    }
+    if (origin === 'requested_slot' && ordinal !== null) {
+      fail('FIRST_LINE_SELECTION_INVALID', 'requested-slot selection cannot carry candidate ordinal');
+    }
+
+    return tx(this.db, () => {
+      const currentStream = this.#readStream(stream);
+      if (!currentStream) {
+        fail('FIRST_LINE_STREAM_NOT_FOUND', 'conversation stream not found', { stream_id: stream });
+      }
+      if (currentStream.stream_revision !== revision ||
+          currentStream.last_event_seq !== through) {
+        fail('FIRST_LINE_ROUTING_PLAN_STALE', 'stream changed after routing plan', {
+          stream_id: stream,
+          expected_stream_revision: revision,
+          current_stream_revision: currentStream.stream_revision,
+          expected_through_event_seq: through,
+          current_last_event_seq: currentStream.last_event_seq,
+        });
+      }
+
+      const currentLedger = this.#readRoutingLedger(currentStream);
+      if (currentLedger.fingerprint !== expectedLedgerFingerprint) {
+        fail('FIRST_LINE_ROUTING_PLAN_STALE', 'routing ledger changed after routing plan', {
+          stream_id: stream,
+          expected_routing_ledger_fingerprint: expectedLedgerFingerprint,
+          current_routing_ledger_fingerprint: currentLedger.fingerprint,
+        });
+      }
+
+      const currentRevisionAction = this.db.prepare(
+        'SELECT action_id FROM public_actions WHERE stream_id=? AND prepared_stream_revision=?'
+      ).get(stream, revision) ?? null;
+      if (currentRevisionAction) {
+        fail('FIRST_LINE_ROUTING_PLAN_STALE', 'current stream revision already owns a public action', {
+          stream_id: stream,
+          action_id: currentRevisionAction.action_id,
+        });
+      }
+
+      const liveActionHead = this.db.prepare(`SELECT action_id FROM public_actions WHERE stream_id=? AND state IN
+        ('PREPARED','GATING','SENDING','UNCERTAIN')`).get(stream) ?? null;
+      if (liveActionHead) {
+        fail('FIRST_LINE_ROUTING_PLAN_STALE', 'live public action appeared after selection plan', {
+          stream_id: stream,
+          action_id: liveActionHead.action_id,
+        });
+      }
+
+      const action = this.#readAction(actionId);
+      if (!action || action.stream_id !== stream ||
+          action.episode_id !== episodeId ||
+          action.episode_version !== episodeVersion ||
+          action.action_type !== 'CLARIFY' ||
+          action.state !== 'CONFIRMED') {
+        fail('FIRST_LINE_SELECTION_PROVENANCE_INVALID', 'clarification action provenance changed', {
+          stream_id: stream,
+          episode_id: episodeId,
+          action_id: actionId,
+        });
+      }
+
+      const sourceRow = this.db.prepare(
+        'SELECT * FROM conversation_events WHERE stream_id=? AND source_message_id=?'
+      ).get(stream, sourceMessageId) ?? null;
+      if (!sourceRow) {
+        fail('FIRST_LINE_SELECTION_PROVENANCE_INVALID', 'selection source event is not accepted', {
+          stream_id: stream,
+          source_message_id: sourceMessageId,
+        });
+      }
+      const sourceEvent = this.#eventDto(sourceRow);
+
+      const clarificationRow = this.db.prepare(
+        'SELECT * FROM conversation_events WHERE stream_id=? AND source_message_id=?'
+      ).get(stream, action.confirmed_source_message_id) ?? null;
+      if (!clarificationRow) {
+        fail('FIRST_LINE_SELECTION_PROVENANCE_INVALID', 'confirmed clarification event is missing', {
+          stream_id: stream,
+          action_id: actionId,
+        });
+      }
+      const clarificationEvent = this.#eventDto(clarificationRow);
+      if (clarificationEvent.event_kind !== 'BABYPARK_PUBLIC_REPLY' ||
+          clarificationEvent.message_type !== 'outgoing' ||
+          clarificationEvent.sender_class !== 'configured_agent_bot' ||
+          clarificationEvent.source_id !== actionId) {
+        fail('FIRST_LINE_SELECTION_PROVENANCE_INVALID', 'confirmed clarification ledger event is invalid', {
+          stream_id: stream,
+          action_id: actionId,
+        });
+      }
+
+      if (evidence === 'STRUCTURED_SUBMISSION') {
+        if (sourceEvent.source_message_id !== action.confirmed_source_message_id ||
+            sourceEvent.event_seq !== clarificationEvent.event_seq ||
+            sourceEvent.event_kind !== 'BABYPARK_PUBLIC_REPLY') {
+          fail('FIRST_LINE_SELECTION_PROVENANCE_INVALID',
+            'structured selection must reference the confirmed clarification event');
+        }
+      } else if (sourceEvent.event_kind !== 'CUSTOMER_MESSAGE' ||
+                 sourceEvent.message_type !== 'incoming' ||
+                 sourceEvent.sender_class !== 'contact' ||
+                 sourceEvent.event_seq <= clarificationEvent.event_seq) {
+        fail('FIRST_LINE_SELECTION_PROVENANCE_INVALID',
+          'exact-message selection must reference a later accepted customer event');
+      }
+
+      if (origin === 'presented_candidate') {
+        if (ordinal > action.presented_candidates.length) {
+          fail('FIRST_LINE_SELECTION_PROVENANCE_INVALID', 'candidate ordinal is outside reservation');
+        }
+        const candidate = action.presented_candidates[ordinal - 1];
+        if (!candidate || candidate.slot !== slot ||
+            canonicalJson(candidate.value) !== canonicalJson(value)) {
+          fail('FIRST_LINE_SELECTION_PROVENANCE_INVALID',
+            'selection does not match reserved candidate');
+        }
+      } else {
+        if (action.requested_slot !== slot) {
+          fail('FIRST_LINE_SELECTION_PROVENANCE_INVALID',
+            'selection does not fill the reserved requested slot');
+        }
+      }
+
+      const activeHead = this.db.prepare(
+        "SELECT episode_id FROM episodes WHERE stream_id=? AND state='active'"
+      ).get(stream) ?? null;
+      const activeEpisode = activeHead ? this.#readEpisode(activeHead.episode_id) : null;
+      if (!activeEpisode || activeEpisode.episode_id !== episodeId ||
+          activeEpisode.stream_id !== stream ||
+          activeEpisode.clarification_prompts_sent !== 1 ||
+          activeEpisode.clarification_action_id !== actionId ||
+          (activeEpisode.requested_slot ?? null) !== (action.requested_slot ?? null)) {
+        fail('FIRST_LINE_ROUTING_PLAN_STALE', 'active clarification episode changed');
+      }
+
+      if (activeEpisode.version !== episodeVersion) {
+        fail('FIRST_LINE_ROUTING_PLAN_STALE', 'episode changed after selection plan', {
+          episode_id: episodeId,
+          expected_episode_version: episodeVersion,
+          current_episode_version: activeEpisode.version,
+        });
+      }
+
+      const transitionAt = this.now();
+      this.db.prepare(`INSERT INTO episode_slots(episode_id,slot_name,value_json,derived_through_event_seq)
+        VALUES (?,?,?,?) ON CONFLICT(episode_id,slot_name) DO UPDATE SET
+        value_json=excluded.value_json,derived_through_event_seq=excluded.derived_through_event_seq`)
+        .run(episodeId, slot, canonicalJson(value), sourceEvent.event_seq);
+      const changed = this.db.prepare(`UPDATE episodes SET version=version+1,updated_at=?
+        WHERE episode_id=? AND stream_id=? AND state='active' AND version=?`)
+        .run(transitionAt, episodeId, stream, episodeVersion).changes;
+      if (changed !== 1) {
+        fail('FIRST_LINE_STALE_WRITE', 'episode changed before clarification selection commit');
+      }
+
+      return {
+        schema: EPISODE_CONTINUATION_SCHEMA,
+        stream_id: stream,
+        stream_revision: revision,
+        through_event_seq: through,
+        evidence_class: evidence,
+        source_event_seq: sourceEvent.event_seq,
+        episode: this.#readEpisode(episodeId),
+      };
+    });
+  }
+
   preparePublicAction({
     streamId, episodeId = null, expectedEpisodeVersion = null, preparedStreamRevision,
     actionType, basisEventSeqs, requestedSlot = null, presentedCandidates = [], deadlineAt,
@@ -1405,6 +1619,7 @@ export {
   ACTION_TYPES,
   BUSY_TIMEOUT_MS,
   CANONICAL_ID_PATTERNS,
+  EPISODE_CONTINUATION_SCHEMA,
   EPISODE_TRANSITION_SCHEMA,
   EVENT_KINDS,
   LIVE_ACTION_STATES,
