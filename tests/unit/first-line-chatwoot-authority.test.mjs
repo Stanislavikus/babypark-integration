@@ -307,3 +307,71 @@ test('template and sender classification is strict default-deny', async () => {
   ]);
   assert.equal(result.events[4].hasAttachments, true);
 });
+
+
+test('exact clarification submission exposes only one bounded native value', async () => {
+  const result = await reader(async () => response({ payload: [{
+    id: 610,
+    message_type: 1,
+    private: false,
+    sender: { id: 7, type: 'AgentBot' },
+    content_type: 'input_select',
+    content: 'presentation must not escape',
+    attachments: [],
+    source_id: 'action-1',
+    content_attributes: {
+      items: [
+        { title: 'first label', value: 'bp-choice:1' },
+        { title: 'second label', value: 'bp-choice:2' },
+      ],
+      submitted_values: [
+        { title: 'selected title', value: 'bp-choice:2' },
+      ],
+    },
+  }] })).readExactClarificationSubmission(55, 610);
+
+  assert.equal(result.code, 'SUPPORTED_CLARIFICATION_SUBMISSION');
+  assert.equal(result.transientSubmittedValue, 'bp-choice:2');
+  assert.equal(result.event.contentType, 'input_select');
+  assert.equal(result.event.sourceId, 'action-1');
+  const serialized = JSON.stringify(result);
+  for (const forbidden of [
+    'presentation must not escape',
+    'first label',
+    'second label',
+    'selected title',
+    'items',
+    'submitted_values',
+  ]) {
+    assert.equal(serialized.includes(forbidden), false, forbidden);
+  }
+});
+
+test('clarification submission rejects multiple, unsafe and non-bot input_select values', async () => {
+  const cases = [
+    { submitted: [], sender: { id: 7, type: 'AgentBot' }, type: 'input_select', source: 'action-1' },
+    { submitted: [{ value: 'bp-choice:1' }, { value: 'bp-choice:2' }], sender: { id: 7, type: 'AgentBot' }, type: 'input_select', source: 'action-1' },
+    { submitted: [{ value: 'bp-choice:1\nunsafe' }], sender: { id: 7, type: 'AgentBot' }, type: 'input_select', source: 'action-1' },
+    { submitted: [{ value: 'bp-choice:1' }], sender: { id: 8, type: 'AgentBot' }, type: 'input_select', source: 'action-1' },
+    { submitted: [{ value: 'bp-choice:1' }], sender: { id: 7, type: 'AgentBot' }, type: 'text', source: 'action-1' },
+    { submitted: [{ value: 'bp-choice:1' }], sender: { id: 7, type: 'AgentBot' }, type: 'input_select', source: null },
+  ];
+
+  for (const item of cases) {
+    const result = await reader(async () => response({ payload: [{
+      id: 611,
+      message_type: 1,
+      private: false,
+      sender: item.sender,
+      content_type: item.type,
+      content: 'hidden prompt',
+      attachments: [],
+      source_id: item.source,
+      content_attributes: { submitted_values: item.submitted },
+    }] })).readExactClarificationSubmission(55, 611);
+
+    assert.equal(result.code, 'PROVEN_UNSUPPORTED_OR_TOPOLOGY');
+    assert.equal(result.transientSubmittedValue, null);
+    assert.equal(JSON.stringify(result).includes('hidden prompt'), false);
+  }
+});
