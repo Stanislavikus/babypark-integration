@@ -285,11 +285,17 @@ export function resolveFirstLineExactReads({
     }
     return transientTurnFromExactRead(entry.turnIndex, entry.exactRead);
   });
-  return resolveFirstLineExtraction({
+  const resolved = resolveFirstLineExtraction({
     extraction,
     turns,
     knowledgeStore,
     catalogService,
     nowUtc,
+  });
+  return Object.freeze({
+    ...resolved,
+    source_message_ids: Object.freeze(
+      turns.map(turn => turn.sourceMessageId)
+    ),
   });
 }

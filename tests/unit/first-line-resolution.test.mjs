@@ -278,6 +278,7 @@ test('certified spans resolve only through deterministic authority contracts', (
 
   assert.equal(result.schema, FIRST_LINE_RESOLUTION_SCHEMA);
   assert.equal(result.source_conversation_id, 55);
+  assert.deepEqual(result.source_message_ids, [501]);
   assert.deepEqual(result.resolutions.map(row => [row.kind, row.authority.status]), [
     ['BRAND', 'RESOLVED'],
     ['CATEGORY', 'RESOLVED'],
@@ -336,6 +337,7 @@ test('product identity uses exact SKU/title contracts only and never FTS search'
     ['resolveProductIdentityExact', 'DAY3-BLK'],
     ['resolveProductIdentityExact', 'Joolz Day3'],
   ]);
+  assert.deepEqual(result.source_message_ids, [501, 502]);
   assert.equal(
     result.resolutions[0].authority.resolved.canonical_variant_id,
     'var-day3-black'
@@ -343,6 +345,39 @@ test('product identity uses exact SKU/title contracts only and never FTS search'
   assert.equal(
     result.resolutions[1].authority.resolved.canonical_product_id,
     'prod-day3'
+  );
+});
+
+test('resolution coverage records every exact-read turn even when a turn has no spans', () => {
+  const result = resolveFirstLineExactReads({
+    extraction: extraction([
+      { kind: 'STORE', turn_index: 1, quote: 'магазине на Глубочицкой', occurrence: 1 },
+    ]),
+    exactReads: exactReads(
+      turn({ text: 'магазине на Глубочицкой' }),
+      turn({
+        turnIndex: 2,
+        sourceMessageId: 502,
+        text: 'и еще один вопрос без извлечённых сущностей',
+      })
+    ),
+    knowledgeStore: knowledge([
+      vocabularyRow(
+        'vocabulary.store',
+        'магазине на глубочицкой',
+        { canonical_store_id: 'store-hlybochytska' },
+        'rev-store-hlybochytska'
+      ),
+    ]),
+    catalogService: catalog(),
+    nowUtc: NOW,
+  });
+
+  assert.deepEqual(result.source_message_ids, [501, 502]);
+  assert.equal(result.resolutions.length, 1);
+  assert.equal(
+    JSON.stringify(result).includes('еще один вопрос'),
+    false
   );
 });
 

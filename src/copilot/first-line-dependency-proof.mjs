@@ -133,6 +133,8 @@ function requireProjection(projection) {
 function requireResolution(resolution) {
   if (!resolution || typeof resolution !== 'object' || Array.isArray(resolution) ||
       resolution.schema !== FIRST_LINE_RESOLUTION_SCHEMA ||
+      !Array.isArray(resolution.source_message_ids) ||
+      resolution.source_message_ids.length < 1 ||
       !Array.isArray(resolution.resolutions) ||
       !Array.isArray(resolution.certified_spans) ||
       resolution.certified_spans.length !== resolution.resolutions.length) {
@@ -140,16 +142,37 @@ function requireResolution(resolution) {
       'dependency proof requires a valid C2b resolution result');
   }
   positiveInteger(resolution.source_conversation_id, 'resolution.source_conversation_id');
+  const coveredSourceIds = new Set();
+  for (const sourceMessageId of resolution.source_message_ids) {
+    positiveInteger(sourceMessageId, 'resolution.source_message_id');
+    if (coveredSourceIds.has(sourceMessageId)) {
+      fail('FIRST_LINE_DEPENDENCY_INPUT_INVALID',
+        'resolution source message coverage must be unique');
+    }
+    coveredSourceIds.add(sourceMessageId);
+  }
   for (const [index, row] of resolution.resolutions.entries()) {
     if (!row || typeof row !== 'object' || Array.isArray(row)) {
       fail('FIRST_LINE_DEPENDENCY_INPUT_INVALID', 'resolution row must be an object');
     }
     textToken(row.kind, 'resolution.kind');
+    positiveInteger(row.turn_index, 'resolution.turn_index');
+    if (row.turn_index > resolution.source_message_ids.length ||
+        resolution.source_message_ids[row.turn_index - 1] !== row.source_message_id) {
+      fail('FIRST_LINE_DEPENDENCY_INPUT_INVALID',
+        'resolution turn index is not bound to source-message coverage',
+        { index, turn_index: row.turn_index, source_message_id: row.source_message_id });
+    }
     if (!['PRODUCT', 'CATEGORY', 'BRAND', 'STORE', 'MONEY'].includes(row.kind)) {
       fail('FIRST_LINE_DEPENDENCY_INPUT_INVALID',
         'resolution kind is unsupported', { kind: row.kind });
     }
     positiveInteger(row.source_message_id, 'resolution.source_message_id');
+    if (!coveredSourceIds.has(row.source_message_id)) {
+      fail('FIRST_LINE_DEPENDENCY_INPUT_INVALID',
+        'resolution row falls outside declared source-message coverage',
+        { index, source_message_id: row.source_message_id });
+    }
     if (!row.authority || typeof row.authority !== 'object' ||
         Array.isArray(row.authority) || typeof row.authority.status !== 'string') {
       fail('FIRST_LINE_DEPENDENCY_INPUT_INVALID',
@@ -351,6 +374,12 @@ function canonicalKey(value) {
 function collectEvidence(projection, resolution) {
   if (resolution.source_conversation_id !== projection.source_conversation_id) {
     return { error: 'RESOLUTION_CONVERSATION_MISMATCH' };
+  }
+  if (resolution.source_message_ids.length !==
+      projection.open_turn.source_message_ids.length ||
+      resolution.source_message_ids.some((sourceMessageId, index) =>
+        sourceMessageId !== projection.open_turn.source_message_ids[index])) {
+    return { error: 'RESOLUTION_OPEN_TURN_COVERAGE_MISMATCH' };
   }
 
   const openIds = new Set(projection.open_turn.source_message_ids);

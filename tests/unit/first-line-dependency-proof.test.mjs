@@ -115,10 +115,10 @@ function projection({
   };
 }
 
-function row(kind, sourceMessageId, authority) {
+function row(kind, sourceMessageId, authority, turnIndex = 1) {
   return {
     kind,
-    turn_index: 1,
+    turn_index: turnIndex,
     source_message_id: sourceMessageId,
     occurrence: 1,
     start_utf16: 0,
@@ -169,7 +169,12 @@ function resolvedAuthority(kind, value) {
 function resolution(rows, {
   sourceConversationId = 55,
   intentHint = 'MALICIOUS_DEPENDENT_TRUE',
+  sourceMessageIds = null,
 } = {}) {
+  const coverage = sourceMessageIds ?? [
+    ...new Set(rows.map(item => item.source_message_id)),
+  ];
+  if (coverage.length === 0) coverage.push(501);
   return {
     schema: FIRST_LINE_RESOLUTION_SCHEMA,
     extraction_schema: 'bp.first-line.extraction/1',
@@ -177,6 +182,7 @@ function resolution(rows, {
     intent_hint: intentHint,
     language: 'uk',
     source_conversation_id: sourceConversationId,
+    source_message_ids: coverage,
     catalog_generation_id: 'g1',
     knowledge_resolver_contract_version: 1,
     used_revision_ids: [],
@@ -243,7 +249,7 @@ test('repeated evidence for one candidate still selects one durable candidate', 
       row('PRODUCT', 502, resolvedAuthority('PRODUCT', {
         canonical_product_id: PRODUCT_1,
         canonical_variant_id: VARIANT_2,
-      })),
+      }), 2),
     ]),
   });
 
@@ -268,7 +274,7 @@ test('two distinct current values of one candidate slot are fail-closed', () => 
       row('PRODUCT', 502, resolvedAuthority('PRODUCT', {
         canonical_product_id: PRODUCT_1,
         canonical_variant_id: VARIANT_1,
-      })),
+      }), 2),
     ]),
   });
 
@@ -340,7 +346,7 @@ test('malformed RESOLVED canonical ID invalidates the whole proof input evidence
     }),
     resolution: resolution([
       row('STORE', 501, resolvedAuthority('STORE', STORE_1)),
-      row('STORE', 502, resolvedAuthority('STORE', 'store-not-canonical')),
+      row('STORE', 502, resolvedAuthority('STORE', 'store-not-canonical'), 2),
     ]),
   });
 
@@ -380,7 +386,7 @@ test('multiple distinct values for requested slot are not dependency proof', () 
     }),
     resolution: resolution([
       row('STORE', 501, resolvedAuthority('STORE', STORE_1)),
-      row('STORE', 502, resolvedAuthority('STORE', STORE_2)),
+      row('STORE', 502, resolvedAuthority('STORE', STORE_2), 2),
     ]),
   });
 
@@ -513,6 +519,37 @@ test('open turn must start after the exact confirmed clarification boundary', ()
   }
 });
 
+test('subset C2b coverage cannot prove dependency for a larger open turn', () => {
+  const result = proveClarificationDependency({
+    projection: projection({ openSourceMessageIds: [501, 502] }),
+    resolution: resolution([
+      row('PRODUCT', 501, resolvedAuthority('PRODUCT', {
+        canonical_product_id: PRODUCT_1,
+        canonical_variant_id: VARIANT_2,
+      })),
+    ], { sourceMessageIds: [501] }),
+  });
+
+  assert.equal(result.code, 'NO_DEPENDENCY_PROOF');
+  assert.equal(result.reason, 'RESOLUTION_OPEN_TURN_COVERAGE_MISMATCH');
+});
+
+test('complete coverage may include a spanless message without inventing evidence', () => {
+  const result = proveClarificationDependency({
+    projection: projection({ openSourceMessageIds: [501, 502] }),
+    resolution: resolution([
+      row('PRODUCT', 501, resolvedAuthority('PRODUCT', {
+        canonical_product_id: PRODUCT_1,
+        canonical_variant_id: VARIANT_2,
+      })),
+    ], { sourceMessageIds: [501, 502] }),
+  });
+
+  assert.equal(result.code, 'DEPENDENCY_PROVEN');
+  assert.equal(result.reason, 'PRESENTED_CANDIDATE_SELECTED');
+  assert.deepEqual(result.anchor.evidence_source_message_ids, [501]);
+});
+
 test('resolution must belong to the current conversation and open turn', () => {
   const wrongConversation = proveClarificationDependency({
     projection: projection(),
@@ -533,10 +570,30 @@ test('resolution must belong to the current conversation and open turn', () => {
         canonical_product_id: PRODUCT_1,
         canonical_variant_id: VARIANT_2,
       })),
-    ]),
+    ], { sourceMessageIds: [400] }),
   });
   assert.equal(oldTurn.code, 'NO_DEPENDENCY_PROOF');
-  assert.equal(oldTurn.reason, 'RESOLUTION_OUTSIDE_OPEN_TURN');
+  assert.equal(oldTurn.reason, 'RESOLUTION_OPEN_TURN_COVERAGE_MISMATCH');
+});
+
+test('resolution rows must stay inside their own declared exact-read coverage', () => {
+  expectInputError(() => proveClarificationDependency({
+    projection: projection({ openSourceMessageIds: [501, 502] }),
+    resolution: resolution([
+      row('STORE', 400, resolvedAuthority('STORE', STORE_1)),
+    ], { sourceMessageIds: [501, 502] }),
+  }));
+});
+
+test('resolution turn index must map to the same covered source message', () => {
+  const mismatched = row('STORE', 502, resolvedAuthority('STORE', STORE_1));
+  mismatched.turn_index = 1;
+  expectInputError(() => proveClarificationDependency({
+    projection: projection({ openSourceMessageIds: [501, 502] }),
+    resolution: resolution([
+      mismatched,
+    ], { sourceMessageIds: [501, 502] }),
+  }));
 });
 
 test('unrelated ambiguous kind does not erase a positive candidate anchor', () => {
