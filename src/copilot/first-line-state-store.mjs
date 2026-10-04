@@ -1026,6 +1026,10 @@ export class FirstLineStateStore {
           fail('FIRST_LINE_SELECTION_PROVENANCE_INVALID',
             'selection does not match reserved candidate');
         }
+        if (action.requested_slot !== null && action.requested_slot !== slot) {
+          fail('FIRST_LINE_SELECTION_PROVENANCE_INVALID',
+            'candidate selection does not resolve the reserved requested slot');
+        }
       } else {
         if (action.requested_slot !== slot) {
           fail('FIRST_LINE_SELECTION_PROVENANCE_INVALID',
@@ -1094,6 +1098,13 @@ export class FirstLineStateStore {
     const candidates = presentedCandidates.map(normalizeCandidate);
     if (type === 'CLARIFY' && requested == null && candidates.length === 0) {
       fail('FIRST_LINE_CLARIFICATION_INVALID', 'CLARIFY requires requested slot or candidates');
+    }
+    if (type === 'CLARIFY' && requested !== null && candidates.length > 0 &&
+        candidates.some(candidate => candidate.slot !== requested)) {
+      fail('FIRST_LINE_CLARIFICATION_INVALID',
+        'CLARIFY candidates must resolve the reserved requested slot', {
+          requested_slot: requested,
+        });
     }
     const epId = episodeId == null ? null : safeToken(episodeId, 'episode_id');
     const epVersion = epId == null ? null : positiveInteger(expectedEpisodeVersion, 'expected_episode_version');
