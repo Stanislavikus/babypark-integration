@@ -1016,6 +1016,61 @@ HUMAN / CLARIFY_EXHAUSTED
 
 Thus there is exactly one assistant clarification prompt per episode.
 
+### 29.0.1 Native clarification submission
+
+A successful response to the single CLARIFY prompt is not required to create a
+new Chatwoot customer message.
+
+Chatwoot/provider transport may represent the customer choice in either form:
+
+1. **new incoming message** — the provider/Chatwoot channel creates a newer
+   customer message carrying the reply; or
+2. **structured submission** — the provider-native control updates the already
+   confirmed CLARIFY message with a structured submitted value.
+
+Chatwoot v4.18 Web Widget `input_select` is the normative v1 example of the
+second form: the widget PATCHes the existing outgoing CLARIFY message,
+`content_attributes.submitted_values` changes, and Chatwoot emits
+`message_updated`. No new customer message ID exists.
+
+A structured submission is a work/selection signal, **not** a second
+Conversation Event Ledger message event. BabyPark MUST NOT:
+- append a second ordinary ledger row with the same Chatwoot message ID;
+- synthesize a fake customer message ID;
+- treat a `message_updated` delivery as proof merely because it exists.
+
+Before accepting a structured clarification selection, BabyPark must:
+- authenticate and deduplicate the Chatwoot delivery;
+- exact-read the referenced Chatwoot message;
+- prove that it is the exact confirmed BabyPark CLARIFY action for the current
+  conversation/episode;
+- prove the expected structured content type;
+- accept exactly one submitted choice under the confirmed response contract;
+- map that choice to exactly one canonical candidate/allowed requested value
+  reserved by the confirmed CLARIFY action;
+- fail closed on unknown, multiple, stale, mismatched or unconfirmed values.
+
+On success, only the canonical stable customer selection/slot and ordinary
+episode version/lifecycle metadata may become durable. Raw presentation labels,
+raw customer bodies and provider callback payloads are not durable authority.
+
+Because the transport created no new customer message, a structured submission
+does not append a new `source_message_id` to the episode solely to simulate a
+turn. The confirmed CLARIFY action plus authenticated exact-read submission is
+the provenance for that selection.
+
+Repeated delivery of the same structured submission is idempotent. A conflicting
+or changed submission after semantic commit fails closed; it never silently
+rewrites an already accepted stable choice.
+
+Where Chatwoot/provider transport collapses a native selection to ordinary
+incoming text (including current Telegram callback content and WhatsApp
+button/list title behavior), v1 may accept an **exact-message selection** only
+when deterministic resolution proves one reserved candidate/requested value and
+its single certified span consumes the whole customer message except leading
+and trailing Unicode whitespace. This is a narrow deterministic fallback, not a
+general NLP/negation classifier.
+
 An unresolved catalog identity collision is:
 
 ```
