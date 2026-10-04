@@ -11,6 +11,7 @@ const MAX_PRESENTED_CANDIDATES = 20;
 const MAX_OPEN_TURN_EVENTS = 999;
 const ROUTING_SUFFIX_FETCH_LIMIT = MAX_OPEN_TURN_EVENTS + 1;
 const ROUTING_SNAPSHOT_SCHEMA = 'bp.first-line.routing-snapshot/1';
+const EPISODE_TRANSITION_SCHEMA = 'bp.first-line.episode-transition/1';
 
 const LIVE_ACTION_STATES = new Set(['PREPARED', 'GATING', 'SENDING', 'UNCERTAIN']);
 const TERMINAL_ACTION_STATES = new Set(['CONFIRMED', 'STALE', 'CANCELLED', 'HANDOFF_DONE', 'NOT_SENT']);
@@ -260,6 +261,30 @@ function normalizeBasisEventSeqs(value) {
     if (out[i] <= out[i - 1]) fail('FIRST_LINE_ACTION_BASIS_INVALID', 'basis event seqs must be strictly increasing');
   }
   return out;
+}
+
+function expectedEpisode(id, version) {
+  if (id == null && version == null) return { id: null, version: null };
+  if (id == null || version == null) {
+    fail('FIRST_LINE_ROUTING_PLAN_INVALID',
+      'expected episode id/version must both be present or both be null');
+  }
+  return {
+    id: safeToken(id, 'expected_episode_id'),
+    version: positiveInteger(version, 'expected_episode_version'),
+  };
+}
+
+function expectedLiveAction(id, state) {
+  if (id == null && state == null) return { id: null, state: null };
+  if (id == null || state == null) {
+    fail('FIRST_LINE_ROUTING_PLAN_INVALID',
+      'expected live action id/state must both be present or both be null');
+  }
+  return {
+    id: safeToken(id, 'expected_live_action_id'),
+    state: enumValue(state, LIVE_ACTION_STATES, 'expected_live_action_state'),
+  };
 }
 function validateEventTopology(event) {
   const senderNeedsId = new Set(['contact', 'configured_agent_bot', 'human', 'other_agent_bot']);
@@ -685,6 +710,157 @@ export class FirstLineStateStore {
         WHERE episode_id=? AND state='active' AND version=?`).run(at, at, closeReason, id, version).changes;
       if (changed !== 1) fail('FIRST_LINE_STALE_WRITE', 'episode changed before close');
       return this.#readEpisode(id);
+    });
+  }
+
+  startStandaloneEpisodeFromRoutingPlan({
+    streamId,
+    expectedStreamRevision,
+    expectedThroughEventSeq,
+    expectedEpisodeId = null,
+    expectedEpisodeVersion = null,
+    expectedLiveActionId = null,
+    expectedLiveActionState = null,
+  } = {}) {
+    const stream = safeToken(streamId, 'stream_id');
+    const revision = positiveInteger(expectedStreamRevision, 'expected_stream_revision');
+    const through = positiveInteger(expectedThroughEventSeq, 'expected_through_event_seq');
+    const episodeExpectation = expectedEpisode(expectedEpisodeId, expectedEpisodeVersion);
+    const actionExpectation = expectedLiveAction(expectedLiveActionId, expectedLiveActionState);
+    const at = this.now();
+
+    return tx(this.db, () => {
+      const currentStream = this.#requireStream(stream);
+      if (currentStream.stream_revision !== revision ||
+          currentStream.last_event_seq !== through) {
+        fail('FIRST_LINE_ROUTING_PLAN_STALE', 'stream changed after routing plan', {
+          stream_id: stream,
+          expected_stream_revision: revision,
+          current_stream_revision: currentStream.stream_revision,
+          expected_through_event_seq: through,
+          current_last_event_seq: currentStream.last_event_seq,
+        });
+      }
+
+      const activeHead = this.db.prepare(
+        "SELECT episode_id FROM episodes WHERE stream_id=? AND state='active'"
+      ).get(stream) ?? null;
+      const activeEpisode = activeHead
+        ? this.#readEpisode(activeHead.episode_id)
+        : null;
+
+      if (episodeExpectation.id === null) {
+        if (activeEpisode !== null) {
+          fail('FIRST_LINE_ROUTING_PLAN_STALE', 'routing plan expected no active episode', {
+            stream_id: stream,
+            current_episode_id: activeEpisode.episode_id,
+          });
+        }
+      } else {
+        if (!activeEpisode ||
+            activeEpisode.stream_id !== stream ||
+            activeEpisode.episode_id !== episodeExpectation.id ||
+            activeEpisode.version !== episodeExpectation.version) {
+          fail('FIRST_LINE_ROUTING_PLAN_STALE', 'active episode changed after routing plan', {
+            stream_id: stream,
+            expected_episode_id: episodeExpectation.id,
+            expected_episode_version: episodeExpectation.version,
+            current_episode_id: activeEpisode?.episode_id ?? null,
+            current_episode_version: activeEpisode?.version ?? null,
+          });
+        }
+      }
+
+      const liveHead = this.db.prepare(`SELECT action_id FROM public_actions WHERE stream_id=? AND state IN
+        ('PREPARED','GATING','SENDING','UNCERTAIN')`).get(stream) ?? null;
+      const liveAction = liveHead
+        ? this.#readAction(liveHead.action_id)
+        : null;
+
+      if (actionExpectation.id === null) {
+        if (liveAction !== null) {
+          fail('FIRST_LINE_ROUTING_PLAN_STALE', 'routing plan expected no live public action', {
+            stream_id: stream,
+            current_action_id: liveAction.action_id,
+            current_action_state: liveAction.state,
+          });
+        }
+      } else if (!liveAction ||
+                 liveAction.action_id !== actionExpectation.id ||
+                 liveAction.state !== actionExpectation.state) {
+        fail('FIRST_LINE_ROUTING_PLAN_STALE', 'live public action changed after routing plan', {
+          stream_id: stream,
+          expected_action_id: actionExpectation.id,
+          expected_action_state: actionExpectation.state,
+          current_action_id: liveAction?.action_id ?? null,
+          current_action_state: liveAction?.state ?? null,
+        });
+      }
+
+      if (liveAction &&
+          (liveAction.state === 'SENDING' || liveAction.state === 'UNCERTAIN')) {
+        fail('FIRST_LINE_ACTION_SEND_UNRESOLVED',
+          'unresolved public send blocks standalone episode transition', {
+            action_id: liveAction.action_id,
+            state: liveAction.state,
+          });
+      }
+      if (liveAction && liveAction.prepared_stream_revision >= revision) {
+        fail('FIRST_LINE_ROUTING_PLAN_STALE',
+          'current routing revision already owns a public action', {
+            action_id: liveAction.action_id,
+            action_prepared_stream_revision: liveAction.prepared_stream_revision,
+            current_stream_revision: revision,
+          });
+      }
+
+      let staledAction = null;
+      if (liveAction) {
+        this.#finishUnsentAction(
+          liveAction,
+          'STALE',
+          'standalone_episode_replaced'
+        );
+        staledAction = this.#readAction(liveAction.action_id);
+      }
+
+      let replacedEpisode = null;
+      if (episodeExpectation.id !== null) {
+        const refreshed = this.#readEpisode(episodeExpectation.id);
+        if (!refreshed || refreshed.state !== 'active' || refreshed.stream_id !== stream) {
+          fail('FIRST_LINE_STALE_WRITE', 'active episode changed during standalone transition', {
+            stream_id: stream,
+            episode_id: episodeExpectation.id,
+          });
+        }
+        const changed = this.db.prepare(`UPDATE episodes
+          SET state='closed',version=version+1,updated_at=?,closed_at=?,close_reason='replaced'
+          WHERE episode_id=? AND stream_id=? AND state='active' AND version=?`)
+          .run(at, at, refreshed.episode_id, stream, refreshed.version).changes;
+        if (changed !== 1) {
+          fail('FIRST_LINE_STALE_WRITE', 'episode changed before standalone replacement', {
+            stream_id: stream,
+            episode_id: refreshed.episode_id,
+          });
+        }
+        replacedEpisode = this.#readEpisode(refreshed.episode_id);
+      }
+
+      const newEpisodeId = safeToken(this.episodeIdFactory(), 'episode_id');
+      this.db.prepare(`INSERT INTO episodes
+        (episode_id,stream_id,state,version,clarification_prompts_sent,created_at,updated_at)
+        VALUES (?,?,'active',1,0,?,?)`).run(newEpisodeId, stream, at, at);
+      const episode = this.#readEpisode(newEpisodeId);
+
+      return {
+        schema: EPISODE_TRANSITION_SCHEMA,
+        stream_id: stream,
+        stream_revision: revision,
+        through_event_seq: through,
+        replaced_episode: replacedEpisode,
+        staled_public_action: staledAction,
+        episode,
+      };
     });
   }
 
@@ -1134,6 +1310,7 @@ function validatePersistedSlot(slotName, value) {
 export {
   ACTION_TYPES,
   BUSY_TIMEOUT_MS,
+  EPISODE_TRANSITION_SCHEMA,
   EVENT_KINDS,
   LIVE_ACTION_STATES,
   MAX_OPEN_TURN_EVENTS,
