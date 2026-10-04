@@ -367,10 +367,95 @@ First message contains "не Cybex"; model extractor omits the negation.
 ObjectiveConstraintLatch still detects meaningful unconsumed exclusion.
 Expected HUMAN / UNSUPPORTED_EXCLUSION.
 
-### Q04
-First message says "для 6 месяцев"; second message only supplies a brand.
-Episode latch preserves unsupported age constraint.
-Expected HUMAN; it does not disappear between turns.
+### Q04 — unsupported latch survives crash/concurrent later turn
+Turn 1 says "для 6 месяцев".
+C3 proves and durably commits only a typed unsupported-age latch plus accepted
+source-event provenance. HUMAN/native handoff has not yet completed (for example,
+because processing crashed after semantic commit).
+
+Before terminalization/handoff completes, a later accepted customer turn supplies
+only a brand.
+
+Expected:
+- prior typed unsupported-age latch remains active;
+- no raw/normalized age phrase or digest is required in durable state;
+- before ordinary standalone replacement, C2c route application observes the
+  non-empty pending-HUMAN latch set and refuses to close/replace the episode;
+- the brand turn cannot erase the prior constraint or start a fresh AI episode;
+- no ANSWER or CLARIFY is authorized;
+- C4 yields HUMAN.
+
+In the ordinary non-crash path, the turn-1 unsupported-age latch already blocks
+ANSWER/CLARIFY and C4 yields HUMAN immediately; an AI clarification is not emitted.
+
+### Q04a — unknown residue never becomes CLEAR by omission
+C2 certifies all supported resolver spans, but contentful customer text remains
+outside those spans and outside the reviewed supported-v1 request-language /
+glue/social allowlists. The residue does not match any more specific known latch
+marker.
+
+Expected:
+- C3 returns OTHER_UNCONSUMED_CONSTRAINT;
+- no supported slot is silently widened or constraint dropped;
+- C4 yields HUMAN;
+- residue text/tokens/digest are not persisted.
+
+### Q04c — multiple unsupported classes are retained, one HUMAN reason is deterministic
+Customer says:
+"Не Cybex, для ребёнка 6 месяцев, и какая модель лучше?"
+
+Expected:
+- C3 retains all three proven classes:
+  `UNSUPPORTED_EXCLUSION`,
+  `UNSUPPORTED_AGE_SUITABILITY`,
+  `SUBJECTIVE_RECOMMENDATION`;
+- no class is overwritten by another;
+- no raw phrase/body/digest is persisted;
+- C3 does not choose the final decision reason;
+- C4 uses the frozen latch precedence and emits
+  `HUMAN / SUBJECTIVE_RECOMMENDATION`;
+- trace/handoff metadata may retain the complete typed class set.
+
+Repeat delivery/reprocessing of the same evidence:
+- does not duplicate latch classes;
+- does not change primary reason by insertion/order timing.
+
+### Q04d — pending unsupported latch forbids standalone episode replacement
+An active episode has a committed `RETURN_CASE` latch. HUMAN/native handoff has
+not yet completed. A later customer message arrives that, without the latch,
+would be classified by C2c as a standalone new product query.
+
+Expected:
+- C2c may classify the new text for topology, but route application MUST NOT
+  close/replace the latched active episode;
+- no new active AI episode is created;
+- no ANSWER/CLARIFY action is prepared;
+- C4/HUMAN recovery continues from the latched episode;
+- after native handoff closes the episode, ordinary future new-episode rules
+  apply; the closed latch is never revived automatically.
+
+### Q04b — supported request language is not mistaken for an unsupported constraint
+Customer asks a supported v1 question such as:
+"Спасибо, а какие способы оплаты есть?"
+There is no unsupported constraint.
+
+Expected:
+- the social prefix and reviewed payment-policy request language MUST be consumed
+  by deterministic bounded validators;
+- model intent_hint alone cannot consume any text and a wrong/missing hint cannot
+  prevent the reviewed payment validator from running;
+- because no unsupported residue remains, C3 MUST return CLEAR;
+- C4/authority resolution remains responsible for COMMERCE_POLICY and the final
+  decision.
+
+Add an unsupported clause:
+"Спасибо, а какие способы оплаты есть и можно ли вернуть именно мой вчерашний заказ?"
+
+Expected:
+- supported payment request language does not hide the individual return case;
+- C3 latches RETURN_CASE;
+- no partial payment answer is public;
+- C4 yields HUMAN.
 
 
 ### Q05 — dynamic stock is reread after clarification
