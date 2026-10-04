@@ -1,4 +1,7 @@
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import test from 'node:test';
 
 import {
@@ -11,9 +14,8 @@ import {
   evaluateObjectiveConstraintLatch,
   isCertifiedObjectiveConstraintProof,
 } from '../../src/copilot/first-line-objective-constraint-latch.mjs';
-import { OPEN_TURN_PROJECTION_SCHEMA } from '../../src/copilot/first-line-routing-planner.mjs';
-
-const FINGERPRINT = 'sha256:' + 'b'.repeat(64);
+import { projectOpenTurn } from '../../src/copilot/first-line-routing-planner.mjs';
+import { FirstLineStateStore } from '../../src/copilot/first-line-state-store.mjs';
 
 function exactRead(text, sourceMessageId = 501) {
   return {
@@ -44,38 +46,35 @@ function exactReads(...texts) {
 }
 
 function projection(texts) {
-  const ids = texts.map((_, index) => 501 + index);
-  const seqs = texts.map((_, index) => index + 1);
-  return {
-    schema: OPEN_TURN_PROJECTION_SCHEMA,
-    stream_id: 'stream-1',
-    source_conversation_id: 55,
-    stream_revision: seqs.length,
-    through_event_seq: seqs.length,
-    plan_token: {
-      stream_id: 'stream-1',
-      stream_revision: seqs.length,
-      through_event_seq: seqs.length,
-      routing_ledger_fingerprint: FINGERPRINT,
-      episode_id: null,
-      episode_version: null,
-      live_action_id: null,
-      live_action_state: null,
-    },
-    active_episode: null,
-    live_public_action: null,
-    clarification_action: null,
-    open_turn: {
-      event_seqs: seqs,
-      source_message_ids: ids,
-      first_event_seq: seqs[0],
-      last_event_seq: seqs.at(-1),
-      message_count: seqs.length,
-    },
-    boundary: null,
-    code: 'OPEN_TURN',
-    reason: 'FROM_STREAM_START',
-  };
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'first-line-c3-projection-'));
+  const file = path.join(dir, 'episode.sqlite');
+  const store = FirstLineStateStore.create(file, {
+    now: () => 2_000_000_000_000,
+    streamIdFactory: () => 'stream-1',
+  });
+  try {
+    const stream = store.ensureConversationStream({
+      sourceProvider: 'chatwoot',
+      sourceConversationId: 55,
+    });
+    for (let index = 0; index < texts.length; index += 1) {
+      store.ingestConversationEvent(stream.stream_id, {
+        sourceMessageId: 501 + index,
+        eventKind: 'CUSTOMER_MESSAGE',
+        messageType: 'incoming',
+        senderClass: 'contact',
+        senderId: 9001,
+        contentType: 'text',
+        deleted: false,
+        unsupported: false,
+        hasAttachments: false,
+      });
+    }
+    return projectOpenTurn(store.readRoutingSnapshot(stream.stream_id));
+  } finally {
+    store.close();
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
 }
 
 function vocabularyRow(namespace, phrase, effect, revisionId) {
@@ -456,4 +455,33 @@ test('unresolved certified span cannot mask exclusion into CLEAR', () => {
   ]);
   assert.equal(result.code, 'CONSTRAINTS_LATCHED');
   assert.equal(result.latch_classes.includes('UNSUPPORTED_EXCLUSION'), true);
+});
+
+
+test('forged open-turn mapping cannot reuse a current routing token to obtain CLEAR', () => {
+  const authentic = projection([
+    'Какие способы оплаты есть?',
+    'не Cybex',
+  ]);
+  assert.equal(authentic.code, 'OPEN_TURN');
+  assert.deepEqual(authentic.open_turn.source_message_ids, [501, 502]);
+
+  const forged = structuredClone(authentic);
+  forged.open_turn = {
+    event_seqs: [1],
+    source_message_ids: [501],
+    first_event_seq: 1,
+    last_event_seq: 1,
+    message_count: 1,
+  };
+
+  const safe = resolve(['Какие способы оплаты есть?']);
+  assert.throws(
+    () => evaluateObjectiveConstraintLatch({
+      projection: forged,
+      resolution: safe.resolution,
+      exactReads: safe.reads,
+    }),
+    error => error.code === 'FIRST_LINE_CONSTRAINT_INPUT_INVALID'
+  );
 });

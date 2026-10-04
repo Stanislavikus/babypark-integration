@@ -2,7 +2,10 @@ import {
   FIRST_LINE_CLARIFICATION_SELECTION_SCHEMA,
   isCertifiedClarificationSelectionProof,
 } from './first-line-clarification-selection.mjs';
-import { OPEN_TURN_PROJECTION_SCHEMA } from './first-line-routing-planner.mjs';
+import {
+  isCertifiedOpenTurnProjection,
+  OPEN_TURN_PROJECTION_SCHEMA,
+} from './first-line-routing-planner.mjs';
 import {
   FIRST_LINE_CONSTRAINT_PROOF_SCHEMA,
   isCertifiedObjectiveConstraintProof,
@@ -159,7 +162,8 @@ export function applyFirstLineRoute({
     }
 
     if (projection !== null) {
-      if (projection.schema !== OPEN_TURN_PROJECTION_SCHEMA ||
+      if (!isCertifiedOpenTurnProjection(projection) ||
+          projection.schema !== OPEN_TURN_PROJECTION_SCHEMA ||
           !tokenEquals(projection.plan_token, selectionProof.plan_token)) {
         fail('FIRST_LINE_ROUTE_PLAN_MISMATCH',
           'selection proof and routing projection do not share one plan token');
@@ -192,6 +196,7 @@ export function applyFirstLineRoute({
 
   if (!projection ||
       typeof projection !== 'object' ||
+      !isCertifiedOpenTurnProjection(projection) ||
       projection.schema !== OPEN_TURN_PROJECTION_SCHEMA) {
     fail('FIRST_LINE_ROUTE_INPUT_INVALID',
       'non-selection route application requires routing projection');

@@ -16,6 +16,7 @@ const ROUTING_SUFFIX_FETCH_LIMIT = MAX_OPEN_TURN_EVENTS + 1;
 const ROUTING_SNAPSHOT_SCHEMA = 'bp.first-line.routing-snapshot/1';
 const EPISODE_TRANSITION_SCHEMA = 'bp.first-line.episode-transition/1';
 const EPISODE_CONTINUATION_SCHEMA = 'bp.first-line.episode-continuation/1';
+const certifiedRoutingSnapshots = new WeakSet();
 
 const LIVE_ACTION_STATES = new Set(['PREPARED', 'GATING', 'SENDING', 'UNCERTAIN']);
 const TERMINAL_ACTION_STATES = new Set(['CONFIRMED', 'STALE', 'CANCELLED', 'HANDOFF_DONE', 'NOT_SENT']);
@@ -261,6 +262,20 @@ function schemaMasterFingerprint(db) {
   return crypto.createHash('sha256')
     .update(JSON.stringify(rows))
     .digest('hex');
+}
+
+function deepFreezeRoutingValue(value) {
+  if (!value || typeof value !== 'object' || Object.isFrozen(value)) return value;
+  if (Array.isArray(value)) {
+    for (const item of value) deepFreezeRoutingValue(item);
+    return Object.freeze(value);
+  }
+  for (const item of Object.values(value)) deepFreezeRoutingValue(item);
+  return Object.freeze(value);
+}
+
+export function isCertifiedRoutingSnapshot(value) {
+  return Boolean(value && typeof value === 'object' && certifiedRoutingSnapshots.has(value));
 }
 
 function positiveInteger(value, field) {
@@ -771,7 +786,7 @@ export class FirstLineStateStore {
         }
       }
 
-      return {
+      const snapshot = deepFreezeRoutingValue({
         schema: ROUTING_SNAPSHOT_SCHEMA,
         stream,
         active_episode: activeEpisode,
@@ -781,7 +796,9 @@ export class FirstLineStateStore {
         routing_ledger_fingerprint: routingLedger.fingerprint,
         suffix_truncated: routingLedger.suffix_truncated,
         max_open_turn_events: MAX_OPEN_TURN_EVENTS,
-      };
+      });
+      certifiedRoutingSnapshots.add(snapshot);
+      return snapshot;
     });
   }
 

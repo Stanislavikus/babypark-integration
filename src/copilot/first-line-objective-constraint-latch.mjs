@@ -1,4 +1,7 @@
-import { OPEN_TURN_PROJECTION_SCHEMA } from './first-line-routing-planner.mjs';
+import {
+  isCertifiedOpenTurnProjection,
+  OPEN_TURN_PROJECTION_SCHEMA,
+} from './first-line-routing-planner.mjs';
 import {
   FIRST_LINE_RESOLUTION_SCHEMA,
   resolutionUsesExactRead,
@@ -37,6 +40,10 @@ function clonePlanToken(token) {
 }
 
 function requireProjection(projection) {
+  if (!isCertifiedOpenTurnProjection(projection)) {
+    fail('FIRST_LINE_CONSTRAINT_INPUT_INVALID',
+      'constraint evaluation requires a transient certified routing projection');
+  }
   if (!projection || typeof projection !== 'object' || Array.isArray(projection) ||
       projection.schema !== OPEN_TURN_PROJECTION_SCHEMA ||
       projection.code !== 'OPEN_TURN' ||

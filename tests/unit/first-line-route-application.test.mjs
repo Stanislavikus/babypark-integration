@@ -793,3 +793,36 @@ test('OPEN_TURN route without certified C3 proof fails before episode mutation',
   });
   assert.equal(result.code, 'STANDALONE_EPISODE_STARTED');
 });
+
+
+test('forged projection clone with current token is rejected before episode mutation', t => {
+  const store = tempStore(t, { streamSuffix: 'forged-open-turn' });
+  const stream = store.ensureConversationStream({
+    sourceProvider: 'chatwoot',
+    sourceConversationId: 99,
+  });
+  store.ingestConversationEvent(stream.stream_id, customer(401));
+  store.ingestConversationEvent(stream.stream_id, customer(402));
+
+  const authentic = projectOpenTurn(store.readRoutingSnapshot(stream.stream_id));
+  assert.equal(authentic.code, 'OPEN_TURN');
+
+  const forged = structuredClone(authentic);
+  forged.open_turn = {
+    event_seqs: [1],
+    source_message_ids: [401],
+    first_event_seq: 1,
+    last_event_seq: 1,
+    message_count: 1,
+  };
+
+  assert.throws(
+    () => applyFirstLineRoute({
+      store,
+      projection: forged,
+      constraintProof: null,
+    }),
+    error => error.code === 'FIRST_LINE_ROUTE_INPUT_INVALID'
+  );
+  assert.equal(store.loadActiveEpisode(stream.stream_id), null);
+});
