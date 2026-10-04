@@ -189,6 +189,29 @@ test('PREPARED clarification is staled and released in the same replacement tran
   assert.equal(store.getPublicAction(action.action_id).state, 'STALE');
 });
 
+test('standalone transition uses one nondecreasing timestamp for all writes', t => {
+  let clock = NOW;
+  const { store } = tempStore(t, {
+    now: () => ++clock,
+  });
+  const stream = makeStream(store);
+  store.ingestConversationEvent(stream.stream_id, customerEvent(101));
+  const old = store.beginEpisode({ streamId: stream.stream_id });
+  const action = reserveClarification(store, stream.stream_id, old);
+  store.ingestConversationEvent(stream.stream_id, customerEvent(102));
+
+  const projected = projection(store, stream.stream_id);
+  const result = applyStandalone(store, projected);
+
+  const writeAt = result.staled_public_action.updated_at;
+  assert.equal(result.replaced_episode.updated_at, writeAt);
+  assert.equal(result.replaced_episode.closed_at, writeAt);
+  assert.equal(result.episode.created_at, writeAt);
+  assert.equal(result.episode.updated_at, writeAt);
+  assert.equal(store.getPublicAction(action.action_id).updated_at, writeAt);
+  assert.ok(writeAt > old.updated_at);
+});
+
 test('GATING clarification can be staled atomically before send', t => {
   const { store } = tempStore(t);
   const stream = makeStream(store);

@@ -695,7 +695,6 @@ export class FirstLineStateStore {
     );
     const episodeExpectation = expectedEpisode(expectedEpisodeId, expectedEpisodeVersion);
     const actionExpectation = expectedLiveAction(expectedLiveActionId, expectedLiveActionState);
-    const at = this.now();
 
     return tx(this.db, () => {
       const currentStream = this.#readStream(stream);
@@ -811,12 +810,15 @@ export class FirstLineStateStore {
           });
       }
 
+      const transitionAt = this.now();
+
       let staledAction = null;
       if (liveAction) {
         this.#finishUnsentAction(
           liveAction,
           'STALE',
-          'standalone_episode_replaced'
+          'standalone_episode_replaced',
+          transitionAt
         );
         staledAction = this.#readAction(liveAction.action_id);
       }
@@ -833,7 +835,7 @@ export class FirstLineStateStore {
         const changed = this.db.prepare(`UPDATE episodes
           SET state='closed',version=version+1,updated_at=?,closed_at=?,close_reason='replaced'
           WHERE episode_id=? AND stream_id=? AND state='active' AND version=?`)
-          .run(at, at, refreshed.episode_id, stream, refreshed.version).changes;
+          .run(transitionAt, transitionAt, refreshed.episode_id, stream, refreshed.version).changes;
         if (changed !== 1) {
           fail('FIRST_LINE_STALE_WRITE', 'episode changed before standalone replacement', {
             stream_id: stream,
@@ -846,7 +848,7 @@ export class FirstLineStateStore {
       const newEpisodeId = safeToken(this.episodeIdFactory(), 'episode_id');
       this.db.prepare(`INSERT INTO episodes
         (episode_id,stream_id,state,version,clarification_prompts_sent,created_at,updated_at)
-        VALUES (?,?,'active',1,0,?,?)`).run(newEpisodeId, stream, at, at);
+        VALUES (?,?,'active',1,0,?,?)`).run(newEpisodeId, stream, transitionAt, transitionAt);
       const episode = this.#readEpisode(newEpisodeId);
 
       return {
@@ -1090,7 +1092,7 @@ export class FirstLineStateStore {
     this.#finishUnsentAction(action, 'CANCELLED', reason);
   }
 
-  #finishUnsentAction(action, terminalState, reason) {
+  #finishUnsentAction(action, terminalState, reason, at = this.now()) {
     if (action.state !== 'PREPARED' && action.state !== 'GATING') {
       fail('FIRST_LINE_ACTION_STATE_INVALID', 'only unsent action may become terminal', { action_id: action.action_id });
     }
@@ -1100,7 +1102,7 @@ export class FirstLineStateStore {
         const changed = this.db.prepare(`UPDATE episodes SET clarification_prompts_sent=0,requested_slot=NULL,
           clarification_action_id=NULL,version=version+1,updated_at=?
           WHERE episode_id=? AND state='active' AND clarification_action_id=?`)
-          .run(this.now(), action.episode_id, action.action_id).changes;
+          .run(at, action.episode_id, action.action_id).changes;
         if (changed !== 1) {
           fail('FIRST_LINE_STALE_WRITE', 'clarification reservation changed before unsent action terminalization',
             { action_id: action.action_id, episode_id: action.episode_id });
@@ -1109,7 +1111,7 @@ export class FirstLineStateStore {
     }
     this.db.prepare(`UPDATE public_actions SET state=?,terminal_reason=?,lease_token=NULL,
       lease_expires_at=NULL,updated_at=? WHERE action_id=?`)
-      .run(terminalState, reason, this.now(), action.action_id);
+      .run(terminalState, reason, at, action.action_id);
   }
 
   #readRoutingLedger(stream) {
