@@ -181,7 +181,24 @@ function catalog() {
           .map(id => ({ store_id: id, name: 'Глибочицька' })),
       };
     },
-    resolveProductIdentityExact() {
+    resolveProductIdentityExact(raw) {
+      if (raw === 'UPPAbaby Cruz V2' || raw === 'Joolz Aer2') {
+        const row = {
+          product_id: raw === 'UPPAbaby Cruz V2' ? 'prod-cruz-v2' : 'prod-aer2',
+          variant_id: null,
+          sku: null,
+          sku_key: null,
+          title: raw,
+          matched_languages: ['ru'],
+          matched_by: ['EXACT_TITLE'],
+        };
+        return {
+          catalog: { generation_id: 'g1' },
+          status: 'FOUND',
+          product: row,
+          candidates: [row],
+        };
+      }
       return {
         catalog: { generation_id: 'g1' },
         status: 'NOT_FOUND',
@@ -430,4 +447,13 @@ test('Q12-Q13 acknowledgement and social-prefix semantics are preserved by C3', 
 
   const delivery = evaluate(['Спасибо, а сколько стоит доставка?'], [], 'WRONG_HINT');
   assert.equal(delivery.code, 'CLEAR');
+});
+
+
+test('unresolved certified span cannot mask exclusion into CLEAR', () => {
+  const result = evaluate(['не Cybex'], [
+    { kind: 'BRAND', turn_index: 1, quote: 'не Cybex', occurrence: 1 },
+  ]);
+  assert.equal(result.code, 'CONSTRAINTS_LATCHED');
+  assert.equal(result.latch_classes.includes('UNSUPPORTED_EXCLUSION'), true);
 });

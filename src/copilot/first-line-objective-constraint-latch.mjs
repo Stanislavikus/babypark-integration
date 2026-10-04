@@ -212,6 +212,24 @@ function markPatterns(text, mask, evidence, eventSeq) {
   }
 }
 
+function resolutionConsumesSpan(span, row) {
+  if (!row || typeof row !== 'object' || Array.isArray(row) ||
+      row.kind !== span.kind ||
+      row.turn_index !== span.turn_index ||
+      row.source_message_id !== span.source_message_id ||
+      row.occurrence !== span.occurrence ||
+      row.start_utf16 !== span.start_utf16 ||
+      row.end_utf16 !== span.end_utf16) {
+    fail('FIRST_LINE_CONSTRAINT_INPUT_INVALID',
+      'C2 resolution row is not aligned with its certified span', {
+        turn_index: span.turn_index,
+        source_message_id: span.source_message_id,
+      });
+  }
+  return row.authority?.status === 'RESOLVED' ||
+    row.authority?.status === 'AMBIGUOUS';
+}
+
 function classifyUnknownResidue(text, mask) {
   const residue = maskedText(text, mask);
   for (const match of tokenMatches(residue)) {
@@ -243,9 +261,11 @@ export function evaluateObjectiveConstraintLatch({
   const resolution = requireResolution(rawResolution, projection, exactReads);
 
   const spansByTurn = new Map();
-  for (const span of resolution.certified_spans) {
+  for (let index = 0; index < resolution.certified_spans.length; index += 1) {
+    const span = resolution.certified_spans[index];
+    const row = resolution.resolutions[index];
     if (!spansByTurn.has(span.turn_index)) spansByTurn.set(span.turn_index, []);
-    spansByTurn.get(span.turn_index).push(span);
+    spansByTurn.get(span.turn_index).push(Object.freeze({ span, row }));
   }
 
   const evidence = new Map();
@@ -256,7 +276,12 @@ export function evaluateObjectiveConstraintLatch({
     const sourceMessageId = projection.open_turn.source_message_ids[index];
     const mask = blankMask(text.length);
 
-    for (const span of spansByTurn.get(turnIndex) ?? []) {
+    // Known unsupported markers are evaluated against the unmasked exact text.
+    // A model/extractor span may never hide negation, compatibility, age, return,
+    // order-specific or subjective language.
+    markPatterns(text, mask, evidence, eventSeq);
+
+    for (const { span, row } of spansByTurn.get(turnIndex) ?? []) {
       if (span.source_message_id !== sourceMessageId) {
         fail('FIRST_LINE_CONSTRAINT_SPAN_INVALID',
           'certified span source does not match routing turn', {
@@ -264,11 +289,10 @@ export function evaluateObjectiveConstraintLatch({
             source_message_id: span.source_message_id,
           });
       }
-      mark(mask, span.start_utf16, span.end_utf16);
+      if (resolutionConsumesSpan(span, row)) {
+        mark(mask, span.start_utf16, span.end_utf16);
+      }
     }
-
-    const residualBeforeMarkers = maskedText(text, mask);
-    markPatterns(residualBeforeMarkers, mask, evidence, eventSeq);
 
     if (classifyUnknownResidue(text, mask) &&
         !evidence.has('OTHER_UNCONSUMED_CONSTRAINT')) {

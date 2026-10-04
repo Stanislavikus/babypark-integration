@@ -5,6 +5,8 @@ import { DatabaseSync } from 'node:sqlite';
 
 const SCHEMA_VERSION = 3;
 const PREVIOUS_SCHEMA_VERSION = 2;
+const V2_SCHEMA_MASTER_SHA256 =
+  'd84094598ffb3371293f8b361f88b19b2997a7e37a79ce5226abcd62326da19e';
 const BUSY_TIMEOUT_MS = 5000;
 const MAX_PRESENTED_CANDIDATES = 20;
 // A whole-conversation authorizing snapshot is unprovable at 1000 public rows;
@@ -252,6 +254,15 @@ function readTx(db, fn) {
   try { const out = fn(); db.exec('COMMIT'); return out; }
   catch (error) { try { db.exec('ROLLBACK'); } catch {} throw error; }
 }
+function schemaMasterFingerprint(db) {
+  const rows = db.prepare(`SELECT type,name,tbl_name,sql FROM sqlite_master
+    WHERE type IN ('table','index','trigger','view')
+    ORDER BY type,name`).all();
+  return crypto.createHash('sha256')
+    .update(JSON.stringify(rows))
+    .digest('hex');
+}
+
 function positiveInteger(value, field) {
   if (!Number.isSafeInteger(value) || value <= 0) fail('FIRST_LINE_VALUE_INVALID', field + ' must be a positive safe integer', { field });
   return value;
@@ -558,6 +569,14 @@ export class FirstLineStateStore {
       if (Number(metadata?.schema_version) !== PREVIOUS_SCHEMA_VERSION) {
         fail('FIRST_LINE_DB_MIGRATION_UNSUPPORTED',
           'database metadata does not match migration source');
+      }
+      const sourceSchemaFingerprint = schemaMasterFingerprint(db);
+      if (sourceSchemaFingerprint !== V2_SCHEMA_MASTER_SHA256) {
+        fail('FIRST_LINE_DB_MIGRATION_UNSUPPORTED',
+          'database sqlite_master does not match the frozen v2 schema', {
+            expected_schema_fingerprint: V2_SCHEMA_MASTER_SHA256,
+            actual_schema_fingerprint: sourceSchemaFingerprint,
+          });
       }
       for (const [table, columns] of Object.entries(EXPECTED_COLUMNS_V2)) {
         const actual = db.prepare(`PRAGMA table_info(${table})`).all().map(row => row.name);
@@ -1538,6 +1557,19 @@ export class FirstLineStateStore {
         .get(stream, revision);
       if (sameRevision) return this.#readAction(sameRevision.action_id);
 
+      const activeHead = this.db.prepare(
+        "SELECT episode_id FROM episodes WHERE stream_id=? AND state='active'"
+      ).get(stream) ?? null;
+      const activeEpisode = activeHead ? this.#readEpisode(activeHead.episode_id) : null;
+
+      if (activeEpisode && epId === null) {
+        fail('FIRST_LINE_ACTION_EPISODE_REQUIRED',
+          'customer-visible AI action must bind to the active episode', {
+            stream_id: stream,
+            active_episode_id: activeEpisode.episode_id,
+          });
+      }
+
       let episode = null;
       if (epId !== null) {
         episode = this.#requireActiveEpisode(epId, epVersion);
@@ -1545,16 +1577,23 @@ export class FirstLineStateStore {
           fail('FIRST_LINE_ACTION_EPISODE_STREAM_MISMATCH', 'episode does not belong to action stream',
             { episode_id: epId, stream_id: stream, episode_stream_id: episode.stream_id });
         }
+        if (!activeEpisode || activeEpisode.episode_id !== episode.episode_id) {
+          fail('FIRST_LINE_ACTION_STALE_EPISODE',
+            'action episode is no longer the active stream episode', {
+              episode_id: episode.episode_id,
+              active_episode_id: activeEpisode?.episode_id ?? null,
+            });
+        }
       }
 
-      if (episode) {
+      if (activeEpisode) {
         const pendingLatch = this.db.prepare(
           'SELECT latch_class FROM episode_constraint_latches WHERE episode_id=? LIMIT 1'
-        ).get(episode.episode_id) ?? null;
+        ).get(activeEpisode.episode_id) ?? null;
         if (pendingLatch) {
           fail('FIRST_LINE_PENDING_HUMAN_LATCH',
             'latched episode cannot prepare customer-visible AI action', {
-              episode_id: episode.episode_id,
+              episode_id: activeEpisode.episode_id,
               latch_class: pendingLatch.latch_class,
             });
         }
@@ -1663,27 +1702,42 @@ export class FirstLineStateStore {
       if (stream.stream_revision !== action.prepared_stream_revision) {
         fail('FIRST_LINE_ACTION_STALE_REVISION', 'stream changed before SENDING', { action_id: id });
       }
-      if (action.episode_id !== null) {
-        const episode = this.db.prepare('SELECT * FROM episodes WHERE episode_id=?').get(action.episode_id);
-        if (!episode || episode.state !== 'active' || episode.version !== action.episode_version) {
-          fail('FIRST_LINE_ACTION_STALE_EPISODE', 'episode changed before SENDING', { action_id: id });
+      const activeHead = this.db.prepare(
+        "SELECT episode_id FROM episodes WHERE stream_id=? AND state='active'"
+      ).get(action.stream_id) ?? null;
+      const activeEpisode = activeHead ? this.#readEpisode(activeHead.episode_id) : null;
+
+      if (activeEpisode) {
+        if (action.episode_id === null ||
+            action.episode_id !== activeEpisode.episode_id ||
+            action.episode_version !== activeEpisode.version) {
+          fail('FIRST_LINE_ACTION_STALE_EPISODE',
+            'active episode changed or action is detached before SENDING', {
+              action_id: id,
+              action_episode_id: action.episode_id,
+              active_episode_id: activeEpisode.episode_id,
+            });
         }
         const pendingLatch = this.db.prepare(
           'SELECT latch_class FROM episode_constraint_latches WHERE episode_id=? LIMIT 1'
-        ).get(action.episode_id) ?? null;
+        ).get(activeEpisode.episode_id) ?? null;
         if (pendingLatch) {
           fail('FIRST_LINE_ACTION_STALE_EPISODE',
             'constraint latch blocks customer-visible AI send', {
               action_id: id,
-              episode_id: action.episode_id,
+              episode_id: activeEpisode.episode_id,
               latch_class: pendingLatch.latch_class,
             });
         }
         if (action.action_type === 'CLARIFY' &&
-            (episode.clarification_prompts_sent !== 1 || episode.clarification_action_id !== id)) {
+            (activeEpisode.clarification_prompts_sent !== 1 ||
+             activeEpisode.clarification_action_id !== id)) {
           fail('FIRST_LINE_ACTION_STALE_EPISODE', 'clarification reservation changed before SENDING',
             { action_id: id });
         }
+      } else if (action.episode_id !== null) {
+        fail('FIRST_LINE_ACTION_STALE_EPISODE',
+          'bound episode is no longer active before SENDING', { action_id: id });
       }
       const changed = this.db.prepare(`UPDATE public_actions SET state='SENDING',send_started_at=?,updated_at=?
         WHERE action_id=? AND state='GATING' AND lease_token=? AND lease_expires_at>? AND deadline_at>?`)

@@ -218,10 +218,10 @@ function storeVocabulary(phrase) {
   }];
 }
 
-function exactRead(text, sourceMessageId = 103) {
+function exactRead(text, sourceMessageId = 103, sourceConversationId = 55) {
   return {
     code: 'SUPPORTED_CUSTOMER_TEXT',
-    sourceConversationId: 55,
+    sourceConversationId,
     sourceMessageId,
     event: {
       sourceMessageId,
@@ -240,7 +240,16 @@ function exactRead(text, sourceMessageId = 103) {
 }
 
 function constraintProofFor(projection, text, sourceMessageId) {
-  const read = exactRead(text, sourceMessageId);
+  const ids = projection.open_turn.source_message_ids;
+  assert.equal(ids.includes(sourceMessageId), true, 'target source message is in open turn');
+  const exactReads = ids.map((id, index) => ({
+    turnIndex: index + 1,
+    exactRead: exactRead(
+      id === sourceMessageId ? text : 'спасибо',
+      id,
+      projection.source_conversation_id
+    ),
+  }));
   const resolution = resolveFirstLineExactReads({
     extraction: {
       schema: FIRST_LINE_EXTRACTION_SCHEMA,
@@ -249,7 +258,7 @@ function constraintProofFor(projection, text, sourceMessageId) {
       language: 'ru',
       spans: [],
     },
-    exactReads: [{ turnIndex: 1, exactRead: read }],
+    exactReads,
     knowledgeStore: knowledge(),
     catalogService: catalog(),
     nowUtc: '2026-10-04T12:00:00Z',
@@ -257,7 +266,7 @@ function constraintProofFor(projection, text, sourceMessageId) {
   return evaluateObjectiveConstraintLatch({
     projection,
     resolution,
-    exactReads: [{ turnIndex: 1, exactRead: read }],
+    exactReads,
   });
 }
 
@@ -439,7 +448,10 @@ test('pending clarification with no affirmative proof stays unresolved for C4', 
   const projection = projectOpenTurn(store.readRoutingSnapshot(stream.stream_id));
   const before = store.loadActiveEpisode(stream.stream_id);
 
-  const result = applyFirstLineRoute({ store, projection });
+  const constraintProof = constraintProofFor(projection, 'спасибо', 103);
+  assert.equal(constraintProof.code, 'CLEAR');
+
+  const result = applyFirstLineRoute({ store, projection, constraintProof });
 
   assert.equal(result.code, 'CLARIFICATION_UNRESOLVED');
   assert.equal(result.reason, 'CLARIFY_EXHAUSTED_PENDING_C4');
@@ -447,7 +459,7 @@ test('pending clarification with no affirmative proof stays unresolved for C4', 
   assert.deepEqual(store.loadActiveEpisode(stream.stream_id), before);
 });
 
-test('ordinary no-proof actionable turn uses existing standalone replacement', t => {
+test('ordinary certified-CLEAR actionable turn uses existing standalone replacement', t => {
   const store = tempStore(t, { streamSuffix: 'standalone' });
   const stream = store.ensureConversationStream({
     sourceProvider: 'chatwoot',
@@ -462,8 +474,14 @@ test('ordinary no-proof actionable turn uses existing standalone replacement', t
   );
   store.ingestConversationEvent(stream.stream_id, customer(202));
   const projection = projectOpenTurn(store.readRoutingSnapshot(stream.stream_id));
+  const constraintProof = constraintProofFor(
+    projection,
+    'Какие способы оплаты есть?',
+    202
+  );
+  assert.equal(constraintProof.code, 'CLEAR');
 
-  const result = applyFirstLineRoute({ store, projection });
+  const result = applyFirstLineRoute({ store, projection, constraintProof });
 
   assert.equal(result.code, 'STANDALONE_EPISODE_STARTED');
   assert.equal(result.transition.replaced_episode.episode_id, old.episode_id);
@@ -743,4 +761,35 @@ test('Q14 pure acknowledgement cannot resolve a pending clarification', t => {
   assert.equal(result.code, 'CLARIFICATION_UNRESOLVED');
   assert.equal(result.reason, 'CLARIFY_EXHAUSTED_PENDING_C4');
   assert.equal(result.transition, null);
+});
+
+
+test('OPEN_TURN route without certified C3 proof fails before episode mutation', t => {
+  const store = tempStore(t, { streamSuffix: 'c3-required' });
+  const stream = store.ensureConversationStream({
+    sourceProvider: 'chatwoot',
+    sourceConversationId: 88,
+  });
+  store.ingestConversationEvent(stream.stream_id, customer(301));
+  const projection = projectOpenTurn(store.readRoutingSnapshot(stream.stream_id));
+  assert.equal(projection.code, 'OPEN_TURN');
+
+  assert.throws(
+    () => applyFirstLineRoute({ store, projection }),
+    error => error.code === 'FIRST_LINE_ROUTE_INPUT_INVALID'
+  );
+  assert.equal(store.loadActiveEpisode(stream.stream_id), null);
+
+  const clear = constraintProofFor(
+    projection,
+    'Какие способы оплаты есть?',
+    301
+  );
+  assert.equal(clear.code, 'CLEAR');
+  const result = applyFirstLineRoute({
+    store,
+    projection,
+    constraintProof: clear,
+  });
+  assert.equal(result.code, 'STANDALONE_EPISODE_STARTED');
 });

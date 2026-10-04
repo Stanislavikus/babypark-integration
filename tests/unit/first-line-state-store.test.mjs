@@ -998,3 +998,119 @@ test('persisted constraint latch with missing episode-stream event fails closed 
     'FIRST_LINE_DB_CORRUPT'
   );
 });
+
+
+test('active episode rejects detached customer-visible action preparation', t => {
+  const { store } = tempStore(t);
+  const stream = makeStream(store);
+  store.ingestConversationEvent(stream.stream_id, customerEvent(101));
+  store.beginEpisode({ streamId: stream.stream_id });
+
+  expectCode(() => store.preparePublicAction({
+    streamId: stream.stream_id,
+    preparedStreamRevision: 1,
+    actionType: 'ANSWER',
+    basisEventSeqs: [1],
+    deadlineAt: NOW + 60_000,
+  }), 'FIRST_LINE_ACTION_EPISODE_REQUIRED');
+
+  assert.equal(
+    store.db.prepare('SELECT COUNT(*) AS n FROM public_actions WHERE stream_id=?')
+      .get(stream.stream_id).n,
+    0
+  );
+});
+
+test('legacy detached prepared action cannot reach SENDING after active episode latches', t => {
+  const { store } = tempStore(t);
+  const stream = makeStream(store);
+  store.ingestConversationEvent(stream.stream_id, customerEvent(101));
+  const episode = store.beginEpisode({ streamId: stream.stream_id });
+
+  const action = store.preparePublicAction({
+    streamId: stream.stream_id,
+    episodeId: episode.episode_id,
+    expectedEpisodeVersion: episode.version,
+    preparedStreamRevision: 1,
+    actionType: 'ANSWER',
+    basisEventSeqs: [1],
+    deadlineAt: NOW + 60_000,
+  });
+
+  // Simulate a legacy/corrupt detached durable row that predates the v3 fence.
+  store.db.prepare(
+    'UPDATE public_actions SET episode_id=NULL,episode_version=NULL WHERE action_id=?'
+  ).run(action.action_id);
+
+  const snapshot = store.readRoutingSnapshot(stream.stream_id);
+  store.commitConstraintLatchesFromRoutingPlan({
+    streamId: stream.stream_id,
+    expectedStreamRevision: snapshot.stream.stream_revision,
+    expectedThroughEventSeq: snapshot.stream.last_event_seq,
+    expectedRoutingLedgerFingerprint: snapshot.routing_ledger_fingerprint,
+    expectedEpisodeId: episode.episode_id,
+    expectedEpisodeVersion: episode.version,
+    constraintLatches: [{
+      latch_class: 'UNSUPPORTED_EXCLUSION',
+      source_event_seq: 1,
+    }],
+    constraintBasisEventSeqs: [1],
+  });
+
+  store.claimNextPublicAction({ leaseMs: 30_000, token: 'legacy-detached' });
+  expectCode(
+    () => store.markActionSending(action.action_id, 'legacy-detached'),
+    'FIRST_LINE_ACTION_STALE_EPISODE'
+  );
+  assert.equal(store.getPublicAction(action.action_id).state, 'GATING');
+});
+
+test('v2 migration rejects unexpected trigger before versions or public actions mutate', t => {
+  const { store, file } = tempStore(t);
+  const stream = makeStream(store);
+  store.ingestConversationEvent(stream.stream_id, customerEvent(101));
+  const action = store.preparePublicAction({
+    streamId: stream.stream_id,
+    preparedStreamRevision: 1,
+    actionType: 'ANSWER',
+    basisEventSeqs: [1],
+    deadlineAt: NOW + 60_000,
+  });
+  store.close();
+
+  const raw = new DatabaseSync(file);
+  raw.exec('DROP TABLE episode_constraint_latches');
+  raw.exec('PRAGMA user_version=2');
+  raw.prepare('UPDATE metadata SET schema_version=2 WHERE singleton=1').run();
+  raw.exec(`CREATE TRIGGER malicious_v2_trigger
+    AFTER UPDATE OF schema_version ON metadata
+    BEGIN
+      DELETE FROM public_actions;
+    END`);
+  raw.close();
+
+  expectCode(
+    () => FirstLineStateStore.migrateV2ToV3(file),
+    'FIRST_LINE_DB_MIGRATION_UNSUPPORTED'
+  );
+
+  const after = new DatabaseSync(file);
+  t.after(() => { try { after.close(); } catch {} });
+  assert.equal(after.prepare('PRAGMA user_version').get().user_version, 2);
+  assert.equal(
+    after.prepare('SELECT schema_version FROM metadata WHERE singleton=1')
+      .get().schema_version,
+    2
+  );
+  assert.equal(
+    after.prepare('SELECT COUNT(*) AS n FROM public_actions WHERE action_id=?')
+      .get(action.action_id).n,
+    1
+  );
+  assert.equal(
+    after.prepare(
+      "SELECT COUNT(*) AS n FROM sqlite_master WHERE type='trigger' AND name='malicious_v2_trigger'"
+    ).get().n,
+    1
+  );
+});

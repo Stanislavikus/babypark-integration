@@ -199,6 +199,11 @@ export function applyFirstLineRoute({
 
   const certifiedConstraint = validatedConstraintProof(projection, constraintProof);
 
+  if (projection.code === 'OPEN_TURN' && certifiedConstraint === null) {
+    fail('FIRST_LINE_ROUTE_INPUT_INVALID',
+      'OPEN_TURN route requires one certified C3 constraint proof');
+  }
+
   if (projection.code !== 'OPEN_TURN') {
     return Object.freeze({
       ...base(projection),
