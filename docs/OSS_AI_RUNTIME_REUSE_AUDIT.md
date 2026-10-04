@@ -6,16 +6,16 @@ Purpose: evaluate selective reuse into BabyPark's existing own AgentBot/AI First
 
 ## Decision matrix
 
-| BabyPark scope | Existing BabyPark state | OSS evidence | Coverage of residual gap | Decision |
-|---|---|---|---:|---|
-| C1 durable episode state | merged, strict canonical-only durability, no raw body | fazer/Oryntra carry their own conversation memory/checkpointer models | <30% direct | KEEP BabyPark |
-| C2a event ledger/public actions | merged; delivery/event identity, durable public-actions, uncertain-send fencing | fazer has delivery ledger/recovery/reply claims; Sage has two-phase idempotency/effect ledger | ~60% concept overlap, low direct portability | KEEP code; ADAPT test/recovery patterns |
-| C2b extraction + deterministic resolution | merged; exact-read/certified-span + deterministic canonical resolvers | candidates are model/RAG oriented | <20% | KEEP BabyPark |
-| C2c clarification/routing | #94 active; native Chatwoot structured submission + deterministic proof | OSS has generic debounce/ownership/thread routing, not BabyPark clarification provenance | <40% | FINISH BabyPark; no runtime transplant |
-| C3 ObjectiveConstraintLatch | not built | no candidate implements BabyPark exclusion/subjective/age/compatibility/order/return authority contract | <20% | BUILD residual |
-| C4 deterministic decision engine | not built | Sage has grounded/epistemic patterns, but different domain/runtime; others are model-driven | ~30% pattern reuse | BUILD residual; borrow test patterns only |
-| C5 renderer | not built/partly existing TextRenderer | generic channel renderers exist | <50%, trivial custom residual | BUILD small residual |
-| C6 wiring/recovery/handoff | not built | fazer is strongest reference: signed delivery, recovery sweep, reply claim, ownership rechecks, message_updated; n8n node covers Chatwoot 4.13–4.18 API surface | 70–80% behavior pattern, but not drop-in due coupling | ADAPT PATTERNS / selective leaf code only |
+| BabyPark scope | Existing BabyPark state | OSS evidence | Decision |
+|---|---|---|---|
+| C1 durable episode state | merged, strict canonical-only durability, no raw body | fazer/Oryntra carry their own conversation memory/checkpointer models | KEEP BabyPark |
+| C2a event ledger/public actions | merged; delivery/event identity, durable public-actions, uncertain-send fencing | fazer has delivery ledger/recovery/reply claims; Sage has two-phase idempotency/effect ledger | KEEP code; ADAPT test/recovery patterns |
+| C2b extraction + deterministic resolution | merged; exact-read/certified-span + deterministic canonical resolvers | candidates are model/RAG oriented | KEEP BabyPark |
+| C2c clarification/routing | #94 active; native Chatwoot structured submission + deterministic proof | OSS has generic debounce/ownership/thread routing, not BabyPark clarification provenance | FINISH BabyPark; no runtime transplant |
+| C3 ObjectiveConstraintLatch | not built | no candidate implements BabyPark exclusion/subjective/age/compatibility/order/return authority contract | BUILD residual |
+| C4 deterministic decision engine | not built | Sage has grounded/epistemic patterns, but different domain/runtime; others are model-driven | BUILD residual; borrow test patterns only |
+| C5 renderer | not built/partly existing TextRenderer | generic channel renderers exist | BUILD small residual |
+| C6 wiring/recovery/handoff | not built | fazer is strongest reference: signed delivery, recovery sweep, reply claim, ownership rechecks, message_updated; n8n node covers broad Chatwoot API surface | MEASURE bounded checklist; likely ADAPT PATTERNS / selective leaf code only |
 
 ## Candidate details
 
@@ -80,6 +80,26 @@ BabyPark already contains:
 - `src/copilot/first-line-public-action-gate.mjs`: exact authorizing reread + stale fencing.
 
 Therefore importing Fazer's corresponding layers would replace tested BabyPark code rather than reduce remaining work.
+
+## Coverage methodology
+
+No percentage is valid unless it is calculated from a published bounded checklist of concrete requirements/race cases.
+
+For a candidate/component:
+1. enumerate N required behaviors;
+2. mark each PASS / PARTIAL / FAIL with source path + pinned SHA or executable PoC evidence;
+3. coverage = PASS / N;
+4. PARTIAL is shown separately and does not count as PASS.
+
+Qualitative statements remain qualitative until that checklist exists.
+
+## Architecture-direction freeze
+
+Keep the current direction: own BabyPark AgentBot + deterministic BabyPark authority/decision core + Chatwoot-native transport/lifecycle.
+
+Do not reopen platform replacement (Captain/other runtime) without a new verified fact that materially changes feasibility, security/privacy, supported Chatwoot capability, bounded OSS coverage, maintenance/upgrade risk, or production KPI evidence.
+
+Real adversarial correctness/security findings are different: they remain blockers and are fixed regardless of review-round count.
 
 ## Recommendation
 
