@@ -947,6 +947,8 @@ export class FirstLineStateStore {
     expectedRoutingLedgerFingerprint,
     expectedEpisodeId,
     expectedEpisodeVersion,
+    expectedLiveActionId = null,
+    expectedLiveActionState = null,
     constraintLatches,
     constraintBasisEventSeqs,
   } = {}) {
@@ -959,6 +961,7 @@ export class FirstLineStateStore {
     );
     const episodeId = safeToken(expectedEpisodeId, 'expected_episode_id');
     const episodeVersion = positiveInteger(expectedEpisodeVersion, 'expected_episode_version');
+    const actionExpectation = expectedLiveAction(expectedLiveActionId, expectedLiveActionState);
     const latches = normalizeConstraintLatchEvidence(constraintLatches);
     const latchBasis = normalizeConstraintBasisEventSeqs(
       constraintBasisEventSeqs,
@@ -988,6 +991,39 @@ export class FirstLineStateStore {
           'constraint episode no longer belongs to stream', {
             stream_id: stream,
             episode_id: episodeId,
+          });
+      }
+
+      const liveHead = this.db.prepare(`SELECT action_id FROM public_actions WHERE stream_id=? AND state IN
+        ('PREPARED','GATING','SENDING','UNCERTAIN')`).get(stream) ?? null;
+      const liveAction = liveHead ? this.#readAction(liveHead.action_id) : null;
+      if (actionExpectation.id === null) {
+        if (liveAction !== null) {
+          fail('FIRST_LINE_ROUTING_PLAN_STALE',
+            'live public action appeared after constraint plan', {
+              stream_id: stream,
+              current_action_id: liveAction.action_id,
+              current_action_state: liveAction.state,
+            });
+        }
+      } else if (!liveAction ||
+                 liveAction.action_id !== actionExpectation.id ||
+                 liveAction.state !== actionExpectation.state) {
+        fail('FIRST_LINE_ROUTING_PLAN_STALE',
+          'live public action changed after constraint plan', {
+            stream_id: stream,
+            expected_action_id: actionExpectation.id,
+            expected_action_state: actionExpectation.state,
+            current_action_id: liveAction?.action_id ?? null,
+            current_action_state: liveAction?.state ?? null,
+          });
+      }
+      if (liveAction &&
+          (liveAction.state === 'SENDING' || liveAction.state === 'UNCERTAIN')) {
+        fail('FIRST_LINE_ACTION_SEND_UNRESOLVED',
+          'unresolved public send blocks constraint latch commit', {
+            action_id: liveAction.action_id,
+            state: liveAction.state,
           });
       }
 

@@ -245,6 +245,8 @@ export function applyFirstLineRoute({
             projection.plan_token.routing_ledger_fingerprint,
           expectedEpisodeId: projection.active_episode.episode_id,
           expectedEpisodeVersion: projection.active_episode.version,
+          expectedLiveActionId: projection.plan_token.live_action_id,
+          expectedLiveActionState: projection.plan_token.live_action_state,
           constraintLatches: certifiedConstraint.latches,
           constraintBasisEventSeqs: [...projection.open_turn.event_seqs],
         })

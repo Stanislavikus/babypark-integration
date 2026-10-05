@@ -831,6 +831,8 @@ test('latch committed after action preparation prevents GATING to SENDING', t =>
     expectedRoutingLedgerFingerprint: snapshot.routing_ledger_fingerprint,
     expectedEpisodeId: episode.episode_id,
     expectedEpisodeVersion: episode.version,
+    expectedLiveActionId: snapshot.live_public_action.action_id,
+    expectedLiveActionState: snapshot.live_public_action.state,
     constraintLatches: [{
       latch_class: 'UNSUPPORTED_COMPATIBILITY',
       source_event_seq: 1,
@@ -845,6 +847,48 @@ test('latch committed after action preparation prevents GATING to SENDING', t =>
     'FIRST_LINE_ACTION_STALE_EPISODE'
   );
   assert.equal(store.getPublicAction(action.action_id).state, 'GATING');
+});
+
+test('routing snapshot cannot commit a new latch after its ANSWER has reached SENDING', t => {
+  const { store } = tempStore(t);
+  const stream = makeStream(store);
+  store.ingestConversationEvent(stream.stream_id, customerEvent(101));
+  const episode = store.beginEpisode({ streamId: stream.stream_id });
+  const snapshot = store.readRoutingSnapshot(stream.stream_id);
+  assert.equal(snapshot.live_public_action, null);
+
+  const action = store.preparePublicAction({
+    streamId: stream.stream_id,
+    episodeId: episode.episode_id,
+    expectedEpisodeVersion: episode.version,
+    preparedStreamRevision: snapshot.stream.stream_revision,
+    actionType: 'ANSWER',
+    basisEventSeqs: [1],
+    deadlineAt: NOW + 60_000,
+  });
+  store.claimNextPublicAction({ leaseMs: 30_000, token: 'lease-before-latch' });
+  const sending = store.markActionSending(action.action_id, 'lease-before-latch');
+  assert.equal(sending.state, 'SENDING');
+
+  expectCode(() => store.commitConstraintLatchesFromRoutingPlan({
+    streamId: stream.stream_id,
+    expectedStreamRevision: snapshot.stream.stream_revision,
+    expectedThroughEventSeq: snapshot.stream.last_event_seq,
+    expectedRoutingLedgerFingerprint: snapshot.routing_ledger_fingerprint,
+    expectedEpisodeId: episode.episode_id,
+    expectedEpisodeVersion: episode.version,
+    expectedLiveActionId: snapshot.live_public_action?.action_id ?? null,
+    expectedLiveActionState: snapshot.live_public_action?.state ?? null,
+    constraintLatches: [{
+      latch_class: 'RETURN_CASE',
+      source_event_seq: 1,
+    }],
+    constraintBasisEventSeqs: [1],
+  }), 'FIRST_LINE_ROUTING_PLAN_STALE');
+
+  assert.deepEqual(store.listEpisodeConstraintLatches(episode.episode_id), []);
+  assert.equal(store.getEpisode(episode.episode_id).version, episode.version);
+  assert.equal(store.getPublicAction(action.action_id).state, 'SENDING');
 });
 
 test('new accepted event makes pending latch commit stale with no durable class', t => {
@@ -1150,6 +1194,8 @@ test('legacy detached prepared action cannot reach SENDING after active episode 
     expectedRoutingLedgerFingerprint: snapshot.routing_ledger_fingerprint,
     expectedEpisodeId: episode.episode_id,
     expectedEpisodeVersion: episode.version,
+    expectedLiveActionId: snapshot.live_public_action.action_id,
+    expectedLiveActionState: snapshot.live_public_action.state,
     constraintLatches: [{
       latch_class: 'UNSUPPORTED_EXCLUSION',
       source_event_seq: 1,
