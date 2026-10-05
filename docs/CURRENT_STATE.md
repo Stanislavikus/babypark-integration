@@ -278,7 +278,7 @@ Website First Line implementation status:
 - C3 — ObjectiveConstraintLatch is complete and merged via PR #98 at
   `0d54c023ee0a304e42cc18fa39034386946f0c85`, exact tree
   `853e144b630a23b1d35bb17b01532c15c3aeabb1`;
-- final C3 exact-tree gates: state-store 39/39 PASS, First-Line/AgentBot focused
+- final C3 exact-tree gates: state-store 40/40 PASS, First-Line/AgentBot focused
   234/234 PASS, full unit 921/921 PASS, legacy 13/13 PASS, refactor 13/13 PASS,
   storage validator PASS and `git diff --check` PASS;
 - the final independent Codex re-review on the exact merged C3 tree reported no
