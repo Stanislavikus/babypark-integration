@@ -7,6 +7,8 @@ const SCHEMA_VERSION = 3;
 const PREVIOUS_SCHEMA_VERSION = 2;
 const V2_SCHEMA_MASTER_SHA256 =
   'd84094598ffb3371293f8b361f88b19b2997a7e37a79ce5226abcd62326da19e';
+const V3_SCHEMA_MASTER_SHA256 =
+  'e7a9f211d23e2439bcd63a29fb3b9ed1569e3958ca536c240af00876dd410e07';
 const BUSY_TIMEOUT_MS = 5000;
 const MAX_PRESENTED_CANDIDATES = 20;
 // A whole-conversation authorizing snapshot is unprovable at 1000 public rows;
@@ -2145,6 +2147,13 @@ export class FirstLineStateStore {
     const integrity = this.db.prepare('PRAGMA integrity_check').get().integrity_check;
     if (version !== SCHEMA_VERSION || metadata?.schema_version !== SCHEMA_VERSION || integrity !== 'ok') {
       fail('FIRST_LINE_DB_INVALID', 'schema/integrity version check failed', { user_version: version, metadata_version: metadata?.schema_version, integrity });
+    }
+    const schemaFingerprint = schemaMasterFingerprint(this.db);
+    if (schemaFingerprint !== V3_SCHEMA_MASTER_SHA256) {
+      fail('FIRST_LINE_DB_INVALID', 'database sqlite_master does not match the frozen v3 schema', {
+        expected_schema_fingerprint: V3_SCHEMA_MASTER_SHA256,
+        actual_schema_fingerprint: schemaFingerprint,
+      });
     }
     for (const [table, columns] of Object.entries(EXPECTED_COLUMNS)) {
       const actual = this.db.prepare(`PRAGMA table_info(${table})`).all().map(row => row.name);

@@ -972,6 +972,47 @@ test('schema v3 attestation rejects latch table without primary-key uniqueness',
   );
 });
 
+test('schema v3 attestation rejects unexpected trigger before a latch can be erased', t => {
+  const { store, file } = tempStore(t);
+  const stream = makeStream(store);
+  store.ingestConversationEvent(stream.stream_id, customerEvent(101));
+  const snapshot = store.readRoutingSnapshot(stream.stream_id);
+  const episode = store.startStandaloneEpisodeFromRoutingPlan({
+    streamId: stream.stream_id,
+    expectedStreamRevision: snapshot.stream.stream_revision,
+    expectedThroughEventSeq: snapshot.stream.last_event_seq,
+    expectedRoutingLedgerFingerprint: snapshot.routing_ledger_fingerprint,
+  }).episode;
+  store.close();
+
+  const raw = new DatabaseSync(file);
+  raw.exec(`CREATE TRIGGER malicious_v3_latch_delete
+    AFTER UPDATE ON episodes
+    BEGIN
+      DELETE FROM episode_constraint_latches WHERE episode_id=NEW.episode_id;
+    END`);
+  raw.close();
+
+  expectCode(
+    () => FirstLineStateStore.open(file),
+    'FIRST_LINE_DB_INVALID'
+  );
+
+  const after = new DatabaseSync(file);
+  t.after(() => { try { after.close(); } catch {} });
+  assert.equal(
+    after.prepare('SELECT COUNT(*) AS n FROM episode_constraint_latches WHERE episode_id=?')
+      .get(episode.episode_id).n,
+    0
+  );
+  assert.equal(
+    after.prepare(
+      "SELECT COUNT(*) AS n FROM sqlite_master WHERE type='trigger' AND name='malicious_v3_latch_delete'"
+    ).get().n,
+    1
+  );
+});
+
 test('persisted constraint latch with missing episode-stream event fails closed as corruption', t => {
   const { store } = tempStore(t);
   const stream = makeStream(store);
