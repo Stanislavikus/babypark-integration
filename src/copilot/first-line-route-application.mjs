@@ -1,6 +1,7 @@
 import {
   FIRST_LINE_CLARIFICATION_SELECTION_SCHEMA,
   isCertifiedClarificationSelectionProof,
+  exactMessageSelectionUsesCertifiedBasis,
 } from './first-line-clarification-selection.mjs';
 import {
   isCertifiedOpenTurnProjection,
@@ -170,12 +171,28 @@ export function applyFirstLineRoute({
       }
     }
 
+    const exactMessageSelection = selectionProof.evidence_class === 'EXACT_MESSAGE_SELECTION';
+    if (exactMessageSelection && projection === null) {
+      fail('FIRST_LINE_ROUTE_INPUT_INVALID',
+        'exact-message selection requires its certified routing projection');
+    }
+
     const certifiedConstraint = projection === null
       ? (constraintProof == null ? null : fail(
           'FIRST_LINE_ROUTE_INPUT_INVALID',
           'constraint proof requires routing projection'
         ))
       : validatedConstraintProof(projection, constraintProof);
+
+    if (exactMessageSelection &&
+        (certifiedConstraint === null ||
+         !exactMessageSelectionUsesCertifiedBasis(selectionProof, {
+           projection,
+           constraintProof: certifiedConstraint,
+         }))) {
+      fail('FIRST_LINE_ROUTE_INPUT_INVALID',
+        'exact-message selection must retain its certified C3 routing basis');
+    }
 
     if (!DURABLE_SELECTION_SLOTS.has(selectionProof.selection.slot)) {
       fail('FIRST_LINE_ROUTE_INPUT_INVALID', 'selection targets unsupported durable slot', {

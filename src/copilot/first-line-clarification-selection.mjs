@@ -1,4 +1,12 @@
 import { proveClarificationDependencyAnchor } from './first-line-dependency-proof.mjs';
+import {
+  isCertifiedOpenTurnProjection,
+  OPEN_TURN_PROJECTION_SCHEMA,
+} from './first-line-routing-planner.mjs';
+import {
+  FIRST_LINE_CONSTRAINT_PROOF_SCHEMA,
+  isCertifiedObjectiveConstraintProof,
+} from './first-line-objective-constraint-latch.mjs';
 import { resolutionUsesExactRead } from './first-line-resolution.mjs';
 import { ROUTING_SNAPSHOT_SCHEMA, CANONICAL_ID_PATTERNS } from './first-line-state-store.mjs';
 
@@ -7,6 +15,7 @@ export const FIRST_LINE_CLARIFICATION_SELECTION_SCHEMA =
 export const CLARIFICATION_CHOICE_TOKEN_PREFIX = 'bp-choice:';
 
 const certifiedPositiveProofs = new WeakSet();
+const exactMessageProofBindings = new WeakMap();
 
 export function isCertifiedClarificationSelectionProof(value) {
   return Boolean(
@@ -14,6 +23,18 @@ export function isCertifiedClarificationSelectionProof(value) {
     typeof value === 'object' &&
     value.code === 'CLARIFICATION_SELECTION_PROVEN' &&
     certifiedPositiveProofs.has(value)
+  );
+}
+
+export function exactMessageSelectionUsesCertifiedBasis(
+  proof,
+  { projection, constraintProof } = {}
+) {
+  const binding = exactMessageProofBindings.get(proof);
+  return Boolean(
+    binding &&
+    binding.projection === projection &&
+    binding.constraintProof === constraintProof
   );
 }
 
@@ -111,7 +132,7 @@ function noProof(meta, reason) {
   });
 }
 
-function proven(meta, evidenceClass, reason, selection) {
+function proven(meta, evidenceClass, reason, selection, exactMessageBasis = null) {
   const output = Object.freeze({
     ...base(meta),
     code: 'CLARIFICATION_SELECTION_PROVEN',
@@ -126,6 +147,7 @@ function proven(meta, evidenceClass, reason, selection) {
     }),
   });
   certifiedPositiveProofs.add(output);
+  if (exactMessageBasis !== null) exactMessageProofBindings.set(output, exactMessageBasis);
   return output;
 }
 
@@ -253,6 +275,40 @@ export function proveStructuredClarificationSubmission({ snapshot: rawSnapshot, 
   });
 }
 
+function tokenEquals(a, b) {
+  if (!a || !b) return false;
+  for (const key of [
+    'stream_id',
+    'stream_revision',
+    'through_event_seq',
+    'routing_ledger_fingerprint',
+    'episode_id',
+    'episode_version',
+    'live_action_id',
+    'live_action_state',
+  ]) {
+    if ((a[key] ?? null) !== (b[key] ?? null)) return false;
+  }
+  return true;
+}
+
+function requireExactMessageBasis(projection, constraintProof) {
+  if (!isCertifiedOpenTurnProjection(projection) ||
+      projection?.schema !== OPEN_TURN_PROJECTION_SCHEMA ||
+      projection.code !== 'OPEN_TURN') {
+    fail('exact-message selection requires a transient certified OPEN_TURN projection');
+  }
+  if (!constraintProof ||
+      constraintProof.schema !== FIRST_LINE_CONSTRAINT_PROOF_SCHEMA ||
+      !isCertifiedObjectiveConstraintProof(constraintProof) ||
+      !['CLEAR', 'CONSTRAINTS_LATCHED'].includes(constraintProof.code) ||
+      constraintProof.stream_id !== projection.stream_id ||
+      constraintProof.source_conversation_id !== projection.source_conversation_id ||
+      !tokenEquals(constraintProof.plan_token, projection.plan_token)) {
+    fail('exact-message selection requires a certified C3 proof for the same routing projection');
+  }
+}
+
 function projectionMeta(projection) {
   return {
     streamId: projection.stream_id,
@@ -264,10 +320,13 @@ function projectionMeta(projection) {
   };
 }
 
-export function proveExactMessageClarificationSelection({ projection, resolution, exactRead } = {}) {
-  if (!projection || typeof projection !== 'object' || !projection.plan_token) {
-    fail('exact-message selection requires a routing projection');
-  }
+export function proveExactMessageClarificationSelection({
+  projection,
+  resolution,
+  exactRead,
+  constraintProof,
+} = {}) {
+  requireExactMessageBasis(projection, constraintProof);
   const meta = projectionMeta(projection);
   if (projection.code !== 'OPEN_TURN' || !projection.open_turn ||
       projection.open_turn.message_count !== 1 ||
@@ -322,7 +381,7 @@ export function proveExactMessageClarificationSelection({ projection, resolution
       value: dependency.anchor.referenced_value,
       candidate_ordinal: dependency.anchor.candidate_ordinal,
       source_message_id: sourceMessageId,
-    });
+    }, { projection, constraintProof });
   }
   if (dependency.anchor.type === 'REQUESTED_SLOT_REFERENCE') {
     return proven(meta, 'EXACT_MESSAGE_SELECTION', 'REQUESTED_SLOT_FILLED', {
@@ -331,7 +390,7 @@ export function proveExactMessageClarificationSelection({ projection, resolution
       value: dependency.anchor.referenced_value,
       candidate_ordinal: null,
       source_message_id: sourceMessageId,
-    });
+    }, { projection, constraintProof });
   }
   return noProof(meta, 'EXACT_SELECTION_DEPENDENCY_TYPE_UNSUPPORTED');
 }

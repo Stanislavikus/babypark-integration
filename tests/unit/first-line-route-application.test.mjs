@@ -271,7 +271,12 @@ function constraintProofFor(projection, text, sourceMessageId) {
 }
 
 function exactSelectionProof(projection, text = 'VARIANT_2') {
-  const read = exactRead(text);
+  const read = exactRead(
+    text,
+    projection.open_turn.source_message_ids[0],
+    projection.source_conversation_id
+  );
+  const exactReads = [{ turnIndex: 1, exactRead: read }];
   const resolution = resolveFirstLineExactReads({
     extraction: {
       schema: FIRST_LINE_EXTRACTION_SCHEMA,
@@ -285,16 +290,23 @@ function exactSelectionProof(projection, text = 'VARIANT_2') {
         occurrence: 1,
       }],
     },
-    exactReads: [{ turnIndex: 1, exactRead: read }],
+    exactReads,
     knowledgeStore: knowledge(),
     catalogService: catalog(),
     nowUtc: '2026-10-04T12:00:00Z',
   });
-  return proveExactMessageClarificationSelection({
+  const constraintProof = evaluateObjectiveConstraintLatch({
+    projection,
+    resolution,
+    exactReads,
+  });
+  const proof = proveExactMessageClarificationSelection({
     projection,
     resolution,
     exactRead: read,
+    constraintProof,
   });
+  return { proof, constraintProof };
 }
 
 function expectStateCode(fn, code) {
@@ -371,12 +383,13 @@ test('exact-message selection continues episode using the later accepted custome
   store.ingestConversationEvent(stream.stream_id, customer(103));
   const projection = projectOpenTurn(store.readRoutingSnapshot(stream.stream_id));
   assert.equal(projection.code, 'OPEN_TURN');
-  const proof = exactSelectionProof(projection);
+  const { proof, constraintProof } = exactSelectionProof(projection);
 
   const result = applyFirstLineRoute({
     store,
     projection,
     selectionProof: proof,
+    constraintProof,
   });
 
   assert.equal(result.code, 'EPISODE_CONTINUED');
@@ -387,6 +400,59 @@ test('exact-message selection continues episode using the later accepted custome
     result.transition.episode.stable_slots.variant_id.derived_through_event_seq,
     3
   );
+});
+
+test('seq3 exact selection cannot hide a newer seq4 unsupported constraint', t => {
+  const { store, stream } = setupStructured(t);
+  store.ingestConversationEvent(stream.stream_id, customer(103));
+  store.ingestConversationEvent(stream.stream_id, customer(104));
+
+  const currentProjection = projectOpenTurn(store.readRoutingSnapshot(stream.stream_id));
+  assert.deepEqual(currentProjection.open_turn.source_message_ids, [103, 104]);
+  const before = store.loadActiveEpisode(stream.stream_id);
+
+  const forgedProjection = structuredClone(currentProjection);
+  forgedProjection.open_turn = {
+    event_seqs: [3],
+    source_message_ids: [103],
+    first_event_seq: 3,
+    last_event_seq: 3,
+    message_count: 1,
+  };
+
+  const read = exactRead('VARIANT_2', 103);
+  const resolution = resolveFirstLineExactReads({
+    extraction: {
+      schema: FIRST_LINE_EXTRACTION_SCHEMA,
+      intent_schema_version: FIRST_LINE_INTENT_SCHEMA_VERSION,
+      intent_hint: 'UNTRUSTED',
+      language: 'uk',
+      spans: [{
+        kind: 'PRODUCT',
+        turn_index: 1,
+        quote: 'VARIANT_2',
+        occurrence: 1,
+      }],
+    },
+    exactReads: [{ turnIndex: 1, exactRead: read }],
+    knowledgeStore: knowledge(),
+    catalogService: catalog(),
+    nowUtc: '2026-10-04T12:00:00Z',
+  });
+
+  assert.throws(
+    () => proveExactMessageClarificationSelection({
+      projection: forgedProjection,
+      resolution,
+      exactRead: read,
+      constraintProof: null,
+    }),
+    /transient certified OPEN_TURN projection/
+  );
+
+  const after = store.loadActiveEpisode(stream.stream_id);
+  assert.equal(after.version, before.version);
+  assert.equal(after.stable_slots.variant_id, undefined);
 });
 
 test('exact requested ID slot fill commits the canonical requested store', t => {
@@ -425,15 +491,27 @@ test('exact requested ID slot fill commits the canonical requested store', t => 
     catalogService: catalog(),
     nowUtc: '2026-10-04T12:00:00Z',
   });
+  const exactReads = [{ turnIndex: 1, exactRead: read }];
+  const constraintProof = evaluateObjectiveConstraintLatch({
+    projection,
+    resolution,
+    exactReads,
+  });
   const proof = proveExactMessageClarificationSelection({
     projection,
     resolution,
     exactRead: read,
+    constraintProof,
   });
   assert.equal(proof.code, 'CLARIFICATION_SELECTION_PROVEN');
   assert.equal(proof.selection.origin, 'requested_slot');
 
-  const result = applyFirstLineRoute({ store, projection, selectionProof: proof });
+  const result = applyFirstLineRoute({
+    store,
+    projection,
+    selectionProof: proof,
+    constraintProof,
+  });
   assert.equal(result.code, 'EPISODE_CONTINUED');
   assert.equal(result.transition.episode.stable_slots.store_id.value, STORE_1);
   assert.equal(result.transition.episode.clarification_prompts_sent, 1);
@@ -523,10 +601,17 @@ test('price-ceiling clarification commits max price and currency atomically in C
     catalogService: catalog(),
     nowUtc: '2026-10-04T12:00:00Z',
   });
+  const exactReads = [{ turnIndex: 1, exactRead: read }];
+  const constraintProof = evaluateObjectiveConstraintLatch({
+    projection,
+    resolution,
+    exactReads,
+  });
   const moneyProof = proveExactMessageClarificationSelection({
     projection,
     resolution,
     exactRead: read,
+    constraintProof,
   });
   assert.equal(moneyProof.code, 'CLARIFICATION_SELECTION_PROVEN');
   assert.equal(moneyProof.selection.slot, 'max_price_minor');
@@ -536,6 +621,7 @@ test('price-ceiling clarification commits max price and currency atomically in C
     store,
     projection,
     selectionProof: moneyProof,
+    constraintProof,
   });
 
   assert.equal(result.code, 'EPISODE_CONTINUED');
@@ -550,7 +636,7 @@ test('positive proof and projection must share the exact routing token', t => {
   const { store, stream } = setupStructured(t);
   store.ingestConversationEvent(stream.stream_id, customer(103));
   const projection = projectOpenTurn(store.readRoutingSnapshot(stream.stream_id));
-  const proof = exactSelectionProof(projection);
+  const { proof, constraintProof } = exactSelectionProof(projection);
   const mismatched = structuredClone(projection);
   mismatched.plan_token.stream_revision += 1;
 
