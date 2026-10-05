@@ -273,10 +273,19 @@ Frozen v0.7 runtime boundary:
 - uncertain POST outcome is never blindly retried and fails open to HUMAN;
 - no CDC/WAL, third database or Chatwoot core patch is required for Website First Line v1.
 
-Next implementation slice:
-**C2a — Conversation Event Ledger + Durable Action Foundation**.
-C2a contains no LLM. C2b adds structured extraction/deterministic resolution;
-C2c adds episode/open-turn routing; C3 follows with ObjectiveConstraintLatch.
+Website First Line implementation status:
+- C2a/C2b/C2c are complete and merged;
+- C3 — ObjectiveConstraintLatch is complete and merged via PR #98 at
+  `0d54c023ee0a304e42cc18fa39034386946f0c85`, exact tree
+  `853e144b630a23b1d35bb17b01532c15c3aeabb1`;
+- final C3 exact-tree gates: state-store 39/39 PASS, First-Line/AgentBot focused
+  234/234 PASS, full unit 921/921 PASS, legacy 13/13 PASS, refactor 13/13 PASS,
+  storage validator PASS and `git diff --check` PASS;
+- the final independent Codex re-review on the exact merged C3 tree reported no
+  major issues and all C3 review threads were resolved before merge.
+
+Next bounded implementation slice:
+**C4 — deterministic decision engine**.
 
 ## D2b acceptance status (2026-09-30)
 
