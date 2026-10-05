@@ -922,6 +922,17 @@ export class FirstLineStateStore {
     const at = this.now();
     return tx(this.db, () => {
       this.#requireActiveEpisode(id, version);
+      const pendingLatch = this.db.prepare(
+        'SELECT latch_class FROM episode_constraint_latches WHERE episode_id=? LIMIT 1'
+      ).get(id) ?? null;
+      if (pendingLatch && closeReason !== 'human_takeover') {
+        fail('FIRST_LINE_PENDING_HUMAN_LATCH',
+          'latched active episode can close only after HUMAN/native handoff terminalization', {
+            episode_id: id,
+            latch_class: pendingLatch.latch_class,
+            close_reason: closeReason,
+          });
+      }
       const changed = this.db.prepare(`UPDATE episodes SET state='closed',version=version+1,updated_at=?,closed_at=?,close_reason=?
         WHERE episode_id=? AND state='active' AND version=?`).run(at, at, closeReason, id, version).changes;
       if (changed !== 1) fail('FIRST_LINE_STALE_WRITE', 'episode changed before close');

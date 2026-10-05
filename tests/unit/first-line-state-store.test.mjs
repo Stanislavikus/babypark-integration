@@ -879,6 +879,65 @@ test('new accepted event makes pending latch commit stale with no durable class'
   assert.deepEqual(store.listEpisodeConstraintLatches(episode.episode_id), []);
 });
 
+test('latched episode rejects every non-HUMAN close reason and keeps later ANSWER blocked', t => {
+  const { store } = tempStore(t);
+  const stream = makeStream(store);
+  store.ingestConversationEvent(stream.stream_id, customerEvent(101));
+  const first = store.readRoutingSnapshot(stream.stream_id);
+  const episode = store.startStandaloneEpisodeFromRoutingPlan({
+    streamId: stream.stream_id,
+    expectedStreamRevision: first.stream.stream_revision,
+    expectedThroughEventSeq: first.stream.last_event_seq,
+    expectedRoutingLedgerFingerprint: first.routing_ledger_fingerprint,
+    constraintLatches: [{
+      latch_class: 'RETURN_CASE',
+      source_event_seq: 1,
+    }],
+    constraintBasisEventSeqs: [1],
+  }).episode;
+
+  for (const reason of [
+    'completed',
+    'replaced',
+    'non_actionable_ack',
+    'superseded',
+    'expired',
+  ]) {
+    expectCode(() => store.closeEpisode(episode.episode_id, {
+      reason,
+      expectedVersion: episode.version,
+    }), 'FIRST_LINE_PENDING_HUMAN_LATCH');
+    const stillActive = store.getEpisode(episode.episode_id);
+    assert.equal(stillActive.state, 'active');
+    assert.equal(stillActive.version, episode.version);
+    assert.equal(stillActive.close_reason, null);
+  }
+
+  store.ingestConversationEvent(stream.stream_id, customerEvent(102));
+  const later = store.readRoutingSnapshot(stream.stream_id);
+  expectCode(() => store.startStandaloneEpisodeFromRoutingPlan({
+    streamId: stream.stream_id,
+    expectedStreamRevision: later.stream.stream_revision,
+    expectedThroughEventSeq: later.stream.last_event_seq,
+    expectedRoutingLedgerFingerprint: later.routing_ledger_fingerprint,
+    expectedEpisodeId: episode.episode_id,
+    expectedEpisodeVersion: episode.version,
+  }), 'FIRST_LINE_PENDING_HUMAN_LATCH');
+  expectCode(() => store.preparePublicAction({
+    streamId: stream.stream_id,
+    episodeId: episode.episode_id,
+    expectedEpisodeVersion: episode.version,
+    preparedStreamRevision: later.stream.stream_revision,
+    actionType: 'ANSWER',
+    basisEventSeqs: [2],
+    deadlineAt: NOW + 60_000,
+  }), 'FIRST_LINE_PENDING_HUMAN_LATCH');
+  assert.equal(
+    store.db.prepare("SELECT COUNT(*) AS n FROM public_actions WHERE state='SENDING'").get().n,
+    0
+  );
+});
+
 test('closed latched episode never leaks latch state into later episode', t => {
   let episodeNumber = 0;
   const { store } = tempStore(t, {
