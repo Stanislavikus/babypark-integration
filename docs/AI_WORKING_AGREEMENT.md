@@ -1,15 +1,15 @@
 # AI Working Agreement — babypark-integration
 
-Status: authoritative repository governance for AI-assisted work in this repo **after merge to `main`**.
+Status: authoritative repository governance for AI-assisted work in this repo **after merge to canonical `main`**.
 
-Scope: BabyPark AI First Line in `Stanislavikus/babypark-integration` only. `babypark-b2b` is an absolute repository boundary: never read, import, copy, or reuse its governance, files, examples, or assumptions for this project. Changing that boundary requires a reviewed amendment to this agreement; task-level justification is never enough.
+Scope: the **process/governance rules in this agreement are repository-wide** for all AI-assisted work in `Stanislavikus/babypark-integration` (Gateway, Drupal/exporter, Catalog, Knowledge, AI First Line, and future components). Domain rules that explicitly name Chatwoot, customer-facing AI, or another component apply only when that component is in scope. `babypark-b2b` is an absolute repository boundary: never read, import, copy, or reuse its governance, files, examples, or assumptions for this project. Changing that boundary requires a reviewed amendment to this agreement; task-level justification is never enough.
 
 ## 1. Requirements first, then implementation order
 
 Before choosing an implementation, identify the complete applicable frozen requirements and invariants for the bounded slice. They define what counts as a fit.
 
 Evaluate implementation options in this order and stop at the first option that satisfies **all** applicable requirements:
-1. verified Chatwoot 4.18 native capability from the actual installed source;
+1. verified native capability of the component/platform in scope; for Chatwoot work this specifically means Chatwoot 4.18 capability verified against the actual installed source;
 2. existing repo capability / frozen contract that already satisfies the requirement;
 3. real, actively maintained OSS compliant with this agreement;
 4. custom BabyPark code as the last resort.
@@ -27,10 +27,12 @@ Every new or modified documentation file that may participate in gating work mus
 - `Applies to`: the bounded system/slice or `repository-wide`;
 - `Supersedes`: exact predecessor(s) or `none`.
 
-Authority resolution order:
+Authority resolution order applies to the **merged canonical tree**:
 1. explicit in-document status controls;
 2. citation from an already normative document determines **applicability**, not status;
 3. otherwise the document is **UNCLASSIFIED** and cannot authorize behavior until classified.
+
+An unmerged branch-local addition or amendment that declares itself `NORMATIVE` / `FROZEN` is still only a **proposal** during review. The target/base merged contract remains authority until merge. A proposed new contract with no predecessor is governed by this agreement plus the existing applicable merged contracts and cannot authorize its own review or waive a base invariant.
 
 Filename prefixes never confer authority. Explicit EVIDENCE / NON-NORMATIVE / HISTORICAL status always beats a filename family. Therefore `AI_FIRST_LINE_C3_TRACEABILITY.md`, which self-declares implementation evidence/non-normative, cannot become normative merely because it starts with `AI_FIRST_LINE_`.
 
@@ -41,6 +43,18 @@ Every gating review must be able to classify each document it relies on exactly 
 `docs/AI_WORKING_AGREEMENT.md` is the single repository source of process/governance authority once merged to `main`.
 
 A correction/delta must be merged into its base normative document in the same change. Never leave a second standalone "also normative" delta file behind.
+
+### 2.1 Canonical governance source and pinning
+
+Never trust a local remote name such as `origin` by name alone. Before reading governance, verify that the source resolves to the canonical repository identity `Stanislavikus/babypark-integration` (GitHub HTTPS/SSH forms are equivalent) or use an authenticated connector/API targeting that exact repository.
+
+For every gating inventory/verification/confirmation pass, record the governance authority tuple:
+
+`canonical repository → canonical main commit → docs/AI_WORKING_AGREEMENT.md blob SHA`
+
+Fetch/read it without moving the campaign branch/base. Both zero-BLOCKER passes required by §7.1 must use the **same governance authority tuple** as well as the same campaign HEAD/tree/base. If canonical `main` advances before confirmation, cancel the closure and restart under the newly fetched canonical governance authority rather than mixing versions.
+
+A fork/remapped `origin` is never governance authority merely because it has a branch named `main`.
 
 ## 3. OSS-first check
 
@@ -102,9 +116,10 @@ Every gating review must provide, per finding:
 "Looks fine" / "no major issues" is not a gate result.
 
 Merge requires:
-- independently re-confirmed exact HEAD/tree/base;
-- exact pass/fail/cancelled test counts;
-- any claimed pre-existing failure reproduced on a clean checkout of the exact base;
+- independently re-confirmed exact HEAD/tree/base **and the governance authority tuple from §2.1**;
+- a required-verification manifest derived from applicable traceability/component contracts before the final gate, listing every required command/suite/check;
+- every manifest entry rerun against the final exact HEAD/tree/base, with all terminal outcomes accounted for: PASS / FAIL / SKIPPED / TODO / CANCELLED (or tool-equivalent);
+- no applicable command/suite omitted and no undisposed non-PASS outcome. A pre-existing failure is non-blocking only after the exact same failure is reproduced on a clean checkout of the exact base and explicitly classified/dispositioned in review; silent skips/TODOs are never success;
 - traceability terminal under §6;
 - zero open BLOCKERs under §7.1;
 - explicit owner go-ahead.
@@ -121,7 +136,7 @@ Do not default to a serial "find one blocker → fix → review again" loop.
 
 **Verification pass.** On the new exact HEAD/tree/base, verify every prior blocker and continue searching the whole applicable surface for additional independent blocker classes. If any blocker remains, classify it, batch-fix the complete known set, and repeat verification.
 
-**Finite zero-blocker closure.** When an exhaustive verification first reports zero BLOCKERs, run one separately triggered **independent exhaustive confirmation** on the **unchanged exact HEAD/tree/base**. The blocker gate closes only if that confirmation also reports zero BLOCKERs. That confirmation is the required re-verification and does not recursively require another clean pass. If it finds a blocker, batch-fix and restart the verification cycle on the new tree.
+**Finite zero-blocker closure.** When an exhaustive verification first reports zero BLOCKERs, run one separately triggered **independent exhaustive confirmation** on the **unchanged exact HEAD/tree/base and unchanged governance authority tuple from §2.1**. The blocker gate closes only if that confirmation also reports zero BLOCKERs. That confirmation is the required re-verification and does not recursively require another clean pass. If it finds a blocker, or canonical governance changes before confirmation, batch-fix/re-pin as applicable and restart the verification cycle.
 
 One clean pass is evidence, not proof. The explicit independent confirmation above is the finite stopping rule.
 
@@ -160,10 +175,12 @@ Ordinary product-scope exclusions may be reopened only by a separately justified
 
 ## 11. Amending this agreement
 
-The agreement currently merged to `origin/main` remains authoritative until an amendment is reviewed and merged.
+The agreement currently merged to canonical `main` remains authoritative until an amendment is reviewed and merged.
+
+**First-adoption exception:** if canonical target/base does not yet contain `docs/AI_WORKING_AGREEMENT.md`, the inaugural adoption is governed by the owner-approved external Project/Custom Instruction fallback that was already in force before the adoption branch was created, plus existing merged repo contracts. Record that fallback authority verbatim or by immutable owner-approved reference in the PR/checkpoint. The proposed agreement remains non-authoritative until explicit owner-approved merge. After first adoption this exception is dormant.
 
 If a branch changes `docs/AI_WORKING_AGREEMENT.md`:
-- the agreement from the branch's exact target/base governs review of the amendment;
+- when the target/base already contains the agreement, that exact target/base version governs review;
 - the branch version is the **proposed artifact**, not active governance;
 - the proposal cannot authorize its own merge or relax its own review requirements.
 
@@ -177,12 +194,14 @@ External Project/Custom Instructions are a short loader/fallback, not a second c
 
 For normal repo work:
 1. list `docs/` fresh;
-2. read `docs/AI_WORKING_AGREEMENT.md` from current `origin/main` for process/governance;
-3. keep the campaign's exact HEAD/base pinned — reading governance from `origin/main` does **not** move, merge, rebase, or re-pin the campaign.
+2. authenticate the governance source as canonical `Stanislavikus/babypark-integration` under §2.1;
+3. fetch/read `docs/AI_WORKING_AGREEMENT.md` from canonical current `main`, recording its commit + blob SHA;
+4. keep the campaign's exact HEAD/base pinned — reading governance does **not** move, merge, rebase, or re-pin the campaign.
 
 If the current branch itself changes this agreement, read both:
-- the agreement from the branch's exact target/base — it governs the review;
+- the agreement from the branch's exact target/base when it exists — it governs the review;
 - the proposed branch version — it is the artifact being reviewed.
+For the inaugural adoption where the target/base lacks the file, use §11's explicitly recorded pre-existing fallback authority; never let the proposed file govern itself.
 
 If cached memory, chat history, or an external instruction conflicts with the merged git agreement, the merged agreement wins. A session-only owner constraint is valid only within §11's additive/tighter limits.
 
@@ -202,9 +221,16 @@ Any amendment/review of this agreement must explicitly exercise these cases:
 | `AI_FIRST_LINE_C3_TRACEABILITY.md` filename looks normative but file self-declares evidence/non-normative | EVIDENCE, not authority |
 | Execution/delivery store mutates through its frozen state/lease/token CAS rather than `expectedVersion` | COMPLIANT |
 | Fresh clone lacks required deployed-source/runtime verification access | DOCUMENTED HALT; no inference |
+| Inaugural adoption target/base has no agreement file | pre-existing owner-approved external fallback governs; proposal remains non-authoritative until merge |
+| Local `origin` is remapped to a fork | REJECTED as governance source; authenticate canonical `Stanislavikus/babypark-integration` |
+| Canonical governance commit/blob changes between first zero and confirmation | CLOSURE CANCELLED; restart under new governance tuple |
+| Branch-local product contract declares itself `FROZEN/NORMATIVE` before merge | PROPOSAL ONLY; merged target/base contract still governs review |
+| First Line change | repository-wide process rules + applicable First Line domain rules apply |
+| Non-First-Line Gateway/Drupal/Catalog change | repository-wide process rules apply; unrelated First Line domain rules do not |
+| Required verification suite is omitted, skipped/TODO/cancelled without disposition, or run on non-final tree | MERGE BLOCKED |
 | Amendment branch changes this file before merge | target/base agreement governs; proposal is non-authoritative |
 | External/chat instruction attempts to weaken merged safety/merge rules | REJECTED; only additive/tighter session constraint allowed |
 | First exhaustive verification reports zero BLOCKERs | NOT YET CLOSED |
-| Independent exhaustive confirmation on unchanged exact tree also reports zero BLOCKERs | BLOCKER GATE CLOSED |
+| Independent exhaustive confirmation on unchanged exact tree **and governance tuple** also reports zero BLOCKERs | BLOCKER GATE CLOSED |
 
 A governance change that cannot produce the required result for every applicable row above is itself BLOCKING.
