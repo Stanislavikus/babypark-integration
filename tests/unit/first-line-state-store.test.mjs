@@ -59,11 +59,11 @@ function customerEvent(id, overrides = {}) {
   };
 }
 
-test('schema v2 is private, attested, and uses explicit busy timeout', t => {
+test('schema v3 is private, attested, and uses explicit busy timeout', t => {
   const { store, file } = tempStore(t);
-  assert.equal(SCHEMA_VERSION, 2);
+  assert.equal(SCHEMA_VERSION, 3);
   assert.equal(fs.statSync(file).mode & 0o777, 0o600);
-  assert.equal(store.db.prepare('PRAGMA user_version').get().user_version, 2);
+  assert.equal(store.db.prepare('PRAGMA user_version').get().user_version, 3);
   assert.equal(store.db.prepare('PRAGMA busy_timeout').get().timeout, BUSY_TIMEOUT_MS);
 
   const tables = new Set(store.db.prepare(
@@ -71,7 +71,7 @@ test('schema v2 is private, attested, and uses explicit busy timeout', t => {
   ).all().map(row => row.name));
   for (const name of [
     'conversation_streams','conversation_events','episodes','episode_slots',
-    'public_actions','public_action_candidates',
+    'episode_constraint_latches','public_actions','public_action_candidates',
   ]) assert.equal(tables.has(name), true, name);
 });
 
@@ -634,5 +634,629 @@ test('mixed-slot CLARIFY reservation is rejected before clarification budget mut
     store.db.prepare('SELECT COUNT(*) AS n FROM public_actions WHERE stream_id=?')
       .get(stream.stream_id).n,
     0
+  );
+});
+
+test('explicit v2 to v3 migration is additive and preserves existing state', t => {
+  const { store, file } = tempStore(t);
+  const stream = makeStream(store);
+  store.ingestConversationEvent(stream.stream_id, customerEvent(101));
+  const episode = store.beginEpisode({ streamId: stream.stream_id });
+  store.setStableSlots(
+    episode.episode_id,
+    { product_id: PRODUCT_1 },
+    { expectedVersion: episode.version, derivedThroughEventSeq: 1 }
+  );
+  store.close();
+
+  const raw = new DatabaseSync(file);
+  raw.exec('DROP TABLE episode_constraint_latches');
+  raw.exec('PRAGMA user_version=2');
+  raw.prepare('UPDATE metadata SET schema_version=2 WHERE singleton=1').run();
+  raw.close();
+
+  const migrated = FirstLineStateStore.migrateV2ToV3(file, {
+    now: () => NOW + 1,
+  });
+  t.after(() => { try { migrated.close(); } catch {} });
+
+  assert.equal(migrated.db.prepare('PRAGMA user_version').get().user_version, 3);
+  assert.equal(
+    migrated.db.prepare('SELECT schema_version FROM metadata WHERE singleton=1')
+      .get().schema_version,
+    3
+  );
+  assert.equal(
+    migrated.getEpisode(episode.episode_id).stable_slots.product_id.value,
+    PRODUCT_1
+  );
+  assert.equal(migrated.listEpisodeConstraintLatches(episode.episode_id).length, 0);
+});
+
+test('pending constraint latch blocks standalone replacement and public action preparation', t => {
+  const { store } = tempStore(t);
+  const stream = makeStream(store);
+  store.ingestConversationEvent(stream.stream_id, customerEvent(101));
+  const projection = store.readRoutingSnapshot(stream.stream_id);
+  const transition = store.startStandaloneEpisodeFromRoutingPlan({
+    streamId: stream.stream_id,
+    expectedStreamRevision: projection.stream.stream_revision,
+    expectedThroughEventSeq: projection.stream.last_event_seq,
+    expectedRoutingLedgerFingerprint: projection.routing_ledger_fingerprint,
+    constraintLatches: [{
+      latch_class: 'UNSUPPORTED_AGE_SUITABILITY',
+      source_event_seq: 1,
+    }],
+    constraintBasisEventSeqs: [1],
+  });
+
+  assert.deepEqual(
+    store.listEpisodeConstraintLatches(transition.episode.episode_id)
+      .map(item => [item.latch_class, item.first_event_seq]),
+    [['UNSUPPORTED_AGE_SUITABILITY', 1]]
+  );
+
+  store.ingestConversationEvent(stream.stream_id, customerEvent(102));
+  const later = store.readRoutingSnapshot(stream.stream_id);
+
+  expectCode(() => store.startStandaloneEpisodeFromRoutingPlan({
+    streamId: stream.stream_id,
+    expectedStreamRevision: later.stream.stream_revision,
+    expectedThroughEventSeq: later.stream.last_event_seq,
+    expectedRoutingLedgerFingerprint: later.routing_ledger_fingerprint,
+    expectedEpisodeId: transition.episode.episode_id,
+    expectedEpisodeVersion: transition.episode.version,
+  }), 'FIRST_LINE_PENDING_HUMAN_LATCH');
+
+  expectCode(() => store.preparePublicAction({
+    streamId: stream.stream_id,
+    episodeId: transition.episode.episode_id,
+    expectedEpisodeVersion: transition.episode.version,
+    preparedStreamRevision: later.stream.stream_revision,
+    actionType: 'ANSWER',
+    basisEventSeqs: [2],
+    deadlineAt: NOW + 60_000,
+  }), 'FIRST_LINE_PENDING_HUMAN_LATCH');
+});
+
+test('constraint latch set is monotonic and duplicate class is idempotent', t => {
+  const { store } = tempStore(t);
+  const stream = makeStream(store);
+  store.ingestConversationEvent(stream.stream_id, customerEvent(101));
+  const projection = store.readRoutingSnapshot(stream.stream_id);
+  const transition = store.startStandaloneEpisodeFromRoutingPlan({
+    streamId: stream.stream_id,
+    expectedStreamRevision: projection.stream.stream_revision,
+    expectedThroughEventSeq: projection.stream.last_event_seq,
+    expectedRoutingLedgerFingerprint: projection.routing_ledger_fingerprint,
+  });
+
+  const snapshot = store.readRoutingSnapshot(stream.stream_id);
+  const first = store.commitConstraintLatchesFromRoutingPlan({
+    streamId: stream.stream_id,
+    expectedStreamRevision: snapshot.stream.stream_revision,
+    expectedThroughEventSeq: snapshot.stream.last_event_seq,
+    expectedRoutingLedgerFingerprint: snapshot.routing_ledger_fingerprint,
+    expectedEpisodeId: transition.episode.episode_id,
+    expectedEpisodeVersion: transition.episode.version,
+    constraintLatches: [
+      { latch_class: 'UNSUPPORTED_EXCLUSION', source_event_seq: 1 },
+      { latch_class: 'SUBJECTIVE_RECOMMENDATION', source_event_seq: 1 },
+    ],
+    constraintBasisEventSeqs: [1],
+  });
+  assert.equal(first.changed, true);
+  assert.equal(first.episode.version, transition.episode.version + 1);
+  assert.deepEqual(
+    first.latches.map(item => item.latch_class),
+    ['SUBJECTIVE_RECOMMENDATION', 'UNSUPPORTED_EXCLUSION']
+  );
+
+  const duplicate = store.commitConstraintLatchesFromRoutingPlan({
+    streamId: stream.stream_id,
+    expectedStreamRevision: snapshot.stream.stream_revision,
+    expectedThroughEventSeq: snapshot.stream.last_event_seq,
+    expectedRoutingLedgerFingerprint: snapshot.routing_ledger_fingerprint,
+    expectedEpisodeId: transition.episode.episode_id,
+    expectedEpisodeVersion: first.episode.version,
+    constraintLatches: [
+      { latch_class: 'UNSUPPORTED_EXCLUSION', source_event_seq: 1 },
+    ],
+    constraintBasisEventSeqs: [1],
+  });
+  assert.equal(duplicate.changed, false);
+  assert.equal(duplicate.episode.version, first.episode.version);
+});
+
+test('constraint latch provenance outside routed open-turn basis is rejected atomically', t => {
+  const { store } = tempStore(t);
+  const stream = makeStream(store);
+  store.ingestConversationEvent(stream.stream_id, customerEvent(101));
+  store.ingestConversationEvent(stream.stream_id, customerEvent(102));
+  const snapshot = store.readRoutingSnapshot(stream.stream_id);
+
+  expectCode(() => store.startStandaloneEpisodeFromRoutingPlan({
+    streamId: stream.stream_id,
+    expectedStreamRevision: snapshot.stream.stream_revision,
+    expectedThroughEventSeq: snapshot.stream.last_event_seq,
+    expectedRoutingLedgerFingerprint: snapshot.routing_ledger_fingerprint,
+    constraintLatches: [{
+      latch_class: 'UNSUPPORTED_EXCLUSION',
+      source_event_seq: 1,
+    }],
+    constraintBasisEventSeqs: [2],
+  }), 'FIRST_LINE_CONSTRAINT_LATCH_PROVENANCE_INVALID');
+
+  assert.equal(store.loadActiveEpisode(stream.stream_id), null);
+});
+
+test('v3 refuses to create legacy generic money clarification reservations', t => {
+  const { store } = tempStore(t);
+  const stream = makeStream(store);
+  store.ingestConversationEvent(stream.stream_id, customerEvent(101));
+  const episode = store.beginEpisode({ streamId: stream.stream_id });
+  expectCode(() => store.preparePublicAction({
+    streamId: stream.stream_id,
+    episodeId: episode.episode_id,
+    expectedEpisodeVersion: episode.version,
+    preparedStreamRevision: 1,
+    actionType: 'CLARIFY',
+    basisEventSeqs: [1],
+    requestedSlot: 'money',
+    deadlineAt: NOW + 60_000,
+  }), 'FIRST_LINE_CLARIFICATION_INVALID');
+});
+
+
+test('latch committed after action preparation prevents GATING to SENDING', t => {
+  const { store } = tempStore(t);
+  const stream = makeStream(store);
+  store.ingestConversationEvent(stream.stream_id, customerEvent(101));
+  const episode = store.beginEpisode({ streamId: stream.stream_id });
+  const action = store.preparePublicAction({
+    streamId: stream.stream_id,
+    episodeId: episode.episode_id,
+    expectedEpisodeVersion: episode.version,
+    preparedStreamRevision: 1,
+    actionType: 'ANSWER',
+    basisEventSeqs: [1],
+    deadlineAt: NOW + 60_000,
+  });
+
+  const snapshot = store.readRoutingSnapshot(stream.stream_id);
+  const latched = store.commitConstraintLatchesFromRoutingPlan({
+    streamId: stream.stream_id,
+    expectedStreamRevision: snapshot.stream.stream_revision,
+    expectedThroughEventSeq: snapshot.stream.last_event_seq,
+    expectedRoutingLedgerFingerprint: snapshot.routing_ledger_fingerprint,
+    expectedEpisodeId: episode.episode_id,
+    expectedEpisodeVersion: episode.version,
+    expectedLiveActionId: snapshot.live_public_action.action_id,
+    expectedLiveActionState: snapshot.live_public_action.state,
+    constraintLatches: [{
+      latch_class: 'UNSUPPORTED_COMPATIBILITY',
+      source_event_seq: 1,
+    }],
+    constraintBasisEventSeqs: [1],
+  });
+  assert.equal(latched.changed, true);
+
+  store.claimNextPublicAction({ leaseMs: 30_000, token: 'lease-after-latch' });
+  expectCode(
+    () => store.markActionSending(action.action_id, 'lease-after-latch'),
+    'FIRST_LINE_ACTION_STALE_EPISODE'
+  );
+  assert.equal(store.getPublicAction(action.action_id).state, 'GATING');
+});
+
+test('routing snapshot cannot commit a new latch after its ANSWER has reached SENDING', t => {
+  const { store } = tempStore(t);
+  const stream = makeStream(store);
+  store.ingestConversationEvent(stream.stream_id, customerEvent(101));
+  const episode = store.beginEpisode({ streamId: stream.stream_id });
+  const snapshot = store.readRoutingSnapshot(stream.stream_id);
+  assert.equal(snapshot.live_public_action, null);
+
+  const action = store.preparePublicAction({
+    streamId: stream.stream_id,
+    episodeId: episode.episode_id,
+    expectedEpisodeVersion: episode.version,
+    preparedStreamRevision: snapshot.stream.stream_revision,
+    actionType: 'ANSWER',
+    basisEventSeqs: [1],
+    deadlineAt: NOW + 60_000,
+  });
+  store.claimNextPublicAction({ leaseMs: 30_000, token: 'lease-before-latch' });
+  const sending = store.markActionSending(action.action_id, 'lease-before-latch');
+  assert.equal(sending.state, 'SENDING');
+
+  expectCode(() => store.commitConstraintLatchesFromRoutingPlan({
+    streamId: stream.stream_id,
+    expectedStreamRevision: snapshot.stream.stream_revision,
+    expectedThroughEventSeq: snapshot.stream.last_event_seq,
+    expectedRoutingLedgerFingerprint: snapshot.routing_ledger_fingerprint,
+    expectedEpisodeId: episode.episode_id,
+    expectedEpisodeVersion: episode.version,
+    expectedLiveActionId: snapshot.live_public_action?.action_id ?? null,
+    expectedLiveActionState: snapshot.live_public_action?.state ?? null,
+    constraintLatches: [{
+      latch_class: 'RETURN_CASE',
+      source_event_seq: 1,
+    }],
+    constraintBasisEventSeqs: [1],
+  }), 'FIRST_LINE_ROUTING_PLAN_STALE');
+
+  assert.deepEqual(store.listEpisodeConstraintLatches(episode.episode_id), []);
+  assert.equal(store.getEpisode(episode.episode_id).version, episode.version);
+  assert.equal(store.getPublicAction(action.action_id).state, 'SENDING');
+});
+
+test('new accepted event makes pending latch commit stale with no durable class', t => {
+  const { store } = tempStore(t);
+  const stream = makeStream(store);
+  store.ingestConversationEvent(stream.stream_id, customerEvent(101));
+  const first = store.readRoutingSnapshot(stream.stream_id);
+  const episode = store.startStandaloneEpisodeFromRoutingPlan({
+    streamId: stream.stream_id,
+    expectedStreamRevision: first.stream.stream_revision,
+    expectedThroughEventSeq: first.stream.last_event_seq,
+    expectedRoutingLedgerFingerprint: first.routing_ledger_fingerprint,
+  }).episode;
+
+  const plan = store.readRoutingSnapshot(stream.stream_id);
+  store.ingestConversationEvent(stream.stream_id, customerEvent(102));
+
+  expectCode(() => store.commitConstraintLatchesFromRoutingPlan({
+    streamId: stream.stream_id,
+    expectedStreamRevision: plan.stream.stream_revision,
+    expectedThroughEventSeq: plan.stream.last_event_seq,
+    expectedRoutingLedgerFingerprint: plan.routing_ledger_fingerprint,
+    expectedEpisodeId: episode.episode_id,
+    expectedEpisodeVersion: episode.version,
+    constraintLatches: [{
+      latch_class: 'ORDER_SPECIFIC',
+      source_event_seq: 1,
+    }],
+    constraintBasisEventSeqs: [1],
+  }), 'FIRST_LINE_ROUTING_PLAN_STALE');
+
+  assert.deepEqual(store.listEpisodeConstraintLatches(episode.episode_id), []);
+});
+
+test('latched episode rejects every non-HUMAN close reason and keeps later ANSWER blocked', t => {
+  const { store } = tempStore(t);
+  const stream = makeStream(store);
+  store.ingestConversationEvent(stream.stream_id, customerEvent(101));
+  const first = store.readRoutingSnapshot(stream.stream_id);
+  const episode = store.startStandaloneEpisodeFromRoutingPlan({
+    streamId: stream.stream_id,
+    expectedStreamRevision: first.stream.stream_revision,
+    expectedThroughEventSeq: first.stream.last_event_seq,
+    expectedRoutingLedgerFingerprint: first.routing_ledger_fingerprint,
+    constraintLatches: [{
+      latch_class: 'RETURN_CASE',
+      source_event_seq: 1,
+    }],
+    constraintBasisEventSeqs: [1],
+  }).episode;
+
+  for (const reason of [
+    'completed',
+    'replaced',
+    'non_actionable_ack',
+    'superseded',
+    'expired',
+  ]) {
+    expectCode(() => store.closeEpisode(episode.episode_id, {
+      reason,
+      expectedVersion: episode.version,
+    }), 'FIRST_LINE_PENDING_HUMAN_LATCH');
+    const stillActive = store.getEpisode(episode.episode_id);
+    assert.equal(stillActive.state, 'active');
+    assert.equal(stillActive.version, episode.version);
+    assert.equal(stillActive.close_reason, null);
+  }
+
+  store.ingestConversationEvent(stream.stream_id, customerEvent(102));
+  const later = store.readRoutingSnapshot(stream.stream_id);
+  expectCode(() => store.startStandaloneEpisodeFromRoutingPlan({
+    streamId: stream.stream_id,
+    expectedStreamRevision: later.stream.stream_revision,
+    expectedThroughEventSeq: later.stream.last_event_seq,
+    expectedRoutingLedgerFingerprint: later.routing_ledger_fingerprint,
+    expectedEpisodeId: episode.episode_id,
+    expectedEpisodeVersion: episode.version,
+  }), 'FIRST_LINE_PENDING_HUMAN_LATCH');
+  expectCode(() => store.preparePublicAction({
+    streamId: stream.stream_id,
+    episodeId: episode.episode_id,
+    expectedEpisodeVersion: episode.version,
+    preparedStreamRevision: later.stream.stream_revision,
+    actionType: 'ANSWER',
+    basisEventSeqs: [2],
+    deadlineAt: NOW + 60_000,
+  }), 'FIRST_LINE_PENDING_HUMAN_LATCH');
+  assert.equal(
+    store.db.prepare("SELECT COUNT(*) AS n FROM public_actions WHERE state='SENDING'").get().n,
+    0
+  );
+});
+
+test('closed latched episode never leaks latch state into later episode', t => {
+  let episodeNumber = 0;
+  const { store } = tempStore(t, {
+    episodeIdFactory: () => 'episode-' + (++episodeNumber),
+  });
+  const stream = makeStream(store);
+  store.ingestConversationEvent(stream.stream_id, customerEvent(101));
+  const first = store.readRoutingSnapshot(stream.stream_id);
+  const old = store.startStandaloneEpisodeFromRoutingPlan({
+    streamId: stream.stream_id,
+    expectedStreamRevision: first.stream.stream_revision,
+    expectedThroughEventSeq: first.stream.last_event_seq,
+    expectedRoutingLedgerFingerprint: first.routing_ledger_fingerprint,
+    constraintLatches: [{
+      latch_class: 'RETURN_CASE',
+      source_event_seq: 1,
+    }],
+    constraintBasisEventSeqs: [1],
+  }).episode;
+
+  const closed = store.closeEpisode(old.episode_id, {
+    reason: 'human_takeover',
+    expectedVersion: old.version,
+  });
+  assert.equal(closed.state, 'closed');
+  assert.deepEqual(
+    store.listEpisodeConstraintLatches(old.episode_id).map(row => row.latch_class),
+    ['RETURN_CASE']
+  );
+
+  store.ingestConversationEvent(stream.stream_id, customerEvent(102));
+  const nextPlan = store.readRoutingSnapshot(stream.stream_id);
+  const next = store.startStandaloneEpisodeFromRoutingPlan({
+    streamId: stream.stream_id,
+    expectedStreamRevision: nextPlan.stream.stream_revision,
+    expectedThroughEventSeq: nextPlan.stream.last_event_seq,
+    expectedRoutingLedgerFingerprint: nextPlan.routing_ledger_fingerprint,
+  }).episode;
+
+  assert.notEqual(next.episode_id, old.episode_id);
+  assert.deepEqual(store.listEpisodeConstraintLatches(next.episode_id), []);
+});
+
+test('v2 to v3 migration fails closed before mutation when a required source index is missing', t => {
+  const { store, file } = tempStore(t);
+  store.close();
+
+  const raw = new DatabaseSync(file);
+  raw.exec('DROP TABLE episode_constraint_latches');
+  raw.exec('DROP INDEX one_active_episode_per_stream');
+  raw.exec('PRAGMA user_version=2');
+  raw.prepare('UPDATE metadata SET schema_version=2 WHERE singleton=1').run();
+  raw.close();
+
+  expectCode(
+    () => FirstLineStateStore.migrateV2ToV3(file),
+    'FIRST_LINE_DB_MIGRATION_UNSUPPORTED'
+  );
+
+  const after = new DatabaseSync(file);
+  t.after(() => { try { after.close(); } catch {} });
+  assert.equal(after.prepare('PRAGMA user_version').get().user_version, 2);
+  assert.equal(
+    after.prepare('SELECT schema_version FROM metadata WHERE singleton=1').get().schema_version,
+    2
+  );
+  const latchTable = after.prepare(
+    "SELECT name FROM sqlite_master WHERE type='table' AND name='episode_constraint_latches'"
+  ).get();
+  assert.equal(latchTable, undefined);
+});
+
+test('schema v3 attestation rejects latch table without primary-key uniqueness', t => {
+  const { store, file } = tempStore(t);
+  store.close();
+
+  const raw = new DatabaseSync(file);
+  raw.exec('PRAGMA foreign_keys=OFF');
+  raw.exec('DROP TABLE episode_constraint_latches');
+  raw.exec(`CREATE TABLE episode_constraint_latches (
+    episode_id TEXT NOT NULL,
+    latch_class TEXT NOT NULL,
+    first_event_seq INTEGER NOT NULL,
+    created_at INTEGER NOT NULL
+  )`);
+  raw.close();
+
+  expectCode(
+    () => FirstLineStateStore.open(file),
+    'FIRST_LINE_DB_INVALID'
+  );
+});
+
+test('schema v3 attestation rejects unexpected trigger before a latch can be erased', t => {
+  const { store, file } = tempStore(t);
+  const stream = makeStream(store);
+  store.ingestConversationEvent(stream.stream_id, customerEvent(101));
+  const snapshot = store.readRoutingSnapshot(stream.stream_id);
+  const episode = store.startStandaloneEpisodeFromRoutingPlan({
+    streamId: stream.stream_id,
+    expectedStreamRevision: snapshot.stream.stream_revision,
+    expectedThroughEventSeq: snapshot.stream.last_event_seq,
+    expectedRoutingLedgerFingerprint: snapshot.routing_ledger_fingerprint,
+  }).episode;
+  store.close();
+
+  const raw = new DatabaseSync(file);
+  raw.exec(`CREATE TRIGGER malicious_v3_latch_delete
+    AFTER UPDATE ON episodes
+    BEGIN
+      DELETE FROM episode_constraint_latches WHERE episode_id=NEW.episode_id;
+    END`);
+  raw.close();
+
+  expectCode(
+    () => FirstLineStateStore.open(file),
+    'FIRST_LINE_DB_INVALID'
+  );
+
+  const after = new DatabaseSync(file);
+  t.after(() => { try { after.close(); } catch {} });
+  assert.equal(
+    after.prepare('SELECT COUNT(*) AS n FROM episode_constraint_latches WHERE episode_id=?')
+      .get(episode.episode_id).n,
+    0
+  );
+  assert.equal(
+    after.prepare(
+      "SELECT COUNT(*) AS n FROM sqlite_master WHERE type='trigger' AND name='malicious_v3_latch_delete'"
+    ).get().n,
+    1
+  );
+});
+
+test('persisted constraint latch with missing episode-stream event fails closed as corruption', t => {
+  const { store } = tempStore(t);
+  const stream = makeStream(store);
+  store.ingestConversationEvent(stream.stream_id, customerEvent(101));
+  const plan = store.readRoutingSnapshot(stream.stream_id);
+  const episode = store.startStandaloneEpisodeFromRoutingPlan({
+    streamId: stream.stream_id,
+    expectedStreamRevision: plan.stream.stream_revision,
+    expectedThroughEventSeq: plan.stream.last_event_seq,
+    expectedRoutingLedgerFingerprint: plan.routing_ledger_fingerprint,
+    constraintLatches: [{
+      latch_class: 'RETURN_CASE',
+      source_event_seq: 1,
+    }],
+    constraintBasisEventSeqs: [1],
+  }).episode;
+
+  store.db.prepare(
+    'UPDATE episode_constraint_latches SET first_event_seq=999 WHERE episode_id=?'
+  ).run(episode.episode_id);
+
+  expectCode(
+    () => store.listEpisodeConstraintLatches(episode.episode_id),
+    'FIRST_LINE_DB_CORRUPT'
+  );
+});
+
+
+test('active episode rejects detached customer-visible action preparation', t => {
+  const { store } = tempStore(t);
+  const stream = makeStream(store);
+  store.ingestConversationEvent(stream.stream_id, customerEvent(101));
+  store.beginEpisode({ streamId: stream.stream_id });
+
+  expectCode(() => store.preparePublicAction({
+    streamId: stream.stream_id,
+    preparedStreamRevision: 1,
+    actionType: 'ANSWER',
+    basisEventSeqs: [1],
+    deadlineAt: NOW + 60_000,
+  }), 'FIRST_LINE_ACTION_EPISODE_REQUIRED');
+
+  assert.equal(
+    store.db.prepare('SELECT COUNT(*) AS n FROM public_actions WHERE stream_id=?')
+      .get(stream.stream_id).n,
+    0
+  );
+});
+
+test('legacy detached prepared action cannot reach SENDING after active episode latches', t => {
+  const { store } = tempStore(t);
+  const stream = makeStream(store);
+  store.ingestConversationEvent(stream.stream_id, customerEvent(101));
+  const episode = store.beginEpisode({ streamId: stream.stream_id });
+
+  const action = store.preparePublicAction({
+    streamId: stream.stream_id,
+    episodeId: episode.episode_id,
+    expectedEpisodeVersion: episode.version,
+    preparedStreamRevision: 1,
+    actionType: 'ANSWER',
+    basisEventSeqs: [1],
+    deadlineAt: NOW + 60_000,
+  });
+
+  // Simulate a legacy/corrupt detached durable row that predates the v3 fence.
+  store.db.prepare(
+    'UPDATE public_actions SET episode_id=NULL,episode_version=NULL WHERE action_id=?'
+  ).run(action.action_id);
+
+  const snapshot = store.readRoutingSnapshot(stream.stream_id);
+  store.commitConstraintLatchesFromRoutingPlan({
+    streamId: stream.stream_id,
+    expectedStreamRevision: snapshot.stream.stream_revision,
+    expectedThroughEventSeq: snapshot.stream.last_event_seq,
+    expectedRoutingLedgerFingerprint: snapshot.routing_ledger_fingerprint,
+    expectedEpisodeId: episode.episode_id,
+    expectedEpisodeVersion: episode.version,
+    expectedLiveActionId: snapshot.live_public_action.action_id,
+    expectedLiveActionState: snapshot.live_public_action.state,
+    constraintLatches: [{
+      latch_class: 'UNSUPPORTED_EXCLUSION',
+      source_event_seq: 1,
+    }],
+    constraintBasisEventSeqs: [1],
+  });
+
+  store.claimNextPublicAction({ leaseMs: 30_000, token: 'legacy-detached' });
+  expectCode(
+    () => store.markActionSending(action.action_id, 'legacy-detached'),
+    'FIRST_LINE_ACTION_STALE_EPISODE'
+  );
+  assert.equal(store.getPublicAction(action.action_id).state, 'GATING');
+});
+
+test('v2 migration rejects unexpected trigger before versions or public actions mutate', t => {
+  const { store, file } = tempStore(t);
+  const stream = makeStream(store);
+  store.ingestConversationEvent(stream.stream_id, customerEvent(101));
+  const action = store.preparePublicAction({
+    streamId: stream.stream_id,
+    preparedStreamRevision: 1,
+    actionType: 'ANSWER',
+    basisEventSeqs: [1],
+    deadlineAt: NOW + 60_000,
+  });
+  store.close();
+
+  const raw = new DatabaseSync(file);
+  raw.exec('DROP TABLE episode_constraint_latches');
+  raw.exec('PRAGMA user_version=2');
+  raw.prepare('UPDATE metadata SET schema_version=2 WHERE singleton=1').run();
+  raw.exec(`CREATE TRIGGER malicious_v2_trigger
+    AFTER UPDATE OF schema_version ON metadata
+    BEGIN
+      DELETE FROM public_actions;
+    END`);
+  raw.close();
+
+  expectCode(
+    () => FirstLineStateStore.migrateV2ToV3(file),
+    'FIRST_LINE_DB_MIGRATION_UNSUPPORTED'
+  );
+
+  const after = new DatabaseSync(file);
+  t.after(() => { try { after.close(); } catch {} });
+  assert.equal(after.prepare('PRAGMA user_version').get().user_version, 2);
+  assert.equal(
+    after.prepare('SELECT schema_version FROM metadata WHERE singleton=1')
+      .get().schema_version,
+    2
+  );
+  assert.equal(
+    after.prepare('SELECT COUNT(*) AS n FROM public_actions WHERE action_id=?')
+      .get(action.action_id).n,
+    1
+  );
+  assert.equal(
+    after.prepare(
+      "SELECT COUNT(*) AS n FROM sqlite_master WHERE type='trigger' AND name='malicious_v2_trigger'"
+    ).get().n,
+    1
   );
 });

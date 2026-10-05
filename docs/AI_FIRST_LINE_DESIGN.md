@@ -1088,6 +1088,19 @@ When the system presents candidates, the next customer message may only:
 - choose one of the presented candidates;
 - or fill the explicitly requested missing slot.
 
+For v1 price-ceiling clarification, the requested slot is concrete:
+`max_price_minor`. A successful MONEY reply supplies one exact UAH amount and
+commits `max_price_minor` plus `currency=UAH`.
+
+The historical generic requested slot `money` is not semantically sufficient
+because it loses min/max direction across the clarification boundary. v3 may read
+legacy persisted `money` for migration compatibility, but new CLARIFY actions
+MUST NOT create it and a pending legacy `money` reservation fails closed rather
+than guessing direction.
+
+`min_price_minor` remains an allowed stable customer constraint, but Slice C v1
+does not invent a lower-bound money clarification without a frozen requirement.
+
 Previously resolved stable identifier slots remain fixed unless the user explicitly changes them.
 
 Clarification counting is prompt-based, not attempt/round-based.

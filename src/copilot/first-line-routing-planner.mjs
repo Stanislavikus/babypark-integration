@@ -1,9 +1,16 @@
 import {
+  isCertifiedRoutingSnapshot,
   MAX_OPEN_TURN_EVENTS,
   ROUTING_SNAPSHOT_SCHEMA,
 } from './first-line-state-store.mjs';
 
 export const OPEN_TURN_PROJECTION_SCHEMA = 'bp.first-line.open-turn-projection/1';
+
+const certifiedOpenTurnProjections = new WeakSet();
+
+export function isCertifiedOpenTurnProjection(value) {
+  return Boolean(value && typeof value === 'object' && certifiedOpenTurnProjections.has(value));
+}
 
 const BLOCKING_PUBLIC_KINDS = new Set([
   'OTHER_BOT_PUBLIC_REPLY',
@@ -39,6 +46,10 @@ function nonNegativeInteger(value, field) {
 }
 
 function requireSnapshot(snapshot) {
+  if (!isCertifiedRoutingSnapshot(snapshot)) {
+    fail('FIRST_LINE_ROUTING_INPUT_INVALID',
+      'routing snapshot must be a transient certified state-store snapshot');
+  }
   if (!snapshot || typeof snapshot !== 'object' || Array.isArray(snapshot) ||
       snapshot.schema !== ROUTING_SNAPSHOT_SCHEMA ||
       !snapshot.stream || typeof snapshot.stream !== 'object' ||
@@ -89,6 +100,11 @@ function boundaryDto(entry) {
   });
 }
 
+function certifyProjection(value) {
+  certifiedOpenTurnProjections.add(value);
+  return value;
+}
+
 function resultBase(snapshot) {
   return {
     schema: OPEN_TURN_PROJECTION_SCHEMA,
@@ -104,28 +120,28 @@ function resultBase(snapshot) {
 }
 
 function unprovable(snapshot, reason, blocker = null) {
-  return Object.freeze({
+  return certifyProjection(Object.freeze({
     ...resultBase(snapshot),
     code: 'TOPOLOGY_UNPROVABLE',
     reason,
     open_turn: null,
     boundary: boundaryDto(blocker),
-  });
+  }));
 }
 
 function noOpenTurn(snapshot, reason, boundary = null) {
-  return Object.freeze({
+  return certifyProjection(Object.freeze({
     ...resultBase(snapshot),
     code: 'NO_OPEN_TURN',
     reason,
     open_turn: null,
     boundary: boundaryDto(boundary),
-  });
+  }));
 }
 
 function openTurn(snapshot, customerEntries, reason, boundary = null) {
   const ordered = [...customerEntries].reverse();
-  return Object.freeze({
+  return certifyProjection(Object.freeze({
     ...resultBase(snapshot),
     code: 'OPEN_TURN',
     reason,
@@ -137,7 +153,7 @@ function openTurn(snapshot, customerEntries, reason, boundary = null) {
       message_count: ordered.length,
     }),
     boundary: boundaryDto(boundary),
-  });
+  }));
 }
 
 function supportedCustomerEvent(event) {

@@ -19,7 +19,8 @@ import {
   FIRST_LINE_EXTRACTION_SCHEMA,
   FIRST_LINE_INTENT_SCHEMA_VERSION,
 } from '../../src/copilot/first-line-extraction.mjs';
-import { OPEN_TURN_PROJECTION_SCHEMA } from '../../src/copilot/first-line-routing-planner.mjs';
+import { projectOpenTurn } from '../../src/copilot/first-line-routing-planner.mjs';
+import { evaluateObjectiveConstraintLatch } from '../../src/copilot/first-line-objective-constraint-latch.mjs';
 import { FirstLineStateStore } from '../../src/copilot/first-line-state-store.mjs';
 
 const NOW = 2_000_000_000_000;
@@ -28,7 +29,6 @@ const VARIANT_1 = 'var_11111111-1111-4111-8111-111111111111';
 const VARIANT_2 = 'var_22222222-2222-4222-8222-222222222222';
 const STORE_1 = 'store_11111111-1111-4111-8111-111111111111';
 const STORE_2 = 'store_22222222-2222-4222-8222-222222222222';
-const FINGERPRINT = 'sha256:' + 'a'.repeat(64);
 
 function tempStore(t) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'clarification-selection-'));
@@ -61,14 +61,14 @@ function customerEvent(sourceMessageId) {
   };
 }
 
-function clarifyReply(sourceMessageId, sourceId) {
+function clarifyReply(sourceMessageId, sourceId, contentType = 'input_select') {
   return {
     sourceMessageId,
     eventKind: 'BABYPARK_PUBLIC_REPLY',
     messageType: 'outgoing',
     senderClass: 'configured_agent_bot',
     senderId: 7001,
-    contentType: 'input_select',
+    contentType,
     deleted: false,
     unsupported: false,
     hasAttachments: false,
@@ -76,7 +76,14 @@ function clarifyReply(sourceMessageId, sourceId) {
   };
 }
 
-function structuredSetup(t) {
+function structuredSetup(t, {
+  requestedSlot = 'store_id',
+  candidates = [
+    { slot: 'store_id', value: STORE_1 },
+    { slot: 'store_id', value: STORE_2 },
+  ],
+  replyContentType = candidates.length > 0 ? 'input_select' : 'text',
+} = {}) {
   const store = tempStore(t);
   const stream = store.ensureConversationStream({
     sourceProvider: 'chatwoot',
@@ -91,16 +98,16 @@ function structuredSetup(t) {
     preparedStreamRevision: 1,
     actionType: 'CLARIFY',
     basisEventSeqs: [1],
-    requestedSlot: 'store_id',
-    presentedCandidates: [
-      { slot: 'store_id', value: STORE_1 },
-      { slot: 'store_id', value: STORE_2 },
-    ],
+    requestedSlot,
+    presentedCandidates: candidates,
     deadlineAt: NOW + 60_000,
   });
   store.claimNextPublicAction({ leaseMs: 30_000, token: 'lease-1' });
   store.markActionSending(action.action_id, 'lease-1');
-  store.ingestConversationEvent(stream.stream_id, clarifyReply(102, action.action_id));
+  store.ingestConversationEvent(
+    stream.stream_id,
+    clarifyReply(102, action.action_id, replyContentType)
+  );
   store.confirmPublicActionFromLedger(action.action_id);
   return {
     store,
@@ -132,110 +139,13 @@ function structuredExactRead(action, value = 'bp-choice:2', overrides = {}) {
   };
 }
 
-function projection({ requestedSlot = 'variant_id', candidates = [
-  { slot: 'variant_id', value: VARIANT_1 },
-  { slot: 'variant_id', value: VARIANT_2 },
-] } = {}) {
-  return {
-    schema: OPEN_TURN_PROJECTION_SCHEMA,
-    stream_id: 'stream-1',
-    source_conversation_id: 55,
-    stream_revision: 3,
-    through_event_seq: 3,
-    plan_token: {
-      stream_id: 'stream-1',
-      stream_revision: 3,
-      through_event_seq: 3,
-      routing_ledger_fingerprint: FINGERPRINT,
-      episode_id: 'episode-1',
-      episode_version: 2,
-      live_action_id: null,
-      live_action_state: null,
-    },
-    active_episode: {
-      episode_id: 'episode-1',
-      stream_id: 'stream-1',
-      state: 'active',
-      version: 2,
-      clarification_prompts_sent: 1,
-      requested_slot: requestedSlot,
-      clarification_action_id: 'action-1',
-      stable_slots: {},
-    },
-    live_public_action: null,
-    clarification_action: {
-      action_id: 'action-1',
-      stream_id: 'stream-1',
-      episode_id: 'episode-1',
-      episode_version: 2,
-      prepared_stream_revision: 1,
-      action_type: 'CLARIFY',
-      state: 'CONFIRMED',
-      basis_event_seqs: [1],
-      requested_slot: requestedSlot,
-      presented_candidates: candidates,
-      confirmed_source_message_id: 500,
-    },
-    open_turn: {
-      event_seqs: [3],
-      source_message_ids: [501],
-      first_event_seq: 3,
-      last_event_seq: 3,
-      message_count: 1,
-    },
-    boundary: {
-      event_seq: 2,
-      source_message_id: 500,
-      event_kind: 'BABYPARK_PUBLIC_REPLY',
-      confirmed_action_id: 'action-1',
-      confirmed_action_type: 'CLARIFY',
-    },
-    code: 'OPEN_TURN',
-    reason: 'AFTER_CONFIRMED_BABYPARK_REPLY',
-  };
-}
-
-function resolution(kind, authority, text, quote = text, sourceMessageId = 501) {
-  const start = text.indexOf(quote);
-  const row = {
-    kind,
-    turn_index: 1,
-    source_message_id: sourceMessageId,
-    occurrence: 1,
-    start_utf16: start,
-    end_utf16: start + quote.length,
-    authority,
-  };
-  return {
-    schema: FIRST_LINE_RESOLUTION_SCHEMA,
-    extraction_schema: 'bp.first-line.extraction/1',
-    intent_schema_version: 'bp.first-line.intent/1',
-    intent_hint: 'UNTRUSTED_HINT',
-    language: 'uk',
-    source_conversation_id: 55,
-    source_message_ids: [sourceMessageId],
-    catalog_generation_id: 'g1',
-    knowledge_resolver_contract_version: 1,
-    used_revision_ids: [],
-    certified_spans: [{
-      kind: row.kind,
-      turn_index: row.turn_index,
-      source_message_id: row.source_message_id,
-      occurrence: row.occurrence,
-      start_utf16: row.start_utf16,
-      end_utf16: row.end_utf16,
-    }],
-    resolutions: [row],
-  };
-}
-
-function exactRead(text) {
+function exactRead(text, sourceMessageId = 501) {
   return {
     code: 'SUPPORTED_CUSTOMER_TEXT',
     sourceConversationId: 55,
-    sourceMessageId: 501,
+    sourceMessageId,
     event: {
-      sourceMessageId: 501,
+      sourceMessageId,
       eventKind: 'CUSTOMER_MESSAGE',
       messageType: 'incoming',
       senderClass: 'contact',
@@ -247,21 +157,6 @@ function exactRead(text) {
       sourceId: null,
     },
     transientContent: text,
-  };
-}
-
-function productAuthority() {
-  return {
-    status: 'RESOLVED',
-    reason: 'PRODUCT_RESOLVED',
-    resolved: {
-      canonical_product_id: PRODUCT_1,
-      canonical_variant_id: VARIANT_2,
-    },
-    candidates: [{
-      canonical_product_id: PRODUCT_1,
-      canonical_variant_id: VARIANT_2,
-    }],
   };
 }
 
@@ -333,8 +228,8 @@ function selectionKnowledge(kind, quote) {
   };
 }
 
-function boundResolution(kind, text, quote = text) {
-  const read = exactRead(text);
+function boundResolution(kind, text, quote = text, sourceMessageId = 501) {
+  const read = exactRead(text, sourceMessageId);
   const resolved = resolveFirstLineExactReads({
     extraction: {
       schema: FIRST_LINE_EXTRACTION_SCHEMA,
@@ -349,6 +244,38 @@ function boundResolution(kind, text, quote = text) {
     nowUtc: '2026-10-04T12:00:00Z',
   });
   return { read, resolved };
+}
+
+function exactBasis(t, {
+  requestedSlot = 'variant_id',
+  candidates = [
+    { slot: 'variant_id', value: VARIANT_1 },
+    { slot: 'variant_id', value: VARIANT_2 },
+  ],
+  text = 'VARIANT_2',
+  kind = 'PRODUCT',
+  quote = text,
+} = {}) {
+  const { store, stream } = structuredSetup(t, { requestedSlot, candidates });
+  store.ingestConversationEvent(stream.stream_id, customerEvent(501));
+  const projection = projectOpenTurn(store.readRoutingSnapshot(stream.stream_id));
+  const pair = boundResolution(kind, text, quote, 501);
+  const exactReads = [{ turnIndex: 1, exactRead: pair.read }];
+  const constraintProof = evaluateObjectiveConstraintLatch({
+    projection,
+    resolution: pair.resolved,
+    exactReads,
+  });
+  return { store, stream, projection, constraintProof, ...pair };
+}
+
+function proveExactFromBasis(basis, overrides = {}) {
+  return proveExactMessageClarificationSelection({
+    projection: basis.projection,
+    resolution: overrides.resolution ?? basis.resolved,
+    exactRead: overrides.exactRead ?? basis.read,
+    constraintProof: overrides.constraintProof ?? basis.constraintProof,
+  });
 }
 
 test('choice token is bounded and contains no canonical authority id', () => {
@@ -410,14 +337,9 @@ test('structured submission fails closed on wrong action, unknown value, or late
   assert.equal(stale.reason, 'CLARIFICATION_LEDGER_BOUNDARY_MISMATCH');
 });
 
-test('exact whole-message offered candidate proves selection', () => {
-  const text = 'VARIANT_2';
-  const { read, resolved } = boundResolution('PRODUCT', text);
-  const result = proveExactMessageClarificationSelection({
-    projection: projection(),
-    resolution: resolved,
-    exactRead: read,
-  });
+test('exact whole-message offered candidate proves selection only on certified C3 basis', t => {
+  const basis = exactBasis(t);
+  const result = proveExactFromBasis(basis);
   assert.equal(result.code, 'CLARIFICATION_SELECTION_PROVEN');
   assert.equal(result.evidence_class, 'EXACT_MESSAGE_SELECTION');
   assert.equal(result.reason, 'PRESENTED_CANDIDATE_SELECTED');
@@ -425,119 +347,122 @@ test('exact whole-message offered candidate proves selection', () => {
   assert.equal(result.selection.candidate_ordinal, 2);
 });
 
-test('Unicode edge whitespace is allowed but negation/punctuation/prefix/suffix are not', () => {
-  const allowed = '\u00a0\u2003VARIANT_2\u202f';
-  const allowedPair = boundResolution('PRODUCT', allowed, 'VARIANT_2');
-  assert.equal(
-    proveExactMessageClarificationSelection({
-      projection: projection(),
-      resolution: allowedPair.resolved,
-      exactRead: allowedPair.read,
-    }).code,
-    'CLARIFICATION_SELECTION_PROVEN'
+test('exact-message prover rejects caller-built routing projections before proof creation', t => {
+  const basis = exactBasis(t);
+  const forgedProjection = structuredClone(basis.projection);
+  assert.throws(
+    () => proveExactMessageClarificationSelection({
+      projection: forgedProjection,
+      resolution: basis.resolved,
+      exactRead: basis.read,
+      constraintProof: basis.constraintProof,
+    }),
+    error => error instanceof FirstLineClarificationSelectionError &&
+      /transient certified OPEN_TURN projection/.test(error.message)
   );
+});
+
+test('Unicode edge whitespace is allowed but negation/punctuation/prefix/suffix are not', t => {
+  const allowedBasis = exactBasis(t, {
+    text: '\u00a0\u2003VARIANT_2\u202f',
+    quote: 'VARIANT_2',
+  });
+  assert.equal(proveExactFromBasis(allowedBasis).code, 'CLARIFICATION_SELECTION_PROVEN');
 
   for (const text of ['не VARIANT_2', 'VARIANT_2?', 'да, VARIANT_2', 'VARIANT_2 будь ласка']) {
-    const pair = boundResolution('PRODUCT', text, 'VARIANT_2');
-    const result = proveExactMessageClarificationSelection({
-      projection: projection(),
-      resolution: pair.resolved,
-      exactRead: pair.read,
-    });
+    const basis = exactBasis(t, { text, quote: 'VARIANT_2' });
+    const result = proveExactFromBasis(basis);
     assert.equal(result.code, 'NO_CLARIFICATION_SELECTION', text);
     assert.equal(result.reason, 'EXACT_SELECTION_SURROUNDING_TEXT', text);
   }
 });
 
-test('exact requested store and money values fill only the requested slot', () => {
-  const storeText = 'STORE ONE';
-  const storePair = boundResolution('STORE', storeText);
-  const storeResult = proveExactMessageClarificationSelection({
-    projection: projection({ requestedSlot: 'store_id', candidates: [] }),
-    resolution: storePair.resolved,
-    exactRead: storePair.read,
+test('exact requested store and max-price values fill only the requested slot', t => {
+  const storeBasis = exactBasis(t, {
+    requestedSlot: 'store_id',
+    candidates: [],
+    text: 'STORE ONE',
+    kind: 'STORE',
   });
+  const storeResult = proveExactFromBasis(storeBasis);
   assert.equal(storeResult.reason, 'REQUESTED_SLOT_FILLED');
   assert.equal(storeResult.selection.value, STORE_1);
 
-  const moneyText = '1000 грн';
-  const moneyPair = boundResolution('MONEY', moneyText);
-  const moneyResult = proveExactMessageClarificationSelection({
-    projection: projection({ requestedSlot: 'money', candidates: [] }),
-    resolution: moneyPair.resolved,
-    exactRead: moneyPair.read,
+  const moneyBasis = exactBasis(t, {
+    requestedSlot: 'max_price_minor',
+    candidates: [],
+    text: '1000 грн',
+    kind: 'MONEY',
   });
+  const moneyResult = proveExactFromBasis(moneyBasis);
+  assert.equal(moneyResult.selection.slot, 'max_price_minor');
   assert.deepEqual(moneyResult.selection.value, { currency: 'UAH', minor_units: 100000 });
 });
 
-test('multi-message turn, wrong exact-read identity and malicious intent hint cannot create proof', () => {
-  const multi = projection();
-  multi.open_turn = {
-    event_seqs: [3, 4],
-    source_message_ids: [501, 502],
-    first_event_seq: 3,
-    last_event_seq: 4,
-    message_count: 2,
-  };
+test('multi-message turn and wrong exact-read identity cannot create exact selection proof', t => {
+  const setup = structuredSetup(t, {
+    requestedSlot: 'variant_id',
+    candidates: [
+      { slot: 'variant_id', value: VARIANT_1 },
+      { slot: 'variant_id', value: VARIANT_2 },
+    ],
+  });
+  setup.store.ingestConversationEvent(setup.stream.stream_id, customerEvent(501));
+  setup.store.ingestConversationEvent(setup.stream.stream_id, customerEvent(502));
+  const multiProjection = projectOpenTurn(setup.store.readRoutingSnapshot(setup.stream.stream_id));
+  const exactReads = [
+    { turnIndex: 1, exactRead: exactRead('VARIANT_2', 501) },
+    { turnIndex: 2, exactRead: exactRead('спасибо', 502) },
+  ];
+  const multiResolution = resolveFirstLineExactReads({
+    extraction: {
+      schema: FIRST_LINE_EXTRACTION_SCHEMA,
+      intent_schema_version: FIRST_LINE_INTENT_SCHEMA_VERSION,
+      intent_hint: 'UNTRUSTED_HINT',
+      language: 'uk',
+      spans: [],
+    },
+    exactReads,
+    knowledgeStore: selectionKnowledge('PRODUCT', 'VARIANT_2'),
+    catalogService: selectionCatalog(),
+    nowUtc: '2026-10-04T12:00:00Z',
+  });
+  const multiConstraint = evaluateObjectiveConstraintLatch({
+    projection: multiProjection,
+    resolution: multiResolution,
+    exactReads,
+  });
   assert.equal(
     proveExactMessageClarificationSelection({
-      projection: multi,
-      resolution: resolution('PRODUCT', productAuthority(), 'VARIANT_2'),
-      exactRead: exactRead('VARIANT_2'),
+      projection: multiProjection,
+      resolution: multiResolution,
+      exactRead: exactReads[0].exactRead,
+      constraintProof: multiConstraint,
     }).reason,
     'EXACT_SELECTION_REQUIRES_SINGLE_MESSAGE_OPEN_TURN'
   );
 
-  const wrongRead = { ...exactRead('VARIANT_2'), sourceConversationId: 99 };
-  assert.equal(
-    proveExactMessageClarificationSelection({
-      projection: projection(),
-      resolution: resolution('PRODUCT', productAuthority(), 'VARIANT_2'),
-      exactRead: wrongRead,
-    }).reason,
-    'EXACT_SELECTION_SOURCE_READ_MISMATCH'
-  );
-
-  const negated = resolution('PRODUCT', productAuthority(), 'не VARIANT_2', 'VARIANT_2');
-  negated.intent_hint = 'AFFIRMATIVE_SELECT';
-  assert.equal(
-    proveExactMessageClarificationSelection({
-      projection: projection(),
-      resolution: negated,
-      exactRead: exactRead('не VARIANT_2'),
-    }).code,
-    'NO_CLARIFICATION_SELECTION'
-  );
+  const basis = exactBasis(t);
+  const wrongRead = { ...basis.read, sourceConversationId: 99 };
+  const wrong = proveExactFromBasis(basis, { exactRead: wrongRead });
+  assert.equal(wrong.reason, 'EXACT_SELECTION_SOURCE_READ_MISMATCH');
 });
 
-test('selection proof serializes no raw body, quote, presentation label, stock or price authority', () => {
-  const pair = boundResolution('PRODUCT', 'VARIANT_2');
-  const result = proveExactMessageClarificationSelection({
-    projection: projection(),
-    resolution: pair.resolved,
-    exactRead: pair.read,
-  });
+test('selection proof serializes no raw body, quote, presentation label, stock or price authority', t => {
+  const result = proveExactFromBasis(exactBasis(t));
   const serialized = JSON.stringify(result);
   for (const forbidden of [
     'intent_hint', 'catalog_generation_id', 'stock', 'quantity', 'price', 'quote',
+    'transientContent', 'content_digest',
   ]) {
     assert.equal(serialized.includes(forbidden), false, forbidden);
   }
   assert.equal(serialized.includes(VARIANT_2), true);
 });
 
-
-test('proof output whitelists plan provenance and rejects requested-slot drift', t => {
-  const p = projection();
-  p.plan_token = { ...p.plan_token, raw_body: 'must-never-escape' };
-  const pair = boundResolution('PRODUCT', 'VARIANT_2');
-  const exact = proveExactMessageClarificationSelection({
-    projection: p,
-    resolution: pair.resolved,
-    exactRead: pair.read,
-  });
+test('proof output whitelists plan provenance and structured requested-slot drift still fails closed', t => {
+  const exact = proveExactFromBasis(exactBasis(t));
   assert.equal(exact.code, 'CLARIFICATION_SELECTION_PROVEN');
-  assert.equal(JSON.stringify(exact).includes('must-never-escape'), false);
   assert.equal(Object.hasOwn(exact.plan_token, 'raw_body'), false);
 
   const { action, snapshot } = structuredSetup(t);
@@ -551,35 +476,22 @@ test('proof output whitelists plan provenance and rejects requested-slot drift',
   assert.equal(structured.reason, 'CLARIFICATION_EPISODE_MISMATCH');
 });
 
-test('exact-message proof binds resolution to reread content without durable body digest', () => {
-  const original = boundResolution('PRODUCT', 'VARIANT_2');
-
+test('exact-message proof binds resolution to reread content without durable body digest', t => {
+  const basis = exactBasis(t);
   const sameContentReread = exactRead('VARIANT_2');
-  const same = proveExactMessageClarificationSelection({
-    projection: projection(),
-    resolution: original.resolved,
-    exactRead: sameContentReread,
-  });
+  const same = proveExactFromBasis(basis, { exactRead: sameContentReread });
   assert.equal(same.code, 'CLARIFICATION_SELECTION_PROVEN');
 
   const changedRead = exactRead('VARIANT_1');
-  const changed = proveExactMessageClarificationSelection({
-    projection: projection(),
-    resolution: original.resolved,
-    exactRead: changedRead,
-  });
+  const changed = proveExactFromBasis(basis, { exactRead: changedRead });
   assert.equal(changed.code, 'NO_CLARIFICATION_SELECTION');
   assert.equal(changed.reason, 'EXACT_SELECTION_RESOLUTION_READ_MISMATCH');
 
-  const serializedResolution = structuredClone(original.resolved);
-  const rehydrated = proveExactMessageClarificationSelection({
-    projection: projection(),
-    resolution: serializedResolution,
-    exactRead: sameContentReread,
-  });
+  const serializedResolution = structuredClone(basis.resolved);
+  const rehydrated = proveExactFromBasis(basis, { resolution: serializedResolution });
   assert.equal(rehydrated.code, 'NO_CLARIFICATION_SELECTION');
   assert.equal(rehydrated.reason, 'EXACT_SELECTION_RESOLUTION_READ_MISMATCH');
-  const serialized = JSON.stringify(original.resolved);
+  const serialized = JSON.stringify(basis.resolved);
   assert.equal(serialized.includes('transientContent'), false);
   assert.equal(serialized.includes('quote'), false);
   assert.equal(serialized.includes('content_digest'), false);

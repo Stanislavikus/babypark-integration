@@ -432,10 +432,10 @@ test('ambiguous requested-slot authority cannot be hidden by one resolved value'
   assert.equal(result.reason, 'REQUESTED_SLOT_AMBIGUOUS');
 });
 
-test('requested money is customer constraint evidence, not dynamic authority', () => {
+test('requested max price is customer constraint evidence, not dynamic authority', () => {
   const result = proveClarificationDependencyAnchor({
     projection: projection({
-      requestedSlot: 'money',
+      requestedSlot: 'max_price_minor',
       candidates: [],
     }),
     resolution: resolution([
@@ -445,10 +445,22 @@ test('requested money is customer constraint evidence, not dynamic authority', (
 
   assert.equal(result.code, 'DEPENDENCY_ANCHOR_PROVEN');
   assert.equal(result.reason, 'REQUESTED_SLOT_VALUE_REFERENCED');
+  assert.equal(result.anchor.slot, 'max_price_minor');
   assert.deepEqual(result.anchor.referenced_value, {
     currency: 'UAH',
     minor_units: 2_000_000,
   });
+});
+
+test('legacy generic money clarification never guesses min/max direction', () => {
+  const result = proveClarificationDependencyAnchor({
+    projection: projection({ requestedSlot: 'money', candidates: [] }),
+    resolution: resolution([
+      row('MONEY', 501, resolvedAuthority('MONEY', 2_000_000)),
+    ]),
+  });
+  assert.equal(result.code, 'NO_DEPENDENCY_PROOF');
+  assert.equal(result.reason, 'REQUESTED_SLOT_UNSUPPORTED');
 });
 
 test('shortlist_anchor remains unsupported until a deterministic contract exists', () => {

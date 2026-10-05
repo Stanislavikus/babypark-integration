@@ -350,43 +350,23 @@ test('unsupported customer metadata fails before semantic extraction', t => {
   assert.equal(projected.open_turn, null);
 });
 
-test('bounded suffix fails closed when complete open-turn provenance is unavailable', () => {
-  const events = Array.from({ length: MAX_OPEN_TURN_EVENTS + 1 }, (_, index) => ({
-    event: {
-      stream_id: 'stream-1',
-      event_seq: index + 1,
-      source_message_id: index + 1,
-      event_kind: 'CUSTOMER_MESSAGE',
-      message_type: 'incoming',
-      sender_class: 'contact',
-      sender_id: 9001,
-      content_type: 'text',
-      deleted: false,
-      unsupported: false,
-      has_attachments: false,
-      source_id: null,
-      accepted_at: NOW,
-    },
-    confirmed_babypark_action: null,
-  }));
+test('bounded suffix fails closed when complete open-turn provenance is unavailable', t => {
+  const { store } = tempStore(t);
+  const stream = makeStream(store);
+  for (let index = 0; index < MAX_OPEN_TURN_EVENTS + 1; index += 1) {
+    store.ingestConversationEvent(
+      stream.stream_id,
+      customerEvent(index + 1)
+    );
+  }
 
-  const projected = projectOpenTurn({
-    schema: ROUTING_SNAPSHOT_SCHEMA,
-    stream: {
-      stream_id: 'stream-1',
-      source_provider: 'chatwoot',
-      source_conversation_id: 55,
-      stream_revision: events.length,
-      last_event_seq: events.length,
-    },
-    active_episode: null,
-    live_public_action: null,
-    clarification_action: null,
-    event_suffix: events,
-    routing_ledger_fingerprint: 'sha256:' + '0'.repeat(64),
-    suffix_truncated: false,
-    max_open_turn_events: MAX_OPEN_TURN_EVENTS,
-  });
+  const snapshot = store.readRoutingSnapshot(stream.stream_id);
+  assert.equal(Object.isFrozen(snapshot), true);
+  assert.equal(Object.isFrozen(snapshot.event_suffix), true);
+  assert.equal(Object.isFrozen(snapshot.event_suffix[0]), true);
+  assert.equal(Object.isFrozen(snapshot.event_suffix[0].event), true);
+
+  const projected = projectOpenTurn(snapshot);
   assert.equal(projected.code, 'TOPOLOGY_UNPROVABLE');
   assert.equal(projected.reason, 'OPEN_TURN_EVENT_LIMIT');
 });

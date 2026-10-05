@@ -3,7 +3,12 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { DatabaseSync } from 'node:sqlite';
 
-const SCHEMA_VERSION = 2;
+const SCHEMA_VERSION = 3;
+const PREVIOUS_SCHEMA_VERSION = 2;
+const V2_SCHEMA_MASTER_SHA256 =
+  'd84094598ffb3371293f8b361f88b19b2997a7e37a79ce5226abcd62326da19e';
+const V3_SCHEMA_MASTER_SHA256 =
+  'e7a9f211d23e2439bcd63a29fb3b9ed1569e3958ca536c240af00876dd410e07';
 const BUSY_TIMEOUT_MS = 5000;
 const MAX_PRESENTED_CANDIDATES = 20;
 // A whole-conversation authorizing snapshot is unprovable at 1000 public rows;
@@ -13,6 +18,7 @@ const ROUTING_SUFFIX_FETCH_LIMIT = MAX_OPEN_TURN_EVENTS + 1;
 const ROUTING_SNAPSHOT_SCHEMA = 'bp.first-line.routing-snapshot/1';
 const EPISODE_TRANSITION_SCHEMA = 'bp.first-line.episode-transition/1';
 const EPISODE_CONTINUATION_SCHEMA = 'bp.first-line.episode-continuation/1';
+const certifiedRoutingSnapshots = new WeakSet();
 
 const LIVE_ACTION_STATES = new Set(['PREPARED', 'GATING', 'SENDING', 'UNCERTAIN']);
 const TERMINAL_ACTION_STATES = new Set(['CONFIRMED', 'STALE', 'CANCELLED', 'HANDOFF_DONE', 'NOT_SENT']);
@@ -48,12 +54,32 @@ const CANONICAL_ID_PATTERNS = Object.freeze({
   category_id: /^cat_[0-9a-f]{32}$/,
 });
 const REQUESTED_SLOTS = new Set([
-  'product_id', 'variant_id', 'category_id', 'brand_id', 'store_id', 'money', 'shortlist_anchor',
+  'product_id', 'variant_id', 'category_id', 'brand_id', 'store_id',
+  'max_price_minor', 'money', 'shortlist_anchor',
+]);
+
+const CONSTRAINT_LATCH_CLASSES = new Set([
+  'UNSUPPORTED_EXCLUSION',
+  'SUBJECTIVE_RECOMMENDATION',
+  'UNSUPPORTED_AGE_SUITABILITY',
+  'UNSUPPORTED_COMPATIBILITY',
+  'ORDER_SPECIFIC',
+  'RETURN_CASE',
+  'OTHER_UNCONSUMED_CONSTRAINT',
+]);
+const CONSTRAINT_LATCH_ORDER = Object.freeze([
+  'RETURN_CASE',
+  'ORDER_SPECIFIC',
+  'UNSUPPORTED_COMPATIBILITY',
+  'SUBJECTIVE_RECOMMENDATION',
+  'UNSUPPORTED_EXCLUSION',
+  'UNSUPPORTED_AGE_SUITABILITY',
+  'OTHER_UNCONSUMED_CONSTRAINT',
 ]);
 
 const SCHEMA = `
 PRAGMA foreign_keys=ON;
-PRAGMA user_version=2;
+PRAGMA user_version=3;
 CREATE TABLE metadata (
   singleton INTEGER PRIMARY KEY CHECK(singleton=1),
   schema_version INTEGER NOT NULL,
@@ -113,6 +139,21 @@ CREATE TABLE episode_slots (
   derived_through_event_seq INTEGER CHECK(derived_through_event_seq IS NULL OR derived_through_event_seq >= 1),
   PRIMARY KEY(episode_id, slot_name)
 );
+CREATE TABLE episode_constraint_latches (
+  episode_id TEXT NOT NULL REFERENCES episodes(episode_id) ON DELETE CASCADE,
+  latch_class TEXT NOT NULL CHECK(latch_class IN (
+    'UNSUPPORTED_EXCLUSION',
+    'SUBJECTIVE_RECOMMENDATION',
+    'UNSUPPORTED_AGE_SUITABILITY',
+    'UNSUPPORTED_COMPATIBILITY',
+    'ORDER_SPECIFIC',
+    'RETURN_CASE',
+    'OTHER_UNCONSUMED_CONSTRAINT'
+  )),
+  first_event_seq INTEGER NOT NULL CHECK(first_event_seq >= 1),
+  created_at INTEGER NOT NULL,
+  PRIMARY KEY(episode_id, latch_class)
+);
 CREATE TABLE public_actions (
   action_id TEXT PRIMARY KEY,
   stream_id TEXT NOT NULL REFERENCES conversation_streams(stream_id) ON DELETE CASCADE,
@@ -155,16 +196,46 @@ const EXPECTED_COLUMNS = Object.freeze({
   conversation_events: ['stream_id','event_seq','source_message_id','event_kind','message_type','sender_class','sender_id','content_type','deleted_flag','unsupported_flag','has_attachments','source_id','accepted_at'],
   episodes: ['episode_id','stream_id','state','version','clarification_prompts_sent','requested_slot','clarification_action_id','created_at','updated_at','closed_at','close_reason'],
   episode_slots: ['episode_id','slot_name','value_json','derived_through_event_seq'],
+  episode_constraint_latches: ['episode_id','latch_class','first_event_seq','created_at'],
   public_actions: ['action_id','stream_id','episode_id','episode_version','prepared_stream_revision','action_type','state','basis_event_seqs_json','requested_slot','lease_token','lease_expires_at','attempts','deadline_at','confirmed_source_message_id','terminal_reason','created_at','updated_at','send_started_at','confirmed_at'],
   public_action_candidates: ['action_id','slot_name','ordinal','value_json'],
 });
-const REQUIRED_INDEXES = new Set([
+const EXPECTED_COLUMNS_V2 = Object.freeze(
+  Object.fromEntries(
+    Object.entries(EXPECTED_COLUMNS)
+      .filter(([table]) => table !== 'episode_constraint_latches')
+  )
+);
+
+const LATCH_SCHEMA_SQL = `
+CREATE TABLE episode_constraint_latches (
+  episode_id TEXT NOT NULL REFERENCES episodes(episode_id) ON DELETE CASCADE,
+  latch_class TEXT NOT NULL CHECK(latch_class IN (
+    'UNSUPPORTED_EXCLUSION',
+    'SUBJECTIVE_RECOMMENDATION',
+    'UNSUPPORTED_AGE_SUITABILITY',
+    'UNSUPPORTED_COMPATIBILITY',
+    'ORDER_SPECIFIC',
+    'RETURN_CASE',
+    'OTHER_UNCONSUMED_CONSTRAINT'
+  )),
+  first_event_seq INTEGER NOT NULL CHECK(first_event_seq >= 1),
+  created_at INTEGER NOT NULL,
+  PRIMARY KEY(episode_id, latch_class)
+);
+`;
+
+const REQUIRED_INDEXES_V2 = new Set([
   'sqlite_autoindex_conversation_streams_2',
   'sqlite_autoindex_conversation_events_2',
   'one_active_episode_per_stream',
   'conversation_events_source_id',
   'one_live_public_action_per_stream',
   'sqlite_autoindex_public_actions_2',
+]);
+const REQUIRED_INDEXES = new Set([
+  ...REQUIRED_INDEXES_V2,
+  'sqlite_autoindex_episode_constraint_latches_1',
 ]);
 
 export class FirstLineStateError extends Error {
@@ -186,6 +257,29 @@ function readTx(db, fn) {
   try { const out = fn(); db.exec('COMMIT'); return out; }
   catch (error) { try { db.exec('ROLLBACK'); } catch {} throw error; }
 }
+function schemaMasterFingerprint(db) {
+  const rows = db.prepare(`SELECT type,name,tbl_name,sql FROM sqlite_master
+    WHERE type IN ('table','index','trigger','view')
+    ORDER BY type,name`).all();
+  return crypto.createHash('sha256')
+    .update(JSON.stringify(rows))
+    .digest('hex');
+}
+
+function deepFreezeRoutingValue(value) {
+  if (!value || typeof value !== 'object' || Object.isFrozen(value)) return value;
+  if (Array.isArray(value)) {
+    for (const item of value) deepFreezeRoutingValue(item);
+    return Object.freeze(value);
+  }
+  for (const item of Object.values(value)) deepFreezeRoutingValue(item);
+  return Object.freeze(value);
+}
+
+export function isCertifiedRoutingSnapshot(value) {
+  return Boolean(value && typeof value === 'object' && certifiedRoutingSnapshots.has(value));
+}
+
 function positiveInteger(value, field) {
   if (!Number.isSafeInteger(value) || value <= 0) fail('FIRST_LINE_VALUE_INVALID', field + ' must be a positive safe integer', { field });
   return value;
@@ -271,6 +365,55 @@ function normalizeRequestedSlot(value) {
   if (!REQUESTED_SLOTS.has(value)) fail('FIRST_LINE_REQUESTED_SLOT_INVALID', 'unsupported requested slot', { requested_slot: value });
   return value;
 }
+function normalizeRequestedMoneySelection(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value) ||
+      Object.keys(value).sort().join(',') !== 'currency,minor_units' ||
+      value.currency !== 'UAH' ||
+      !Number.isSafeInteger(value.minor_units) || value.minor_units < 0) {
+    fail('FIRST_LINE_SELECTION_INVALID',
+      'price-ceiling selection must be one exact UAH money value');
+  }
+  return Object.freeze({
+    currency: 'UAH',
+    minor_units: value.minor_units,
+  });
+}
+
+function normalizeConstraintLatchEvidence(value) {
+  if (value == null) return Object.freeze([]);
+  if (!Array.isArray(value) || value.length > CONSTRAINT_LATCH_CLASSES.size) {
+    fail('FIRST_LINE_CONSTRAINT_LATCH_INVALID',
+      'constraint latches must be a bounded array');
+  }
+  const byClass = new Map();
+  for (const [index, item] of value.entries()) {
+    if (!item || typeof item !== 'object' || Array.isArray(item) ||
+        Object.keys(item).sort().join(',') !== 'latch_class,source_event_seq') {
+      fail('FIRST_LINE_CONSTRAINT_LATCH_INVALID',
+        'constraint latch evidence must contain only latch_class and source_event_seq',
+        { index });
+    }
+    const latchClass = enumValue(
+      item.latch_class,
+      CONSTRAINT_LATCH_CLASSES,
+      'constraint_latch_class'
+    );
+    const sourceEventSeq = positiveInteger(item.source_event_seq, 'source_event_seq');
+    const prior = byClass.get(latchClass);
+    if (prior === undefined || sourceEventSeq < prior) {
+      byClass.set(latchClass, sourceEventSeq);
+    }
+  }
+  return Object.freeze(
+    CONSTRAINT_LATCH_ORDER
+      .filter(latchClass => byClass.has(latchClass))
+      .map(latchClass => Object.freeze({
+        latch_class: latchClass,
+        source_event_seq: byClass.get(latchClass),
+      }))
+  );
+}
+
 function normalizeSlotValue(slotName, value) {
   if (!Object.hasOwn(SLOT_SPECS, slotName)) fail('FIRST_LINE_SLOT_UNSUPPORTED', 'unsupported stable slot', { slot_name: slotName });
   const kind = SLOT_SPECS[slotName];
@@ -303,6 +446,28 @@ function normalizeBasisEventSeqs(value) {
     if (out[i] <= out[i - 1]) fail('FIRST_LINE_ACTION_BASIS_INVALID', 'basis event seqs must be strictly increasing');
   }
   return out;
+}
+
+function normalizeConstraintBasisEventSeqs(value, latches) {
+  if (latches.length === 0) {
+    if (value == null || (Array.isArray(value) && value.length === 0)) {
+      return Object.freeze([]);
+    }
+  }
+  if (!Array.isArray(value) || value.length < 1) {
+    fail('FIRST_LINE_CONSTRAINT_LATCH_PROVENANCE_INVALID',
+      'constraint latch basis event seqs must be non-empty');
+  }
+  const out = value.map((item, index) =>
+    positiveInteger(item, 'constraint_basis_event_seq_' + index)
+  );
+  for (let index = 1; index < out.length; index += 1) {
+    if (out[index] <= out[index - 1]) {
+      fail('FIRST_LINE_CONSTRAINT_LATCH_PROVENANCE_INVALID',
+        'constraint latch basis event seqs must be strictly increasing');
+    }
+  }
+  return Object.freeze(out);
 }
 
 function expectedEpisode(id, version) {
@@ -388,6 +553,91 @@ export class FirstLineStateStore {
     } finally { db.close(); }
     fs.chmodSync(resolved, 0o600);
     return FirstLineStateStore.open(file, { now, streamIdFactory, episodeIdFactory, actionIdFactory });
+  }
+
+  static migrateV2ToV3(file, options = {}) {
+    const resolved = path.resolve(file);
+    if (!fs.existsSync(resolved)) fail('FIRST_LINE_DB_MISSING', 'database is missing');
+    if ((fs.statSync(resolved).mode & 0o077) !== 0) {
+      fail('FIRST_LINE_DB_PERMISSIONS_UNSAFE', 'database must be mode 0600');
+    }
+    const db = new DatabaseSync(resolved);
+    try {
+      db.exec(`PRAGMA foreign_keys=ON; PRAGMA busy_timeout=${BUSY_TIMEOUT_MS}`);
+      const integrity = db.prepare('PRAGMA integrity_check').get().integrity_check;
+      if (integrity !== 'ok') {
+        fail('FIRST_LINE_DB_INVALID', 'pre-migration integrity check failed', { integrity });
+      }
+      const version = Number(db.prepare('PRAGMA user_version').get().user_version);
+      if (version === SCHEMA_VERSION) {
+        return FirstLineStateStore.open(file, options);
+      }
+      if (version !== PREVIOUS_SCHEMA_VERSION) {
+        fail('FIRST_LINE_DB_MIGRATION_UNSUPPORTED',
+          'database schema cannot be migrated by this release', {
+            expected_from: PREVIOUS_SCHEMA_VERSION,
+            expected_to: SCHEMA_VERSION,
+            actual: version,
+          });
+      }
+      const metadata = db.prepare(
+        'SELECT schema_version FROM metadata WHERE singleton=1'
+      ).get();
+      if (Number(metadata?.schema_version) !== PREVIOUS_SCHEMA_VERSION) {
+        fail('FIRST_LINE_DB_MIGRATION_UNSUPPORTED',
+          'database metadata does not match migration source');
+      }
+      const sourceSchemaFingerprint = schemaMasterFingerprint(db);
+      if (sourceSchemaFingerprint !== V2_SCHEMA_MASTER_SHA256) {
+        fail('FIRST_LINE_DB_MIGRATION_UNSUPPORTED',
+          'database sqlite_master does not match the frozen v2 schema', {
+            expected_schema_fingerprint: V2_SCHEMA_MASTER_SHA256,
+            actual_schema_fingerprint: sourceSchemaFingerprint,
+          });
+      }
+      for (const [table, columns] of Object.entries(EXPECTED_COLUMNS_V2)) {
+        const actual = db.prepare(`PRAGMA table_info(${table})`).all().map(row => row.name);
+        if (actual.length !== columns.length ||
+            actual.some((name, index) => name !== columns[index])) {
+          fail('FIRST_LINE_DB_MIGRATION_UNSUPPORTED',
+            'migration source schema attestation failed', {
+              table, actual, expected: columns,
+            });
+        }
+      }
+      const sourceIndexes = new Set(
+        db.prepare("SELECT name FROM sqlite_master WHERE type='index'").all()
+          .map(row => row.name)
+      );
+      for (const name of REQUIRED_INDEXES_V2) {
+        if (!sourceIndexes.has(name)) {
+          fail('FIRST_LINE_DB_MIGRATION_UNSUPPORTED',
+            'migration source required index is missing', { index: name });
+        }
+      }
+      tx(db, () => {
+        db.exec(LATCH_SCHEMA_SQL);
+        db.prepare('UPDATE metadata SET schema_version=? WHERE singleton=1')
+          .run(SCHEMA_VERSION);
+        db.exec(`PRAGMA user_version=${SCHEMA_VERSION}`);
+      });
+      const after = Number(db.prepare('PRAGMA user_version').get().user_version);
+      const afterMeta = Number(
+        db.prepare('SELECT schema_version FROM metadata WHERE singleton=1')
+          .get()?.schema_version
+      );
+      if (after !== SCHEMA_VERSION || afterMeta !== SCHEMA_VERSION) {
+        fail('FIRST_LINE_DB_MIGRATION_FAILED',
+          'schema version did not advance atomically', {
+            user_version: after,
+            metadata_version: afterMeta,
+          });
+      }
+    } finally {
+      try { db.close(); } catch {}
+    }
+    fs.chmodSync(resolved, 0o600);
+    return FirstLineStateStore.open(file, options);
   }
 
   static open(file, options = {}) {
@@ -538,7 +788,7 @@ export class FirstLineStateStore {
         }
       }
 
-      return {
+      const snapshot = deepFreezeRoutingValue({
         schema: ROUTING_SNAPSHOT_SCHEMA,
         stream,
         active_episode: activeEpisode,
@@ -548,7 +798,9 @@ export class FirstLineStateStore {
         routing_ledger_fingerprint: routingLedger.fingerprint,
         suffix_truncated: routingLedger.suffix_truncated,
         max_open_turn_events: MAX_OPEN_TURN_EVENTS,
-      };
+      });
+      certifiedRoutingSnapshots.add(snapshot);
+      return snapshot;
     });
   }
 
@@ -670,11 +922,185 @@ export class FirstLineStateStore {
     const at = this.now();
     return tx(this.db, () => {
       this.#requireActiveEpisode(id, version);
+      const pendingLatch = this.db.prepare(
+        'SELECT latch_class FROM episode_constraint_latches WHERE episode_id=? LIMIT 1'
+      ).get(id) ?? null;
+      if (pendingLatch && closeReason !== 'human_takeover') {
+        fail('FIRST_LINE_PENDING_HUMAN_LATCH',
+          'latched active episode can close only after HUMAN/native handoff terminalization', {
+            episode_id: id,
+            latch_class: pendingLatch.latch_class,
+            close_reason: closeReason,
+          });
+      }
       const changed = this.db.prepare(`UPDATE episodes SET state='closed',version=version+1,updated_at=?,closed_at=?,close_reason=?
         WHERE episode_id=? AND state='active' AND version=?`).run(at, at, closeReason, id, version).changes;
       if (changed !== 1) fail('FIRST_LINE_STALE_WRITE', 'episode changed before close');
       return this.#readEpisode(id);
     });
+  }
+
+  commitConstraintLatchesFromRoutingPlan({
+    streamId,
+    expectedStreamRevision,
+    expectedThroughEventSeq,
+    expectedRoutingLedgerFingerprint,
+    expectedEpisodeId,
+    expectedEpisodeVersion,
+    expectedLiveActionId = null,
+    expectedLiveActionState = null,
+    constraintLatches,
+    constraintBasisEventSeqs,
+  } = {}) {
+    const stream = safeToken(streamId, 'stream_id');
+    const revision = positiveInteger(expectedStreamRevision, 'expected_stream_revision');
+    const through = positiveInteger(expectedThroughEventSeq, 'expected_through_event_seq');
+    const expectedLedgerFingerprint = routingLedgerFingerprintValue(
+      expectedRoutingLedgerFingerprint,
+      'expected_routing_ledger_fingerprint'
+    );
+    const episodeId = safeToken(expectedEpisodeId, 'expected_episode_id');
+    const episodeVersion = positiveInteger(expectedEpisodeVersion, 'expected_episode_version');
+    const actionExpectation = expectedLiveAction(expectedLiveActionId, expectedLiveActionState);
+    const latches = normalizeConstraintLatchEvidence(constraintLatches);
+    const latchBasis = normalizeConstraintBasisEventSeqs(
+      constraintBasisEventSeqs,
+      latches
+    );
+    if (latches.length === 0) {
+      fail('FIRST_LINE_CONSTRAINT_LATCH_INVALID',
+        'constraint latch commit requires at least one proven class');
+    }
+
+    return tx(this.db, () => {
+      const currentStream = this.#readStream(stream);
+      if (!currentStream ||
+          currentStream.stream_revision !== revision ||
+          currentStream.last_event_seq !== through) {
+        fail('FIRST_LINE_ROUTING_PLAN_STALE',
+          'stream changed after constraint plan', { stream_id: stream });
+      }
+      const currentLedger = this.#readRoutingLedger(currentStream);
+      if (currentLedger.fingerprint !== expectedLedgerFingerprint) {
+        fail('FIRST_LINE_ROUTING_PLAN_STALE',
+          'routing ledger changed after constraint plan', { stream_id: stream });
+      }
+      const episode = this.#requireActiveEpisode(episodeId, episodeVersion);
+      if (episode.stream_id !== stream) {
+        fail('FIRST_LINE_ROUTING_PLAN_STALE',
+          'constraint episode no longer belongs to stream', {
+            stream_id: stream,
+            episode_id: episodeId,
+          });
+      }
+
+      const liveHead = this.db.prepare(`SELECT action_id FROM public_actions WHERE stream_id=? AND state IN
+        ('PREPARED','GATING','SENDING','UNCERTAIN')`).get(stream) ?? null;
+      const liveAction = liveHead ? this.#readAction(liveHead.action_id) : null;
+      if (actionExpectation.id === null) {
+        if (liveAction !== null) {
+          fail('FIRST_LINE_ROUTING_PLAN_STALE',
+            'live public action appeared after constraint plan', {
+              stream_id: stream,
+              current_action_id: liveAction.action_id,
+              current_action_state: liveAction.state,
+            });
+        }
+      } else if (!liveAction ||
+                 liveAction.action_id !== actionExpectation.id ||
+                 liveAction.state !== actionExpectation.state) {
+        fail('FIRST_LINE_ROUTING_PLAN_STALE',
+          'live public action changed after constraint plan', {
+            stream_id: stream,
+            expected_action_id: actionExpectation.id,
+            expected_action_state: actionExpectation.state,
+            current_action_id: liveAction?.action_id ?? null,
+            current_action_state: liveAction?.state ?? null,
+          });
+      }
+      if (liveAction &&
+          (liveAction.state === 'SENDING' || liveAction.state === 'UNCERTAIN')) {
+        fail('FIRST_LINE_ACTION_SEND_UNRESOLVED',
+          'unresolved public send blocks constraint latch commit', {
+            action_id: liveAction.action_id,
+            state: liveAction.state,
+          });
+      }
+
+      const at = this.now();
+      const before = this.db.prepare(
+        'SELECT COUNT(*) AS n FROM episode_constraint_latches WHERE episode_id=?'
+      ).get(episodeId).n;
+      this.#insertConstraintLatches(
+        episodeId, stream, through, latches, latchBasis, at
+      );
+      const after = this.db.prepare(
+        'SELECT COUNT(*) AS n FROM episode_constraint_latches WHERE episode_id=?'
+      ).get(episodeId).n;
+
+      if (after > before) {
+        const changed = this.db.prepare(`UPDATE episodes
+          SET version=version+1,updated_at=?
+          WHERE episode_id=? AND stream_id=? AND state='active' AND version=?`)
+          .run(at, episodeId, stream, episodeVersion).changes;
+        if (changed !== 1) {
+          fail('FIRST_LINE_STALE_WRITE',
+            'episode changed before constraint latch commit', {
+              episode_id: episodeId,
+            });
+        }
+      }
+
+      return Object.freeze({
+        stream_id: stream,
+        stream_revision: revision,
+        through_event_seq: through,
+        episode: this.#readEpisode(episodeId),
+        latches: this.listEpisodeConstraintLatches(episodeId),
+        changed: after > before,
+      });
+    });
+  }
+
+  listEpisodeConstraintLatches(episodeId) {
+    const id = safeToken(episodeId, 'episode_id');
+    const episode = this.#readEpisode(id);
+    if (!episode) fail('FIRST_LINE_EPISODE_NOT_FOUND', 'episode not found', { episode_id: id });
+    return Object.freeze(
+      this.db.prepare(`SELECT latch_class,first_event_seq,created_at
+        FROM episode_constraint_latches
+        WHERE episode_id=?
+        ORDER BY CASE latch_class
+          WHEN 'RETURN_CASE' THEN 1
+          WHEN 'ORDER_SPECIFIC' THEN 2
+          WHEN 'UNSUPPORTED_COMPATIBILITY' THEN 3
+          WHEN 'SUBJECTIVE_RECOMMENDATION' THEN 4
+          WHEN 'UNSUPPORTED_EXCLUSION' THEN 5
+          WHEN 'UNSUPPORTED_AGE_SUITABILITY' THEN 6
+          WHEN 'OTHER_UNCONSUMED_CONSTRAINT' THEN 7
+          ELSE 99 END`).all(id).map(row => {
+        persistedGuard(() => {
+          enumValue(row.latch_class, CONSTRAINT_LATCH_CLASSES, 'constraint_latch_class');
+          positiveInteger(row.first_event_seq, 'first_event_seq');
+          nonNegativeInteger(row.created_at, 'created_at');
+          const sourceEvent = this.db.prepare(
+            'SELECT 1 AS ok FROM conversation_events WHERE stream_id=? AND event_seq=?'
+          ).get(episode.stream_id, row.first_event_seq);
+          if (!sourceEvent) {
+            fail('FIRST_LINE_CONSTRAINT_LATCH_PROVENANCE_INVALID',
+              'persisted constraint latch references no event in its episode stream');
+          }
+        }, 'persisted constraint latch is invalid', {
+          episode_id: id,
+          latch_class: row.latch_class,
+        });
+        return Object.freeze({
+          latch_class: row.latch_class,
+          first_event_seq: row.first_event_seq,
+          created_at: row.created_at,
+        });
+      })
+    );
   }
 
   startStandaloneEpisodeFromRoutingPlan({
@@ -686,6 +1112,8 @@ export class FirstLineStateStore {
     expectedEpisodeVersion = null,
     expectedLiveActionId = null,
     expectedLiveActionState = null,
+    constraintLatches = [],
+    constraintBasisEventSeqs = [],
   } = {}) {
     const stream = safeToken(streamId, 'stream_id');
     const revision = positiveInteger(expectedStreamRevision, 'expected_stream_revision');
@@ -696,6 +1124,11 @@ export class FirstLineStateStore {
     );
     const episodeExpectation = expectedEpisode(expectedEpisodeId, expectedEpisodeVersion);
     const actionExpectation = expectedLiveAction(expectedLiveActionId, expectedLiveActionState);
+    const latches = normalizeConstraintLatchEvidence(constraintLatches);
+    const latchBasis = normalizeConstraintBasisEventSeqs(
+      constraintBasisEventSeqs,
+      latches
+    );
 
     return tx(this.db, () => {
       const currentStream = this.#readStream(stream);
@@ -751,6 +1184,19 @@ export class FirstLineStateStore {
             current_episode_id: activeEpisode?.episode_id ?? null,
             current_episode_version: activeEpisode?.version ?? null,
           });
+        }
+      }
+
+      if (activeEpisode !== null) {
+        const pendingLatch = this.db.prepare(
+          'SELECT latch_class FROM episode_constraint_latches WHERE episode_id=? LIMIT 1'
+        ).get(activeEpisode.episode_id) ?? null;
+        if (pendingLatch) {
+          fail('FIRST_LINE_PENDING_HUMAN_LATCH',
+            'latched active episode cannot be replaced before HUMAN terminalization', {
+              episode_id: activeEpisode.episode_id,
+              latch_class: pendingLatch.latch_class,
+            });
         }
       }
 
@@ -850,6 +1296,14 @@ export class FirstLineStateStore {
       this.db.prepare(`INSERT INTO episodes
         (episode_id,stream_id,state,version,clarification_prompts_sent,created_at,updated_at)
         VALUES (?,?,'active',1,0,?,?)`).run(newEpisodeId, stream, transitionAt, transitionAt);
+      this.#insertConstraintLatches(
+        newEpisodeId,
+        stream,
+        through,
+        latches,
+        latchBasis,
+        transitionAt
+      );
       const episode = this.#readEpisode(newEpisodeId);
 
       return {
@@ -878,6 +1332,8 @@ export class FirstLineStateStore {
     selectionValue,
     candidateOrdinal = null,
     selectionSourceMessageId,
+    constraintLatches = [],
+    constraintBasisEventSeqs = [],
   } = {}) {
     const stream = safeToken(streamId, 'stream_id');
     const revision = positiveInteger(expectedStreamRevision, 'expected_stream_revision');
@@ -900,11 +1356,22 @@ export class FirstLineStateStore {
       'selection_origin'
     );
     const slot = safeToken(selectionSlot, 'selection_slot');
-    const value = normalizeSlotValue(slot, selectionValue);
+    const moneySelection = slot === 'max_price_minor'
+      ? normalizeRequestedMoneySelection(selectionValue)
+      : null;
+    const value = moneySelection === null
+      ? normalizeSlotValue(slot, selectionValue)
+      : moneySelection;
     const sourceMessageId = positiveInteger(selectionSourceMessageId, 'selection_source_message_id');
     const ordinal = candidateOrdinal == null
       ? null
       : positiveInteger(candidateOrdinal, 'candidate_ordinal');
+
+    const latches = normalizeConstraintLatchEvidence(constraintLatches);
+    const latchBasis = normalizeConstraintBasisEventSeqs(
+      constraintBasisEventSeqs,
+      latches
+    );
 
     if (origin === 'presented_candidate' && ordinal === null) {
       fail('FIRST_LINE_SELECTION_INVALID', 'presented candidate selection requires ordinal');
@@ -1058,10 +1525,30 @@ export class FirstLineStateStore {
       }
 
       const transitionAt = this.now();
-      this.db.prepare(`INSERT INTO episode_slots(episode_id,slot_name,value_json,derived_through_event_seq)
-        VALUES (?,?,?,?) ON CONFLICT(episode_id,slot_name) DO UPDATE SET
-        value_json=excluded.value_json,derived_through_event_seq=excluded.derived_through_event_seq`)
-        .run(episodeId, slot, canonicalJson(value), sourceEvent.event_seq);
+      if (moneySelection !== null) {
+        for (const [moneySlot, moneyValue] of [
+          ['max_price_minor', moneySelection.minor_units],
+          ['currency', moneySelection.currency],
+        ]) {
+          this.db.prepare(`INSERT INTO episode_slots(episode_id,slot_name,value_json,derived_through_event_seq)
+            VALUES (?,?,?,?) ON CONFLICT(episode_id,slot_name) DO UPDATE SET
+            value_json=excluded.value_json,derived_through_event_seq=excluded.derived_through_event_seq`)
+            .run(episodeId, moneySlot, canonicalJson(moneyValue), sourceEvent.event_seq);
+        }
+      } else {
+        this.db.prepare(`INSERT INTO episode_slots(episode_id,slot_name,value_json,derived_through_event_seq)
+          VALUES (?,?,?,?) ON CONFLICT(episode_id,slot_name) DO UPDATE SET
+          value_json=excluded.value_json,derived_through_event_seq=excluded.derived_through_event_seq`)
+          .run(episodeId, slot, canonicalJson(value), sourceEvent.event_seq);
+      }
+      this.#insertConstraintLatches(
+        episodeId,
+        stream,
+        through,
+        latches,
+        latchBasis,
+        transitionAt
+      );
       const changed = this.db.prepare(`UPDATE episodes SET version=version+1,requested_slot=NULL,
         clarification_action_id=NULL,updated_at=?
         WHERE episode_id=? AND stream_id=? AND state='active' AND version=?`)
@@ -1099,6 +1586,10 @@ export class FirstLineStateStore {
     if (type === 'CLARIFY' && requested == null && candidates.length === 0) {
       fail('FIRST_LINE_CLARIFICATION_INVALID', 'CLARIFY requires requested slot or candidates');
     }
+    if (type === 'CLARIFY' && requested === 'money') {
+      fail('FIRST_LINE_CLARIFICATION_INVALID',
+        'generic money clarification is legacy-only; v3 requires max_price_minor');
+    }
     if (type === 'CLARIFY' && requested !== null && candidates.length > 0 &&
         candidates.some(candidate => candidate.slot !== requested)) {
       fail('FIRST_LINE_CLARIFICATION_INVALID',
@@ -1132,12 +1623,45 @@ export class FirstLineStateStore {
         .get(stream, revision);
       if (sameRevision) return this.#readAction(sameRevision.action_id);
 
+      const activeHead = this.db.prepare(
+        "SELECT episode_id FROM episodes WHERE stream_id=? AND state='active'"
+      ).get(stream) ?? null;
+      const activeEpisode = activeHead ? this.#readEpisode(activeHead.episode_id) : null;
+
+      if (activeEpisode && epId === null) {
+        fail('FIRST_LINE_ACTION_EPISODE_REQUIRED',
+          'customer-visible AI action must bind to the active episode', {
+            stream_id: stream,
+            active_episode_id: activeEpisode.episode_id,
+          });
+      }
+
       let episode = null;
       if (epId !== null) {
         episode = this.#requireActiveEpisode(epId, epVersion);
         if (episode.stream_id !== stream) {
           fail('FIRST_LINE_ACTION_EPISODE_STREAM_MISMATCH', 'episode does not belong to action stream',
             { episode_id: epId, stream_id: stream, episode_stream_id: episode.stream_id });
+        }
+        if (!activeEpisode || activeEpisode.episode_id !== episode.episode_id) {
+          fail('FIRST_LINE_ACTION_STALE_EPISODE',
+            'action episode is no longer the active stream episode', {
+              episode_id: episode.episode_id,
+              active_episode_id: activeEpisode?.episode_id ?? null,
+            });
+        }
+      }
+
+      if (activeEpisode) {
+        const pendingLatch = this.db.prepare(
+          'SELECT latch_class FROM episode_constraint_latches WHERE episode_id=? LIMIT 1'
+        ).get(activeEpisode.episode_id) ?? null;
+        if (pendingLatch) {
+          fail('FIRST_LINE_PENDING_HUMAN_LATCH',
+            'latched episode cannot prepare customer-visible AI action', {
+              episode_id: activeEpisode.episode_id,
+              latch_class: pendingLatch.latch_class,
+            });
         }
       }
 
@@ -1244,16 +1768,42 @@ export class FirstLineStateStore {
       if (stream.stream_revision !== action.prepared_stream_revision) {
         fail('FIRST_LINE_ACTION_STALE_REVISION', 'stream changed before SENDING', { action_id: id });
       }
-      if (action.episode_id !== null) {
-        const episode = this.db.prepare('SELECT * FROM episodes WHERE episode_id=?').get(action.episode_id);
-        if (!episode || episode.state !== 'active' || episode.version !== action.episode_version) {
-          fail('FIRST_LINE_ACTION_STALE_EPISODE', 'episode changed before SENDING', { action_id: id });
+      const activeHead = this.db.prepare(
+        "SELECT episode_id FROM episodes WHERE stream_id=? AND state='active'"
+      ).get(action.stream_id) ?? null;
+      const activeEpisode = activeHead ? this.#readEpisode(activeHead.episode_id) : null;
+
+      if (activeEpisode) {
+        if (action.episode_id === null ||
+            action.episode_id !== activeEpisode.episode_id ||
+            action.episode_version !== activeEpisode.version) {
+          fail('FIRST_LINE_ACTION_STALE_EPISODE',
+            'active episode changed or action is detached before SENDING', {
+              action_id: id,
+              action_episode_id: action.episode_id,
+              active_episode_id: activeEpisode.episode_id,
+            });
+        }
+        const pendingLatch = this.db.prepare(
+          'SELECT latch_class FROM episode_constraint_latches WHERE episode_id=? LIMIT 1'
+        ).get(activeEpisode.episode_id) ?? null;
+        if (pendingLatch) {
+          fail('FIRST_LINE_ACTION_STALE_EPISODE',
+            'constraint latch blocks customer-visible AI send', {
+              action_id: id,
+              episode_id: activeEpisode.episode_id,
+              latch_class: pendingLatch.latch_class,
+            });
         }
         if (action.action_type === 'CLARIFY' &&
-            (episode.clarification_prompts_sent !== 1 || episode.clarification_action_id !== id)) {
+            (activeEpisode.clarification_prompts_sent !== 1 ||
+             activeEpisode.clarification_action_id !== id)) {
           fail('FIRST_LINE_ACTION_STALE_EPISODE', 'clarification reservation changed before SENDING',
             { action_id: id });
         }
+      } else if (action.episode_id !== null) {
+        fail('FIRST_LINE_ACTION_STALE_EPISODE',
+          'bound episode is no longer active before SENDING', { action_id: id });
       }
       const changed = this.db.prepare(`UPDATE public_actions SET state='SENDING',send_started_at=?,updated_at=?
         WHERE action_id=? AND state='GATING' AND lease_token=? AND lease_expires_at>? AND deadline_at>?`)
@@ -1483,6 +2033,55 @@ export class FirstLineStateStore {
     };
   }
 
+  #insertConstraintLatches(
+    episodeId,
+    streamId,
+    throughEventSeq,
+    latches,
+    basisEventSeqs,
+    at
+  ) {
+    const basis = new Set(basisEventSeqs);
+    for (const latch of latches) {
+      if (!basis.has(latch.source_event_seq)) {
+        fail('FIRST_LINE_CONSTRAINT_LATCH_PROVENANCE_INVALID',
+          'constraint latch evidence is outside the routed open-turn basis', {
+            episode_id: episodeId,
+            latch_class: latch.latch_class,
+            source_event_seq: latch.source_event_seq,
+          });
+      }
+      if (latch.source_event_seq > throughEventSeq) {
+        fail('FIRST_LINE_CONSTRAINT_LATCH_PROVENANCE_INVALID',
+          'constraint latch evidence is newer than the routing plan', {
+            episode_id: episodeId,
+            latch_class: latch.latch_class,
+            source_event_seq: latch.source_event_seq,
+            through_event_seq: throughEventSeq,
+          });
+      }
+      const event = this.db.prepare(
+        'SELECT 1 AS ok FROM conversation_events WHERE stream_id=? AND event_seq=?'
+      ).get(streamId, latch.source_event_seq);
+      if (!event) {
+        fail('FIRST_LINE_CONSTRAINT_LATCH_PROVENANCE_INVALID',
+          'constraint latch references an unknown accepted event', {
+            episode_id: episodeId,
+            latch_class: latch.latch_class,
+            source_event_seq: latch.source_event_seq,
+          });
+      }
+      this.db.prepare(`INSERT OR IGNORE INTO episode_constraint_latches
+        (episode_id,latch_class,first_event_seq,created_at)
+        VALUES (?,?,?,?)`).run(
+          episodeId,
+          latch.latch_class,
+          latch.source_event_seq,
+          at
+        );
+    }
+  }
+
   #eventDto(row) {
     persistedGuard(() => {
       safeToken(row.stream_id, 'stream_id');
@@ -1596,6 +2195,13 @@ export class FirstLineStateStore {
     if (version !== SCHEMA_VERSION || metadata?.schema_version !== SCHEMA_VERSION || integrity !== 'ok') {
       fail('FIRST_LINE_DB_INVALID', 'schema/integrity version check failed', { user_version: version, metadata_version: metadata?.schema_version, integrity });
     }
+    const schemaFingerprint = schemaMasterFingerprint(this.db);
+    if (schemaFingerprint !== V3_SCHEMA_MASTER_SHA256) {
+      fail('FIRST_LINE_DB_INVALID', 'database sqlite_master does not match the frozen v3 schema', {
+        expected_schema_fingerprint: V3_SCHEMA_MASTER_SHA256,
+        actual_schema_fingerprint: schemaFingerprint,
+      });
+    }
     for (const [table, columns] of Object.entries(EXPECTED_COLUMNS)) {
       const actual = this.db.prepare(`PRAGMA table_info(${table})`).all().map(row => row.name);
       if (actual.length !== columns.length || actual.some((name, i) => name !== columns[i])) {
@@ -1631,6 +2237,8 @@ export {
   ACTION_TYPES,
   BUSY_TIMEOUT_MS,
   CANONICAL_ID_PATTERNS,
+  CONSTRAINT_LATCH_CLASSES,
+  CONSTRAINT_LATCH_ORDER,
   EPISODE_CONTINUATION_SCHEMA,
   EPISODE_TRANSITION_SCHEMA,
   EVENT_KINDS,
@@ -1638,6 +2246,7 @@ export {
   MAX_OPEN_TURN_EVENTS,
   MAX_PRESENTED_CANDIDATES,
   ROUTING_SNAPSHOT_SCHEMA,
+  PREVIOUS_SCHEMA_VERSION,
   SCHEMA_VERSION,
   SLOT_SPECS,
   TERMINAL_ACTION_STATES,

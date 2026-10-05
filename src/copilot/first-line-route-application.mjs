@@ -1,8 +1,16 @@
 import {
   FIRST_LINE_CLARIFICATION_SELECTION_SCHEMA,
   isCertifiedClarificationSelectionProof,
+  exactMessageSelectionUsesCertifiedBasis,
 } from './first-line-clarification-selection.mjs';
-import { OPEN_TURN_PROJECTION_SCHEMA } from './first-line-routing-planner.mjs';
+import {
+  isCertifiedOpenTurnProjection,
+  OPEN_TURN_PROJECTION_SCHEMA,
+} from './first-line-routing-planner.mjs';
+import {
+  FIRST_LINE_CONSTRAINT_PROOF_SCHEMA,
+  isCertifiedObjectiveConstraintProof,
+} from './first-line-objective-constraint-latch.mjs';
 
 export const FIRST_LINE_ROUTE_APPLICATION_SCHEMA = 'bp.first-line.route-application/1';
 
@@ -12,6 +20,7 @@ const DURABLE_SELECTION_SLOTS = new Set([
   'category_id',
   'brand_id',
   'store_id',
+  'max_price_minor',
 ]);
 
 export class FirstLineRouteApplicationError extends Error {
@@ -44,7 +53,7 @@ function tokenEquals(a, b) {
   return true;
 }
 
-function continuationArgs(proof) {
+function continuationArgs(proof, constraintProof = null, projection = null) {
   const token = proof.plan_token;
   return {
     streamId: token.stream_id,
@@ -60,10 +69,15 @@ function continuationArgs(proof) {
     selectionValue: proof.selection.value,
     candidateOrdinal: proof.selection.candidate_ordinal,
     selectionSourceMessageId: proof.selection.source_message_id,
+    constraintLatches: constraintProof?.latches ?? [],
+    constraintBasisEventSeqs:
+      constraintProof?.code === 'CONSTRAINTS_LATCHED'
+        ? [...(projection?.open_turn?.event_seqs ?? [])]
+        : [],
   };
 }
 
-function standaloneArgs(projection) {
+function standaloneArgs(projection, constraintProof = null) {
   const token = projection.plan_token;
   return {
     streamId: token.stream_id,
@@ -74,6 +88,11 @@ function standaloneArgs(projection) {
     expectedEpisodeVersion: token.episode_version,
     expectedLiveActionId: token.live_action_id,
     expectedLiveActionState: token.live_action_state,
+    constraintLatches: constraintProof?.latches ?? [],
+    constraintBasisEventSeqs:
+      constraintProof?.code === 'CONSTRAINTS_LATCHED'
+        ? [...projection.open_turn.event_seqs]
+        : [],
   };
 }
 
@@ -85,6 +104,22 @@ function base(projection, proof = null) {
       proof?.source_conversation_id ?? projection?.source_conversation_id ?? null,
     plan_token: proof?.plan_token ?? projection?.plan_token ?? null,
   };
+}
+
+function validatedConstraintProof(projection, proof) {
+  if (proof == null) return null;
+  if (!proof || typeof proof !== 'object' ||
+      proof.schema !== FIRST_LINE_CONSTRAINT_PROOF_SCHEMA ||
+      !isCertifiedObjectiveConstraintProof(proof) ||
+      !tokenEquals(projection?.plan_token, proof.plan_token) ||
+      proof.stream_id !== projection?.stream_id ||
+      proof.source_conversation_id !== projection?.source_conversation_id ||
+      !['CLEAR', 'CONSTRAINTS_LATCHED'].includes(proof.code) ||
+      !Array.isArray(proof.latches)) {
+    fail('FIRST_LINE_ROUTE_INPUT_INVALID',
+      'constraint proof must be a transient certified C3 proof for the same plan');
+  }
+  return proof;
 }
 
 function pendingConfirmedClarification(projection) {
@@ -108,10 +143,12 @@ export function applyFirstLineRoute({
   store,
   projection = null,
   selectionProof = null,
+  constraintProof = null,
 } = {}) {
   if (!store ||
       typeof store.applyClarificationSelectionFromRoutingPlan !== 'function' ||
-      typeof store.startStandaloneEpisodeFromRoutingPlan !== 'function') {
+      typeof store.startStandaloneEpisodeFromRoutingPlan !== 'function' ||
+      typeof store.commitConstraintLatchesFromRoutingPlan !== 'function') {
     fail('FIRST_LINE_ROUTE_INPUT_INVALID', 'route application requires FirstLineStateStore');
   }
 
@@ -126,20 +163,35 @@ export function applyFirstLineRoute({
     }
 
     if (projection !== null) {
-      if (projection.schema !== OPEN_TURN_PROJECTION_SCHEMA ||
+      if (!isCertifiedOpenTurnProjection(projection) ||
+          projection.schema !== OPEN_TURN_PROJECTION_SCHEMA ||
           !tokenEquals(projection.plan_token, selectionProof.plan_token)) {
         fail('FIRST_LINE_ROUTE_PLAN_MISMATCH',
           'selection proof and routing projection do not share one plan token');
       }
     }
 
-    if (selectionProof.selection.slot === 'money') {
-      return Object.freeze({
-        ...base(projection, selectionProof),
-        code: 'SELECTION_DEFER_TO_C3',
-        reason: 'MONEY_CONSTRAINT_MAPPING_OWNED_BY_C3',
-        transition: null,
-      });
+    const exactMessageSelection = selectionProof.evidence_class === 'EXACT_MESSAGE_SELECTION';
+    if (exactMessageSelection && projection === null) {
+      fail('FIRST_LINE_ROUTE_INPUT_INVALID',
+        'exact-message selection requires its certified routing projection');
+    }
+
+    const certifiedConstraint = projection === null
+      ? (constraintProof == null ? null : fail(
+          'FIRST_LINE_ROUTE_INPUT_INVALID',
+          'constraint proof requires routing projection'
+        ))
+      : validatedConstraintProof(projection, constraintProof);
+
+    if (exactMessageSelection &&
+        (certifiedConstraint === null ||
+         !exactMessageSelectionUsesCertifiedBasis(selectionProof, {
+           projection,
+           constraintProof: certifiedConstraint,
+         }))) {
+      fail('FIRST_LINE_ROUTE_INPUT_INVALID',
+        'exact-message selection must retain its certified C3 routing basis');
     }
 
     if (!DURABLE_SELECTION_SLOTS.has(selectionProof.selection.slot)) {
@@ -149,7 +201,7 @@ export function applyFirstLineRoute({
     }
 
     const transition = store.applyClarificationSelectionFromRoutingPlan(
-      continuationArgs(selectionProof)
+      continuationArgs(selectionProof, certifiedConstraint, projection)
     );
     return Object.freeze({
       ...base(projection, selectionProof),
@@ -161,9 +213,17 @@ export function applyFirstLineRoute({
 
   if (!projection ||
       typeof projection !== 'object' ||
+      !isCertifiedOpenTurnProjection(projection) ||
       projection.schema !== OPEN_TURN_PROJECTION_SCHEMA) {
     fail('FIRST_LINE_ROUTE_INPUT_INVALID',
       'non-selection route application requires routing projection');
+  }
+
+  const certifiedConstraint = validatedConstraintProof(projection, constraintProof);
+
+  if (projection.code === 'OPEN_TURN' && certifiedConstraint === null) {
+    fail('FIRST_LINE_ROUTE_INPUT_INVALID',
+      'OPEN_TURN route requires one certified C3 constraint proof');
   }
 
   if (projection.code !== 'OPEN_TURN') {
@@ -176,16 +236,31 @@ export function applyFirstLineRoute({
   }
 
   if (pendingConfirmedClarification(projection)) {
+    const transition = certifiedConstraint?.code === 'CONSTRAINTS_LATCHED'
+      ? store.commitConstraintLatchesFromRoutingPlan({
+          streamId: projection.plan_token.stream_id,
+          expectedStreamRevision: projection.plan_token.stream_revision,
+          expectedThroughEventSeq: projection.plan_token.through_event_seq,
+          expectedRoutingLedgerFingerprint:
+            projection.plan_token.routing_ledger_fingerprint,
+          expectedEpisodeId: projection.active_episode.episode_id,
+          expectedEpisodeVersion: projection.active_episode.version,
+          expectedLiveActionId: projection.plan_token.live_action_id,
+          expectedLiveActionState: projection.plan_token.live_action_state,
+          constraintLatches: certifiedConstraint.latches,
+          constraintBasisEventSeqs: [...projection.open_turn.event_seqs],
+        })
+      : null;
     return Object.freeze({
       ...base(projection),
       code: 'CLARIFICATION_UNRESOLVED',
       reason: 'CLARIFY_EXHAUSTED_PENDING_C4',
-      transition: null,
+      transition,
     });
   }
 
   const transition = store.startStandaloneEpisodeFromRoutingPlan(
-    standaloneArgs(projection)
+    standaloneArgs(projection, certifiedConstraint)
   );
   return Object.freeze({
     ...base(projection),
