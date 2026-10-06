@@ -1,8 +1,11 @@
 # BabyPark AI First Line — Frozen Design v0.7
 
 Status: FROZEN — Event Ledger v0.7 architecture freeze complete
-Implementation: Slice C authorized via #75; C1 merged; C2a is the next implementation slice
-Repository baseline: main `b25fca317273526968b7413f25c47dc1303e3424`
+Applies to: BabyPark AI First Line Website v1 / Slice C normative design.
+Supersedes: `docs/AI_FIRST_LINE_DESIGN.md` at canonical main `8e65a57b36eaf649853fa3a7aae58bf5cd5a477c`.
+Implementation: C1/C2a/C2b/C2c/C3 are merged; this amendment is a docs-only
+C4 pre-code contract freeze and contains no production C4 implementation.
+Contract amendment base: canonical main `8e65a57b36eaf649853fa3a7aae58bf5cd5a477c`.
 Chatwoot runtime verified: v4.18.0, `9f920b549c14491a4e587687a3eed5d21c6ccc7d`
 
 This document is the single normative repository source of truth for the first
@@ -128,6 +131,7 @@ Similar-looking data in different systems must not compete.
 | Physical-store weekly hours | BabyPark Knowledge | Reviewed baseline |
 | Physical-store special hours / closure / temporary status | BabyPark Knowledge | Typed temporal overlays |
 | Physical-store customer address / phone | BabyPark Knowledge | Reviewed store facts; commerce systems may receive projections |
+| Call-center phone | BabyPark Knowledge | Business-wide `business/babypark` OperationalFact; exact `call_center.phone` schema below |
 | Product price / commercial availability | CatalogService | Accepted provider-neutral catalog |
 | Physical per-store stock | CatalogService | Always keyed by canonical `store_id` |
 | Website-chat support hours | Chatwoot inbox working-hours config | Applies to chat/support channel only |
@@ -143,6 +147,142 @@ Examples:
 
 No resolver may answer a physical-store-hours question from Chatwoot or Magento
 text fields.
+
+### 3.2.1 Call-center business subject and phone authority
+
+Website First Line v1 freezes the call-center namespace family to one
+business-wide Knowledge subject: `subject_type=business`,
+`subject_id=babypark`. This is a **new explicit convention introduced here**;
+it must not be described as a previously frozen generic convention.
+`call_center.hours` shares that subject binding, but this freeze does not define
+its effect schema and C4 does not answer call-center-hours questions in v1.
+
+`call_center.phone` is an approval-required OperationalFact with exact schema:
+- `record_type=OPERATIONAL_FACT`;
+- `schema_version=1`;
+- `namespace=call_center.phone`;
+- `effect_family=call_center.phone`;
+- `scope={}`;
+- `effect_type=PHONE`;
+- `effect_value={"e164":"+..."}` with exactly one key and value matching
+  `^\\+[1-9]\\d{1,14}$`;
+- no other namespace may use `effect_family=call_center.phone` in v1.
+
+The C4 call-center-phone adapter invokes `projectActiveKnowledge()` for the full
+`business/babypark` subject without a namespace prefilter, then inspects only the
+`call_center.phone` effect family. This preserves same-family cross-namespace
+visibility. Before mapping any fact it validates every active same-family row's
+record type, schema version, namespace, empty scope, effect type and exact E.164
+value shape. A malformed or foreign same-family row is invalid authority and
+rejects before ANSWER/CLARIFY; it is not POLICY_NOT_FOUND.
+
+For valid active rows:
+- zero => HUMAN / POLICY_NOT_FOUND;
+- one canonical effect, or several rows with the exact same canonical effect =>
+  ANSWER / OPERATIONAL_FACT;
+- two different canonical effects => HUMAN / POLICY_CONFLICT.
+
+A changed number uses ordinary atomic supersession. v1 has one call center; a
+second live number is not a new identity and is never resolved with CLARIFY.
+Chatwoot inbox working hours remain a separate chat-support authority and are
+never used as call-center phone/hours authority.
+
+### 3.2.2 Store phone and public CommercePolicy schemas
+
+Website First Line v1 uses a dedicated store-phone family rather than the older
+non-normative test-fixture grouping with `store.identity`:
+- `subject_type=store`, `subject_id=<canonical store_id>`;
+- `record_type=OPERATIONAL_FACT`, `schema_version=1`;
+- `namespace=effect_family=store.phone`, `scope={}`;
+- `effect_type=PHONE`;
+- exact one-key `effect_value={"e164":"+..."}` matching
+  `^\\+[1-9]\\d{1,14}$`.
+
+`resolveStorePhone(store,{nowUtc,storeId})` and
+`resolveCallCenterPhone(store,{nowUtc})` are the two required typed v1 phone
+readers. They share one private strict PHONE reducer: project the complete active
+subject without namespace prefilter; reject malformed or foreign same-family
+rows; accept compatible duplicate canonical effects; map zero to
+POLICY_NOT_FOUND and different canonical effects to POLICY_CONFLICT. The
+customer-facing DTO union is only:
+- `{status:'RESOLVED', effect_family, e164, revision_ids}`;
+- `{status:'POLICY_NOT_FOUND', effect_family, revisions:[]}`;
+- `{status:'POLICY_CONFLICT', effect_family, revisions:[...]}`.
+
+`store.address` remains Knowledge authority but is **not** a Website First Line
+v1 public request family; C4 must not ad-hoc read it merely because address data
+exists.
+
+Store operational questions use **two** typed readers over the same frozen
+OperationalFact precedence:
+- `resolveStoreOperationalState(store,{nowUtc,storeId})` answers current
+  open/closed state;
+- `resolveStoreTodaySchedule(store,{nowUtc,storeId})` answers the current
+  Europe/Kyiv local-day schedule **only when current operating state is not a
+  §9.2 CLOSED terminal**.
+
+For a today-hours request C4 first evaluates current operating state. If an
+active `store.temporary_closure` / `store.status_override` or applicable
+baseline-status authority resolves the store CLOSED at current `now`, the older
+§9.2 rule remains authoritative: return the current CLOSED answer and suppress
+hours. The schedule reader never weakens that frozen safety boundary merely
+because a finite closure could end later in the day.
+
+Otherwise `resolveStoreTodaySchedule` evaluates the **entire current
+Europe/Kyiv local civil day**, not only whether the store is open at the instant
+`now`. It first selects base hours for that local date: `store.special_hours`
+owns the whole civil day when present, otherwise the current weekday from
+`store.weekly_hours`. It also accounts for already-published future same-day
+operating-state revisions whose effective intervals overlap those base hours:
+CLOSED removes only its future overlapping portion; OPEN never invents hours;
+conflicting peer states on any future segment => POLICY_CONFLICT.
+
+The exact customer-safe resolved DTO is
+`{status:'RESOLVED',open_now:boolean,intervals:[{open,close},...],source,
+revision_ids}`. `intervals` is the complete non-overlapping local `HH:MM`
+schedule in ascending order after applicable known future CLOSED segments are
+removed. It is not reduced to `open_now`. Therefore before-opening and
+between-split-interval reads preserve the later intervals and final close.
+
+If base hours are missing, return POLICY_NOT_FOUND. Conflicting authority =>
+POLICY_CONFLICT; malformed/unrepresentable hours or DST-local boundaries reject
+rather than guess. This reader exists to preserve schedule information that the
+current-state reader deliberately does not carry; it is not a second way around
+a current CLOSED terminal.
+
+Public CommercePolicy ANSWER families in this freeze are exactly the following
+closed schemas. These constraints are normative **here**; operational/evidence
+documents may mirror them but cannot widen them.
+
+All three use `record_type=COMMERCE_POLICY`, `schema_version=1`,
+`subject_type=business`, `subject_id=babypark`, and are approval-required.
+
+- `commerce.payment_methods`: `namespace=effect_family=commerce.payment_methods`,
+  `scope={}`, `effect_type=PAYMENT_METHODS`, and exact
+  `effect_value={methods:[...]}`. `methods` is non-empty, duplicate-free,
+  lexicographically sorted, and every code is exactly one of
+  `BANK_TRANSFER | CASH_COURIER | COD_NOVA_POSHTA`.
+- `commerce.prepayment`: `namespace=effect_family=commerce.prepayment`,
+  `effect_type=PREPAYMENT`; reviewed scope follows the already-frozen
+  CommercePolicy exact-binding/exception rules; exact `effect_value` contains
+  only `amount_minor` (non-negative safe integer) and `currency` (uppercase
+  three-letter code).
+- `commerce.return_period`: `namespace=effect_family=commerce.return_period`,
+  `scope={}`, `effect_type=RETURN_PERIOD`, and exact `effect_value` contains
+  only `applies_to='GOOD_QUALITY'`, positive safe-integer `calendar_days`,
+  and boolean `purchase_day_excluded`.
+
+C4 validates the complete applicable row/schema before a resolved policy can
+become public payload. For payment methods, codes authorize method **names only**.
+No fee, percentage, amount or condition is implied by `COD_NOVA_POSHTA`;
+numeric COD terms require a future separately reviewed typed authority contract.
+
+A delivery request such as Q13 remains actionable (never NON_ACTIONABLE_ACK),
+but public delivery-policy schema is not certified in this freeze. Until one is
+explicitly frozen it terminates before authority as HUMAN /
+COMMERCE_POLICY_NOT_AUTHORITATIVE. Warranty is likewise not a reviewed public
+ANSWER family in v1. Merely having generic CommercePolicy JSON does not widen the
+public contract.
 
 ### 3.3 Magento cutover contract
 
@@ -424,6 +564,7 @@ Examples:
 - store.address
 - store.phone
 - call_center.hours
+- call_center.phone
 
 ### CommercePolicy
 
@@ -719,8 +860,259 @@ HUMAN:
 - RETURN_CASE_SPECIFIC
 - ORDER_SPECIFIC
 - CATALOG_IDENTITY_COLLISION
+- IDENTITY_NOT_RESOLVABLE
+- MULTIPLE_REQUEST_FAMILIES_MATCHED
+- MULTIPLE_IDENTITY_AMBIGUITIES
+- MULTIPLE_CLARIFICATION_REQUIREMENTS
 - CLARIFY_EXHAUSTED
 - PRODUCT_VARIANT_NOT_RESOLVABLE
+- PRODUCT_PRESENTATION_NOT_AVAILABLE
+- COMMERCE_POLICY_NOT_AUTHORITATIVE
+- UNSUPPORTED_RESPONSE_LANGUAGE
+
+### 16.1 Customer response locale
+
+Website First Line v1 has exactly two public response locales: `uk` and `ru`.
+C4 obtains the response locale only from the **current certified C2 extraction**
+for the complete open customer turn. It does not infer response language from
+Catalog `matched_languages`, Knowledge source-language priority, browser/contact
+metadata, Chatwoot profile fields or `intent_hint`.
+
+If the current certified C2 `language` is exactly `uk` or `ru`, that exact tag is
+`response_locale`. Any other syntactically valid language tag is a closed-world
+HUMAN / UNSUPPORTED_RESPONSE_LANGUAGE outcome before any public CLARIFY or
+factual authority read. There is no hidden default/fallback locale.
+
+Mixed RU/UK customer wording does not create a third locale. If C2 certifies the
+turn as `uk` or `ru`, C4 uses that one certified tag; if C2 emits another/unknown
+tag, C4 hands off. Response locale is presentation metadata only: it never
+selects authority IDs, changes facts or changes Catalog/Knowledge authority.
+
+Every C4 ANSWER or CLARIFY decision carries `response_locale`=`uk|ru`. HUMAN
+carries no public response locale because v1 HUMAN sends no AI preface. C5 must
+consume this field and must not perform its own language detection or fallback.
+
+### 16.2 Exact C4 decision/render contract
+
+C5 is not allowed to interpret authority DTOs. C4 returns one frozen exact-shape
+customer-safe decision object:
+
+```text
+C4Decision {
+  schema = bp.first-line.decision/1
+  decision = ANSWER | CLARIFY | HUMAN
+  reason
+  response_locale = uk | ru | null
+  template_id = string | null
+  render_payload = object | null
+  requested_slot = string | null
+  choices = [{token,label}, ...]
+}
+```
+
+All eight keys are always present and no additional enumerable key is allowed.
+The object contains no raw customer text, authority revision IDs, catalog
+generation/freshness metadata, product/variant/category/brand/store IDs, SKU,
+quantity, cohort IDs, debug fields or whole source DTO. Those remain private
+DecisionBasis/decision-context metadata and are never input to C5.
+
+Class invariants:
+- HUMAN: `response_locale/template_id/render_payload/requested_slot=null`,
+  `choices=[]`;
+- ANSWER: `response_locale=uk|ru`, non-null allowlisted `template_id`, exact
+  template payload, `requested_slot=null`, `choices=[]`;
+- CLARIFY: `response_locale=uk|ru`, allowlisted clarify template,
+  **`render_payload=null` for every CLARIFY template**, `requested_slot` is
+  frozen, and `choices` contains only customer-safe
+  `{token:'bp-choice:<ordinal>',label}` rows when finite choices are presented.
+  `TPL_CLARIFY_MONEY_V1` and `TPL_CLARIFY_SHORTLIST_ANCHOR_V1` are free-text
+  prompts and require **exactly `choices=[]`**; any non-empty choice array is
+  invalid because there is no canonical candidate reservation behind it.
+  Canonical candidate values for candidate-based prompts remain private durable
+  clarification reservation data; C5 never sees or renders them. `{}`, an
+  arbitrary object, or any non-null CLARIFY render payload is invalid and rejects
+  before action preparation.
+
+Unknown template IDs, missing/extra payload keys, wrong primitive types, unsafe
+labels or extra DTO fields reject before public action preparation.
+
+ANSWER templates and **only** their render payloads:
+
+| template_id | decision reason/family | exact render_payload |
+|---|---|---|
+| `TPL_STORE_OPEN_STATUS_V1` | OPERATIONAL_FACT / current store open-status | `{open:boolean,closes_at_local:string|null}`; time is exact `HH:MM` when currently open |
+| `TPL_STORE_HOURS_TODAY_V1` | OPERATIONAL_FACT / composed today-schedule | `{open_now:boolean,intervals:[{open:string,close:string},...]}`; interval times are exact `HH:MM`, complete for the local day and already adjusted for known CLOSED state intervals |
+| `TPL_STORE_PHONE_V1` | OPERATIONAL_FACT / store.phone | `{e164:string}` |
+| `TPL_CALL_CENTER_PHONE_V1` | OPERATIONAL_FACT / call_center.phone | `{e164:string}` |
+| `TPL_PAYMENT_METHODS_V1` | COMMERCE_POLICY / payment methods | `{methods:[closed-code,...]}`; codes only, no conditions |
+| `TPL_PREPAYMENT_V1` | COMMERCE_POLICY / prepayment | `{amount_minor:integer,currency:string}` |
+| `TPL_RETURN_PERIOD_V1` | COMMERCE_POLICY / return period | `{applies_to:'GOOD_QUALITY',calendar_days:integer,purchase_day_excluded:boolean}` |
+| `TPL_PRODUCT_PRICE_SINGLE_V1` | PRODUCT_PRICE_SINGLE | `{currency:string,current_minor:integer}` |
+| `TPL_PRODUCT_PRICE_RANGE_V1` | PRODUCT_PRICE_RANGE | `{currency:string,min_current_minor:integer,max_current_minor:integer}` |
+| `TPL_PRODUCT_NOT_IN_STOCK_V1` | PRODUCT_NOT_IN_STOCK | `{}` |
+| `TPL_VARIANT_LIST_V1` | VARIANT_LIST | `{total_variant_count:integer,named_variant_count:integer,labels:[string,...]}`; all labels must be pairwise-distinguishable under the frozen public-label key |
+| `TPL_VARIANT_LIST_PARTIAL_V1` | VARIANT_LIST_PARTIAL | same shape; `named_variant_count < total_variant_count` is explicit and all emitted labels must be pairwise-distinguishable |
+| `TPL_VARIANT_PRICE_LIST_V1` | VARIANT_PRICE_LIST | `{currency:string,variants:[{label:string,current_minor:integer},...]}`; requires complete safe pairwise-distinguishable labels |
+| `TPL_SHORTLIST_TOP3_V1` | OBJECTIVE_SHORTLIST where total > displayed | `{total_product_count:integer,products:[ShortlistItem,...]}` |
+| `TPL_SHORTLIST_ALL_V1` | OBJECTIVE_SHORTLIST where total == displayed | same shape |
+| `TPL_SHORTLIST_EMPTY_V1` | OBJECTIVE_SHORTLIST_EMPTY | `{}` |
+| `TPL_STORE_STOCK_V1` | STORE_STOCK | `{in_stock:boolean,variant_label:string|null}` |
+
+`ShortlistItem` is exact customer-safe projection:
+`{title,product_url,image_url,price_min_minor,price_max_minor,currency,partial_model_match}`.
+`title` must pass the exact public-display-text predicate below; URLs/images are
+null or pass the exact public-URL predicate below; price fields are integer minor
+units; `partial_model_match` is boolean. No canonical ID/SKU enters the item.
+
+Variant enumeration ANSWER payloads (`VARIANT_LIST`, `VARIANT_LIST_PARTIAL`,
+`VARIANT_PRICE_LIST`) must satisfy the same frozen public-label normalization and
+pairwise-distinguishability rule as CLARIFY choices. If two different canonical
+variants yield duplicate-equivalent emitted labels, C4 returns HUMAN /
+PRODUCT_VARIANT_NOT_RESOLVABLE before constructing public payload; differing
+prices do not make duplicate labels distinguishable. Ordinal position, SKU and
+variant ID are never public disambiguators.
+
+Variant-price-list rows with `label_complete=false` cannot be represented safely
+without an internal identifier and therefore map to HUMAN /
+PRODUCT_VARIANT_NOT_RESOLVABLE rather than partial public prices.
+
+All CLARIFY templates use `render_payload=null`; prompt wording is determined
+only by `(template_id,response_locale,requested_slot,choices)`. No CLARIFY
+reason has an object payload in v1.
+
+CLARIFY template mapping:
+- AMBIGUOUS_PRODUCT -> `TPL_CLARIFY_PRODUCT_V1`, slot `product_id`;
+- AMBIGUOUS_VARIANT -> `TPL_CLARIFY_VARIANT_V1`, slot `variant_id`;
+- AMBIGUOUS_CATEGORY -> `TPL_CLARIFY_CATEGORY_V1`, slot `category_id`; the
+  private durable candidate value is the exact tuple
+  `{category_id,match_mode}` where `match_mode` is `NODE_ONLY` or
+  `INCLUDE_DESCENDANTS`, while the public choice exposes only token+label;
+- AMBIGUOUS_BRAND -> `TPL_CLARIFY_BRAND_V1`, slot `brand_id`;
+- AMBIGUOUS_STORE -> `TPL_CLARIFY_STORE_V1`, slot `store_id`;
+- AMBIGUOUS_MONEY -> `TPL_CLARIFY_MONEY_V1`, slot `max_price_minor`, and
+  **exactly `choices=[]`**;
+- MISSING_SHORTLIST_ANCHOR -> `TPL_CLARIFY_SHORTLIST_ANCHOR_V1`, concrete slot
+  `category_id`, and **exactly `choices=[]`**. v1 deliberately asks for category
+  rather than emitting the unsupported union slot `shortlist_anchor`; a brand
+  remains a valid shortlist anchor when it was already resolved in the customer
+  turn, but it is not treated as an answer to this category-specific prompt.
+
+Every finite candidate must have one bounded safe customer label. For PRODUCT
+and CATEGORY ambiguity, the C2 identity candidate's convenience `title`/`name`
+field is **not** customer-presentation evidence because those resolvers may have
+cross-locale fallback semantics. C4 instead performs the exact bounded
+candidate-presentation reads frozen in §28.4 phase 7 and accepts only
+`localized[response_locale].title` for PRODUCT or `names[response_locale]` for
+CATEGORY when every read reports the same certified C2 catalog generation.
+Cross-locale fallback is forbidden. Brand/store/variant labels may use their
+canonical sanitized factual label where no locale-specific field exists.
+
+A finite choice set must also be **pairwise distinguishable to the customer**.
+For comparison only, derive `choice_label_key` by NFC-normalizing the rendered
+label, collapsing Unicode whitespace to one ASCII space, trimming, and applying
+locale lowercase with the exact `response_locale`. Two different private
+candidate values may not share one `choice_label_key`. Ordinal tokens are not a
+customer-visible disambiguator and must never be used to hide duplicate labels.
+
+If PRODUCT/CATEGORY/BRAND/STORE identity candidates cannot all be represented
+with safe exact-locale/factual and pairwise-distinguishable labels, the turn
+fails closed to HUMAN / IDENTITY_NOT_RESOLVABLE. AMBIGUOUS_VARIANT uses HUMAN /
+PRODUCT_VARIANT_NOT_RESOLVABLE under the same distinguishability rule. Candidate
+ordering is the deterministic resolver order only after this validation, and a
+public token ordinal maps only to the private reservation at the same ordinal.
+
+### 16.3 Exact public presentation safety predicate
+
+All customer-visible PRODUCT/CATEGORY/BRAND/STORE labels, shortlist titles and
+variant labels are validated again at the C4 public boundary. Upstream ingest or
+resolver acceptance is not presentation authorization.
+
+`public_display_text(raw,{internal_ids})` is exact. `internal_ids` is **not caller-selected**; DecisionBasis derives the mandatory closed set below for the projection kind and rejects if required provenance cannot be read:
+1. `raw` must be a string. NFC-normalize it.
+2. **Before whitespace normalization**, reject any Unicode General_Category
+   `Cc` **or `Cf`** code point (`/\p{Cc}|\p{Cf}/u`). This deliberately rejects
+   zero-width/default-format controls such as U+200B/U+200C/U+200D/U+2060 and
+   therefore also covers bidi override/isolate controls.
+3. Collapse Unicode whitespace runs to one ASCII space and trim.
+4. Result must contain 1..160 Unicode code points. The 160 ceiling is inherited
+   from the already-shipped customer-facing variant-label bound, not newly guessed.
+5. Reject URL-like values if the normalized value matches any exact predicate:
+   `/^[A-Za-z][A-Za-z0-9+.-]*:/u`, `/^\/\//u`, or `/^www\./iu`.
+6. Reject debug/internal-looking values if the normalized value matches either
+   exact regex:
+   - `/(?:^|[^\p{L}\p{N}_])(?:id|oid|aid|nid|vid|fid)\s*[:=#-]\s*\S+/iu`;
+   - `/^(?:a|o|s|i|b|d):\d+[:;{]/iu`.
+   The first rule is boundary-sensitive and separator-sensitive; for example
+   `Blue oid:32976` and `oid-32976` reject, while `xoid:32976` does not match that
+   debug-token rule. The serialized-prefix rule is intentionally case-insensitive,
+   so `O:8:{...}`, `o:8:{...}` and `A:1:{...}` all reject.
+7. Case-insensitive normalized equality with any member of the mandatory
+   projection-specific internal-ID set is rejected.
+8. Otherwise return the normalized string. No renderer may apply a weaker second
+   sanitizer or recover rejected text from another source.
+
+Mandatory `internal_ids` derivation is exact:
+- PRODUCT identity choice: candidate `canonical_product_id`, non-null
+  `canonical_variant_id`, `sku`, `sku_key`; plus same-generation `getProduct()`
+  `product_id`, `default_variant_id`, `brand.brand_id`, every
+  `variants[*].variant_id|sku|sku_key`, every category `category_id|parent_id`,
+  every attribute `attribute_id|owner_id`, every image `image_id|variant_id`, and
+  kit component `component_variant_id|component_product_id|sku` when present;
+- CATEGORY choice: reserved/current `canonical_category_id`, presentation
+  `category_id`, and non-null `parent_id`;
+- BRAND choice: `canonical_brand_id` and presentation `brand_id`;
+- STORE choice: `canonical_store_id` and presentation `store_id`;
+- VARIANT choice/list/price/stock label: fact/reservation `variant_id` and `sku`
+  plus a bounded same-generation `getVariant({variantId})` read supplying
+  `variant_id`, `product_id`, `sku`, `sku_key` and every option object's non-null
+  `option_id` / `attribute_id` used by label construction;
+- shortlist PRODUCT title: current shortlist `product_id`, every
+  `matching_variant_ids[*]`, and the full same-generation `getProduct()` internal
+  identifier set listed for PRODUCT above.
+
+Null/absent fields are ignored; non-string identifier values are stringified only
+for equality comparison. Required same-generation identifier reads that fail,
+drift, or cannot prove the mandatory set fail closed with the projection's
+existing HUMAN reason (identity PRODUCT/CATEGORY/BRAND/STORE ->
+IDENTITY_NOT_RESOLVABLE; VARIANT -> PRODUCT_VARIANT_NOT_RESOLVABLE; shortlist
+required title -> PRODUCT_PRESENTATION_NOT_AVAILABLE). An empty or caller-pruned
+set is never permitted.
+
+Variant labels have an additional composition rule: **every constituent label
+part is validated independently before composition** with the complete mandatory
+VARIANT `internal_ids` set above, not merely with that part's local
+`option_id`/`attribute_id`. A rejected part makes the whole variant label
+unrepresentable; C4 never drops the bad part and keeps the remainder. Only after
+all parts pass may they be joined deterministically with ` / `; the resulting
+whole label is then validated again with the same complete VARIANT `internal_ids`
+set. Therefore a SKU/internal ID cannot hide inside a composite label such as
+`SKU123 / Blue` even though the final string is not equal to `SKU123`.
+
+`public_url(raw,kind)` where `kind=product|image` is exact:
+- `null` is allowed; otherwise `raw` is a string of 1..4096 Unicode code points
+  (4096 is inherited from the frozen Catalog ingest URL bound);
+- reject Unicode whitespace, Unicode `Cc`, backslash, and percent-encoded control
+  octets `%00..%1F` / `%7F` before parsing;
+- WHATWG URL parse must succeed;
+- scheme must be exactly `https:`; username/password, fragment and non-default
+  port are forbidden;
+- hostname must be a public DNS hostname with at least one dot; IP literals,
+  `localhost`, and `.localhost/.local/.internal/.invalid/.test/.example` names
+  are forbidden;
+- `product` host must be exactly `babypark.ua` or a subdomain of `babypark.ua`;
+- `image` may use any public HTTPS DNS host satisfying the common host rule,
+  because Catalog images may be CDN-hosted.
+
+Return the canonical parsed HTTPS URL. For shortlist output, an unsafe/missing
+required title => HUMAN / PRODUCT_PRESENTATION_NOT_AVAILABLE. `product_url` and
+`image_url` are optional: an unsafe optional URL is projected as `null`, never
+passed through and never replaced from another locale/generation/source.
+Identity-choice label failure keeps the existing IDENTITY_NOT_RESOLVABLE /
+PRODUCT_VARIANT_NOT_RESOLVABLE mappings.
+
+Private provenance and authority dependencies are registered out-of-band with
+the genuine decision object for `decision_context_id` construction. They are not
+enumerable C4Decision properties and cannot be supplied/replaced by the caller.
 
 ## 17. Catalog freshness
 
@@ -811,15 +1203,86 @@ That follow-up exists as `VARIANT_PRICE_LIST`.
 
 1 credible canonical product => continue.
 
-0 or multiple unresolved customer-level candidates => CLARIFY.
+0 customer-level canonical candidates => HUMAN / IDENTITY_NOT_RESOLVABLE.
+
+Multiple known, bounded customer-level candidates => CLARIFY / AMBIGUOUS_PRODUCT.
+CLARIFY is reserved for a real finite candidate set that can be presented and
+selected; zero candidates must not degrade into an open-ended "tell me more"
+prompt.
+
+The same zero-versus-known-many rule applies to required canonical
+category/brand/store identity resolution: zero canonical candidates => HUMAN /
+IDENTITY_NOT_RESOLVABLE; multiple known bounded candidates => the corresponding
+AMBIGUOUS_* CLARIFY reason. Absence of an optional shortlist anchor remains the
+separate `MISSING_SHORTLIST_ANCHOR` case.
 
 Unresolved catalog identity corruption/collision => HUMAN / CATALOG_IDENTITY_COLLISION.
 Never expose internal identity-collision candidates.
+
+C4 evaluates the **complete certified identity-row multiset**, never one selected
+row in isolation. Before any ANSWER or CLARIFY:
+- any `INVALID_AUTHORITY / CATALOG_IDENTITY_COLLISION` row => HUMAN /
+  CATALOG_IDENTITY_COLLISION;
+- any other `INVALID_AUTHORITY` row => fail before decision creation;
+- any PRODUCT/CATEGORY/BRAND/STORE `NOT_FOUND` row forbids ANSWER and CLARIFY
+  for the whole turn and yields HUMAN / IDENTITY_NOT_RESOLVABLE unless a more
+  specific C3 latch reason wins;
+- `AMBIGUOUS_*` may be considered only when no identity row is NOT_FOUND or
+  INVALID_AUTHORITY;
+- exactly one ambiguous identity kind may use the corresponding CLARIFY path;
+- more than one simultaneously ambiguous required identity kind => HUMAN /
+  MULTIPLE_IDENTITY_AMBIGUITIES.
+
+Thus `NOT_FOUND + RESOLVED` never becomes ANSWER, `NOT_FOUND + AMBIGUOUS` never
+becomes CLARIFY, and multiple NOT_FOUND rows never degrade to
+`MISSING_SHORTLIST_ANCHOR`.
+
+After INVALID_AUTHORITY and NOT_FOUND have been handled, C4 also reduces
+**same-kind singular-slot cardinality** before request-family selection or any
+dynamic authority read. v1 singular resolver kinds are PRODUCT, CATEGORY,
+BRAND, STORE and MONEY. Multiple rows of one kind are admissible only when every
+row is `RESOLVED` and all rows prove the same exact semantic slot value; those
+rows collapse to one value while their source-span provenance remains retained.
+
+Semantic equality is exact and kind-specific:
+- PRODUCT: `(canonical_product_id, canonical_variant_id)`; `null` variant and an
+  exact variant are different values;
+- CATEGORY: `(canonical_category_id, match_mode)`;
+- BRAND: `canonical_brand_id`;
+- STORE: `canonical_store_id`;
+- MONEY: `(currency, minor_units)`.
+
+If one singular kind has two different RESOLVED values, any mix of RESOLVED and
+AMBIGUOUS rows, or more than one AMBIGUOUS row, C4 returns HUMAN /
+UNSUPPORTED_CONSTRAINT before authority. It never chooses the first row,
+intersects/unions values, invents min/max roles, or presents candidates from an
+arbitrarily selected row. This is a v1 fail-closed boundary, not a claim that
+multi-product/multi-category/multi-money requests are inherently unsupported in
+future versions.
 
 ## 23. Variant labels
 
 Raw Drupal option labels may be shown only as sanitized factual labels.
 Do not infer universal COLOR/SIZE/MATERIAL semantics.
+
+**Review trigger (data-based, not phase-based).**
+`PRODUCT_ATTRIBUTE_NOT_AUTHORITATIVE` routing, including C30/C31, must be
+explicitly re-certified — never silently reinterpreted — the first time the
+current production-authoritative Catalog generation contains at least one
+canonical `product_attributes` row referencing `attribute_defs`, regardless of
+source provider. This trigger is a required checklist item of the next
+source-provider cutover review, not an independently schedulable task. Until an
+explicit re-certification change is reviewed and merged into the frozen base
+docs, HUMAN routing stays in force even when richer canonical attribute data is
+technically available. Populated data alone never changes frozen policy.
+
+C4 treats reviewed product-attribute request language as a **pre-authority
+terminal family outcome** in v1. After the request-family match set has been
+reduced to exactly one attribute-query family, C4 returns HUMAN /
+PRODUCT_ATTRIBUTE_NOT_AUTHORITATIVE without reading product attribute values or
+using free description text. C30/C31 and the populated-data C31a fixture use the
+same terminal mapping until an explicit re-certification changes this frozen
+contract.
 
 `displayable_variant_label()` minimum:
 - non-empty;
@@ -971,10 +1434,11 @@ episode replacement while a previously proven HUMAN blocker is pending.
 This is safe for v1 because HUMAN ends the AI episode and automatic bot re-entry
 after handoff is out of scope.
 
-### 28.2 C4 precedence for multiple latch classes
+### 28.2 C4 primary HUMAN reason
 
-C3 retains the whole set and does **not** choose the final HUMAN reason. C4 maps
-a non-empty set to HUMAN using this fixed primary-reason order:
+C3 retains the complete latch set and never chooses the final public reason.
+C4 preserves that set and selects one primary HUMAN reason using this fixed
+order:
 
 1. `RETURN_CASE` -> `RETURN_CASE_SPECIFIC`
 2. `ORDER_SPECIFIC` -> `ORDER_SPECIFIC`
@@ -982,10 +1446,154 @@ a non-empty set to HUMAN using this fixed primary-reason order:
 4. `SUBJECTIVE_RECOMMENDATION` -> `SUBJECTIVE_RECOMMENDATION`
 5. `UNSUPPORTED_EXCLUSION` -> `UNSUPPORTED_EXCLUSION`
 6. `UNSUPPORTED_AGE_SUITABILITY` -> `UNSUPPORTED_CONSTRAINT`
-7. `OTHER_UNCONSUMED_CONSTRAINT` -> `UNSUPPORTED_CONSTRAINT`
+7. any certified PRODUCT/CATEGORY/BRAND/STORE `NOT_FOUND` identity row ->
+   `IDENTITY_NOT_RESOLVABLE`
+8. `OTHER_UNCONSUMED_CONSTRAINT` -> `UNSUPPORTED_CONSTRAINT`
 
-The ordering selects one stable observable reason only; it does not discard the
-other proven latch classes.
+A contentful zero-candidate phrase is **not** required to make C3 CLEAR.
+For example, an unknown model name may legitimately leave
+`OTHER_UNCONSUMED_CONSTRAINT`; the latch remains intact while the certified
+NOT_FOUND identity row selects `IDENTITY_NOT_RESOLVABLE` above the generic
+OTHER fallback. A specific latch such as `UNSUPPORTED_EXCLUSION` still outranks
+the identity reason. No latch is deleted or rewritten to obtain a preferred
+reason.
+
+### 28.3 Sealed transient DecisionBasis
+
+C4 kernel has one admissible input capability: a transient opaque
+`DecisionBasis` token. It MUST NOT accept caller-supplied C3 proofs, resolution
+rows, exact-read arrays, request-family results or authority fact DTOs as
+independent kernel arguments.
+
+The decision-authority composition seam creates the token in one invocation. In
+that invocation it must:
+1. receive the current certified routing projection and exact Chatwoot reads;
+2. consume the exact certified C2 resolution proven against those reads;
+3. call `evaluateObjectiveConstraintLatch` itself and retain the exact genuine
+   C3 result;
+4. run **all** reviewed deterministic request-family validators, recording the
+   complete match set;
+5. reduce the complete certified identity-row multiset under §22;
+6. derive the complete **pre-authority clarification set** for the one matched
+   family before any domain-authority read. This set includes required unresolved
+   PRODUCT/CATEGORY/BRAND/STORE identity ambiguity, AMBIGUOUS_MONEY and
+   MISSING_SHORTLIST_ANCHOR. The exact set is retained and is never reduced by
+   choosing a slot in source-code order;
+7. for any finite identity clarification set, perform only the exact bounded
+   **candidate-presentation reads** allowed by §16.2/§28.4: they may decorate the
+   already-certified candidate IDs for public labels but may not add/remove/
+   replace candidates or determine business facts. Every Catalog read must return
+   the same `generation_id` as the certified C2 `catalog_generation_id`; drift,
+   missing exact-locale presentation or unsafe/indistinguishable labels becomes a
+   terminal identity-representability HUMAN before clarification budget;
+8. validate the current clarification budget as exactly integer 0 or 1 and
+   reduce all local gates under the total precedence in §28.4, including C3,
+   identity integrity/NOT_FOUND, same-kind singular-slot cardinality,
+   request-family cardinality, all frozen single-family pre-authority terminals
+   (attribute query and uncertified delivery policy), response-locale allowlist,
+   candidate-label representability and the clarification set. A local terminal HUMAN or
+   CLARIFY outcome is retained in the private snapshot and **no family authority
+   read occurs**;
+9. only when §28.4 produces no pre-authority terminal outcome and every required
+   canonical ID/value is resolved, perform the current authority read required
+   for that family. Never choose an arbitrary candidate, omit an unresolved
+   filter/value, widen the request, or read dynamic authority after a prior
+   terminal outcome merely to choose a different reason;
+10. validate the returned authority outcome against the exact closed
+   `(authority family, status, reason)` union emitted by that authority
+   contract. Every emitted tuple has one explicit mapping or an explicit
+   intentional rejection. Wildcard/default mappings such as "any allowlisted
+   UNANSWERABLE" are forbidden; an unknown/new tuple fails before decision
+   creation until the frozen contract is amended;
+11. derive an allowlisted immutable typed private snapshot and return only an
+    opaque frozen token.
+
+Private basis metadata is held only in process in WeakMap/WeakSet-equivalent
+state. It may retain source object references for provenance, but the kernel
+uses only the private immutable typed snapshot. The token and metadata are never
+durable and contain no raw/normalized customer body, residue, email, phone,
+attachment URL or content-derived digest.
+
+A missing, serialized, `structuredClone`d, reconstructed or otherwise
+unregistered token fails before decision creation. The token is single-use:
+after one decision attempt, reuse fails. Recovery/retry or a later customer turn
+must rebuild a new basis from exact reads and current authority.
+
+Because the kernel receives no independent proof/fact arguments, callers cannot
+mix a C3 result from basis A, a resolution from basis B or a fact DTO for another
+product. Certification is the capability boundary, not structural equality.
+
+For any certified identity row with status `NOT_FOUND`, the exact certified C2
+resolution captured in DecisionBasis is the zero-candidate evidence. No second
+parallel zero-candidate proof object exists.
+
+### 28.4 Total terminal precedence and authority short-circuit
+
+C4 has one total precedence across independent gates. This order chooses the one
+machine reason and determines whether dynamic authority may be read. All local
+pure validators/reducers may collect their evidence, but a lower phase never
+replaces a terminal outcome from a higher phase.
+
+0. **Invalid/certification state:** missing/forged basis inputs, invalid
+   `clarification_prompts_sent`, unknown/non-allowlisted enum/status/reason or
+   other unclassified typed state => reject before decision creation. No dynamic
+   authority read.
+1. **Identity integrity:** if any identity row is `INVALID_AUTHORITY /
+   CATALOG_IDENTITY_COLLISION`, HUMAN / CATALOG_IDENTITY_COLLISION wins. If no
+   collision exists but any other `INVALID_AUTHORITY` row exists, reject. A
+   collision outranks semantic C3 latch reasons; the complete latch set remains
+   retained for trace/handoff.
+2. **C3 + identity NOT_FOUND:** if phase 1 did not terminate, apply §28.2 exactly
+   across the complete C3 latch set plus any certified identity `NOT_FOUND` row.
+   Any resulting HUMAN reason terminates the decision before authority.
+3. **Singular-slot cardinality:** reduce same-kind PRODUCT/CATEGORY/BRAND/STORE/
+   MONEY rows under §22. Equivalent all-RESOLVED rows collapse; any different
+   RESOLVED values or any multi-row set containing AMBIGUOUS => HUMAN /
+   UNSUPPORTED_CONSTRAINT. No authority read.
+4. **Request-family cardinality:** only if no earlier terminal outcome exists,
+   zero matches rejects, more than one match => HUMAN /
+   MULTIPLE_REQUEST_FAMILIES_MATCHED, exactly one match continues.
+5. **Single-family pre-authority terminal:** attribute-query family => HUMAN /
+   PRODUCT_ATTRIBUTE_NOT_AUTHORITATIVE; delivery-policy family => HUMAN /
+   COMMERCE_POLICY_NOT_AUTHORITATIVE until an exact public delivery schema is
+   separately frozen. Future pre-authority terminal families require an explicit
+   frozen mapping; there is no default.
+6. **Response locale:** current certified C2 language must be exactly `uk` or
+   `ru`; otherwise HUMAN / UNSUPPORTED_RESPONSE_LANGUAGE. No domain-authority
+   read.
+7. **Finite identity candidate presentation/representability:** only for a
+   clarification requirement that presents PRODUCT/CATEGORY/BRAND/STORE
+   candidates. PRODUCT labels come from exact `getProduct({productId})`
+   `localized[response_locale].title`; CATEGORY labels come from exact
+   `listCategories({language:response_locale,categoryIds:[...]}).categories[*].names[response_locale]`.
+   C4 ignores fallback `candidate.title`, fallback category `name`, and
+   cross-locale presentation as public label evidence. Every such Catalog read
+   must report the exact certified C2 `catalog_generation_id`; generation drift,
+   missing exact-locale label, unsafe label or duplicate-equivalent labels =>
+   HUMAN / IDENTITY_NOT_RESOLVABLE. BRAND/STORE use their already-certified
+   canonical factual labels and obey the same safety/distinguishability rule.
+   These reads decorate the fixed candidate set only; they never change identity
+   or business authority.
+8. **Clarification set/budget:** only after phase 7 succeeds, apply §29 to the
+   complete pre-authority clarification set. Budget 1 + any non-empty set =>
+   HUMAN / CLARIFY_EXHAUSTED; budget 0 + one requirement => corresponding
+   CLARIFY; budget 0 + >1 identity-only => HUMAN /
+   MULTIPLE_IDENTITY_AMBIGUITIES; budget 0 + any other >1 => HUMAN /
+   MULTIPLE_CLARIFICATION_REQUIREMENTS.
+9. **Current authority:** only after phases 0-8 produce no terminal outcome may
+   C4 perform the family authority read. Exact ANSWER/HUMAN tuples map under the
+   closed family table. If the exact store-stock read returns `CLARIFY /
+   AMBIGUOUS_VARIANT`, C4 validates all candidate variant labels for safety and
+   pairwise distinguishability **before** applying the 0/1 budget. Label failure
+   => HUMAN / PRODUCT_VARIANT_NOT_RESOLVABLE at budget 0 or 1; only a
+   representable candidate set uses budget 0 => CLARIFY / AMBIGUOUS_VARIANT or
+   budget 1 => HUMAN / CLARIFY_EXHAUSTED.
+
+Therefore a C3 HUMAN, identity-integrity HUMAN, singular-slot-cardinality
+HUMAN, multi-family HUMAN, attribute-query HUMAN, unsupported-response-language
+HUMAN or pre-authority CLARIFY/HUMAN can never be replaced by a later
+stale/conflicting authority result, because that authority call is not made. Cross-product property tests use an authority
+spy to prove zero calls for every pre-authority terminal phase.
 
 Supported resolvers consume:
 - product;
@@ -1028,6 +1636,17 @@ itself mark arbitrary text as consumed.
 
 Every frozen supported-only v1 vector must be recognized by the corresponding
 deterministic request-language validator independently of model hint quality.
+
+All reviewed request-family validators run for the turn; source-code order and
+`intent_hint` never select the winner. If C3/identity gates have not already
+forced HUMAN:
+- zero matching families => fail before decision creation;
+- exactly one matching family => continue;
+- more than one matching family => HUMAN /
+  MULTIPLE_REQUEST_FAMILIES_MATCHED.
+
+A multi-family match is one known fail-closed state, not an implicit priority
+between otherwise valid domains.
 A validator may accept only reviewed language for that v1 intent family. If all
 contentful text is accounted for by certified spans plus reviewed request/glue/
 social validators and no unsupported marker is present, the effective latch set
@@ -1082,6 +1701,16 @@ A preserved identifier that no longer resolves safely in current authority fails
 
 The final `decision_context_id` is built from the authority actually reread for the final response, not from the earlier clarification turn.
 
+That current authority outcome is captured inside the same sealed DecisionBasis
+that C4 consumes. The kernel never accepts an authority DTO separately. Outcome
+mapping is keyed by the exact tuple `(authority family, status, reason)`, not by
+a global reason-string switch. A fact-layer `NOT_FOUND / PRODUCT_NOT_FOUND`
+therefore does not mean identity zero-candidates and does not mean
+`PRODUCT_NOT_IN_STOCK`; unless explicitly frozen for that authority family it
+fails before decision creation. A previous-turn DTO, an outcome for another
+canonical ID, or an outcome from another generation/revision cannot be attached
+to the current basis.
+
 Clarification does not restart intent extraction from zero.
 
 When the system presents candidates, the next customer message may only:
@@ -1106,12 +1735,28 @@ Previously resolved stable identifier slots remain fixed unless the user explici
 Clarification counting is prompt-based, not attempt/round-based.
 
 Rules:
+- the only valid persisted values are integer `0` and integer `1`; any
+  missing/null/other value fails before decision creation;
 - initial episode: `clarification_prompts_sent=0`;
-- BabyPark may emit at most one `CLARIFY` prompt;
+- `0` is the **only** state in which any clarify-capable outcome may emit
+  `CLARIFY`;
 - after that prompt is emitted: `clarification_prompts_sent=1`;
-- the next customer reply must resolve the requested slot by selecting an
-  offered candidate or supplying a valid requested value;
-- if it remains unresolved, do not emit a second CLARIFY.
+- a successful selection may allow a later ANSWER after current-authority
+  rereads, but it never resets the budget;
+- finite identity candidate sets must first pass the §28.4 presentation/label
+  representability gate; an unrepresentable PRODUCT/CATEGORY/BRAND/STORE set
+  yields HUMAN / IDENTITY_NOT_RESOLVABLE, and an unrepresentable VARIANT set
+  yields HUMAN / PRODUCT_VARIANT_NOT_RESOLVABLE, at budget `0` or `1`;
+- only **after** every required finite candidate set is representable, budget `1`
+  plus any non-empty clarification requirement set — one requirement or many,
+  pre-authority or post-authority AMBIGUOUS_VARIANT — yields HUMAN /
+  CLARIFY_EXHAUSTED before any lower clarification-cardinality HUMAN reason;
+- when the budget is `0`, exactly one representable finite requirement may CLARIFY; more than
+  one identity-only requirement yields HUMAN / MULTIPLE_IDENTITY_AMBIGUITIES,
+  while any other set of more than one requirement yields HUMAN /
+  MULTIPLE_CLARIFICATION_REQUIREMENTS;
+- no path emits a second CLARIFY and no path chooses one requirement from a
+  multi-requirement set by code order.
 
 Outcome:
 
@@ -1201,6 +1846,56 @@ example:
 - filling the explicitly requested missing slot;
 - invoking an explicitly supported deterministic follow-up that relies on
   preserved stable slots, such as C25 `VARIANT_PRICE_LIST`.
+
+A successful clarification selection does not append a second independent
+identity row to the old ambiguity. The continuation seam performs one
+**provenance-bound clarification discharge reducer** before ordinary C4 identity/
+family reduction:
+1. locate the episode's unique CONFIRMED CLARIFY action that owns the historical
+   one-prompt reservation; its `basis_event_seqs`/descriptor define the original
+   request-family semantics;
+2. reread/rebuild that original covered customer basis under current C2/C3 rules;
+3. require durable stable selection state committed by the already proven
+   selection path and matching the confirmed action's reserved slot/candidate.
+   This includes the concrete money slot `max_price_minor` with proven
+   `{currency:'UAH',minor_units}` and, for CATEGORY, the atomic pair
+   `(category_id,category_match_mode)`;
+4. for CATEGORY, re-prove according to the selection origin before discharge:
+   - **presented-candidate / structured submission:** rerun the current category
+     resolver on the original ambiguity phrase/basis that produced the confirmed
+     CLARIFY, not on the ordinal token. The result may correctly remain
+     `AMBIGUOUS`; success requires the privately reserved selected
+     `{category_id,match_mode}` tuple to be an exact member of the current
+     candidate set. Extra current candidates do not erase the customer's proven
+     selection. Absence of the tuple, INVALID/NOT_FOUND authority, or a same-ID
+     mode replacement such as `NODE_ONLY -> INCLUDE_DESCENDANTS` fails HUMAN /
+     IDENTITY_NOT_RESOLVABLE;
+   - **requested-slot free-text fill:** rerun the category resolver on that exact
+     follow-up phrase and require one current `RESOLVED` tuple exactly equal to
+     the atomically committed `(category_id,category_match_mode)`. Current
+     ambiguity/NOT_FOUND/INVALID or mode drift fails HUMAN /
+     IDENTITY_NOT_RESOLVABLE.
+   The structured ordinal itself is never treated as a vocabulary phrase and no
+   path guesses descendant scope;
+5. replace **exactly that one unresolved/ambiguous slot** in the original
+   continuation view with the proven stable canonical selection before
+   singular-cardinality, ambiguity and family-match reduction. CATEGORY supplies
+   both `category_id` and `category_match_mode` to the original family. For MONEY
+   the historical AMBIGUOUS_MONEY row is discharged and the selected upper-bound
+   `(currency,max_price_minor)` is supplied to the original objective shortlist
+   family; neither old ambiguity remains alongside its replacement;
+6. preserve every unrelated original stable constraint/family input (for example
+   the original category/brand anchor while resolving C40 money, or the original
+   price ceiling while resolving C43 category) and then reread all current dynamic
+   authority.
+
+The reducer never globally deletes AMBIGUOUS rows, never guesses which old row
+was answered and never lets a later standalone query inherit this context. If
+there is no unique confirmed CLARIFY provenance, slot mismatch, value mismatch,
+multiple possible discharge targets, or the rebuilt original family no longer
+matches the reservation semantics, fail closed to HUMAN/reject rather than
+renewing ambiguity. After successful discharge the persisted prompt budget
+remains `1`; it is not reset.
 
 A standalone new query closes/replaces the prior logical episode and starts a
 new one. Its `clarification_prompts_sent` starts at zero and no old stable slot
@@ -1347,6 +2042,20 @@ state to BabyPark's durable semantic conversation database. It contains:
 - clarification reservations;
 - durable public-action/outbox state.
 
+For the **v0.7 runtime target**, CATEGORY stable identity is the exact pair
+`(category_id,category_match_mode)`, where `category_match_mode` is exactly
+`NODE_ONLY | INCLUDE_DESCENDANTS`. A proven category selection must commit both
+components atomically with the same accepted-event provenance, and restart
+rebuild must re-prove the same pair before category-scoped authority is used.
+
+This pair requirement is newly frozen by the PR #100 contract amendment. It is
+**not** a claim about the implementation already merged on the PR #100 base:
+that implementation persists `category_id` without durable
+`category_match_mode`. Therefore C4 production code may not rely on the pair
+until a later production-code stage implements and verifies the prerequisite
+C2/state-store retrofit under the then-current AI Working Agreement. The
+historical C1 contract in §29.3 remains unchanged evidence.
+
 `copilot.sqlite` remains disposable delivery/job/lease/reconciler execution
 state. Domain truth MUST be committed in `episode.sqlite` before the originating
 copilot job may be terminalized. Cross-file atomicity is not required: retry
@@ -1454,6 +2163,39 @@ external POST is the accepted residual cross-system race. Strict elimination
 would require a conditional/CAS send primitive inside Chatwoot; CDC/WAL does not
 remove that final send race and is not required for Website First Line v1.
 
+The whole-conversation snapshot authorizes **conversation topology only**. It is
+not authority for price, stock, policy, hours or the text of a prepared reply.
+After that snapshot passes and before `SENDING`, the relay performs **semantic
+reauthorization** for the still-current action:
+1. exact-reread the action's covered customer source messages transiently from
+   Chatwoot; raw bodies remain non-durable;
+2. rebuild the current C2 resolution/C3 proof/request-family state from those
+   reads and the current episode's stable identifiers/selections;
+3. build a new genuine DecisionBasis and rerun C4, which rereads current
+   Catalog/Knowledge authority and current operational `now`;
+4. if any stable slot used by this decision came from a native structured
+   clarification submission, exact-read the confirmed CLARIFY message again and
+   re-run the structured-submission proof against the same confirmed action,
+   ordinal/reservation and committed stable value; a changed/missing/multiple/
+   unknown `submitted_values` is a semantic mismatch and permits zero POSTs;
+5. compare the fresh decision's semantic descriptor with the durable prepared
+   descriptor;
+6. render only from the **fresh** C4 render payload;
+7. only then enter the atomic `GATING -> SENDING` transition and POST.
+
+This reauthorization occurs inside the already accepted final-snapshot-to-POST
+cross-system race; it does not claim a cross-system transaction. A failure or
+semantic mismatch never falls back to the previously prepared facts.
+
+No new durable selection-provenance column is required in v1. A structured
+selection's durable slot has `derived_through_event_seq` equal to the confirmed
+CLARIFY ledger event that supplied the submission, while an exact-message
+selection is derived through its later incoming customer event. Together with
+the episode's unique CONFIRMED CLARIFY action, this deterministically identifies
+when the final gate must re-read `submitted_values`. The final gate never trusts
+the already committed stable value alone when the provider-native source can be
+mutated without creating a new ledger event/stream revision.
+
 ## 29.8 Durable public-action outbox
 
 Public customer actions are durable domain state in `episode.sqlite`, owned by
@@ -1476,11 +2218,33 @@ A prepared action carries at least:
 - episode/basis identity;
 - prepared `stream_revision`;
 - action class;
+- prepared semantic descriptor: machine `reason`, `template_id` and
+  `response_locale` (`uk|ru`);
 - source-event coverage needed by the stale-action gate;
 - requested slot/canonical candidate reservation when CLARIFY requires it;
 - lifecycle/lease/deadline metadata.
 
+The prepared semantic descriptor is durable **decision/provenance**, not cached
+business truth. `render_payload`, price, stock, policy effects, operational
+hours/status and customer-facing labels are never persisted in the action.
 No raw customer body or content digest is required.
+
+After semantic reauthorization, the fresh decision must match the durable action
+on `decision`, `reason`, `template_id` and `response_locale`. For CLARIFY it must
+also match the reserved `requested_slot` and exact ordered private canonical
+candidate values. Reauthorization of the owning unsent CLARIFY uses only the
+reservation attestation from §29.9; without that attestation, persisted budget
+`1` applies normally. If the fresh result is HUMAN/reject, changes any descriptor
+field, or changes a CLARIFY reservation, the unsent action performs **zero public
+POSTs** and fails closed to native human handoff. It never mutates an existing
+reservation into a different prompt.
+
+If the descriptor remains identical, dynamic payload values are allowed to have
+changed: the relay sends the fresh current value. Examples: a price range whose
+numbers changed but remains PRODUCT_PRICE_RANGE, a STORE_STOCK yes/no change,
+or an updated prepayment amount all render from the new authority read. A change
+from PRODUCT_PRICE_RANGE to PRODUCT_PRICE_SINGLE changes reason/template and
+therefore does not send under the old action.
 
 The relay claims an action with CAS/lease semantics. The final
 `GATING -> SENDING` transition MUST atomically verify, inside one
@@ -1501,8 +2265,29 @@ UNCERTAIN and fails open to human.
 ## 29.9 Clarification and semantic provenance under v0.7
 
 A CLARIFY reservation is committed atomically with its PREPARED public action
-before any public send attempt. The reservation includes the one-prompt budget,
-requested slot and canonical candidates required for that prompt.
+before any public send attempt. The storage transition is itself the proof that
+this action was planned at pre-reservation budget `0`: it inserts the CLARIFY
+action and atomically changes the active episode to
+`clarification_prompts_sent=1`, `clarification_action_id=action_id`, the exact
+requested slot and the action's post-reservation episode version.
+
+Send-time semantic reauthorization of **that same owning unsent CLARIFY** must
+not feed the persisted post-reservation `1` back into ordinary C4 and thereby
+exhaust its own prompt. EpisodeStore instead issues a transient, single-action
+**clarification reservation attestation** only when all of these still hold:
+- action type is CLARIFY and state is PREPARED or the relay's current GATING
+  claim;
+- action episode/version is the current active episode/version;
+- episode has `clarification_prompts_sent=1`;
+- `clarification_action_id == action_id`;
+- episode/action requested slot and reserved canonical candidates are unchanged.
+
+Only while rebuilding semantics for that exact action does the attestation expose
+an **effective pre-reservation budget 0**. It is not a general budget override,
+is not durable, cannot be supplied by callers, and is invalid for another/new
+action. The fresh decision must still be semantically identical to the durable
+reservation. A competing/new clarification sees ordinary persisted budget `1`
+and therefore exhausts.
 
 Before SENDING, that exact reservation may be released only as part of a safe
 atomic cancellation/replacement of the unsent action. After SENDING, the budget
@@ -1566,6 +2351,14 @@ Optional:
 
 Missing anchor:
 CLARIFY / MISSING_SHORTLIST_ANCHOR.
+
+The v1 clarification requests **category only** (`requested_slot=category_id`).
+This is intentional: C2c already proves exact `category_id` requested-slot
+follow-ups, while the generic `shortlist_anchor` union is not a supported
+dependency slot and must never be emitted by C4. The original request's stable
+money/store constraints remain preserved across the clarification. A future
+category-or-brand union requires an explicit C2c contract change; it is not
+inferred here.
 
 ## 31. Dedicated objective CatalogService contract
 
@@ -1778,7 +2571,8 @@ ProductPresentation {
 ```
 
 Rules:
-- canonical product/variant IDs only;
+- canonical product/variant IDs only inside business/Catalog logic; C5 does not
+  receive those IDs in its public render payload;
 - variant_label is sanitized factual text and may be null;
 - product-level image is preferred;
 - variant image fallback may use only the exact selected variant or the already
@@ -1786,11 +2580,51 @@ Rules:
 - price, stock quantity and customer wording do not live inside ProductPresentation;
 - exact price/stock facts remain deterministic values in the enclosing factual DTO.
 
+### 40.1 Exact-locale public presentation
+
+The existing Catalog presentation helper may fall back to another available
+language for generic/non-public consumers. Website First Line **must not** use
+that cross-locale fallback for public title/URL text.
+
+For public shortlist/card projection, C4 reads the already-public CatalogService
+`getProduct({productId})` result and selects only
+`product.localized[response_locale]`. Every such presentation read must report
+`catalog.generation_id` exactly equal to the generation carried by the current
+`searchObjectiveProducts()` shortlist fact. A generation mismatch, missing
+product row or missing exact-locale presentation means the shortlist cannot be
+safely presented and yields HUMAN / PRODUCT_PRESENTATION_NOT_AVAILABLE. C4 never
+combines membership/price from one catalog generation with title/URL/image from
+another. It may use language-neutral image evidence only from that same-generation
+product read / already proven cohort. It must not select another localized entry
+when the exact response locale is absent.
+
+If a template requires a product title (currently shortlist cards) and any
+selected item lacks a non-empty safe title in the exact `response_locale`, C4
+returns HUMAN / PRODUCT_PRESENTATION_NOT_AVAILABLE. It never exposes a product
+ID, substitutes a RU title into a UK response (or vice versa), or asks C5 to
+choose a fallback. `product_url` may be null; if present it must come from the
+same exact-locale entry. Price/stock templates that do not require title/URL are
+not blocked merely because localized presentation is absent.
+
+C5 receives only the exact `C4Decision` from §16.2. WebsiteRenderer/TextRenderer:
+- perform no language detection;
+- perform no Catalog/Knowledge/Chatwoot read;
+- perform no LLM call;
+- accept only the allowlisted template for `response_locale`;
+- reject unknown/extra payload fields;
+- format exact critical values without semantic rewriting;
+- map PAYMENT_METHODS codes only to fixed locale-specific method names. The code
+  `COD_NOVA_POSHTA` never causes a percentage/fee/condition to be printed.
+
+Every public template has an explicit `uk` and `ru` branch. Missing branch is a
+renderer failure and produces zero public send; there is no default language.
+
 Initial adapters:
 - WebsiteRenderer;
 - TextRenderer.
 
-TextRenderer is implemented/tested in Slice C but not connected to Viber/Telegram production.
+TextRenderer is a planned deterministic C5 adapter. It is not implemented or
+connected to Viber/Telegram production by this pre-code C4 contract amendment.
 
 ## 41. Critical-value rendering
 
@@ -1892,6 +2726,7 @@ Canonical input includes only authority that affected the decision:
 - tool_contract_version;
 - template_id;
 - template_version;
+- response_locale for public ANSWER/CLARIFY;
 - used operational revision IDs;
 - used commerce revision IDs;
 - used vocabulary revision IDs;
@@ -2040,8 +2875,8 @@ No customer messages.
 - ObjectiveConstraintLatch;
 - ANSWER/CLARIFY/HUMAN;
 - deterministic templates;
-- WebsiteRenderer;
-- unconnected TextRenderer;
+- planned WebsiteRenderer;
+- planned TextRenderer;
 - public messages only for ANSWER/CLARIFY;
 - HUMAN sends no AI preface;
 - native handoff;
@@ -2123,6 +2958,11 @@ Key closure invariants are:
 6. durable public actions survive input-job/coprocessor loss through the independent relay;
 7. no CDC/WAL, third DB or Chatwoot core patch is required for Website First Line v1.
 
-Slice C umbrella issue #75 remains authorized. C1 is merged historical evidence;
-C2a implements the v0.7 runtime foundation next.
+Slice C umbrella issue #75 remains the frozen program boundary. C1 is merged
+historical evidence; C2a/C2b/C2c/C3 are merged under their previously reviewed
+contracts. This PR #100 amendment freezes additional pre-code C4/C5/C6 contract
+requirements, including a new v0.7 CATEGORY-pair prerequisite that current
+C2/state-store code on the PR base does not yet implement. Production C4/C5/C6
+work is not authorized by this docs-only amendment and must proceed only through
+future bounded production-code stages under the then-current AI Working Agreement.
 This v0.7 file is the single normative design source; no delta document applies.

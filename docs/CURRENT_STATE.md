@@ -1,9 +1,11 @@
 # CURRENT_STATE
 
-Status: CURRENT
-Last verified: 2026-10-02
+Status: EVIDENCE — operational/current-state record; not normative contract authority.
+Applies to: repository-wide operational and campaign state tracking.
+Supersedes: `docs/CURRENT_STATE.md` at canonical main `8e65a57b36eaf649853fa3a7aae58bf5cd5a477c`.
+Last updated: 2026-10-06
 Owner: BabyPark
-Source of truth: production runtime + this repository
+Source of truth for operational facts: production runtime + verified repository evidence.
 
 ## AI First Line Slice A state (2026-10-02)
 
@@ -274,7 +276,11 @@ Frozen v0.7 runtime boundary:
 - no CDC/WAL, third database or Chatwoot core patch is required for Website First Line v1.
 
 Website First Line implementation status:
-- C2a/C2b/C2c are complete and merged;
+- C2a/C2b/C2c are merged and passed their previously frozen gates;
+- PR #100 proposes a new v0.7 CATEGORY durable-identity requirement
+  `(category_id,category_match_mode)`; current base code still persists/proves
+  `category_id` without durable `category_match_mode`, so this is an explicit
+  future prerequisite retrofit before C4 production code may rely on the pair;
 - C3 — ObjectiveConstraintLatch is complete and merged via PR #98 at
   `0d54c023ee0a304e42cc18fa39034386946f0c85`, exact tree
   `853e144b630a23b1d35bb17b01532c15c3aeabb1`;
@@ -284,8 +290,75 @@ Website First Line implementation status:
 - the final independent Codex re-review on the exact merged C3 tree reported no
   major issues and all C3 review threads were resolved before merge.
 
-Next bounded implementation slice:
-**C4 — deterministic decision engine**.
+Current bounded contract slice:
+**C4 — deterministic decision engine**, campaign issue #99 / Draft PR #100.
+
+C4 remains **pre-code**: production C4 implementation is zero. This docs-only
+campaign does not select or authorize an implementation option. After the
+contract amendment merges, any production-code stage must first refresh/freeze
+the implementation-options evidence required by AI Working Agreement §§1/3 and
+then satisfy its applicable HEAVY verification/review closure.
+The PR #100 contract amendment includes:
+- one opaque transient single-use DecisionBasis and total terminal precedence;
+- complete identity/singular-slot/family/clarification reducers;
+- current-authority reads inside basis construction and exhaustive family tuple
+  mappings;
+- public response locale exactly `uk|ru`, with no hidden language fallback;
+- exact typed `bp.first-line.decision/1` public projection: C5 receives only
+  allowlisted template payload, never raw authority DTO/internal IDs;
+- separate typed store current-state and today-schedule readers so before-opening
+  and split-interval queries preserve the later schedule and already-published
+  future same-day closures are reflected, while an active current §9.2 CLOSED
+  terminal still suppresses hours;
+- every CLARIFY has exact `render_payload=null`; prompt inputs are only
+  template/locale/requested-slot/public choices; missing shortlist anchor uses
+  concrete `category_id` rather than the unsupported `shortlist_anchor` union;
+  finite identity choices and variant-enumeration ANSWER payloads require
+  pairwise-distinguishable customer labels, so ordinal position, differing price,
+  SKU or internal IDs never hide distinct canonical variants behind the same label;
+  PRODUCT/CATEGORY ambiguity labels are proven by bounded exact-generation,
+  exact-response-locale presentation reads and label representability is terminal
+  before clarification-budget exhaustion;
+  finite CLARIFY choice sets are capped at the existing durable bound of 20 with
+  no truncation; 21+ fails closed;
+  successful clarification continuation uses the unique confirmed CLARIFY action
+  to discharge exactly one reserved ambiguity while preserving the original
+  request-family semantics and unrelated constraints, including concrete
+  `max_price_minor` MONEY follow-up and CATEGORY identity as the durable/re-proven
+  `(category_id,category_match_mode)` tuple; mode drift fails closed rather than
+  guessing descendant scope. This bullet is a **proposed target contract**, not a
+  statement that the current merged C2/state-store already implements the pair;
+- exact store/call-center phone authority readers and schemas;
+- typed public CommercePolicy schemas for payment-method identity, prepayment and
+  general good-quality return period; payment-method codes carry no numeric
+  conditions;
+- delivery-policy public schema remains uncertified and therefore fails closed to
+  HUMAN / COMMERCE_POLICY_NOT_AUTHORITATIVE before generic policy JSON can be
+  rendered.
+
+Two downstream Slice C corrections discovered during adversarial preflight are
+already incorporated into the normative base documents on the current C4
+contract branch rather than left as chat/delta knowledge:
+- C5 exact-locale rendering forbids Catalog cross-language title/URL fallback and
+  keeps renderer pure/deterministic; C4 shortlist presentation reads are also
+  generation-bound to the exact `searchObjectiveProducts()` fact generation so a
+  catalog cutover cannot mix old membership/price with new title/URL/image. C4
+  additionally enforces one frozen public-display-text/public-URL safety boundary
+  before any label/title/link reaches C5; unsafe optional URLs become null;
+- C6 PublicActionRelay performs send-time semantic reauthorization after the
+  whole-conversation topology snapshot, reruns current C2->C4/dynamic authority,
+  and sends only a fresh payload whose decision descriptor still matches the
+  durable prepared action. Dynamic render payload is never durable. Reauthorizing
+  the exact owning unsent CLARIFY uses a transient reservation attestation to
+  recover its pre-reservation budget 0 without opening a second-prompt loophole;
+  structured input_select selections are exact-read and re-proven again at the
+  final send gate because submitted_values can mutate without a new ledger event.
+
+Production C4 code is not authorized by this docs-only campaign. A later
+production-code campaign starts only after the current AI Working Agreement's
+fresh alternatives/fit gate is satisfied; merge then requires the Agreement's
+complete verification manifest, exhaustive self-review, isolated HEAVY
+confirmation, and final owner approval on one unchanged exact basis.
 
 ## D2b acceptance status (2026-09-30)
 
