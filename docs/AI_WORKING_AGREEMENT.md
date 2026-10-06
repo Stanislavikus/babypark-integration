@@ -14,7 +14,7 @@ Before choosing an implementation, identify the complete applicable frozen requi
 
 Evaluate implementation options in this order:
 1. verified native capability of the component/platform in scope. Capability evidence is bound to an explicit component/environment/version tuple. For a production Chatwoot change, the version must match the actually deployed runtime/source for that bounded environment; a planned upgrade version is evaluated separately and cannot be treated as a production-native capability until that rollout boundary is explicit and verified;
-2. existing repo capability / frozen contract that already satisfies the requirement;
+2. an **implemented and proven** existing repository capability whose actual behavior already satisfies the requirement. Frozen/normative contracts define fitness and required behavior, but a design-only, planned, or otherwise unimplemented contract is never itself an implementation capability and cannot stop the alternatives scan;
 3. real, actively maintained OSS compliant with this agreement;
 4. a ready external product/framework/runtime service that is not a qualifying OSS option, but only after §3 architecture-fit establishes its exact commercial/license/usage terms and the owner accepts those terms for this bounded use;
 5. custom BabyPark code as the last resort.
@@ -167,6 +167,25 @@ If classification is ambiguous, use HEAVY. If a STANDARD review discovers that t
 
 For a HEAVY change with combinatorial/stateful behavior, the required-verification manifest includes property/state-space coverage where applicable. Select maintained OSS test tooling under §§1–3 before inventing a custom property-testing framework.
 
+### 7.0a Required-verification manifest and checked-in minimum baseline
+
+Before the **first zero-BLOCKER pass**, freeze one required-verification manifest for the current exact HEAD/tree/base. The manifest records:
+- every changed path and its deterministic changed-surface class;
+- every mandatory command/suite/check from the checked-in baseline below;
+- every additional check required by applicable normative/traceability contracts;
+- the exact final-tree basis on which those checks must run.
+
+The manifest is evidence, not governance, but it is immutable gate input: normalize its bytes deterministically (UTF-8, LF, final newline), record a SHA-256 content digest, and bind that digest to every zero-BLOCKER review pass, every reported verification result, and final owner approval. A comment ID/revision label is not an immutable binding. Any manifest byte/digest change cancels closure, invalidates prior verification results/approval, and requires every required check plus blocker closure to rerun on the current exact basis.
+
+**Checked-in minimum changed-surface → command baseline (a floor, never a ceiling):**
+- **every change:** `git diff --check <base>..HEAD` must PASS, and `git diff --name-status <base>..HEAD` must enumerate the complete changed surface for manifest classification;
+- **docs-only change** where every changed path is under `docs/` and no executable/runtime/config/schema/package/test surface changes: the repository baseline adds no runtime suite beyond `git diff --check`; any check required by the changed normative/evidence contract still applies;
+- **any runtime/tooling/config/schema/package/test change** outside that docs-only class — including `src/**`, `scripts/**`, `config/**`, `tests/**`, `package.json` or lockfile changes — requires final-HEAD `npm test` PASS in addition to `git diff --check`;
+- **Gateway executable/characterization surface** (including `src/gateway/**` or `tests/characterization/gateway-current.test.mjs`) is covered only when final evidence shows `npm test` PASS **including its `test:legacy` and `test:refactor` child suites**; a focused Gateway test alone cannot replace them;
+- if a changed path/surface cannot be classified deterministically, or the checked-in baseline plus applicable authoritative contracts do not identify a maintained validation that actually exercises a materially changed executable/config/schema surface, HALT under §9 rather than create an empty/convenient manifest.
+
+Applicable normative or traceability contracts may add required checks but may never remove this baseline. A legacy/unclassified document is not needed to make the baseline mandatory.
+
 Every gating review must provide, per finding:
 - concrete counterexample/trace;
 - violated invariant by name;
@@ -181,17 +200,17 @@ If an otherwise independent review tool has a fixed no-findings response format 
 - the tool produced no finding/suggestion threads for that run and there are zero unresolved BLOCKER threads attributable to the exact tree;
 - the complete available review output contains no finding that was merely omitted from the summary.
 
-The normalization record must cite the exact review run/comment and exact HEAD/tree/base/governance tuple and state `ZERO BLOCKERS (normalized no-findings result)`. A stock "no major issues" message without that evidence remains insufficient.
+The normalization record must cite the exact review run/comment, exact HEAD/tree/base/governance tuple, and frozen required-verification-manifest SHA-256 and state `ZERO BLOCKERS (normalized no-findings result)`. A stock "no major issues" message without that evidence remains insufficient.
 
 Merge requires:
 - independently re-confirmed exact HEAD/tree/base **and the governance authority tuple from §2.1**;
-- a required-verification manifest derived from applicable traceability/component contracts before the final gate, listing every required command/suite/check;
+- the frozen required-verification manifest from §7.0a, including every checked-in baseline requirement plus all applicable added checks, with its normalized content SHA-256 independently re-confirmed;
 - every manifest entry rerun against the final exact HEAD/tree/base, with all terminal outcomes accounted for;
 - every applicable required command/suite/check reaches PASS. `SKIPPED`, `TODO`, `CANCELLED`, unavailable evidence, or an omitted required check always blocks merge and halts under §9 where appropriate; an explanation/disposition cannot convert them to success;
 - the final merge write is guarded atomically against the exact validated canonical-main/base OID under §2.1; a tool that only guards the feature HEAD is insufficient;
 - traceability terminal under §6;
 - zero open BLOCKERs under the applicable STANDARD/HEAVY closure rule in §7.1;
-- an authenticated explicit owner go-ahead **after** blocker closure and final verification, bound to the exact final `HEAD → tree → base → governance authority tuple`. For inaugural adoption the governance tuple includes both the external-snapshot SHA-256 and the normalized manifest-content SHA-256; the owner approval also attests manifest completeness. Record the bound basis with the approval in the campaign PR/checkpoint or authenticated owner chat. Any subsequent commit/tree/base/governance/manifest/required-gate change invalidates that approval and requires a fresh owner go-ahead.
+- an authenticated explicit owner go-ahead **after** blocker closure and final verification, bound to the exact final `HEAD → tree → base → governance authority tuple → required-verification-manifest SHA-256`. For inaugural adoption the governance tuple also includes both the external-snapshot SHA-256 and the normalized **first-adoption** manifest-content SHA-256; the owner approval attests that first-adoption manifest's completeness. Record the complete bound basis with the approval in the campaign PR/checkpoint or authenticated owner chat. Any subsequent commit/tree/base/governance/first-adoption-manifest/required-verification-manifest/required-gate change invalidates that approval and requires a fresh owner go-ahead.
 
 No auto-merge, ever.
 
@@ -205,9 +224,9 @@ Do not default to a serial "find one blocker → fix → review again" loop. The
 
 **Verification pass.** On the new exact HEAD/tree/base, verify every prior blocker and continue searching the whole applicable surface for additional independent blocker classes. If any blocker remains, classify it, batch-fix the complete known set, and repeat verification.
 
-**STANDARD finite closure.** For a correctly classified STANDARD change, one exhaustive exact-tree verification that reports ZERO BLOCKERS closes the blocker gate. This is permitted only because the change is composing already-proven primitives and the classification evidence is part of the gate. A newly discovered HEAVY condition invalidates that closure and triggers HEAVY review.
+**STANDARD finite closure.** For a correctly classified STANDARD change, one exhaustive exact-tree verification bound to the unchanged required-verification-manifest SHA-256 that reports ZERO BLOCKERS closes the blocker gate. This is permitted only because the change is composing already-proven primitives and the classification evidence is part of the gate. A newly discovered HEAVY condition invalidates that closure and triggers HEAVY review.
 
-**HEAVY finite closure.** When an exhaustive verification first reports ZERO BLOCKERS, run one separately triggered **run-independent exhaustive confirmation** on the **unchanged exact HEAD/tree/base and unchanged governance authority tuple from §2.1**. The blocker gate closes only if that confirmation also reports ZERO BLOCKERS. The confirmation does not recursively require a third clean pass.
+**HEAVY finite closure.** When an exhaustive verification first reports ZERO BLOCKERS, run one separately triggered **run-independent exhaustive confirmation** on the **unchanged exact HEAD/tree/base, unchanged governance authority tuple from §2.1, and unchanged required-verification-manifest SHA-256 from §7.0a**. The blocker gate closes only if that confirmation also reports ZERO BLOCKERS. The confirmation does not recursively require a third clean pass.
 
 For this agreement, **run-independent** requires **context isolation**, not merely a second run ID. The confirmation context receives only the pinned campaign basis/governance authority (or, for inaugural adoption, the complete first-adoption invariant manifest + bound snapshot digest), the artifact/diff and applicable contracts, and the exhaustive review request. It must not receive the first review's clean conclusion, transcript, finding summary, or a same-conversation continuation that can anchor the second judgment.
 
@@ -298,6 +317,7 @@ Any amendment/review of this agreement must explicitly exercise these cases:
 | Case | Required result |
 |---|---|
 | Native feature exists but misses one frozen invariant | NOT A FIT; continue decision order |
+| A frozen/design document specifies a capability but no implemented/proven repository behavior exists, while a fitting OSS candidate exists | the design defines fitness only; step 2 does NOT stop the scan; continue to OSS |
 | Native/existing/OSS all fail but a non-OSS external product/service satisfies the requirements and its §3 commercial/architecture terms are owner-accepted | it is the step-4 candidate before custom; implementation still requires the bound §3 owner go-ahead |
 | Frozen/owner requirement demands free/open-source commercial use but the non-OSS product cannot satisfy it | NOT A FIT; it cannot block or displace the remaining decision order |
 | Free ready solution closes the need, preserves required quality, and is proven faster to integrate than equivalent custom production code | CUSTOM BUILD REJECTED; use the ready solution |
@@ -328,6 +348,8 @@ Any amendment/review of this agreement must explicitly exercise these cases:
 | First Line change | repository-wide process rules + applicable First Line domain rules apply |
 | Non-First-Line Gateway/Drupal/Catalog change | repository-wide process rules apply; unrelated First Line domain rules do not |
 | Required verification suite is omitted, SKIPPED/TODO/CANCELLED/unavailable even with an explanation, or run on a non-final tree | MERGE BLOCKED |
+| Gateway source/characterization change manifest omits final-HEAD `npm test` or its `test:legacy` / `test:refactor` child outcomes | MERGE BLOCKED by §7.0a baseline |
+| Required-verification manifest bytes change under the same comment/checkpoint/revision label while its content digest is unchanged/not re-bound | CLOSURE INVALID; freeze a new normalized manifest SHA-256 and rerun all required checks + blocker closure |
 | Required final-tree check FAILS for any reason, including an identical pre-existing/base failure | MERGE BLOCKED until the required final-tree check itself reaches PASS; provenance may explain the failure but cannot convert it to success |
 | Amendment branch changes this file before merge | target/base agreement governs; proposal is non-authoritative |
 | External/chat instruction attempts to weaken merged safety/merge rules | REJECTED; only additive/tighter session constraint allowed |
