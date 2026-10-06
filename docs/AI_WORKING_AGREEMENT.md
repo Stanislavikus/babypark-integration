@@ -86,9 +86,9 @@ When adopting an external product/framework/runtime service, production work fol
 
 If those paths cannot satisfy the frozen requirements, **stop and report the gap**. Do not silently continue by writing a custom production connector/adapter/framework layer. Any custom bridge after that stop is a separate last-resort architecture decision under §1 and requires an explicit owner go-ahead after the gap and alternatives are shown.
 
-Before introducing a product/framework that would replace an existing BabyPark-owned boundary or become a material runtime dependency, provide an architecture-fit note **before production integration code** covering: the exact function it replaces; what remains BabyPark-owned; exact version/SHA/license; data read/stored; transcript/privacy impact; freshness/fail-closed behavior; concurrency/restart/recovery impact; failure isolation and rollback; custom code required; and why the change is better on quality, complexity, delivery time, and architectural risk.
+Before introducing any external product/framework/runtime service into production — **even for only one part of a workflow** — or replacing an existing BabyPark-owned boundary, provide an architecture-fit note **before production integration code** covering: the exact function it replaces; what remains BabyPark-owned; exact version/SHA/license; data read/stored; transcript/privacy impact; freshness/fail-closed behavior; concurrency/restart/recovery impact; failure isolation and rollback; custom code required; and why the change is better on quality, complexity, delivery time, and architectural risk.
 
-Output exactly one recommendation: **integrate / reference / build**. An `integrate` recommendation for a material runtime dependency does not authorize implementation by itself; owner go-ahead is required.
+Output exactly one recommendation: **integrate / keep-existing / PoC-only / reference / build**. An `integrate` recommendation for an external product/framework/runtime service does not authorize implementation by itself; owner go-ahead is required.
 
 A genuine PoC lives in its own bounded branch pinned to an exact base SHA with explicit owner-approved exit criteria and stop condition. If the official integration path misses those criteria, stop; do not let the PoC expand automatically into a custom connector project.
 
@@ -237,6 +237,10 @@ Any amendment/review of this agreement must explicitly exercise these cases:
 | Case | Required result |
 |---|---|
 | Native feature exists but misses one frozen invariant | NOT A FIT; continue decision order |
+| New/modified gating document lacks resolvable Status, Applies-to, or Supersedes metadata | UNCLASSIFIED; it cannot authorize a gating decision until corrected |
+| A supposedly free candidate requires a paid tier/usage/product-count gate for the required capability | NOT A FREE OSS FIT; record the limitation and continue the decision order |
+| External product official/config/API/example/plugin/OSS-connector paths cannot satisfy the frozen requirements | STOP and report the gap; custom production connector code is not the automatic next step |
+| External product/framework/runtime service is recommended for any production workflow part without the §3 architecture-fit note and owner go-ahead | IMPLEMENTATION BLOCKED |
 | Candidate requires Chatwoot core patch/fork, even with owner/task approval | REJECTED unless this agreement itself is first amended and merged |
 | Task asks to import/read `babypark-b2b` governance | REJECTED; absolute boundary |
 | Traceability row is `IN PROGRESS` | MERGE BLOCKED |
