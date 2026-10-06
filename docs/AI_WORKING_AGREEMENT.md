@@ -131,6 +131,25 @@ Merge rules:
 
 ## 7. Review / merge gate
 
+### 7.0 Risk tier — heavy only when the change introduces or crosses an unproven boundary
+
+Classify the bounded change **before its gating review** and record the classification + evidence in the PR/checkpoint.
+
+**HEAVY** is mandatory when the change introduces, changes, or newly depends on any of:
+- this repository governance or another normative process/safety contract;
+- an unproven reusable primitive or invariant;
+- authority selection, identity/cardinality, dynamic-fact freshness, money/policy decision semantics, or fail-closed behavior;
+- transcript/privacy/PII handling or durable customer-content boundaries;
+- durable schema/state ownership, concurrency, transaction, lease/CAS, restart, reconciliation, or recovery semantics;
+- customer-facing public send/handoff/idempotency/reauthorization behavior;
+- a new external product/framework/runtime dependency that crosses any boundary above.
+
+**STANDARD** is allowed only when the change exclusively composes already-proven primitives and frozen contracts, introduces none of the HEAVY conditions, and cites the existing proof/tests it relies on. A small diff is not sufficient evidence by itself.
+
+If classification is ambiguous, use HEAVY. If a STANDARD review discovers that the change actually introduces or alters a HEAVY boundary, reclassify it HEAVY and restart the gate on the same exact tree; do not grandfather the earlier lighter pass.
+
+For a HEAVY change with combinatorial/stateful behavior, the required-verification manifest includes property/state-space coverage where applicable. Select maintained OSS test tooling under §§1–3 before inventing a custom property-testing framework.
+
 Every gating review must provide, per finding:
 - concrete counterexample/trace;
 - violated invariant by name;
@@ -153,14 +172,14 @@ Merge requires:
 - every manifest entry rerun against the final exact HEAD/tree/base, with all terminal outcomes accounted for: PASS / FAIL / SKIPPED / TODO / CANCELLED (or tool-equivalent);
 - no applicable command/suite omitted and no undisposed non-PASS outcome. A pre-existing failure is non-blocking only after the exact same failure is reproduced on a clean checkout of the exact base and explicitly classified/dispositioned in review; silent skips/TODOs are never success;
 - traceability terminal under §6;
-- zero open BLOCKERs under §7.1;
+- zero open BLOCKERs under the applicable STANDARD/HEAVY closure rule in §7.1;
 - explicit owner go-ahead.
 
 No auto-merge, ever.
 
 ### 7.1 Exhaustive adversarial review protocol
 
-Do not default to a serial "find one blocker → fix → review again" loop.
+Do not default to a serial "find one blocker → fix → review again" loop. The exhaustive inventory/fix/verification discipline below applies to **both** risk tiers; risk tier changes the finite closure rule, not whether the applicable surface is inspected.
 
 **Inventory pass.** On one exact pinned HEAD/tree/base, inspect the complete applicable contract and implementation, continue after the first finding, and cluster permutations into independent root-cause classes. Cross-check precedence/gate interactions, authority/read provenance, identity/cardinality, clarification continuation, locale/presentation, typed payload boundaries, durable restart behavior, and freshness/send semantics where applicable.
 
@@ -168,9 +187,15 @@ Do not default to a serial "find one blocker → fix → review again" loop.
 
 **Verification pass.** On the new exact HEAD/tree/base, verify every prior blocker and continue searching the whole applicable surface for additional independent blocker classes. If any blocker remains, classify it, batch-fix the complete known set, and repeat verification.
 
-**Finite zero-blocker closure.** When an exhaustive verification first reports zero BLOCKERs, run one separately triggered **independent exhaustive confirmation** on the **unchanged exact HEAD/tree/base and unchanged governance authority tuple from §2.1**. The blocker gate closes only if that confirmation also reports zero BLOCKERs. That confirmation is the required re-verification and does not recursively require another clean pass. If it finds a blocker, or canonical governance changes before confirmation, batch-fix/re-pin as applicable and restart the verification cycle.
+**STANDARD finite closure.** For a correctly classified STANDARD change, one exhaustive exact-tree verification that reports ZERO BLOCKERS closes the blocker gate. This is permitted only because the change is composing already-proven primitives and the classification evidence is part of the gate. A newly discovered HEAVY condition invalidates that closure and triggers HEAVY review.
 
-One clean pass is evidence, not proof. The explicit independent confirmation above is the finite stopping rule.
+**HEAVY finite closure.** When an exhaustive verification first reports ZERO BLOCKERS, run one separately triggered **run-independent exhaustive confirmation** on the **unchanged exact HEAD/tree/base and unchanged governance authority tuple from §2.1**. The blocker gate closes only if that confirmation also reports ZERO BLOCKERS. The confirmation does not recursively require a third clean pass.
+
+For this agreement, **run-independent** means a new review execution started only after the first zero result, with a distinct run/comment identity and an explicit instruction to inspect the whole applicable surface from first principles rather than rely on the first clean result. A different reviewer/model/service is preferred when available but is not required; replaying, reusing, or merely re-labeling the same review output is never independent.
+
+If a HEAVY confirmation finds a blocker, or the exact HEAD/tree/base/governance basis changes, batch-fix/re-pin as applicable and restart the HEAVY verification cycle.
+
+One clean pass remains evidence rather than universal proof; the tiered finite rules above define when that evidence is sufficient for this repository's merge gate without imposing HEAVY confirmation on already-proven composition work.
 
 ## 8. Delivery pattern
 
@@ -202,8 +227,10 @@ A fresh clone without required production credentials must deterministically rea
 
 Ordinary product-scope exclusions may be reopened only by a separately justified/frozen scope change:
 - 1C/Magento/middleware adapter design;
-- general market/RAG/recommendation research unless a concrete current-slice correctness blocker requires it;
+- general business/product market, RAG, or recommendation research unless a concrete current-slice correctness blocker requires it;
 - Voice/Asterisk and Telegram/Viber customer-facing AI until Website text First Line is proven in production.
+
+The business/product research exclusion above never exempts the mandatory engineering native/OSS/product-alternative scan required by §§1–3 for a bounded implementation.
 
 ## 11. Amending this agreement
 
@@ -261,7 +288,7 @@ Any amendment/review of this agreement must explicitly exercise these cases:
 | `AI_FIRST_LINE_C3_TRACEABILITY.md` filename looks normative but file self-declares evidence/non-normative | EVIDENCE, not authority |
 | Execution/delivery store mutates through its frozen state/lease/token CAS rather than `expectedVersion` | COMPLIANT |
 | Fresh clone lacks required deployed-source/runtime verification access | DOCUMENTED HALT; no inference |
-| Inaugural adoption target/base has no agreement file | use the §2.1 first-adoption fallback tuple with the captured fallback-record SHA-256; no Agreement blob SHA is required; proposal remains non-authoritative until merge |
+| Inaugural adoption target/base has no agreement file | use the §2.1 tuple bound to the exact external Project Instruction snapshot SHA-256; the review extract is evidence only; no Agreement blob SHA is required; proposal remains non-authoritative until merge |
 | Agreement amendment base contains Agreement A but canonical `main` has advanced to Agreement B | CLOSURE CANCELLED; re-pin amendment to current `main`; review then uses exactly the new target/base Agreement |
 | Two bounded Chatwoot environments use different deployed/target versions | evaluate each explicit component/environment/version tuple independently; never substitute one version's native capability for the other |
 | Local `origin` is remapped to a fork | REJECTED as governance source; authenticate canonical `Stanislavikus/babypark-integration` |
@@ -275,7 +302,12 @@ Any amendment/review of this agreement must explicitly exercise these cases:
 | External/chat instruction attempts to weaken merged safety/merge rules | REJECTED; only additive/tighter session constraint allowed |
 | Reviewer emits only generic "no major issues" with no qualifying normalization record | NOT A GATE RESULT |
 | Fixed-format independent reviewer emits no findings after an explicitly exhaustive request, exact basis is unchanged, and zero finding/BLOCKER threads are verified | may be mechanically recorded as `ZERO BLOCKERS (normalized no-findings result)` under §7 |
-| First exhaustive verification reports zero BLOCKERs | NOT YET CLOSED |
-| Independent exhaustive confirmation on unchanged exact tree **and governance tuple** also reports zero BLOCKERs | BLOCKER GATE CLOSED |
+| Governance change, new safety/authority/state/concurrency/privacy/send primitive, or boundary-crossing external runtime dependency | HEAVY |
+| Change only composes cited already-proven primitives and introduces no HEAVY condition | STANDARD |
+| Risk tier is ambiguous | HEAVY |
+| STANDARD exhaustive verification reports ZERO BLOCKERS on exact tree | BLOCKER GATE CLOSED |
+| HEAVY first exhaustive verification reports ZERO BLOCKERS | NOT YET CLOSED |
+| HEAVY run-independent exhaustive confirmation on unchanged exact tree **and governance tuple** also reports ZERO BLOCKERS | BLOCKER GATE CLOSED |
+| Supposed HEAVY confirmation merely reuses/relabels the first review output | NOT INDEPENDENT; GATE OPEN |
 
 A governance change that cannot produce the required result for every applicable row above is itself BLOCKING.
