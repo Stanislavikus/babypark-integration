@@ -1,6 +1,10 @@
 # AI Working Agreement — babypark-integration
 
-Status: authoritative repository governance for AI-assisted work in this repo **after merge to canonical `main`**.
+Status: NORMATIVE **only after merge to canonical `main`**; while unmerged, this file is a proposal.
+
+Applies to: repository-wide AI-assisted work in `Stanislavikus/babypark-integration`.
+
+Supersedes: none — this is the inaugural repository adoption; pre-merge review is governed by the first-adoption fallback in §11.
 
 Scope: the **process/governance rules in this agreement are repository-wide** for all AI-assisted work in `Stanislavikus/babypark-integration` (Gateway, Drupal/exporter, Catalog, Knowledge, AI First Line, and future components). Domain rules that explicitly name Chatwoot, customer-facing AI, or another component apply only when that component is in scope. `babypark-b2b` is an absolute repository boundary: never read, import, copy, or reuse its governance, files, examples, or assumptions for this project. Changing that boundary requires a reviewed amendment to this agreement; task-level justification is never enough.
 
@@ -52,7 +56,7 @@ For every gating inventory/verification/confirmation pass, record exactly one go
 
 - **ordinary repo work that does not change this agreement:** `canonical repository → canonical current-main commit → docs/AI_WORKING_AGREEMENT.md blob SHA`;
 - **an amendment branch that changes this agreement and whose exact target/base already contains it:** `canonical repository → exact target/base commit → target/base docs/AI_WORKING_AGREEMENT.md blob SHA`. That base Agreement, not a later current-main Agreement, governs review of the proposal;
-- **the inaugural adoption where the exact target/base contains no Agreement:** `canonical repository → exact target/base commit → docs/AI_WORKING_AGREEMENT.md ABSENT → pre-existing owner-approved fallback authority reference recorded in the PR/checkpoint`. This is the sole first-adoption exemption from requiring an Agreement blob SHA. The recorded fallback reference/content must be stable for the complete closure; both zero-BLOCKER passes must use the same fallback authority record.
+- **the inaugural adoption where the exact target/base contains no Agreement:** `canonical repository → exact target/base commit → docs/AI_WORKING_AGREEMENT.md ABSENT → SHA-256 of the exact pre-existing owner-approved fallback authority record captured in the PR/checkpoint`. This is the sole first-adoption exemption from requiring an Agreement blob SHA. Capture the exact fallback text/rules (including the emergency exhaustive-review invariant) before the first zero-BLOCKER pass, record its digest, and use the identical record + digest for both passes. If the record is edited, unavailable, or its digest changes, closure is cancelled and must restart.
 
 Fetch/read the selected authority without moving the campaign branch/base. Both zero-BLOCKER passes required by §7.1 must use the **same governance authority tuple** as well as the same campaign HEAD/tree/base.
 
@@ -60,19 +64,33 @@ For ordinary work, if canonical `main` advances before confirmation, cancel the 
 
 A fork/remapped `origin` is never governance authority merely because it has a branch named `main`.
 
-## 3. OSS-first check
+## 3. OSS-first and integration-first gate
 
-Before building a bounded component from scratch, search real/active alternatives. Record per candidate:
-- repository + exact SHA;
-- license;
+Before **any bounded implementation that adds, replaces, or materially extends functionality**, run the §1 decision order against real current options. This gate applies even when extending existing BabyPark code; it is not limited to greenfield work.
+
+For every serious OSS/product candidate, record:
+- repository + exact SHA/version when source-addressable;
+- exact license and whether the required code/features are permitted for commercial use without a paid tier, product-count cap, message/usage cap, or other fee gate that would make the required capability only conditionally free;
 - activity/maintenance signal;
-- PASS / PARTIAL / FAIL per requirement area, never one aggregate percentage;
-- Chatwoot core-patch check under §1;
-- privacy/durable-state check under §4.
+- PASS / PARTIAL / FAIL per frozen requirement area, never one aggregate percentage;
+- Chatwoot core-patch check under §1 where applicable;
+- privacy/durable-state check under §4;
+- expected production integration code and operational burden.
 
-Output exactly one recommendation: **adapt / reference / build**.
+When adopting an external product/framework/runtime service, production work follows **INTEGRATION-FIRST / NO-CUSTOM-BY-DEFAULT**:
+1. official installation/deployment;
+2. stock configuration;
+3. official SDK/API;
+4. official examples/adapters/plugins;
+5. existing maintained OSS connectors.
 
-A genuine PoC lives in its own short branch pinned to an exact base SHA and is resolved in days, not weeks.
+If those paths cannot satisfy the frozen requirements, **stop and report the gap**. Do not silently continue by writing a custom production connector/adapter/framework layer. Any custom bridge after that stop is a separate last-resort architecture decision under §1 and requires an explicit owner go-ahead after the gap and alternatives are shown.
+
+Before introducing a product/framework that would replace an existing BabyPark-owned boundary or become a material runtime dependency, provide an architecture-fit note **before production integration code** covering: the exact function it replaces; what remains BabyPark-owned; exact version/SHA/license; data read/stored; transcript/privacy impact; freshness/fail-closed behavior; concurrency/restart/recovery impact; failure isolation and rollback; custom code required; and why the change is better on quality, complexity, delivery time, and architectural risk.
+
+Output exactly one recommendation: **integrate / reference / build**. An `integrate` recommendation for a material runtime dependency does not authorize implementation by itself; owner go-ahead is required.
+
+A genuine PoC lives in its own bounded branch pinned to an exact base SHA with explicit owner-approved exit criteria and stop condition. If the official integration path misses those criteria, stop; do not let the PoC expand automatically into a custom connector project.
 
 ## 4. Durable-state rules
 
@@ -181,7 +199,7 @@ Ordinary product-scope exclusions may be reopened only by a separately justified
 
 The agreement currently merged to canonical `main` remains authoritative until an amendment is reviewed and merged.
 
-**First-adoption exception:** if the exact canonical target/base does not yet contain `docs/AI_WORKING_AGREEMENT.md`, the inaugural adoption is governed by the owner-approved external Project/Custom Instruction fallback that was already in force before the adoption branch was created, plus existing merged repo contracts. Record the first-adoption governance tuple defined in §2.1, including the verified exact target/base where the Agreement is absent and a stable owner-approved fallback authority reference/content in the PR/checkpoint. Both zero-BLOCKER passes must use that same recorded fallback authority. The proposed agreement remains non-authoritative until explicit owner-approved merge. After first adoption this exception is dormant.
+**First-adoption exception:** if the exact canonical target/base does not yet contain `docs/AI_WORKING_AGREEMENT.md`, the inaugural adoption is governed by the owner-approved external Project/Custom Instruction fallback that was already in force before the adoption branch was created, plus existing merged repo contracts. Before the first zero-BLOCKER pass, capture the exact applicable fallback rules in the PR/checkpoint and record the SHA-256 digest required by the first-adoption tuple in §2.1. Both zero-BLOCKER passes must use that identical fallback authority record and digest; any change cancels closure and requires restart. The proposed agreement remains non-authoritative until explicit owner-approved merge. After first adoption this exception is dormant.
 
 If a branch changes `docs/AI_WORKING_AGREEMENT.md`:
 - when the exact target/base already contains the agreement, that exact target/base Agreement is the sole governance authority for reviewing the proposal;
@@ -226,9 +244,9 @@ Any amendment/review of this agreement must explicitly exercise these cases:
 | `AI_FIRST_LINE_C3_TRACEABILITY.md` filename looks normative but file self-declares evidence/non-normative | EVIDENCE, not authority |
 | Execution/delivery store mutates through its frozen state/lease/token CAS rather than `expectedVersion` | COMPLIANT |
 | Fresh clone lacks required deployed-source/runtime verification access | DOCUMENTED HALT; no inference |
-| Inaugural adoption target/base has no agreement file | use the §2.1 first-adoption fallback tuple; no Agreement blob SHA is required; proposal remains non-authoritative until merge |
+| Inaugural adoption target/base has no agreement file | use the §2.1 first-adoption fallback tuple with the captured fallback-record SHA-256; no Agreement blob SHA is required; proposal remains non-authoritative until merge |
 | Agreement amendment base contains Agreement A but canonical `main` has advanced to Agreement B | CLOSURE CANCELLED; re-pin amendment to current `main`; review then uses exactly the new target/base Agreement |
-| Chatwoot production change targets deployed 4.17.1 while another bounded environment targets 4.18 | evaluate each explicit component/environment/version tuple independently; never substitute one version's native capability for the other |
+| Two bounded Chatwoot environments use different deployed/target versions | evaluate each explicit component/environment/version tuple independently; never substitute one version's native capability for the other |
 | Local `origin` is remapped to a fork | REJECTED as governance source; authenticate canonical `Stanislavikus/babypark-integration` |
 | Canonical governance commit/blob changes between first zero and confirmation | CLOSURE CANCELLED; restart under new governance tuple |
 | Branch-local product contract declares itself `FROZEN/NORMATIVE` before merge | PROPOSAL ONLY; merged target/base contract still governs review |
