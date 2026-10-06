@@ -188,7 +188,6 @@ Merge requires:
 - a required-verification manifest derived from applicable traceability/component contracts before the final gate, listing every required command/suite/check;
 - every manifest entry rerun against the final exact HEAD/tree/base, with all terminal outcomes accounted for;
 - every applicable required command/suite/check reaches PASS. `SKIPPED`, `TODO`, `CANCELLED`, unavailable evidence, or an omitted required check always blocks merge and halts under §9 where appropriate; an explanation/disposition cannot convert them to success;
-- the sole non-PASS exception is an exact `FAIL` reproduced identically on a clean checkout of the exact base, proven unrelated to the changed/applicable safety surface, and explicitly classified as a named BASELINE-FAILURE by the gating review. This exception never applies to SKIPPED/TODO/CANCELLED/unavailable checks;
 - the final merge write is guarded atomically against the exact validated canonical-main/base OID under §2.1; a tool that only guards the feature HEAD is insufficient;
 - traceability terminal under §6;
 - zero open BLOCKERs under the applicable STANDARD/HEAVY closure rule in §7.1;
@@ -328,7 +327,7 @@ Any amendment/review of this agreement must explicitly exercise these cases:
 | First Line change | repository-wide process rules + applicable First Line domain rules apply |
 | Non-First-Line Gateway/Drupal/Catalog change | repository-wide process rules apply; unrelated First Line domain rules do not |
 | Required verification suite is omitted, SKIPPED/TODO/CANCELLED/unavailable even with an explanation, or run on a non-final tree | MERGE BLOCKED |
-| Final-tree check FAILS identically on exact clean base, is proven unrelated to changed/applicable safety surface, and review names it BASELINE-FAILURE | only the narrowly defined §7 exception may proceed; otherwise MERGE BLOCKED |
+| Required final-tree check FAILS for any reason, including an identical pre-existing/base failure | MERGE BLOCKED until the required final-tree check itself reaches PASS; provenance may explain the failure but cannot convert it to success |
 | Amendment branch changes this file before merge | target/base agreement governs; proposal is non-authoritative |
 | External/chat instruction attempts to weaken merged safety/merge rules | REJECTED; only additive/tighter session constraint allowed |
 | Owner approves H0, then HEAD/tree/base/governance/manifest/gate changes before merge | APPROVAL INVALID; blocker closure/final verification must finish and owner must approve the new exact final basis |
