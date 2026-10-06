@@ -12,13 +12,15 @@ Scope: the **process/governance rules in this agreement are repository-wide** fo
 
 Before choosing an implementation, identify the complete applicable frozen requirements and invariants for the bounded slice. They define what counts as a fit.
 
-Evaluate implementation options in this order and stop at the first option that satisfies **all** applicable requirements:
+Evaluate implementation options in this order:
 1. verified native capability of the component/platform in scope. Capability evidence is bound to an explicit component/environment/version tuple. For a production Chatwoot change, the version must match the actually deployed runtime/source for that bounded environment; a planned upgrade version is evaluated separately and cannot be treated as a production-native capability until that rollout boundary is explicit and verified;
 2. existing repo capability / frozen contract that already satisfies the requirement;
 3. real, actively maintained OSS compliant with this agreement;
 4. custom BabyPark code as the last resort.
 
-A native/OSS option that violates one frozen invariant is **not** a fit and does not terminate the search.
+A candidate never counts as a fit merely because it exists. It must satisfy **all** applicable frozen correctness/safety/operational requirements. In addition, the active owner engineering rule is preserved exactly for the OSS-vs-custom boundary: when a **free ready solution** can be integrated faster than writing the equivalent custom production code, without loss of quality, and closes the need, custom production code is forbidden. Conversely, an OSS/product candidate that meets functional requirements but is demonstrably slower/higher-burden to integrate or loses required quality does not automatically win merely because it is OSS; record that delivery/quality result and continue the decision. If that comparison is materially uncertain, use a bounded evidence/PoC step or halt under §9 rather than guessing in favor of either OSS or custom.
+
+Stop at the first option in the order above that is a proven fit under those rules.
 
 **Chatwoot core patch rule:** core patches, forks, or changes that block normal Chatwoot upgrades are rejected in this repository. They cannot be authorized by a task-level exception or ordinary owner approval. Reopening that boundary requires a reviewed amendment to this agreement.
 
@@ -56,7 +58,7 @@ For every gating inventory/verification/confirmation pass, record exactly one go
 
 - **ordinary repo work that does not change this agreement:** `canonical repository → canonical current-main commit → docs/AI_WORKING_AGREEMENT.md blob SHA`;
 - **an amendment branch that changes this agreement and whose exact target/base already contains it:** `canonical repository → exact target/base commit → target/base docs/AI_WORKING_AGREEMENT.md blob SHA`. That base Agreement, not a later current-main Agreement, governs review of the proposal;
-- **the inaugural adoption where the exact target/base contains no Agreement:** `canonical repository → exact target/base commit → docs/AI_WORKING_AGREEMENT.md ABSENT → SHA-256 of the exact pre-existing owner-approved fallback authority record captured in the PR/checkpoint`. This is the sole first-adoption exemption from requiring an Agreement blob SHA. Capture the exact fallback text/rules (including the emergency exhaustive-review invariant) before the first zero-BLOCKER pass, record its digest, and use the identical record + digest for both passes. If the record is edited, unavailable, or its digest changes, closure is cancelled and must restart.
+- **the inaugural adoption where the exact target/base contains no Agreement:** `canonical repository → exact target/base commit → docs/AI_WORKING_AGREEMENT.md ABSENT → SHA-256 of the exact pre-existing owner-approved external Project Instruction snapshot`. This is the sole first-adoption exemption from requiring an Agreement blob SHA. Bind the exact external snapshot with a documented byte-normalization rule (for this adoption: UTF-8, LF line endings, final newline) and record its digest before the first zero-BLOCKER pass. Because external Project Instructions are a loader/fallback rather than a second repository governance copy, do **not** duplicate their complete private text into the repo merely to create the tuple; instead record a reviewable extract/checklist of all applicable fallback invariants as evidence, clearly marked non-authoritative. Both zero-BLOCKER passes must use the same snapshot digest. If the external snapshot changes, becomes unavailable, or the digest changes, closure is cancelled and must restart. The final owner merge go-ahead also attests that the recorded digest identifies the pre-existing fallback used for inaugural review.
 
 Fetch/read the selected authority without moving the campaign branch/base. Both zero-BLOCKER passes required by §7.1 must use the **same governance authority tuple** as well as the same campaign HEAD/tree/base.
 
@@ -135,7 +137,15 @@ Every gating review must provide, per finding:
 - BLOCKER / SHOULD FIX / NON-BLOCKING classification;
 - for every BLOCKER, minimal correction + regression/property test that fails before and passes after.
 
-"Looks fine" / "no major issues" is not a gate result.
+A clean gating result must be recorded explicitly as **ZERO BLOCKERS** on the exact review basis. Generic praise such as "looks fine" / "no major issues" by itself is not a gate result.
+
+If an otherwise independent review tool has a fixed no-findings response format and cannot emit that exact label, its result may be **mechanically normalized** to ZERO BLOCKERS only when all of the following are independently rechecked and recorded without adding substantive review judgment:
+- the review request explicitly required exhaustive whole-surface BLOCKER classification and continuation past the first finding;
+- the tool's result is bound to the exact reviewed commit, and the exact tree/base/governance tuple are independently re-confirmed unchanged;
+- the tool produced no finding/suggestion threads for that run and there are zero unresolved BLOCKER threads attributable to the exact tree;
+- the complete available review output contains no finding that was merely omitted from the summary.
+
+The normalization record must cite the exact review run/comment and exact HEAD/tree/base/governance tuple and state `ZERO BLOCKERS (normalized no-findings result)`. A stock "no major issues" message without that evidence remains insufficient.
 
 Merge requires:
 - independently re-confirmed exact HEAD/tree/base **and the governance authority tuple from §2.1**;
@@ -199,7 +209,7 @@ Ordinary product-scope exclusions may be reopened only by a separately justified
 
 The agreement currently merged to canonical `main` remains authoritative until an amendment is reviewed and merged.
 
-**First-adoption exception:** if the exact canonical target/base does not yet contain `docs/AI_WORKING_AGREEMENT.md`, the inaugural adoption is governed by the owner-approved external Project/Custom Instruction fallback that was already in force before the adoption branch was created, plus existing merged repo contracts. Before the first zero-BLOCKER pass, capture the exact applicable fallback rules in the PR/checkpoint and record the SHA-256 digest required by the first-adoption tuple in §2.1. Both zero-BLOCKER passes must use that identical fallback authority record and digest; any change cancels closure and requires restart. The proposed agreement remains non-authoritative until explicit owner-approved merge. After first adoption this exception is dormant.
+**First-adoption exception:** if the exact canonical target/base does not yet contain `docs/AI_WORKING_AGREEMENT.md`, the inaugural adoption is governed by the owner-approved external Project/Custom Instruction fallback that was already in force before the adoption branch was created, plus existing merged repo contracts. Before the first zero-BLOCKER pass, bind that exact external snapshot by the SHA-256 tuple defined in §2.1 and record a non-authoritative review extract/checklist covering all applicable fallback invariants. Both zero-BLOCKER passes must use the identical external-snapshot digest; any change cancels closure and requires restart. The final explicit owner merge go-ahead attests the fallback binding as well as authorizing merge. The proposed agreement remains non-authoritative until that merge. After first adoption this exception is dormant.
 
 If a branch changes `docs/AI_WORKING_AGREEMENT.md`:
 - when the exact target/base already contains the agreement, that exact target/base Agreement is the sole governance authority for reviewing the proposal;
@@ -237,6 +247,9 @@ Any amendment/review of this agreement must explicitly exercise these cases:
 | Case | Required result |
 |---|---|
 | Native feature exists but misses one frozen invariant | NOT A FIT; continue decision order |
+| Free ready OSS closes the need, preserves required quality, and is proven faster to integrate than equivalent custom production code | CUSTOM BUILD REJECTED; use the ready solution |
+| OSS/product meets functional requirements but is proven slower/higher-burden to integrate or loses required quality | NOT AN AUTOMATIC FIT merely because it is OSS; record evidence and continue the decision |
+| OSS-vs-custom delivery/quality comparison is materially unproven | BOUNDED EVIDENCE/PoC OR HALT; do not guess either direction |
 | New/modified gating document lacks resolvable Status, Applies-to, or Supersedes metadata | UNCLASSIFIED; it cannot authorize a gating decision until corrected |
 | A supposedly free candidate requires a paid tier/usage/product-count gate for the required capability | NOT A FREE OSS FIT; record the limitation and continue the decision order |
 | External product official/config/API/example/plugin/OSS-connector paths cannot satisfy the frozen requirements | STOP and report the gap; custom production connector code is not the automatic next step |
@@ -260,6 +273,8 @@ Any amendment/review of this agreement must explicitly exercise these cases:
 | Required verification suite is omitted, skipped/TODO/cancelled without disposition, or run on non-final tree | MERGE BLOCKED |
 | Amendment branch changes this file before merge | target/base agreement governs; proposal is non-authoritative |
 | External/chat instruction attempts to weaken merged safety/merge rules | REJECTED; only additive/tighter session constraint allowed |
+| Reviewer emits only generic "no major issues" with no qualifying normalization record | NOT A GATE RESULT |
+| Fixed-format independent reviewer emits no findings after an explicitly exhaustive request, exact basis is unchanged, and zero finding/BLOCKER threads are verified | may be mechanically recorded as `ZERO BLOCKERS (normalized no-findings result)` under §7 |
 | First exhaustive verification reports zero BLOCKERs | NOT YET CLOSED |
 | Independent exhaustive confirmation on unchanged exact tree **and governance tuple** also reports zero BLOCKERs | BLOCKER GATE CLOSED |
 
