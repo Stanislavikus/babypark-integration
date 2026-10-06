@@ -60,7 +60,7 @@ For every gating inventory/verification/confirmation pass, record exactly one go
 
 Fetch/read the selected authority without moving the campaign branch/base. Both zero-BLOCKER passes required by §7.1 must use the **same governance authority tuple** as well as the same campaign HEAD/tree/base.
 
-For ordinary work, if canonical `main` advances before confirmation, cancel the closure and restart under the newly fetched canonical governance authority. For an Agreement amendment, verify before zero-BLOCKER closure and again before merge that its exact target/base is still canonical current `main`; if canonical `main` has advanced, cancel closure, explicitly re-pin the amendment to current `main`, and restart review under that new base Agreement. This prevents a stale amendment base and a newer current-main Agreement from competing as authority.
+For ordinary work, revalidate the canonical current-`main` governance commit + Agreement blob immediately before merge as well as across both zero-BLOCKER passes. If canonical `main` advances at any point after closure started — including after independent confirmation but before merge — cancel the closure and restart under the newly fetched canonical governance authority. For an Agreement amendment, verify before zero-BLOCKER closure and again immediately before merge that its exact target/base is still canonical current `main`; if canonical `main` has advanced, cancel closure, explicitly re-pin the amendment to current `main`, and restart review under that new base Agreement. This prevents either ordinary work or an amendment from merging under stale governance authority.
 
 A fork/remapped `origin` is never governance authority merely because it has a branch named `main`.
 
@@ -253,6 +253,7 @@ Any amendment/review of this agreement must explicitly exercise these cases:
 | Two bounded Chatwoot environments use different deployed/target versions | evaluate each explicit component/environment/version tuple independently; never substitute one version's native capability for the other |
 | Local `origin` is remapped to a fork | REJECTED as governance source; authenticate canonical `Stanislavikus/babypark-integration` |
 | Canonical governance commit/blob changes between first zero and confirmation | CLOSURE CANCELLED; restart under new governance tuple |
+| Ordinary-work governance changes after independent confirmation but before merge | MERGE BLOCKED; closure cancelled and restarted under the new current-main governance tuple |
 | Branch-local product contract declares itself `FROZEN/NORMATIVE` before merge | PROPOSAL ONLY; merged target/base contract still governs review |
 | First Line change | repository-wide process rules + applicable First Line domain rules apply |
 | Non-First-Line Gateway/Drupal/Catalog change | repository-wide process rules apply; unrelated First Line domain rules do not |
