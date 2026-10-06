@@ -63,6 +63,8 @@ A correction/delta must be merged into its base normative document in the same c
 
 Never trust a local remote name such as `origin` by name alone. Before reading governance, verify that the source resolves to the canonical repository identity `Stanislavikus/babypark-integration` (GitHub HTTPS/SSH forms are equivalent) or use an authenticated connector/API targeting that exact repository.
 
+At the start of every repo-work session, fetch/read canonical current `main` governance state before selecting amendment authority. If the current branch changes this Agreement, compare canonical current-`main` commit/OID with the amendment's exact target/base commit **before any repository work or gating review**. If they differ, HALT, explicitly re-pin the amendment to current `main`, and restart bootstrap; a stale base Agreement never remains usable merely because it was authoritative when the branch was created.
+
 For every gating inventory/verification/confirmation pass, record exactly one governance authority tuple, selected by change type:
 
 - **ordinary repo work that does not change this agreement:** `canonical repository → canonical current-main commit → docs/AI_WORKING_AGREEMENT.md blob SHA`;
@@ -276,8 +278,10 @@ External Project/Custom Instructions are a short loader/fallback, not a second c
 For normal repo work:
 1. list `docs/` fresh;
 2. authenticate the governance source as canonical `Stanislavikus/babypark-integration` under §2.1;
-3. select exactly one governance authority tuple under §2.1: current canonical `main` for ordinary work, exact target/base Agreement for an Agreement-amendment branch, or the recorded first-adoption fallback tuple when the exact target/base lacks the file;
-4. fetch/read that authority and keep the campaign's exact HEAD/base pinned — reading governance does **not** by itself move, merge, rebase, or re-pin the campaign.
+3. fetch/read canonical current `main` governance state and record its commit/OID before selecting authority;
+4. if the current branch changes this Agreement, compare that current-`main` OID with the amendment's exact target/base commit immediately. A mismatch means HALT + explicit re-pin/restart **before any repository work or gating review**; do not continue under stale base Agreement A after discovering current-main B;
+5. only after that check, select exactly one governance authority tuple under §2.1: current canonical `main` for ordinary work, exact target/base Agreement for a current-base Agreement-amendment branch, or the recorded first-adoption fallback tuple when the exact target/base lacks the file;
+6. fetch/read the selected authority and keep the campaign's exact HEAD/base pinned — reading governance does **not** by itself move, merge, rebase, or re-pin the campaign.
 
 If the current branch itself changes this agreement, read both:
 - the agreement from the branch's exact target/base when it exists — it alone governs review of the proposal, subject to the stale-base restart rule in §2.1;
@@ -314,7 +318,7 @@ Any amendment/review of this agreement must explicitly exercise these cases:
 | Execution/delivery store mutates through its frozen state/lease/token CAS rather than `expectedVersion` | COMPLIANT |
 | Fresh clone lacks required deployed-source/runtime verification access | DOCUMENTED HALT; no inference |
 | Inaugural adoption target/base has no agreement file | use the §2.1 tuple bound to both the external Project Instruction snapshot SHA-256 and normalized NON-AUTHORITATIVE manifest-content SHA-256; raw private snapshot need not be published; both HEAVY passes use identical digests/revision; final bound owner approval attests both digests + manifest completeness |
-| Agreement amendment base contains Agreement A but canonical `main` has advanced to Agreement B | CLOSURE CANCELLED; re-pin amendment to current `main`; review then uses exactly the new target/base Agreement |
+| Repo-work session starts for an Agreement amendment whose base is Agreement A but canonical current `main` is already Agreement B | BOOTSTRAP HALT before repository work/gating review; re-pin to current `main`, restart, then use exactly the new target/base Agreement |
 | Two bounded Chatwoot environments use different deployed/target versions | evaluate each explicit component/environment/version tuple independently; never substitute one version's native capability for the other |
 | Local `origin` is remapped to a fork | REJECTED as governance source; authenticate canonical `Stanislavikus/babypark-integration` |
 | HEAVY canonical governance commit/blob changes between first zero and isolated confirmation | CLOSURE CANCELLED; restart under new governance tuple |
