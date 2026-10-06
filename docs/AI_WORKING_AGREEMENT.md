@@ -42,7 +42,13 @@ An unmerged branch-local addition or amendment that declares itself `NORMATIVE` 
 
 Filename prefixes never confer authority. Explicit EVIDENCE / NON-NORMATIVE / HISTORICAL status always beats a filename family. Therefore `AI_FIRST_LINE_C3_TRACEABILITY.md`, which self-declares implementation evidence/non-normative, cannot become normative merely because it starts with `AI_FIRST_LINE_`.
 
-Legacy docs do not need mass edits merely to exist, but before an unclassified legacy doc can authorize a gating decision it must be classified in the same bounded change or an already normative document must be corrected to remove reliance on it.
+Legacy docs merged before this Agreement's inaugural adoption do not need mass edits merely to exist, but their gating status is deterministic:
+
+- an explicit legacy `FROZEN` status is treated as NORMATIVE for the bounded design/acceptance content it freezes;
+- an explicit `IMPLEMENTATION EVIDENCE — NON-NORMATIVE`, `EVIDENCE`, `HISTORICAL`, or `RUNBOOK` status maps to that declared non-authority class;
+- every other pre-adoption status form is `LEGACY-UNCLASSIFIED` for gating authority, including bare `CURRENT`, `CURRENT + PLANNED`, `CURRENT production authority`, `CURRENT production read contract`, `IMPLEMENTED ... / NOT DEPLOYED`, `MERGED-CANDIDATE`, `DRAFT`, `PLANNED`, and similar mixed lifecycle prose. Words such as `current`, `production`, or `implemented` never elevate authority by themselves.
+
+A LEGACY-UNCLASSIFIED document may be consulted as background evidence but cannot authorize a gating decision. If a future change needs it as authority, first merge a bounded classification/governance change that adds the standard Status / Applies-to / Supersedes metadata without relying on that same document for its own authority. The consuming feature/change starts its gate only after that classification is present on canonical `main`. A branch-local same-change classification remains a proposal and cannot bootstrap authority for the implementation beside it.
 
 Every gating review must be able to classify each document it relies on exactly once. Ambiguous status, applicability, or supersession halts fail-closed under §9.
 
@@ -62,7 +68,9 @@ For every gating inventory/verification/confirmation pass, record exactly one go
 
 Fetch/read the selected authority without moving the campaign branch/base. Both zero-BLOCKER passes required by §7.1 must use the **same governance authority tuple** as well as the same campaign HEAD/tree/base.
 
-For ordinary work, revalidate the canonical current-`main` governance commit + Agreement blob immediately before merge as well as across both zero-BLOCKER passes. If canonical `main` advances at any point after closure started — including after independent confirmation but before merge — cancel the closure and restart under the newly fetched canonical governance authority. For an Agreement amendment, verify before zero-BLOCKER closure and again immediately before merge that its exact target/base is still canonical current `main`; if canonical `main` has advanced, cancel closure, explicitly re-pin the amendment to current `main`, and restart review under that new base Agreement. This prevents either ordinary work or an amendment from merging under stale governance authority.
+For ordinary work, revalidate the canonical current-`main` governance commit + Agreement blob immediately before merge as well as across the required zero-BLOCKER pass(es). The **merge write itself must be conditional on that exact validated canonical-main commit/OID**: use a merge queue/strict protection mechanism that guarantees the base lease, a lease/CAS-capable ref update, or another mechanism that rejects the write when the base moved. A read followed by an unconditional merge is not compliant, and an expected feature-HEAD check alone does not protect the base. Any rejected lease, server-reported base change, or canonical-`main` advance after closure starts cancels closure and requires re-pin/restart on the new exact basis.
+
+For an Agreement amendment, apply the same atomic base-OID requirement and also verify that the exact target/base Agreement remains the governance authority. If canonical `main` moves before the guarded merge, the merge must reject; explicitly re-pin the amendment to current `main` and restart review under that new base Agreement. If the available merge mechanism cannot provide an atomic base guard, HALT under §9 rather than approximating atomicity with timing.
 
 A fork/remapped `origin` is never governance authority merely because it has a branch named `main`.
 
@@ -88,7 +96,7 @@ When adopting an external product/framework/runtime service, production work fol
 
 If those paths cannot satisfy the frozen requirements, **stop and report the gap**. Do not silently continue by writing a custom production connector/adapter/framework layer. Any custom bridge after that stop is a separate last-resort architecture decision under §1 and requires an explicit owner go-ahead after the gap and alternatives are shown.
 
-Before introducing any external product/framework/runtime service into production — **even for only one part of a workflow** — or replacing an existing BabyPark-owned boundary, provide an architecture-fit note **before production integration code** covering: the exact function it replaces; what remains BabyPark-owned; exact version/SHA/license; data read/stored; transcript/privacy impact; freshness/fail-closed behavior; concurrency/restart/recovery impact; failure isolation and rollback; custom code required; and why the change is better on quality, complexity, delivery time, and architectural risk.
+Before any **new or materially extended production use** of an external product/framework/runtime service in any workflow part — whether the service is newly deployed, already deployed elsewhere in BabyPark, or would replace an existing BabyPark-owned boundary — provide an architecture-fit note **before production integration code** covering: the exact function/use being added or replaced; what remains BabyPark-owned; exact version/SHA/license where available; data read/stored; transcript/privacy impact; freshness/fail-closed behavior; concurrency/restart/recovery impact; failure isolation and rollback; custom code required; and why the change is better on quality, complexity, delivery time, and architectural risk.
 
 Output exactly one recommendation: **integrate / keep-existing / PoC-only / reference / build**. An `integrate` recommendation for an external product/framework/runtime service does not authorize implementation by itself; owner go-ahead is required.
 
@@ -106,7 +114,11 @@ A genuine PoC lives in its own bounded branch pinned to an exact base SHA with e
 
 One durable concern = one named owner/store and lifecycle. Execution/delivery state, semantic/episode state, and knowledge authority remain separate concerns; never merge stores for convenience.
 
-Every SQLite writer sets `PRAGMA busy_timeout` explicitly. Cross-process mutual exclusion uses `BEGIN IMMEDIATE` where the concern's frozen protocol requires it. "One active X per Y" invariants belong in DB constraints, not only application code.
+Every SQLite writer **introduced or materially modified after this Agreement's inaugural adoption** sets `PRAGMA busy_timeout` explicitly. The exact adoption base `736705bc4cae70974870fb9f0e9a5c8c69d4549b` defines the grandfathered legacy set; adoption does not retroactively declare an untouched base writer noncompliant. Grandfathering ends for a writer when its connection/transaction/write behavior is materially changed: that bounded change must add an explicit timeout before merge. A component may not ship new SQLite-backed write behavior while leaving the touched connection on the legacy exception.
+
+Before the first post-adoption SQLite-writing change in a component, the verification manifest inventories that component's writable SQLite connection constructors against the adoption base and records which are already compliant versus legacy. The known adoption-base `src/gateway/db.mjs` `GatewayDb` connection is legacy under this rule and must be remediated in the same bounded campaign before the next production change that materially changes Gateway SQLite write behavior.
+
+Cross-process mutual exclusion uses `BEGIN IMMEDIATE` where the concern's frozen protocol requires it. "One active X per Y" invariants belong in DB constraints, not only application code.
 
 Do **not** universalize one store's concurrency API across all stores. Use the mutation primitive frozen for that durable concern, for example:
 - episode/semantic aggregates: positive `expectedVersion` CAS where frozen;
@@ -169,8 +181,10 @@ The normalization record must cite the exact review run/comment and exact HEAD/t
 Merge requires:
 - independently re-confirmed exact HEAD/tree/base **and the governance authority tuple from §2.1**;
 - a required-verification manifest derived from applicable traceability/component contracts before the final gate, listing every required command/suite/check;
-- every manifest entry rerun against the final exact HEAD/tree/base, with all terminal outcomes accounted for: PASS / FAIL / SKIPPED / TODO / CANCELLED (or tool-equivalent);
-- no applicable command/suite omitted and no undisposed non-PASS outcome. A pre-existing failure is non-blocking only after the exact same failure is reproduced on a clean checkout of the exact base and explicitly classified/dispositioned in review; silent skips/TODOs are never success;
+- every manifest entry rerun against the final exact HEAD/tree/base, with all terminal outcomes accounted for;
+- every applicable required command/suite/check reaches PASS. `SKIPPED`, `TODO`, `CANCELLED`, unavailable evidence, or an omitted required check always blocks merge and halts under §9 where appropriate; an explanation/disposition cannot convert them to success;
+- the sole non-PASS exception is an exact `FAIL` reproduced identically on a clean checkout of the exact base, proven unrelated to the changed/applicable safety surface, and explicitly classified as a named BASELINE-FAILURE by the gating review. This exception never applies to SKIPPED/TODO/CANCELLED/unavailable checks;
+- the final merge write is guarded atomically against the exact validated canonical-main/base OID under §2.1; a tool that only guards the feature HEAD is insufficient;
 - traceability terminal under §6;
 - zero open BLOCKERs under the applicable STANDARD/HEAVY closure rule in §7.1;
 - explicit owner go-ahead.
@@ -191,7 +205,9 @@ Do not default to a serial "find one blocker → fix → review again" loop. The
 
 **HEAVY finite closure.** When an exhaustive verification first reports ZERO BLOCKERS, run one separately triggered **run-independent exhaustive confirmation** on the **unchanged exact HEAD/tree/base and unchanged governance authority tuple from §2.1**. The blocker gate closes only if that confirmation also reports ZERO BLOCKERS. The confirmation does not recursively require a third clean pass.
 
-For this agreement, **run-independent** means a new review execution started only after the first zero result, with a distinct run/comment identity and an explicit instruction to inspect the whole applicable surface from first principles rather than rely on the first clean result. A different reviewer/model/service is preferred when available but is not required; replaying, reusing, or merely re-labeling the same review output is never independent.
+For this agreement, **run-independent** requires **context isolation**, not merely a second run ID. The confirmation context receives only the pinned HEAD/tree/base/governance authority, the artifact/diff and applicable contracts, and the exhaustive review request. It must not receive the first review's clean conclusion, transcript, finding summary, or a same-conversation continuation that can anchor the second judgment.
+
+A genuinely separate reviewer/model/service in a fresh context qualifies. The same service qualifies only when a clean isolated context can be proven. If the normal PR-review surface necessarily exposes the first review conversation, use a separate clean review context (for example a temporary Draft review-only carrier pointing to the identical HEAD/tree/base, with no commits or merge authorization) or HALT until an isolated reviewer is available. Replaying, reusing, re-labeling, or following up in the same review conversation is never independent.
 
 If a HEAVY confirmation finds a blocker, or the exact HEAD/tree/base/governance basis changes, batch-fix/re-pin as applicable and restart the HEAVY verification cycle.
 
@@ -199,7 +215,7 @@ One clean pass remains evidence rather than universal proof; the tiered finite r
 
 ## 8. Delivery pattern
 
-One bounded campaign → one branch → one Draft PR. Pin and record the exact base SHA at the start.
+One bounded campaign → one branch → one Draft PR. Pin and record the exact base SHA at the start. A temporary Draft **review-only carrier** used solely to obtain the isolated HEAVY confirmation permitted by §7.1 is not a second campaign: it must point to the identical reviewed HEAD/tree/base, accept no implementation commits, carry no merge authorization, and be closed after the confirmation result.
 
 Never merge `main` into a feature branch mid-flight. Rebase cleanly onto the pinned base, or explicitly re-pin and restart any in-flight exact-tree review.
 
@@ -277,10 +293,12 @@ Any amendment/review of this agreement must explicitly exercise these cases:
 | Free ready OSS closes the need, preserves required quality, and is proven faster to integrate than equivalent custom production code | CUSTOM BUILD REJECTED; use the ready solution |
 | OSS/product meets functional requirements but is proven slower/higher-burden to integrate or loses required quality | NOT AN AUTOMATIC FIT merely because it is OSS; record evidence and continue the decision |
 | OSS-vs-custom delivery/quality comparison is materially unproven | BOUNDED EVIDENCE/PoC OR HALT; do not guess either direction |
+| Pre-adoption legacy doc says `CURRENT`, `CURRENT + PLANNED`, `CURRENT production authority`, `IMPLEMENTED ... / NOT DEPLOYED`, or another unmapped lifecycle phrase | LEGACY-UNCLASSIFIED; background evidence only, never gating authority |
+| Feature PR adds classification metadata to a LEGACY-UNCLASSIFIED base doc and tries to rely on it in the same PR | REJECTED; classification must merge first |
 | New/modified gating document lacks resolvable Status, Applies-to, or Supersedes metadata | UNCLASSIFIED; it cannot authorize a gating decision until corrected |
 | A supposedly free candidate requires a paid tier/usage/product-count gate for the required capability | NOT A FREE OSS FIT; record the limitation and continue the decision order |
 | External product official/config/API/example/plugin/OSS-connector paths cannot satisfy the frozen requirements | STOP and report the gap; custom production connector code is not the automatic next step |
-| External product/framework/runtime service is recommended for any production workflow part without the §3 architecture-fit note and owner go-ahead | IMPLEMENTATION BLOCKED |
+| New or materially extended use of an external product/framework/runtime service in any production workflow part — including reuse of an already-deployed service — lacks the §3 architecture-fit note and owner go-ahead | IMPLEMENTATION BLOCKED |
 | Candidate requires Chatwoot core patch/fork, even with owner/task approval | REJECTED unless this agreement itself is first amended and merged |
 | Task asks to import/read `babypark-b2b` governance | REJECTED; absolute boundary |
 | Traceability row is `IN PROGRESS` | MERGE BLOCKED |
@@ -293,11 +311,13 @@ Any amendment/review of this agreement must explicitly exercise these cases:
 | Two bounded Chatwoot environments use different deployed/target versions | evaluate each explicit component/environment/version tuple independently; never substitute one version's native capability for the other |
 | Local `origin` is remapped to a fork | REJECTED as governance source; authenticate canonical `Stanislavikus/babypark-integration` |
 | Canonical governance commit/blob changes between first zero and confirmation | CLOSURE CANCELLED; restart under new governance tuple |
-| Ordinary-work governance changes after independent confirmation but before merge | MERGE BLOCKED; closure cancelled and restarted under the new current-main governance tuple |
+| Another actor advances canonical `main` after validation but before the merge write | lease/CAS/queue guard MUST reject the merge; closure cancelled and restarted on the new base |
+| Merge mechanism validates feature HEAD but cannot atomically guard the validated base OID | HALT; do not merge |
 | Branch-local product contract declares itself `FROZEN/NORMATIVE` before merge | PROPOSAL ONLY; merged target/base contract still governs review |
 | First Line change | repository-wide process rules + applicable First Line domain rules apply |
 | Non-First-Line Gateway/Drupal/Catalog change | repository-wide process rules apply; unrelated First Line domain rules do not |
-| Required verification suite is omitted, skipped/TODO/cancelled without disposition, or run on non-final tree | MERGE BLOCKED |
+| Required verification suite is omitted, SKIPPED/TODO/CANCELLED/unavailable even with an explanation, or run on a non-final tree | MERGE BLOCKED |
+| Final-tree check FAILS identically on exact clean base, is proven unrelated to changed/applicable safety surface, and review names it BASELINE-FAILURE | only the narrowly defined §7 exception may proceed; otherwise MERGE BLOCKED |
 | Amendment branch changes this file before merge | target/base agreement governs; proposal is non-authoritative |
 | External/chat instruction attempts to weaken merged safety/merge rules | REJECTED; only additive/tighter session constraint allowed |
 | Reviewer emits only generic "no major issues" with no qualifying normalization record | NOT A GATE RESULT |
@@ -307,7 +327,10 @@ Any amendment/review of this agreement must explicitly exercise these cases:
 | Risk tier is ambiguous | HEAVY |
 | STANDARD exhaustive verification reports ZERO BLOCKERS on exact tree | BLOCKER GATE CLOSED |
 | HEAVY first exhaustive verification reports ZERO BLOCKERS | NOT YET CLOSED |
-| HEAVY run-independent exhaustive confirmation on unchanged exact tree **and governance tuple** also reports ZERO BLOCKERS | BLOCKER GATE CLOSED |
-| Supposed HEAVY confirmation merely reuses/relabels the first review output | NOT INDEPENDENT; GATE OPEN |
+| HEAVY isolated run-independent exhaustive confirmation on unchanged exact tree **and governance tuple** also reports ZERO BLOCKERS | BLOCKER GATE CLOSED |
+| Same-conversation/same-context follow-up is offered as HEAVY confirmation, even with a distinct run/comment ID | NOT INDEPENDENT; GATE OPEN |
+| Supposed HEAVY confirmation reuses/relabels the first review output or transcript | NOT INDEPENDENT; GATE OPEN |
+| Pre-adoption SQLite writer remains byte-equivalent/untouched after Agreement adoption | GRANDFATHERED under §5; does not make the repository immediately noncompliant |
+| Legacy SQLite connection is materially modified or gains new write behavior without explicit `busy_timeout` | MERGE BLOCKED |
 
 A governance change that cannot produce the required result for every applicable row above is itself BLOCKING.
