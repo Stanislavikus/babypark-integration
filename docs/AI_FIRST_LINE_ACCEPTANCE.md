@@ -1359,6 +1359,27 @@ Expected:
 - renderer never wraps content in Liquid raw/endraw tags;
 - rejected input can produce zero public POST.
 
+### T09a — Chatwoot Markdown cannot reinterpret dynamic factual text
+For ordinary ANSWER content, use dynamic shortlist/variant labels containing
+`[Коляска](https://evil.example)`, `Коляска https://evil.example Blue`,
+`Blue *bold* _x_ #tag`, punctuation controls and an allowed BabyPark product URL.
+For finite CLARIFY, use choice labels with bracket-link syntax, embedded/bare
+HTTP(S), `www.`, email-like and DNS-like tokens plus ordinary
+`Pearl-Grey / Day+ (2026)` controls.
+
+Expected:
+- Website ordinary dynamic factual text is encoded by exact DESIGN §40.3 ASCII
+  punctuation escaping before insertion, so Chatwoot Markdown displays the
+  original normalized text but creates no attacker-controlled link/image/markup;
+- the separately validated `product_url` stays unescaped and is the only dynamic
+  URL intentionally linkifiable;
+- finite choice labels matching the exact Markdown-link-inert rejection predicate
+  fail with `FIRST_LINE_RENDERER_INVALID` rather than becoming clickable after
+  selection;
+- ordinary hyphen/slash/parenthesis/plus choice controls remain accepted;
+- TextRenderer does not apply Website Markdown escaping because it is not a
+  Chatwoot/Web Widget transport adapter.
+
 ### T10 — critical formatting is exact and UAH-only
 Golden vectors include `2730000 -> 27 300 грн`,
 `2730050 -> 27 300,50 грн`, `50 -> 0,50 грн`, a non-UAH currency, E.164,
