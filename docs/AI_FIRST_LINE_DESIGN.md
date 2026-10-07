@@ -3214,8 +3214,8 @@ The prior CATEGORY-pair prerequisite is therefore implemented and reviewed.
 This docs-only C5 amendment freezes the complete C5 renderer / Website-transport
 contract in §40.2–§40.4: exact wording/output/formatting, genuine-decision
 provenance, transient-output/privacy boundary, Chatwoot Liquid and Markdown
-neutrality, native `input_select` ordinal transport, the 150000-Unicode-code-
-point content bound, product-URL plain-text transport, and runtime-drift
+neutrality, native `input_select` ordinal transport, the 150000 Unicode
+code-point content bound, product-URL plain-text transport, and runtime-drift
 revalidation. It contains no production C5/C6 code and does not authorize
 renderer/send implementation. C5 production work must start as a later bounded stage under the
 then-current AI Working Agreement with a fresh alternatives scan; C6 remains a
