@@ -26,6 +26,7 @@ proposed DESIGN/ACCEPTANCE bytes remain non-authoritative until merged.
 | G5 TextRenderer output | DESIGN §40.2 | T08 |
 | G6 result/error contract | DESIGN §40.2 | T13 |
 | G7 Chatwoot Liquid safety | DESIGN §40.3 | T09 |
+| G8 Chatwoot Markdown/linkify neutrality | DESIGN §40.3 | T09a |
 | genuine C4 decision provenance | DESIGN §40.2 | T11 |
 | no cards/network/image fetch in C5 v1 | DESIGN §40.2/§40.4 | T12 |
 | HUMAN public silence | DESIGN §40.2 + existing §16.2 | T08 + existing T03 |
