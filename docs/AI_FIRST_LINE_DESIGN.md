@@ -2776,6 +2776,16 @@ Liquid-looking Catalog title/variant label/URL therefore yields
 contact/agent/conversation/inbox/account drops. This is an additional
 presentation safety gate and never weakens §16.3.
 
+The WebsiteRenderer transport contract above is bound to the verified deployed
+Chatwoot v4.18.0 behavior recorded by this amendment. Before first production
+activation, and after any Chatwoot package/version/source change that can affect
+message creation, Liquid processing, Markdown formatting, `input_select`
+render/submission or message content limits, the bounded deployment stage must
+revalidate those exact native surfaces against the target deployed runtime.
+A version/source mismatch, unavailable proof or changed behavior blocks
+WebsiteRenderer activation/send; it never falls back to assumptions from v4.18.0
+and never requires a Chatwoot core patch.
+
 ### 40.4 Exact uk/ru C5 wording
 
 Braced names below denote deterministic §40.3 substitutions; they are not a
