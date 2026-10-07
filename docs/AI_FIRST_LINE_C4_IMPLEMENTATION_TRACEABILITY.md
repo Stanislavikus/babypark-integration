@@ -50,7 +50,7 @@ No new durable customer-content or dynamic-fact payload is introduced. `episode.
 | RC14 reservation-aware CLARIFY | `issueClarificationReservationAttestation`, `effectiveClarificationBudget` | PREPARED/GATING/clone/wrong-lease tests + Q14 | only exact owning unsent action receives effective budget 0 | transient attestation only | DONE |
 | RC15 provenance-bound discharge | `createFirstLineContinuationDecisionBasis`, `stableSelectionForAction`, `dischargeOriginalResolution` | C60ab presented + requested PRODUCT/CATEGORY/BRAND/STORE/VARIANT, MONEY, C43; restart | missing/mismatched/ambiguous provenance => HUMAN/reject | canonical stable slots only | DONE |
 | RC16 finite cardinality 20 | presentation reducers + state-store bound | C60aa PRODUCT/CATEGORY/BRAND/STORE/VARIANT 20/21 | 21+ never truncated | unchanged durable max 20 | DONE |
-| RC17 structured-selection prerequisite | structured clarification proof + durable selection provenance | structured CATEGORY restart/mode-drift matrix + existing Q10c selection tests | changed/unknown structured value cannot silently authorize stable slot | canonical selection/provenance only | DONE |
+| RC17 structured-selection prerequisite | structured clarification proof + durable selection provenance | certified `readRoutingSnapshot()` positive proof; clone/hand-built/tampered snapshot rejection before positive proof; structured CATEGORY restart/mode-drift matrix + existing Q10c selection tests | changed/unknown structured value or uncertified routing provenance cannot silently authorize stable slot | canonical selection/provenance only | DONE |
 | RC18 typed Operational/Commerce readers | public operational readers, today schedule, exact CommercePolicy validation | C01-C16a/O09-O11 reader tests + C61-C63 end-to-end + strict full-subject operational ownership/schema malformed/foreign/conflict cases | missing/conflict HUMAN; malformed rejects; delivery stays HUMAN | none | DONE |
 | RC19 public presentation safety | public-safety module + internal-ID derivation in C4 | C60ac fixed + fast-check properties; 160/161, 4096/4097, URI/debug/control, hosts, nested/constituent IDs | unsafe required label/title => HUMAN; unsafe optional URL => null | none | DONE |
 | Frozen Decision Context provenance | `attachDecisionContext` + decision WeakMap private context | ordinary ANSWER/CLARIFY redacted-context tests; dependency/source-ID separation | no raw exact-read text; authority/revision/generation/tool dependencies remain private/out-of-band | transient only | DONE |
@@ -213,6 +213,20 @@ C25 is not claimed closed by PR #107. It is a frozen future C6
 routing/integration prerequisite; this C4 campaign implements the
 VARIANT_PRICE_LIST mapper but not ordinary ANSWER-to-follow-up episode routing.
 
-The next required-verification manifest must be a new revision (V2 or later)
-bound to the post-correction exact HEAD/tree/base. Historical V1/R1 results
-remain evidence about their old tree only and cannot authorize merge.
+## 9. Independent V2 confirmation correction batch
+
+The run-independent exhaustive confirmation on the V2 exact tree found one
+additional independent blocker class. The V2 review continued across the
+applicable surface; no second blocker class was reported.
+
+| Review blocker | Minimal correction / regression evidence | Status |
+|---|---|---|
+| SR-B9 uncertified structured routing snapshot could create positive clarification proof | `requireStructuredSnapshot()` now requires `isCertifiedRoutingSnapshot()` before structural validation; genuine `readRoutingSnapshot()` still proves; `structuredClone`, caller-built top-level snapshot, tampered presented-candidate ordering and caller-forged requested-slot drift all reject before `CLARIFICATION_SELECTION_PROVEN` | DONE |
+
+This correction preserves the existing state-store as the sole certification
+authority and adds no durable state or customer-content persistence.
+
+Because SR-B9 changes the implementation tree, V2/R2 and the V2 confirmation are
+historical evidence only. The next required-verification manifest must be V3 or
+later and bind the new exact HEAD/tree/base plus the updated implementation
+traceability digest.

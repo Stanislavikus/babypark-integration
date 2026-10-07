@@ -313,6 +313,39 @@ test('structured Web Widget submission proves one reserved candidate without a n
   );
 });
 
+test('structured prover rejects caller-built routing snapshots before proof creation', t => {
+  const { action, snapshot } = structuredSetup(t);
+  const exactRead = structuredExactRead(action);
+
+  for (const forgedSnapshot of [
+    structuredClone(snapshot),
+    { ...snapshot, schema: snapshot.schema },
+  ]) {
+    assert.throws(
+      () => proveStructuredClarificationSubmission({
+        snapshot: forgedSnapshot,
+        exactRead,
+      }),
+      error => error instanceof FirstLineClarificationSelectionError &&
+        /committed routing snapshot/.test(error.message)
+    );
+  }
+
+  const tampered = structuredClone(snapshot);
+  tampered.clarification_action.presented_candidates = [
+    { slot: 'store_id', value: STORE_2 },
+    { slot: 'store_id', value: STORE_1 },
+  ];
+  assert.throws(
+    () => proveStructuredClarificationSubmission({
+      snapshot: tampered,
+      exactRead: structuredExactRead(action, 'bp-choice:1'),
+    }),
+    error => error instanceof FirstLineClarificationSelectionError &&
+      /committed routing snapshot/.test(error.message)
+  );
+});
+
 test('structured submission fails closed on wrong action, unknown value, or later ledger event', t => {
   const { store, stream, action, snapshot } = structuredSetup(t);
 
@@ -460,7 +493,7 @@ test('selection proof serializes no raw body, quote, presentation label, stock o
   assert.equal(serialized.includes(VARIANT_2), true);
 });
 
-test('proof output whitelists plan provenance and structured requested-slot drift still fails closed', t => {
+test('proof output whitelists plan provenance and caller-forged requested-slot drift fails closed', t => {
   const exact = proveExactFromBasis(exactBasis(t));
   assert.equal(exact.code, 'CLARIFICATION_SELECTION_PROVEN');
   assert.equal(Object.hasOwn(exact.plan_token, 'raw_body'), false);
@@ -468,12 +501,14 @@ test('proof output whitelists plan provenance and structured requested-slot drif
   const { action, snapshot } = structuredSetup(t);
   const drifted = structuredClone(snapshot);
   drifted.clarification_action.requested_slot = 'variant_id';
-  const structured = proveStructuredClarificationSubmission({
-    snapshot: drifted,
-    exactRead: structuredExactRead(action),
-  });
-  assert.equal(structured.code, 'NO_CLARIFICATION_SELECTION');
-  assert.equal(structured.reason, 'CLARIFICATION_EPISODE_MISMATCH');
+  assert.throws(
+    () => proveStructuredClarificationSubmission({
+      snapshot: drifted,
+      exactRead: structuredExactRead(action),
+    }),
+    error => error instanceof FirstLineClarificationSelectionError &&
+      /committed routing snapshot/.test(error.message)
+  );
 });
 
 test('exact-message proof binds resolution to reread content without durable body digest', t => {

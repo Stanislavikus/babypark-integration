@@ -12,6 +12,7 @@ import {
   ROUTING_SNAPSHOT_SCHEMA,
   CANONICAL_ID_PATTERNS,
   CATEGORY_MATCH_MODES,
+  isCertifiedRoutingSnapshot,
 } from './first-line-state-store.mjs';
 
 export const FIRST_LINE_CLARIFICATION_SELECTION_SCHEMA =
@@ -180,7 +181,8 @@ function choiceOrdinal(value) {
 }
 
 function requireStructuredSnapshot(snapshot) {
-  if (!snapshot || typeof snapshot !== 'object' || Array.isArray(snapshot) ||
+  if (!isCertifiedRoutingSnapshot(snapshot) ||
+      !snapshot || typeof snapshot !== 'object' || Array.isArray(snapshot) ||
       snapshot.schema !== ROUTING_SNAPSHOT_SCHEMA ||
       !snapshot.stream || typeof snapshot.stream !== 'object' ||
       snapshot.stream.source_provider !== 'chatwoot' ||
