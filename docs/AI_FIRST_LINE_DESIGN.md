@@ -2653,7 +2653,7 @@ WebsiteRenderSelect {
   content_type = input_select
   content = string with 1..150000 Unicode code points
   content_attributes = {
-    items: [{title:string,value:'bp-choice:<ordinal>'}, ...]
+    items: [{title:'<ordinal>',value:'bp-choice:<ordinal>'}, ...]
   }
 }
 ```
@@ -2665,8 +2665,13 @@ identity.
 
 WebsiteRenderer mapping is exact:
 - every ANSWER uses `content_type=text`, including shortlist answers;
-- candidate-based CLARIFY uses `input_select`; item order is decision choice
-  order, `title=choice.label` and `value=choice.token` exactly;
+- candidate-based CLARIFY uses `input_select`. Its `content` is the fixed
+  locale prompt followed by one U+000A LF and the exact ordered rows
+  `1. <label>`, `2. <label>`, ... with Website-only Markdown encoding applied
+  only to each dynamic label and no trailing LF. `content_attributes.items`
+  has the same cardinality/order; each item is exactly
+  `{title:String(ordinal),value:choice.token}` where ordinal starts at 1.
+  Dynamic factual labels never enter `items[*].title`;
 - `TPL_CLARIFY_MONEY_V1` and `TPL_CLARIFY_SHORTLIST_ANCHOR_V1` use `text` with
   `content_attributes={}`;
 - C5 v1 does **not** emit Chatwoot `cards`. Shortlist `image_url` is not
@@ -2739,26 +2744,15 @@ separately validated `product_url` do not use this encoding. `product_url` is
 the only dynamic URL intentionally left linkifiable and is already constrained
 by §16.3 to HTTPS `babypark.ua`/subdomains.
 
-`input_select.items[*].title` is initially rendered by Vue as plain text but is
-later echoed through Chatwoot Markdown after selection. Because escaping the
-stored title would expose backslashes in the initial option, a finite choice
-label must instead be **Markdown-link inert as stored**. In addition to §16.3
-and the Liquid rule below, reject a choice label when any exact predicate matches:
-- `/[\[\]<>`*_{}~]/u`;
-- `/(?:https?:\/\/|www\.)/iu`;
-- `/@/u`;
-- `/(?:^|[^\p{L}\p{N}-])(?:[\p{L}\p{N}-]+\.)+[\p{L}]{2,}(?:$|[^\p{L}\p{N}-])/iu`;
-- `/(?:^|[^0-9])(?:[0-9]{1,3}\.){3}[0-9]{1,3}(?:$|[^0-9])/u`;
-- `/^(?:#{1,6}|>|[-+])\s/u`;
-- `/^\d{1,9}[.)]\s/u`;
-- `/^-{3,}$/u`.
-The first predicate includes Markdown emphasis/code/strikethrough punctuation.
-Together the predicates prevent link/autolink, heading, blockquote, list,
-horizontal-rule and inline-format reinterpretation of the selected title.
-They are intentionally conservative: an unrepresentable finite label fails
-closed rather than allowing the post-selection echo to differ visually from the
-offered factual label. Ordinary internal hyphens, slashes, parentheses, periods
-and plus signs remain representable.
+For finite Website CLARIFY, dynamic choice labels are rendered only inside
+the numbered `content` list and therefore use the same reversible
+Markdown-neutral encoding as other Website free-form factual text. Native
+`input_select.items[*].title` contains only the generated unsigned ASCII
+ordinal (`"1"`, `"2"`, ...). Chatwoot later echoes that ordinal through
+Markdown after selection, so no Catalog/Knowledge label is reinterpreted there.
+The public labels remain pairwise-distinguishable in the visible numbered list;
+the ordinal button references an already-distinguishable row and is never used
+to hide duplicate labels.
 
 Payment method names are a closed table and carry no fee/condition:
 - `BANK_TRANSFER`: uk `банківський переказ`; ru `банковский перевод`;
@@ -2769,17 +2763,18 @@ Payment method names are a closed table and carry no fee/condition:
 Chatwoot v4.18.0 evaluates Liquid for outgoing message `content` during message
 creation. WebsiteRenderer must not escape this with
 `{% raw %}...{% endraw %}`. Before any Website Markdown encoding/interpolation,
-every dynamic public string that WebsiteRenderer may place into `content` or an
-`input_select.items[*].title` fails closed if it contains ASCII `{{` or `{%`. After rendering, final `content` and every select
-item title are checked again for the same delimiters. WebsiteRenderer then
-checks final `content` length after all transport encoding: 1..150000 Unicode
-code points, matching the verified Chatwoot v4.18.0 Message content ceiling.
-Length failure is `FIRST_LINE_RENDERER_INVALID`, never a send/retry hint. Fixed
-branches are
-regression-tested to contain neither. A Liquid-looking Catalog title/variant
-label/URL therefore yields `FIRST_LINE_RENDERER_INVALID`; C5/C6 do not let
-Chatwoot reinterpret it against contact/agent/conversation/inbox/account drops.
-This is an additional presentation safety gate and never weakens §16.3.
+every dynamic public string that WebsiteRenderer may place into `content` fails
+closed if it contains ASCII `{{` or `{%`. After rendering, final `content`
+is checked again for the same delimiters; every select item title is independently
+required to equal its unsigned ASCII ordinal exactly. WebsiteRenderer then checks
+final `content` length after all transport encoding: 1..150000 Unicode code
+points, matching the verified Chatwoot v4.18.0 Message content ceiling. Length
+failure is `FIRST_LINE_RENDERER_INVALID`, never a send/retry hint. Fixed branches
+are regression-tested to contain neither Liquid opening delimiter. A
+Liquid-looking Catalog title/variant label/URL therefore yields
+`FIRST_LINE_RENDERER_INVALID`; C5/C6 do not let Chatwoot reinterpret it against
+contact/agent/conversation/inbox/account drops. This is an additional
+presentation safety gate and never weakens §16.3.
 
 ### 40.4 Exact uk/ru C5 wording
 
