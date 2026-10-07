@@ -36,6 +36,7 @@ proposed DESIGN/ACCEPTANCE bytes remain non-authoritative until merged.
 | HUMAN public silence | DESIGN §40.2 + existing §16.2 | T08 + existing T03 | HUMAN => `null`, not fallback text | NONE | DONE |
 | exact-locale/no fallback | DESIGN §40.2–§40.4 + existing §16.2 | T07/T10 + existing T01/T03 | unsupported/missing locale => renderer failure | NONE | DONE |
 | C6 send/activation stays downstream | DESIGN §40.2 and unchanged §29.7–§29.9 | T13 + U01–U07 remain C6 | C5 performs no Chatwoot/network call | NONE | DONE |
+| C5 render output remains transient / Chatwoot transcript authority | DESIGN §40.2 + §29.8 | T08 + T13 | no DB/file/cache/outbox/log/content-digest persistence in C5 | NONE | DONE |
 | normative lifecycle prose no longer claims C4/prerequisite absent | DESIGN §29.4 + DESIGN/ACCEPTANCE closing lifecycle prose | static review against merged PR #107 / base main `565f8eb3…` | stale lifecycle claims removed; historical C1 evidence preserved; proposal still non-authorizing | NONE | DONE |
 
 Deployed Chatwoot transport evidence (2026-10-07):
