@@ -2731,14 +2731,16 @@ by §16.3 to HTTPS `babypark.ua`/subdomains.
 later echoed through Chatwoot Markdown after selection. Because escaping the
 stored title would expose backslashes in the initial option, a finite choice
 label must instead be **Markdown-link inert as stored**. In addition to §16.3
-and the Liquid rule below, reject a choice label if it contains `[` or `]`,
-`<` or `>`, a backtick, a bare `http://` or `https://`, `www.`, an email-like
-`@` token, or a DNS-like token matching
-`(?:^|[^\p{L}\p{N}-])(?:[\p{L}\p{N}-]+\.)+[A-Za-z]{2,}(?:$|[^\p{L}\p{N}-])`.
-This rule is intentionally conservative: an unrepresentable finite label fails
-closed rather than allowing Chatwoot to manufacture an external link after the
-customer selects it. Ordinary hyphens, slashes, parentheses and plus signs stay
-representable.
+and the Liquid rule below, reject a choice label when any exact predicate matches:
+- `/[\[\]<>`]/u`;
+- `/(?:https?:\/\/|www\.)/iu`;
+- `/@/u`;
+- `/(?:^|[^\p{L}\p{N}-])(?:[\p{L}\p{N}-]+\.)+[\p{L}]{2,}(?:$|[^\p{L}\p{N}-])/iu`;
+- `/(?:^|[^0-9])(?:[0-9]{1,3}\.){3}[0-9]{1,3}(?:$|[^0-9])/u`.
+The first predicate includes the ASCII backtick. These rules are intentionally
+conservative: an unrepresentable finite label fails closed rather than allowing
+Chatwoot to manufacture an external link after the customer selects it.
+Ordinary hyphens, slashes, parentheses and plus signs stay representable.
 
 Payment method names are a closed table and carry no fee/condition:
 - `BANK_TRANSFER`: uk `банківський переказ`; ru `банковский перевод`;
