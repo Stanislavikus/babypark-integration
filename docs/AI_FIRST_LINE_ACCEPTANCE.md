@@ -1332,6 +1332,7 @@ Expected:
   substitutions/joins;
 - no plural library, translation lookup, locale fallback or paraphrase;
 - every fixed branch exists in both locales;
+- `VARIANT_LIST_PARTIAL` exercises both named>0 and named=0 exact branches;
 - payment codes map only to the exact frozen method names.
 
 ### T08 — Website/Text renderer envelope is closed
@@ -1390,11 +1391,15 @@ Expected:
 ### T10 — critical formatting is exact and UAH-only
 Golden vectors include `2730000 -> 27 300 грн`,
 `2730050 -> 27 300,50 грн`, `50 -> 0,50 грн`, a non-UAH currency, E.164,
-HH:MM, two schedule intervals and integer counters.
+HH:MM, two schedule intervals, integer counters, equal-vs-strict price range,
+full variant list and partial variant lists with named>0/named=0.
 
 Expected:
 - exact §40.3 bytes for UAH;
 - non-UAH => `FIRST_LINE_RENDERER_INVALID`;
+- range requires min<max; equal values under RANGE reject;
+- full variant-list requires named=total>0; partial requires total>named>=0 and
+  named=0 uses the frozen no-label wording rather than an empty list placeholder;
 - phone/time bytes unchanged;
 - schedule uses U+2013 and `, `;
 - no locale/runtime fallback or LLM.
