@@ -305,13 +305,17 @@ Website First Line implementation status:
 - this C4 repository campaign does not deploy/activate customer-facing AI,
   attach an AgentBot, mutate Chatwoot production, or send a customer message.
 
-Current bounded implementation slice:
-**C4 — deterministic decision engine production runtime**.
+C4 deterministic decision engine production runtime is merged via PR #107.
+Canonical merge commit: `565f8eb30bf39afa80bb4d59258cc2fd13aa67d5`;
+the merge tree equals the reviewed C4 tree
+`2d5a1bdb8e85c4324d7235d7b40d311b66ce40c4`.
 
-The implementation is still subject to the repository Agreement's final immutable
-verification manifest, exhaustive HEAVY review closure, final-gate bundle and
-fresh owner merge approval. This current-state evidence does not itself authorize
-merge or production activation.
+Current bounded Slice C stage:
+**C5 pre-code renderer contract freeze** (issue #110), before any renderer
+production implementation. C5 implementation issue #109 remains blocked until
+the merged renderer contract is followed by a fresh Agreement §§1/3 alternatives
+scan and owner-bound implementation decision. C6 send/relay and production
+activation remain downstream and are not authorized by this docs-only stage.
 
 ## D2b acceptance status (2026-09-30)
 
