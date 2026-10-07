@@ -2,8 +2,8 @@
 
 Status: EVIDENCE — operational/current-state record; not normative contract authority.
 Applies to: repository-wide operational and campaign state tracking.
-Supersedes: `docs/CURRENT_STATE.md` at canonical main `8e65a57b36eaf649853fa3a7aae58bf5cd5a477c`.
-Last updated: 2026-10-06
+Supersedes: `docs/CURRENT_STATE.md` at canonical main `f60c42ca929c55b4bd4c06da5da7558bead5b486`.
+Last updated: 2026-10-07
 Owner: BabyPark
 Source of truth for operational facts: production runtime + verified repository evidence.
 
@@ -298,6 +298,10 @@ Website First Line implementation status:
 - C5 renderer execution and C6 Chatwoot PublicActionRelay/send-time execution are
   still separate later slices. C4 T/U tests prove compatibility only and do not
   claim those downstream runtimes exist;
+- frozen C25 dependent follow-up ("Да, покажите точные цены вариантов" after a
+  prior product price answer) remains a C6 routing/integration prerequisite:
+  C4 owns the VARIANT_PRICE_LIST mapper, but PR #107 does not claim ordinary
+  ANSWER-to-follow-up episode routing or durable prepared-answer wiring;
 - this C4 repository campaign does not deploy/activate customer-facing AI,
   attach an AgentBot, mutate Chatwoot production, or send a customer message.
 

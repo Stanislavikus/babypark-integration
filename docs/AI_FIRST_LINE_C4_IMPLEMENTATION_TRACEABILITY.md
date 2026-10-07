@@ -160,3 +160,32 @@ intentionally not recorded here until the implementation tree is frozen.
 All in-scope implementation traceability rows above are DONE. Final
 verification/review closure remains governed by
 `docs/AI_WORKING_AGREEMENT.md`.
+
+
+## 8. Exhaustive self-review correction batch after V1/R1
+
+The first exact-tree HEAVY self-review of `a43eec6a1681e0bf0df99f11039be30abefbba85`
+continued past the first finding and found five independent blocker classes.
+They invalidate V1/R1 as final-gate evidence once this correction batch changes
+the tree.
+
+| Review blocker | Minimal correction / regression evidence | Status |
+|---|---|---|
+| SR-B1 response-scoped Knowledge snapshot TOCTOU | capture one immutable Knowledge snapshot for each Knowledge-backed C4 family; Commerce strict validation+resolution and STORE_HOURS current-state+schedule consume that same snapshot; mutating-store regressions prove one original snapshot read | DONE |
+| SR-B2 locale-sensitive Decision Context ordering | canonical resolver/dependency arrays use UTF-8 binary comparison, never default-locale `localeCompare`; regression monkeypatches `String.prototype.localeCompare` to throw | DONE |
+| SR-B3 Commerce exception ancestry incomplete | strict C4 schema validation traverses exception ancestors on the captured snapshot; resolved Decision Context fingerprints the consulted parent+leaf revision IDs; valid narrower exception, malformed inactive ancestor and unlinked-conflict regressions are explicit | DONE |
+| SR-B4 Decision Context canonical-set mismatch | hash only the frozen §45 canonical input; schema remains envelope metadata, `response_locale` is conditional on ANSWER/CLARIFY, and absent model participation emits no `model_id` field | DONE |
+| SR-B5 modified CURRENT_STATE predecessor metadata stale | `docs/CURRENT_STATE.md` now names exact campaign predecessor `f60c42ca929c55b4bd4c06da5da7558bead5b486` and current update date | DONE |
+
+C13/C14 Commerce composition is now tested through the actual C4 adapter:
+valid narrower prepayment exception resolves the child and fingerprints both
+parent+child revisions; an unlinked narrower effect conflicts; a malformed
+inactive exception ancestor rejects before C4 policy mapping.
+
+C25 is not claimed closed by PR #107. It is a frozen future C6
+routing/integration prerequisite; this C4 campaign implements the
+VARIANT_PRICE_LIST mapper but not ordinary ANSWER-to-follow-up episode routing.
+
+The next required-verification manifest must be a new revision (V2 or later)
+bound to the post-correction exact HEAD/tree/base. Historical V1/R1 results
+remain evidence about their old tree only and cannot authorize merge.

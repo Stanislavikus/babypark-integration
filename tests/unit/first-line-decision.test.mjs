@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -10,6 +11,7 @@ import {
 } from '../../src/copilot/first-line-extraction.mjs';
 import { resolveFirstLineExactReads } from '../../src/copilot/first-line-resolution.mjs';
 import { projectOpenTurn } from '../../src/copilot/first-line-routing-planner.mjs';
+import { canonicalKnowledgeJson } from '../../src/copilot/knowledge/canonical.mjs';
 import {
   FirstLineStateStore,
   FirstLineStateError,
@@ -3535,4 +3537,341 @@ test('B5 public decision payload is detached and deeply frozen', () => {
   assert.throws(() => decision.render_payload.methods.push('CASH_COURIER'));
   methods.push('CASH_COURIER');
   assert.deepEqual(decision.render_payload.methods, ['BANK_TRANSFER', 'COD_NOVA_POSHTA']);
+});
+
+
+function phaseKnowledge(stableRows, laterRows = stableRows) {
+  let decisionMode = false;
+  let decisionCalls = 0;
+  let totalCalls = 0;
+  return {
+    authoritySnapshot() {
+      totalCalls += 1;
+      if (!decisionMode) return stableRows;
+      const rows = decisionCalls === 0 ? stableRows : laterRows;
+      decisionCalls += 1;
+      return rows;
+    },
+    beginDecision() {
+      decisionMode = true;
+      decisionCalls = 0;
+    },
+    get decisionCalls() {
+      return decisionCalls;
+    },
+    get totalCalls() {
+      return totalCalls;
+    },
+  };
+}
+
+function commerceVocabularyRow(kind, phrase, canonicalId) {
+  const spec = kind === 'CATEGORY'
+    ? {
+        namespace: 'vocabulary.category',
+        effect_family: 'vocabulary.category_resolution',
+        effect_type: 'CATEGORY_BINDING',
+        effect_value: {
+          canonical_category_id: canonicalId,
+          match_mode: 'NODE_ONLY',
+        },
+      }
+    : {
+        namespace: 'vocabulary.brand',
+        effect_family: 'vocabulary.brand_resolution',
+        effect_type: 'BRAND_BINDING',
+        effect_value: { canonical_brand_id: canonicalId },
+      };
+  return {
+    revision_id: 'rev-commerce-vocab-' + kind.toLowerCase(),
+    record_type: 'VOCABULARY_ENTRY',
+    schema_version: 1,
+    namespace: spec.namespace,
+    effect_family: spec.effect_family,
+    subject_type: 'phrase',
+    subject_id: phrase,
+    scope: {},
+    effect_type: spec.effect_type,
+    effect_value: spec.effect_value,
+    state: 'PUBLISHED',
+    effective_from_utc: '2026-01-01T00:00:00.000Z',
+    expires_at_utc: null,
+  };
+}
+
+function prepaymentPolicy({
+  revisionId,
+  scope,
+  amountMinor,
+  exceptionOf = null,
+  namespace = 'commerce.prepayment',
+  state = 'PUBLISHED',
+}) {
+  const row = commerceRow({
+    revision_id: revisionId,
+    namespace,
+    effect_family: 'commerce.prepayment',
+    effect_type: 'PREPAYMENT',
+    effect_value: { amount_minor: amountMinor, currency: 'UAH' },
+    scope,
+  });
+  row.exception_of_revision_id = exceptionOf;
+  row.state = state;
+  return row;
+}
+
+test('review B1 Commerce uses one response-scoped Knowledge snapshot for strict validation and resolution', () => {
+  const valid = commerceRow({
+    revision_id: 'policy-stable',
+    effect_value: { methods: ['BANK_TRANSFER', 'COD_NOVA_POSHTA'] },
+  });
+  const foreignLater = commerceRow({
+    revision_id: 'policy-later-foreign',
+    namespace: 'foreign.payment_methods',
+    effect_family: 'commerce.payment_methods',
+    effect_type: 'PAYMENT_METHODS',
+    effect_value: { methods: ['BANK_TRANSFER', 'COD_NOVA_POSHTA'] },
+  });
+  const k = phaseKnowledge([valid], [foreignLater]);
+  const fixture = build({
+    text: 'Какие способы оплаты есть?',
+    knowledgeStore: k,
+  });
+  k.beginDecision();
+
+  const decision = decideFirstLine(basis(fixture));
+  assert.equal(decision.decision, 'ANSWER');
+  assert.equal(decision.reason, 'COMMERCE_POLICY');
+  assert.equal(k.decisionCalls, 1);
+  const context = getFirstLineDecisionPrivateContext(decision);
+  assert.deepEqual(
+    context.decision_context.used_commerce_revision_ids,
+    ['policy-stable']
+  );
+});
+
+test('review B1 STORE_HOURS current-state guard and schedule share one Knowledge snapshot', () => {
+  const stableRows = [
+    c61StoreVocabularyRow(),
+    c61OperationalRow(),
+  ];
+  const changedRows = [
+    ...stableRows,
+    c61OperationalRow({
+      revision_id: 'rev-current-closed-after-capture',
+      namespace: 'store.temporary_closure',
+      effect_family: 'store.operating_state',
+      effect_type: 'CLOSED',
+      effect_value: { closed: true },
+      effective_from_utc: '2026-10-06T11:00:00.000Z',
+      expires_at_utc: '2026-10-06T13:00:00.000Z',
+    }),
+  ];
+  const k = phaseKnowledge(stableRows, changedRows);
+  const fixture = build({
+    text: 'До скольки сегодня работает магазин?',
+    spans: [{
+      kind: 'STORE',
+      turn_index: 1,
+      quote: 'магазин',
+      occurrence: 1,
+    }],
+    catalogService: identityCatalog(),
+    knowledgeStore: k,
+  });
+  k.beginDecision();
+
+  const decision = decideFirstLine(createFirstLineDecisionBasis({
+    ...fixture,
+    nowUtc: NOW,
+  }));
+  assert.equal(k.decisionCalls, 1);
+  assert.equal(decision.decision, 'ANSWER');
+  assert.equal(decision.template_id, 'TPL_STORE_HOURS_TODAY_V1');
+  assert.equal(decision.render_payload.open_now, true);
+  assert.deepEqual(decision.render_payload.intervals, [
+    { open: '10:00', close: '20:00' },
+  ]);
+});
+
+test('review B3 valid narrower prepayment exception answers child and fingerprints parent plus child', () => {
+  const category = categoryId(1);
+  const brand = brandId(1);
+  const parent = prepaymentPolicy({
+    revisionId: 'pre-parent',
+    scope: { category_id: category },
+    amountMinor: 200_000,
+  });
+  const child = prepaymentPolicy({
+    revisionId: 'pre-child',
+    scope: { category_id: category, brand_id: brand },
+    amountMinor: 30_000,
+    exceptionOf: 'pre-parent',
+  });
+  const k = knowledge([
+    commerceVocabularyRow('CATEGORY', 'шкаф', category),
+    commerceVocabularyRow('BRAND', 'veres', brand),
+    parent,
+    child,
+  ]);
+  const fixture = build({
+    text: 'Какая предоплата на шкаф veres?',
+    spans: [
+      { kind: 'CATEGORY', turn_index: 1, quote: 'шкаф', occurrence: 1 },
+      { kind: 'BRAND', turn_index: 1, quote: 'veres', occurrence: 1 },
+    ],
+    catalogService: identityCatalog(),
+    knowledgeStore: k,
+  });
+
+  const decision = decideFirstLine(basis(fixture));
+  assert.equal(decision.decision, 'ANSWER');
+  assert.equal(decision.template_id, 'TPL_PREPAYMENT_V1');
+  assert.deepEqual(decision.render_payload, {
+    amount_minor: 30_000,
+    currency: 'UAH',
+  });
+  const context = getFirstLineDecisionPrivateContext(decision);
+  assert.deepEqual(
+    context.decision_context.used_commerce_revision_ids,
+    ['pre-child', 'pre-parent']
+  );
+});
+
+test('review B3 malformed inactive exception ancestor rejects before C4 policy mapping', () => {
+  const category = categoryId(1);
+  const brand = brandId(1);
+  const parent = prepaymentPolicy({
+    revisionId: 'pre-parent-invalid',
+    scope: { category_id: category },
+    amountMinor: 200_000,
+    namespace: 'foreign.prepayment',
+    state: 'SUPERSEDED',
+  });
+  const child = prepaymentPolicy({
+    revisionId: 'pre-child-valid',
+    scope: { category_id: category, brand_id: brand },
+    amountMinor: 30_000,
+    exceptionOf: 'pre-parent-invalid',
+  });
+  const k = knowledge([
+    commerceVocabularyRow('CATEGORY', 'шкаф', category),
+    commerceVocabularyRow('BRAND', 'veres', brand),
+    parent,
+    child,
+  ]);
+  const fixture = build({
+    text: 'Какая предоплата на шкаф veres?',
+    spans: [
+      { kind: 'CATEGORY', turn_index: 1, quote: 'шкаф', occurrence: 1 },
+      { kind: 'BRAND', turn_index: 1, quote: 'veres', occurrence: 1 },
+    ],
+    catalogService: identityCatalog(),
+    knowledgeStore: k,
+  });
+
+  assert.throws(
+    () => basis(fixture),
+    error => error instanceof FirstLineDecisionAuthorityError &&
+      error.code === 'FIRST_LINE_DECISION_AUTHORITY_INVALID'
+  );
+});
+
+test('review B3 unlinked narrower prepayment effect conflicts with general applicable policy', () => {
+  const category = categoryId(1);
+  const brand = brandId(1);
+  const parent = prepaymentPolicy({
+    revisionId: 'pre-general',
+    scope: { category_id: category },
+    amountMinor: 200_000,
+  });
+  const unlinked = prepaymentPolicy({
+    revisionId: 'pre-unlinked',
+    scope: { category_id: category, brand_id: brand },
+    amountMinor: 30_000,
+  });
+  const k = knowledge([
+    commerceVocabularyRow('CATEGORY', 'шкаф', category),
+    commerceVocabularyRow('BRAND', 'veres', brand),
+    parent,
+    unlinked,
+  ]);
+  const fixture = build({
+    text: 'Какая предоплата на шкаф veres?',
+    spans: [
+      { kind: 'CATEGORY', turn_index: 1, quote: 'шкаф', occurrence: 1 },
+      { kind: 'BRAND', turn_index: 1, quote: 'veres', occurrence: 1 },
+    ],
+    catalogService: identityCatalog(),
+    knowledgeStore: k,
+  });
+
+  const decision = decideFirstLine(basis(fixture));
+  assert.equal(decision.decision, 'HUMAN');
+  assert.equal(decision.reason, 'POLICY_CONFLICT');
+});
+
+test('review B2 Decision Context canonical ordering does not depend on localeCompare', () => {
+  const fixture = build({
+    text: 'Сколько стоит Дубль?',
+    spans: [{
+      kind: 'PRODUCT',
+      turn_index: 1,
+      quote: 'Дубль',
+      occurrence: 1,
+    }],
+    catalogService: catalog({ productMode: 'AMBIGUOUS' }),
+  });
+  const original = String.prototype.localeCompare;
+  String.prototype.localeCompare = function forbiddenLocaleCompare() {
+    throw new Error('localeCompare must not participate in Decision Context canonicalization');
+  };
+  try {
+    const decision = decideFirstLine(basis(fixture));
+    assert.equal(decision.decision, 'CLARIFY');
+    assert.match(
+      getFirstLineDecisionPrivateContext(decision).decision_context_id,
+      /^dc_[a-f0-9]{64}$/u
+    );
+  } finally {
+    String.prototype.localeCompare = original;
+  }
+});
+
+test('review B4 Decision Context hashes only the frozen conditional §45 canonical input', () => {
+  const fixture = build({
+    text: 'Какие способы оплаты есть?',
+    knowledgeStore: knowledge([commerceRow()]),
+  });
+  const answerDecision = decideFirstLine(basis(fixture));
+  const answerContext = getFirstLineDecisionPrivateContext(answerDecision);
+  assert.equal(answerContext.decision_context.response_locale, 'ru');
+  assert.equal(Object.hasOwn(answerContext.decision_context, 'model_id'), false);
+  const {
+    schema: answerSchema,
+    ...answerCanonicalInput
+  } = answerContext.decision_context;
+  assert.equal(answerSchema, 'bp.first-line.decision-context/1');
+  const expectedAnswerId = 'dc_' + createHash('sha256')
+    .update(canonicalKnowledgeJson(answerCanonicalInput))
+    .digest('hex');
+  assert.equal(answerContext.decision_context_id, expectedAnswerId);
+
+  const humanFixture = build({
+    text: 'Какая доставка?',
+  });
+  const humanDecision = decideFirstLine(basis(humanFixture));
+  assert.equal(humanDecision.decision, 'HUMAN');
+  const humanContext = getFirstLineDecisionPrivateContext(humanDecision);
+  assert.equal(Object.hasOwn(humanContext.decision_context, 'response_locale'), false);
+  assert.equal(Object.hasOwn(humanContext.decision_context, 'model_id'), false);
+  const {
+    schema: humanSchema,
+    ...humanCanonicalInput
+  } = humanContext.decision_context;
+  assert.equal(humanSchema, 'bp.first-line.decision-context/1');
+  const expectedHumanId = 'dc_' + createHash('sha256')
+    .update(canonicalKnowledgeJson(humanCanonicalInput))
+    .digest('hex');
+  assert.equal(humanContext.decision_context_id, expectedHumanId);
 });

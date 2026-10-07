@@ -28,6 +28,7 @@ import {
   resolveCallCenterPhone,
 } from './knowledge/public-operational-readers.mjs';
 import {
+  normalizeCommerceScope,
   resolveCommercePolicy,
 } from './knowledge/commerce-policy.mjs';
 import {
@@ -42,6 +43,15 @@ const CUSTOMER_IDENTITY_KINDS = new Set(['PRODUCT', 'CATEGORY', 'BRAND', 'STORE'
 const CATEGORY_MATCH_MODES = new Set(['NODE_ONLY', 'INCLUDE_DESCENDANTS']);
 const MAX_CHOICES = 20;
 const PAYMENT_CODES = new Set(['BANK_TRANSFER', 'CASH_COURIER', 'COD_NOVA_POSHTA']);
+const KNOWLEDGE_AUTHORITY_FAMILIES = new Set([
+  'STORE_OPEN_STATUS',
+  'STORE_HOURS_TODAY',
+  'STORE_PHONE',
+  'CALL_CENTER_PHONE',
+  'PAYMENT_METHODS',
+  'PREPAYMENT',
+  'RETURN_PERIOD',
+]);
 const DECISION_CONTEXT_SCHEMA = 'bp.first-line.decision-context/1';
 const TOOL_CONTRACT_VERSION = 'bp.first-line.c4-authority/1';
 
@@ -54,6 +64,31 @@ function frozenClone(value) {
     if (item !== undefined) out[key] = frozenClone(item);
   }
   return Object.freeze(out);
+}
+
+function compareCanonicalUtf8(left, right) {
+  return Buffer.compare(
+    Buffer.from(canonicalKnowledgeJson(left), 'utf8'),
+    Buffer.from(canonicalKnowledgeJson(right), 'utf8')
+  );
+}
+
+function captureKnowledgeStore(store) {
+  if (!store || typeof store.authoritySnapshot !== 'function') {
+    fail('FIRST_LINE_DECISION_AUTHORITY_INVALID',
+      'Knowledge authority must provide authoritySnapshot()');
+  }
+  const snapshot = store.authoritySnapshot();
+  if (!Array.isArray(snapshot)) {
+    fail('FIRST_LINE_DECISION_AUTHORITY_INVALID',
+      'Knowledge authority snapshot must be an array');
+  }
+  const frozenSnapshot = frozenClone(snapshot);
+  return Object.freeze({
+    authoritySnapshot() {
+      return frozenSnapshot;
+    },
+  });
 }
 
 function resultRevisionIds(result) {
@@ -164,21 +199,15 @@ function buildDecisionContext(snapshot, resolutions, dependencies) {
       status: item.authority?.status ?? null,
       reason: item.authority?.reason ?? null,
     }))
-  ).sort((x, y) =>
-    canonicalKnowledgeJson(x).localeCompare(canonicalKnowledgeJson(y))
-  );
-  const authorityDependencies = [...dependencies].sort((x, y) =>
-    canonicalKnowledgeJson(x).localeCompare(canonicalKnowledgeJson(y))
-  );
-  const canonical = frozenClone({
-    schema: DECISION_CONTEXT_SCHEMA,
+  ).sort(compareCanonicalUtf8);
+  const authorityDependencies = [...dependencies].sort(compareCanonicalUtf8);
+  const canonicalInput = {
     intent_schema_version: [...intentVersions][0],
     knowledge_resolver_contract_version:
       resolverVersions.size === 1 ? [...resolverVersions][0] : null,
     tool_contract_version: TOOL_CONTRACT_VERSION,
     template_id: snapshot.template_id,
     template_version: templateVersion(snapshot.template_id),
-    response_locale: snapshot.response_locale,
     used_operational_revision_ids: operationalRevisionIds,
     used_commerce_revision_ids: commerceRevisionIds,
     used_vocabulary_revision_ids: vocabularyRevisionIds,
@@ -186,14 +215,20 @@ function buildDecisionContext(snapshot, resolutions, dependencies) {
       catalogGenerations.size === 1 ? [...catalogGenerations][0] : null,
     authority_dependencies: authorityDependencies,
     resolver_outcomes: resolverOutcomes,
-    model_id: null,
-  });
+  };
+  if (snapshot.decision === 'ANSWER' || snapshot.decision === 'CLARIFY') {
+    canonicalInput.response_locale = snapshot.response_locale;
+  }
+  const canonical = frozenClone(canonicalInput);
   const decisionContextId = 'dc_' + createHash('sha256')
     .update(canonicalKnowledgeJson(canonical))
     .digest('hex');
   return Object.freeze({
     decision_context_id: decisionContextId,
-    decision_context: canonical,
+    decision_context: Object.freeze({
+      schema: DECISION_CONTEXT_SCHEMA,
+      ...canonical,
+    }),
     trace_metadata: Object.freeze({ source_message_ids: sourceMessageIds }),
   });
 }
@@ -842,71 +877,122 @@ function exactObject(value, keys) {
     Object.keys(value).sort().join(',') === [...keys].sort().join(',');
 }
 
+function validateCommercePublicRow(row, {
+  effectFamily,
+  effectType,
+}) {
+  if (row?.record_type !== 'COMMERCE_POLICY' ||
+      row.schema_version !== 1 ||
+      row.subject_type !== 'business' ||
+      row.subject_id !== 'babypark' ||
+      row.effect_family !== effectFamily ||
+      row.namespace !== effectFamily ||
+      row.effect_type !== effectType) {
+    fail('FIRST_LINE_DECISION_AUTHORITY_INVALID',
+      'CommercePolicy same-family row is malformed or foreign',
+      { revision_id: row?.revision_id ?? null, effect_family: effectFamily });
+  }
+
+  if (effectFamily === 'commerce.prepayment') {
+    try {
+      normalizeCommerceScope(row.scope);
+    } catch (error) {
+      fail('FIRST_LINE_DECISION_AUTHORITY_INVALID',
+        'public prepayment policy has invalid exact-binding scope',
+        { revision_id: row.revision_id, cause: error?.code ?? error?.name ?? 'ERROR' });
+    }
+  } else if (!row.scope || typeof row.scope !== 'object' ||
+      Array.isArray(row.scope) || Object.keys(row.scope).length !== 0) {
+    fail('FIRST_LINE_DECISION_AUTHORITY_INVALID',
+      'public CommercePolicy family requires empty scope',
+      { revision_id: row.revision_id });
+  }
+
+  const value = row.effect_value;
+  if (effectFamily === 'commerce.payment_methods') {
+    if (!exactObject(value, ['methods']) ||
+        !Array.isArray(value.methods) || value.methods.length < 1 ||
+        value.methods.some(code => !PAYMENT_CODES.has(code)) ||
+        new Set(value.methods).size !== value.methods.length ||
+        value.methods.join('\0') !== [...value.methods].sort().join('\0')) {
+      fail('FIRST_LINE_DECISION_AUTHORITY_INVALID',
+        'PAYMENT_METHODS effect is malformed',
+        { revision_id: row.revision_id });
+    }
+  } else if (effectFamily === 'commerce.prepayment') {
+    if (!exactObject(value, ['amount_minor', 'currency']) ||
+        !Number.isSafeInteger(value.amount_minor) || value.amount_minor < 0 ||
+        typeof value.currency !== 'string' || !/^[A-Z]{3}$/.test(value.currency)) {
+      fail('FIRST_LINE_DECISION_AUTHORITY_INVALID',
+        'PREPAYMENT effect is malformed',
+        { revision_id: row.revision_id });
+    }
+  } else if (effectFamily === 'commerce.return_period') {
+    if (!exactObject(value, [
+      'applies_to', 'calendar_days', 'purchase_day_excluded',
+    ]) ||
+        value.applies_to !== 'GOOD_QUALITY' ||
+        !Number.isSafeInteger(value.calendar_days) || value.calendar_days <= 0 ||
+        typeof value.purchase_day_excluded !== 'boolean') {
+      fail('FIRST_LINE_DECISION_AUTHORITY_INVALID',
+        'RETURN_PERIOD effect is malformed',
+        { revision_id: row.revision_id });
+    }
+  }
+  return row;
+}
+
 function validateCommerceRows(knowledgeStore, {
   nowUtc,
   effectFamily,
   effectType,
   bindings,
 }) {
+  const snapshot = knowledgeStore.authoritySnapshot();
+  const byId = new Map(snapshot.map(row => [row.revision_id, row]));
   const projection = projectActiveKnowledge(knowledgeStore, {
     nowUtc,
     subjectType: 'business',
     subjectId: 'babypark',
   });
   const rows = projection.active.filter(row => row.effect_family === effectFamily);
+
   for (const row of rows) {
-    if (row.record_type !== 'COMMERCE_POLICY' ||
-        row.schema_version !== 1 ||
-        row.subject_type !== 'business' ||
-        row.subject_id !== 'babypark' ||
-        row.namespace !== effectFamily ||
-        row.effect_type !== effectType) {
-      fail('FIRST_LINE_DECISION_AUTHORITY_INVALID',
-        'CommercePolicy same-family row is malformed or foreign',
-        { revision_id: row.revision_id, effect_family: effectFamily });
-    }
-    if (effectFamily !== 'commerce.prepayment' &&
-        (!row.scope || typeof row.scope !== 'object' || Array.isArray(row.scope) ||
-         Object.keys(row.scope).length !== 0)) {
-      fail('FIRST_LINE_DECISION_AUTHORITY_INVALID',
-        'public CommercePolicy family requires empty scope',
-        { revision_id: row.revision_id });
-    }
-    const value = row.effect_value;
-    if (effectFamily === 'commerce.payment_methods') {
-      if (!exactObject(value, ['methods']) ||
-          !Array.isArray(value.methods) || value.methods.length < 1 ||
-          value.methods.some(code => !PAYMENT_CODES.has(code)) ||
-          new Set(value.methods).size !== value.methods.length ||
-          value.methods.join('\0') !== [...value.methods].sort().join('\0')) {
-        fail('FIRST_LINE_DECISION_AUTHORITY_INVALID',
-          'PAYMENT_METHODS effect is malformed');
-      }
-    } else if (effectFamily === 'commerce.prepayment') {
-      if (!exactObject(value, ['amount_minor', 'currency']) ||
-          !Number.isSafeInteger(value.amount_minor) || value.amount_minor < 0 ||
-          typeof value.currency !== 'string' || !/^[A-Z]{3}$/.test(value.currency)) {
-        fail('FIRST_LINE_DECISION_AUTHORITY_INVALID',
-          'PREPAYMENT effect is malformed');
-      }
-    } else if (effectFamily === 'commerce.return_period') {
-      if (!exactObject(value, [
-        'applies_to', 'calendar_days', 'purchase_day_excluded',
-      ]) ||
-          value.applies_to !== 'GOOD_QUALITY' ||
-          !Number.isSafeInteger(value.calendar_days) || value.calendar_days <= 0 ||
-          typeof value.purchase_day_excluded !== 'boolean') {
-        fail('FIRST_LINE_DECISION_AUTHORITY_INVALID',
-          'RETURN_PERIOD effect is malformed');
-      }
+    let cursor = row;
+    const seen = new Set();
+    while (cursor) {
+      if (seen.has(cursor.revision_id)) break;
+      seen.add(cursor.revision_id);
+      validateCommercePublicRow(cursor, { effectFamily, effectType });
+      if (cursor.exception_of_revision_id === null) break;
+      cursor = byId.get(cursor.exception_of_revision_id) ?? null;
     }
   }
-  return resolveCommercePolicy(knowledgeStore, {
+
+  const result = resolveCommercePolicy(knowledgeStore, {
     nowUtc,
     subjectType: 'business',
     subjectId: 'babypark',
     effectFamily,
     bindings,
+  });
+
+  const consulted = new Set(resultRevisionIds(result));
+  for (const revisionId of [...consulted]) {
+    let cursor = byId.get(revisionId) ?? null;
+    const seen = new Set();
+    while (cursor?.exception_of_revision_id !== null) {
+      const parentId = cursor.exception_of_revision_id;
+      if (seen.has(parentId)) break;
+      seen.add(parentId);
+      consulted.add(parentId);
+      cursor = byId.get(parentId) ?? null;
+    }
+  }
+
+  return Object.freeze({
+    ...result,
+    revision_ids: Object.freeze([...consulted].sort()),
   });
 }
 
@@ -1208,11 +1294,15 @@ function authorityDecision(family, {
   budget,
   dependencies,
 }) {
+  const responseKnowledgeStore = KNOWLEDGE_AUTHORITY_FAMILIES.has(family)
+    ? captureKnowledgeStore(knowledgeStore)
+    : knowledgeStore;
+
   if (family === 'STORE_OPEN_STATUS') {
     const result = recordKnowledgeDependency(
       dependencies, 'OPERATIONAL', 'resolveStoreOperationalState',
       { store_id: slots.store_id },
-      resolveStoreOperationalState(knowledgeStore, {
+      resolveStoreOperationalState(responseKnowledgeStore, {
         nowUtc, storeId: slots.store_id,
       })
     );
@@ -1229,7 +1319,7 @@ function authorityDecision(family, {
     const current = recordKnowledgeDependency(
       dependencies, 'OPERATIONAL', 'resolveStoreOperationalState',
       { store_id: slots.store_id },
-      resolveStoreOperationalState(knowledgeStore, {
+      resolveStoreOperationalState(responseKnowledgeStore, {
         nowUtc, storeId: slots.store_id,
       })
     );
@@ -1244,7 +1334,7 @@ function authorityDecision(family, {
     const result = recordKnowledgeDependency(
       dependencies, 'OPERATIONAL', 'resolveStoreTodaySchedule',
       { store_id: slots.store_id },
-      resolveStoreTodaySchedule(knowledgeStore, {
+      resolveStoreTodaySchedule(responseKnowledgeStore, {
         nowUtc, storeId: slots.store_id,
       })
     );
@@ -1264,8 +1354,8 @@ function authorityDecision(family, {
       family === 'STORE_PHONE' ? 'resolveStorePhone' : 'resolveCallCenterPhone',
       family === 'STORE_PHONE' ? { store_id: slots.store_id } : {},
       family === 'STORE_PHONE'
-        ? resolveStorePhone(knowledgeStore, { nowUtc, storeId: slots.store_id })
-        : resolveCallCenterPhone(knowledgeStore, { nowUtc })
+        ? resolveStorePhone(responseKnowledgeStore, { nowUtc, storeId: slots.store_id })
+        : resolveCallCenterPhone(responseKnowledgeStore, { nowUtc })
     );
     if (result.status === 'POLICY_NOT_FOUND') return human('POLICY_NOT_FOUND');
     if (result.status === 'POLICY_CONFLICT') return human('POLICY_CONFLICT');
@@ -1276,7 +1366,7 @@ function authorityDecision(family, {
   }
 
   if (family === 'PAYMENT_METHODS') {
-    const result = validateCommerceRows(knowledgeStore, {
+    const result = validateCommerceRows(responseKnowledgeStore, {
       nowUtc,
       effectFamily: 'commerce.payment_methods',
       effectType: 'PAYMENT_METHODS',
@@ -1296,7 +1386,7 @@ function authorityDecision(family, {
     for (const key of ['category_id', 'brand_id', 'product_id', 'variant_id', 'store_id']) {
       if (slots[key]) bindings[key] = slots[key];
     }
-    const result = validateCommerceRows(knowledgeStore, {
+    const result = validateCommerceRows(responseKnowledgeStore, {
       nowUtc,
       effectFamily: 'commerce.prepayment',
       effectType: 'PREPAYMENT',
@@ -1315,7 +1405,7 @@ function authorityDecision(family, {
     });
   }
   if (family === 'RETURN_PERIOD') {
-    const result = validateCommerceRows(knowledgeStore, {
+    const result = validateCommerceRows(responseKnowledgeStore, {
       nowUtc,
       effectFamily: 'commerce.return_period',
       effectType: 'RETURN_PERIOD',
