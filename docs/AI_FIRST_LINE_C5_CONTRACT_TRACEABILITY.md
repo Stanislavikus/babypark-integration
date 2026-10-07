@@ -26,7 +26,7 @@ proposed DESIGN/ACCEPTANCE bytes remain non-authoritative until merged.
 | G5 TextRenderer exact output | DESIGN §40.2/§40.4 | T08 + T07 | non-exact shape/branch rejected | NONE; adapter remains unconnected | DONE |
 | G6 single renderer error contract | DESIGN §40.2 | T13 | `FIRST_LINE_RENDERER_INVALID`, no fallback/old render reuse | NONE | DONE |
 | G7 Chatwoot Liquid safety | DESIGN §40.3 | T09 | unsafe delimiter => renderer failure before output; final recheck | NONE | DONE |
-| G8 Chatwoot Markdown/display neutrality | DESIGN §40.3 | T09a | Website free-form text encoded; non-inert finite choice rejected | NONE | DONE |
+| G8 Chatwoot Markdown/display neutrality | DESIGN §40.2/§40.3 | T09a | Website dynamic labels are reversibly encoded in content; input-select titles are generated ordinals only | NONE | DONE |
 | G9 Chatwoot message-content ceiling | DESIGN §40.2/§40.3 | T08 + T13 | final Website content >150000 Unicode code points => `FIRST_LINE_RENDERER_INVALID`, zero send | NONE | DONE |
 | G10 template semantic edge invariants | DESIGN §40.4 closing invariants | T07 + T10 | equal RANGE / impossible full-partial counts reject; partial named=0 uses explicit branch | NONE | DONE |
 | genuine C4 decision provenance | DESIGN §40.2 | T11 | clone/forgery rejected | NONE | DONE |
@@ -58,6 +58,17 @@ Deployed Chatwoot transport evidence (2026-10-07):
     `f739d69b9ed1816a467c18d805db60dc4252ee13a48f15c167b4fe045b3f75da`;
   - `app/javascript/shared/components/ChatOption.vue` =
     `6458a84c3657b77178944fbb698adf4064690d8353d4b6d739c1348bfa44ef8b`.
+
+Catalog representability check motivating ordinal button titles:
+- current catalog generation inspected:
+  `g_bcd3c2836b25ab4252f8f5510c769f260e0597092fea8aff`;
+- a reject-on-Markdown-syntax button-label design would have rejected 90/32311
+  exact-locale product-title rows (0.279%) and 24/7486 active IN_STOCK joined
+  variant labels (0.321%);
+- observed legitimate shapes included dot-separated model names, dimensions with
+  `*`, and underscore-suffixed option labels. The proposal therefore keeps the
+  factual label in Markdown-neutral encoded message content and uses only the
+  generated ordinal as native button title. No catalog bytes are persisted by C5.
 
 Research finding motivating the Liquid safety amendment:
 Chatwoot v4.18.0 `Message` includes `Liquidable`; outgoing message content is
