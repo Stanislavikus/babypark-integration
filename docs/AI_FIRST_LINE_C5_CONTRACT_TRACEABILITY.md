@@ -32,7 +32,7 @@ proposed DESIGN/ACCEPTANCE bytes remain non-authoritative until merged.
 | HUMAN public silence | DESIGN §40.2 + existing §16.2 | T08 + existing T03 |
 | exact-locale/no fallback | DESIGN §40.2–§40.4 + existing §16.2 | T07/T10 + existing T01/T03 |
 | C6 send/activation remains downstream | DESIGN §40.2 and unchanged §29.7–§29.9 | T13 + U01–U07 remain C6 |
-| lifecycle/status no longer claims C4 absent | DESIGN/ACCEPTANCE closing lifecycle prose + `docs/CURRENT_STATE.md` | static review against merged PR #107 / main `565f8eb3…` |
+| normative lifecycle prose no longer claims C4 absent | DESIGN/ACCEPTANCE closing lifecycle prose | static review against merged PR #107 / base main `565f8eb3…` |
 
 Research finding motivating the Liquid safety amendment:
 Chatwoot v4.18.0 `Message` includes `Liquidable`; outgoing message content is
