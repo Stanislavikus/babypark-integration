@@ -3425,4 +3425,3 @@ test('C63 conflicting cross-namespace operating-state peers map to HUMAN POLICY_
   assert.equal(decision.decision, 'HUMAN');
   assert.equal(decision.reason, 'POLICY_CONFLICT');
 });
-
