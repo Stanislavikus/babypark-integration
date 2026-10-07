@@ -112,7 +112,12 @@ Deployed Chatwoot transport evidence (2026-10-07):
     `3c8ff53c97e2a7ce45258140df9655062c9007dd0327bef4eaa8ca663284e2c3`,
     map = `6c7861d8dfa934c5c3e0133b9c5cee03c4782dfc3e3270f81970e033839831de`;
   - DOMPurify chunk `purify.es-yM5BOMUm.js` =
-    `2742409cbb786796e83a82f7dfed4fbcca6756ce2ba5dd93c0902658a95e62f4`.
+    `2742409cbb786796e83a82f7dfed4fbcca6756ce2ba5dd93c0902658a95e62f4`,
+    map = `4d1d18cc786620eb992d684599650d820fa1de733176c55cfe042013f5bd02d5`;
+    that map's `dompurify@3.4.13/dist/purify.es.mjs` `sourcesContent` SHA-256
+    `1939de7b9b248a4ffdf7f8065af45116a1babb96362eaf84d8f9fc3756c26fad`
+    byte-matches the installed package source, whose pnpm integrity is
+    `sha512-2vmYIoqjze2d+kakP8S/nS5shfsl587kzwEjcGlTdiksUVgFHnFCsLYDVj/JNqJVOQZGSYBTmuycv0PodwmnMQ==`.
 - the current source maps byte-match the tracked Widget store/API,
   AgentMessage/AgentMessageBubble/UserMessage/UserMessageBubble/ChatOptions/
   ChatOption, MessageFormatter/mention-plugin, Dashboard Form and HTMLSanitizer
@@ -136,7 +141,7 @@ Catalog representability check motivating ordinal button titles:
   total 8673);
 - observed legitimate shapes included `Zero.Zero`, `2.Go`, `MK.VB`,
   `200*90 см`, `Black_1` and `Authentic Cognac*2`. The proposal therefore
-  keeps factual labels in Markdown-neutral encoded message content and uses only
+  keeps factual labels in transport-neutral entity-encoded message content and uses only
   the generated ordinal as native button title. No catalog bytes are persisted
   by C5.
 
@@ -194,6 +199,14 @@ Correction inventory from the second exhaustive V2-tree review:
   proven dual-surface uppercase-hex numeric-entity encoder and T09a covers both
   Widget and Dashboard.
 
+Correction inventory from the third exhaustive current-tree review:
+- B10 active DESIGN prose still named the superseded Markdown/backslash
+  transport algorithm -> all normative active-algorithm wording now says
+  Website transport entity encoding / transport-neutral entity-encoded text;
+- B11 T09b claimed complete relevant browser chunk/source-map binding while the
+  DOMPurify sidecar map was omitted -> its map SHA, exact `sourcesContent`
+  equivalence to installed `dompurify@3.4.13`, and pnpm integrity are now bound
+  in the deployed-runtime evidence above.
 Risk classification proposal: HEAVY. The amendment freezes new customer-visible
 wording/presentation-safety/provenance behavior and uses the conservative HEAVY
 closure path.
