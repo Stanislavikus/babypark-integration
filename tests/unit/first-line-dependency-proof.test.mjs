@@ -140,7 +140,10 @@ function resolvedAuthority(kind, value) {
       return {
         status: 'RESOLVED',
         reason: 'CATEGORY_RESOLVED',
-        resolved: { canonical_category_id: value },
+        resolved: {
+          canonical_category_id: value,
+          match_mode: 'NODE_ONLY',
+        },
       };
     case 'BRAND':
       return {
@@ -803,4 +806,69 @@ test('real store confirmed CLARIFY -> ledger -> open turn proves one candidate',
   assert.equal(serialized.includes('intent_hint'), false);
   assert.equal(serialized.includes('stock'), false);
   assert.equal(serialized.includes('price'), false);
+});
+
+
+test('requested CATEGORY proof carries exact category id plus match mode tuple', () => {
+  const p = projection({
+    requestedSlot: 'category_id',
+    candidates: [],
+  });
+  const r = resolution([
+    row('CATEGORY', 501, resolvedAuthority('CATEGORY', CATEGORY_1)),
+  ]);
+  const proof = proveClarificationDependencyAnchor({
+    projection: p,
+    resolution: r,
+  });
+  assert.equal(proof.code, 'DEPENDENCY_ANCHOR_PROVEN');
+  assert.equal(proof.reason, 'REQUESTED_SLOT_VALUE_REFERENCED');
+  assert.deepEqual(proof.anchor.referenced_value, {
+    category_id: CATEGORY_1,
+    match_mode: 'NODE_ONLY',
+  });
+});
+
+test('presented CATEGORY candidate proof is match-mode sensitive', () => {
+  const tuple = {
+    category_id: CATEGORY_1,
+    match_mode: 'NODE_ONLY',
+  };
+  const p = projection({
+    requestedSlot: null,
+    candidates: [{ slot: 'category_id', value: tuple }],
+  });
+  const same = resolution([
+    row('CATEGORY', 501, {
+      status: 'RESOLVED',
+      reason: 'CATEGORY_RESOLVED',
+      resolved: {
+        canonical_category_id: CATEGORY_1,
+        match_mode: 'NODE_ONLY',
+      },
+    }),
+  ]);
+  const proven = proveClarificationDependencyAnchor({
+    projection: p,
+    resolution: same,
+  });
+  assert.equal(proven.code, 'DEPENDENCY_ANCHOR_PROVEN');
+  assert.deepEqual(proven.anchor.referenced_value, tuple);
+
+  const drifted = resolution([
+    row('CATEGORY', 501, {
+      status: 'RESOLVED',
+      reason: 'CATEGORY_RESOLVED',
+      resolved: {
+        canonical_category_id: CATEGORY_1,
+        match_mode: 'INCLUDE_DESCENDANTS',
+      },
+    }),
+  ]);
+  const rejected = proveClarificationDependencyAnchor({
+    projection: p,
+    resolution: drifted,
+  });
+  assert.equal(rejected.code, 'NO_DEPENDENCY_PROOF');
+  assert.equal(rejected.reason, 'NO_CLARIFICATION_MATCH');
 });

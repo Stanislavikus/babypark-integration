@@ -8,7 +8,11 @@ import {
   isCertifiedObjectiveConstraintProof,
 } from './first-line-objective-constraint-latch.mjs';
 import { resolutionUsesExactRead } from './first-line-resolution.mjs';
-import { ROUTING_SNAPSHOT_SCHEMA, CANONICAL_ID_PATTERNS } from './first-line-state-store.mjs';
+import {
+  ROUTING_SNAPSHOT_SCHEMA,
+  CANONICAL_ID_PATTERNS,
+  CATEGORY_MATCH_MODES,
+} from './first-line-state-store.mjs';
 
 export const FIRST_LINE_CLARIFICATION_SELECTION_SCHEMA =
   'bp.first-line.clarification-selection/1';
@@ -76,6 +80,18 @@ function safeToken(value, field) {
 function canonicalId(slot, value) {
   const pattern = CANONICAL_ID_PATTERNS[slot];
   return Boolean(pattern && typeof value === 'string' && pattern.test(value));
+}
+
+function reservedCandidateValueValid(slot, value) {
+  if (slot !== 'category_id') return canonicalId(slot, value);
+  return Boolean(
+    value &&
+    typeof value === 'object' &&
+    !Array.isArray(value) &&
+    Object.keys(value).sort().join(',') === 'category_id,match_mode' &&
+    canonicalId('category_id', value.category_id) &&
+    CATEGORY_MATCH_MODES.has(value.match_mode)
+  );
 }
 
 function frozenValue(value) {
@@ -214,7 +230,8 @@ function structuredFailure(snapshot) {
   }
   for (const candidate of action.presented_candidates) {
     if (!candidate || typeof candidate !== 'object' || Array.isArray(candidate) ||
-        !ID_SLOTS.has(candidate.slot) || !canonicalId(candidate.slot, candidate.value)) {
+        !ID_SLOTS.has(candidate.slot) ||
+        !reservedCandidateValueValid(candidate.slot, candidate.value)) {
       return 'CLARIFICATION_RESERVATION_MISMATCH';
     }
   }

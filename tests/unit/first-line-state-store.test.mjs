@@ -14,6 +14,7 @@ import {
 const NOW = 2_000_000_000_000;
 const PRODUCT_1 = 'prod_11111111-1111-4111-8111-111111111111';
 const STORE_1 = 'store_11111111-1111-4111-8111-111111111111';
+const CATEGORY_1 = 'cat_11111111111111111111111111111111';
 
 function tempStore(t, {
   now = () => NOW,
@@ -1258,5 +1259,170 @@ test('v2 migration rejects unexpected trigger before versions or public actions 
       "SELECT COUNT(*) AS n FROM sqlite_master WHERE type='trigger' AND name='malicious_v2_trigger'"
     ).get().n,
     1
+  );
+});
+
+
+test('CATEGORY stable selection is an atomic pair with one provenance', t => {
+  const { store } = tempStore(t);
+  const stream = makeStream(store);
+  store.ingestConversationEvent(stream.stream_id, customerEvent(101));
+  let episode = store.beginEpisode({ streamId: stream.stream_id });
+
+  expectCode(() => store.setStableSlots(
+    episode.episode_id,
+    { category_id: CATEGORY_1 },
+    { expectedVersion: episode.version, derivedThroughEventSeq: 1 }
+  ), 'FIRST_LINE_SLOT_PATCH_INVALID');
+  expectCode(() => store.setStableSlots(
+    episode.episode_id,
+    { category_match_mode: 'NODE_ONLY' },
+    { expectedVersion: episode.version, derivedThroughEventSeq: 1 }
+  ), 'FIRST_LINE_SLOT_PATCH_INVALID');
+
+  episode = store.setStableSlots(
+    episode.episode_id,
+    {
+      category_id: CATEGORY_1,
+      category_match_mode: 'INCLUDE_DESCENDANTS',
+    },
+    { expectedVersion: episode.version, derivedThroughEventSeq: 1 }
+  );
+  assert.equal(episode.stable_slots.category_id.value, CATEGORY_1);
+  assert.equal(
+    episode.stable_slots.category_match_mode.value,
+    'INCLUDE_DESCENDANTS'
+  );
+  assert.equal(
+    episode.stable_slots.category_id.derived_through_event_seq,
+    episode.stable_slots.category_match_mode.derived_through_event_seq
+  );
+  assert.equal(episode.stable_slots.category_id.derived_through_event_seq, 1);
+});
+
+test('CATEGORY persisted pair fails closed on mode-alone or split provenance corruption', t => {
+  const { store } = tempStore(t);
+  const stream = makeStream(store);
+  store.ingestConversationEvent(stream.stream_id, customerEvent(101));
+  const episode = store.beginEpisode({ streamId: stream.stream_id });
+
+  store.db.prepare(
+    'INSERT INTO episode_slots(episode_id,slot_name,value_json,derived_through_event_seq) VALUES (?,?,?,?)'
+  ).run(episode.episode_id, 'category_match_mode', '"NODE_ONLY"', 1);
+  expectCode(() => store.getEpisode(episode.episode_id), 'FIRST_LINE_DB_CORRUPT');
+
+  store.db.prepare(
+    'DELETE FROM episode_slots WHERE episode_id=?'
+  ).run(episode.episode_id);
+  store.db.prepare(
+    'INSERT INTO episode_slots(episode_id,slot_name,value_json,derived_through_event_seq) VALUES (?,?,?,?)'
+  ).run(episode.episode_id, 'category_id', JSON.stringify(CATEGORY_1), 1);
+  store.db.prepare(
+    'INSERT INTO episode_slots(episode_id,slot_name,value_json,derived_through_event_seq) VALUES (?,?,?,?)'
+  ).run(episode.episode_id, 'category_match_mode', '"NODE_ONLY"', null);
+  expectCode(() => store.getEpisode(episode.episode_id), 'FIRST_LINE_DB_CORRUPT');
+});
+
+test('confirmed CATEGORY candidate selection commits id and match mode atomically across restart', t => {
+  const { store, file } = tempStore(t);
+  const stream = makeStream(store);
+  store.ingestConversationEvent(stream.stream_id, customerEvent(101));
+  const episode = store.beginEpisode({ streamId: stream.stream_id });
+  const tuple = Object.freeze({
+    category_id: CATEGORY_1,
+    match_mode: 'NODE_ONLY',
+  });
+  const action = store.preparePublicAction({
+    streamId: stream.stream_id,
+    episodeId: episode.episode_id,
+    expectedEpisodeVersion: episode.version,
+    preparedStreamRevision: 1,
+    actionType: 'CLARIFY',
+    basisEventSeqs: [1],
+    requestedSlot: 'category_id',
+    presentedCandidates: [{ slot: 'category_id', value: tuple }],
+    deadlineAt: NOW + 60_000,
+  });
+  assert.deepEqual(action.presented_candidates, [
+    { slot: 'category_id', value: tuple },
+  ]);
+  store.claimNextPublicAction({ leaseMs: 30_000, token: 'lease-category' });
+  store.markActionSending(action.action_id, 'lease-category');
+  store.ingestConversationEvent(stream.stream_id, {
+    sourceMessageId: 102,
+    eventKind: 'BABYPARK_PUBLIC_REPLY',
+    messageType: 'outgoing',
+    senderClass: 'configured_agent_bot',
+    senderId: 7001,
+    contentType: 'input_select',
+    deleted: false,
+    unsupported: false,
+    hasAttachments: false,
+    sourceId: action.action_id,
+  });
+  const confirmed = store.confirmPublicActionFromLedger(action.action_id);
+  const snapshot = store.readRoutingSnapshot(stream.stream_id);
+
+  const transition = store.applyClarificationSelectionFromRoutingPlan({
+    streamId: stream.stream_id,
+    expectedStreamRevision: snapshot.stream.stream_revision,
+    expectedThroughEventSeq: snapshot.stream.last_event_seq,
+    expectedRoutingLedgerFingerprint: snapshot.routing_ledger_fingerprint,
+    expectedEpisodeId: snapshot.active_episode.episode_id,
+    expectedEpisodeVersion: snapshot.active_episode.version,
+    clarificationActionId: confirmed.action_id,
+    evidenceClass: 'STRUCTURED_SUBMISSION',
+    selectionOrigin: 'presented_candidate',
+    selectionSlot: 'category_id',
+    selectionValue: tuple,
+    candidateOrdinal: 1,
+    selectionSourceMessageId: confirmed.confirmed_source_message_id,
+  });
+  assert.equal(transition.episode.stable_slots.category_id.value, CATEGORY_1);
+  assert.equal(
+    transition.episode.stable_slots.category_match_mode.value,
+    'NODE_ONLY'
+  );
+  assert.equal(
+    transition.episode.stable_slots.category_id.derived_through_event_seq,
+    2
+  );
+  assert.equal(
+    transition.episode.stable_slots.category_match_mode.derived_through_event_seq,
+    2
+  );
+
+  store.close();
+  const reopened = FirstLineStateStore.open(file);
+  t.after(() => { try { reopened.close(); } catch {} });
+  const durable = reopened.getEpisode(episode.episode_id);
+  assert.equal(durable.stable_slots.category_id.value, CATEGORY_1);
+  assert.equal(durable.stable_slots.category_match_mode.value, 'NODE_ONLY');
+  assert.equal(
+    durable.stable_slots.category_id.derived_through_event_seq,
+    durable.stable_slots.category_match_mode.derived_through_event_seq
+  );
+});
+
+
+test('C60l corrupted persisted clarification budget fails closed at state boundary', t => {
+  const { store } = tempStore(t);
+  const stream = makeStream(store);
+  store.ingestConversationEvent(stream.stream_id, customerEvent(101));
+  const episode = store.beginEpisode({ streamId: stream.stream_id });
+
+  store.db.exec('PRAGMA ignore_check_constraints=ON');
+  store.db.prepare(
+    'UPDATE episodes SET clarification_prompts_sent=2 WHERE episode_id=?'
+  ).run(episode.episode_id);
+  store.db.exec('PRAGMA ignore_check_constraints=OFF');
+
+  expectCode(
+    () => store.getEpisode(episode.episode_id),
+    'FIRST_LINE_DB_CORRUPT'
+  );
+  expectCode(
+    () => store.readRoutingSnapshot(stream.stream_id),
+    'FIRST_LINE_DB_CORRUPT'
   );
 });

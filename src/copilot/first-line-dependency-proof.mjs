@@ -11,6 +11,7 @@ const ID_SLOTS = new Set([
   'brand_id',
   'store_id',
 ]);
+const CATEGORY_MATCH_MODES = new Set(['NODE_ONLY', 'INCLUDE_DESCENDANTS']);
 const MAX_PRESENTED_CANDIDATES = 20;
 
 export class FirstLineDependencyProofError extends Error {
@@ -276,9 +277,11 @@ function clarificationProvenanceReason(projection) {
     return 'CLARIFICATION_RESERVATION_MISMATCH';
   }
   for (const candidate of action.presented_candidates) {
+    const valueValid = candidate?.slot === 'category_id'
+      ? canonicalKey(candidate.value)?.startsWith('c:') === true
+      : canonicalId(candidate?.slot, candidate?.value);
     if (!candidate || typeof candidate !== 'object' || Array.isArray(candidate) ||
-        !ID_SLOTS.has(candidate.slot) ||
-        !canonicalId(candidate.slot, candidate.value)) {
+        !ID_SLOTS.has(candidate.slot) || !valueValid) {
       return 'CLARIFICATION_RESERVATION_MISMATCH';
     }
   }
@@ -322,8 +325,19 @@ function resolutionSlots(row) {
     return out;
   }
   if (row.kind === 'CATEGORY') {
-    const value = authority.resolved?.canonical_category_id;
-    return canonicalId('category_id', value) ? [{ slot: 'category_id', value }] : null;
+    const categoryId = authority.resolved?.canonical_category_id;
+    const matchMode = authority.resolved?.match_mode;
+    if (!canonicalId('category_id', categoryId) ||
+        !CATEGORY_MATCH_MODES.has(matchMode)) {
+      return null;
+    }
+    return [{
+      slot: 'category_id',
+      value: Object.freeze({
+        category_id: categoryId,
+        match_mode: matchMode,
+      }),
+    }];
   }
   if (row.kind === 'BRAND') {
     const value = authority.resolved?.canonical_brand_id;
@@ -363,6 +377,12 @@ function possibleSlotsForKind(kind) {
 
 function canonicalKey(value) {
   if (typeof value === 'string') return 's:' + value;
+  if (value && typeof value === 'object' && !Array.isArray(value) &&
+      canonicalId('category_id', value.category_id) &&
+      CATEGORY_MATCH_MODES.has(value.match_mode) &&
+      Object.keys(value).sort().join(',') === 'category_id,match_mode') {
+    return 'c:' + value.category_id + ':' + value.match_mode;
+  }
   if (value && typeof value === 'object' &&
       value.currency === 'UAH' &&
       Number.isSafeInteger(value.minor_units)) {
@@ -427,14 +447,15 @@ function candidateProof(projection, action, collected) {
   const matches = [];
   for (const [index, candidate] of candidates.entries()) {
     if (!candidate || typeof candidate !== 'object' ||
-        !ID_SLOTS.has(candidate.slot) ||
-        typeof candidate.value !== 'string') {
+        !ID_SLOTS.has(candidate.slot)) {
       continue;
     }
+    const candidateKey = canonicalKey(candidate.value);
+    if (candidateKey === null) continue;
     if (collected.unresolvedSlots.has(candidate.slot)) continue;
 
     const rows = collected.evidence.filter(row =>
-      row.slot === candidate.slot && row.value === candidate.value
+      row.slot === candidate.slot && row.key === candidateKey
     );
     if (rows.length > 0) {
       matches.push({

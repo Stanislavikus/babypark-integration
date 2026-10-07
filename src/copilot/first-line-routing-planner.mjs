@@ -63,7 +63,11 @@ function requireSnapshot(snapshot) {
         Array.isArray(snapshot.live_public_action))) ||
       (snapshot.clarification_action !== null &&
        (typeof snapshot.clarification_action !== 'object' ||
-        Array.isArray(snapshot.clarification_action)))) {
+        Array.isArray(snapshot.clarification_action))) ||
+      (snapshot.confirmed_clarification_action !== null &&
+       snapshot.confirmed_clarification_action !== undefined &&
+       (typeof snapshot.confirmed_clarification_action !== 'object' ||
+        Array.isArray(snapshot.confirmed_clarification_action)))) {
     fail('FIRST_LINE_ROUTING_INPUT_INVALID', 'routing snapshot contract is invalid');
   }
   positiveInteger(snapshot.stream.source_conversation_id, 'source_conversation_id');
@@ -116,6 +120,8 @@ function resultBase(snapshot) {
     active_episode: snapshot.active_episode,
     live_public_action: snapshot.live_public_action,
     clarification_action: snapshot.clarification_action,
+    confirmed_clarification_action:
+      snapshot.confirmed_clarification_action ?? null,
   };
 }
 
@@ -277,4 +283,59 @@ export function projectOpenTurn(rawSnapshot) {
     return noOpenTurn(snapshot, 'NO_CUSTOMER_EVENT');
   }
   return openTurn(snapshot, customerEntries, 'FROM_STREAM_START');
+}
+
+
+export function projectConfirmedClarificationBasis(rawSnapshot) {
+  const snapshot = requireSnapshot(rawSnapshot);
+  const episode = snapshot.active_episode;
+  const action = snapshot.confirmed_clarification_action ?? null;
+  if (!episode || episode.state !== 'active' ||
+      episode.clarification_prompts_sent !== 1 ||
+      !action || action.action_type !== 'CLARIFY' ||
+      action.state !== 'CONFIRMED' ||
+      action.stream_id !== snapshot.stream.stream_id ||
+      action.episode_id !== episode.episode_id ||
+      !Array.isArray(action.basis_event_seqs) ||
+      action.basis_event_seqs.length === 0) {
+    fail('FIRST_LINE_ROUTING_INPUT_INVALID',
+      'confirmed clarification historical basis is unavailable');
+  }
+
+  const bySeq = new Map(
+    snapshot.event_suffix.map(entry => [entry.event.event_seq, entry])
+  );
+  const customerEntries = [];
+  for (const eventSeq of action.basis_event_seqs) {
+    const entry = bySeq.get(eventSeq);
+    if (!entry ||
+        entry.event.event_kind !== 'CUSTOMER_MESSAGE' ||
+        entry.event.message_type !== 'incoming' ||
+        entry.event.sender_class !== 'contact') {
+      fail('FIRST_LINE_ROUTING_BASIS_UNAVAILABLE',
+        'confirmed clarification basis event is unavailable from certified ledger',
+        { event_seq: eventSeq, action_id: action.action_id });
+    }
+    customerEntries.push(entry);
+  }
+
+  const ordered = [...customerEntries].sort(
+    (a, b) => a.event.event_seq - b.event.event_seq
+  );
+  const projection = Object.freeze({
+    ...resultBase(snapshot),
+    code: 'OPEN_TURN',
+    reason: 'CONFIRMED_CLARIFICATION_ORIGINAL_BASIS',
+    open_turn: Object.freeze({
+      event_seqs: Object.freeze(ordered.map(entry => entry.event.event_seq)),
+      source_message_ids: Object.freeze(
+        ordered.map(entry => entry.event.source_message_id)
+      ),
+      first_event_seq: ordered[0].event.event_seq,
+      last_event_seq: ordered.at(-1).event.event_seq,
+      message_count: ordered.length,
+    }),
+    boundary: null,
+  });
+  return certifyProjection(projection);
 }
