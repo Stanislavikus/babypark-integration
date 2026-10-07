@@ -37,6 +37,28 @@ proposed DESIGN/ACCEPTANCE bytes remain non-authoritative until merged.
 | C6 send/activation stays downstream | DESIGN §40.2 and unchanged §29.7–§29.9 | T13 + U01–U07 remain C6 | C5 performs no Chatwoot/network call | NONE | DONE |
 | normative lifecycle prose no longer claims C4 absent | DESIGN/ACCEPTANCE closing lifecycle prose | static review against merged PR #107 / base main `565f8eb3…` | stale lifecycle claim removed; proposal still non-authorizing | NONE | DONE |
 
+Deployed Chatwoot transport evidence (2026-10-07):
+- deployed package reports `4.18.0`; the deployment tree has no `.git`, so no
+  deployed Git HEAD is claimed;
+- the following deployed files byte-match upstream Chatwoot v4.18.0 commit
+  `9f920b549c14491a4e587687a3eed5d21c6ccc7d` by SHA-256:
+  - `app/models/concerns/liquidable.rb` =
+    `acca8cff5ff2b9828918c2a6a856148831383a4d4c09eedfd2f07849c07ff05f`;
+  - `app/models/message.rb` =
+    `b31b98c28bbe2fe6bed2b78d6cc2553830a9217236c179c78791e8b6c9cb7701`;
+  - `app/builders/messages/message_builder.rb` =
+    `5934d5e80388f5d7a6cd7bfe5b77e4946cf1b786d47e6fcf151eb54796379c2a`;
+  - `app/models/concerns/content_attribute_validator.rb` =
+    `9b27c1eb9a19cbb30ed764934d3ec6870ce17d22e2af16ab68513154f96fb3d5`;
+  - `app/javascript/shared/helpers/MessageFormatter.js` =
+    `9b0624c797868ba8e3f486b4a92465fbea626c3e4a988c927a2606ec2bc805c1`;
+  - `app/javascript/widget/components/AgentMessageBubble.vue` =
+    `fc6486b9cbe6b99519be3ae58312a11aceba00ba9abf79b484e06a12999e4ff2`;
+  - `app/javascript/shared/components/ChatOptions.vue` =
+    `f739d69b9ed1816a467c18d805db60dc4252ee13a48f15c167b4fe045b3f75da`;
+  - `app/javascript/shared/components/ChatOption.vue` =
+    `6458a84c3657b77178944fbb698adf4064690d8353d4b6d739c1348bfa44ef8b`.
+
 Research finding motivating the Liquid safety amendment:
 Chatwoot v4.18.0 `Message` includes `Liquidable`; outgoing message content is
 processed during create and Liquid errors are not a BabyPark fail-closed
