@@ -1347,6 +1347,10 @@ Expected:
 - ANSWER -> exact `bp.first-line.website-render/1` text shape;
 - Website `content` is 1..150000 Unicode code points after all Markdown
   transport encoding; 150001 fails closed before any POST;
+- the length primitive is explicitly regression-tested as **code-point**, not
+  JavaScript UTF-16-unit, counting: 150000 U+1F600 characters are at the bound
+  even though JavaScript `.length` is 300000, while 150001 U+1F600 characters
+  fail; mixed BMP/astral controls obey the same rule;
 - finite CLARIFY -> exact `input_select` shape; `content` is
   `<prompt>\n1. <encoded-label>\n2. <encoded-label>...` with no trailing LF,
   while ordered items are exactly
@@ -1361,13 +1365,18 @@ Expected:
   content, dynamic labels/URLs, choice labels/tokens or a content-derived digest.
 
 ### T09 — Chatwoot Liquid re-interpretation is fail-closed
-Use otherwise-safe public title/variant/choice/product-URL strings containing
-`{{contact.email}}`, `{{agent.name}}` and `{% assign x = 1 %}`. Include normal
-brace/non-Liquid controls.
+Use otherwise-safe public title/variant/choice strings containing
+`{{contact.email}}`, `{{agent.name}}` and `{% assign x = 1 %}`. For
+`product_url`, include a genuine C4-canonical URL whose query still contains a
+literal `{{agent.name}}`, plus a control where raw braces in the path have
+already become canonical `%7B%7B...%7D%7D`. Include normal brace/non-Liquid
+controls.
 
 Expected:
-- any dynamic Website content string containing `{{` or `{%` is rejected
-  before a render result;
+- any dynamic Website content string **as received from genuine C4** containing
+  literal `{{` or `{%` is rejected before a render result;
+- a canonical percent-encoded brace sequence contains no Liquid opening
+  delimiter and remains inert Markdown-neutral plain text;
 - final content is checked again; every input-select title must equal its
   generated unsigned ASCII ordinal exactly;
 - normal non-Liquid brace controls remain representable through Markdown-neutral
@@ -1379,24 +1388,30 @@ Expected:
 For ordinary ANSWER and finite CLARIFY content, use otherwise-valid dynamic labels
 containing `[Коляска](https://evil.example)`,
 `Коляска https://evil.example Blue`, `Blue *bold* _x_ #tag`,
-`First.Go`, `200*90 см`, `Black_1`, punctuation controls and an allowed
-BabyPark product URL.
+`First.Go`, `200*90 см`, `Black_1`, plus exhaustive single-code-point
+coverage for all 32 ASCII punctuation characters and compound typographer/link
+controls such as `...`, `--`, `---`, `(c)`, quotes, domains and emails.
+For `product_url`, include ordinary production-shaped URLs plus C4-safe
+trailing `)` / `.`, percent escapes, `^`, `|` and incomplete `%`
+controls.
 
 Expected:
-- every dynamic factual label placed in Website `content` is encoded by exact
-  DESIGN §40.3 ASCII punctuation escaping, so Chatwoot Markdown displays the
-  original normalized factual text but creates no attacker-controlled
-  link/image/emphasis/list/other markup;
+- every dynamic factual label **and canonical product URL** placed in Website
+  `content` is encoded by exact DESIGN §40.3 ASCII punctuation escaping, so
+  Chatwoot Markdown displays the original normalized/canonical text but creates
+  no dynamic link/image/emphasis/list/other markup;
+- every punctuation/property control round-trips visibly and produces zero
+  dynamic `<a>` / image / emphasis / code markup;
 - finite CLARIFY keeps all such C4-safe labels representable: the numbered
   `content` list carries the encoded labels, while native input-select button
   titles are only `"1"`, `"2"`, ... and values remain the exact
   `bp-choice:<ordinal>` tokens;
 - after selection Chatwoot may echo only that generated ordinal, never a dynamic
   Catalog/Knowledge label through Markdown;
-- the separately validated `product_url` stays unescaped and is the only
-  dynamic URL intentionally linkifiable;
-- TextRenderer does not apply Website Markdown or Liquid transport encoding
-  because it is not a Chatwoot/Web Widget transport adapter.
+- Website v1 intentionally produces **no dynamic hyperlink**; a non-null
+  `product_url` is exact visible non-clickable plain text. TextRenderer keeps
+  the raw canonical URL and does not apply Website Markdown/Liquid transport
+  encoding.
 
 ### T09b — Chatwoot runtime drift blocks WebsiteRenderer activation
 Repeat the verified v4.18.0 transport checks against the exact target deployment
@@ -1449,22 +1464,27 @@ optional image URL and `partial_model_match` true/false.
 Expected:
 - WebsiteRenderer uses `content_type=text`, never `cards`;
 - exact numbered rows and frozen partial-match phrase;
-- product URL, when present, is copied literally;
+- product URL, when present, is copied literally by TextRenderer; WebsiteRenderer
+  uses the exact reversible §40.3 encoding so the visible canonical URL is
+  unchanged, non-clickable and creates zero dynamic `<a>`;
 - image URL is neither rendered nor fetched;
 - zero products use only `TPL_SHORTLIST_EMPTY_V1`.
 
 ### T13 — renderer failure is terminal for this send attempt
 Parameterize forged decision, unknown template/reason tuple, missing locale
 branch, invalid payload, unsupported currency, Liquid-unsafe dynamic string,
-final Website content at 150000/150001 Unicode code points and invalid output
-shape.
+final Website content at 150000/150001 Unicode code points (including the astral
+U+1F600 boundary that differs from JavaScript UTF-16 `.length`) and invalid
+output shape.
 
 Expected:
 - one `FIRST_LINE_RENDERER_INVALID` failure family;
 - no fallback content and no old/prepared render reuse;
 - no renderer output/log/cache/digest is durable;
-- C5 performs no Chatwoot/network call, so C6 can perform zero POST and follow
-  its existing renderer-failure HUMAN/fail-closed path.
+- C5 performs no Chatwoot/network call. The separately scoped future C6 stage
+  **must** treat renderer failure as zero public POST and follow the already
+  frozen native-HUMAN/fail-closed policy; this C5 amendment does not claim an
+  existing renderer/send integration or freeze C6's exact state transition.
 
 ## U. C6 send-time semantic reauthorization
 
