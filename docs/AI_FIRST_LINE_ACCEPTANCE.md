@@ -1,11 +1,11 @@
 # BabyPark AI First Line — Acceptance Corpus v0.7
 
-Status: FROZEN — Event Ledger v0.7 architecture acceptance freeze
+Status: FROZEN — Event Ledger v0.7 architecture + C5 renderer acceptance freeze
 Applies to: BabyPark AI First Line Website v1 / Slice C acceptance contract.
-Supersedes: `docs/AI_FIRST_LINE_ACCEPTANCE.md` at canonical main `8e65a57b36eaf649853fa3a7aae58bf5cd5a477c`.
+Supersedes: `docs/AI_FIRST_LINE_ACCEPTANCE.md` at canonical main `565f8eb30bf39afa80bb4d59258cc2fd13aa67d5`.
 Companion: `docs/AI_FIRST_LINE_DESIGN.md`
 Historical research baseline: `e4b3989f852d5de4a868a6f72867b87cb64f8b2d`.
-Contract amendment base: canonical main `8e65a57b36eaf649853fa3a7aae58bf5cd5a477c`.
+Contract amendment base: canonical main `565f8eb30bf39afa80bb4d59258cc2fd13aa67d5`.
 
 This file is the single normative acceptance corpus for AI First Line v0.7. It
 incorporates the complete v0.6 acceptance delta and subsequent v0.7 freezes; no
@@ -1322,6 +1322,86 @@ A candidate CLARIFY carries private canonical IDs and public
 Expected: renderer receives only public token+label; rendered text/content
 attributes expose no canonical ID. Structured selection maps the ordinal back to
 the separately persisted private reservation.
+
+### T07 — exact uk/ru golden wording
+For every 17 ANSWER and 7 CLARIFY template IDs in DESIGN §40.4, run exact valid
+payload/choice controls in both `uk` and `ru`.
+
+Expected:
+- emitted content is byte-for-byte the frozen branch after only §40.3
+  substitutions/joins;
+- no plural library, translation lookup, locale fallback or paraphrase;
+- every fixed branch exists in both locales;
+- payment codes map only to the exact frozen method names.
+
+### T08 — Website/Text renderer envelope is closed
+Parameterize ANSWER, finite-choice CLARIFY, free-text MONEY/ANCHOR CLARIFY and
+HUMAN.
+
+Expected:
+- ANSWER -> exact `bp.first-line.website-render/1` text shape;
+- finite CLARIFY -> exact `input_select` shape and ordered
+  `{title:label,value:token}` only;
+- MONEY/ANCHOR -> exact text shape with `content_attributes={}`;
+- HUMAN -> `null`;
+- TextRenderer -> exact text-render shape or `null`;
+- cards/template params/provider metadata/private candidate values are impossible.
+
+### T09 — Chatwoot Liquid re-interpretation is fail-closed
+Use otherwise-safe public title/variant/choice/product-URL strings containing
+`{{contact.email}}`, `{{agent.name}}` and `{% assign x = 1 %}`. Include normal
+brace/non-Liquid controls.
+
+Expected:
+- any dynamic string containing `{{` or `{%` is rejected before a render result;
+- final content and input-select titles are checked again;
+- normal brace controls remain representable;
+- renderer never wraps content in Liquid raw/endraw tags;
+- rejected input can produce zero public POST.
+
+### T10 — critical formatting is exact and UAH-only
+Golden vectors include `2730000 -> 27 300 грн`,
+`2730050 -> 27 300,50 грн`, `50 -> 0,50 грн`, a non-UAH currency, E.164,
+HH:MM, two schedule intervals and integer counters.
+
+Expected:
+- exact §40.3 bytes for UAH;
+- non-UAH => `FIRST_LINE_RENDERER_INVALID`;
+- phone/time bytes unchanged;
+- schedule uses U+2013 and `, `;
+- no locale/runtime fallback or LLM.
+
+### T11 — renderer requires genuine C4 decision provenance
+Render genuine C4 ANSWER/CLARIFY/HUMAN controls, then try
+`structuredClone(decision)` and a hand-built exact-shape object with identical
+public bytes.
+
+Expected:
+- only the genuine C4 decision may render;
+- clone/forgery => `FIRST_LINE_RENDERER_INVALID`;
+- provenance check exposes no private DecisionBasis/context.
+
+### T12 — shortlist stays text-only in C5 v1
+Render TOP3/ALL with exact-locale safe title, min=max/range, optional URL,
+optional image URL and `partial_model_match` true/false.
+
+Expected:
+- WebsiteRenderer uses `content_type=text`, never `cards`;
+- exact numbered rows and frozen partial-match phrase;
+- product URL, when present, is copied literally;
+- image URL is neither rendered nor fetched;
+- zero products use only `TPL_SHORTLIST_EMPTY_V1`.
+
+### T13 — renderer failure is terminal for this send attempt
+Parameterize forged decision, unknown template/reason tuple, missing locale
+branch, invalid payload, unsupported currency, Liquid-unsafe dynamic string and
+invalid output shape.
+
+Expected:
+- one `FIRST_LINE_RENDERER_INVALID` failure family;
+- no fallback content and no old/prepared render reuse;
+- C5 performs no Chatwoot/network call, so C6 can perform zero POST and follow
+  its existing renderer-failure HUMAN/fail-closed path.
 
 ## U. C6 send-time semantic reauthorization
 
