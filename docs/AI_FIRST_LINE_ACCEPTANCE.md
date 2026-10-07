@@ -1392,6 +1392,20 @@ Expected:
 - TextRenderer does not apply Website Markdown or Liquid transport encoding
   because it is not a Chatwoot/Web Widget transport adapter.
 
+### T09b — Chatwoot runtime drift blocks WebsiteRenderer activation
+Repeat the verified v4.18.0 transport checks against the exact target deployment
+before first activation and after a Chatwoot package/source change affecting
+message creation, Liquid, Markdown, `input_select` or message content limits.
+
+Expected:
+- the target runtime/version and relevant source behavior are explicitly proven;
+- unchanged verified behavior permits the ordinary C5/C6 deployment gate to
+  continue;
+- version/source mismatch, changed behavior or unavailable proof blocks
+  WebsiteRenderer activation/send;
+- no old v4.18.0 assumption is silently reused and no Chatwoot core patch is
+  introduced to force compatibility.
+
 ### T10 — critical formatting is exact and UAH-only
 Golden vectors include `2730000 -> 27 300 грн`,
 `2730050 -> 27 300,50 грн`, `50 -> 0,50 грн`, a non-UAH currency, E.164,
