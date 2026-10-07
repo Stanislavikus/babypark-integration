@@ -2644,14 +2644,14 @@ WebsiteRenderer returns exactly one of these frozen shapes for ANSWER/CLARIFY:
 WebsiteRenderText {
   schema = bp.first-line.website-render/1
   content_type = text
-  content = non-empty string
+  content = string with 1..150000 Unicode code points
   content_attributes = {}
 }
 
 WebsiteRenderSelect {
   schema = bp.first-line.website-render/1
   content_type = input_select
-  content = non-empty string
+  content = string with 1..150000 Unicode code points
   content_attributes = {
     items: [{title:string,value:'bp-choice:<ordinal>'}, ...]
   }
@@ -2693,7 +2693,8 @@ an impossible public reason/template pair is still invalid.
 
 Unknown/forged decision, unsupported locale/template/reason tuple, invalid
 payload/choice shape, missing locale branch, unsupported currency, unsafe
-dynamic text or invalid output is one fail-closed renderer failure family:
+dynamic text, final Website content outside 1..150000 Unicode code points or
+other invalid output is one fail-closed renderer failure family:
 `FIRST_LINE_RENDERER_INVALID`. It produces no fallback text and is never
 permission for C6 to use a previously prepared render.
 
@@ -2770,7 +2771,11 @@ creation. WebsiteRenderer must not escape this with
 `{% raw %}...{% endraw %}`. Before any Website Markdown encoding/interpolation,
 every dynamic public string that WebsiteRenderer may place into `content` or an
 `input_select.items[*].title` fails closed if it contains ASCII `{{` or `{%`. After rendering, final `content` and every select
-item title are checked again for the same delimiters. Fixed branches are
+item title are checked again for the same delimiters. WebsiteRenderer then
+checks final `content` length after all transport encoding: 1..150000 Unicode
+code points, matching the verified Chatwoot v4.18.0 Message content ceiling.
+Length failure is `FIRST_LINE_RENDERER_INVALID`, never a send/retry hint. Fixed
+branches are
 regression-tested to contain neither. A Liquid-looking Catalog title/variant
 label/URL therefore yields `FIRST_LINE_RENDERER_INVALID`; C5/C6 do not let
 Chatwoot reinterpret it against contact/agent/conversation/inbox/account drops.
