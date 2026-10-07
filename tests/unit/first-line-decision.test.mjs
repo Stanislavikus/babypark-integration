@@ -710,7 +710,11 @@ test('C60aa PRODUCT finite choice boundary is exactly 20 and never truncates 21'
   assert.equal(rejected.decision, 'HUMAN');
   assert.equal(rejected.reason, 'IDENTITY_NOT_RESOLVABLE');
   assert.deepEqual(rejected.choices, []);
-  assert.equal(getFirstLineDecisionPrivateContext(rejected), null);
+  assert.ok(getFirstLineDecisionPrivateContext(rejected));
+  assert.equal(
+    Object.hasOwn(getFirstLineDecisionPrivateContext(rejected), 'presented_candidates'),
+    false
+  );
   assert.equal(
     twentyOneCatalog.calls.some(row => row[0] === 'getProductPriceFact'),
     false
@@ -894,7 +898,12 @@ test('C60aa CATEGORY/BRAND/STORE finite choice boundary is exactly 20/21', () =>
     const rejected = decideFirstLine(basis(rejectedFixture));
     assert.equal(rejected.decision, 'HUMAN', item.kind);
     assert.equal(rejected.reason, 'IDENTITY_NOT_RESOLVABLE', item.kind);
-    assert.equal(getFirstLineDecisionPrivateContext(rejected), null, item.kind);
+    assert.ok(getFirstLineDecisionPrivateContext(rejected), item.kind);
+    assert.equal(
+      Object.hasOwn(getFirstLineDecisionPrivateContext(rejected), 'presented_candidates'),
+      false,
+      item.kind
+    );
   }
 });
 
@@ -1012,7 +1021,11 @@ test('C60aa post-authority VARIANT boundary is exactly 20/21 with no truncation'
     } else {
       assert.equal(decision.reason, 'PRODUCT_VARIANT_NOT_RESOLVABLE');
       assert.equal(decision.choices.length, 0);
-      assert.equal(getFirstLineDecisionPrivateContext(decision), null);
+      assert.ok(getFirstLineDecisionPrivateContext(decision));
+      assert.equal(
+        Object.hasOwn(getFirstLineDecisionPrivateContext(decision), 'presented_candidates'),
+        false
+      );
       assert.equal(
         c.calls.filter(row => row[0] === 'getVariant').length,
         0
@@ -2289,7 +2302,12 @@ test('C60n/C60x every pre-authority clarify reason has exact slot, null payload,
       assert.ok(getFirstLineDecisionPrivateContext(decision), kind);
     } else {
       assert.deepEqual(decision.choices, [], kind);
-      assert.equal(getFirstLineDecisionPrivateContext(decision), null, kind);
+      assert.ok(getFirstLineDecisionPrivateContext(decision), kind);
+      assert.equal(
+        Object.hasOwn(getFirstLineDecisionPrivateContext(decision), 'presented_candidates'),
+        false,
+        kind
+      );
     }
   }
 });
