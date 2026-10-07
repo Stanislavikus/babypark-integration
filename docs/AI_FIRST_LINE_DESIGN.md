@@ -2663,6 +2663,13 @@ conversation/account IDs, source/action IDs, template/provider parameters or
 private reservation values. C6 owns the Chatwoot POST envelope and action
 identity.
 
+Renderer output is transient in-memory presentation only. C5 owns no durable
+store/cache/outbox and MUST NOT persist or routinely log rendered content,
+dynamic labels, product URLs, choice labels/tokens, or a content-derived digest.
+The only durable pre-send state remains the C6/§29.8 machine descriptor and
+provenance; Chatwoot remains transcript authority for the eventual public
+message.
+
 WebsiteRenderer mapping is exact:
 - every ANSWER uses `content_type=text`, including shortlist answers;
 - candidate-based CLARIFY uses `input_select`. Its `content` is the fixed
