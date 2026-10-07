@@ -1343,8 +1343,10 @@ Expected:
 - ANSWER -> exact `bp.first-line.website-render/1` text shape;
 - Website `content` is 1..150000 Unicode code points after all Markdown
   transport encoding; 150001 fails closed before any POST;
-- finite CLARIFY -> exact `input_select` shape and ordered
-  `{title:label,value:token}` only;
+- finite CLARIFY -> exact `input_select` shape; `content` is
+  `<prompt>\n1. <encoded-label>\n2. <encoded-label>...` with no trailing LF,
+  while ordered items are exactly
+  `{title:String(ordinal),value:token}` and contain no dynamic label;
 - MONEY/ANCHOR -> exact text shape with `content_attributes={}`;
 - HUMAN -> `null`;
 - TextRenderer -> exact text-render shape or `null`; finite CLARIFY bytes are
@@ -1358,35 +1360,37 @@ Use otherwise-safe public title/variant/choice/product-URL strings containing
 brace/non-Liquid controls.
 
 Expected:
-- any dynamic string containing `{{` or `{%` is rejected before a render result;
-- final content and input-select titles are checked again;
-- normal brace controls remain representable;
+- any dynamic Website content string containing `{{` or `{%` is rejected
+  before a render result;
+- final content is checked again; every input-select title must equal its
+  generated unsigned ASCII ordinal exactly;
+- normal non-Liquid brace controls remain representable through Markdown-neutral
+  encoding;
 - renderer never wraps content in Liquid raw/endraw tags;
 - rejected input can produce zero public POST.
 
 ### T09a — Chatwoot Markdown cannot reinterpret dynamic factual text
-For ordinary ANSWER content, use dynamic shortlist/variant labels containing
-`[Коляска](https://evil.example)`, `Коляска https://evil.example Blue`,
-`Blue *bold* _x_ #tag`, punctuation controls and an allowed BabyPark product URL.
-For finite CLARIFY, use choice labels with bracket-link syntax, embedded/bare
-HTTP(S), `www.`, email/DNS/IP-like tokens, `*Blue*`, `_Blue_`,
-`~~Blue~~`, a backtick-code label, `# Blue`, `> Blue`, `- Blue`,
-`+ Blue`, `1. Blue`, `---`, plus ordinary
-`Pearl-Grey / Day+ (2026)` controls.
+For ordinary ANSWER and finite CLARIFY content, use otherwise-valid dynamic labels
+containing `[Коляска](https://evil.example)`,
+`Коляска https://evil.example Blue`, `Blue *bold* _x_ #tag`,
+`First.Go`, `200*90 см`, `Black_1`, punctuation controls and an allowed
+BabyPark product URL.
 
 Expected:
-- Website ordinary dynamic factual text is encoded by exact DESIGN §40.3 ASCII
-  punctuation escaping before insertion, so Chatwoot Markdown displays the
-  original normalized text but creates no attacker-controlled link/image/markup;
-- the separately validated `product_url` stays unescaped and is the only dynamic
-  URL intentionally linkifiable;
-- every finite choice label matching any exact §40.3 Markdown-display predicate
-  fails with `FIRST_LINE_RENDERER_INVALID`, so the post-selection Markdown echo
-  is visually the same factual label that was offered;
-- ordinary internal hyphen/slash/parenthesis/period/plus choice controls remain
-  accepted;
-- TextRenderer does not apply Website Markdown or Liquid transport rules because
-  it is not a Chatwoot/Web Widget transport adapter.
+- every dynamic factual label placed in Website `content` is encoded by exact
+  DESIGN §40.3 ASCII punctuation escaping, so Chatwoot Markdown displays the
+  original normalized factual text but creates no attacker-controlled
+  link/image/emphasis/list/other markup;
+- finite CLARIFY keeps all such C4-safe labels representable: the numbered
+  `content` list carries the encoded labels, while native input-select button
+  titles are only `"1"`, `"2"`, ... and values remain the exact
+  `bp-choice:<ordinal>` tokens;
+- after selection Chatwoot may echo only that generated ordinal, never a dynamic
+  Catalog/Knowledge label through Markdown;
+- the separately validated `product_url` stays unescaped and is the only
+  dynamic URL intentionally linkifiable;
+- TextRenderer does not apply Website Markdown or Liquid transport encoding
+  because it is not a Chatwoot/Web Widget transport adapter.
 
 ### T10 — critical formatting is exact and UAH-only
 Golden vectors include `2730000 -> 27 300 грн`,
