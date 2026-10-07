@@ -1337,7 +1337,9 @@ Expected:
   substitutions/joins;
 - no plural library, translation lookup, locale fallback or paraphrase;
 - every fixed and conditional branch exists in both locales;
-- payment codes map only to the exact frozen method names.
+- payment codes map only to the exact frozen method names; UK `CASH_COURIER`
+  uses U+2019 in `готівкою кур’єру` and remains visibly unchanged under the
+  verified typographer.
 
 ### T08 — Website/Text renderer envelope is closed
 Parameterize ANSWER, finite-choice CLARIFY, free-text MONEY/ANCHOR CLARIFY and
@@ -1345,7 +1347,7 @@ HUMAN.
 
 Expected:
 - ANSWER -> exact `bp.first-line.website-render/1` text shape;
-- Website `content` is 1..150000 Unicode code points after all Markdown
+- Website `content` is 1..150000 Unicode code points after all Website
   transport encoding; 150001 fails closed before any POST;
 - the length primitive is explicitly regression-tested as **code-point**, not
   JavaScript UTF-16-unit, counting: 150000 U+1F600 characters are at the bound
@@ -1376,56 +1378,90 @@ Expected:
 - any dynamic Website content string **as received from genuine C4** containing
   literal `{{` or `{%` is rejected before a render result;
 - a canonical percent-encoded brace sequence contains no Liquid opening
-  delimiter and remains inert Markdown-neutral plain text;
+  delimiter and remains inert transport-neutral plain text;
 - final content is checked again; every input-select title must equal its
   generated unsigned ASCII ordinal exactly;
-- normal non-Liquid brace controls remain representable through Markdown-neutral
-  encoding;
+- normal non-Liquid brace controls remain representable through transport-neutral
+  entity encoding;
 - renderer never wraps content in Liquid raw/endraw tags;
 - rejected input can produce zero public POST.
 
-### T09a — Chatwoot Markdown cannot reinterpret dynamic factual text
+### T09a — Chatwoot native views cannot reinterpret dynamic factual text
 For ordinary ANSWER and finite CLARIFY content, use otherwise-valid dynamic labels
 containing `[Коляска](https://evil.example)`,
 `Коляска https://evil.example Blue`, `Blue *bold* _x_ #tag`,
-`First.Go`, `200*90 см`, `Black_1`, plus exhaustive single-code-point
-coverage for all 32 ASCII punctuation characters and compound typographer/link
-controls such as `...`, `--`, `---`, `(c)`, quotes, domains and emails.
+`First.Go`, `200*90 см`, `Black_1`, HTML-shaped controls such as
+`<b>Blue</b>`, `<a href="https://evil.example">Click</a>` and
+`<img src="https://evil.example/pixel.png">`, entity/backslash controls such as
+`&copy;` and a trailing `\`, plus exhaustive single-code-point coverage for
+all 32 ASCII punctuation characters and compound typographer/link controls such
+as `...`, `--`, `---`, `(c)`, apostrophes/quotes, domains and emails.
 For `product_url`, include ordinary production-shaped URLs plus C4-safe
 trailing `)` / `.`, percent escapes, `^`, `|` and incomplete `%`
 controls.
 
 Expected:
 - every dynamic factual label **and canonical product URL** placed in Website
-  `content` is encoded by exact DESIGN §40.3 ASCII punctuation escaping, so
-  Chatwoot Markdown displays the original normalized/canonical text but creates
-  no dynamic link/image/emphasis/list/other markup;
-- every punctuation/property control round-trips visibly and produces zero
-  dynamic `<a>` / image / emphasis / code markup;
+  `content` is encoded by the exact DESIGN §40.3 uppercase-hex numeric-entity
+  algorithm for ASCII punctuation;
+- the deployed Web Widget Markdown + DOMPurify path displays the exact original
+  normalized/canonical text and creates zero dynamic link/image/emphasis/code/HTML
+  element;
+- for finite `input_select`, the deployed agent Dashboard `Form.vue` +
+  DOMPurify path displays that same exact original label/URL text from the stored
+  transport content, with no visible transport escapes and zero dynamic
+  link/image/HTML element;
+- every punctuation/property/HTML-shaped control round-trips visibly on both
+  applicable native views;
 - finite CLARIFY keeps all such C4-safe labels representable: the numbered
-  `content` list carries the encoded labels, while native input-select button
-  titles are only `"1"`, `"2"`, ... and values remain the exact
-  `bp-choice:<ordinal>` tokens;
-- after selection Chatwoot may echo only that generated ordinal, never a dynamic
-  Catalog/Knowledge label through Markdown;
+  `content` list carries the encoded labels, while C5-created native
+  input-select button titles are only `"1"`, `"2"`, ... and values remain
+  the exact `bp-choice:<ordinal>` tokens;
 - Website v1 intentionally produces **no dynamic hyperlink**; a non-null
   `product_url` is exact visible non-clickable plain text. TextRenderer keeps
-  the raw canonical URL and does not apply Website Markdown/Liquid transport
-  encoding.
+  the raw canonical URL and does not apply Website transport entity encoding.
 
 ### T09b — Chatwoot runtime drift blocks WebsiteRenderer activation
 Repeat the verified v4.18.0 transport checks against the exact target deployment
-before first activation and after a Chatwoot package/source change affecting
-message creation, Liquid, Markdown, `input_select` or message content limits.
+before first activation and after a Chatwoot package/source/build change
+affecting message creation, Liquid, Web Widget Markdown, Dashboard
+`input_select` presentation, `input_select` submission/echo or message content
+limits.
 
 Expected:
-- the target runtime/version and relevant source behavior are explicitly proven;
+- the target package/tag/Git source tuple and relevant locked parser/sanitizer
+  versions are explicitly proven;
+- because production `public/vite/**` is gitignored, the current production
+  Vite manifest and every manifest-selected relevant browser chunk/source map are
+  content-bound; source-map content byte-matches the inspected tracked source or
+  an equivalently content-bound reproducible-build proof is supplied;
 - unchanged verified behavior permits the ordinary C5/C6 deployment gate to
   continue;
-- version/source mismatch, changed behavior or unavailable proof blocks
-  WebsiteRenderer activation/send;
+- version/source/bundle mismatch, missing bundle/source-map/build provenance,
+  changed behavior or unavailable proof blocks WebsiteRenderer activation/send;
 - no old v4.18.0 assumption is silently reused and no Chatwoot core patch is
   introduced to force compatibility.
+
+### T09c — submitted input-select title is untrusted presentation data
+Start from a genuine finite CLARIFY render whose C5-created items are exactly
+`{title:"1",value:"bp-choice:1"}`, `{title:"2",value:"bp-choice:2"}`, ...
+Exercise the normal native click and direct Widget PATCH mutations that keep an
+otherwise-valid exact `value` while changing, omitting or replacing
+`submitted_values[0].title` with arbitrary text/markup. Also exercise wrong,
+missing, multiple and unknown submitted values.
+
+Expected:
+- normal unmodified Widget interaction submits/displays the generated ordinal;
+- Chatwoot's client-supplied submitted title is never treated as BabyPark
+  authority and is never mapped back to a Catalog/Knowledge fact;
+- BabyPark structured-selection proof consumes only the exact single
+  `submitted_values[0].value` and the existing action/source/episode
+  provenance; title bytes cannot change the selected ordinal/canonical value;
+- wrong/missing/multiple/unknown `value` still fails closed under the existing
+  C2/C4/C6 reauthorization contract;
+- a tampered title that Chatwoot chooses to display remains customer-originated
+  presentation data, not an AI factual claim; no Chatwoot core patch is required
+  merely to suppress or rewrite it.
 
 ### T10 — critical formatting is exact and UAH-only
 Golden vectors include `2730000 -> 27 300 грн`,
@@ -1465,8 +1501,8 @@ Expected:
 - WebsiteRenderer uses `content_type=text`, never `cards`;
 - exact numbered rows and frozen partial-match phrase;
 - product URL, when present, is copied literally by TextRenderer; WebsiteRenderer
-  uses the exact reversible §40.3 encoding so the visible canonical URL is
-  unchanged, non-clickable and creates zero dynamic `<a>`;
+  uses the exact reversible §40.3 transport-entity encoding so the visible
+  canonical URL is unchanged, non-clickable and creates zero dynamic `<a>`;
 - image URL is neither rendered nor fetched;
 - zero products use only `TPL_SHORTLIST_EMPTY_V1`.
 

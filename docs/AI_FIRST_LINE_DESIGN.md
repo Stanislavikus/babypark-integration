@@ -6,7 +6,10 @@ Supersedes: `docs/AI_FIRST_LINE_DESIGN.md` at canonical main `565f8eb30bf39afa80
 Implementation: C1/C2a/C2b/C2c/C3/C4 are merged; this amendment is a docs-only
 C5 pre-code contract freeze and contains no production C5 implementation.
 Contract amendment base: canonical main `565f8eb30bf39afa80bb4d59258cc2fd13aa67d5`.
-Chatwoot runtime verified: package v4.18.0; C5-relevant deployed source files byte-match upstream v4.18.0 commit `9f920b549c14491a4e587687a3eed5d21c6ccc7d`.
+Chatwoot runtime verified: package v4.18.0; deployed tracked sources and the
+current gitignored production Vite manifest/chunks/source maps were verified
+against the running target. Exact hashes/equivalence evidence is recorded in
+`docs/AI_FIRST_LINE_C5_CONTRACT_TRACEABILITY.md`.
 
 This document is the single normative repository source of truth for the first
 customer-facing BabyPark AI design. It incorporates the complete v0.6 design
@@ -2693,15 +2696,15 @@ WebsiteRenderer mapping is exact:
   rendered or fetched; this avoids making C5 a network/media adapter. A non-null
   safe `product_url` remains part of the semantic row. TextRenderer copies that
   canonical URL literally. WebsiteRenderer emits it as **non-clickable plain
-  text** using the same reversible Markdown-neutral encoding as other dynamic
-  factual text; C5 v1 never lets Chatwoot/linkify choose a dynamic URL boundary
+  text** using the same reversible Website transport-neutral entity encoding as other
+  dynamic factual text; C5 v1 never lets Chatwoot/linkify choose a dynamic URL boundary
   or hyperlink target.
 
 TextRenderer returns exactly
 `{schema:'bp.first-line.text-render/1',content:string}` for ANSWER/CLARIFY and
 `null` for HUMAN. It has no transport metadata and remains unconnected to
 Viber/Telegram in C5. Its `content` is the exact semantic §40.4 branch before
-Website-only Markdown transport encoding and has no trailing newline. For finite
+Website-only transport entity encoding and has no trailing newline. For finite
 CLARIFY the exact bytes are `<prompt>\n1. <label>\n2. <label>...`, with one
 U+000A LF before each ordinal row and no `bp-choice` token/private candidate
 value. ANSWER multiline/list content uses the same §40.4 line breaks and no
@@ -2750,37 +2753,57 @@ Other critical formatting is exact:
 - TextRenderer copies a non-null canonical product URL byte-for-byte. For
   WebsiteRenderer, the canonical URL is first subject to the same literal Liquid
   opening-delimiter gate as every other dynamic Website string and is then
-  reversibly Markdown-neutral encoded as plain text. C5 performs no
+  reversibly transport-neutral entity encoded as plain text. C5 performs no
   redirect/fetch and emits no dynamic Website hyperlink.
 
 Chatwoot v4.18.0 renders ordinary Web Widget message `content` through
-`markdown-it` with `linkify=true`. C5 therefore owns an exact Website-only
-Markdown-neutral encoding for **dynamic free-form factual text inserted into
-`content`** (shortlist titles, variant/stock labels and canonical product
-URLs): after the Liquid check below, prefix one ASCII backslash before every
-ASCII punctuation code point in `U+0021..U+002F`, `U+003A..U+0040`,
-`U+005B..U+0060` or `U+007B..U+007E`. Unicode
-letters/digits/whitespace are unchanged. The encoded bytes are transport
-content; Chatwoot Markdown rendering must display the original normalized
-factual text and must not create a link/image/emphasis from it. Fixed template
-text and generated money/time/counters/payment names do not use this encoding.
-Website First Line v1 intentionally emits **zero dynamic hyperlinks**; an
-already-C4-validated `product_url` is shown as exact visible plain text instead
-of relying on Chatwoot bare-link/autolink boundary rules.
+`markdown-it` with `linkify=true`. For finite `input_select`, the agent
+Dashboard renders the same stored `content` through its native
+`dashboard/components-next/message/bubbles/Form.vue` path with DOMPurify
+rather than Markdown. C5 therefore owns one exact Website transport-neutral
+encoding for **dynamic free-form factual text inserted into `content`**
+(shortlist titles, variant/stock labels and canonical product URLs): after the
+Liquid check below, replace every ASCII punctuation code point in
+`U+0021..U+002F`, `U+003A..U+0040`, `U+005B..U+0060` or
+`U+007B..U+007E` with the uppercase hexadecimal numeric HTML entity
+`&#xHH;`, where `HH` is the two-digit ASCII code point (for example
+`!` -> `&#x21;`, `&` -> `&#x26;`, `<` -> `&#x3C;`,
+`_` -> `&#x5F;`). Unicode letters/digits/whitespace are unchanged.
+
+Those entity bytes are transport content. The verified Web Widget
+Markdown/DOMPurify path and, for `input_select`, the verified agent Dashboard
+DOMPurify path must both display the original normalized/canonical factual text
+and must create no dynamic link, image, emphasis, code or HTML element from it.
+Fixed template text and generated money/time/counters/payment names do not use
+this encoding and therefore must themselves be frozen in a form that is stable
+under the verified formatter. Website First Line v1 intentionally emits **zero
+dynamic hyperlinks**; an already-C4-validated `product_url` is shown as exact
+visible plain text instead of relying on Chatwoot bare-link/autolink boundary
+rules.
 
 For finite Website CLARIFY, dynamic choice labels are rendered only inside
 the numbered `content` list and therefore use the same reversible
-Markdown-neutral encoding as other Website free-form factual text. Native
-`input_select.items[*].title` contains only the generated unsigned ASCII
-ordinal (`"1"`, `"2"`, ...). Chatwoot later echoes that ordinal through
-Markdown after selection, so no Catalog/Knowledge label is reinterpreted there.
-The public labels remain pairwise-distinguishable in the visible numbered list;
-the ordinal button references an already-distinguishable row and is never used
-to hide duplicate labels.
+transport-neutral entity encoding as other Website free-form factual text. C5
+creates each native `input_select.items[*].title` as only the generated
+unsigned ASCII ordinal (`"1"`, `"2"`, ...). An unmodified native Widget
+selection submits that selected option and normally echoes the ordinal.
+
+That echoed/submitted `title` is **not** an authority field: Chatwoot's Widget
+update endpoint permits a client-supplied `submitted_values[*].title` and does
+not server-bind it back to the original item. A modified client can therefore
+change display title while keeping the same `value`. BabyPark must treat any
+submitted title as untrusted customer presentation data and must never derive a
+selection/fact from it. Structured-selection authority uses only the exact
+single `submitted_values[0].value` / `bp-choice:<ordinal>` proven through the
+existing C2/C4 reauthorization chain and the future C6 final gate. A displayed
+tampered title is customer-originated content, not an AI factual claim. The
+public labels remain pairwise-distinguishable in the visible numbered list; the
+ordinal button references an already-distinguishable row and is never used to
+hide duplicate labels.
 
 Payment method names are a closed table and carry no fee/condition:
 - `BANK_TRANSFER`: uk `банківський переказ`; ru `банковский перевод`;
-- `CASH_COURIER`: uk `готівкою кур'єру`; ru `наличными курьеру`;
+- `CASH_COURIER`: uk `готівкою кур’єру`; ru `наличными курьеру`;
 - `COD_NOVA_POSHTA`: uk `післяплата у Новій пошті`; ru
   `наложенный платеж в Новой почте`.
 
@@ -2805,14 +2828,21 @@ reinterpret it against contact/agent/conversation/inbox/account drops. This is a
 additional presentation safety gate and never weakens §16.3.
 
 The WebsiteRenderer transport contract above is bound to the verified deployed
-Chatwoot v4.18.0 behavior recorded by this amendment. Before first production
-activation, and after any Chatwoot package/version/source change that can affect
-message creation, Liquid processing, Markdown formatting, `input_select`
-render/submission or message content limits, the bounded deployment stage must
-revalidate those exact native surfaces against the target deployed runtime.
-A version/source mismatch, unavailable proof or changed behavior blocks
-WebsiteRenderer activation/send; it never falls back to assumptions from v4.18.0
-and never requires a Chatwoot core patch.
+Chatwoot v4.18.0 behavior recorded by this amendment. Because production
+`public/vite/**` artifacts are gitignored, tracked Git source identity alone is
+not sufficient browser-runtime provenance. Before first production activation,
+and after any Chatwoot package/version/source/build change that can affect
+message creation, Liquid processing, Web Widget Markdown, agent Dashboard
+`input_select` presentation, `input_select` submission/echo or message
+content limits, the bounded deployment stage must revalidate those exact native
+surfaces against the target deployed runtime. That proof must include the
+production Vite manifest, the manifest-selected relevant chunks/source maps and
+their equivalence to the inspected tracked sources (or an equivalently
+content-bound reproducible build proof), plus the relevant locked parser/sanitizer
+versions. A version/source/bundle mismatch, missing source-map/build provenance,
+unavailable proof or changed behavior blocks WebsiteRenderer activation/send; it
+never falls back to assumptions from v4.18.0 and never requires a Chatwoot core
+patch.
 
 ### 40.4 Exact uk/ru C5 wording
 
@@ -2848,7 +2878,7 @@ Shortlist row `i` is exact:
   ` (частичное соответствие модели)` when `partial_model_match=true`;
 - if `product_url` is non-null, the semantic/TextRenderer row appends newline
   then that canonical URL; WebsiteRenderer appends newline then the exact
-  Markdown-neutral encoding of that URL, so Chatwoot displays the canonical URL
+  transport-neutral entity encoding of that URL, so Chatwoot displays the canonical URL
   as non-clickable plain text;
 - rows are separated by one newline;
 - `image_url` is ignored by C5 v1 and never fetched.
