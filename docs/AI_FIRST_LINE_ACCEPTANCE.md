@@ -1272,7 +1272,7 @@ Expected: reject/block deployment.
 
 ### T01 — exact response locale, no presentation fallback
 `response_locale=uk`. Catalog product has `localized.ru.title/url` but no
-`localized.uk` entry. The selected template is a shortlist/card template that
+`localized.uk` entry. The selected template is a shortlist presentation template that
 requires title.
 
 Expected:
