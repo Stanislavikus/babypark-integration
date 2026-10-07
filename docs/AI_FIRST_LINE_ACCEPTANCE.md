@@ -1340,6 +1340,8 @@ HUMAN.
 
 Expected:
 - ANSWER -> exact `bp.first-line.website-render/1` text shape;
+- Website `content` is 1..150000 Unicode code points after all Markdown
+  transport encoding; 150001 fails closed before any POST;
 - finite CLARIFY -> exact `input_select` shape and ordered
   `{title:label,value:token}` only;
 - MONEY/ANCHOR -> exact text shape with `content_attributes={}`;
@@ -1424,8 +1426,9 @@ Expected:
 
 ### T13 — renderer failure is terminal for this send attempt
 Parameterize forged decision, unknown template/reason tuple, missing locale
-branch, invalid payload, unsupported currency, Liquid-unsafe dynamic string and
-invalid output shape.
+branch, invalid payload, unsupported currency, Liquid-unsafe dynamic string,
+final Website content at 150000/150001 Unicode code points and invalid output
+shape.
 
 Expected:
 - one `FIRST_LINE_RENDERER_INVALID` failure family;
