@@ -2801,7 +2801,7 @@ ANSWER branches:
 | `TPL_PRODUCT_PRICE_RANGE_V1` | `Ціна: від {min_money} до {max_money}. Можу показати доступні варіанти з точною ціною кожного.` | `Цена: от {min_money} до {max_money}. Могу показать доступные варианты с точной ценой каждого.` |
 | `TPL_PRODUCT_NOT_IN_STOCK_V1` | `Зараз товару немає в наявності.` | `Сейчас товара нет в наличии.` |
 | `TPL_VARIANT_LIST_V1` | `Доступні варіанти ({named}/{total}): {labels}.` | `Доступные варианты ({named}/{total}): {labels}.` |
-| `TPL_VARIANT_LIST_PARTIAL_V1` | `Варіанти з доступними назвами ({named}/{total}): {labels}.` | `Варианты с доступными названиями ({named}/{total}): {labels}.` |
+| `TPL_VARIANT_LIST_PARTIAL_V1` | named>0: `Варіанти з доступними назвами ({named}/{total}): {labels}.`; named=0: `Кількість доступних варіантів: {total}. Назви недоступні.` | named>0: `Варианты с доступными названиями ({named}/{total}): {labels}.`; named=0: `Количество доступных вариантов: {total}. Названия недоступны.` |
 | `TPL_VARIANT_PRICE_LIST_V1` | first line `Ціни варіантів:`, then `• {label} — {money}` per row | first line `Цены вариантов:`, then `• {label} — {money}` per row |
 | `TPL_SHORTLIST_TOP3_V1` | `Кількість знайдених товарів: {total}. Перші результати:` then shortlist rows | `Количество найденных товаров: {total}. Первые результаты:` then shortlist rows |
 | `TPL_SHORTLIST_ALL_V1` | `Знайдені товари:` then shortlist rows | `Найденные товары:` then shortlist rows |
@@ -2831,6 +2831,12 @@ CLARIFY prompt branches:
 
 For `TPL_STORE_HOURS_TODAY_V1`, `open_now=true` with empty intervals is invalid.
 For `TPL_STORE_OPEN_STATUS_V1`, closed requires `closes_at_local=null`.
+`TPL_PRODUCT_PRICE_RANGE_V1` requires `min_current_minor < max_current_minor`;
+an equal pair belongs only to `TPL_PRODUCT_PRICE_SINGLE_V1`.
+`TPL_VARIANT_LIST_V1` requires `total_variant_count=named_variant_count>0`.
+`TPL_VARIANT_LIST_PARTIAL_V1` requires
+`total_variant_count>named_variant_count>=0`; the named=0 branch above emits no
+empty punctuation/list placeholder.
 TOP3/ALL require at least one product; zero uses only `TPL_SHORTLIST_EMPTY_V1`.
 
 ## 41. Critical-value rendering
