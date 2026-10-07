@@ -50,7 +50,7 @@ No new durable customer-content or dynamic-fact payload is introduced. `episode.
 | RC14 reservation-aware CLARIFY | `issueClarificationReservationAttestation`, `effectiveClarificationBudget` | PREPARED/GATING/clone/wrong-lease tests + Q14 | only exact owning unsent action receives effective budget 0 | transient attestation only | DONE |
 | RC15 provenance-bound discharge | `createFirstLineContinuationDecisionBasis`, `stableSelectionForAction`, `dischargeOriginalResolution` | C60ab presented + requested PRODUCT/CATEGORY/BRAND/STORE/VARIANT, MONEY, C43; restart | missing/mismatched/ambiguous provenance => HUMAN/reject | canonical stable slots only | DONE |
 | RC16 finite cardinality 20 | presentation reducers + state-store bound | C60aa PRODUCT/CATEGORY/BRAND/STORE/VARIANT 20/21 | 21+ never truncated | unchanged durable max 20 | DONE |
-| RC17 structured-selection prerequisite | structured clarification proof + durable selection provenance | certified `readRoutingSnapshot()` positive proof; clone/hand-built/tampered snapshot rejection before positive proof; structured CATEGORY restart/mode-drift matrix + existing Q10c selection tests | changed/unknown structured value or uncertified routing provenance cannot silently authorize stable slot | canonical selection/provenance only | DONE |
+| RC17 structured-selection prerequisite | structured clarification proof + durable selection provenance + post-commit re-proof | certified initial `readRoutingSnapshot()` proof; clone/hand-built/tampered rejection; restart A→A re-proof; CATEGORY and PRODUCT A→B/unknown/unsupported/omitted current submission rejection before authority | changed/unknown structured value, missing current exact read, or uncertified routing provenance cannot authorize continuation | canonical selection/provenance only | DONE |
 | RC18 typed Operational/Commerce readers | public operational readers, today schedule, exact CommercePolicy validation | C01-C16a/O09-O11 reader tests + C61-C63 end-to-end + strict full-subject operational ownership/schema malformed/foreign/conflict cases | missing/conflict HUMAN; malformed rejects; delivery stays HUMAN | none | DONE |
 | RC19 public presentation safety | public-safety module + internal-ID derivation in C4 | C60ac fixed + fast-check properties; 160/161, 4096/4097, URI/debug/control, hosts, nested/constituent IDs | unsafe required label/title => HUMAN; unsafe optional URL => null | none | DONE |
 | Frozen Decision Context provenance | `attachDecisionContext` + decision WeakMap private context | ordinary ANSWER/CLARIFY redacted-context tests; dependency/source-ID separation | no raw exact-read text; authority/revision/generation/tool dependencies remain private/out-of-band | transient only | DONE |
@@ -126,7 +126,7 @@ Every frozen C60 family is mapped to an executable regression. Grouping here is 
 | U05 | restart rebuild uses durable IDs/provenance only; raw body and dynamic render payload are not stored in `episode.sqlite` | C6 later performs final whole-conversation rebuild | DONE |
 | U05a | presented/requested selections discharge exactly one reserved slot; requested-message restart re-proof repeats the one-span/one-resolution/full-message exactness predicate; CATEGORY pair and unrelated constraints survive restart | C6 later reauthorizes resulting descriptor | DONE |
 | U06 | authority failure/staleness maps to HUMAN/reject rather than permission to reuse old payload | C6 later converts failed reauth to zero POST/HUMAN | DONE |
-| U07 | structured selection proof is action/value/provenance-bound; unknown/multiple/mutated submission cannot authorize stable selection | final send-time repeat is C6 | DONE |
+| U07 | structured selection is re-proven from a fresh exact read inside continuation-basis construction against the historical confirmed action, current ordinal/reservation and committed stable value; unknown/mutated/unsupported/omitted submission rejects before authority | C6 later supplies the final fresh exact read immediately before send | DONE |
 
 No C5 renderer or C6 Chatwoot POST/relay implementation is claimed by these rows.
 
@@ -227,6 +227,22 @@ This correction preserves the existing state-store as the sole certification
 authority and adds no durable state or customer-content persistence.
 
 Because SR-B9 changes the implementation tree, V2/R2 and the V2 confirmation are
-historical evidence only. The next required-verification manifest must be V3 or
-later and bind the new exact HEAD/tree/base plus the updated implementation
-traceability digest.
+historical evidence only.
+
+## 10. V3 exhaustive-review correction batch
+
+The V3 exhaustive HEAVY self-review continued across the complete applicable
+surface and found one additional independent blocker class.
+
+| Review blocker | Minimal correction / regression evidence | Status |
+|---|---|---|
+| SR-B10 committed structured selection had no final re-proof path | continuation-basis construction now requires a fresh structured exact read for confirmed-BabyPark-reply provenance and re-proves the historical confirmed action, reservation ordinal and committed stable canonical value before authority; restart A→A remains valid; CATEGORY and PRODUCT A→B plus unknown/unsupported/omitted current submission reject before authority | DONE |
+
+No new durable selection-provenance column or customer-content storage is added.
+The confirmed action reservation plus the unique committed candidate value binds
+the historical ordinal; ambiguous duplicate candidate values remain fail closed.
+
+Because SR-B10 changes the implementation tree, V3/R3 and the V3 V12 blocker
+inventory are historical evidence only. The next required-verification manifest
+must be V4 or later and bind the new exact HEAD/tree/base plus the updated
+implementation traceability digest.

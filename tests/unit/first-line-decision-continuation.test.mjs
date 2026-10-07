@@ -74,7 +74,7 @@ function customerExactRead(text, sourceMessageId = 101) {
   };
 }
 
-function structuredExactRead(action) {
+function structuredExactRead(action, value = 'bp-choice:1', overrides = {}) {
   return {
     code: 'SUPPORTED_CLARIFICATION_SUBMISSION',
     sourceConversationId: 55,
@@ -82,8 +82,24 @@ function structuredExactRead(action) {
     event: {
       ...replyEvent(action.confirmed_source_message_id, action.action_id),
     },
-    transientSubmittedValue: 'bp-choice:1',
+    transientSubmittedValue: value,
+    ...overrides,
   };
+}
+
+function continuationBasis(args, {
+  structuredValue = 'bp-choice:1',
+  structuredOverrides = {},
+  omitStructuredRead = false,
+} = {}) {
+  const action = args.routingSnapshot?.confirmed_clarification_action ?? null;
+  return createFirstLineContinuationDecisionBasis({
+    ...args,
+    structuredSelectionExactRead:
+      omitStructuredRead || action === null
+        ? null
+        : structuredExactRead(action, structuredValue, structuredOverrides),
+  });
 }
 
 function vocabulary(
@@ -320,7 +336,7 @@ test('C60ad structured CATEGORY selection survives restart and preserves exact m
     'action-cont'
   );
 
-  const decision = decideFirstLine(createFirstLineContinuationDecisionBasis({
+  const decision = decideFirstLine(continuationBasis({
     routingSnapshot: snapshot,
     originalResolution: rebuilt.resolution,
     originalExactReads: rebuilt.exactReads,
@@ -338,6 +354,48 @@ test('C60ad structured CATEGORY selection survives restart and preserves exact m
   assert.equal(search[1].maxPriceMinor, 2_000_000);
 });
 
+test('U07 structured CATEGORY continuation re-proves current submission before authority', t => {
+  const state = preparedCategoryContinuation(t);
+  const c = catalog();
+  const rebuilt = originalResolution(
+    'Покажи коляски до 20 000 грн',
+    vocabulary('NODE_ONLY'),
+    c
+  );
+  const snapshot = state.store.readRoutingSnapshot(state.streamId);
+  const before = c.calls.filter(row => row[0] === 'searchObjectiveProducts').length;
+  const baseArgs = {
+    routingSnapshot: snapshot,
+    originalResolution: rebuilt.resolution,
+    originalExactReads: rebuilt.exactReads,
+    catalogService: c,
+    knowledgeStore: vocabulary('NODE_ONLY'),
+    nowUtc: NOW,
+  };
+
+  for (const options of [
+    { structuredValue: 'bp-choice:2' },
+    { structuredValue: 'bp-choice:20' },
+    {
+      structuredOverrides: {
+        code: 'PROVEN_UNSUPPORTED_OR_TOPOLOGY',
+        transientSubmittedValue: null,
+      },
+    },
+    { omitStructuredRead: true },
+  ]) {
+    assert.throws(
+      () => continuationBasis(baseArgs, options),
+      error => error?.code === 'FIRST_LINE_DECISION_CONTINUATION_INVALID'
+    );
+  }
+
+  assert.equal(
+    c.calls.filter(row => row[0] === 'searchObjectiveProducts').length,
+    before
+  );
+});
+
 test('C60ad same category id with flipped current match_mode fails HUMAN before shortlist', t => {
   const state = preparedCategoryContinuation(t);
   const c = catalog();
@@ -348,7 +406,7 @@ test('C60ad same category id with flipped current match_mode fails HUMAN before 
   );
   const snapshot = state.store.readRoutingSnapshot(state.streamId);
 
-  const decision = decideFirstLine(createFirstLineContinuationDecisionBasis({
+  const decision = decideFirstLine(continuationBasis({
     routingSnapshot: snapshot,
     originalResolution: drifted.resolution,
     originalExactReads: drifted.exactReads,
@@ -536,7 +594,7 @@ test('C60ab MONEY restart discharge preserves original category anchor and uses 
     103
   );
 
-  const decision = decideFirstLine(createFirstLineContinuationDecisionBasis({
+  const decision = decideFirstLine(continuationBasis({
     routingSnapshot: snapshot,
     originalResolution: rebuilt.resolution,
     originalExactReads: rebuilt.exactReads,
@@ -621,7 +679,7 @@ test('C43/C60ab requested CATEGORY fill survives restart and preserves original 
   );
   const snapshot = store.readRoutingSnapshot(stream.stream_id);
 
-  const decision = decideFirstLine(createFirstLineContinuationDecisionBasis({
+  const decision = decideFirstLine(continuationBasis({
     routingSnapshot: snapshot,
     originalResolution: rebuilt.resolution,
     originalExactReads: rebuilt.exactReads,
@@ -713,7 +771,7 @@ test('C60m price is reread after clarification; old price cannot authorize rebui
   );
   const snapshot = state.store.readRoutingSnapshot(state.streamId);
 
-  const first = decideFirstLine(createFirstLineContinuationDecisionBasis({
+  const first = decideFirstLine(continuationBasis({
     routingSnapshot: snapshot,
     originalResolution: rebuilt.resolution,
     originalExactReads: rebuilt.exactReads,
@@ -724,7 +782,7 @@ test('C60m price is reread after clarification; old price cannot authorize rebui
   assert.equal(first.render_payload.current_minor, 10000);
 
   currentMinor = 25000;
-  const second = decideFirstLine(createFirstLineContinuationDecisionBasis({
+  const second = decideFirstLine(continuationBasis({
     routingSnapshot: snapshot,
     originalResolution: rebuilt.resolution,
     originalExactReads: rebuilt.exactReads,
@@ -768,7 +826,7 @@ test('C60m scoped CommercePolicy is reread after clarification', t => {
   );
   const snapshot = state.store.readRoutingSnapshot(state.streamId);
 
-  const first = decideFirstLine(createFirstLineContinuationDecisionBasis({
+  const first = decideFirstLine(continuationBasis({
     routingSnapshot: snapshot,
     originalResolution: rebuilt.resolution,
     originalExactReads: rebuilt.exactReads,
@@ -780,7 +838,7 @@ test('C60m scoped CommercePolicy is reread after clarification', t => {
 
   policy.revision_id = 'prepay-2';
   policy.effect_value = { amount_minor: 25000, currency: 'UAH' };
-  const second = decideFirstLine(createFirstLineContinuationDecisionBasis({
+  const second = decideFirstLine(continuationBasis({
     routingSnapshot: snapshot,
     originalResolution: rebuilt.resolution,
     originalExactReads: rebuilt.exactReads,
@@ -859,7 +917,7 @@ test('C60m objective membership is rerun after clarification', t => {
   );
   const snapshot = state.store.readRoutingSnapshot(state.streamId);
 
-  const first = decideFirstLine(createFirstLineContinuationDecisionBasis({
+  const first = decideFirstLine(continuationBasis({
     routingSnapshot: snapshot,
     originalResolution: rebuilt.resolution,
     originalExactReads: rebuilt.exactReads,
@@ -870,7 +928,7 @@ test('C60m objective membership is rerun after clarification', t => {
   assert.equal(first.template_id, 'TPL_SHORTLIST_EMPTY_V1');
 
   includeProduct = true;
-  const second = decideFirstLine(createFirstLineContinuationDecisionBasis({
+  const second = decideFirstLine(continuationBasis({
     routingSnapshot: snapshot,
     originalResolution: rebuilt.resolution,
     originalExactReads: rebuilt.exactReads,
@@ -1034,7 +1092,7 @@ test('C60ab/U05a PRODUCT presented selection discharges old ambiguity after rest
     state.sourceMessageId
   );
   const snapshot = state.store.readRoutingSnapshot(state.streamId);
-  const decision = decideFirstLine(createFirstLineContinuationDecisionBasis({
+  const decision = decideFirstLine(continuationBasis({
     routingSnapshot: snapshot,
     originalResolution: rebuilt.resolution,
     originalExactReads: rebuilt.exactReads,
@@ -1046,6 +1104,73 @@ test('C60ab/U05a PRODUCT presented selection discharges old ambiguity after rest
   assert.equal(decision.render_payload.current_minor, 12345);
   assert.equal(snapshot.active_episode.stable_slots.product_id.value, PRODUCT_CONT);
   assert.equal(snapshot.active_episode.clarification_prompts_sent, 1);
+});
+
+test('U07 structured PRODUCT continuation rejects changed ordinal before price authority', t => {
+  const state = genericStructuredContinuation(t, {
+    slot: 'product_id',
+    candidates: [PRODUCT_CONT, PRODUCT_CONT_2],
+    suffix: 'product-u07',
+  });
+  const c = catalog();
+  c.resolveProductIdentityExact = () => ({
+    catalog: { generation_id: 'g1' },
+    status: 'AMBIGUOUS',
+    product: null,
+    candidates: [
+      {
+        product_id: PRODUCT_CONT,
+        variant_id: null,
+        sku: null,
+        sku_key: null,
+        title: 'A',
+        matched_languages: ['ru'],
+        matched_by: ['EXACT_TITLE'],
+      },
+      {
+        product_id: PRODUCT_CONT_2,
+        variant_id: null,
+        sku: null,
+        sku_key: null,
+        title: 'B',
+        matched_languages: ['ru'],
+        matched_by: ['EXACT_TITLE'],
+      },
+    ],
+  });
+  let priceReads = 0;
+  c.getProductPriceFact = ({ productId }) => {
+    priceReads += 1;
+    return {
+      catalog: { generation_id: 'g1' },
+      product_id: productId,
+      status: 'FACT',
+      reason: 'PRODUCT_PRICE_SINGLE',
+      currency: 'UAH',
+      min_current_minor: 12345,
+      max_current_minor: 12345,
+    };
+  };
+  const rebuilt = resolveBasis(
+    'Сколько стоит Дубль?',
+    [{ kind: 'PRODUCT', turn_index: 1, quote: 'Дубль', occurrence: 1 }],
+    vocabulary('NODE_ONLY', false, 'unused', false),
+    c,
+    state.sourceMessageId
+  );
+  const snapshot = state.store.readRoutingSnapshot(state.streamId);
+  assert.throws(
+    () => continuationBasis({
+      routingSnapshot: snapshot,
+      originalResolution: rebuilt.resolution,
+      originalExactReads: rebuilt.exactReads,
+      catalogService: c,
+      knowledgeStore: vocabulary('NODE_ONLY', false, 'unused', false),
+      nowUtc: NOW,
+    }, { structuredValue: 'bp-choice:2' }),
+    error => error?.code === 'FIRST_LINE_DECISION_CONTINUATION_INVALID'
+  );
+  assert.equal(priceReads, 0);
 });
 
 test('C60ab/U05a BRAND presented selection preserves original MONEY constraint', t => {
@@ -1105,7 +1230,7 @@ test('C60ab/U05a BRAND presented selection preserves original MONEY constraint',
     state.sourceMessageId
   );
   const snapshot = state.store.readRoutingSnapshot(state.streamId);
-  const decision = decideFirstLine(createFirstLineContinuationDecisionBasis({
+  const decision = decideFirstLine(continuationBasis({
     routingSnapshot: snapshot,
     originalResolution: rebuilt.resolution,
     originalExactReads: rebuilt.exactReads,
@@ -1168,7 +1293,7 @@ test('C60ab/U05a STORE presented selection rebuilds current phone authority', t 
     state.sourceMessageId
   );
   const snapshot = state.store.readRoutingSnapshot(state.streamId);
-  const decision = decideFirstLine(createFirstLineContinuationDecisionBasis({
+  const decision = decideFirstLine(continuationBasis({
     routingSnapshot: snapshot,
     originalResolution: rebuilt.resolution,
     originalExactReads: rebuilt.exactReads,
@@ -1231,7 +1356,7 @@ test('C60ab/U05a VARIANT presented selection becomes exact store-stock selector 
     state.sourceMessageId
   );
   const snapshot = state.store.readRoutingSnapshot(state.streamId);
-  const decision = decideFirstLine(createFirstLineContinuationDecisionBasis({
+  const decision = decideFirstLine(continuationBasis({
     routingSnapshot: snapshot,
     originalResolution: rebuilt.resolution,
     originalExactReads: rebuilt.exactReads,
@@ -1341,7 +1466,7 @@ test('C60ad requested CATEGORY restart matrix re-proves exact durable pair for b
           row => row[0] === 'searchObjectiveProducts'
         ).length;
 
-        const decision = decideFirstLine(createFirstLineContinuationDecisionBasis({
+        const decision = decideFirstLine(continuationBasis({
           routingSnapshot: snapshot,
           originalResolution: rebuilt.resolution,
           originalExactReads: rebuilt.exactReads,
@@ -1481,7 +1606,7 @@ test('C60ab requested PRODUCT selection discharges ambiguity and rereads current
     c
   );
   const snapshot = state.store.readRoutingSnapshot(state.streamId);
-  const decision = decideFirstLine(createFirstLineContinuationDecisionBasis({
+  const decision = decideFirstLine(continuationBasis({
     routingSnapshot: snapshot,
     originalResolution: rebuilt.resolution,
     originalExactReads: rebuilt.exactReads,
@@ -1550,7 +1675,7 @@ test('C60ab requested BRAND selection preserves original money constraint', t =>
     c
   );
   const snapshot = state.store.readRoutingSnapshot(state.streamId);
-  const decision = decideFirstLine(createFirstLineContinuationDecisionBasis({
+  const decision = decideFirstLine(continuationBasis({
     routingSnapshot: snapshot,
     originalResolution: rebuilt.resolution,
     originalExactReads: rebuilt.exactReads,
@@ -1613,7 +1738,7 @@ test('C60ab requested STORE selection rebuilds current phone authority', t => {
     c
   );
   const snapshot = state.store.readRoutingSnapshot(state.streamId);
-  const decision = decideFirstLine(createFirstLineContinuationDecisionBasis({
+  const decision = decideFirstLine(continuationBasis({
     routingSnapshot: snapshot,
     originalResolution: rebuilt.resolution,
     originalExactReads: rebuilt.exactReads,
@@ -1706,7 +1831,7 @@ test('C60ab requested VARIANT selection can be proven by exact PRODUCT resolutio
     c
   );
   const snapshot = state.store.readRoutingSnapshot(state.streamId);
-  const decision = decideFirstLine(createFirstLineContinuationDecisionBasis({
+  const decision = decideFirstLine(continuationBasis({
     routingSnapshot: snapshot,
     originalResolution: rebuilt.resolution,
     originalExactReads: rebuilt.exactReads,
@@ -1752,7 +1877,7 @@ test('B6 requested-slot restart re-proof rejects selection message with extra su
     k, c, 103
   );
   const before = c.calls.filter(row => row[0] === 'searchObjectiveProducts').length;
-  const decision = decideFirstLine(createFirstLineContinuationDecisionBasis({
+  const decision = decideFirstLine(continuationBasis({
     routingSnapshot: state.store.readRoutingSnapshot(state.streamId),
     originalResolution: rebuilt.resolution,
     originalExactReads: rebuilt.exactReads,

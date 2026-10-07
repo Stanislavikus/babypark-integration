@@ -34,6 +34,9 @@ import {
 import {
   projectActiveKnowledge,
 } from './knowledge/projection.mjs';
+import {
+  reproveCommittedStructuredClarificationSubmission,
+} from './first-line-clarification-selection.mjs';
 import { createHash } from 'node:crypto';
 import { canonicalKnowledgeJson } from './knowledge/canonical.mjs';
 
@@ -1999,6 +2002,7 @@ export function createFirstLineContinuationDecisionBasis({
   originalExactReads,
   selectionResolution = null,
   selectionExactReads = null,
+  structuredSelectionExactRead = null,
   catalogService,
   knowledgeStore,
   nowUtc,
@@ -2037,15 +2041,20 @@ export function createFirstLineContinuationDecisionBasis({
       'durable selection value is invalid');
   }
 
-  const candidateMatches = action.presented_candidates.filter(candidate =>
-    candidate.slot === selection.slot &&
-    selectionKey(candidate.slot, candidate.value) === selectedKey
-  );
+  const candidateMatches = action.presented_candidates
+    .map((candidate, index) => ({ candidate, ordinal: index + 1 }))
+    .filter(item =>
+      item.candidate.slot === selection.slot &&
+      selectionKey(item.candidate.slot, item.candidate.value) === selectedKey
+    );
   if (candidateMatches.length > 1) {
     fail('FIRST_LINE_DECISION_CONTINUATION_INVALID',
       'clarification reservation contains duplicate selected candidates');
   }
   const selectionIsPresented = candidateMatches.length === 1;
+  const selectedCandidateOrdinal = selectionIsPresented
+    ? candidateMatches[0].ordinal
+    : null;
 
   const provenanceEntry = routingSnapshot.event_suffix.find(entry =>
     entry.event.event_seq === selection.source_event_seq
@@ -2076,6 +2085,22 @@ export function createFirstLineContinuationDecisionBasis({
   ) {
     fail('FIRST_LINE_DECISION_CONTINUATION_INVALID',
       'structured continuation provenance is inconsistent');
+  } else {
+    const reproof = reproveCommittedStructuredClarificationSubmission({
+      snapshot: routingSnapshot,
+      exactRead: structuredSelectionExactRead,
+    });
+    if (reproof.code !== 'COMMITTED_STRUCTURED_SELECTION_REPROVEN' ||
+        reproof.selection.source_message_id !==
+          provenanceEntry.event.source_message_id ||
+        reproof.selection.slot !== selection.slot ||
+        reproof.selection.candidate_ordinal !== selectedCandidateOrdinal ||
+        selectionKey(reproof.selection.slot, reproof.selection.value) !==
+          selectedKey) {
+      fail('FIRST_LINE_DECISION_CONTINUATION_INVALID',
+        'committed structured selection failed current exact-read reauthorization',
+        { reason: reproof.reason ?? null });
+    }
   }
 
   const effectiveCatalogGeneration = continuationCatalogGeneration(
