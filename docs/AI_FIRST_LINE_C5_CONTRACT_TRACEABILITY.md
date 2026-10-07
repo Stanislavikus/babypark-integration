@@ -17,22 +17,23 @@ PRODUCTION IMPLEMENTATION: NONE.
 This artifact maps the complete docs-only change. It is evidence only; the
 proposed DESIGN/ACCEPTANCE bytes remain non-authoritative until merged.
 
-| Gap / invariant | Proposed normative artifact | Verification / future executable regression |
-|---|---|---|
-| G1 exact uk/ru wording | DESIGN §40.4 | ACCEPTANCE T07 golden bytes |
-| G2 critical formatting | DESIGN §40.3 | T10 + T07 |
-| G3 fixed payment names/no hidden terms | DESIGN §40.3/§40.4 | existing T04 + T07 |
-| G4 WebsiteRenderer envelope | DESIGN §40.2 | T08 + T12 |
-| G5 TextRenderer output | DESIGN §40.2 | T08 |
-| G6 result/error contract | DESIGN §40.2 | T13 |
-| G7 Chatwoot Liquid safety | DESIGN §40.3 | T09 |
-| G8 Chatwoot Markdown/linkify neutrality | DESIGN §40.3 | T09a |
-| genuine C4 decision provenance | DESIGN §40.2 | T11 |
-| no cards/network/image fetch in C5 v1 | DESIGN §40.2/§40.4 | T12 |
-| HUMAN public silence | DESIGN §40.2 + existing §16.2 | T08 + existing T03 |
-| exact-locale/no fallback | DESIGN §40.2–§40.4 + existing §16.2 | T07/T10 + existing T01/T03 |
-| C6 send/activation remains downstream | DESIGN §40.2 and unchanged §29.7–§29.9 | T13 + U01–U07 remain C6 |
-| normative lifecycle prose no longer claims C4 absent | DESIGN/ACCEPTANCE closing lifecycle prose | static review against merged PR #107 / base main `565f8eb3…` |
+| Requirement / invariant | Proposed artifact clause | Verification / future regression | Fail-closed behavior | Durable-state impact | Status |
+|---|---|---|---|---|---|
+| G1 exact uk/ru wording | DESIGN §40.4 | ACCEPTANCE T07 golden bytes | missing/unknown branch => `FIRST_LINE_RENDERER_INVALID`, zero send | NONE | DONE |
+| G2 exact critical formatting + TextRenderer bytes | DESIGN §40.2–§40.4 | T08/T10/T07 | invalid/unsupported value => renderer failure, no fallback | NONE | DONE |
+| G3 fixed payment names/no hidden terms | DESIGN §40.3/§40.4 | existing T04 + T07 | unknown code/term cannot render | NONE | DONE |
+| G4 WebsiteRenderer exact envelope | DESIGN §40.2 | T08 + T12 | non-exact shape/content type rejected | NONE | DONE |
+| G5 TextRenderer exact output | DESIGN §40.2/§40.4 | T08 + T07 | non-exact shape/branch rejected | NONE; adapter remains unconnected | DONE |
+| G6 single renderer error contract | DESIGN §40.2 | T13 | `FIRST_LINE_RENDERER_INVALID`, no fallback/old render reuse | NONE | DONE |
+| G7 Chatwoot Liquid safety | DESIGN §40.3 | T09 | unsafe delimiter => renderer failure before output; final recheck | NONE | DONE |
+| G8 Chatwoot Markdown/display neutrality | DESIGN §40.3 | T09a | Website free-form text encoded; non-inert finite choice rejected | NONE | DONE |
+| genuine C4 decision provenance | DESIGN §40.2 | T11 | clone/forgery rejected | NONE | DONE |
+| exact public `reason -> template_id` relation | DESIGN §40.2 + existing §16.2 | T11 + T03 | impossible public tuple rejected; private family not reconstructed | NONE | DONE |
+| no cards/network/image fetch in C5 v1 | DESIGN §40.2/§40.4 | T12 | only frozen text/input_select outputs are representable | NONE | DONE |
+| HUMAN public silence | DESIGN §40.2 + existing §16.2 | T08 + existing T03 | HUMAN => `null`, not fallback text | NONE | DONE |
+| exact-locale/no fallback | DESIGN §40.2–§40.4 + existing §16.2 | T07/T10 + existing T01/T03 | unsupported/missing locale => renderer failure | NONE | DONE |
+| C6 send/activation stays downstream | DESIGN §40.2 and unchanged §29.7–§29.9 | T13 + U01–U07 remain C6 | C5 performs no Chatwoot/network call | NONE | DONE |
+| normative lifecycle prose no longer claims C4 absent | DESIGN/ACCEPTANCE closing lifecycle prose | static review against merged PR #107 / base main `565f8eb3…` | stale lifecycle claim removed; proposal still non-authorizing | NONE | DONE |
 
 Research finding motivating the Liquid safety amendment:
 Chatwoot v4.18.0 `Message` includes `Liquidable`; outgoing message content is
