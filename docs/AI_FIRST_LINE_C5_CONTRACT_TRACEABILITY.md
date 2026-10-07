@@ -27,6 +27,7 @@ proposed DESIGN/ACCEPTANCE bytes remain non-authoritative until merged.
 | G6 single renderer error contract | DESIGN §40.2 | T13 | `FIRST_LINE_RENDERER_INVALID`, no fallback/old render reuse | NONE | DONE |
 | G7 Chatwoot Liquid safety | DESIGN §40.3 | T09 | unsafe delimiter => renderer failure before output; final recheck | NONE | DONE |
 | G8 Chatwoot Markdown/display neutrality | DESIGN §40.3 | T09a | Website free-form text encoded; non-inert finite choice rejected | NONE | DONE |
+| G9 Chatwoot message-content ceiling | DESIGN §40.2/§40.3 | T08 + T13 | final Website content >150000 Unicode code points => `FIRST_LINE_RENDERER_INVALID`, zero send | NONE | DONE |
 | genuine C4 decision provenance | DESIGN §40.2 | T11 | clone/forgery rejected | NONE | DONE |
 | exact public `reason -> template_id` relation | DESIGN §40.2 + existing §16.2 | T11 + T03 | impossible public tuple rejected; private family not reconstructed | NONE | DONE |
 | no cards/network/image fetch in C5 v1 | DESIGN §40.2/§40.4 | T12 | only frozen text/input_select outputs are representable | NONE | DONE |
