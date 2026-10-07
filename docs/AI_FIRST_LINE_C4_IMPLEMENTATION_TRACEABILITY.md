@@ -2,7 +2,7 @@
 
 Status: **EVIDENCE — NON-NORMATIVE**
 Applies to: C4 deterministic decision runtime production-code campaign / Draft PR #107.
-Supersedes: none.
+Supersedes: `docs/AI_FIRST_LINE_C4_PRODUCTION_TRACEABILITY.md` for live §6 implementation-status tracking; that file remains historical pre-code verification-plan evidence.
 
 Campaign base: canonical main `f60c42ca929c55b4bd4c06da5da7558bead5b486`.
 Governance: `docs/AI_WORKING_AGREEMENT.md` blob `e777fce4af8e8c3372f1f9de9ef7d00f786c2c89`.
@@ -51,7 +51,7 @@ No new durable customer-content or dynamic-fact payload is introduced. `episode.
 | RC15 provenance-bound discharge | `createFirstLineContinuationDecisionBasis`, `stableSelectionForAction`, `dischargeOriginalResolution` | C60ab presented + requested PRODUCT/CATEGORY/BRAND/STORE/VARIANT, MONEY, C43; restart | missing/mismatched/ambiguous provenance => HUMAN/reject | canonical stable slots only | DONE |
 | RC16 finite cardinality 20 | presentation reducers + state-store bound | C60aa PRODUCT/CATEGORY/BRAND/STORE/VARIANT 20/21 | 21+ never truncated | unchanged durable max 20 | DONE |
 | RC17 structured-selection prerequisite | structured clarification proof + durable selection provenance | structured CATEGORY restart/mode-drift matrix + existing Q10c selection tests | changed/unknown structured value cannot silently authorize stable slot | canonical selection/provenance only | DONE |
-| RC18 typed Operational/Commerce readers | public operational readers, today schedule, exact CommercePolicy validation | C01-C16a/O09-O11 reader tests + C61-C63 end-to-end + malformed/foreign/conflict cases | missing/conflict HUMAN; malformed rejects; delivery stays HUMAN | none | DONE |
+| RC18 typed Operational/Commerce readers | public operational readers, today schedule, exact CommercePolicy validation | C01-C16a/O09-O11 reader tests + C61-C63 end-to-end + strict full-subject operational ownership/schema malformed/foreign/conflict cases | missing/conflict HUMAN; malformed rejects; delivery stays HUMAN | none | DONE |
 | RC19 public presentation safety | public-safety module + internal-ID derivation in C4 | C60ac fixed + fast-check properties; 160/161, 4096/4097, URI/debug/control, hosts, nested/constituent IDs | unsafe required label/title => HUMAN; unsafe optional URL => null | none | DONE |
 
 ## 3. C60–C60ad state-space terminal
@@ -123,8 +123,38 @@ No C5 renderer or C6 Chatwoot POST/relay implementation is claimed by these rows
 
 ## 7. Verification status
 
-Focused C4-adjacent verification has passed on the working candidate. These are development results, not final-gate evidence.
+Focused C4-adjacent verification has passed on working candidates. Those are
+development results, not final-gate evidence.
 
-Final required-verification results, exact HEAD/tree/base, immutable dependency provenance, exhaustive ZERO-BLOCKER passes, isolated HEAVY confirmation, final-gate bundle and owner approval are intentionally not recorded here until the implementation tree is frozen.
+The final immutable §7.0a required-verification manifest MUST bind one exact
+HEAD/tree/base and carry forward the complete historical pre-code plan. At
+minimum it must require:
+- canonical repository/current-main/Agreement tuple and exact changed-path surface;
+- the bound BUILD alternatives scan SHA-256
+  `3b2f4445d2412a20546ac31a1ad98f30b4d2d25a0fd50f368b4f8790a95035c2`;
+- the owner-approved property-tooling fit SHA-256
+  `5797e655dadd86d8e72f5435a215171ad7be5713a0110655e97a1dc979e9bf60`;
+- a fresh dependency layer from the exact committed lockfile, exact toolchain
+  provenance, and `fast-check 4.10.2`;
+- checked-in property seeds `440101..440105` with their checked-in run counts;
+- exact-base `git diff --check "${CAMPAIGN_BASE_OID}..HEAD"`;
+- `npm run storage:validate`;
+- focused state-store migration/restart/CAS/corruption, dependency-proof,
+  operational-reader, public-safety/property, DecisionBasis/continuation and
+  RC/C59-C63/C60..C60ad suites;
+- final-root `npm test`, including concrete PASS outcomes for
+  `test:unit`, `test:legacy` and `test:refactor`;
+- any additional behaviorally owning package suite discovered from the final
+  changed/import surface;
+- zero omitted/SKIPPED/TODO/CANCELLED required checks;
+- complete §6 terminal traceability with no live `IN PROGRESS` row;
+- exhaustive self-review to ZERO BLOCKERS and one isolated run-independent
+  HEAVY confirmation on the unchanged exact tree/governance tuple.
 
-All in-scope implementation traceability rows above are DONE. Final verification/review closure remains governed by `docs/AI_WORKING_AGREEMENT.md`.
+Exact final results, immutable dependency provenance, exhaustive ZERO-BLOCKER
+passes, isolated HEAVY confirmation, final-gate bundle and owner approval are
+intentionally not recorded here until the implementation tree is frozen.
+
+All in-scope implementation traceability rows above are DONE. Final
+verification/review closure remains governed by
+`docs/AI_WORKING_AGREEMENT.md`.

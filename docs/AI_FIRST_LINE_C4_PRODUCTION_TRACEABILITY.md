@@ -1,6 +1,6 @@
 # BabyPark AI First Line — C4 Production Traceability
 
-Status: EVIDENCE — NON-NORMATIVE
+Status: HISTORICAL — PRE-CODE VERIFICATION-PLAN SNAPSHOT; NON-NORMATIVE
 Applies to: PR #107 C4 production runtime campaign.
 Supersedes: none.
 Pinned campaign base: `f60c42ca929c55b4bd4c06da5da7558bead5b486`.
@@ -12,7 +12,7 @@ Bound production-options scan SHA-256:
 
 Bound property-tooling fit evidence SHA-256:
 `5797e655dadd86d8e72f5435a215171ad7be5713a0110655e97a1dc979e9bf60`.
-Property-tooling owner approval: **PENDING**.
+Snapshot-time note: property-tooling approval had not yet been recorded when this pre-code plan was written. The owner subsequently approved exact fit digest `5797e655dadd86d8e72f5435a215171ad7be5713a0110655e97a1dc979e9bf60` for `fast-check 4.10.2`.
 
 This is the pre-code traceability/verification contract for the production
 campaign. It is not the final AI_WORKING_AGREEMENT §7.0a manifest because the
@@ -20,6 +20,13 @@ final exact implementation HEAD/tree does not exist yet. Before the first
 zero-BLOCKER pass, a final required-verification manifest must bind the exact
 final HEAD/tree/base and must include every mandatory check below. It may add
 checks; it may not remove or weaken them.
+
+This file is retained only as the historical pre-code verification-plan snapshot.
+Its table statuses are not the live §6 implementation terminal. Current §6
+implementation status is tracked by
+`docs/AI_FIRST_LINE_C4_IMPLEMENTATION_TRACEABILITY.md`; the final immutable
+§7.0a manifest must still carry forward every mandatory verification requirement
+from this historical plan.
 
 ## 1. Production implementation boundary
 
@@ -120,65 +127,65 @@ Coverage strategy:
 
 | ID | Requirement | Planned implementation surface | Mandatory verification | Fail closed | Durable impact | Status |
 |---|---|---|---|---|---|---|
-| RC1 | one genuine single-use sealed DecisionBasis | `src/copilot/first-line-decision-authority.mjs`, decision kernel | authenticity/clone/replay property + focused tests | reject | none | IN PROGRESS |
-| RC2 | complete identity-row multiset reduction | decision kernel | pair/multiset permutations | HUMAN/reject | none | IN PROGRESS |
-| RC3 | current authority outcome inside basis | authority seam | exact-ID/current-generation binding tests | no basis | none | IN PROGRESS |
-| RC4 | closed clarification budget 0/1 | decision kernel | budget domain + precedence properties | reject/HUMAN | none | IN PROGRESS |
-| RC5 | contentful NOT_FOUND keeps C3 provenance | decision kernel | NOT_FOUND × C3 latch matrix | HUMAN | none | IN PROGRESS |
-| RC6 | deterministic closed request-family set | authority/basis seam | 0/1/>1 family permutations | reject/HUMAN | none | IN PROGRESS |
-| RC7 | pre-authority clarification reducer | authority/basis seam | clarify-set cardinality + authority-call spies | HUMAN/CLARIFY | none | IN PROGRESS |
-| RC8 | exhaustive authority-family outcome tables | authority adapters + decision kernel | exact mapper-key equality | reject unknown | none | IN PROGRESS |
-| RC9 | total terminal precedence | decision kernel | cross-gate precedence property model | earlier gate wins | none | IN PROGRESS |
-| RC10 | singular-slot cardinality | decision kernel | same-kind row permutation matrix | HUMAN | none | IN PROGRESS |
-| RC11 | response-locale containment | authority/basis + projection | uk/ru/other disagreements | HUMAN | none | IN PROGRESS |
-| RC12 | exact typed decision projection | decision kernel | exact eight-key schema/no leakage | reject | none | IN PROGRESS |
-| RC13 | exact candidate presentation proof | authority seam | generation/locale/label representability | HUMAN | none | IN PROGRESS |
-| RC14 | reservation-aware CLARIFY reauthorization contract inputs | state/dependency proof surfaces needed by C4 | owner/non-owner reservation proofs | zero send later | existing durable reservation only | IN PROGRESS |
-| RC15 | provenance-bound clarification discharge | state/dependency/clarification proof | restart/discharge matrices | HUMAN | CATEGORY pair retrofit | IN PROGRESS |
-| RC16 | finite-choice cardinality bound | decision kernel | 20 vs 21+ all finite kinds | HUMAN | none | IN PROGRESS |
-| RC17 | mutable structured selection final-proof compatibility | dependency proof inputs consumed by C4 | structured mutation vectors | HUMAN later | existing provenance | IN PROGRESS |
-| RC18 | typed public OperationalFact/CommercePolicy readers | authority seam | exact schema/family validators | HUMAN/reject | none | IN PROGRESS |
-| RC19 | exact public presentation safety | decision kernel/authority projection | text/URL property suite | HUMAN/null/reject | none | IN PROGRESS |
+| RC1 | one genuine single-use sealed DecisionBasis | `src/copilot/first-line-decision-authority.mjs`, decision kernel | authenticity/clone/replay property + focused tests | reject | none | HISTORICAL PLAN |
+| RC2 | complete identity-row multiset reduction | decision kernel | pair/multiset permutations | HUMAN/reject | none | HISTORICAL PLAN |
+| RC3 | current authority outcome inside basis | authority seam | exact-ID/current-generation binding tests | no basis | none | HISTORICAL PLAN |
+| RC4 | closed clarification budget 0/1 | decision kernel | budget domain + precedence properties | reject/HUMAN | none | HISTORICAL PLAN |
+| RC5 | contentful NOT_FOUND keeps C3 provenance | decision kernel | NOT_FOUND × C3 latch matrix | HUMAN | none | HISTORICAL PLAN |
+| RC6 | deterministic closed request-family set | authority/basis seam | 0/1/>1 family permutations | reject/HUMAN | none | HISTORICAL PLAN |
+| RC7 | pre-authority clarification reducer | authority/basis seam | clarify-set cardinality + authority-call spies | HUMAN/CLARIFY | none | HISTORICAL PLAN |
+| RC8 | exhaustive authority-family outcome tables | authority adapters + decision kernel | exact mapper-key equality | reject unknown | none | HISTORICAL PLAN |
+| RC9 | total terminal precedence | decision kernel | cross-gate precedence property model | earlier gate wins | none | HISTORICAL PLAN |
+| RC10 | singular-slot cardinality | decision kernel | same-kind row permutation matrix | HUMAN | none | HISTORICAL PLAN |
+| RC11 | response-locale containment | authority/basis + projection | uk/ru/other disagreements | HUMAN | none | HISTORICAL PLAN |
+| RC12 | exact typed decision projection | decision kernel | exact eight-key schema/no leakage | reject | none | HISTORICAL PLAN |
+| RC13 | exact candidate presentation proof | authority seam | generation/locale/label representability | HUMAN | none | HISTORICAL PLAN |
+| RC14 | reservation-aware CLARIFY reauthorization contract inputs | state/dependency proof surfaces needed by C4 | owner/non-owner reservation proofs | zero send later | existing durable reservation only | HISTORICAL PLAN |
+| RC15 | provenance-bound clarification discharge | state/dependency/clarification proof | restart/discharge matrices | HUMAN | CATEGORY pair retrofit | HISTORICAL PLAN |
+| RC16 | finite-choice cardinality bound | decision kernel | 20 vs 21+ all finite kinds | HUMAN | none | HISTORICAL PLAN |
+| RC17 | mutable structured selection final-proof compatibility | dependency proof inputs consumed by C4 | structured mutation vectors | HUMAN later | existing provenance | HISTORICAL PLAN |
+| RC18 | typed public OperationalFact/CommercePolicy readers | authority seam | exact schema/family validators | HUMAN/reject | none | HISTORICAL PLAN |
+| RC19 | exact public presentation safety | decision kernel/authority projection | text/URL property suite | HUMAN/null/reject | none | HISTORICAL PLAN |
 
 ## 6. C60..C60ad mandatory acceptance rows
 
 Each row below is independently blocking and must map to a focused fixed
-regression plus any applicable property generator. Status remains IN PROGRESS
+regression plus any applicable property generator. Status remains HISTORICAL PLAN
 until the final test/result evidence exists on the exact final tree.
 
 | ID | Required proof | Status |
 |---|---|---|
-| C60 | identity collision -> HUMAN / CATALOG_IDENTITY_COLLISION | IN PROGRESS |
-| C60a | PRODUCT zero candidates -> HUMAN / IDENTITY_NOT_RESOLVABLE | IN PROGRESS |
-| C60b | CATEGORY/BRAND/STORE zero candidates -> IDENTITY_NOT_RESOLVABLE | IN PROGRESS |
-| C60c | NOT_FOUND + C3 provenance/precedence | IN PROGRESS |
-| C60d | missing/cloned/reconstructed/reused basis rejects | IN PROGRESS |
-| C60e | two-row identity status-pair reduction | IN PROGRESS |
-| C60f | multiple ambiguous identity kinds never choose by order | IN PROGRESS |
-| C60g | >1 request family -> MULTIPLE_REQUEST_FAMILIES_MATCHED | IN PROGRESS |
-| C60h | authority ID/generation mismatch prevents basis | IN PROGRESS |
-| C60i | fact PRODUCT_NOT_FOUND is not identity NOT_FOUND | IN PROGRESS |
-| C60j | budget 0 permits exactly one safe CLARIFY | IN PROGRESS |
-| C60k | budget 1 + representable clarification -> CLARIFY_EXHAUSTED | IN PROGRESS |
-| C60l | invalid/missing budget rejects | IN PROGRESS |
-| C60m | post-clarification dynamic changes use fresh reread | IN PROGRESS |
-| C60n | every supported pre-authority clarify reason, budget 0/1 | IN PROGRESS |
-| C60o | mapper keys exactly equal frozen emitted tuple unions | IN PROGRESS |
-| C60p | >1 pre-authority clarification requirement precedence | IN PROGRESS |
-| C60q | total cross-gate precedence / zero inappropriate authority calls | IN PROGRESS |
-| C60r | same-kind singular semantic-cardinality reduction | IN PROGRESS |
-| C60s | exact uk/ru locale; other valid tag -> HUMAN; no fallback | IN PROGRESS |
-| C60t | exact eight-key decision / no DTO leakage | IN PROGRESS |
-| C60u | public/private candidate separation + exact-locale labels | IN PROGRESS |
-| C60v | uncertified delivery policy -> COMMERCE_POLICY_NOT_AUTHORITATIVE | IN PROGRESS |
-| C60w | incomplete variant labels -> PRODUCT_VARIANT_NOT_RESOLVABLE | IN PROGRESS |
-| C60x | every CLARIFY has render_payload=null; free-text choices=[] | IN PROGRESS |
-| C60y | label representability precedes budget | IN PROGRESS |
-| C60z | PRODUCT/CATEGORY exact-generation exact-locale presentation proof | IN PROGRESS |
-| C60aa | finite cardinality 20 accepted / 21+ fail closed | IN PROGRESS |
-| C60ab | restart continuation discharges exactly one ambiguity | IN PROGRESS |
-| C60ac | public text/URL safety boundary and internal-ID rejection | IN PROGRESS |
-| C60ad | CATEGORY clarification/restart exact tuple matrix | IN PROGRESS |
+| C60 | identity collision -> HUMAN / CATALOG_IDENTITY_COLLISION | HISTORICAL PLAN |
+| C60a | PRODUCT zero candidates -> HUMAN / IDENTITY_NOT_RESOLVABLE | HISTORICAL PLAN |
+| C60b | CATEGORY/BRAND/STORE zero candidates -> IDENTITY_NOT_RESOLVABLE | HISTORICAL PLAN |
+| C60c | NOT_FOUND + C3 provenance/precedence | HISTORICAL PLAN |
+| C60d | missing/cloned/reconstructed/reused basis rejects | HISTORICAL PLAN |
+| C60e | two-row identity status-pair reduction | HISTORICAL PLAN |
+| C60f | multiple ambiguous identity kinds never choose by order | HISTORICAL PLAN |
+| C60g | >1 request family -> MULTIPLE_REQUEST_FAMILIES_MATCHED | HISTORICAL PLAN |
+| C60h | authority ID/generation mismatch prevents basis | HISTORICAL PLAN |
+| C60i | fact PRODUCT_NOT_FOUND is not identity NOT_FOUND | HISTORICAL PLAN |
+| C60j | budget 0 permits exactly one safe CLARIFY | HISTORICAL PLAN |
+| C60k | budget 1 + representable clarification -> CLARIFY_EXHAUSTED | HISTORICAL PLAN |
+| C60l | invalid/missing budget rejects | HISTORICAL PLAN |
+| C60m | post-clarification dynamic changes use fresh reread | HISTORICAL PLAN |
+| C60n | every supported pre-authority clarify reason, budget 0/1 | HISTORICAL PLAN |
+| C60o | mapper keys exactly equal frozen emitted tuple unions | HISTORICAL PLAN |
+| C60p | >1 pre-authority clarification requirement precedence | HISTORICAL PLAN |
+| C60q | total cross-gate precedence / zero inappropriate authority calls | HISTORICAL PLAN |
+| C60r | same-kind singular semantic-cardinality reduction | HISTORICAL PLAN |
+| C60s | exact uk/ru locale; other valid tag -> HUMAN; no fallback | HISTORICAL PLAN |
+| C60t | exact eight-key decision / no DTO leakage | HISTORICAL PLAN |
+| C60u | public/private candidate separation + exact-locale labels | HISTORICAL PLAN |
+| C60v | uncertified delivery policy -> COMMERCE_POLICY_NOT_AUTHORITATIVE | HISTORICAL PLAN |
+| C60w | incomplete variant labels -> PRODUCT_VARIANT_NOT_RESOLVABLE | HISTORICAL PLAN |
+| C60x | every CLARIFY has render_payload=null; free-text choices=[] | HISTORICAL PLAN |
+| C60y | label representability precedes budget | HISTORICAL PLAN |
+| C60z | PRODUCT/CATEGORY exact-generation exact-locale presentation proof | HISTORICAL PLAN |
+| C60aa | finite cardinality 20 accepted / 21+ fail closed | HISTORICAL PLAN |
+| C60ab | restart continuation discharges exactly one ambiguity | HISTORICAL PLAN |
+| C60ac | public text/URL safety boundary and internal-ID rejection | HISTORICAL PLAN |
+| C60ad | CATEGORY clarification/restart exact tuple matrix | HISTORICAL PLAN |
 
 ## 7. T01-T06 mandatory rows
 
@@ -188,12 +195,12 @@ implement C5.
 
 | ID | Required proof | Status |
 |---|---|---|
-| T01 | exact response locale / no presentation fallback | IN PROGRESS |
-| T02 | presentation absence does not block templates that do not need it | IN PROGRESS |
-| T03 | C4 output satisfies closed pure-renderer contract surface | IN PROGRESS |
-| T04 | payment-method code cannot smuggle commercial conditions | IN PROGRESS |
-| T05 | critical values remain exact/non-semantic | IN PROGRESS |
-| T06 | CLARIFY public/private candidate separation | IN PROGRESS |
+| T01 | exact response locale / no presentation fallback | HISTORICAL PLAN |
+| T02 | presentation absence does not block templates that do not need it | HISTORICAL PLAN |
+| T03 | C4 output satisfies closed pure-renderer contract surface | HISTORICAL PLAN |
+| T04 | payment-method code cannot smuggle commercial conditions | HISTORICAL PLAN |
+| T05 | critical values remain exact/non-semantic | HISTORICAL PLAN |
+| T06 | CLARIFY public/private candidate separation | HISTORICAL PLAN |
 
 ## 8. U01-U07 mandatory rows
 
@@ -203,14 +210,14 @@ the frozen semantics needed by the later C6 campaign.
 
 | ID | Required proof | Status |
 |---|---|---|
-| U01 | dynamic value may change while descriptor stays same | IN PROGRESS |
-| U02 | semantic descriptor change fails stale prepared semantics | IN PROGRESS |
-| U03 | stock/policy value changes under same descriptor use current result | IN PROGRESS |
-| U04 | CLARIFY reservation remains exact/owner-bound | IN PROGRESS |
-| U05 | restart rebuilds semantics, never deserializes DecisionBasis | IN PROGRESS |
-| U05a | continuation discharges exactly one old ambiguity after restart | IN PROGRESS |
-| U06 | reauthorization failure never permits stale send semantics | IN PROGRESS |
-| U07 | mutable structured selection is re-proven at final boundary | IN PROGRESS |
+| U01 | dynamic value may change while descriptor stays same | HISTORICAL PLAN |
+| U02 | semantic descriptor change fails stale prepared semantics | HISTORICAL PLAN |
+| U03 | stock/policy value changes under same descriptor use current result | HISTORICAL PLAN |
+| U04 | CLARIFY reservation remains exact/owner-bound | HISTORICAL PLAN |
+| U05 | restart rebuilds semantics, never deserializes DecisionBasis | HISTORICAL PLAN |
+| U05a | continuation discharges exactly one old ambiguity after restart | HISTORICAL PLAN |
+| U06 | reauthorization failure never permits stale send semantics | HISTORICAL PLAN |
+| U07 | mutable structured selection is re-proven at final boundary | HISTORICAL PLAN |
 
 ## 9. Merge terminal
 

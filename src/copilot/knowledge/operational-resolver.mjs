@@ -47,6 +47,159 @@ function activeAt(row, nowMs) {
   return from <= nowMs && (until === null || nowMs < until);
 }
 
+
+const OPERATIONAL_NAMESPACE_CONTRACTS = Object.freeze({
+  'store.weekly_hours': Object.freeze({
+    family: 'store.hours',
+    type: 'WEEKLY_HOURS',
+  }),
+  'store.special_hours': Object.freeze({
+    family: 'store.hours',
+    type: 'SPECIAL_HOURS',
+  }),
+  'store.status_override': Object.freeze({
+    family: 'store.operating_state',
+    type: 'STATUS',
+  }),
+  'store.baseline_status': Object.freeze({
+    family: 'store.operating_state',
+    type: 'STATUS',
+  }),
+  'store.temporary_closure': Object.freeze({
+    family: 'store.operating_state',
+    type: 'CLOSED_OR_STATUS',
+  }),
+});
+const OPERATIONAL_FAMILIES = new Set([
+  'store.hours',
+  'store.operating_state',
+]);
+const OPERATING_STATE_NAMESPACES = new Set([
+  'store.status_override',
+  'store.baseline_status',
+  'store.temporary_closure',
+]);
+
+function exactKeys(value, expected) {
+  return value && typeof value === 'object' && !Array.isArray(value) &&
+    Object.keys(value).sort().join(',') === [...expected].sort().join(',');
+}
+
+function isOperationalCandidate(row) {
+  return Boolean(
+    row &&
+    (Object.hasOwn(OPERATIONAL_NAMESPACE_CONTRACTS, row.namespace) ||
+     OPERATIONAL_FAMILIES.has(row.effect_family))
+  );
+}
+
+function isOperatingStateCandidate(row) {
+  return Boolean(
+    row &&
+    (OPERATING_STATE_NAMESPACES.has(row.namespace) ||
+     row.effect_family === 'store.operating_state')
+  );
+}
+
+function validateOperationalAuthorityRow(row, storeId) {
+  const contract = OPERATIONAL_NAMESPACE_CONTRACTS[row?.namespace] ?? null;
+  if (!contract) {
+    fail(
+      'OPERATIONAL_AUTHORITY_INVALID',
+      'foreign namespace claims a reserved operational effect family',
+      {
+        revision_id: row?.revision_id ?? null,
+        namespace: row?.namespace ?? null,
+        effect_family: row?.effect_family ?? null,
+      }
+    );
+  }
+  if (
+    row.record_type !== 'OPERATIONAL_FACT' ||
+    row.schema_version !== 1 ||
+    row.subject_type !== 'store' ||
+    row.subject_id !== storeId ||
+    !row.scope || typeof row.scope !== 'object' ||
+    Array.isArray(row.scope) || Object.keys(row.scope).length !== 0 ||
+    row.effect_family !== contract.family
+  ) {
+    fail(
+      'OPERATIONAL_AUTHORITY_INVALID',
+      'operational authority row has invalid ownership/schema binding',
+      {
+        revision_id: row?.revision_id ?? null,
+        namespace: row?.namespace ?? null,
+        effect_family: row?.effect_family ?? null,
+      }
+    );
+  }
+
+  if (row.namespace === 'store.weekly_hours') {
+    if (row.effect_type !== 'WEEKLY_HOURS' ||
+        !row.effect_value || typeof row.effect_value !== 'object' ||
+        Array.isArray(row.effect_value)) {
+      fail('OPERATIONAL_AUTHORITY_INVALID',
+        'weekly-hours authority shape is invalid',
+        { revision_id: row.revision_id });
+    }
+    for (const [weekday, intervals] of Object.entries(row.effect_value)) {
+      if (!WEEKDAYS.has(weekday)) {
+        fail('OPERATIONAL_AUTHORITY_INVALID',
+          'weekly-hours authority contains an unknown weekday',
+          { revision_id: row.revision_id, weekday });
+      }
+      normalizeIntervals(intervals, `store.weekly_hours.${weekday}`);
+    }
+    return row;
+  }
+
+  if (row.namespace === 'store.special_hours') {
+    if (row.effect_type !== 'SPECIAL_HOURS' ||
+        !exactKeys(row.effect_value, ['intervals'])) {
+      fail('OPERATIONAL_AUTHORITY_INVALID',
+        'special-hours authority shape is invalid',
+        { revision_id: row.revision_id });
+    }
+    normalizeIntervals(
+      row.effect_value.intervals,
+      'store.special_hours.intervals'
+    );
+    return row;
+  }
+
+  if (row.namespace === 'store.status_override' ||
+      row.namespace === 'store.baseline_status') {
+    if (row.effect_type !== 'STATUS' ||
+        !exactKeys(row.effect_value, ['status']) ||
+        !['OPEN', 'CLOSED'].includes(row.effect_value.status)) {
+      fail('OPERATIONAL_AUTHORITY_INVALID',
+        'operating-state authority shape is invalid',
+        { revision_id: row.revision_id, namespace: row.namespace });
+    }
+    return row;
+  }
+
+  const legacyClosed =
+    row.effect_type === 'CLOSED' &&
+    exactKeys(row.effect_value, ['closed']) &&
+    row.effect_value.closed === true;
+  const canonicalClosed =
+    row.effect_type === 'STATUS' &&
+    exactKeys(row.effect_value, ['status']) &&
+    row.effect_value.status === 'CLOSED';
+  if (!legacyClosed && !canonicalClosed) {
+    fail('OPERATIONAL_AUTHORITY_INVALID',
+      'temporary-closure authority must be exact CLOSED state',
+      { revision_id: row.revision_id });
+  }
+  return row;
+}
+
+function validateOperationalCandidates(rows, storeId) {
+  for (const row of rows) validateOperationalAuthorityRow(row, storeId);
+  return rows;
+}
+
 function localClock(nowUtc) {
   const parts = {};
   for (const part of localFormatter.formatToParts(new Date(nowUtc))) {
@@ -76,6 +229,10 @@ function normalizeIntervals(value, name) {
   const normalized = value.map((interval, index) => {
     if (!interval || typeof interval !== 'object' || Array.isArray(interval)) {
       fail('OPERATIONAL_HOURS_INVALID', `${name}[${index}] must be an object`);
+    }
+    if (Object.keys(interval).sort().join(',') !== 'close,open') {
+      fail('OPERATIONAL_HOURS_INVALID',
+        `${name}[${index}] must contain exactly open and close`);
     }
     const open = minuteOfDay(interval.open, `${name}[${index}].open`);
     const close = minuteOfDay(interval.close, `${name}[${index}].close`);
@@ -160,10 +317,14 @@ export function resolveStoreOperationalState(store, {
   text('storeId', storeId);
   const nowMs = Date.parse(now);
   const clock = localClock(now);
-  const active = store.authoritySnapshot().filter(row =>
-    row.subject_type === 'store' &&
-    row.subject_id === storeId &&
-    activeAt(row, nowMs)
+  const active = validateOperationalCandidates(
+    store.authoritySnapshot().filter(row =>
+      row.subject_type === 'store' &&
+      row.subject_id === storeId &&
+      activeAt(row, nowMs) &&
+      isOperationalCandidate(row)
+    ),
+    storeId
   );
 
   const stateOverlays = active.filter(row =>
@@ -386,7 +547,10 @@ export function resolveStoreTodaySchedule(store, {
   ensureStableLocalDay(now, clock.date);
 
   const rows = publishedStoreRows(store, storeId);
-  const active = rows.filter(row => activeAt(row, nowMs));
+  const active = validateOperationalCandidates(
+    rows.filter(row => activeAt(row, nowMs) && isOperationalCandidate(row)),
+    storeId
+  );
   const specials = active.filter(row => row.namespace === 'store.special_hours');
   const baselines = active.filter(row => row.namespace === 'store.weekly_hours');
 
@@ -446,11 +610,17 @@ export function resolveStoreTodaySchedule(store, {
 
   const mask = intervalsToMask(baseIntervals);
   const nowMinute = clock.hour * 60 + clock.minute;
-  const overlays = rows.filter(row =>
+  const relevantStateRows = rows.filter(row => {
+    if (!isOperatingStateCandidate(row)) return false;
+    const range = sameDayRange(row, clock.date);
+    return range !== null && range.end > nowMinute;
+  });
+  validateOperationalCandidates(relevantStateRows, storeId);
+  const overlays = relevantStateRows.filter(row =>
     row.namespace === 'store.temporary_closure' ||
     row.namespace === 'store.status_override'
   );
-  const baselineStates = rows.filter(row =>
+  const baselineStates = relevantStateRows.filter(row =>
     row.namespace === 'store.baseline_status'
   );
   const contributing = new Set(baseRows.map(row => row.revision_id));

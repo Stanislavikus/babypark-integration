@@ -7,6 +7,14 @@ import {
   publicUrl,
 } from '../../src/copilot/first-line-public-safety.mjs';
 
+const PROPERTY_SEEDS = Object.freeze({
+  internalIdEquality: 440101,
+  controlInsertion: 440102,
+  whitespaceCollapse: 440103,
+  foreignProductHost: 440104,
+  underscoreDnsHost: 440105,
+});
+
 test('C60ac fixed public-display boundary vectors', () => {
   assert.equal(publicDisplayText('Blue'), 'Blue');
   for (const unsafe of [
@@ -86,7 +94,7 @@ test('property: normalized case-insensitive internal IDs can never become public
       });
       assert.equal(rendered, null);
     }
-  ), { numRuns: 500 });
+  ), { seed: PROPERTY_SEEDS.internalIdEquality, numRuns: 500 });
 });
 
 test('property: any inserted Cc/Cf code point is rejected before whitespace normalization', () => {
@@ -102,7 +110,7 @@ test('property: any inserted Cc/Cf code point is rejected before whitespace norm
     (left, control, right) => {
       assert.equal(publicDisplayText(left + control + right), null);
     }
-  ), { numRuns: 500 });
+  ), { seed: PROPERTY_SEEDS.controlInsertion, numRuns: 500 });
 });
 
 test('property: safe ASCII word labels are deterministic under whitespace collapse', () => {
@@ -124,7 +132,7 @@ test('property: safe ASCII word labels are deterministic under whitespace collap
       assert.equal(publicDisplayText(raw), canonical);
       assert.equal(publicDisplayText(raw), publicDisplayText(raw));
     }
-  ), { numRuns: 500 });
+  ), { seed: PROPERTY_SEEDS.whitespaceCollapse, numRuns: 500 });
 });
 
 test('property: product URL host policy never accepts a foreign generated host', () => {
@@ -139,7 +147,7 @@ test('property: product URL host policy never accepts a foreign generated host',
       assert.equal(publicUrl(url, 'product'), null);
       assert.equal(publicUrl(url, 'image'), url);
     }
-  ), { numRuns: 300 });
+  ), { seed: PROPERTY_SEEDS.foreignProductHost, numRuns: 300 });
 });
 
 
@@ -159,7 +167,7 @@ test('property: DNS host labels with underscore are never public image hosts', (
       const raw = `https://${left}_${right}.example.org/image.jpg`;
       assert.equal(publicUrl(raw, 'image'), null);
     }
-  ), { numRuns: 300 });
+  ), { seed: PROPERTY_SEEDS.underscoreDnsHost, numRuns: 300 });
 });
 
 test('public display internal identifiers stringify non-string comparison values', () => {
