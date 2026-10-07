@@ -2676,15 +2676,20 @@ WebsiteRenderer mapping is exact:
 TextRenderer returns exactly
 `{schema:'bp.first-line.text-render/1',content:string}` for ANSWER/CLARIFY and
 `null` for HUMAN. It has no transport metadata and remains unconnected to
-Viber/Telegram in C5. For finite CLARIFY it renders the same prompt followed by
-ordered numbered labels (`1. <label>`, `2. <label>`, ...); it does not print
-the `bp-choice` token or any private candidate value.
+Viber/Telegram in C5. Its `content` is the exact semantic §40.4 branch before
+Website-only Markdown transport encoding and has no trailing newline. For finite
+CLARIFY the exact bytes are `<prompt>\n1. <label>\n2. <label>...`, with one
+U+000A LF before each ordinal row and no `bp-choice` token/private candidate
+value. ANSWER multiline/list content uses the same §40.4 line breaks and no
+trailing LF.
 
 Genuine C4 provenance never waives public-contract validation. Before rendering,
-C5 revalidates the complete exact §16.2 relation among `decision`, `reason`,
-`response_locale`, `template_id`, `render_payload`, `requested_slot` and
-`choices`, including the frozen ANSWER reason/family-to-template mapping. A
-genuine object with an impossible reason/template pair is still invalid.
+C5 revalidates the complete exact §16.2 public relation among `decision`,
+`reason`, `response_locale`, `template_id`, `render_payload`,
+`requested_slot` and `choices`, including the frozen
+`reason -> allowed template_id` relation. Private request-family identity is
+not a C5 input and is not reconstructed by the renderer. A genuine object with
+an impossible public reason/template pair is still invalid.
 
 Unknown/forged decision, unsupported locale/template/reason tuple, invalid
 payload/choice shape, missing locale branch, unsupported currency, unsafe
@@ -2738,15 +2743,21 @@ later echoed through Chatwoot Markdown after selection. Because escaping the
 stored title would expose backslashes in the initial option, a finite choice
 label must instead be **Markdown-link inert as stored**. In addition to §16.3
 and the Liquid rule below, reject a choice label when any exact predicate matches:
-- `/[\[\]<>`]/u`;
+- `/[\[\]<>`*_{}~]/u`;
 - `/(?:https?:\/\/|www\.)/iu`;
 - `/@/u`;
 - `/(?:^|[^\p{L}\p{N}-])(?:[\p{L}\p{N}-]+\.)+[\p{L}]{2,}(?:$|[^\p{L}\p{N}-])/iu`;
-- `/(?:^|[^0-9])(?:[0-9]{1,3}\.){3}[0-9]{1,3}(?:$|[^0-9])/u`.
-The first predicate includes the ASCII backtick. These rules are intentionally
-conservative: an unrepresentable finite label fails closed rather than allowing
-Chatwoot to manufacture an external link after the customer selects it.
-Ordinary hyphens, slashes, parentheses and plus signs stay representable.
+- `/(?:^|[^0-9])(?:[0-9]{1,3}\.){3}[0-9]{1,3}(?:$|[^0-9])/u`;
+- `/^(?:#{1,6}|>|[-+])\s/u`;
+- `/^\d{1,9}[.)]\s/u`;
+- `/^-{3,}$/u`.
+The first predicate includes Markdown emphasis/code/strikethrough punctuation.
+Together the predicates prevent link/autolink, heading, blockquote, list,
+horizontal-rule and inline-format reinterpretation of the selected title.
+They are intentionally conservative: an unrepresentable finite label fails
+closed rather than allowing the post-selection echo to differ visually from the
+offered factual label. Ordinary internal hyphens, slashes, parentheses, periods
+and plus signs remain representable.
 
 Payment method names are a closed table and carry no fee/condition:
 - `BANK_TRANSFER`: uk `банківський переказ`; ru `банковский перевод`;
@@ -2755,10 +2766,10 @@ Payment method names are a closed table and carry no fee/condition:
   `наложенный платеж в Новой почте`.
 
 Chatwoot v4.18.0 evaluates Liquid for outgoing message `content` during message
-creation. C5 must not escape this with `{% raw %}...{% endraw %}`. Before any
-Website Markdown encoding/interpolation, every dynamic public string that C5 may
-place into `content` or an `input_select.items[*].title` fails closed if it
-contains ASCII `{{` or `{%`. After rendering, final `content` and every select
+creation. WebsiteRenderer must not escape this with
+`{% raw %}...{% endraw %}`. Before any Website Markdown encoding/interpolation,
+every dynamic public string that WebsiteRenderer may place into `content` or an
+`input_select.items[*].title` fails closed if it contains ASCII `{{` or `{%`. After rendering, final `content` and every select
 item title are checked again for the same delimiters. Fixed branches are
 regression-tested to contain neither. A Liquid-looking Catalog title/variant
 label/URL therefore yields `FIRST_LINE_RENDERER_INVALID`; C5/C6 do not let
