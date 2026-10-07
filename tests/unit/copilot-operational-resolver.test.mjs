@@ -417,6 +417,29 @@ test('today schedule rejects a future same-day foreign operating-state authority
   }
 });
 
+test('today schedule preserves an already-ended same-day CLOSED interval in the complete civil-day schedule', t => {
+  const f = fixture(); t.after(f.cleanup);
+  const store = f.store();
+  reviewed(store, weekly());
+  closure(store, {
+    effectiveFromUtc: '2026-10-02T08:00:00Z',
+    expiresAtUtc: '2026-10-02T09:00:00Z',
+  });
+
+  const result = resolveStoreTodaySchedule(store, {
+    nowUtc: '2026-10-02T14:30:00Z',
+    storeId: 'store_1',
+  });
+
+  assert.equal(result.status, 'RESOLVED');
+  assert.equal(result.open_now, true);
+  assert.deepEqual(result.intervals, [
+    { open: '10:00', close: '11:00' },
+    { open: '12:00', close: '20:00' },
+  ]);
+  store.close();
+});
+
 test('interval authority rejects extra interval keys instead of ignoring them', () => {
   const f = fixture();
   const store = f.store();

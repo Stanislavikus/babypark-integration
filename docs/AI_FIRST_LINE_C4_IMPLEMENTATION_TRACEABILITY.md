@@ -61,14 +61,31 @@ Every frozen C60 family is mapped to an executable regression. Grouping here is 
 
 | Acceptance | Verification surface | Status |
 |---|---|---|
-| C60, C60a–C60e | collision, zero-candidate, C3/NOT_FOUND, single-use basis, status-pair identity matrices | DONE |
-| C60f–C60k | multi-ambiguity, family cardinality, exact authority binding, fact NOT_FOUND, one-prompt and exhausted-budget matrices | DONE |
-| C60l–C60p | malformed budget, dynamic rereads, all clarify reasons 0/1, mapper closure, multi-requirement sets | DONE |
-| C60q | collision/C3, NOT_FOUND/family, singular-cardinality/family, family/locale, locale/presentation, label/budget and frozen-family terminal precedence with authority spies | DONE |
+| C60 | identity collision outranks lower gates; zero lower authority calls | DONE |
+| C60a | PRODUCT zero candidates => IDENTITY_NOT_RESOLVABLE | DONE |
+| C60b | CATEGORY/BRAND/STORE zero candidates => IDENTITY_NOT_RESOLVABLE | DONE |
+| C60c | identity NOT_FOUND preserves C3 precedence/provenance | DONE |
+| C60d | missing/cloned/reconstructed/reused DecisionBasis rejects | DONE |
+| C60e | two-row identity status-pair matrix never hides harder state | DONE |
+| C60f | multiple ambiguous identity kinds never choose by order | DONE |
+| C60g | multiple reviewed request families => MULTIPLE_REQUEST_FAMILIES_MATCHED | DONE |
+| C60h | exact authority ID/generation/store/objective-constraint binding mismatch rejects | DONE |
+| C60i | fact-layer PRODUCT_NOT_FOUND never aliases identity NOT_FOUND | DONE |
+| C60j | budget 0 permits exactly one safe CLARIFY | DONE |
+| C60k | budget 1 + representable clarification => CLARIFY_EXHAUSTED | DONE |
+| C60l | missing/null/negative/>1/non-integer clarification budget rejects | DONE |
+| C60m | post-clarification price/policy/objective authority is reread current | DONE |
+| C60n | every supported pre-authority clarify reason at budget 0/1 | DONE |
+| C60o | mapper key sets exactly equal frozen per-family status/reason unions; cross-family reason rejects | DONE |
+| C60p | multiple pre-authority clarification requirements use deterministic identity-only/mixed reasons | DONE |
+| C60q | full cross-gate precedence matrix + zero inappropriate authority calls | DONE |
 | C60r | PRODUCT/CATEGORY/BRAND/STORE/MONEY same-kind equality/adversarial combinations | DONE |
 | C60s | exact uk/ru plus unsupported language; Catalog hints do not override C2 locale | DONE |
-| C60t–C60u | exact eight public keys, raw DTO containment, ordinal+label public choices and private canonical candidates for every finite kind | DONE |
-| C60v–C60x | uncertified delivery terminal, variant-price incomplete labels, exact CLARIFY payload/slot/choice schemas | DONE |
+| C60t | exact eight public keys + per-template schema + raw DTO containment | DONE |
+| C60u | ordinal+label public choices stay separate from private canonical candidates for every finite kind | DONE |
+| C60v | delivery policy remains uncertified => COMMERCE_POLICY_NOT_AUTHORITATIVE before authority | DONE |
+| C60w | VARIANT_PRICE_LIST label_complete=false => PRODUCT_VARIANT_NOT_RESOLVABLE | DONE |
+| C60x | every CLARIFY has render_payload=null and exact slot/choice schema; free-text choices=[] | DONE |
 | C60y | PRODUCT/CATEGORY/BRAND/STORE/VARIANT × budget 0/1 × safe/missing/unsafe/duplicate-equivalent | DONE |
 | C60z | PRODUCT/CATEGORY generation, exact-locale, fallback/missing presentation proof | DONE |
 | C60aa | 20/21 boundary for every finite identity/variant class | DONE |
@@ -176,6 +193,16 @@ the tree.
 | SR-B3 Commerce exception ancestry incomplete | strict C4 schema validation traverses exception ancestors on the captured snapshot; resolved Decision Context fingerprints the consulted parent+leaf revision IDs; valid narrower exception, malformed inactive ancestor and unlinked-conflict regressions are explicit | DONE |
 | SR-B4 Decision Context canonical-set mismatch | hash only the frozen §45 canonical input; schema remains envelope metadata, `response_locale` is conditional on ANSWER/CLARIFY, and absent model participation emits no `model_id` field | DONE |
 | SR-B5 modified CURRENT_STATE predecessor metadata stale | `docs/CURRENT_STATE.md` now names exact campaign predecessor `f60c42ca929c55b4bd4c06da5da7558bead5b486` and current update date | DONE |
+
+A second exhaustive pass on the post-SR-B1..B5 tree continued across the full
+changed surface and found three additional independent blocker classes. They are
+fixed as one batch before the next zero-BLOCKER candidate:
+
+| Review blocker | Minimal correction / regression evidence | Status |
+|---|---|---|
+| SR-B6 live C60 traceability grouped rows despite row-by-row owner gate | §3 now has one explicit DONE row for every C60 through C60ad; no range/group row substitutes for an acceptance ID | DONE |
+| SR-B7 Link B regression hid all child Node warnings | remove `NODE_NO_WARNINGS=1`; strip only the exact known Node SQLite ExperimentalWarning before asserting no remaining stderr | DONE |
+| SR-B8 complete today schedule dropped already-ended same-day CLOSED intervals | compose operating-state mask across the full civil day, not only from `nowMinute`; regression proves an already-ended closure remains split out of the complete local-day intervals | DONE |
 
 C13/C14 Commerce composition is now tested through the actual C4 adapter:
 valid narrower prepayment exception resolves the child and fingerprints both

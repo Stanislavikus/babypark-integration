@@ -613,8 +613,7 @@ export function resolveStoreTodaySchedule(store, {
   const nowMinute = clock.hour * 60 + clock.minute;
   const relevantStateRows = rows.filter(row => {
     if (!isOperatingStateCandidate(row)) return false;
-    const range = sameDayRange(row, clock.date);
-    return range !== null && range.end > nowMinute;
+    return sameDayRange(row, clock.date) !== null;
   });
   validateOperationalCandidates(relevantStateRows, storeId);
   const overlays = relevantStateRows.filter(row =>
@@ -626,7 +625,7 @@ export function resolveStoreTodaySchedule(store, {
   );
   const contributing = new Set(baseRows.map(row => row.revision_id));
 
-  for (let minute = nowMinute; minute < 1440; minute += 1) {
+  for (let minute = 0; minute < 1440; minute += 1) {
     const overlayStates = [];
     const baselineStateValues = [];
 
