@@ -2713,6 +2713,33 @@ Other critical formatting is exact:
 - integer counters are unsigned ASCII decimal with no grouping;
 - non-null product URL is copied byte-for-byte; C5 performs no redirect/fetch.
 
+Chatwoot v4.18.0 renders ordinary Web Widget message `content` through
+`markdown-it` with `linkify=true`. C5 therefore owns an exact Website-only
+Markdown-neutral encoding for **dynamic free-form factual text inserted into
+`content`** (shortlist titles and variant/stock labels): after the Liquid check
+below, prefix one ASCII backslash before every ASCII punctuation code point in
+`U+0021..U+002F`, `U+003A..U+0040`, `U+005B..U+0060` or
+`U+007B..U+007E`. Unicode letters/digits/whitespace are unchanged. The encoded
+bytes are transport content; Chatwoot Markdown rendering must display the
+original normalized factual text and must not create a link/image/emphasis from
+it. Fixed template text, generated money/time/counters/payment names and the
+separately validated `product_url` do not use this encoding. `product_url` is
+the only dynamic URL intentionally left linkifiable and is already constrained
+by §16.3 to HTTPS `babypark.ua`/subdomains.
+
+`input_select.items[*].title` is initially rendered by Vue as plain text but is
+later echoed through Chatwoot Markdown after selection. Because escaping the
+stored title would expose backslashes in the initial option, a finite choice
+label must instead be **Markdown-link inert as stored**. In addition to §16.3
+and the Liquid rule below, reject a choice label if it contains `[` or `]`,
+`<` or `>`, a backtick, a bare `http://` or `https://`, `www.`, an email-like
+`@` token, or a DNS-like token matching
+`(?:^|[^\p{L}\p{N}-])(?:[\p{L}\p{N}-]+\.)+[A-Za-z]{2,}(?:$|[^\p{L}\p{N}-])`.
+This rule is intentionally conservative: an unrepresentable finite label fails
+closed rather than allowing Chatwoot to manufacture an external link after the
+customer selects it. Ordinary hyphens, slashes, parentheses and plus signs stay
+representable.
+
 Payment method names are a closed table and carry no fee/condition:
 - `BANK_TRANSFER`: uk `банківський переказ`; ru `банковский перевод`;
 - `CASH_COURIER`: uk `готівкою кур'єру`; ru `наличными курьеру`;
@@ -2720,15 +2747,15 @@ Payment method names are a closed table and carry no fee/condition:
   `наложенный платеж в Новой почте`.
 
 Chatwoot v4.18.0 evaluates Liquid for outgoing message `content` during message
-creation. C5 must not escape this with `{% raw %}...{% endraw %}`. Before
-interpolation, every dynamic public string that C5 may place into `content` or
-an `input_select.items[*].title` fails closed if it contains ASCII `{{` or `{%`.
-After rendering, final `content` and every select item title are checked again
-for the same delimiters. Fixed branches are regression-tested to contain neither.
-A Liquid-looking Catalog title/variant label/URL therefore yields
-`FIRST_LINE_RENDERER_INVALID`; C5/C6 do not let Chatwoot reinterpret it against
-contact/agent/conversation/inbox/account drops. This is an additional
-presentation safety gate and never weakens §16.3.
+creation. C5 must not escape this with `{% raw %}...{% endraw %}`. Before any
+Website Markdown encoding/interpolation, every dynamic public string that C5 may
+place into `content` or an `input_select.items[*].title` fails closed if it
+contains ASCII `{{` or `{%`. After rendering, final `content` and every select
+item title are checked again for the same delimiters. Fixed branches are
+regression-tested to contain neither. A Liquid-looking Catalog title/variant
+label/URL therefore yields `FIRST_LINE_RENDERER_INVALID`; C5/C6 do not let
+Chatwoot reinterpret it against contact/agent/conversation/inbox/account drops.
+This is an additional presentation safety gate and never weakens §16.3.
 
 ### 40.4 Exact uk/ru C5 wording
 
