@@ -2685,8 +2685,8 @@ WebsiteRenderer mapping is exact:
 - every ANSWER uses `content_type=text`, including shortlist answers;
 - candidate-based CLARIFY uses `input_select`. Its `content` is the fixed
   locale prompt followed by one U+000A LF and the exact ordered rows
-  `1. <label>`, `2. <label>`, ... with Website-only Markdown encoding applied
-  only to each dynamic label and no trailing LF. `content_attributes.items`
+  `1. <label>`, `2. <label>`, ... with Website transport entity encoding
+  applied only to each dynamic label and no trailing LF. `content_attributes.items`
   has the same cardinality/order; each item is exactly
   `{title:String(ordinal),value:choice.token}` where ordinal starts at 1.
   Dynamic factual labels never enter `items[*].title`;
@@ -2809,13 +2809,13 @@ Payment method names are a closed table and carry no fee/condition:
 
 Chatwoot v4.18.0 evaluates Liquid for outgoing message `content` during message
 creation. WebsiteRenderer must not escape this with
-`{% raw %}...{% endraw %}`. Before any Website Markdown encoding/interpolation,
+`{% raw %}...{% endraw %}`. Before any Website transport entity encoding/interpolation,
 every dynamic public string that WebsiteRenderer may place into `content` fails
 closed if it contains ASCII `{{` or `{%`. For `product_url`, this check is
 against the **canonical §16.3 C4 projection received by C5**: a canonical URL
 that still contains a literal opening delimiter rejects, while a percent-encoded
 sequence such as `%7B%7B` contains no Liquid delimiter and remains inert
-Markdown-neutral plain text. After rendering, final `content` is checked again
+transport-neutral entity-encoded plain text. After rendering, final `content` is checked again
 for literal opening delimiters; every select item title is independently required
 to equal its unsigned ASCII ordinal exactly. WebsiteRenderer then checks final
 `content` length after all transport encoding: 1..150000 Unicode code points,
