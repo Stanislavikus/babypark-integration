@@ -18,7 +18,11 @@ const ROUTING_SUFFIX_FETCH_LIMIT = MAX_OPEN_TURN_EVENTS + 1;
 const ROUTING_SNAPSHOT_SCHEMA = 'bp.first-line.routing-snapshot/1';
 const EPISODE_TRANSITION_SCHEMA = 'bp.first-line.episode-transition/1';
 const EPISODE_CONTINUATION_SCHEMA = 'bp.first-line.episode-continuation/1';
+const CLARIFICATION_RESERVATION_ATTESTATION_SCHEMA =
+  'bp.first-line.clarification-reservation-attestation/1';
 const certifiedRoutingSnapshots = new WeakSet();
+const clarificationReservationBindings = new WeakMap();
+const consumedClarificationReservationAttestations = new WeakSet();
 
 const LIVE_ACTION_STATES = new Set(['PREPARED', 'GATING', 'SENDING', 'UNCERTAIN']);
 const TERMINAL_ACTION_STATES = new Set(['CONFIRMED', 'STALE', 'CANCELLED', 'HANDOFF_DONE', 'NOT_SENT']);
@@ -35,10 +39,12 @@ const EVENT_KINDS = new Set([
 const MESSAGE_TYPES = new Set(['incoming', 'outgoing', 'template', 'unknown']);
 const SENDER_CLASSES = new Set(['contact', 'configured_agent_bot', 'human', 'other_agent_bot', 'none', 'unknown']);
 
+const CATEGORY_MATCH_MODES = new Set(['NODE_ONLY', 'INCLUDE_DESCENDANTS']);
 const SLOT_SPECS = Object.freeze({
   product_id: 'id',
   variant_id: 'id',
   category_id: 'id',
+  category_match_mode: 'category_match_mode',
   brand_id: 'id',
   store_id: 'id',
   min_price_minor: 'money_minor',
@@ -280,6 +286,17 @@ export function isCertifiedRoutingSnapshot(value) {
   return Boolean(value && typeof value === 'object' && certifiedRoutingSnapshots.has(value));
 }
 
+export function consumeClarificationReservationAttestation(value) {
+  if (!value || typeof value !== 'object' ||
+      value.schema !== CLARIFICATION_RESERVATION_ATTESTATION_SCHEMA ||
+      !clarificationReservationBindings.has(value) ||
+      consumedClarificationReservationAttestations.has(value)) {
+    return null;
+  }
+  consumedClarificationReservationAttestations.add(value);
+  return clarificationReservationBindings.get(value);
+}
+
 function positiveInteger(value, field) {
   if (!Number.isSafeInteger(value) || value <= 0) fail('FIRST_LINE_VALUE_INVALID', field + ' must be a positive safe integer', { field });
   return value;
@@ -430,12 +447,40 @@ function normalizeSlotValue(slotName, value) {
     if (typeof value !== 'string' || !/^[A-Z]{3}$/.test(value)) fail('FIRST_LINE_VALUE_INVALID', 'currency must be uppercase 3-letter code');
     return value;
   }
+  if (kind === 'category_match_mode') {
+    if (!CATEGORY_MATCH_MODES.has(value)) {
+      fail('FIRST_LINE_VALUE_INVALID',
+        'category_match_mode must be NODE_ONLY or INCLUDE_DESCENDANTS',
+        { slot_name: slotName });
+    }
+    return value;
+  }
   fail('FIRST_LINE_SLOT_UNSUPPORTED', 'unsupported stable slot kind');
 }
+
+function normalizeCategorySelection(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value) ||
+      Object.keys(value).sort().join(',') !== 'category_id,match_mode') {
+    fail('FIRST_LINE_CANDIDATE_INVALID',
+      'CATEGORY selection must contain only category_id and match_mode');
+  }
+  return Object.freeze({
+    category_id: normalizeSlotValue('category_id', value.category_id),
+    match_mode: normalizeSlotValue('category_match_mode', value.match_mode),
+  });
+}
+
 function normalizeCandidate(candidate) {
   if (!candidate || typeof candidate !== 'object' || Array.isArray(candidate) ||
       Object.keys(candidate).sort().join(',') !== 'slot,value') {
     fail('FIRST_LINE_CANDIDATE_INVALID', 'candidate must contain only slot and value');
+  }
+  if (candidate.slot === 'category_id') {
+    return { slot: candidate.slot, value: normalizeCategorySelection(candidate.value) };
+  }
+  if (candidate.slot === 'category_match_mode') {
+    fail('FIRST_LINE_CANDIDATE_INVALID',
+      'category_match_mode cannot be reserved independently');
   }
   return { slot: candidate.slot, value: normalizeSlotValue(candidate.slot, candidate.value) };
 }
@@ -548,6 +593,7 @@ export class FirstLineStateStore {
     const fd = fs.openSync(resolved, 'wx', 0o600); fs.closeSync(fd);
     const db = new DatabaseSync(resolved);
     try {
+      db.exec(`PRAGMA foreign_keys=ON; PRAGMA busy_timeout=${BUSY_TIMEOUT_MS}`);
       db.exec(SCHEMA);
       db.prepare('INSERT INTO metadata VALUES (1,?,?)').run(SCHEMA_VERSION, now());
     } finally { db.close(); }
@@ -788,12 +834,32 @@ export class FirstLineStateStore {
         }
       }
 
+      let confirmedClarificationAction = null;
+      if (activeEpisode) {
+        const rows = this.db.prepare(
+          "SELECT action_id FROM public_actions WHERE stream_id=? AND episode_id=? " +
+          "AND action_type='CLARIFY' AND state='CONFIRMED' ORDER BY created_at,action_id"
+        ).all(id, activeEpisode.episode_id);
+        if (rows.length > 1) {
+          fail('FIRST_LINE_DB_CORRUPT',
+            'active episode has multiple confirmed clarification actions', {
+              stream_id: id,
+              episode_id: activeEpisode.episode_id,
+              count: rows.length,
+            });
+        }
+        if (rows.length === 1) {
+          confirmedClarificationAction = this.#readAction(rows[0].action_id);
+        }
+      }
+
       const snapshot = deepFreezeRoutingValue({
         schema: ROUTING_SNAPSHOT_SCHEMA,
         stream,
         active_episode: activeEpisode,
         live_public_action: livePublicAction,
         clarification_action: clarificationAction,
+        confirmed_clarification_action: confirmedClarificationAction,
         event_suffix: routingLedger.event_suffix,
         routing_ledger_fingerprint: routingLedger.fingerprint,
         suffix_truncated: routingLedger.suffix_truncated,
@@ -890,6 +956,20 @@ export class FirstLineStateStore {
     const version = positiveInteger(expectedVersion, 'expected_version');
     const derived = derivedThroughEventSeq == null ? null : positiveInteger(derivedThroughEventSeq, 'derived_through_event_seq');
     if (!patch || typeof patch !== 'object' || Array.isArray(patch)) fail('FIRST_LINE_SLOT_PATCH_INVALID', 'slot patch must be object');
+    const touchesCategory =
+      Object.hasOwn(patch, 'category_id') || Object.hasOwn(patch, 'category_match_mode');
+    if (touchesCategory) {
+      if (!Object.hasOwn(patch, 'category_id') || !Object.hasOwn(patch, 'category_match_mode')) {
+        fail('FIRST_LINE_SLOT_PATCH_INVALID',
+          'CATEGORY stable selection must update category_id and category_match_mode atomically');
+      }
+      const deleting = patch.category_id == null && patch.category_match_mode == null;
+      const setting = patch.category_id != null && patch.category_match_mode != null;
+      if (!deleting && !setting) {
+        fail('FIRST_LINE_SLOT_PATCH_INVALID',
+          'CATEGORY stable selection cannot persist a partial pair');
+      }
+    }
     const normalized = Object.entries(patch).map(([name, value]) => [name, value == null ? null : normalizeSlotValue(name, value)]);
     return tx(this.db, () => {
       const episode = this.#requireActiveEpisode(id, version);
@@ -1356,12 +1436,17 @@ export class FirstLineStateStore {
       'selection_origin'
     );
     const slot = safeToken(selectionSlot, 'selection_slot');
+    const categorySelection = slot === 'category_id'
+      ? normalizeCategorySelection(selectionValue)
+      : null;
     const moneySelection = slot === 'max_price_minor'
       ? normalizeRequestedMoneySelection(selectionValue)
       : null;
-    const value = moneySelection === null
-      ? normalizeSlotValue(slot, selectionValue)
-      : moneySelection;
+    const value = categorySelection ?? (
+      moneySelection === null
+        ? normalizeSlotValue(slot, selectionValue)
+        : moneySelection
+    );
     const sourceMessageId = positiveInteger(selectionSourceMessageId, 'selection_source_message_id');
     const ordinal = candidateOrdinal == null
       ? null
@@ -1525,7 +1610,17 @@ export class FirstLineStateStore {
       }
 
       const transitionAt = this.now();
-      if (moneySelection !== null) {
+      if (categorySelection !== null) {
+        for (const [categorySlot, categoryValue] of [
+          ['category_id', categorySelection.category_id],
+          ['category_match_mode', categorySelection.match_mode],
+        ]) {
+          this.db.prepare(`INSERT INTO episode_slots(episode_id,slot_name,value_json,derived_through_event_seq)
+            VALUES (?,?,?,?) ON CONFLICT(episode_id,slot_name) DO UPDATE SET
+            value_json=excluded.value_json,derived_through_event_seq=excluded.derived_through_event_seq`)
+            .run(episodeId, categorySlot, canonicalJson(categoryValue), sourceEvent.event_seq);
+        }
+      } else if (moneySelection !== null) {
         for (const [moneySlot, moneyValue] of [
           ['max_price_minor', moneySelection.minor_units],
           ['currency', moneySelection.currency],
@@ -1851,6 +1946,91 @@ export class FirstLineStateStore {
     return readTx(this.db, () => this.#readAction(id));
   }
 
+  issueClarificationReservationAttestation(
+    actionId,
+    { leaseToken = null } = {}
+  ) {
+    const id = safeToken(actionId, 'action_id');
+    const suppliedLease = leaseToken === null
+      ? null
+      : safeToken(leaseToken, 'lease_token');
+    const at = this.now();
+    return readTx(this.db, () => {
+      const action = this.#readAction(id);
+      if (!action || action.action_type !== 'CLARIFY' ||
+          !['PREPARED', 'GATING'].includes(action.state) ||
+          action.episode_id === null || action.episode_version === null) {
+        fail('FIRST_LINE_CLARIFICATION_ATTESTATION_INVALID',
+          'only an owning unsent CLARIFY can receive reservation attestation',
+          { action_id: id, state: action?.state ?? null });
+      }
+
+      if (action.state === 'GATING') {
+        if (suppliedLease === null ||
+            action.lease_token !== suppliedLease ||
+            !Number.isSafeInteger(action.lease_expires_at) ||
+            action.lease_expires_at <= at) {
+          fail('FIRST_LINE_CLARIFICATION_ATTESTATION_INVALID',
+            'GATING clarification attestation requires the current live claim',
+            { action_id: id });
+        }
+      } else if (suppliedLease !== null) {
+        fail('FIRST_LINE_CLARIFICATION_ATTESTATION_INVALID',
+          'PREPARED clarification attestation does not accept a lease token',
+          { action_id: id });
+      }
+
+      const stream = this.#readStream(action.stream_id);
+      if (!stream ||
+          stream.stream_revision !== action.prepared_stream_revision) {
+        fail('FIRST_LINE_CLARIFICATION_ATTESTATION_INVALID',
+          'clarification stream revision changed',
+          { action_id: id });
+      }
+
+      const activeHead = this.db.prepare(
+        "SELECT episode_id FROM episodes WHERE stream_id=? AND state='active'"
+      ).get(action.stream_id) ?? null;
+      const episode = activeHead
+        ? this.#readEpisode(activeHead.episode_id)
+        : null;
+      if (!episode ||
+          episode.episode_id !== action.episode_id ||
+          episode.version !== action.episode_version ||
+          episode.clarification_prompts_sent !== 1 ||
+          episode.clarification_action_id !== action.action_id ||
+          (episode.requested_slot ?? null) !==
+            (action.requested_slot ?? null)) {
+        fail('FIRST_LINE_CLARIFICATION_ATTESTATION_INVALID',
+          'clarification action no longer owns the active reservation',
+          { action_id: id });
+      }
+
+      const token = Object.freeze({
+        schema: CLARIFICATION_RESERVATION_ATTESTATION_SCHEMA,
+      });
+      clarificationReservationBindings.set(
+        token,
+        deepFreezeRoutingValue({
+          action_id: action.action_id,
+          action_state: action.state,
+          stream_id: action.stream_id,
+          prepared_stream_revision: action.prepared_stream_revision,
+          episode_id: action.episode_id,
+          episode_version: action.episode_version,
+          requested_slot: action.requested_slot,
+          presented_candidates_json: canonicalJson(
+            action.presented_candidates
+          ),
+          lease_token: action.state === 'GATING'
+            ? action.lease_token
+            : null,
+        })
+      );
+      return token;
+    });
+  }
+
   #finishActionBeforeSend(actionId, terminalState, reason) {
     const id = safeToken(actionId, 'action_id');
     const terminalReason = safeToken(reason, 'terminal_reason');
@@ -2124,6 +2304,11 @@ export class FirstLineStateStore {
       safeToken(row.episode_id, 'episode_id');
       safeToken(row.stream_id, 'stream_id');
       positiveInteger(row.version, 'version');
+      if (row.clarification_prompts_sent !== 0 &&
+          row.clarification_prompts_sent !== 1) {
+        fail('FIRST_LINE_VALUE_INVALID',
+          'clarification_prompts_sent must be exactly 0 or 1');
+      }
       if (row.clarification_action_id !== null) safeToken(row.clarification_action_id, 'clarification_action_id');
       nonNegativeInteger(row.created_at, 'created_at');
       nonNegativeInteger(row.updated_at, 'updated_at');
@@ -2135,6 +2320,18 @@ export class FirstLineStateStore {
       const value = parseJson(item.value_json);
       validatePersistedSlot(item.slot_name, value);
       slots[item.slot_name] = { value, derived_through_event_seq: item.derived_through_event_seq };
+    }
+    if (slots.category_match_mode && !slots.category_id) {
+      fail('FIRST_LINE_DB_CORRUPT',
+        'persisted category_match_mode has no category_id',
+        { episode_id: episodeId });
+    }
+    if (slots.category_id && slots.category_match_mode &&
+        slots.category_id.derived_through_event_seq !==
+          slots.category_match_mode.derived_through_event_seq) {
+      fail('FIRST_LINE_DB_CORRUPT',
+        'persisted CATEGORY identity pair has split provenance',
+        { episode_id: episodeId });
     }
     return {
       episode_id: row.episode_id, stream_id: row.stream_id, state: row.state, version: row.version,
@@ -2173,8 +2370,7 @@ export class FirstLineStateStore {
     const candidates = this.db.prepare('SELECT * FROM public_action_candidates WHERE action_id=? ORDER BY ordinal').all(actionId)
       .map(item => {
         const value = parseJson(item.value_json);
-        validatePersistedSlot(item.slot_name, value);
-        return { slot: item.slot_name, value };
+        return validatePersistedCandidate(item.slot_name, value);
       });
     return {
       action_id: row.action_id, stream_id: row.stream_id, episode_id: row.episode_id,
@@ -2228,7 +2424,15 @@ function persistedGuard(fn, message, details = {}) {
 function validatePersistedSlot(slotName, value) {
   return persistedGuard(
     () => normalizeSlotValue(slotName, value),
-    'persisted stable/candidate slot is invalid',
+    'persisted stable slot is invalid',
+    { slot_name: slotName }
+  );
+}
+
+function validatePersistedCandidate(slotName, value) {
+  return persistedGuard(
+    () => normalizeCandidate({ slot: slotName, value }),
+    'persisted candidate slot is invalid',
     { slot_name: slotName }
   );
 }
@@ -2237,6 +2441,8 @@ export {
   ACTION_TYPES,
   BUSY_TIMEOUT_MS,
   CANONICAL_ID_PATTERNS,
+  CATEGORY_MATCH_MODES,
+  CLARIFICATION_RESERVATION_ATTESTATION_SCHEMA,
   CONSTRAINT_LATCH_CLASSES,
   CONSTRAINT_LATCH_ORDER,
   EPISODE_CONTINUATION_SCHEMA,

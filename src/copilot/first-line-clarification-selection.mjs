@@ -8,7 +8,12 @@ import {
   isCertifiedObjectiveConstraintProof,
 } from './first-line-objective-constraint-latch.mjs';
 import { resolutionUsesExactRead } from './first-line-resolution.mjs';
-import { ROUTING_SNAPSHOT_SCHEMA, CANONICAL_ID_PATTERNS } from './first-line-state-store.mjs';
+import {
+  ROUTING_SNAPSHOT_SCHEMA,
+  CANONICAL_ID_PATTERNS,
+  CATEGORY_MATCH_MODES,
+  isCertifiedRoutingSnapshot,
+} from './first-line-state-store.mjs';
 
 export const FIRST_LINE_CLARIFICATION_SELECTION_SCHEMA =
   'bp.first-line.clarification-selection/1';
@@ -76,6 +81,18 @@ function safeToken(value, field) {
 function canonicalId(slot, value) {
   const pattern = CANONICAL_ID_PATTERNS[slot];
   return Boolean(pattern && typeof value === 'string' && pattern.test(value));
+}
+
+function reservedCandidateValueValid(slot, value) {
+  if (slot !== 'category_id') return canonicalId(slot, value);
+  return Boolean(
+    value &&
+    typeof value === 'object' &&
+    !Array.isArray(value) &&
+    Object.keys(value).sort().join(',') === 'category_id,match_mode' &&
+    canonicalId('category_id', value.category_id) &&
+    CATEGORY_MATCH_MODES.has(value.match_mode)
+  );
 }
 
 function frozenValue(value) {
@@ -164,7 +181,8 @@ function choiceOrdinal(value) {
 }
 
 function requireStructuredSnapshot(snapshot) {
-  if (!snapshot || typeof snapshot !== 'object' || Array.isArray(snapshot) ||
+  if (!isCertifiedRoutingSnapshot(snapshot) ||
+      !snapshot || typeof snapshot !== 'object' || Array.isArray(snapshot) ||
       snapshot.schema !== ROUTING_SNAPSHOT_SCHEMA ||
       !snapshot.stream || typeof snapshot.stream !== 'object' ||
       snapshot.stream.source_provider !== 'chatwoot' ||
@@ -214,7 +232,8 @@ function structuredFailure(snapshot) {
   }
   for (const candidate of action.presented_candidates) {
     if (!candidate || typeof candidate !== 'object' || Array.isArray(candidate) ||
-        !ID_SLOTS.has(candidate.slot) || !canonicalId(candidate.slot, candidate.value)) {
+        !ID_SLOTS.has(candidate.slot) ||
+        !reservedCandidateValueValid(candidate.slot, candidate.value)) {
       return 'CLARIFICATION_RESERVATION_MISMATCH';
     }
   }
@@ -238,6 +257,25 @@ function structuredFailure(snapshot) {
   return null;
 }
 
+function structuredExactReadMatches(snapshot, action, exactRead) {
+  return Boolean(
+    exactRead &&
+    typeof exactRead === 'object' &&
+    exactRead.code === 'SUPPORTED_CLARIFICATION_SUBMISSION' &&
+    exactRead.sourceConversationId === snapshot.stream.source_conversation_id &&
+    exactRead.sourceMessageId === action.confirmed_source_message_id &&
+    exactRead.event?.sourceMessageId === action.confirmed_source_message_id &&
+    exactRead.event?.eventKind === 'BABYPARK_PUBLIC_REPLY' &&
+    exactRead.event?.messageType === 'outgoing' &&
+    exactRead.event?.senderClass === 'configured_agent_bot' &&
+    exactRead.event?.contentType === 'input_select' &&
+    exactRead.event?.deleted === false &&
+    exactRead.event?.unsupported === false &&
+    exactRead.event?.hasAttachments === false &&
+    exactRead.event?.sourceId === action.action_id
+  );
+}
+
 export function proveStructuredClarificationSubmission({ snapshot: rawSnapshot, exactRead } = {}) {
   const snapshot = requireStructuredSnapshot(rawSnapshot);
   const meta = structuredMeta(snapshot);
@@ -245,19 +283,7 @@ export function proveStructuredClarificationSubmission({ snapshot: rawSnapshot, 
   if (failure !== null) return noProof(meta, failure);
 
   const action = snapshot.clarification_action;
-  if (!exactRead || typeof exactRead !== 'object' ||
-      exactRead.code !== 'SUPPORTED_CLARIFICATION_SUBMISSION' ||
-      exactRead.sourceConversationId !== snapshot.stream.source_conversation_id ||
-      exactRead.sourceMessageId !== action.confirmed_source_message_id ||
-      exactRead.event?.sourceMessageId !== action.confirmed_source_message_id ||
-      exactRead.event?.eventKind !== 'BABYPARK_PUBLIC_REPLY' ||
-      exactRead.event?.messageType !== 'outgoing' ||
-      exactRead.event?.senderClass !== 'configured_agent_bot' ||
-      exactRead.event?.contentType !== 'input_select' ||
-      exactRead.event?.deleted !== false ||
-      exactRead.event?.unsupported !== false ||
-      exactRead.event?.hasAttachments !== false ||
-      exactRead.event?.sourceId !== action.action_id) {
+  if (!structuredExactReadMatches(snapshot, action, exactRead)) {
     return noProof(meta, 'STRUCTURED_SUBMISSION_EXACT_READ_MISMATCH');
   }
 
@@ -272,6 +298,84 @@ export function proveStructuredClarificationSubmission({ snapshot: rawSnapshot, 
     value: candidate.value,
     candidate_ordinal: ordinal,
     source_message_id: action.confirmed_source_message_id,
+  });
+}
+
+export function reproveCommittedStructuredClarificationSubmission({
+  snapshot: rawSnapshot,
+  exactRead,
+} = {}) {
+  const snapshot = requireStructuredSnapshot(rawSnapshot);
+  const episode = snapshot.active_episode;
+  const action = snapshot.confirmed_clarification_action ?? null;
+  const noCommittedProof = reason => Object.freeze({
+    schema: FIRST_LINE_CLARIFICATION_SELECTION_SCHEMA,
+    code: 'NO_COMMITTED_STRUCTURED_SELECTION',
+    reason,
+    selection: null,
+  });
+
+  if (!episode || episode.state !== 'active' ||
+      episode.clarification_prompts_sent !== 1 ||
+      episode.clarification_action_id !== null ||
+      episode.requested_slot !== null) {
+    return noCommittedProof('COMMITTED_CLARIFICATION_EPISODE_MISMATCH');
+  }
+  if (!action || action.action_type !== 'CLARIFY' ||
+      action.state !== 'CONFIRMED' ||
+      action.stream_id !== snapshot.stream.stream_id ||
+      action.episode_id !== episode.episode_id ||
+      !Number.isSafeInteger(action.confirmed_source_message_id) ||
+      action.confirmed_source_message_id <= 0 ||
+      !Array.isArray(action.presented_candidates) ||
+      action.presented_candidates.length < 1 ||
+      action.presented_candidates.length > MAX_PRESENTED_CANDIDATES) {
+    return noCommittedProof('COMMITTED_CLARIFICATION_ACTION_MISMATCH');
+  }
+  for (const candidate of action.presented_candidates) {
+    if (!candidate || typeof candidate !== 'object' || Array.isArray(candidate) ||
+        !ID_SLOTS.has(candidate.slot) ||
+        !reservedCandidateValueValid(candidate.slot, candidate.value)) {
+      return noCommittedProof('COMMITTED_CLARIFICATION_RESERVATION_MISMATCH');
+    }
+  }
+
+  const entry = snapshot.event_suffix.find(item =>
+    item.event?.source_message_id === action.confirmed_source_message_id
+  );
+  if (!entry ||
+      entry.event?.event_kind !== 'BABYPARK_PUBLIC_REPLY' ||
+      entry.event?.message_type !== 'outgoing' ||
+      entry.event?.sender_class !== 'configured_agent_bot' ||
+      entry.event?.content_type !== 'input_select' ||
+      entry.event?.deleted !== false ||
+      entry.event?.unsupported !== false ||
+      entry.event?.has_attachments !== false ||
+      entry.event?.source_id !== action.action_id ||
+      entry.confirmed_babypark_action?.action_id !== action.action_id ||
+      entry.confirmed_babypark_action?.action_type !== 'CLARIFY') {
+    return noCommittedProof('COMMITTED_CLARIFICATION_LEDGER_MISMATCH');
+  }
+  if (!structuredExactReadMatches(snapshot, action, exactRead)) {
+    return noCommittedProof('COMMITTED_STRUCTURED_EXACT_READ_MISMATCH');
+  }
+
+  const ordinal = choiceOrdinal(exactRead.transientSubmittedValue);
+  if (ordinal === null || ordinal > action.presented_candidates.length) {
+    return noCommittedProof('COMMITTED_STRUCTURED_VALUE_UNKNOWN');
+  }
+  const candidate = action.presented_candidates[ordinal - 1];
+  return Object.freeze({
+    schema: FIRST_LINE_CLARIFICATION_SELECTION_SCHEMA,
+    code: 'COMMITTED_STRUCTURED_SELECTION_REPROVEN',
+    reason: 'PRESENTED_CANDIDATE_SELECTED',
+    selection: Object.freeze({
+      origin: 'presented_candidate',
+      slot: candidate.slot,
+      value: frozenValue(candidate.value),
+      candidate_ordinal: ordinal,
+      source_message_id: action.confirmed_source_message_id,
+    }),
   });
 }
 
