@@ -1325,14 +1325,18 @@ the separately persisted private reservation.
 
 ### T07 — exact uk/ru golden wording
 For every 17 ANSWER and 7 CLARIFY template IDs in DESIGN §40.4, run exact valid
-payload/choice controls in both `uk` and `ru`.
+payload/choice controls in both `uk` and `ru`. Exercise every conditional
+wording branch, not merely one example per template: STORE_OPEN_STATUS
+open+close/open+null/closed; STORE_HOURS_TODAY empty and non-empty with both
+`open_now` values; RETURN_PERIOD purchase-day excluded/included;
+VARIANT_LIST_PARTIAL named>0/named=0; STORE_STOCK in/out × label/no-label; and
+shortlist single/range price, URL null/non-null and partial-model false/true.
 
 Expected:
 - emitted content is byte-for-byte the frozen branch after only §40.3
   substitutions/joins;
 - no plural library, translation lookup, locale fallback or paraphrase;
-- every fixed branch exists in both locales;
-- `VARIANT_LIST_PARTIAL` exercises both named>0 and named=0 exact branches;
+- every fixed and conditional branch exists in both locales;
 - payment codes map only to the exact frozen method names.
 
 ### T08 — Website/Text renderer envelope is closed
