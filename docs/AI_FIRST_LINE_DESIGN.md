@@ -2586,7 +2586,7 @@ The existing Catalog presentation helper may fall back to another available
 language for generic/non-public consumers. Website First Line **must not** use
 that cross-locale fallback for public title/URL text.
 
-For public shortlist/card projection, C4 reads the already-public CatalogService
+For public shortlist presentation projection, C4 reads the already-public CatalogService
 `getProduct({productId})` result and selects only
 `product.localized[response_locale]`. Every such presentation read must report
 `catalog.generation_id` exactly equal to the generation carried by the current
@@ -2598,7 +2598,7 @@ another. It may use language-neutral image evidence only from that same-generati
 product read / already proven cohort. It must not select another localized entry
 when the exact response locale is absent.
 
-If a template requires a product title (currently shortlist cards) and any
+If a template requires a product title (currently shortlist presentation templates) and any
 selected item lacks a non-empty safe title in the exact `response_locale`, C4
 returns HUMAN / PRODUCT_PRESENTATION_NOT_AVAILABLE. It never exposes a product
 ID, substitutes a RU title into a UK response (or vice versa), or asks C5 to
