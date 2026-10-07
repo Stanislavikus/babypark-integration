@@ -29,6 +29,7 @@ proposed DESIGN/ACCEPTANCE bytes remain non-authoritative until merged.
 | G8 Chatwoot Markdown/display neutrality | DESIGN §40.2/§40.3 | T09a | Website dynamic labels are reversibly encoded in content; input-select titles are generated ordinals only | NONE | DONE |
 | G9 Chatwoot message-content ceiling | DESIGN §40.2/§40.3 | T08 + T13 | final Website content >150000 Unicode code points => `FIRST_LINE_RENDERER_INVALID`, zero send | NONE | DONE |
 | G10 template semantic edge invariants | DESIGN §40.4 closing invariants | T07 + T10 | equal RANGE / impossible full-partial counts reject; partial named=0 uses explicit branch | NONE | DONE |
+| G11 Chatwoot transport-version drift | DESIGN §40.3 activation revalidation rule | T09b | unproven/changed target runtime blocks WebsiteRenderer activation/send; no v4.18 assumption fallback/core patch | NONE | DONE |
 | genuine C4 decision provenance | DESIGN §40.2 | T11 | clone/forgery rejected | NONE | DONE |
 | exact public `reason -> template_id` relation | DESIGN §40.2 + existing §16.2 | T11 + T03 | impossible public tuple rejected; private family not reconstructed | NONE | DONE |
 | no cards/network/image fetch in C5 v1 | DESIGN §40.2/§40.4 | T12 | only frozen text/input_select outputs are representable | NONE | DONE |
