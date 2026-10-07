@@ -1344,7 +1344,9 @@ Expected:
   `{title:label,value:token}` only;
 - MONEY/ANCHOR -> exact text shape with `content_attributes={}`;
 - HUMAN -> `null`;
-- TextRenderer -> exact text-render shape or `null`;
+- TextRenderer -> exact text-render shape or `null`; finite CLARIFY bytes are
+  exactly `<prompt>\n1. <label>\n2. <label>...` with LF separators and no
+  trailing newline/token;
 - cards/template params/provider metadata/private candidate values are impossible.
 
 ### T09 — Chatwoot Liquid re-interpretation is fail-closed
@@ -1364,7 +1366,9 @@ For ordinary ANSWER content, use dynamic shortlist/variant labels containing
 `[Коляска](https://evil.example)`, `Коляска https://evil.example Blue`,
 `Blue *bold* _x_ #tag`, punctuation controls and an allowed BabyPark product URL.
 For finite CLARIFY, use choice labels with bracket-link syntax, embedded/bare
-HTTP(S), `www.`, email-like and DNS-like tokens plus ordinary
+HTTP(S), `www.`, email/DNS/IP-like tokens, `*Blue*`, `_Blue_`,
+`~~Blue~~`, a backtick-code label, `# Blue`, `> Blue`, `- Blue`,
+`+ Blue`, `1. Blue`, `---`, plus ordinary
 `Pearl-Grey / Day+ (2026)` controls.
 
 Expected:
@@ -1373,12 +1377,13 @@ Expected:
   original normalized text but creates no attacker-controlled link/image/markup;
 - the separately validated `product_url` stays unescaped and is the only dynamic
   URL intentionally linkifiable;
-- finite choice labels matching the exact Markdown-link-inert rejection predicate
-  fail with `FIRST_LINE_RENDERER_INVALID` rather than becoming clickable after
-  selection;
-- ordinary hyphen/slash/parenthesis/plus choice controls remain accepted;
-- TextRenderer does not apply Website Markdown escaping because it is not a
-  Chatwoot/Web Widget transport adapter.
+- every finite choice label matching any exact §40.3 Markdown-display predicate
+  fails with `FIRST_LINE_RENDERER_INVALID`, so the post-selection Markdown echo
+  is visually the same factual label that was offered;
+- ordinary internal hyphen/slash/parenthesis/period/plus choice controls remain
+  accepted;
+- TextRenderer does not apply Website Markdown or Liquid transport rules because
+  it is not a Chatwoot/Web Widget transport adapter.
 
 ### T10 — critical formatting is exact and UAH-only
 Golden vectors include `2730000 -> 27 300 грн`,
@@ -1400,7 +1405,11 @@ public bytes.
 Expected:
 - only the genuine C4 decision may render;
 - clone/forgery => `FIRST_LINE_RENDERER_INVALID`;
-- provenance check exposes no private DecisionBasis/context.
+- mutate/construct a genuine-shape public tuple with an impossible
+  `reason -> template_id` pair and it is rejected even if each individual field
+  is otherwise allowlisted;
+- provenance check exposes no private DecisionBasis/context and never tries to
+  reconstruct a private request family.
 
 ### T12 — shortlist stays text-only in C5 v1
 Render TOP3/ALL with exact-locale safe title, min=max/range, optional URL,
