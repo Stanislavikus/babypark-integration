@@ -1503,17 +1503,14 @@ Expected:
 - restart between selection commit and final gate does not weaken the check.
 
 The v0.7 acceptance corpus remains frozen for Slice C umbrella issue #75.
-C1/C2a/C2b/C2c/C3 are merged under their previously reviewed contracts.
-PR #100 is a docs-only C4 contract amendment and introduces a new v0.7 target
-requirement that CATEGORY durable identity include `category_match_mode` beside
-`category_id`. The current C2/state-store implementation on the PR base does
-not yet satisfy that new pair requirement; this is an explicit prerequisite
-implementation gap, not retroactive failure of historical C1 evidence.
+C1/C2a/C2b/C2c/C3 are merged under their previously reviewed contracts and C4
+is merged via PR #107 on canonical main
+`565f8eb30bf39afa80bb4d59258cc2fd13aa67d5`, including the CATEGORY
+`(category_id,category_match_mode)` prerequisite and its HEAVY closure.
 
-Production C4 implementation remains absent and is not authorized by this file's
-pre-code review evidence. Before C4 production code may rely on the CATEGORY pair,
-a future bounded production-code stage must implement/verify the prerequisite
-retrofit under the then-current repository AI Working Agreement, including a
-fresh implementation-options scan and applicable HEAVY verification/review
-closure.
+This docs-only C5 amendment adds T07–T13 and contains no production renderer or
+C6 implementation. These proposed acceptance rows become authoritative only after
+merge. Production C5 must then run a fresh implementation-options scan and the
+applicable verification/review closure under the then-current AI Working Agreement.
+C6 send-time U01–U07 remains a separate downstream implementation stage.
 
