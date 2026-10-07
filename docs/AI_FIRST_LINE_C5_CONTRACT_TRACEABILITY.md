@@ -74,8 +74,9 @@ Catalog representability check motivating ordinal button titles:
 Research finding motivating the Liquid safety amendment:
 Chatwoot v4.18.0 `Message` includes `Liquidable`; outgoing message content is
 processed during create and Liquid errors are not a BabyPark fail-closed
-renderer boundary. The proposal rejects Liquid opening delimiters in
-dynamic/final public strings rather than attempting raw-tag escaping.
+renderer boundary. WebsiteRenderer therefore rejects Liquid opening delimiters
+in dynamic/final Website content rather than attempting raw-tag escaping.
+TextRenderer remains transport-neutral and unconnected in C5.
 
 Implementation-order status:
 - this docs-only stage makes no production implementation choice and therefore
