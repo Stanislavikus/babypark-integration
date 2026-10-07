@@ -1194,10 +1194,11 @@ If min == max:
 If min != max:
 `ANSWER / PRODUCT_PRICE_RANGE`.
 
-Range template may offer a deterministic supported follow-up:
-"Могу показать доступные варианты с точной ценой каждого."
-
-That follow-up exists as `VARIANT_PRICE_LIST`.
+`VARIANT_PRICE_LIST` remains a supported deterministic C4 family and the
+downstream target for the separately scoped C25 dependent-follow-up routing.
+The C5 v1 range wording frozen in §40.4 does **not** invite/promise that follow-up
+before C25 routing exists. Adding a customer-facing invitation later requires
+the C25 routing prerequisite plus a separately reviewed wording-contract update.
 
 ## 22. Product resolution
 
