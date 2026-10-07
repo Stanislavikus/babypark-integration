@@ -3114,11 +3114,14 @@ Key closure invariants are:
 6. durable public actions survive input-job/coprocessor loss through the independent relay;
 7. no CDC/WAL, third DB or Chatwoot core patch is required for Website First Line v1.
 
-Slice C umbrella issue #75 remains the frozen program boundary. C1 is merged
-historical evidence; C2a/C2b/C2c/C3 are merged under their previously reviewed
-contracts. This PR #100 amendment freezes additional pre-code C4/C5/C6 contract
-requirements, including a new v0.7 CATEGORY-pair prerequisite that current
-C2/state-store code on the PR base does not yet implement. Production C4/C5/C6
-work is not authorized by this docs-only amendment and must proceed only through
-future bounded production-code stages under the then-current AI Working Agreement.
-This v0.7 file is the single normative design source; no delta document applies.
+Slice C umbrella issue #75 remains the frozen program boundary. C1/C2a/C2b/C2c/C3
+are merged historical evidence and C4 deterministic decision runtime is merged via
+PR #107 on canonical main `565f8eb30bf39afa80bb4d59258cc2fd13aa67d5`.
+The prior CATEGORY-pair prerequisite is therefore implemented and reviewed.
+This docs-only C5 amendment freezes renderer wording, exact output, formatting,
+genuine-decision provenance and Chatwoot-Liquid presentation safety only.
+It contains no production C5/C6 code and does not authorize renderer/send
+implementation. C5 production work must start as a later bounded stage under the
+then-current AI Working Agreement with a fresh alternatives scan; C6 remains a
+separate downstream stage. This v0.7 file is the single normative design source;
+no delta document applies.
