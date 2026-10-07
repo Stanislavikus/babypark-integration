@@ -2680,6 +2680,12 @@ Viber/Telegram in C5. For finite CLARIFY it renders the same prompt followed by
 ordered numbered labels (`1. <label>`, `2. <label>`, ...); it does not print
 the `bp-choice` token or any private candidate value.
 
+Genuine C4 provenance never waives public-contract validation. Before rendering,
+C5 revalidates the complete exact §16.2 relation among `decision`, `reason`,
+`response_locale`, `template_id`, `render_payload`, `requested_slot` and
+`choices`, including the frozen ANSWER reason/family-to-template mapping. A
+genuine object with an impossible reason/template pair is still invalid.
+
 Unknown/forged decision, unsupported locale/template/reason tuple, invalid
 payload/choice shape, missing locale branch, unsupported currency, unsafe
 dynamic text or invalid output is one fail-closed renderer failure family:
