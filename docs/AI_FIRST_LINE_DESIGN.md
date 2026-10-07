@@ -6,7 +6,7 @@ Supersedes: `docs/AI_FIRST_LINE_DESIGN.md` at canonical main `565f8eb30bf39afa80
 Implementation: C1/C2a/C2b/C2c/C3/C4 are merged; this amendment is a docs-only
 C5 pre-code contract freeze and contains no production C5 implementation.
 Contract amendment base: canonical main `565f8eb30bf39afa80bb4d59258cc2fd13aa67d5`.
-Chatwoot runtime verified: v4.18.0, `9f920b549c14491a4e587687a3eed5d21c6ccc7d`
+Chatwoot runtime verified: package v4.18.0; C5-relevant deployed source files byte-match upstream v4.18.0 commit `9f920b549c14491a4e587687a3eed5d21c6ccc7d`.
 
 This document is the single normative repository source of truth for the first
 customer-facing BabyPark AI design. It incorporates the complete v0.6 design
