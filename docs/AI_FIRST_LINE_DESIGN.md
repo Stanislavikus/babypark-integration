@@ -2664,6 +2664,13 @@ conversation/account IDs, source/action IDs, template/provider parameters or
 private reservation values. C6 owns the Chatwoot POST envelope and action
 identity.
 
+The Website `content` ceiling is counted in Unicode **code points**, matching
+Chatwoot/Ruby UTF-8 string-length semantics, not JavaScript UTF-16 code units.
+For example U+1F600 counts as one code point even though JavaScript
+`"😀".length === 2`. The implementation must use an equivalent code-point
+count (for example `Array.from(content).length`) on the final transport content
+after all Website escaping; unescaped/source length is not the admission test.
+
 Renderer output is transient in-memory presentation only. C5 owns no durable
 store/cache/outbox and MUST NOT persist or routinely log rendered content,
 dynamic labels, product URLs, choice labels/tokens, or a content-derived digest.
@@ -2684,7 +2691,11 @@ WebsiteRenderer mapping is exact:
   `content_attributes={}`;
 - C5 v1 does **not** emit Chatwoot `cards`. Shortlist `image_url` is not
   rendered or fetched; this avoids making C5 a network/media adapter. A non-null
-  safe `product_url` may be copied literally into the text row.
+  safe `product_url` remains part of the semantic row. TextRenderer copies that
+  canonical URL literally. WebsiteRenderer emits it as **non-clickable plain
+  text** using the same reversible Markdown-neutral encoding as other dynamic
+  factual text; C5 v1 never lets Chatwoot/linkify choose a dynamic URL boundary
+  or hyperlink target.
 
 TextRenderer returns exactly
 `{schema:'bp.first-line.text-render/1',content:string}` for ANSWER/CLARIFY and
@@ -2711,7 +2722,7 @@ other invalid output is one fail-closed renderer failure family:
 `FIRST_LINE_RENDERER_INVALID`. It produces no fallback text and is never
 permission for C6 to use a previously prepared render.
 
-### 40.3 Exact C5 formatting and Chatwoot-Liquid neutrality
+### 40.3 Exact C5 formatting and Chatwoot transport neutrality
 
 C5 performs no language detection and never calls `Intl` with an unchecked
 locale. The only public locales are the already-certified exact tags `uk` and
@@ -2736,21 +2747,26 @@ Other critical formatting is exact:
 - one schedule interval is `HH:MM–HH:MM` using U+2013 EN DASH;
 - intervals and ordinary label/method lists join with `, `;
 - integer counters are unsigned ASCII decimal with no grouping;
-- non-null product URL is copied byte-for-byte; C5 performs no redirect/fetch.
+- TextRenderer copies a non-null canonical product URL byte-for-byte. For
+  WebsiteRenderer, the canonical URL is first subject to the same literal Liquid
+  opening-delimiter gate as every other dynamic Website string and is then
+  reversibly Markdown-neutral encoded as plain text. C5 performs no
+  redirect/fetch and emits no dynamic Website hyperlink.
 
 Chatwoot v4.18.0 renders ordinary Web Widget message `content` through
 `markdown-it` with `linkify=true`. C5 therefore owns an exact Website-only
 Markdown-neutral encoding for **dynamic free-form factual text inserted into
-`content`** (shortlist titles and variant/stock labels): after the Liquid check
-below, prefix one ASCII backslash before every ASCII punctuation code point in
-`U+0021..U+002F`, `U+003A..U+0040`, `U+005B..U+0060` or
-`U+007B..U+007E`. Unicode letters/digits/whitespace are unchanged. The encoded
-bytes are transport content; Chatwoot Markdown rendering must display the
-original normalized factual text and must not create a link/image/emphasis from
-it. Fixed template text, generated money/time/counters/payment names and the
-separately validated `product_url` do not use this encoding. `product_url` is
-the only dynamic URL intentionally left linkifiable and is already constrained
-by §16.3 to HTTPS `babypark.ua`/subdomains.
+`content`** (shortlist titles, variant/stock labels and canonical product
+URLs): after the Liquid check below, prefix one ASCII backslash before every
+ASCII punctuation code point in `U+0021..U+002F`, `U+003A..U+0040`,
+`U+005B..U+0060` or `U+007B..U+007E`. Unicode
+letters/digits/whitespace are unchanged. The encoded bytes are transport
+content; Chatwoot Markdown rendering must display the original normalized
+factual text and must not create a link/image/emphasis from it. Fixed template
+text and generated money/time/counters/payment names do not use this encoding.
+Website First Line v1 intentionally emits **zero dynamic hyperlinks**; an
+already-C4-validated `product_url` is shown as exact visible plain text instead
+of relying on Chatwoot bare-link/autolink boundary rules.
 
 For finite Website CLARIFY, dynamic choice labels are rendered only inside
 the numbered `content` list and therefore use the same reversible
@@ -2772,17 +2788,21 @@ Chatwoot v4.18.0 evaluates Liquid for outgoing message `content` during message
 creation. WebsiteRenderer must not escape this with
 `{% raw %}...{% endraw %}`. Before any Website Markdown encoding/interpolation,
 every dynamic public string that WebsiteRenderer may place into `content` fails
-closed if it contains ASCII `{{` or `{%`. After rendering, final `content`
-is checked again for the same delimiters; every select item title is independently
-required to equal its unsigned ASCII ordinal exactly. WebsiteRenderer then checks
-final `content` length after all transport encoding: 1..150000 Unicode code
-points, matching the verified Chatwoot v4.18.0 Message content ceiling. Length
-failure is `FIRST_LINE_RENDERER_INVALID`, never a send/retry hint. Fixed branches
-are regression-tested to contain neither Liquid opening delimiter. A
-Liquid-looking Catalog title/variant label/URL therefore yields
-`FIRST_LINE_RENDERER_INVALID`; C5/C6 do not let Chatwoot reinterpret it against
-contact/agent/conversation/inbox/account drops. This is an additional
-presentation safety gate and never weakens §16.3.
+closed if it contains ASCII `{{` or `{%`. For `product_url`, this check is
+against the **canonical §16.3 C4 projection received by C5**: a canonical URL
+that still contains a literal opening delimiter rejects, while a percent-encoded
+sequence such as `%7B%7B` contains no Liquid delimiter and remains inert
+Markdown-neutral plain text. After rendering, final `content` is checked again
+for literal opening delimiters; every select item title is independently required
+to equal its unsigned ASCII ordinal exactly. WebsiteRenderer then checks final
+`content` length after all transport encoding: 1..150000 Unicode code points,
+matching the verified Chatwoot v4.18.0 Message content ceiling. Length failure is
+`FIRST_LINE_RENDERER_INVALID`, never a send/retry hint. Fixed branches are
+regression-tested to contain neither Liquid opening delimiter. A dynamic value
+that still contains a literal Liquid opening delimiter at the C5 boundary
+therefore yields `FIRST_LINE_RENDERER_INVALID`; C5/C6 do not let Chatwoot
+reinterpret it against contact/agent/conversation/inbox/account drops. This is an
+additional presentation safety gate and never weakens §16.3.
 
 The WebsiteRenderer transport contract above is bound to the verified deployed
 Chatwoot v4.18.0 behavior recorded by this amendment. Before first production
@@ -2826,7 +2846,10 @@ Shortlist row `i` is exact:
 - base row is `{i}. {title} — {price}` in both locales;
 - append ` (часткова відповідність моделі)` /
   ` (частичное соответствие модели)` when `partial_model_match=true`;
-- if `product_url` is non-null, append newline then that URL;
+- if `product_url` is non-null, the semantic/TextRenderer row appends newline
+  then that canonical URL; WebsiteRenderer appends newline then the exact
+  Markdown-neutral encoding of that URL, so Chatwoot displays the canonical URL
+  as non-clickable plain text;
 - rows are separated by one newline;
 - `image_url` is ignored by C5 v1 and never fetched.
 
@@ -3188,10 +3211,13 @@ Slice C umbrella issue #75 remains the frozen program boundary. C1/C2a/C2b/C2c/C
 are merged historical evidence and C4 deterministic decision runtime is merged via
 PR #107 on canonical main `565f8eb30bf39afa80bb4d59258cc2fd13aa67d5`.
 The prior CATEGORY-pair prerequisite is therefore implemented and reviewed.
-This docs-only C5 amendment freezes renderer wording, exact output, formatting,
-genuine-decision provenance and Chatwoot-Liquid presentation safety only.
-It contains no production C5/C6 code and does not authorize renderer/send
-implementation. C5 production work must start as a later bounded stage under the
+This docs-only C5 amendment freezes the complete C5 renderer / Website-transport
+contract in §40.2–§40.4: exact wording/output/formatting, genuine-decision
+provenance, transient-output/privacy boundary, Chatwoot Liquid and Markdown
+neutrality, native `input_select` ordinal transport, the 150000-Unicode-code-
+point content bound, product-URL plain-text transport, and runtime-drift
+revalidation. It contains no production C5/C6 code and does not authorize
+renderer/send implementation. C5 production work must start as a later bounded stage under the
 then-current AI Working Agreement with a fresh alternatives scan; C6 remains a
 separate downstream stage. This v0.7 file is the single normative design source;
 no delta document applies.
