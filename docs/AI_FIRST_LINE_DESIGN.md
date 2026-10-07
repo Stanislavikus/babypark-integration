@@ -2048,13 +2048,13 @@ For the **v0.7 runtime target**, CATEGORY stable identity is the exact pair
 components atomically with the same accepted-event provenance, and restart
 rebuild must re-prove the same pair before category-scoped authority is used.
 
-This pair requirement is newly frozen by the PR #100 contract amendment. It is
-**not** a claim about the implementation already merged on the PR #100 base:
-that implementation persists `category_id` without durable
-`category_match_mode`. Therefore C4 production code may not rely on the pair
-until a later production-code stage implements and verifies the prerequisite
-C2/state-store retrofit under the then-current AI Working Agreement. The
-historical C1 contract in §29.3 remains unchanged evidence.
+This pair requirement was originally frozen by the docs-only PR #100 contract
+amendment before the prerequisite implementation existed. The prerequisite
+C2/state-store retrofit was subsequently implemented and verified as part of the
+merged C4 production campaign, PR #107 on canonical main
+`565f8eb30bf39afa80bb4d59258cc2fd13aa67d5`. Current C4 may therefore rely on
+the exact pair under the merged v0.7 contract. The historical C1 contract in
+§29.3 remains unchanged evidence and is not retroactively rewritten.
 
 `copilot.sqlite` remains disposable delivery/job/lease/reconciler execution
 state. Domain truth MUST be committed in `episode.sqlite` before the originating
