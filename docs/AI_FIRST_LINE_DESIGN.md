@@ -1,12 +1,15 @@
 # BabyPark AI First Line — Frozen Design v0.7
 
-Status: FROZEN — Event Ledger v0.7 architecture freeze complete
+Status: FROZEN — Event Ledger v0.7 architecture + C5 renderer contract
 Applies to: BabyPark AI First Line Website v1 / Slice C normative design.
-Supersedes: `docs/AI_FIRST_LINE_DESIGN.md` at canonical main `8e65a57b36eaf649853fa3a7aae58bf5cd5a477c`.
-Implementation: C1/C2a/C2b/C2c/C3 are merged; this amendment is a docs-only
-C4 pre-code contract freeze and contains no production C4 implementation.
-Contract amendment base: canonical main `8e65a57b36eaf649853fa3a7aae58bf5cd5a477c`.
-Chatwoot runtime verified: v4.18.0, `9f920b549c14491a4e587687a3eed5d21c6ccc7d`
+Supersedes: `docs/AI_FIRST_LINE_DESIGN.md` at canonical main `565f8eb30bf39afa80bb4d59258cc2fd13aa67d5`.
+Implementation: C1/C2a/C2b/C2c/C3/C4 are merged; this amendment is a docs-only
+C5 pre-code contract freeze and contains no production C5 implementation.
+Contract amendment base: canonical main `565f8eb30bf39afa80bb4d59258cc2fd13aa67d5`.
+Chatwoot runtime verified: package v4.18.0; deployed tracked sources and the
+current gitignored production Vite manifest/chunks/source maps were verified
+against the running target. Exact hashes/equivalence evidence is recorded in
+`docs/AI_FIRST_LINE_C5_CONTRACT_TRACEABILITY.md`.
 
 This document is the single normative repository source of truth for the first
 customer-facing BabyPark AI design. It incorporates the complete v0.6 design
@@ -1194,10 +1197,11 @@ If min == max:
 If min != max:
 `ANSWER / PRODUCT_PRICE_RANGE`.
 
-Range template may offer a deterministic supported follow-up:
-"Могу показать доступные варианты с точной ценой каждого."
-
-That follow-up exists as `VARIANT_PRICE_LIST`.
+`VARIANT_PRICE_LIST` remains a supported deterministic C4 family and the
+downstream target for the separately scoped C25 dependent-follow-up routing.
+The C5 v1 range wording frozen in §40.4 does **not** invite/promise that follow-up
+before C25 routing exists. Adding a customer-facing invitation later requires
+the C25 routing prerequisite plus a separately reviewed wording-contract update.
 
 ## 22. Product resolution
 
@@ -2048,13 +2052,13 @@ For the **v0.7 runtime target**, CATEGORY stable identity is the exact pair
 components atomically with the same accepted-event provenance, and restart
 rebuild must re-prove the same pair before category-scoped authority is used.
 
-This pair requirement is newly frozen by the PR #100 contract amendment. It is
-**not** a claim about the implementation already merged on the PR #100 base:
-that implementation persists `category_id` without durable
-`category_match_mode`. Therefore C4 production code may not rely on the pair
-until a later production-code stage implements and verifies the prerequisite
-C2/state-store retrofit under the then-current AI Working Agreement. The
-historical C1 contract in §29.3 remains unchanged evidence.
+This pair requirement was originally frozen by the docs-only PR #100 contract
+amendment before the prerequisite implementation existed. The prerequisite
+C2/state-store retrofit was subsequently implemented and verified as part of the
+merged C4 production campaign, PR #107 on canonical main
+`565f8eb30bf39afa80bb4d59258cc2fd13aa67d5`. Current C4 may therefore rely on
+the exact pair under the merged v0.7 contract. The historical C1 contract in
+§29.3 remains unchanged evidence and is not retroactively rewritten.
 
 `copilot.sqlite` remains disposable delivery/job/lease/reconciler execution
 state. Domain truth MUST be committed in `episode.sqlite` before the originating
@@ -2586,7 +2590,7 @@ The existing Catalog presentation helper may fall back to another available
 language for generic/non-public consumers. Website First Line **must not** use
 that cross-locale fallback for public title/URL text.
 
-For public shortlist/card projection, C4 reads the already-public CatalogService
+For public shortlist presentation projection, C4 reads the already-public CatalogService
 `getProduct({productId})` result and selects only
 `product.localized[response_locale]`. Every such presentation read must report
 `catalog.generation_id` exactly equal to the generation carried by the current
@@ -2598,7 +2602,7 @@ another. It may use language-neutral image evidence only from that same-generati
 product read / already proven cohort. It must not select another localized entry
 when the exact response locale is absent.
 
-If a template requires a product title (currently shortlist cards) and any
+If a template requires a product title (currently shortlist presentation templates) and any
 selected item lacks a non-empty safe title in the exact `response_locale`, C4
 returns HUMAN / PRODUCT_PRESENTATION_NOT_AVAILABLE. It never exposes a product
 ID, substitutes a RU title into a UK response (or vice versa), or asks C5 to
@@ -2624,7 +2628,282 @@ Initial adapters:
 - TextRenderer.
 
 TextRenderer is a planned deterministic C5 adapter. It is not implemented or
-connected to Viber/Telegram production by this pre-code C4 contract amendment.
+connected to Viber/Telegram production by this pre-code C5 contract amendment.
+
+### 40.2 C5 genuine-decision and exact output boundary
+
+C5 is a pure presentation adapter over one **genuine** C4 public decision. A
+structurally matching object, clone, deserialized copy or caller-built eight-key
+object is not sufficient authority to render. C4 must own an in-process
+capability/provenance check for decisions returned by its public decision
+constructor, and C5 must require that check before rendering. This check exposes
+no DecisionBasis/private context and does not make C5 an authority reader.
+
+A valid HUMAN decision returns no render result (`null`). It is not a renderer
+error and never produces customer content.
+
+WebsiteRenderer returns exactly one of these frozen shapes for ANSWER/CLARIFY:
+
+```text
+WebsiteRenderText {
+  schema = bp.first-line.website-render/1
+  content_type = text
+  content = string with 1..150000 Unicode code points
+  content_attributes = {}
+}
+
+WebsiteRenderSelect {
+  schema = bp.first-line.website-render/1
+  content_type = input_select
+  content = string with 1..150000 Unicode code points
+  content_attributes = {
+    items: [{title:'<ordinal>',value:'bp-choice:<ordinal>'}, ...]
+  }
+}
+```
+
+No additional enumerable key is allowed at either level. C5 never emits sender,
+conversation/account IDs, source/action IDs, template/provider parameters or
+private reservation values. C6 owns the Chatwoot POST envelope and action
+identity.
+
+The Website `content` ceiling is counted in Unicode **code points**, matching
+Chatwoot/Ruby UTF-8 string-length semantics, not JavaScript UTF-16 code units.
+For example U+1F600 counts as one code point even though JavaScript
+`"😀".length === 2`. The implementation must use an equivalent code-point
+count (for example `Array.from(content).length`) on the final transport content
+after all Website escaping; unescaped/source length is not the admission test.
+
+Renderer output is transient in-memory presentation only. C5 owns no durable
+store/cache/outbox and MUST NOT persist or routinely log rendered content,
+dynamic labels, product URLs, choice labels/tokens, or a content-derived digest.
+The only durable pre-send state remains the C6/§29.8 machine descriptor and
+provenance; Chatwoot remains transcript authority for the eventual public
+message.
+
+WebsiteRenderer mapping is exact:
+- every ANSWER uses `content_type=text`, including shortlist answers;
+- candidate-based CLARIFY uses `input_select`. Its `content` is the fixed
+  locale prompt followed by one U+000A LF and the exact ordered rows
+  `1. <label>`, `2. <label>`, ... with Website transport entity encoding
+  applied only to each dynamic label and no trailing LF. `content_attributes.items`
+  has the same cardinality/order; each item is exactly
+  `{title:String(ordinal),value:choice.token}` where ordinal starts at 1.
+  Dynamic factual labels never enter `items[*].title`;
+- `TPL_CLARIFY_MONEY_V1` and `TPL_CLARIFY_SHORTLIST_ANCHOR_V1` use `text` with
+  `content_attributes={}`;
+- C5 v1 does **not** emit Chatwoot `cards`. Shortlist `image_url` is not
+  rendered or fetched; this avoids making C5 a network/media adapter. A non-null
+  safe `product_url` remains part of the semantic row. TextRenderer copies that
+  canonical URL literally. WebsiteRenderer emits it as **non-clickable plain
+  text** using the same reversible Website transport-neutral entity encoding as other
+  dynamic factual text; C5 v1 never lets Chatwoot/linkify choose a dynamic URL boundary
+  or hyperlink target.
+
+TextRenderer returns exactly
+`{schema:'bp.first-line.text-render/1',content:string}` for ANSWER/CLARIFY and
+`null` for HUMAN. It has no transport metadata and remains unconnected to
+Viber/Telegram in C5. Its `content` is the exact semantic §40.4 branch before
+Website-only transport entity encoding and has no trailing newline. For finite
+CLARIFY the exact bytes are `<prompt>\n1. <label>\n2. <label>...`, with one
+U+000A LF before each ordinal row and no `bp-choice` token/private candidate
+value. ANSWER multiline/list content uses the same §40.4 line breaks and no
+trailing LF.
+
+Genuine C4 provenance never waives public-contract validation. Before rendering,
+C5 revalidates the complete exact §16.2 public relation among `decision`,
+`reason`, `response_locale`, `template_id`, `render_payload`,
+`requested_slot` and `choices`, including the frozen
+`reason -> allowed template_id` relation. Private request-family identity is
+not a C5 input and is not reconstructed by the renderer. A genuine object with
+an impossible public reason/template pair is still invalid.
+
+Unknown/forged decision, unsupported locale/template/reason tuple, invalid
+payload/choice shape, missing locale branch, unsupported currency, unsafe
+dynamic text, final Website content outside 1..150000 Unicode code points or
+other invalid output is one fail-closed renderer failure family:
+`FIRST_LINE_RENDERER_INVALID`. It produces no fallback text and is never
+permission for C6 to use a previously prepared render.
+
+### 40.3 Exact C5 formatting and Chatwoot transport neutrality
+
+C5 performs no language detection and never calls `Intl` with an unchecked
+locale. The only public locales are the already-certified exact tags `uk` and
+`ru`.
+
+Website First Line v1 public monetary rendering is deliberately UAH-only.
+Although the C4 schema carries a safe three-letter currency code, C5 renders a
+money-bearing template only when the current payload currency is exactly `UAH`.
+Any other currency is `FIRST_LINE_RENDERER_INVALID` / zero public send until a
+separately reviewed public formatting contract is frozen.
+
+UAH formatting is exact and contains no locale/runtime dependency:
+- divide the non-negative integer minor value by 100;
+- group the integer major part from the right in threes with one ASCII space;
+- omit `,00`; otherwise render comma plus exactly two minor digits;
+- append exactly one ASCII space plus `грн`.
+Examples: `2730000 -> "27 300 грн"`, `2730050 -> "27 300,50 грн"`,
+`50 -> "0,50 грн"`.
+
+Other critical formatting is exact:
+- E.164 phone and `HH:MM` are copied byte-for-byte;
+- one schedule interval is `HH:MM–HH:MM` using U+2013 EN DASH;
+- intervals and ordinary label/method lists join with `, `;
+- integer counters are unsigned ASCII decimal with no grouping;
+- TextRenderer copies a non-null canonical product URL byte-for-byte. For
+  WebsiteRenderer, the canonical URL is first subject to the same literal Liquid
+  opening-delimiter gate as every other dynamic Website string and is then
+  reversibly transport-neutral entity encoded as plain text. C5 performs no
+  redirect/fetch and emits no dynamic Website hyperlink.
+
+Chatwoot v4.18.0 renders ordinary Web Widget message `content` through
+`markdown-it` with `linkify=true`. For finite `input_select`, the agent
+Dashboard renders the same stored `content` through its native
+`dashboard/components-next/message/bubbles/Form.vue` path with DOMPurify
+rather than Markdown. C5 therefore owns one exact Website transport-neutral
+encoding for **dynamic free-form factual text inserted into `content`**
+(shortlist titles, variant/stock labels and canonical product URLs): after the
+Liquid check below, replace every ASCII punctuation code point in
+`U+0021..U+002F`, `U+003A..U+0040`, `U+005B..U+0060` or
+`U+007B..U+007E` with the uppercase hexadecimal numeric HTML entity
+`&#xHH;`, where `HH` is the two-digit ASCII code point (for example
+`!` -> `&#x21;`, `&` -> `&#x26;`, `<` -> `&#x3C;`,
+`_` -> `&#x5F;`). Unicode letters/digits/whitespace are unchanged.
+
+Those entity bytes are transport content. The verified Web Widget
+Markdown/DOMPurify path and, for `input_select`, the verified agent Dashboard
+DOMPurify path must both display the original normalized/canonical factual text
+and must create no dynamic link, image, emphasis, code or HTML element from it.
+Fixed template text and generated money/time/counters/payment names do not use
+this encoding and therefore must themselves be frozen in a form that is stable
+under the verified formatter. Website First Line v1 intentionally emits **zero
+dynamic hyperlinks**; an already-C4-validated `product_url` is shown as exact
+visible plain text instead of relying on Chatwoot bare-link/autolink boundary
+rules.
+
+For finite Website CLARIFY, dynamic choice labels are rendered only inside
+the numbered `content` list and therefore use the same reversible
+transport-neutral entity encoding as other Website free-form factual text. C5
+creates each native `input_select.items[*].title` as only the generated
+unsigned ASCII ordinal (`"1"`, `"2"`, ...). An unmodified native Widget
+selection submits that selected option and normally echoes the ordinal.
+
+That echoed/submitted `title` is **not** an authority field: Chatwoot's Widget
+update endpoint permits a client-supplied `submitted_values[*].title` and does
+not server-bind it back to the original item. A modified client can therefore
+change display title while keeping the same `value`. BabyPark must treat any
+submitted title as untrusted customer presentation data and must never derive a
+selection/fact from it. Structured-selection authority uses only the exact
+single `submitted_values[0].value` / `bp-choice:<ordinal>` proven through the
+existing C2/C4 reauthorization chain and the future C6 final gate. A displayed
+tampered title is customer-originated content, not an AI factual claim. The
+public labels remain pairwise-distinguishable in the visible numbered list; the
+ordinal button references an already-distinguishable row and is never used to
+hide duplicate labels.
+
+Payment method names are a closed table and carry no fee/condition:
+- `BANK_TRANSFER`: uk `банківський переказ`; ru `банковский перевод`;
+- `CASH_COURIER`: uk `готівкою кур’єру`; ru `наличными курьеру`;
+- `COD_NOVA_POSHTA`: uk `післяплата у Новій пошті`; ru
+  `наложенный платеж в Новой почте`.
+
+Chatwoot v4.18.0 evaluates Liquid for outgoing message `content` during message
+creation. WebsiteRenderer must not escape this with
+`{% raw %}...{% endraw %}`. Before any Website transport entity encoding/interpolation,
+every dynamic public string that WebsiteRenderer may place into `content` fails
+closed if it contains ASCII `{{` or `{%`. For `product_url`, this check is
+against the **canonical §16.3 C4 projection received by C5**: a canonical URL
+that still contains a literal opening delimiter rejects, while a percent-encoded
+sequence such as `%7B%7B` contains no Liquid delimiter and remains inert
+transport-neutral entity-encoded plain text. After rendering, final `content` is checked again
+for literal opening delimiters; every select item title is independently required
+to equal its unsigned ASCII ordinal exactly. WebsiteRenderer then checks final
+`content` length after all transport encoding: 1..150000 Unicode code points,
+matching the verified Chatwoot v4.18.0 Message content ceiling. Length failure is
+`FIRST_LINE_RENDERER_INVALID`, never a send/retry hint. Fixed branches are
+regression-tested to contain neither Liquid opening delimiter. A dynamic value
+that still contains a literal Liquid opening delimiter at the C5 boundary
+therefore yields `FIRST_LINE_RENDERER_INVALID`; C5/C6 do not let Chatwoot
+reinterpret it against contact/agent/conversation/inbox/account drops. This is an
+additional presentation safety gate and never weakens §16.3.
+
+The WebsiteRenderer transport contract above is bound to the verified deployed
+Chatwoot v4.18.0 behavior recorded by this amendment. Because production
+`public/vite/**` artifacts are gitignored, tracked Git source identity alone is
+not sufficient browser-runtime provenance. Before first production activation,
+and after any Chatwoot package/version/source/build change that can affect
+message creation, Liquid processing, Web Widget Markdown, agent Dashboard
+`input_select` presentation, `input_select` submission/echo or message
+content limits, the bounded deployment stage must revalidate those exact native
+surfaces against the target deployed runtime. That proof must include the
+production Vite manifest, the manifest-selected relevant chunks/source maps and
+their equivalence to the inspected tracked sources (or an equivalently
+content-bound reproducible build proof), plus the relevant locked parser/sanitizer
+versions. A version/source/bundle mismatch, missing source-map/build provenance,
+unavailable proof or changed behavior blocks WebsiteRenderer activation/send; it
+never falls back to assumptions from v4.18.0 and never requires a Chatwoot core
+patch.
+
+### 40.4 Exact uk/ru C5 wording
+
+Braced names below denote deterministic §40.3 substitutions; they are not a
+runtime template language and literal braces do not appear in emitted content.
+
+ANSWER branches:
+
+| template_id | uk | ru |
+|---|---|---|
+| `TPL_STORE_OPEN_STATUS_V1` | open+close `Магазин зараз відкритий до {time}.`; open+null `Магазин зараз відкритий.`; closed `Магазин зараз зачинений.` | open+close `Магазин сейчас открыт до {time}.`; open+null `Магазин сейчас открыт.`; closed `Магазин сейчас закрыт.` |
+| `TPL_STORE_HOURS_TODAY_V1` | empty `Сьогодні магазин зачинений.`; otherwise `Графік на сьогодні: {intervals}. Зараз магазин {відкритий|зачинений}.` | empty `Сегодня магазин закрыт.`; otherwise `График на сегодня: {intervals}. Сейчас магазин {открыт|закрыт}.` |
+| `TPL_STORE_PHONE_V1` | `Телефон магазину: {e164}.` | `Телефон магазина: {e164}.` |
+| `TPL_CALL_CENTER_PHONE_V1` | `Телефон контакт-центру: {e164}.` | `Телефон контакт-центра: {e164}.` |
+| `TPL_PAYMENT_METHODS_V1` | `Способи оплати: {methods}.` | `Способы оплаты: {methods}.` |
+| `TPL_PREPAYMENT_V1` | `Передоплата: {money}.` | `Предоплата: {money}.` |
+| `TPL_RETURN_PERIOD_V1` | `Період повернення товару належної якості (календарні дні): {days}. День покупки {не враховується|враховується}.` | `Срок возврата товара надлежащего качества (календарные дни): {days}. День покупки {не учитывается|учитывается}.` |
+| `TPL_PRODUCT_PRICE_SINGLE_V1` | `Ціна: {money}.` | `Цена: {money}.` |
+| `TPL_PRODUCT_PRICE_RANGE_V1` | `Ціна залежить від варіанта: від {min_money} до {max_money}.` | `Цена зависит от варианта: от {min_money} до {max_money}.` |
+| `TPL_PRODUCT_NOT_IN_STOCK_V1` | `Зараз товару немає в наявності.` | `Сейчас товара нет в наличии.` |
+| `TPL_VARIANT_LIST_V1` | `Доступні варіанти ({named}/{total}): {labels}.` | `Доступные варианты ({named}/{total}): {labels}.` |
+| `TPL_VARIANT_LIST_PARTIAL_V1` | named>0: `Варіанти з доступними назвами ({named}/{total}): {labels}.`; named=0: `Кількість доступних варіантів: {total}. Назви недоступні.` | named>0: `Варианты с доступными названиями ({named}/{total}): {labels}.`; named=0: `Количество доступных вариантов: {total}. Названия недоступны.` |
+| `TPL_VARIANT_PRICE_LIST_V1` | first line `Ціни варіантів:`, then `• {label} — {money}` per row | first line `Цены вариантов:`, then `• {label} — {money}` per row |
+| `TPL_SHORTLIST_TOP3_V1` | `Кількість знайдених товарів: {total}. Перші результати:` then shortlist rows | `Количество найденных товаров: {total}. Первые результаты:` then shortlist rows |
+| `TPL_SHORTLIST_ALL_V1` | `Знайдені товари:` then shortlist rows | `Найденные товары:` then shortlist rows |
+| `TPL_SHORTLIST_EMPTY_V1` | `За заданими умовами товарів не знайдено.` | `По заданным условиям товары не найдены.` |
+| `TPL_STORE_STOCK_V1` | no label: `Є в наявності в цьому магазині.` / `Немає в наявності в цьому магазині.`; with label: `Варіант «{label}» є в наявності в цьому магазині.` / `Варіанта «{label}» немає в наявності в цьому магазині.` | no label: `Есть в наличии в этом магазине.` / `Нет в наличии в этом магазине.`; with label: `Вариант «{label}» есть в наличии в этом магазине.` / `Варианта «{label}» нет в наличии в этом магазине.` |
+
+Shortlist row `i` is exact:
+- price is one UAH amount when min=max, otherwise `{min_money}–{max_money}`;
+- base row is `{i}. {title} — {price}` in both locales;
+- append ` (часткова відповідність моделі)` /
+  ` (частичное соответствие модели)` when `partial_model_match=true`;
+- if `product_url` is non-null, the semantic/TextRenderer row appends newline
+  then that canonical URL; WebsiteRenderer appends newline then the exact
+  transport-neutral entity encoding of that URL, so Chatwoot displays the canonical URL
+  as non-clickable plain text;
+- rows are separated by one newline;
+- `image_url` is ignored by C5 v1 and never fetched.
+
+CLARIFY prompt branches:
+
+| template_id | uk | ru |
+|---|---|---|
+| `TPL_CLARIFY_PRODUCT_V1` | `Уточніть, будь ласка, який товар ви маєте на увазі.` | `Уточните, пожалуйста, какой товар вы имеете в виду.` |
+| `TPL_CLARIFY_VARIANT_V1` | `Уточніть, будь ласка, який варіант ви маєте на увазі.` | `Уточните, пожалуйста, какой вариант вы имеете в виду.` |
+| `TPL_CLARIFY_CATEGORY_V1` | `Уточніть, будь ласка, яку категорію ви маєте на увазі.` | `Уточните, пожалуйста, какую категорию вы имеете в виду.` |
+| `TPL_CLARIFY_BRAND_V1` | `Уточніть, будь ласка, який бренд ви маєте на увазі.` | `Уточните, пожалуйста, какой бренд вы имеете в виду.` |
+| `TPL_CLARIFY_STORE_V1` | `Уточніть, будь ласка, який магазин ви маєте на увазі.` | `Уточните, пожалуйста, какой магазин вы имеете в виду.` |
+| `TPL_CLARIFY_MONEY_V1` | `Уточніть, будь ласка, максимальну суму в гривнях.` | `Уточните, пожалуйста, максимальную сумму в гривнах.` |
+| `TPL_CLARIFY_SHORTLIST_ANCHOR_V1` | `Уточніть, будь ласка, категорію товару.` | `Уточните, пожалуйста, категорию товара.` |
+
+For `TPL_STORE_HOURS_TODAY_V1`, `open_now=true` with empty intervals is invalid.
+For `TPL_STORE_OPEN_STATUS_V1`, closed requires `closes_at_local=null`.
+`TPL_PRODUCT_PRICE_RANGE_V1` requires `min_current_minor < max_current_minor`;
+an equal pair belongs only to `TPL_PRODUCT_PRICE_SINGLE_V1`.
+`TPL_VARIANT_LIST_V1` requires `total_variant_count=named_variant_count>0`.
+`TPL_VARIANT_LIST_PARTIAL_V1` requires
+`total_variant_count>named_variant_count>=0`; the named=0 branch above emits no
+empty punctuation/list placeholder.
+TOP3/ALL require at least one product; zero uses only `TPL_SHORTLIST_EMPTY_V1`.
 
 ## 41. Critical-value rendering
 
@@ -2958,11 +3237,17 @@ Key closure invariants are:
 6. durable public actions survive input-job/coprocessor loss through the independent relay;
 7. no CDC/WAL, third DB or Chatwoot core patch is required for Website First Line v1.
 
-Slice C umbrella issue #75 remains the frozen program boundary. C1 is merged
-historical evidence; C2a/C2b/C2c/C3 are merged under their previously reviewed
-contracts. This PR #100 amendment freezes additional pre-code C4/C5/C6 contract
-requirements, including a new v0.7 CATEGORY-pair prerequisite that current
-C2/state-store code on the PR base does not yet implement. Production C4/C5/C6
-work is not authorized by this docs-only amendment and must proceed only through
-future bounded production-code stages under the then-current AI Working Agreement.
-This v0.7 file is the single normative design source; no delta document applies.
+Slice C umbrella issue #75 remains the frozen program boundary. C1/C2a/C2b/C2c/C3
+are merged historical evidence and C4 deterministic decision runtime is merged via
+PR #107 on canonical main `565f8eb30bf39afa80bb4d59258cc2fd13aa67d5`.
+The prior CATEGORY-pair prerequisite is therefore implemented and reviewed.
+This docs-only C5 amendment freezes the complete C5 renderer / Website-transport
+contract in §40.2–§40.4: exact wording/output/formatting, genuine-decision
+provenance, transient-output/privacy boundary, Chatwoot Liquid and Markdown
+neutrality, native `input_select` ordinal transport, the 150000 Unicode
+code-point content bound, product-URL plain-text transport, and runtime-drift
+revalidation. It contains no production C5/C6 code and does not authorize
+renderer/send implementation. C5 production work must start as a later bounded stage under the
+then-current AI Working Agreement with a fresh alternatives scan; C6 remains a
+separate downstream stage. This v0.7 file is the single normative design source;
+no delta document applies.

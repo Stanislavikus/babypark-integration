@@ -1,11 +1,11 @@
 # BabyPark AI First Line — Acceptance Corpus v0.7
 
-Status: FROZEN — Event Ledger v0.7 architecture acceptance freeze
+Status: FROZEN — Event Ledger v0.7 architecture + C5 renderer acceptance freeze
 Applies to: BabyPark AI First Line Website v1 / Slice C acceptance contract.
-Supersedes: `docs/AI_FIRST_LINE_ACCEPTANCE.md` at canonical main `8e65a57b36eaf649853fa3a7aae58bf5cd5a477c`.
+Supersedes: `docs/AI_FIRST_LINE_ACCEPTANCE.md` at canonical main `565f8eb30bf39afa80bb4d59258cc2fd13aa67d5`.
 Companion: `docs/AI_FIRST_LINE_DESIGN.md`
 Historical research baseline: `e4b3989f852d5de4a868a6f72867b87cb64f8b2d`.
-Contract amendment base: canonical main `8e65a57b36eaf649853fa3a7aae58bf5cd5a477c`.
+Contract amendment base: canonical main `565f8eb30bf39afa80bb4d59258cc2fd13aa67d5`.
 
 This file is the single normative acceptance corpus for AI First Line v0.7. It
 incorporates the complete v0.6 acceptance delta and subsequent v0.7 freezes; no
@@ -1272,7 +1272,7 @@ Expected: reject/block deployment.
 
 ### T01 — exact response locale, no presentation fallback
 `response_locale=uk`. Catalog product has `localized.ru.title/url` but no
-`localized.uk` entry. The selected template is a shortlist/card template that
+`localized.uk` entry. The selected template is a shortlist presentation template that
 requires title.
 
 Expected:
@@ -1322,6 +1322,205 @@ A candidate CLARIFY carries private canonical IDs and public
 Expected: renderer receives only public token+label; rendered text/content
 attributes expose no canonical ID. Structured selection maps the ordinal back to
 the separately persisted private reservation.
+
+### T07 — exact uk/ru golden wording
+For every 17 ANSWER and 7 CLARIFY template IDs in DESIGN §40.4, run exact valid
+payload/choice controls in both `uk` and `ru`. Exercise every conditional
+wording branch, not merely one example per template: STORE_OPEN_STATUS
+open+close/open+null/closed; STORE_HOURS_TODAY empty and non-empty with both
+`open_now` values; RETURN_PERIOD purchase-day excluded/included;
+VARIANT_LIST_PARTIAL named>0/named=0; STORE_STOCK in/out × label/no-label; and
+shortlist single/range price, URL null/non-null and partial-model false/true.
+
+Expected:
+- emitted content is byte-for-byte the frozen branch after only §40.3
+  substitutions/joins;
+- no plural library, translation lookup, locale fallback or paraphrase;
+- every fixed and conditional branch exists in both locales;
+- payment codes map only to the exact frozen method names; UK `CASH_COURIER`
+  uses U+2019 in `готівкою кур’єру` and remains visibly unchanged under the
+  verified typographer.
+
+### T08 — Website/Text renderer envelope is closed
+Parameterize ANSWER, finite-choice CLARIFY, free-text MONEY/ANCHOR CLARIFY and
+HUMAN.
+
+Expected:
+- ANSWER -> exact `bp.first-line.website-render/1` text shape;
+- Website `content` is 1..150000 Unicode code points after all Website
+  transport encoding; 150001 fails closed before any POST;
+- the length primitive is explicitly regression-tested as **code-point**, not
+  JavaScript UTF-16-unit, counting: 150000 U+1F600 characters are at the bound
+  even though JavaScript `.length` is 300000, while 150001 U+1F600 characters
+  fail; mixed BMP/astral controls obey the same rule;
+- finite CLARIFY -> exact `input_select` shape; `content` is
+  `<prompt>\n1. <encoded-label>\n2. <encoded-label>...` with no trailing LF,
+  while ordered items are exactly
+  `{title:String(ordinal),value:token}` and contain no dynamic label;
+- MONEY/ANCHOR -> exact text shape with `content_attributes={}`;
+- HUMAN -> `null`;
+- TextRenderer -> exact text-render shape or `null`; finite CLARIFY bytes are
+  exactly `<prompt>\n1. <label>\n2. <label>...` with LF separators and no
+  trailing newline/token;
+- cards/template params/provider metadata/private candidate values are impossible;
+- C5 performs no DB/file/cache/outbox write and does not persist/log rendered
+  content, dynamic labels/URLs, choice labels/tokens or a content-derived digest.
+
+### T09 — Chatwoot Liquid re-interpretation is fail-closed
+Use otherwise-safe public title/variant/choice strings containing
+`{{contact.email}}`, `{{agent.name}}` and `{% assign x = 1 %}`. For
+`product_url`, include a genuine C4-canonical URL whose query still contains a
+literal `{{agent.name}}`, plus a control where raw braces in the path have
+already become canonical `%7B%7B...%7D%7D`. Include normal brace/non-Liquid
+controls.
+
+Expected:
+- any dynamic Website content string **as received from genuine C4** containing
+  literal `{{` or `{%` is rejected before a render result;
+- a canonical percent-encoded brace sequence contains no Liquid opening
+  delimiter and remains inert transport-neutral plain text;
+- final content is checked again; every input-select title must equal its
+  generated unsigned ASCII ordinal exactly;
+- normal non-Liquid brace controls remain representable through transport-neutral
+  entity encoding;
+- renderer never wraps content in Liquid raw/endraw tags;
+- rejected input can produce zero public POST.
+
+### T09a — Chatwoot native views cannot reinterpret dynamic factual text
+For ordinary ANSWER and finite CLARIFY content, use otherwise-valid dynamic labels
+containing `[Коляска](https://evil.example)`,
+`Коляска https://evil.example Blue`, `Blue *bold* _x_ #tag`,
+`First.Go`, `200*90 см`, `Black_1`, HTML-shaped controls such as
+`<b>Blue</b>`, `<a href="https://evil.example">Click</a>` and
+`<img src="https://evil.example/pixel.png">`, entity/backslash controls such as
+`&copy;` and a trailing `\`, plus exhaustive single-code-point coverage for
+all 32 ASCII punctuation characters and compound typographer/link controls such
+as `...`, `--`, `---`, `(c)`, apostrophes/quotes, domains and emails.
+For `product_url`, include ordinary production-shaped URLs plus C4-safe
+trailing `)` / `.`, percent escapes, `^`, `|` and incomplete `%`
+controls.
+
+Expected:
+- every dynamic factual label **and canonical product URL** placed in Website
+  `content` is encoded by the exact DESIGN §40.3 uppercase-hex numeric-entity
+  algorithm for ASCII punctuation;
+- the deployed Web Widget Markdown + DOMPurify path displays the exact original
+  normalized/canonical text and creates zero dynamic link/image/emphasis/code/HTML
+  element;
+- for finite `input_select`, the deployed agent Dashboard `Form.vue` +
+  DOMPurify path displays that same exact original label/URL text from the stored
+  transport content, with no visible transport escapes and zero dynamic
+  link/image/HTML element;
+- every punctuation/property/HTML-shaped control round-trips visibly on both
+  applicable native views;
+- finite CLARIFY keeps all such C4-safe labels representable: the numbered
+  `content` list carries the encoded labels, while C5-created native
+  input-select button titles are only `"1"`, `"2"`, ... and values remain
+  the exact `bp-choice:<ordinal>` tokens;
+- Website v1 intentionally produces **no dynamic hyperlink**; a non-null
+  `product_url` is exact visible non-clickable plain text. TextRenderer keeps
+  the raw canonical URL and does not apply Website transport entity encoding.
+
+### T09b — Chatwoot runtime drift blocks WebsiteRenderer activation
+Repeat the verified v4.18.0 transport checks against the exact target deployment
+before first activation and after a Chatwoot package/source/build change
+affecting message creation, Liquid, Web Widget Markdown, Dashboard
+`input_select` presentation, `input_select` submission/echo or message content
+limits.
+
+Expected:
+- the target package/tag/Git source tuple and relevant locked parser/sanitizer
+  versions are explicitly proven;
+- because production `public/vite/**` is gitignored, the current production
+  Vite manifest and every manifest-selected relevant browser chunk/source map are
+  content-bound; source-map content byte-matches the inspected tracked source or
+  an equivalently content-bound reproducible-build proof is supplied;
+- unchanged verified behavior permits the ordinary C5/C6 deployment gate to
+  continue;
+- version/source/bundle mismatch, missing bundle/source-map/build provenance,
+  changed behavior or unavailable proof blocks WebsiteRenderer activation/send;
+- no old v4.18.0 assumption is silently reused and no Chatwoot core patch is
+  introduced to force compatibility.
+
+### T09c — submitted input-select title is untrusted presentation data
+Start from a genuine finite CLARIFY render whose C5-created items are exactly
+`{title:"1",value:"bp-choice:1"}`, `{title:"2",value:"bp-choice:2"}`, ...
+Exercise the normal native click and direct Widget PATCH mutations that keep an
+otherwise-valid exact `value` while changing, omitting or replacing
+`submitted_values[0].title` with arbitrary text/markup. Also exercise wrong,
+missing, multiple and unknown submitted values.
+
+Expected:
+- normal unmodified Widget interaction submits/displays the generated ordinal;
+- Chatwoot's client-supplied submitted title is never treated as BabyPark
+  authority and is never mapped back to a Catalog/Knowledge fact;
+- BabyPark structured-selection proof consumes only the exact single
+  `submitted_values[0].value` and the existing action/source/episode
+  provenance; title bytes cannot change the selected ordinal/canonical value;
+- wrong/missing/multiple/unknown `value` still fails closed under the existing
+  C2/C4/C6 reauthorization contract;
+- a tampered title that Chatwoot chooses to display remains customer-originated
+  presentation data, not an AI factual claim; no Chatwoot core patch is required
+  merely to suppress or rewrite it.
+
+### T10 — critical formatting is exact and UAH-only
+Golden vectors include `2730000 -> 27 300 грн`,
+`2730050 -> 27 300,50 грн`, `50 -> 0,50 грн`, a non-UAH currency, E.164,
+HH:MM, two schedule intervals, integer counters, equal-vs-strict price range,
+full variant list and partial variant lists with named>0/named=0.
+
+Expected:
+- exact §40.3 bytes for UAH;
+- non-UAH => `FIRST_LINE_RENDERER_INVALID`;
+- range requires min<max; equal values under RANGE reject;
+- full variant-list requires named=total>0; partial requires total>named>=0 and
+  named=0 uses the frozen no-label wording rather than an empty list placeholder;
+- phone/time bytes unchanged;
+- schedule uses U+2013 and `, `;
+- no locale/runtime fallback or LLM.
+
+### T11 — renderer requires genuine C4 decision provenance
+Render genuine C4 ANSWER/CLARIFY/HUMAN controls, then try
+`structuredClone(decision)` and a hand-built exact-shape object with identical
+public bytes.
+
+Expected:
+- only the genuine C4 decision may render;
+- clone/forgery => `FIRST_LINE_RENDERER_INVALID`;
+- mutate/construct a genuine-shape public tuple with an impossible
+  `reason -> template_id` pair and it is rejected even if each individual field
+  is otherwise allowlisted;
+- provenance check exposes no private DecisionBasis/context and never tries to
+  reconstruct a private request family.
+
+### T12 — shortlist stays text-only in C5 v1
+Render TOP3/ALL with exact-locale safe title, min=max/range, optional URL,
+optional image URL and `partial_model_match` true/false.
+
+Expected:
+- WebsiteRenderer uses `content_type=text`, never `cards`;
+- exact numbered rows and frozen partial-match phrase;
+- product URL, when present, is copied literally by TextRenderer; WebsiteRenderer
+  uses the exact reversible §40.3 transport-entity encoding so the visible
+  canonical URL is unchanged, non-clickable and creates zero dynamic `<a>`;
+- image URL is neither rendered nor fetched;
+- zero products use only `TPL_SHORTLIST_EMPTY_V1`.
+
+### T13 — renderer failure is terminal for this send attempt
+Parameterize forged decision, unknown template/reason tuple, missing locale
+branch, invalid payload, unsupported currency, Liquid-unsafe dynamic string,
+final Website content at 150000/150001 Unicode code points (including the astral
+U+1F600 boundary that differs from JavaScript UTF-16 `.length`) and invalid
+output shape.
+
+Expected:
+- one `FIRST_LINE_RENDERER_INVALID` failure family;
+- no fallback content and no old/prepared render reuse;
+- no renderer output/log/cache/digest is durable;
+- C5 performs no Chatwoot/network call. The separately scoped future C6 stage
+  **must** treat renderer failure as zero public POST and follow the already
+  frozen native-HUMAN/fail-closed policy; this C5 amendment does not claim an
+  existing renderer/send integration or freeze C6's exact state transition.
 
 ## U. C6 send-time semantic reauthorization
 
@@ -1423,17 +1622,14 @@ Expected:
 - restart between selection commit and final gate does not weaken the check.
 
 The v0.7 acceptance corpus remains frozen for Slice C umbrella issue #75.
-C1/C2a/C2b/C2c/C3 are merged under their previously reviewed contracts.
-PR #100 is a docs-only C4 contract amendment and introduces a new v0.7 target
-requirement that CATEGORY durable identity include `category_match_mode` beside
-`category_id`. The current C2/state-store implementation on the PR base does
-not yet satisfy that new pair requirement; this is an explicit prerequisite
-implementation gap, not retroactive failure of historical C1 evidence.
+C1/C2a/C2b/C2c/C3 are merged under their previously reviewed contracts and C4
+is merged via PR #107 on canonical main
+`565f8eb30bf39afa80bb4d59258cc2fd13aa67d5`, including the CATEGORY
+`(category_id,category_match_mode)` prerequisite and its HEAVY closure.
 
-Production C4 implementation remains absent and is not authorized by this file's
-pre-code review evidence. Before C4 production code may rely on the CATEGORY pair,
-a future bounded production-code stage must implement/verify the prerequisite
-retrofit under the then-current repository AI Working Agreement, including a
-fresh implementation-options scan and applicable HEAVY verification/review
-closure.
+This docs-only C5 amendment adds T07–T13 and contains no production renderer or
+C6 implementation. These proposed acceptance rows become authoritative only after
+merge. Production C5 must then run a fresh implementation-options scan and the
+applicable verification/review closure under the then-current AI Working Agreement.
+C6 send-time U01–U07 remains a separate downstream implementation stage.
 
