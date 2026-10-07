@@ -1356,7 +1356,9 @@ Expected:
 - TextRenderer -> exact text-render shape or `null`; finite CLARIFY bytes are
   exactly `<prompt>\n1. <label>\n2. <label>...` with LF separators and no
   trailing newline/token;
-- cards/template params/provider metadata/private candidate values are impossible.
+- cards/template params/provider metadata/private candidate values are impossible;
+- C5 performs no DB/file/cache/outbox write and does not persist/log rendered
+  content, dynamic labels/URLs, choice labels/tokens or a content-derived digest.
 
 ### T09 — Chatwoot Liquid re-interpretation is fail-closed
 Use otherwise-safe public title/variant/choice/product-URL strings containing
@@ -1460,6 +1462,7 @@ shape.
 Expected:
 - one `FIRST_LINE_RENDERER_INVALID` failure family;
 - no fallback content and no old/prepared render reuse;
+- no renderer output/log/cache/digest is durable;
 - C5 performs no Chatwoot/network call, so C6 can perform zero POST and follow
   its existing renderer-failure HUMAN/fail-closed path.
 
