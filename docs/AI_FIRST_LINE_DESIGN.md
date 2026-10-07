@@ -1,11 +1,11 @@
 # BabyPark AI First Line — Frozen Design v0.7
 
-Status: FROZEN — Event Ledger v0.7 architecture freeze complete
+Status: FROZEN — Event Ledger v0.7 architecture + C5 renderer contract
 Applies to: BabyPark AI First Line Website v1 / Slice C normative design.
-Supersedes: `docs/AI_FIRST_LINE_DESIGN.md` at canonical main `8e65a57b36eaf649853fa3a7aae58bf5cd5a477c`.
-Implementation: C1/C2a/C2b/C2c/C3 are merged; this amendment is a docs-only
-C4 pre-code contract freeze and contains no production C4 implementation.
-Contract amendment base: canonical main `8e65a57b36eaf649853fa3a7aae58bf5cd5a477c`.
+Supersedes: `docs/AI_FIRST_LINE_DESIGN.md` at canonical main `565f8eb30bf39afa80bb4d59258cc2fd13aa67d5`.
+Implementation: C1/C2a/C2b/C2c/C3/C4 are merged; this amendment is a docs-only
+C5 pre-code contract freeze and contains no production C5 implementation.
+Contract amendment base: canonical main `565f8eb30bf39afa80bb4d59258cc2fd13aa67d5`.
 Chatwoot runtime verified: v4.18.0, `9f920b549c14491a4e587687a3eed5d21c6ccc7d`
 
 This document is the single normative repository source of truth for the first
@@ -2624,7 +2624,163 @@ Initial adapters:
 - TextRenderer.
 
 TextRenderer is a planned deterministic C5 adapter. It is not implemented or
-connected to Viber/Telegram production by this pre-code C4 contract amendment.
+connected to Viber/Telegram production by this pre-code C5 contract amendment.
+
+### 40.2 C5 genuine-decision and exact output boundary
+
+C5 is a pure presentation adapter over one **genuine** C4 public decision. A
+structurally matching object, clone, deserialized copy or caller-built eight-key
+object is not sufficient authority to render. C4 must own an in-process
+capability/provenance check for decisions returned by its public decision
+constructor, and C5 must require that check before rendering. This check exposes
+no DecisionBasis/private context and does not make C5 an authority reader.
+
+A valid HUMAN decision returns no render result (`null`). It is not a renderer
+error and never produces customer content.
+
+WebsiteRenderer returns exactly one of these frozen shapes for ANSWER/CLARIFY:
+
+```text
+WebsiteRenderText {
+  schema = bp.first-line.website-render/1
+  content_type = text
+  content = non-empty string
+  content_attributes = {}
+}
+
+WebsiteRenderSelect {
+  schema = bp.first-line.website-render/1
+  content_type = input_select
+  content = non-empty string
+  content_attributes = {
+    items: [{title:string,value:'bp-choice:<ordinal>'}, ...]
+  }
+}
+```
+
+No additional enumerable key is allowed at either level. C5 never emits sender,
+conversation/account IDs, source/action IDs, template/provider parameters or
+private reservation values. C6 owns the Chatwoot POST envelope and action
+identity.
+
+WebsiteRenderer mapping is exact:
+- every ANSWER uses `content_type=text`, including shortlist answers;
+- candidate-based CLARIFY uses `input_select`; item order is decision choice
+  order, `title=choice.label` and `value=choice.token` exactly;
+- `TPL_CLARIFY_MONEY_V1` and `TPL_CLARIFY_SHORTLIST_ANCHOR_V1` use `text` with
+  `content_attributes={}`;
+- C5 v1 does **not** emit Chatwoot `cards`. Shortlist `image_url` is not
+  rendered or fetched; this avoids making C5 a network/media adapter. A non-null
+  safe `product_url` may be copied literally into the text row.
+
+TextRenderer returns exactly
+`{schema:'bp.first-line.text-render/1',content:string}` for ANSWER/CLARIFY and
+`null` for HUMAN. It has no transport metadata and remains unconnected to
+Viber/Telegram in C5. For finite CLARIFY it renders the same prompt followed by
+ordered numbered labels (`1. <label>`, `2. <label>`, ...); it does not print
+the `bp-choice` token or any private candidate value.
+
+Unknown/forged decision, unsupported locale/template/reason tuple, invalid
+payload/choice shape, missing locale branch, unsupported currency, unsafe
+dynamic text or invalid output is one fail-closed renderer failure family:
+`FIRST_LINE_RENDERER_INVALID`. It produces no fallback text and is never
+permission for C6 to use a previously prepared render.
+
+### 40.3 Exact C5 formatting and Chatwoot-Liquid neutrality
+
+C5 performs no language detection and never calls `Intl` with an unchecked
+locale. The only public locales are the already-certified exact tags `uk` and
+`ru`.
+
+Website First Line v1 public monetary rendering is deliberately UAH-only.
+Although the C4 schema carries a safe three-letter currency code, C5 renders a
+money-bearing template only when the current payload currency is exactly `UAH`.
+Any other currency is `FIRST_LINE_RENDERER_INVALID` / zero public send until a
+separately reviewed public formatting contract is frozen.
+
+UAH formatting is exact and contains no locale/runtime dependency:
+- divide the non-negative integer minor value by 100;
+- group the integer major part from the right in threes with one ASCII space;
+- omit `,00`; otherwise render comma plus exactly two minor digits;
+- append exactly one ASCII space plus `грн`.
+Examples: `2730000 -> "27 300 грн"`, `2730050 -> "27 300,50 грн"`,
+`50 -> "0,50 грн"`.
+
+Other critical formatting is exact:
+- E.164 phone and `HH:MM` are copied byte-for-byte;
+- one schedule interval is `HH:MM–HH:MM` using U+2013 EN DASH;
+- intervals and ordinary label/method lists join with `, `;
+- integer counters are unsigned ASCII decimal with no grouping;
+- non-null product URL is copied byte-for-byte; C5 performs no redirect/fetch.
+
+Payment method names are a closed table and carry no fee/condition:
+- `BANK_TRANSFER`: uk `банківський переказ`; ru `банковский перевод`;
+- `CASH_COURIER`: uk `готівкою кур'єру`; ru `наличными курьеру`;
+- `COD_NOVA_POSHTA`: uk `післяплата у Новій пошті`; ru
+  `наложенный платеж в Новой почте`.
+
+Chatwoot v4.18.0 evaluates Liquid for outgoing message `content` during message
+creation. C5 must not escape this with `{% raw %}...{% endraw %}`. Before
+interpolation, every dynamic public string that C5 may place into `content` or
+an `input_select.items[*].title` fails closed if it contains ASCII `{{` or `{%`.
+After rendering, final `content` and every select item title are checked again
+for the same delimiters. Fixed branches are regression-tested to contain neither.
+A Liquid-looking Catalog title/variant label/URL therefore yields
+`FIRST_LINE_RENDERER_INVALID`; C5/C6 do not let Chatwoot reinterpret it against
+contact/agent/conversation/inbox/account drops. This is an additional
+presentation safety gate and never weakens §16.3.
+
+### 40.4 Exact uk/ru C5 wording
+
+Braced names below denote deterministic §40.3 substitutions; they are not a
+runtime template language and literal braces do not appear in emitted content.
+
+ANSWER branches:
+
+| template_id | uk | ru |
+|---|---|---|
+| `TPL_STORE_OPEN_STATUS_V1` | open+close `Магазин зараз відкритий до {time}.`; open+null `Магазин зараз відкритий.`; closed `Магазин зараз зачинений.` | open+close `Магазин сейчас открыт до {time}.`; open+null `Магазин сейчас открыт.`; closed `Магазин сейчас закрыт.` |
+| `TPL_STORE_HOURS_TODAY_V1` | empty `Сьогодні магазин зачинений.`; otherwise `Графік на сьогодні: {intervals}. Зараз магазин {відкритий|зачинений}.` | empty `Сегодня магазин закрыт.`; otherwise `График на сегодня: {intervals}. Сейчас магазин {открыт|закрыт}.` |
+| `TPL_STORE_PHONE_V1` | `Телефон магазину: {e164}.` | `Телефон магазина: {e164}.` |
+| `TPL_CALL_CENTER_PHONE_V1` | `Телефон контакт-центру: {e164}.` | `Телефон контакт-центра: {e164}.` |
+| `TPL_PAYMENT_METHODS_V1` | `Способи оплати: {methods}.` | `Способы оплаты: {methods}.` |
+| `TPL_PREPAYMENT_V1` | `Передоплата: {money}.` | `Предоплата: {money}.` |
+| `TPL_RETURN_PERIOD_V1` | `Період повернення товару належної якості (календарні дні): {days}. День покупки {не враховується|враховується}.` | `Срок возврата товара надлежащего качества (календарные дни): {days}. День покупки {не учитывается|учитывается}.` |
+| `TPL_PRODUCT_PRICE_SINGLE_V1` | `Ціна: {money}.` | `Цена: {money}.` |
+| `TPL_PRODUCT_PRICE_RANGE_V1` | `Ціна: від {min_money} до {max_money}. Можу показати доступні варіанти з точною ціною кожного.` | `Цена: от {min_money} до {max_money}. Могу показать доступные варианты с точной ценой каждого.` |
+| `TPL_PRODUCT_NOT_IN_STOCK_V1` | `Зараз товару немає в наявності.` | `Сейчас товара нет в наличии.` |
+| `TPL_VARIANT_LIST_V1` | `Доступні варіанти ({named}/{total}): {labels}.` | `Доступные варианты ({named}/{total}): {labels}.` |
+| `TPL_VARIANT_LIST_PARTIAL_V1` | `Варіанти з доступними назвами ({named}/{total}): {labels}.` | `Варианты с доступными названиями ({named}/{total}): {labels}.` |
+| `TPL_VARIANT_PRICE_LIST_V1` | first line `Ціни варіантів:`, then `• {label} — {money}` per row | first line `Цены вариантов:`, then `• {label} — {money}` per row |
+| `TPL_SHORTLIST_TOP3_V1` | `Кількість знайдених товарів: {total}. Перші результати:` then shortlist rows | `Количество найденных товаров: {total}. Первые результаты:` then shortlist rows |
+| `TPL_SHORTLIST_ALL_V1` | `Знайдені товари:` then shortlist rows | `Найденные товары:` then shortlist rows |
+| `TPL_SHORTLIST_EMPTY_V1` | `За заданими умовами товарів не знайдено.` | `По заданным условиям товары не найдены.` |
+| `TPL_STORE_STOCK_V1` | no label: `Є в наявності в цьому магазині.` / `Немає в наявності в цьому магазині.`; with label: `Варіант «{label}» є в наявності в цьому магазині.` / `Варіанта «{label}» немає в наявності в цьому магазині.` | no label: `Есть в наличии в этом магазине.` / `Нет в наличии в этом магазине.`; with label: `Вариант «{label}» есть в наличии в этом магазине.` / `Варианта «{label}» нет в наличии в этом магазине.` |
+
+Shortlist row `i` is exact:
+- price is one UAH amount when min=max, otherwise `{min_money}–{max_money}`;
+- base row is `{i}. {title} — {price}` in both locales;
+- append ` (часткова відповідність моделі)` /
+  ` (частичное соответствие модели)` when `partial_model_match=true`;
+- if `product_url` is non-null, append newline then that URL;
+- rows are separated by one newline;
+- `image_url` is ignored by C5 v1 and never fetched.
+
+CLARIFY prompt branches:
+
+| template_id | uk | ru |
+|---|---|---|
+| `TPL_CLARIFY_PRODUCT_V1` | `Уточніть, будь ласка, який товар ви маєте на увазі.` | `Уточните, пожалуйста, какой товар вы имеете в виду.` |
+| `TPL_CLARIFY_VARIANT_V1` | `Уточніть, будь ласка, який варіант ви маєте на увазі.` | `Уточните, пожалуйста, какой вариант вы имеете в виду.` |
+| `TPL_CLARIFY_CATEGORY_V1` | `Уточніть, будь ласка, яку категорію ви маєте на увазі.` | `Уточните, пожалуйста, какую категорию вы имеете в виду.` |
+| `TPL_CLARIFY_BRAND_V1` | `Уточніть, будь ласка, який бренд ви маєте на увазі.` | `Уточните, пожалуйста, какой бренд вы имеете в виду.` |
+| `TPL_CLARIFY_STORE_V1` | `Уточніть, будь ласка, який магазин ви маєте на увазі.` | `Уточните, пожалуйста, какой магазин вы имеете в виду.` |
+| `TPL_CLARIFY_MONEY_V1` | `Уточніть, будь ласка, максимальну суму в гривнях.` | `Уточните, пожалуйста, максимальную сумму в гривнах.` |
+| `TPL_CLARIFY_SHORTLIST_ANCHOR_V1` | `Уточніть, будь ласка, категорію товару.` | `Уточните, пожалуйста, категорию товара.` |
+
+For `TPL_STORE_HOURS_TODAY_V1`, `open_now=true` with empty intervals is invalid.
+For `TPL_STORE_OPEN_STATUS_V1`, closed requires `closes_at_local=null`.
+TOP3/ALL require at least one product; zero uses only `TPL_SHORTLIST_EMPTY_V1`.
 
 ## 41. Critical-value rendering
 
