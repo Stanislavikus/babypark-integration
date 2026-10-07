@@ -46,12 +46,12 @@ No new durable customer-content or dynamic-fact payload is introduced. `episode.
 | RC10 singular same-kind reduction | `reduceIdentityCardinality`, `semanticKey` | C60r PRODUCT/CATEGORY/BRAND/STORE/MONEY | differing/mixed ambiguity => UNSUPPORTED_CONSTRAINT before authority | none | DONE |
 | RC11 response locale | basis locale gate | C60s de reject + uk/ru conflicting-hint presentation | no fallback; unsupported => HUMAN before authority | none | DONE |
 | RC12 typed eight-key projection | `publicDecision`, closed payload validators | C60t/u/x plus raw-metadata/leakage fixtures | missing/extra/wrong-type public shape rejects | private context WeakMap only | DONE |
-| RC13 candidate presentation | `presentationForIdentity`, `distinctPublicLabels`, `safeVariantRows` | C60y/z; PRODUCT/CATEGORY exact-generation/locale; all label classes at budget 0/1 | unsafe/missing/duplicate labels => correct NOT_RESOLVABLE before budget | none | DONE |
+| RC13 candidate presentation | `presentationForIdentity`, `distinctPublicLabels`, `safeVariantRows` | C59/C59a–c; C60y/z; PRODUCT/CATEGORY exact-generation/locale; all label classes at budget 0/1 | unsafe/missing/duplicate labels => correct NOT_RESOLVABLE before budget | none | DONE |
 | RC14 reservation-aware CLARIFY | `issueClarificationReservationAttestation`, `effectiveClarificationBudget` | PREPARED/GATING/clone/wrong-lease tests + Q14 | only exact owning unsent action receives effective budget 0 | transient attestation only | DONE |
 | RC15 provenance-bound discharge | `createFirstLineContinuationDecisionBasis`, `stableSelectionForAction`, `dischargeOriginalResolution` | C60ab presented + requested PRODUCT/CATEGORY/BRAND/STORE/VARIANT, MONEY, C43; restart | missing/mismatched/ambiguous provenance => HUMAN/reject | canonical stable slots only | DONE |
 | RC16 finite cardinality 20 | presentation reducers + state-store bound | C60aa PRODUCT/CATEGORY/BRAND/STORE/VARIANT 20/21 | 21+ never truncated | unchanged durable max 20 | DONE |
 | RC17 structured-selection prerequisite | structured clarification proof + durable selection provenance | structured CATEGORY restart/mode-drift matrix + existing Q10c selection tests | changed/unknown structured value cannot silently authorize stable slot | canonical selection/provenance only | DONE |
-| RC18 typed Operational/Commerce readers | public operational readers, today schedule, exact CommercePolicy validation | C01-C16a/O09-O11 reader tests + malformed/foreign/conflict cases | missing/conflict HUMAN; malformed rejects; delivery stays HUMAN | none | DONE |
+| RC18 typed Operational/Commerce readers | public operational readers, today schedule, exact CommercePolicy validation | C01-C16a/O09-O11 reader tests + C61-C63 end-to-end + malformed/foreign/conflict cases | missing/conflict HUMAN; malformed rejects; delivery stays HUMAN | none | DONE |
 | RC19 public presentation safety | public-safety module + internal-ID derivation in C4 | C60ac fixed + fast-check properties; 160/161, 4096/4097, URI/debug/control, hosts, nested/constituent IDs | unsafe required label/title => HUMAN; unsafe optional URL => null | none | DONE |
 
 ## 3. C60–C60ad state-space terminal
@@ -74,6 +74,17 @@ Every frozen C60 family is mapped to an executable regression. Grouping here is 
 | C60ab | restart; presented and requested PRODUCT/CATEGORY/BRAND/STORE/VARIANT; exact MONEY ceiling; preserved unrelated constraints/current rereads | DONE |
 | C60ac | fixed/property public text/URL boundary; nested PRODUCT/shortlist IDs; CATEGORY parent; BRAND/STORE IDs; VARIANT SKU/option/attribute constituent IDs | DONE |
 | C60ad | CATEGORY presented/requested restart matrices; NODE_ONLY/INCLUDE_DESCENDANTS; same/flipped/ambiguous/not-found/invalid | DONE |
+
+## 3a. Adjacent frozen acceptance closure
+
+| Acceptance | Verification surface | Status |
+|---|---|---|
+| C59/C59a | post-authority AMBIGUOUS_VARIANT safe/missing/unsafe/duplicate-equivalent label matrix (also C60y) | DONE |
+| C59b | VARIANT_LIST and VARIANT_LIST_PARTIAL distinct-label controls plus duplicate-equivalent canonical variants | DONE |
+| C59c | VARIANT_PRICE_LIST distinct control plus duplicate-equivalent labels with different prices | DONE |
+| C61 | open-ended weekly-hours baseline through C4 STORE_OPEN_STATUS | DONE |
+| C62 | special-hours civil-day ownership through C4; weekly baseline cannot reopen after special close | DONE |
+| C63 | overlapping CLOSED/OPEN cross-namespace operating-state peers through C4 => HUMAN / POLICY_CONFLICT | DONE |
 
 ## 4. T01–T06 C4-side compatibility
 

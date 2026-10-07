@@ -3183,3 +3183,246 @@ test('C60ac CATEGORY parent and BRAND STORE canonical IDs cannot become public l
     assert.equal(decision.reason, 'IDENTITY_NOT_RESOLVABLE', kind);
   }
 });
+
+function c59VariantAnswerCatalog({
+  duplicate = false,
+  partial = false,
+  price = false,
+} = {}) {
+  const c = catalog();
+  const named = duplicate ? ['Blue', ' blue '] : ['Blue', 'Red'];
+  const rows = [
+    { variant_id: variantId(1), sku: 'SKU-1', label: named[0] },
+    { variant_id: variantId(2), sku: 'SKU-2', label: named[1] },
+    ...(partial
+      ? [{ variant_id: variantId(3), sku: 'SKU-3', label: null }]
+      : []),
+  ];
+  c.getVariant = ({ variantId: id }) => {
+    c.calls.push(['getVariant', id]);
+    const index = id === variantId(1) ? 0 : id === variantId(2) ? 1 : 2;
+    const optionName = index < 2 ? named[index] : 'Green';
+    return {
+      catalog: { generation_id: 'g1' },
+      variant: {
+        variant_id: id,
+        product_id: PRODUCT_A,
+        sku: 'SKU-' + (index + 1),
+        sku_key: 'sku-' + (index + 1),
+        options: {
+          color: {
+            option_id: 'option-' + (index + 1),
+            attribute_id: 'attribute-color',
+            option_name: optionName,
+          },
+        },
+      },
+    };
+  };
+  if (price) {
+    c.getVariantPriceListFact = ({ productId }) => ({
+      contract: 'bp.catalog.variant-price-list-fact/1',
+      catalog: { generation_id: 'g1' },
+      product_id: productId,
+      status: 'FACT',
+      reason: 'VARIANT_PRICE_LIST',
+      total_variant_count: 2,
+      displayable_label_count: 2,
+      label_complete: true,
+      currency: 'UAH',
+      variants: rows.slice(0, 2).map((row, index) => ({
+        ...row,
+        current_minor: index === 0 ? 10_000 : 12_000,
+      })),
+    });
+  } else {
+    c.getAvailableVariantsFact = ({ productId }) => ({
+      contract: 'bp.catalog.available-variants-fact/1',
+      catalog: { generation_id: 'g1' },
+      product_id: productId,
+      status: 'FACT',
+      reason: partial ? 'VARIANT_LIST_PARTIAL' : 'VARIANT_LIST',
+      total_variant_count: partial ? 3 : 2,
+      displayable_label_count: 2,
+      label_complete: !partial,
+      variants: rows,
+    });
+  }
+  return c;
+}
+
+test('C59b duplicate-equivalent VARIANT_LIST/PARTIAL labels fail closed; distinct controls answer', () => {
+  for (const partial of [false, true]) {
+    for (const duplicate of [false, true]) {
+      const c = c59VariantAnswerCatalog({ duplicate, partial });
+      const fixture = build({
+        text: 'Какие варианты UPPAbaby Cruz V2 сейчас есть?',
+        spans: [{
+          kind: 'PRODUCT',
+          turn_index: 1,
+          quote: 'UPPAbaby Cruz V2',
+          occurrence: 1,
+        }],
+        catalogService: c,
+      });
+      const decision = decideFirstLine(basis(fixture));
+      if (duplicate) {
+        assert.equal(decision.decision, 'HUMAN', String(partial));
+        assert.equal(decision.reason, 'PRODUCT_VARIANT_NOT_RESOLVABLE');
+      } else {
+        assert.equal(decision.decision, 'ANSWER', String(partial));
+        assert.equal(
+          decision.reason,
+          partial ? 'VARIANT_LIST_PARTIAL' : 'VARIANT_LIST'
+        );
+        assert.deepEqual(decision.render_payload.labels, ['Blue', 'Red']);
+      }
+    }
+  }
+});
+
+test('C59c duplicate-equivalent variant-price labels fail despite different prices; distinct control answers', () => {
+  for (const duplicate of [false, true]) {
+    const c = c59VariantAnswerCatalog({ duplicate, price: true });
+    const fixture = build({
+      text: 'Покажи точные цены вариантов UPPAbaby Cruz V2',
+      spans: [{
+        kind: 'PRODUCT',
+        turn_index: 1,
+        quote: 'UPPAbaby Cruz V2',
+        occurrence: 1,
+      }],
+      catalogService: c,
+    });
+    const decision = decideFirstLine(basis(fixture));
+    if (duplicate) {
+      assert.equal(decision.decision, 'HUMAN');
+      assert.equal(decision.reason, 'PRODUCT_VARIANT_NOT_RESOLVABLE');
+    } else {
+      assert.equal(decision.decision, 'ANSWER');
+      assert.equal(decision.reason, 'VARIANT_PRICE_LIST');
+      assert.deepEqual(
+        decision.render_payload.variants.map(row => row.label),
+        ['Blue', 'Red']
+      );
+      assert.deepEqual(
+        decision.render_payload.variants.map(row => row.current_minor),
+        [10_000, 12_000]
+      );
+    }
+  }
+});
+
+function c61StoreVocabularyRow(phrase = 'магазин') {
+  return {
+    revision_id: 'rev-store-operational',
+    record_type: 'VOCABULARY_ENTRY',
+    schema_version: 1,
+    namespace: 'vocabulary.store',
+    effect_family: 'vocabulary.store_resolution',
+    subject_type: 'phrase',
+    subject_id: phrase,
+    scope: {},
+    effect_type: 'STORE_BINDING',
+    effect_value: { canonical_store_id: storeId(1) },
+    state: 'PUBLISHED',
+    effective_from_utc: '2026-01-01T00:00:00.000Z',
+    expires_at_utc: null,
+  };
+}
+
+function c61OperationalRow(overrides = {}) {
+  return {
+    revision_id: overrides.revision_id ?? 'rev-weekly-operational',
+    record_type: 'OPERATIONAL_FACT',
+    schema_version: 1,
+    namespace: overrides.namespace ?? 'store.weekly_hours',
+    effect_family: overrides.effect_family ?? 'store.hours',
+    subject_type: 'store',
+    subject_id: storeId(1),
+    scope: {},
+    effect_type: overrides.effect_type ?? 'WEEKLY_HOURS',
+    effect_value: overrides.effect_value ?? {
+      tuesday: [{ open: '10:00', close: '20:00' }],
+    },
+    state: 'PUBLISHED',
+    effective_from_utc:
+      overrides.effective_from_utc ?? '2026-09-01T00:00:00.000Z',
+    expires_at_utc: overrides.expires_at_utc ?? null,
+  };
+}
+
+function c61StoreDecision(rows, nowUtc = NOW) {
+  const fixture = build({
+    text: 'Сегодня магазин открыт?',
+    spans: [{
+      kind: 'STORE',
+      turn_index: 1,
+      quote: 'магазин',
+      occurrence: 1,
+    }],
+    catalogService: identityCatalog(),
+    knowledgeStore: knowledge([
+      c61StoreVocabularyRow(),
+      ...rows,
+    ]),
+  });
+  return decideFirstLine(createFirstLineDecisionBasis({
+    ...fixture,
+    nowUtc,
+  }));
+}
+
+test('C61 open-ended weekly baseline authorizes current operational answer', () => {
+  const decision = c61StoreDecision([c61OperationalRow()]);
+  assert.equal(decision.decision, 'ANSWER');
+  assert.equal(decision.reason, 'OPERATIONAL_FACT');
+  assert.equal(decision.template_id, 'TPL_STORE_OPEN_STATUS_V1');
+  assert.equal(decision.render_payload.open, true);
+});
+
+test('C62 special hours own the civil day and weekly baseline cannot reopen at 18:30 Kyiv', () => {
+  const decision = c61StoreDecision([
+    c61OperationalRow(),
+    c61OperationalRow({
+      revision_id: 'rev-special-operational',
+      namespace: 'store.special_hours',
+      effect_type: 'SPECIAL_HOURS',
+      effect_value: {
+        intervals: [{ open: '11:00', close: '18:00' }],
+      },
+      effective_from_utc: '2026-10-05T21:00:00.000Z',
+      expires_at_utc: '2026-10-06T21:00:00.000Z',
+    }),
+  ], '2026-10-06T15:30:00.000Z');
+  assert.equal(decision.decision, 'ANSWER');
+  assert.equal(decision.reason, 'OPERATIONAL_FACT');
+  assert.equal(decision.render_payload.open, false);
+});
+
+test('C63 conflicting cross-namespace operating-state peers map to HUMAN POLICY_CONFLICT', () => {
+  const decision = c61StoreDecision([
+    c61OperationalRow(),
+    c61OperationalRow({
+      revision_id: 'rev-closed-operational',
+      namespace: 'store.temporary_closure',
+      effect_family: 'store.operating_state',
+      effect_type: 'CLOSED',
+      effect_value: { closed: true },
+      effective_from_utc: '2026-10-06T11:00:00.000Z',
+      expires_at_utc: '2026-10-06T13:00:00.000Z',
+    }),
+    c61OperationalRow({
+      revision_id: 'rev-open-operational',
+      namespace: 'store.status_override',
+      effect_family: 'store.operating_state',
+      effect_type: 'STATUS',
+      effect_value: { status: 'OPEN' },
+      effective_from_utc: '2026-10-06T11:00:00.000Z',
+      expires_at_utc: '2026-10-06T13:00:00.000Z',
+    }),
+  ]);
+  assert.equal(decision.decision, 'HUMAN');
+  assert.equal(decision.reason, 'POLICY_CONFLICT');
+});
+
