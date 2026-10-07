@@ -1803,9 +1803,7 @@ function requireSelectionMessageResolution({
 }) {
   if (!resolution || resolution.schema !== FIRST_LINE_RESOLUTION_SCHEMA ||
       !Array.isArray(resolution.resolutions) ||
-      resolution.resolutions.length !== 1 ||
       !Array.isArray(resolution.certified_spans) ||
-      resolution.certified_spans.length !== 1 ||
       !Array.isArray(resolution.source_message_ids) ||
       resolution.source_message_ids.length !== 1 ||
       resolution.source_message_ids[0] !== sourceMessageId ||
@@ -1815,6 +1813,10 @@ function requireSelectionMessageResolution({
       !resolutionUsesExactRead(resolution, 1, exactReads[0].exactRead)) {
     fail('FIRST_LINE_DECISION_CONTINUATION_INVALID',
       'selection message must be one genuine current C2 resolution');
+  }
+  if (resolution.resolutions.length !== 1 ||
+      resolution.certified_spans.length !== 1) {
+    return false;
   }
 
   const exactRead = exactReads[0].exactRead;
@@ -1922,7 +1924,9 @@ export function createFirstLineContinuationDecisionBasis({
 
   const dependencies = [];
   const contextResolutions = [originalResolution];
-  const finish = snapshot => finish(attachDecisionContext(snapshot, contextResolutions, dependencies)
+  const finish = snapshot => registerDecisionBasis(
+    AUTHORITY_CAPABILITY,
+    attachDecisionContext(snapshot, contextResolutions, dependencies)
   );
   const originalProjection = projectConfirmedClarificationBasis(routingSnapshot);
   const budget = requireCertifiedInputs(
@@ -2099,7 +2103,9 @@ export function createFirstLineDecisionBasis({
   nowUtc,
 } = {}) {
   const dependencies = [];
-  const finish = snapshot => finish(attachDecisionContext(snapshot, [resolution], dependencies)
+  const finish = snapshot => registerDecisionBasis(
+    AUTHORITY_CAPABILITY,
+    attachDecisionContext(snapshot, [resolution], dependencies)
   );
   const persistedBudget = requireCertifiedInputs(
     projection,
