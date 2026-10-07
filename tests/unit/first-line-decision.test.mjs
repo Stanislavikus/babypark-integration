@@ -2691,24 +2691,36 @@ function identityLabelProblemCatalog(kind, mode) {
       };
     };
   } else if (kind === 'BRAND') {
+    let reads = 0;
     c.listBrands = ({ brandIds, limit }) => {
       c.calls.push(['listBrands', brandIds.length, limit]);
+      const presentationRead = reads++ > 0;
       return {
-        catalog: { generation_id: 'g1' },
+        catalog: {
+          generation_id: presentationRead && mode === 'generation' ? 'g2' : 'g1',
+        },
         brands: brandIds.map((id, index) => ({
           brand_id: id,
-          name: mode === 'missing' && index === 0 ? null : label(index),
+          name: presentationRead && mode === 'missing' && index === 0
+            ? null
+            : presentationRead ? label(index) : 'Safe brand ' + (index + 1),
         })),
       };
     };
   } else if (kind === 'STORE') {
+    let reads = 0;
     c.getStores = ({ storeIds, limit }) => {
       c.calls.push(['getStores', storeIds.length, limit]);
+      const presentationRead = reads++ > 0;
       return {
-        catalog: { generation_id: 'g1' },
+        catalog: {
+          generation_id: presentationRead && mode === 'generation' ? 'g2' : 'g1',
+        },
         stores: storeIds.map((id, index) => ({
           store_id: id,
-          name: mode === 'missing' && index === 0 ? null : label(index),
+          name: presentationRead && mode === 'missing' && index === 0
+            ? null
+            : presentationRead ? label(index) : 'Safe store ' + (index + 1),
           active: true,
         })),
       };
@@ -3424,4 +3436,85 @@ test('C63 conflicting cross-namespace operating-state peers map to HUMAN POLICY_
   ]);
   assert.equal(decision.decision, 'HUMAN');
   assert.equal(decision.reason, 'POLICY_CONFLICT');
+});
+
+
+test('B1 BRAND/STORE presentation is freshly reread, complete and generation-bound', () => {
+  for (const kind of ['BRAND', 'STORE']) {
+    for (const mode of ['missing', 'unsafe', 'duplicate', 'generation']) {
+      const c = identityLabelProblemCatalog(kind, mode);
+      const phrase = kind === 'BRAND' ? 'бренд' : 'магазина';
+      const fixture = build({
+        text: kind === 'BRAND' ? 'Покажи бренд' : 'Какой телефон магазина?',
+        spans: [{ kind, turn_index: 1, quote: phrase, occurrence: 1 }],
+        catalogService: c,
+        knowledgeStore: identityVocabulary(kind, 2, phrase),
+      });
+      const decision = decideFirstLine(basis(fixture));
+      assert.equal(decision.decision, 'HUMAN', kind + '/' + mode);
+      assert.equal(decision.reason, 'IDENTITY_NOT_RESOLVABLE', kind + '/' + mode);
+    }
+  }
+});
+
+test('B4 every genuine decision has redacted out-of-band Decision Context', () => {
+  const methods = ['BANK_TRANSFER', 'COD_NOVA_POSHTA'];
+  const fixture = build({
+    text: 'Какие способы оплаты есть?',
+    knowledgeStore: knowledge([commerceRow({ effect_value: { methods } })]),
+  });
+  const decision = decideFirstLine(basis(fixture));
+  const context = getFirstLineDecisionPrivateContext(decision);
+  assert.ok(context);
+  assert.match(context.decision_context_id, /^dc_[a-f0-9]{64}$/u);
+  assert.equal(context.decision_context.schema, 'bp.first-line.decision-context/1');
+  assert.equal(context.decision_context.intent_schema_version, FIRST_LINE_INTENT_SCHEMA_VERSION);
+  assert.equal(context.decision_context.tool_contract_version, 'bp.first-line.c4-authority/1');
+  assert.equal(context.decision_context.template_id, 'TPL_PAYMENT_METHODS_V1');
+  assert.equal(context.decision_context.template_version, 1);
+  assert.deepEqual(context.decision_context.used_commerce_revision_ids, ['policy-1']);
+  assert.deepEqual(context.trace_metadata.source_message_ids, [501]);
+  assert.equal(
+    context.decision_context.authority_dependencies.some(dep =>
+      dep.authority === 'COMMERCE' && dep.tool === 'resolveCommercePolicy'
+    ),
+    true
+  );
+  const serialized = JSON.stringify(context);
+  assert.equal(serialized.includes('Какие способы оплаты есть?'), false);
+  assert.equal(serialized.includes('transientContent'), false);
+  assert.equal(getFirstLineDecisionPrivateContext(structuredClone(decision)), null);
+});
+
+test('B4 CLARIFY decision keeps candidates and dependency context private', () => {
+  const c = catalog({ productMode: 'AMBIGUOUS' });
+  const fixture = build({
+    text: 'Сколько стоит Дубль?',
+    spans: [{ kind: 'PRODUCT', turn_index: 1, quote: 'Дубль', occurrence: 1 }],
+    catalogService: c,
+  });
+  const decision = decideFirstLine(basis(fixture));
+  const context = getFirstLineDecisionPrivateContext(decision);
+  assert.equal(decision.decision, 'CLARIFY');
+  assert.ok(context?.decision_context_id);
+  assert.equal(Array.isArray(context.presented_candidates), true);
+  assert.equal(
+    context.decision_context.authority_dependencies.some(dep => dep.tool === 'getProduct'),
+    true
+  );
+});
+
+test('B5 public decision payload is detached and deeply frozen', () => {
+  const methods = ['BANK_TRANSFER', 'COD_NOVA_POSHTA'];
+  const fixture = build({
+    text: 'Какие способы оплаты есть?',
+    knowledgeStore: knowledge([commerceRow({ effect_value: { methods } })]),
+  });
+  const decision = decideFirstLine(basis(fixture));
+  assert.equal(Object.isFrozen(decision), true);
+  assert.equal(Object.isFrozen(decision.render_payload), true);
+  assert.equal(Object.isFrozen(decision.render_payload.methods), true);
+  assert.throws(() => decision.render_payload.methods.push('CASH_COURIER'));
+  methods.push('CASH_COURIER');
+  assert.deepEqual(decision.render_payload.methods, ['BANK_TRANSFER', 'COD_NOVA_POSHTA']);
 });

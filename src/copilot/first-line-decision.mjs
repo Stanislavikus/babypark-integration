@@ -67,6 +67,14 @@ function fail(code, message, details = {}) {
   throw new FirstLineDecisionError(code, message, details);
 }
 
+function deepCloneFreeze(value) {
+  if (value === null || typeof value !== 'object') return value;
+  if (Array.isArray(value)) return Object.freeze(value.map(deepCloneFreeze));
+  const out = {};
+  for (const key of Object.keys(value)) out[key] = deepCloneFreeze(value[key]);
+  return Object.freeze(out);
+}
+
 function exactKeys(value, expected) {
   return value && typeof value === 'object' && !Array.isArray(value) &&
     Object.keys(value).sort().join(',') === [...expected].sort().join(',');
@@ -281,13 +289,13 @@ function publicDecision(snapshot) {
     reason,
     response_locale,
     template_id,
-    render_payload,
+    render_payload: render_payload === null ? null : deepCloneFreeze(render_payload),
     requested_slot,
-    choices: Object.freeze(choices.map(row => Object.freeze({ ...row }))),
+    choices: deepCloneFreeze(choices),
   });
   const privateContext = snapshot.private_context ?? null;
   if (privateContext !== null) {
-    decisionPrivateContexts.set(output, privateContext);
+    decisionPrivateContexts.set(output, deepCloneFreeze(privateContext));
   }
   return output;
 }

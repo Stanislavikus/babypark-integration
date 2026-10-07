@@ -46,13 +46,14 @@ No new durable customer-content or dynamic-fact payload is introduced. `episode.
 | RC10 singular same-kind reduction | `reduceIdentityCardinality`, `semanticKey` | C60r PRODUCT/CATEGORY/BRAND/STORE/MONEY | differing/mixed ambiguity => UNSUPPORTED_CONSTRAINT before authority | none | DONE |
 | RC11 response locale | basis locale gate | C60s de reject + uk/ru conflicting-hint presentation | no fallback; unsupported => HUMAN before authority | none | DONE |
 | RC12 typed eight-key projection | `publicDecision`, closed payload validators | C60t/u/x plus raw-metadata/leakage fixtures | missing/extra/wrong-type public shape rejects | private context WeakMap only | DONE |
-| RC13 candidate presentation | `presentationForIdentity`, `distinctPublicLabels`, `safeVariantRows` | C59/C59a–c; C60y/z; PRODUCT/CATEGORY exact-generation/locale; all label classes at budget 0/1 | unsafe/missing/duplicate labels => correct NOT_RESOLVABLE before budget | none | DONE |
+| RC13 candidate presentation | `presentationForIdentity`, `distinctPublicLabels`, `safeVariantRows` | C59/C59a–c; C60y/z; PRODUCT/CATEGORY plus fresh BRAND/STORE current-presentation rereads; all label classes at budget 0/1 | unsafe/missing/duplicate/drifted current labels => correct NOT_RESOLVABLE before budget | none | DONE |
 | RC14 reservation-aware CLARIFY | `issueClarificationReservationAttestation`, `effectiveClarificationBudget` | PREPARED/GATING/clone/wrong-lease tests + Q14 | only exact owning unsent action receives effective budget 0 | transient attestation only | DONE |
 | RC15 provenance-bound discharge | `createFirstLineContinuationDecisionBasis`, `stableSelectionForAction`, `dischargeOriginalResolution` | C60ab presented + requested PRODUCT/CATEGORY/BRAND/STORE/VARIANT, MONEY, C43; restart | missing/mismatched/ambiguous provenance => HUMAN/reject | canonical stable slots only | DONE |
 | RC16 finite cardinality 20 | presentation reducers + state-store bound | C60aa PRODUCT/CATEGORY/BRAND/STORE/VARIANT 20/21 | 21+ never truncated | unchanged durable max 20 | DONE |
 | RC17 structured-selection prerequisite | structured clarification proof + durable selection provenance | structured CATEGORY restart/mode-drift matrix + existing Q10c selection tests | changed/unknown structured value cannot silently authorize stable slot | canonical selection/provenance only | DONE |
 | RC18 typed Operational/Commerce readers | public operational readers, today schedule, exact CommercePolicy validation | C01-C16a/O09-O11 reader tests + C61-C63 end-to-end + strict full-subject operational ownership/schema malformed/foreign/conflict cases | missing/conflict HUMAN; malformed rejects; delivery stays HUMAN | none | DONE |
 | RC19 public presentation safety | public-safety module + internal-ID derivation in C4 | C60ac fixed + fast-check properties; 160/161, 4096/4097, URI/debug/control, hosts, nested/constituent IDs | unsafe required label/title => HUMAN; unsafe optional URL => null | none | DONE |
+| Frozen Decision Context provenance | `attachDecisionContext` + decision WeakMap private context | ordinary ANSWER/CLARIFY redacted-context tests; dependency/source-ID separation | no raw exact-read text; authority/revision/generation/tool dependencies remain private/out-of-band | transient only | DONE |
 
 ## 3. C60–C60ad state-space terminal
 
@@ -92,7 +93,7 @@ Every frozen C60 family is mapped to an executable regression. Grouping here is 
 |---|---|---|---|
 | T01 | exact `response_locale`; shortlist title is required from exact locale and otherwise PRODUCT_PRESENTATION_NOT_AVAILABLE | C5 later selects exact template branch | DONE |
 | T02 | PRODUCT_PRICE does not require product presentation; STORE_STOCK accepts `variant_label=null` without inventing a label | C5 later renders title-free templates | DONE |
-| T03 | C4 result is a closed serializable eight-key data object; no authority object/function/network capability crosses the seam | actual pure renderer implementation is C5 | DONE |
+| T03 | C4 result is a closed serializable eight-key data object with detached deep-frozen nested payload; private Decision Context/dependencies stay out-of-band | actual pure renderer implementation is C5 | DONE |
 | T04 | payment payload is exact allowlisted method codes only; numeric/commercial conditions cannot enter its schema | wording is C5 | DONE |
 | T05 | price/phone/prepayment values are exact typed payload values copied from current authority; C4 does no semantic prose rewriting | locale formatting is C5 | DONE |
 | T06 | public finite choices are ordinal token + safe label; canonical reservation data is transient/private | prompt prose is C5 | DONE |
@@ -106,7 +107,7 @@ Every frozen C60 family is mapped to an executable regression. Grouping here is 
 | U03 | current price/stock/policy values are projected from current reads, not persisted payload | C6 later renders/sends current descriptor | DONE |
 | U04 | reservation attestation is transient, single-owner, PREPARED/current-GATING only and lease-bound when GATING | C6 later requests it for exact unsent CLARIFY | DONE |
 | U05 | restart rebuild uses durable IDs/provenance only; raw body and dynamic render payload are not stored in `episode.sqlite` | C6 later performs final whole-conversation rebuild | DONE |
-| U05a | presented/requested selections discharge exactly one reserved slot; CATEGORY pair and unrelated constraints survive restart | C6 later reauthorizes resulting descriptor | DONE |
+| U05a | presented/requested selections discharge exactly one reserved slot; requested-message restart re-proof repeats the one-span/one-resolution/full-message exactness predicate; CATEGORY pair and unrelated constraints survive restart | C6 later reauthorizes resulting descriptor | DONE |
 | U06 | authority failure/staleness maps to HUMAN/reject rather than permission to reuse old payload | C6 later converts failed reauth to zero POST/HUMAN | DONE |
 | U07 | structured selection proof is action/value/provenance-bound; unknown/multiple/mutated submission cannot authorize stable selection | final send-time repeat is C6 | DONE |
 
@@ -118,6 +119,7 @@ No C5 renderer or C6 Chatwoot POST/relay implementation is claimed by these rows
 - No price, stock, schedule, policy result, shortlist membership or render payload is added to durable state.
 - CATEGORY clarification persists `category_id` + `category_match_mode` atomically with one provenance event.
 - Reservation attestation is in-memory capability state only.
+- Decision Context dependencies are transient/redacted out-of-band metadata on the genuine decision object; this campaign adds no C6 trace table or durable decision-context storage.
 - `episode.sqlite` remains declared in `config/storage-policy.yaml`; no new writable storage class is introduced.
 - Materially touched FirstLineStateStore create/open/migration SQLite paths have explicit `busy_timeout`.
 

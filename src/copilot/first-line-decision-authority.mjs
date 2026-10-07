@@ -33,6 +33,8 @@ import {
 import {
   projectActiveKnowledge,
 } from './knowledge/projection.mjs';
+import { createHash } from 'node:crypto';
+import { canonicalKnowledgeJson } from './knowledge/canonical.mjs';
 
 const AUTHORITY_CAPABILITY = Object.freeze({});
 const IDENTITY_KINDS = new Set(['PRODUCT', 'CATEGORY', 'BRAND', 'STORE', 'MONEY']);
@@ -40,6 +42,171 @@ const CUSTOMER_IDENTITY_KINDS = new Set(['PRODUCT', 'CATEGORY', 'BRAND', 'STORE'
 const CATEGORY_MATCH_MODES = new Set(['NODE_ONLY', 'INCLUDE_DESCENDANTS']);
 const MAX_CHOICES = 20;
 const PAYMENT_CODES = new Set(['BANK_TRANSFER', 'CASH_COURIER', 'COD_NOVA_POSHTA']);
+const DECISION_CONTEXT_SCHEMA = 'bp.first-line.decision-context/1';
+const TOOL_CONTRACT_VERSION = 'bp.first-line.c4-authority/1';
+
+function frozenClone(value) {
+  if (value === null || typeof value !== 'object') return value;
+  if (Array.isArray(value)) return Object.freeze(value.map(frozenClone));
+  const out = {};
+  for (const key of Object.keys(value).sort()) {
+    const item = value[key];
+    if (item !== undefined) out[key] = frozenClone(item);
+  }
+  return Object.freeze(out);
+}
+
+function resultRevisionIds(result) {
+  const values = [
+    ...(Array.isArray(result?.revision_ids) ? result.revision_ids : []),
+    ...(Array.isArray(result?.revisions) ? result.revisions : []),
+  ].map(value => typeof value === 'string' ? value : value?.revision_id)
+    .filter(value => typeof value === 'string' && value.length > 0);
+  return Object.freeze([...new Set(values)].sort());
+}
+
+function catalogLayerEvidence(result) {
+  const names = Array.isArray(result?.relevant_layers)
+    ? [...new Set(result.relevant_layers)].sort()
+    : [];
+  const layers = {};
+  for (const name of names) {
+    const row = result?.catalog?.layers?.[name];
+    if (!row) continue;
+    layers[name] = {
+      freshness_state: row.freshness_state ?? null,
+      need_reconcile: row.need_reconcile ?? null,
+      need_full: row.need_full ?? null,
+    };
+  }
+  return Object.freeze({
+    relevant_layers: Object.freeze(names),
+    layers: frozenClone(layers),
+  });
+}
+
+function recordCatalogDependency(dependencies, tool, args, result) {
+  const layerEvidence = catalogLayerEvidence(result);
+  dependencies.push(frozenClone({
+    authority: 'CATALOG',
+    tool,
+    args,
+    catalog_generation_id: result?.catalog?.generation_id ?? null,
+    relevant_layers: layerEvidence.relevant_layers,
+    layers: layerEvidence.layers,
+    outcome: {
+      status: result?.status ?? null,
+      reason: result?.reason ?? null,
+    },
+  }));
+  return result;
+}
+
+function recordKnowledgeDependency(dependencies, authority, tool, args, result) {
+  dependencies.push(frozenClone({
+    authority,
+    tool,
+    args,
+    revision_ids: resultRevisionIds(result),
+    outcome: {
+      status: result?.status ?? null,
+      reason: result?.reason ?? null,
+    },
+  }));
+  return result;
+}
+
+function templateVersion(templateId) {
+  if (templateId === null) return null;
+  const match = typeof templateId === 'string'
+    ? templateId.match(/_V(\d+)$/u)
+    : null;
+  if (!match) {
+    fail('FIRST_LINE_DECISION_CONTEXT_INVALID',
+      'template id has no deterministic version', { template_id: templateId });
+  }
+  return Number(match[1]);
+}
+
+function buildDecisionContext(snapshot, resolutions, dependencies) {
+  const inputs = resolutions.filter(Boolean);
+  const intentVersions = new Set(inputs.map(row => row.intent_schema_version));
+  const resolverVersions = new Set(
+    inputs.map(row => row.knowledge_resolver_contract_version)
+      .filter(value => value !== null)
+  );
+  const catalogGenerations = new Set(
+    inputs.map(row => row.catalog_generation_id)
+      .filter(value => value !== null)
+  );
+  if (intentVersions.size !== 1 || resolverVersions.size > 1 ||
+      catalogGenerations.size > 1) {
+    fail('FIRST_LINE_DECISION_CONTEXT_INVALID',
+      'decision context inputs disagree on certified versions/generation');
+  }
+  const sourceMessageIds = Object.freeze([...new Set(
+    inputs.flatMap(row => row.source_message_ids ?? [])
+  )].sort((x, y) => x - y));
+  const vocabularyRevisionIds = Object.freeze([...new Set(
+    inputs.flatMap(row => row.used_revision_ids ?? [])
+  )].sort());
+  const operationalRevisionIds = Object.freeze([...new Set(
+    dependencies.filter(row => row.authority === 'OPERATIONAL')
+      .flatMap(row => row.revision_ids ?? [])
+  )].sort());
+  const commerceRevisionIds = Object.freeze([...new Set(
+    dependencies.filter(row => row.authority === 'COMMERCE')
+      .flatMap(row => row.revision_ids ?? [])
+  )].sort());
+  const resolverOutcomes = inputs.flatMap(row =>
+    (row.resolutions ?? []).map(item => ({
+      kind: item.kind,
+      status: item.authority?.status ?? null,
+      reason: item.authority?.reason ?? null,
+    }))
+  ).sort((x, y) =>
+    canonicalKnowledgeJson(x).localeCompare(canonicalKnowledgeJson(y))
+  );
+  const authorityDependencies = [...dependencies].sort((x, y) =>
+    canonicalKnowledgeJson(x).localeCompare(canonicalKnowledgeJson(y))
+  );
+  const canonical = frozenClone({
+    schema: DECISION_CONTEXT_SCHEMA,
+    intent_schema_version: [...intentVersions][0],
+    knowledge_resolver_contract_version:
+      resolverVersions.size === 1 ? [...resolverVersions][0] : null,
+    tool_contract_version: TOOL_CONTRACT_VERSION,
+    template_id: snapshot.template_id,
+    template_version: templateVersion(snapshot.template_id),
+    response_locale: snapshot.response_locale,
+    used_operational_revision_ids: operationalRevisionIds,
+    used_commerce_revision_ids: commerceRevisionIds,
+    used_vocabulary_revision_ids: vocabularyRevisionIds,
+    catalog_generation_id:
+      catalogGenerations.size === 1 ? [...catalogGenerations][0] : null,
+    authority_dependencies: authorityDependencies,
+    resolver_outcomes: resolverOutcomes,
+    model_id: null,
+  });
+  const decisionContextId = 'dc_' + createHash('sha256')
+    .update(canonicalKnowledgeJson(canonical))
+    .digest('hex');
+  return Object.freeze({
+    decision_context_id: decisionContextId,
+    decision_context: canonical,
+    trace_metadata: Object.freeze({ source_message_ids: sourceMessageIds }),
+  });
+}
+
+function attachDecisionContext(snapshot, resolutions, dependencies) {
+  return Object.freeze({
+    ...snapshot,
+    private_context: Object.freeze({
+      ...(snapshot.private_context ?? {}),
+      ...buildDecisionContext(snapshot, resolutions, dependencies),
+    }),
+  });
+}
 
 const LATCH_PRIORITY = Object.freeze([
   ['RETURN_CASE', 'RETURN_CASE_SPECIFIC'],
@@ -438,6 +605,7 @@ function presentationForIdentity(row, {
   locale,
   catalogService,
   generationId,
+  dependencies,
 }) {
   const candidates = row.authority?.candidates;
   if (!Array.isArray(candidates) || candidates.length < 1 || candidates.length > MAX_CHOICES) {
@@ -450,7 +618,10 @@ function presentationForIdentity(row, {
     for (const candidate of candidates) {
       const id = candidate.canonical_product_id;
       if (typeof id !== 'string') return null;
-      const current = catalogService.getProduct({ productId: id });
+      const current = recordCatalogDependency(
+        dependencies, 'getProduct', { product_id: id },
+        catalogService.getProduct({ productId: id })
+      );
       if (current?.catalog?.generation_id !== generationId || !current.product) return null;
       const label = current.product.localized?.[locale]?.title;
       const key = id + ':' + (candidate.canonical_variant_id ?? '');
@@ -479,11 +650,17 @@ function presentationForIdentity(row, {
     if (tuples.some(tuple =>
       typeof tuple.category_id !== 'string' ||
       !CATEGORY_MATCH_MODES.has(tuple.match_mode))) return null;
-    const result = catalogService.listCategories({
-      language: locale,
-      categoryIds: tuples.map(tuple => tuple.category_id),
-      limit: tuples.length,
-    });
+    const categoryIds = tuples.map(tuple => tuple.category_id);
+    const result = recordCatalogDependency(
+      dependencies,
+      'listCategories',
+      { language: locale, category_ids: categoryIds, limit: tuples.length },
+      catalogService.listCategories({
+        language: locale,
+        categoryIds,
+        limit: tuples.length,
+      })
+    );
     if (result?.catalog?.generation_id !== generationId) return null;
     const byId = new Map((result.categories ?? []).map(item => [item.category_id, item]));
     const rows = [];
@@ -508,15 +685,44 @@ function presentationForIdentity(row, {
   }
 
   if (row.kind === 'BRAND' || row.kind === 'STORE') {
-    const idKey = row.kind === 'BRAND' ? 'canonical_brand_id' : 'canonical_store_id';
+    const idKey = row.kind === 'BRAND'
+      ? 'canonical_brand_id'
+      : 'canonical_store_id';
+    const candidateIds = candidates.map(candidate => candidate[idKey]);
+    if (candidateIds.some(id => typeof id !== 'string')) return null;
+    const result = row.kind === 'BRAND'
+      ? catalogService.listBrands({
+          brandIds: candidateIds,
+          limit: candidateIds.length,
+        })
+      : catalogService.getStores({
+          activeOnly: true,
+          storeIds: candidateIds,
+          limit: candidateIds.length,
+        });
+    recordCatalogDependency(
+      dependencies,
+      row.kind === 'BRAND' ? 'listBrands' : 'getStores',
+      row.kind === 'BRAND'
+        ? { brand_ids: candidateIds, limit: candidateIds.length }
+        : { active_only: true, store_ids: candidateIds, limit: candidateIds.length },
+      result
+    );
+    if (result?.catalog?.generation_id !== generationId) return null;
+    const items = row.kind === 'BRAND'
+      ? result.brands ?? []
+      : result.stores ?? [];
+    const itemIdKey = row.kind === 'BRAND' ? 'brand_id' : 'store_id';
+    const byId = new Map(items.map(item => [item[itemIdKey], item]));
     const rows = [];
     const ids = new Map();
-    for (const candidate of candidates) {
-      const id = candidate[idKey];
-      const label = candidate.name ?? candidate.title ?? candidate.label;
-      if (typeof id !== 'string') return null;
-      rows.push({ key: id, private_value: id, label });
-      ids.set(id, new Set([id]));
+    for (const id of candidateIds) {
+      const item = byId.get(id);
+      if (!item) return null;
+      rows.push({ key: id, private_value: id, label: item.name });
+      const internalIds = collectInternalIds(item);
+      internalIds.add(String(id));
+      ids.set(id, internalIds);
     }
     return distinctPublicLabels(rows, locale, ids);
   }
@@ -576,6 +782,7 @@ function preAuthorityClarification(requirements, {
   locale,
   catalogService,
   generationId,
+  dependencies,
 }) {
   const presented = [];
   for (const requirement of requirements) {
@@ -584,6 +791,7 @@ function preAuthorityClarification(requirements, {
         locale,
         catalogService,
         generationId,
+        dependencies,
       });
       if (choices === null) return { terminal: human('IDENTITY_NOT_RESOLVABLE') };
       presented.push({ requirement, choices });
@@ -873,8 +1081,11 @@ function catalogHuman(family, fact) {
   return null;
 }
 
-function safeVariantLabel(catalogService, row, expectedGeneration) {
-  const current = catalogService.getVariant({ variantId: row.variant_id });
+function safeVariantLabel(catalogService, row, expectedGeneration, dependencies) {
+  const current = recordCatalogDependency(
+    dependencies, 'getVariant', { variant_id: row.variant_id },
+    catalogService.getVariant({ variantId: row.variant_id })
+  );
   if (current?.catalog?.generation_id !== expectedGeneration || !current.variant) {
     return null;
   }
@@ -904,10 +1115,12 @@ function safeVariantLabel(catalogService, row, expectedGeneration) {
   return joined;
 }
 
-function safeVariantRows(catalogService, variants, locale, expectedGeneration, {
-  allowNull = false,
-  withPrice = false,
-}) {
+function safeVariantRows(
+  catalogService, variants, locale, expectedGeneration, dependencies, {
+    allowNull = false,
+    withPrice = false,
+  }
+) {
   if (typeof expectedGeneration !== 'string' || expectedGeneration.length === 0) {
     return null;
   }
@@ -915,7 +1128,7 @@ function safeVariantRows(catalogService, variants, locale, expectedGeneration, {
   const out = [];
   for (const row of variants) {
     if (row.label === null && allowNull) continue;
-    const label = safeVariantLabel(catalogService, row, expectedGeneration);
+    const label = safeVariantLabel(catalogService, row, expectedGeneration, dependencies);
     if (label === null) return null;
     const key = label.normalize('NFC').replace(/\s+/gu, ' ').trim()
       .toLocaleLowerCase(locale);
@@ -928,7 +1141,7 @@ function safeVariantRows(catalogService, variants, locale, expectedGeneration, {
   return Object.freeze(out);
 }
 
-function objectiveAnswer(fact, locale, catalogService) {
+function objectiveAnswer(fact, locale, catalogService, dependencies) {
   if (fact.status === 'FACT' && fact.reason === 'OBJECTIVE_SHORTLIST_EMPTY') {
     return answer('OBJECTIVE_SHORTLIST_EMPTY', locale,
       'TPL_SHORTLIST_EMPTY_V1', {});
@@ -946,7 +1159,10 @@ function objectiveAnswer(fact, locale, catalogService) {
 
   const products = [];
   for (const item of fact.products ?? []) {
-    const current = catalogService.getProduct({ productId: item.product_id });
+    const current = recordCatalogDependency(
+      dependencies, 'getProduct', { product_id: item.product_id },
+      catalogService.getProduct({ productId: item.product_id })
+    );
     if (current?.catalog?.generation_id !== fact.catalog?.generation_id ||
         !current.product) {
       return human('PRODUCT_PRESENTATION_NOT_AVAILABLE');
@@ -990,12 +1206,16 @@ function authorityDecision(family, {
   knowledgeStore,
   nowUtc,
   budget,
+  dependencies,
 }) {
   if (family === 'STORE_OPEN_STATUS') {
-    const result = resolveStoreOperationalState(knowledgeStore, {
-      nowUtc,
-      storeId: slots.store_id,
-    });
+    const result = recordKnowledgeDependency(
+      dependencies, 'OPERATIONAL', 'resolveStoreOperationalState',
+      { store_id: slots.store_id },
+      resolveStoreOperationalState(knowledgeStore, {
+        nowUtc, storeId: slots.store_id,
+      })
+    );
     if (result.status === 'POLICY_NOT_FOUND') return human('POLICY_NOT_FOUND');
     if (result.status === 'POLICY_CONFLICT') return human('POLICY_CONFLICT');
     if (result.status !== 'RESOLVED') fail('FIRST_LINE_DECISION_AUTHORITY_TUPLE_UNKNOWN', 'unknown store state');
@@ -1006,10 +1226,13 @@ function authorityDecision(family, {
   }
 
   if (family === 'STORE_HOURS_TODAY') {
-    const current = resolveStoreOperationalState(knowledgeStore, {
-      nowUtc,
-      storeId: slots.store_id,
-    });
+    const current = recordKnowledgeDependency(
+      dependencies, 'OPERATIONAL', 'resolveStoreOperationalState',
+      { store_id: slots.store_id },
+      resolveStoreOperationalState(knowledgeStore, {
+        nowUtc, storeId: slots.store_id,
+      })
+    );
     if (current.status === 'POLICY_CONFLICT') return human('POLICY_CONFLICT');
     if (current.status === 'RESOLVED' && current.open === false &&
         ['OPERATING_STATE_OVERLAY', 'BASELINE_STATUS'].includes(current.source)) {
@@ -1018,10 +1241,13 @@ function authorityDecision(family, {
         closes_at_local: null,
       });
     }
-    const result = resolveStoreTodaySchedule(knowledgeStore, {
-      nowUtc,
-      storeId: slots.store_id,
-    });
+    const result = recordKnowledgeDependency(
+      dependencies, 'OPERATIONAL', 'resolveStoreTodaySchedule',
+      { store_id: slots.store_id },
+      resolveStoreTodaySchedule(knowledgeStore, {
+        nowUtc, storeId: slots.store_id,
+      })
+    );
     if (result.status === 'POLICY_NOT_FOUND') return human('POLICY_NOT_FOUND');
     if (result.status === 'POLICY_CONFLICT') return human('POLICY_CONFLICT');
     if (result.status !== 'RESOLVED') fail('FIRST_LINE_DECISION_AUTHORITY_TUPLE_UNKNOWN', 'unknown today schedule');
@@ -1032,9 +1258,15 @@ function authorityDecision(family, {
   }
 
   if (family === 'STORE_PHONE' || family === 'CALL_CENTER_PHONE') {
-    const result = family === 'STORE_PHONE'
-      ? resolveStorePhone(knowledgeStore, { nowUtc, storeId: slots.store_id })
-      : resolveCallCenterPhone(knowledgeStore, { nowUtc });
+    const result = recordKnowledgeDependency(
+      dependencies,
+      'OPERATIONAL',
+      family === 'STORE_PHONE' ? 'resolveStorePhone' : 'resolveCallCenterPhone',
+      family === 'STORE_PHONE' ? { store_id: slots.store_id } : {},
+      family === 'STORE_PHONE'
+        ? resolveStorePhone(knowledgeStore, { nowUtc, storeId: slots.store_id })
+        : resolveCallCenterPhone(knowledgeStore, { nowUtc })
+    );
     if (result.status === 'POLICY_NOT_FOUND') return human('POLICY_NOT_FOUND');
     if (result.status === 'POLICY_CONFLICT') return human('POLICY_CONFLICT');
     if (result.status !== 'RESOLVED') fail('FIRST_LINE_DECISION_AUTHORITY_TUPLE_UNKNOWN', 'unknown phone status');
@@ -1050,6 +1282,10 @@ function authorityDecision(family, {
       effectType: 'PAYMENT_METHODS',
       bindings: {},
     });
+    recordKnowledgeDependency(
+      dependencies, 'COMMERCE', 'resolveCommercePolicy',
+      { effect_family: 'commerce.payment_methods', bindings: {} }, result
+    );
     return policyResult(result, locale, {
       templateId: 'TPL_PAYMENT_METHODS_V1',
       payloadFrom: row => ({ methods: row.effect_value.methods }),
@@ -1066,6 +1302,10 @@ function authorityDecision(family, {
       effectType: 'PREPAYMENT',
       bindings,
     });
+    recordKnowledgeDependency(
+      dependencies, 'COMMERCE', 'resolveCommercePolicy',
+      { effect_family: 'commerce.prepayment', bindings }, result
+    );
     return policyResult(result, locale, {
       templateId: 'TPL_PREPAYMENT_V1',
       payloadFrom: row => ({
@@ -1081,6 +1321,10 @@ function authorityDecision(family, {
       effectType: 'RETURN_PERIOD',
       bindings: {},
     });
+    recordKnowledgeDependency(
+      dependencies, 'COMMERCE', 'resolveCommercePolicy',
+      { effect_family: 'commerce.return_period', bindings: {} }, result
+    );
     return policyResult(result, locale, {
       templateId: 'TPL_RETURN_PERIOD_V1',
       payloadFrom: row => ({ ...row.effect_value }),
@@ -1089,7 +1333,10 @@ function authorityDecision(family, {
 
   if (family === 'PRODUCT_PRICE') {
     const fact = requireCatalogFactBinding(
-      catalogService.getProductPriceFact({ productId: slots.product_id }),
+      recordCatalogDependency(
+      dependencies, 'getProductPriceFact', { product_id: slots.product_id },
+      catalogService.getProductPriceFact({ productId: slots.product_id })
+    ),
       {
         family,
         generationId: catalogGenerationId,
@@ -1120,7 +1367,10 @@ function authorityDecision(family, {
 
   if (family === 'AVAILABLE_VARIANTS') {
     const fact = requireCatalogFactBinding(
-      catalogService.getAvailableVariantsFact({ productId: slots.product_id }),
+      recordCatalogDependency(
+      dependencies, 'getAvailableVariantsFact', { product_id: slots.product_id },
+      catalogService.getAvailableVariantsFact({ productId: slots.product_id })
+    ),
       {
         family,
         generationId: catalogGenerationId,
@@ -1137,6 +1387,7 @@ function authorityDecision(family, {
         fact.variants ?? [],
         locale,
         fact.catalog?.generation_id,
+        dependencies,
         { allowNull: fact.reason === 'VARIANT_LIST_PARTIAL' }
       );
       if (labels === null) return human('PRODUCT_VARIANT_NOT_RESOLVABLE');
@@ -1158,7 +1409,10 @@ function authorityDecision(family, {
 
   if (family === 'VARIANT_PRICE_LIST') {
     const fact = requireCatalogFactBinding(
-      catalogService.getVariantPriceListFact({ productId: slots.product_id }),
+      recordCatalogDependency(
+      dependencies, 'getVariantPriceListFact', { product_id: slots.product_id },
+      catalogService.getVariantPriceListFact({ productId: slots.product_id })
+    ),
       {
         family,
         generationId: catalogGenerationId,
@@ -1175,6 +1429,7 @@ function authorityDecision(family, {
         fact.variants ?? [],
         locale,
         fact.catalog?.generation_id,
+        dependencies,
         { allowNull: false, withPrice: true }
       );
       if (variants === null) return human('PRODUCT_VARIANT_NOT_RESOLVABLE');
@@ -1190,7 +1445,20 @@ function authorityDecision(family, {
   }
 
   if (family === 'OBJECTIVE_SHORTLIST') {
-    const fact = requireCatalogFactBinding(catalogService.searchObjectiveProducts({
+    const fact = requireCatalogFactBinding(recordCatalogDependency(
+      dependencies,
+      'searchObjectiveProducts',
+      {
+        category_id: slots.category_id ?? null,
+        category_match_mode: slots.category_match_mode ?? null,
+        brand_id: slots.brand_id ?? null,
+        min_price_minor: slots.min_price_minor ?? null,
+        max_price_minor: slots.max_price_minor ?? null,
+        store_id: slots.store_id ?? null,
+        language: locale,
+        limit: 3,
+      },
+      catalogService.searchObjectiveProducts({
       categoryId: slots.category_id ?? null,
       categoryMatchMode: slots.category_match_mode ?? null,
       brandId: slots.brand_id ?? null,
@@ -1199,7 +1467,7 @@ function authorityDecision(family, {
       storeId: slots.store_id ?? null,
       language: locale,
       limit: 3,
-    }), {
+    })), {
       family,
       generationId: catalogGenerationId,
       objectiveConstraints: {
@@ -1214,17 +1482,27 @@ function authorityDecision(family, {
         display_limit: 3,
       },
     });
-    return objectiveAnswer(fact, locale, catalogService);
+    return objectiveAnswer(fact, locale, catalogService, dependencies);
   }
 
   if (family === 'STORE_STOCK') {
     const fact = requireCatalogFactBinding(
-      catalogService.getStoreStockFact({
-        productId: slots.product_id ?? null,
-        variantId: slots.variant_id ?? null,
-        storeId: slots.store_id,
-        language: locale,
-      }),
+      recordCatalogDependency(
+        dependencies,
+        'getStoreStockFact',
+        {
+          product_id: slots.product_id ?? null,
+          variant_id: slots.variant_id ?? null,
+          store_id: slots.store_id,
+          language: locale,
+        },
+        catalogService.getStoreStockFact({
+          productId: slots.product_id ?? null,
+          variantId: slots.variant_id ?? null,
+          storeId: slots.store_id,
+          language: locale,
+        })
+      ),
       {
         family,
         generationId: catalogGenerationId,
@@ -1243,7 +1521,8 @@ function authorityDecision(family, {
               sku: fact.presentation?.sku ?? null,
               label: fact.presentation.variant_label,
             },
-            fact.catalog?.generation_id
+            fact.catalog?.generation_id,
+            dependencies
           );
       if (fact.presentation?.variant_label != null && label === null) {
         return human('PRODUCT_VARIANT_NOT_RESOLVABLE');
@@ -1263,6 +1542,7 @@ function authorityDecision(family, {
         candidates,
         locale,
         fact.catalog?.generation_id,
+        dependencies,
         { allowNull: false }
       );
       if (labels === null) return human('PRODUCT_VARIANT_NOT_RESOLVABLE');
@@ -1523,6 +1803,9 @@ function requireSelectionMessageResolution({
 }) {
   if (!resolution || resolution.schema !== FIRST_LINE_RESOLUTION_SCHEMA ||
       !Array.isArray(resolution.resolutions) ||
+      resolution.resolutions.length !== 1 ||
+      !Array.isArray(resolution.certified_spans) ||
+      resolution.certified_spans.length !== 1 ||
       !Array.isArray(resolution.source_message_ids) ||
       resolution.source_message_ids.length !== 1 ||
       resolution.source_message_ids[0] !== sourceMessageId ||
@@ -1534,6 +1817,22 @@ function requireSelectionMessageResolution({
       'selection message must be one genuine current C2 resolution');
   }
 
+  const exactRead = exactReads[0].exactRead;
+  const span = resolution.certified_spans[0];
+  if (span.source_message_id !== sourceMessageId ||
+      !Number.isSafeInteger(span.start_utf16) ||
+      !Number.isSafeInteger(span.end_utf16) ||
+      span.start_utf16 < 0 ||
+      span.end_utf16 <= span.start_utf16 ||
+      span.end_utf16 > exactRead.transientContent.length ||
+      !/^\p{White_Space}*$/u.test(
+        exactRead.transientContent.slice(0, span.start_utf16)
+      ) ||
+      !/^\p{White_Space}*$/u.test(
+        exactRead.transientContent.slice(span.end_utf16)
+      )) {
+    return false;
+  }
   const expectedKey = selectionKey(slot, selectedValue);
   const matches = resolution.resolutions.filter(row =>
     selectionKey(slot, resolvedSelectionValue(row, slot)) === expectedKey
@@ -1621,6 +1920,10 @@ export function createFirstLineContinuationDecisionBasis({
       'DecisionBasis requires catalogService, knowledgeStore and nowUtc');
   }
 
+  const dependencies = [];
+  const contextResolutions = [originalResolution];
+  const finish = snapshot => finish(attachDecisionContext(snapshot, contextResolutions, dependencies)
+  );
   const originalProjection = projectConfirmedClarificationBasis(routingSnapshot);
   const budget = requireCertifiedInputs(
     originalProjection,
@@ -1660,6 +1963,7 @@ export function createFirstLineContinuationDecisionBasis({
 
   let locale = originalResolution.language;
   if (provenanceEntry.event.event_kind === 'CUSTOMER_MESSAGE') {
+    contextResolutions.push(selectionResolution);
     if (!requireSelectionMessageResolution({
       resolution: selectionResolution,
       exactReads: selectionExactReads,
@@ -1667,9 +1971,7 @@ export function createFirstLineContinuationDecisionBasis({
       slot: selection.slot,
       selectedValue: selection.value,
     })) {
-      return registerDecisionBasis(
-        AUTHORITY_CAPABILITY,
-        human(continuationFailureReason(selection.slot))
+      return finish(human(continuationFailureReason(selection.slot))
       );
     }
     locale = selectionResolution.language;
@@ -1701,11 +2003,11 @@ export function createFirstLineContinuationDecisionBasis({
 
   const integrity = identityIntegrity(originalResolution);
   if (integrity.terminal) {
-    return registerDecisionBasis(AUTHORITY_CAPABILITY, integrity.terminal);
+    return finish(integrity.terminal);
   }
   const c3Reason = c3OrNotFoundReason(constraintProof, integrity.rows);
   if (c3Reason !== null) {
-    return registerDecisionBasis(AUTHORITY_CAPABILITY, human(c3Reason));
+    return finish(human(c3Reason));
   }
 
   const families = requestFamilies(originalExactReads, originalResolution);
@@ -1714,30 +2016,22 @@ export function createFirstLineContinuationDecisionBasis({
       'rebuilt original clarification basis no longer matches a reviewed family');
   }
   if (families.length > 1) {
-    return registerDecisionBasis(
-      AUTHORITY_CAPABILITY,
-      human('MULTIPLE_REQUEST_FAMILIES_MATCHED')
+    return finish(human('MULTIPLE_REQUEST_FAMILIES_MATCHED')
     );
   }
   const family = families[0];
 
   if (family === 'ATTRIBUTE_QUERY') {
-    return registerDecisionBasis(
-      AUTHORITY_CAPABILITY,
-      human('PRODUCT_ATTRIBUTE_NOT_AUTHORITATIVE')
+    return finish(human('PRODUCT_ATTRIBUTE_NOT_AUTHORITATIVE')
     );
   }
   if (family === 'DELIVERY_POLICY') {
-    return registerDecisionBasis(
-      AUTHORITY_CAPABILITY,
-      human('COMMERCE_POLICY_NOT_AUTHORITATIVE')
+    return finish(human('COMMERCE_POLICY_NOT_AUTHORITATIVE')
     );
   }
 
   if (!['uk', 'ru'].includes(locale)) {
-    return registerDecisionBasis(
-      AUTHORITY_CAPABILITY,
-      human('UNSUPPORTED_RESPONSE_LANGUAGE')
+    return finish(human('UNSUPPORTED_RESPONSE_LANGUAGE')
     );
   }
 
@@ -1748,9 +2042,7 @@ export function createFirstLineContinuationDecisionBasis({
     selectionIsPresented,
   });
   if (dischargedRows === null) {
-    return registerDecisionBasis(
-      AUTHORITY_CAPABILITY,
-      human(continuationFailureReason(selection.slot))
+    return finish(human(continuationFailureReason(selection.slot))
     );
   }
 
@@ -1761,7 +2053,7 @@ export function createFirstLineContinuationDecisionBasis({
   });
   const identity = reduceIdentityCardinality(dischargedRows);
   if (identity.terminal) {
-    return registerDecisionBasis(AUTHORITY_CAPABILITY, identity.terminal);
+    return finish(identity.terminal);
   }
   const slots = Object.freeze({
     ...identity.slots,
@@ -1778,9 +2070,10 @@ export function createFirstLineContinuationDecisionBasis({
     locale,
     catalogService,
     generationId: effectiveCatalogGeneration,
+    dependencies,
   });
   if (local.terminal) {
-    return registerDecisionBasis(AUTHORITY_CAPABILITY, local.terminal);
+    return finish(local.terminal);
   }
 
   const snapshot = authorityDecision(family, {
@@ -1791,8 +2084,9 @@ export function createFirstLineContinuationDecisionBasis({
     knowledgeStore,
     nowUtc,
     budget,
+    dependencies,
   });
-  return registerDecisionBasis(AUTHORITY_CAPABILITY, snapshot);
+  return finish(snapshot);
 }
 
 export function createFirstLineDecisionBasis({
@@ -1804,6 +2098,9 @@ export function createFirstLineDecisionBasis({
   knowledgeStore,
   nowUtc,
 } = {}) {
+  const dependencies = [];
+  const finish = snapshot => finish(attachDecisionContext(snapshot, [resolution], dependencies)
+  );
   const persistedBudget = requireCertifiedInputs(
     projection,
     resolution,
@@ -1831,56 +2128,46 @@ export function createFirstLineDecisionBasis({
 
   const integrity = identityIntegrity(resolution);
   if (integrity.terminal) {
-    return registerDecisionBasis(AUTHORITY_CAPABILITY, integrity.terminal);
+    return finish(integrity.terminal);
   }
 
   const c3Reason = c3OrNotFoundReason(constraintProof, integrity.rows);
   if (c3Reason !== null) {
-    return registerDecisionBasis(AUTHORITY_CAPABILITY, human(c3Reason));
+    return finish(human(c3Reason));
   }
 
   const identity = reduceIdentityCardinality(integrity.rows);
   if (identity.terminal) {
-    return registerDecisionBasis(AUTHORITY_CAPABILITY, identity.terminal);
+    return finish(identity.terminal);
   }
 
   const families = requestFamilies(exactReads, resolution);
   if (families.length === 0) {
     if (budget === 1 && hasOutstandingClarificationReservation(projection)) {
-      return registerDecisionBasis(
-        AUTHORITY_CAPABILITY,
-        human('CLARIFY_EXHAUSTED')
+      return finish(human('CLARIFY_EXHAUSTED')
       );
     }
     fail('FIRST_LINE_DECISION_FAMILY_UNCLASSIFIED',
       'no reviewed request family matched the exact turn');
   }
   if (families.length > 1) {
-    return registerDecisionBasis(
-      AUTHORITY_CAPABILITY,
-      human('MULTIPLE_REQUEST_FAMILIES_MATCHED')
+    return finish(human('MULTIPLE_REQUEST_FAMILIES_MATCHED')
     );
   }
   const family = families[0];
 
   if (family === 'ATTRIBUTE_QUERY') {
-    return registerDecisionBasis(
-      AUTHORITY_CAPABILITY,
-      human('PRODUCT_ATTRIBUTE_NOT_AUTHORITATIVE')
+    return finish(human('PRODUCT_ATTRIBUTE_NOT_AUTHORITATIVE')
     );
   }
   if (family === 'DELIVERY_POLICY') {
-    return registerDecisionBasis(
-      AUTHORITY_CAPABILITY,
-      human('COMMERCE_POLICY_NOT_AUTHORITATIVE')
+    return finish(human('COMMERCE_POLICY_NOT_AUTHORITATIVE')
     );
   }
 
   const locale = resolution.language;
   if (!['uk', 'ru'].includes(locale)) {
-    return registerDecisionBasis(
-      AUTHORITY_CAPABILITY,
-      human('UNSUPPORTED_RESPONSE_LANGUAGE')
+    return finish(human('UNSUPPORTED_RESPONSE_LANGUAGE')
     );
   }
 
@@ -1894,9 +2181,10 @@ export function createFirstLineDecisionBasis({
     locale,
     catalogService,
     generationId: resolution.catalog_generation_id,
+    dependencies,
   });
   if (local.terminal) {
-    return registerDecisionBasis(AUTHORITY_CAPABILITY, local.terminal);
+    return finish(local.terminal);
   }
 
   const snapshot = authorityDecision(family, {
@@ -1907,8 +2195,9 @@ export function createFirstLineDecisionBasis({
     knowledgeStore,
     nowUtc,
     budget,
+    dependencies,
   });
-  return registerDecisionBasis(AUTHORITY_CAPABILITY, snapshot);
+  return finish(snapshot);
 }
 
 export function classifyFirstLineRequestFamiliesForTest({

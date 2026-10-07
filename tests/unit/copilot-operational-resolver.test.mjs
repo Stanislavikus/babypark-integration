@@ -438,3 +438,68 @@ test('interval authority rejects extra interval keys instead of ignoring them', 
     f.cleanup();
   }
 });
+
+
+test('B3 today schedule rejects fractional-second operating-state boundaries', () => {
+  const base = {
+    revision_id: 'weekly-fraction-control',
+    record_type: 'OPERATIONAL_FACT',
+    schema_version: 1,
+    namespace: 'store.weekly_hours',
+    effect_family: 'store.hours',
+    subject_type: 'store',
+    subject_id: 'store_1',
+    scope: {},
+    effect_type: 'WEEKLY_HOURS',
+    effect_value: { friday: [{ open: '09:00', close: '18:00' }] },
+    state: 'PUBLISHED',
+    effective_from_utc: '2026-01-01T00:00:00.000Z',
+    expires_at_utc: null,
+  };
+  for (const fraction of ['.500', '.001']) {
+    const future = {
+      revision_id: 'future-' + fraction,
+      record_type: 'OPERATIONAL_FACT',
+      schema_version: 1,
+      namespace: 'store.temporary_closure',
+      effect_family: 'store.operating_state',
+      subject_type: 'store',
+      subject_id: 'store_1',
+      scope: {},
+      effect_type: 'STATUS',
+      effect_value: { status: 'CLOSED' },
+      state: 'PUBLISHED',
+      effective_from_utc: '2026-10-02T12:00:00' + fraction + 'Z',
+      expires_at_utc: '2026-10-02T13:00:00.000Z',
+    };
+    assert.throws(
+      () => resolveStoreTodaySchedule(
+        { authoritySnapshot: () => [base, future] },
+        { nowUtc: '2026-10-02T10:00:00.000Z', storeId: 'store_1' }
+      ),
+      error => error.code === 'OPERATIONAL_HOURS_BOUNDARY_UNREPRESENTABLE',
+      fraction
+    );
+  }
+  const control = resolveStoreTodaySchedule(
+    {
+      authoritySnapshot: () => [base, {
+        revision_id: 'future-control',
+        record_type: 'OPERATIONAL_FACT',
+        schema_version: 1,
+        namespace: 'store.temporary_closure',
+        effect_family: 'store.operating_state',
+        subject_type: 'store',
+        subject_id: 'store_1',
+        scope: {},
+        effect_type: 'STATUS',
+        effect_value: { status: 'CLOSED' },
+        state: 'PUBLISHED',
+        effective_from_utc: '2026-10-02T12:00:00.000Z',
+        expires_at_utc: '2026-10-02T13:00:00.000Z',
+      }],
+    },
+    { nowUtc: '2026-10-02T10:00:00.000Z', storeId: 'store_1' }
+  );
+  assert.equal(control.status, 'RESOLVED');
+});

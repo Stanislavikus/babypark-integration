@@ -479,10 +479,11 @@ function ensureStableLocalDay(now, localDate) {
 }
 
 function localMinuteBoundary(value, localDate, edge) {
+  const parsed = new Date(value);
   const point = localClock(value);
   if (point.date < localDate) return edge === 'start' ? 0 : null;
   if (point.date > localDate) return edge === 'start' ? null : 1440;
-  if (point.second !== 0) {
+  if (point.second !== 0 || parsed.getUTCMilliseconds() !== 0) {
     fail('OPERATIONAL_HOURS_BOUNDARY_UNREPRESENTABLE',
       'Operating-state boundary must align to a local minute',
       { boundary: value, local_date: localDate });

@@ -1724,3 +1724,48 @@ test('C60ab requested VARIANT selection can be proven by exact PRODUCT resolutio
   assert.equal(snapshot.active_episode.stable_slots.variant_id.value, VARIANT_CONT);
   assert.equal(snapshot.active_episode.clarification_prompts_sent, 1);
 });
+
+
+test('B6 requested-slot restart re-proof rejects selection message with extra supported semantics', t => {
+  const k = vocabulary('NODE_ONLY', true, 'коляски', false);
+  const c = catalog();
+  const state = genericRequestedContinuation(t, {
+    slot: 'category_id',
+    text: 'коляски',
+    kind: 'CATEGORY',
+    quote: 'коляски',
+    knowledgeStore: k,
+    catalogService: c,
+    suffix: 'category-extra-semantics',
+  });
+  const rebuilt = resolveBasis(
+    'Покажи что-нибудь до 20 000 грн',
+    [{ kind: 'MONEY', turn_index: 1, quote: '20 000 грн', occurrence: 1 }],
+    k, c
+  );
+  const mutatedSelection = resolveBasis(
+    'коляски 1000 грн',
+    [
+      { kind: 'CATEGORY', turn_index: 1, quote: 'коляски', occurrence: 1 },
+      { kind: 'MONEY', turn_index: 1, quote: '1000 грн', occurrence: 1 },
+    ],
+    k, c, 103
+  );
+  const before = c.calls.filter(row => row[0] === 'searchObjectiveProducts').length;
+  const decision = decideFirstLine(createFirstLineContinuationDecisionBasis({
+    routingSnapshot: state.store.readRoutingSnapshot(state.streamId),
+    originalResolution: rebuilt.resolution,
+    originalExactReads: rebuilt.exactReads,
+    selectionResolution: mutatedSelection.resolution,
+    selectionExactReads: mutatedSelection.exactReads,
+    catalogService: c,
+    knowledgeStore: k,
+    nowUtc: NOW,
+  }));
+  assert.equal(decision.decision, 'HUMAN');
+  assert.equal(decision.reason, 'IDENTITY_NOT_RESOLVABLE');
+  assert.equal(
+    c.calls.filter(row => row[0] === 'searchObjectiveProducts').length,
+    before
+  );
+});
