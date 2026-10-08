@@ -5223,3 +5223,63 @@ test('C5 renderer T13 mixed BMP/astral final Website length is code-point based'
       error.code === 'FIRST_LINE_RENDERER_INVALID'
   );
 });
+
+
+test('C5 review B1 schedule admission preserves ascending non-overlap semantics', () => {
+  const decision = c5StoreOperationalCustomDecision({
+    kind: 'hours',
+    rows: [c61OperationalRow({
+      effect_value: {
+        tuesday: [
+          { open: '10:00', close: '12:00' },
+          { open: '14:00', close: '20:00' },
+        ],
+      },
+    })],
+    nowUtc: '2026-10-06T10:00:00.000Z',
+  });
+  assert.deepEqual(decision.render_payload.intervals, [
+    { open: '10:00', close: '12:00' },
+    { open: '14:00', close: '20:00' },
+  ]);
+  assert.equal(
+    renderFirstLineText(decision).content,
+    'График на сегодня: 10:00–12:00, 14:00–20:00. Сейчас магазин закрыт.'
+  );
+
+  // Current C4 operational authority always normalizes/sorts before branding,
+  // so an overlapping/out-of-order genuine producer is intentionally
+  // unreachable. Keep the C5-side independent revalidation observable without
+  // adding a test-only decision-brand bypass.
+  const rendererSource = fs.readFileSync(
+    new URL('../../src/copilot/first-line-renderer.mjs', import.meta.url),
+    'utf8'
+  );
+  assert.match(
+    rendererSource,
+    /let previousClose = null;[\s\S]*interval\.open < previousClose[\s\S]*previousClose = interval\.close;/u
+  );
+});
+
+test('C5 review B2 rejects genuine TOP3 decisions that display fewer than three rows', () => {
+  const malformed = c5ShortlistDecision({ total: 4, displayed: 2 });
+  assert.equal(isGenuineFirstLineDecision(malformed), true);
+  assert.equal(malformed.template_id, 'TPL_SHORTLIST_TOP3_V1');
+  assert.equal(malformed.render_payload.products.length, 2);
+
+  for (const render of [renderFirstLineText, renderFirstLineWebsite]) {
+    assert.throws(
+      () => render(malformed),
+      error => error instanceof FirstLineRendererError &&
+        error.code === 'FIRST_LINE_RENDERER_INVALID'
+    );
+  }
+
+  const validTop3 = c5ShortlistDecision({ total: 4, displayed: 3 });
+  assert.equal(validTop3.template_id, 'TPL_SHORTLIST_TOP3_V1');
+  assert.equal(renderFirstLineText(validTop3).content.split('\n').length >= 4, true);
+
+  const validAll = c5ShortlistDecision({ total: 3, displayed: 3 });
+  assert.equal(validAll.template_id, 'TPL_SHORTLIST_ALL_V1');
+  assert.equal(renderFirstLineText(validAll).content.startsWith('Найденные товары:'), true);
+});
