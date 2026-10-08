@@ -5038,27 +5038,30 @@ test('C5 renderer T07/T10 genuine conditional branch matrix is complete for curr
     assert.equal(renderFirstLineText(decision).content, expected);
   }
 
-  const noUrl = c5ShortlistDecision({
-    total: 1,
-    displayed: 1,
-    presentationOverrides: {
-      [PRODUCT_A]: {
-        title: 'No URL model',
-        url: null,
-        image_url: 'https://cdn.babypark.ua/pixel.png',
+  for (const [language, expected] of [
+    ['ru', 'Найденные товары:\n1. No URL model — 27 300 грн'],
+    ['uk', 'Знайдені товари:\n1. No URL model — 27 300 грн'],
+  ]) {
+    const noUrl = c5ShortlistDecision({
+      language,
+      total: 1,
+      displayed: 1,
+      presentationOverrides: {
+        [PRODUCT_A]: {
+          title: 'No URL model',
+          url: null,
+          image_url: 'https://cdn.babypark.ua/pixel.png',
+        },
       },
-    },
-  });
-  assert.equal(noUrl.template_id, 'TPL_SHORTLIST_ALL_V1');
-  assert.equal(noUrl.render_payload.products[0].product_url, null);
-  assert.equal(
-    renderFirstLineText(noUrl).content,
-    'Найденные товары:\n1. No URL model — 27 300 грн'
-  );
-  assert.equal(
-    renderFirstLineWebsite(noUrl).content.includes('pixel.png'),
-    false
-  );
+    });
+    assert.equal(noUrl.template_id, 'TPL_SHORTLIST_ALL_V1');
+    assert.equal(noUrl.render_payload.products[0].product_url, null);
+    assert.equal(renderFirstLineText(noUrl).content, expected);
+    assert.equal(
+      renderFirstLineWebsite(noUrl).content.includes('pixel.png'),
+      false
+    );
+  }
 
   // The merged public C4 schema intentionally admits open=true + null close,
   // but the current operational resolver has no genuine producer for that
