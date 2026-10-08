@@ -50,7 +50,7 @@ change production services.
 
 | Requirement / invariant | Production artifact | Regression / evidence | Fail-closed behavior | Durable-state impact | Status |
 |---|---|---|---|---|---|
-| G1 exact 17 ANSWER + 7 CLARIFY uk/ru wording | renderer `answerContent` / `CLARIFY_PROMPTS` | T07 17-template ru+uk golden matrix + all seven CLARIFY classes + genuine reachable conditional branch matrix; frozen open+null branch source-checked because current C4 has no genuine producer for that tuple | unknown/missing branch => `FIRST_LINE_RENDERER_INVALID` | NONE | DONE |
+| G1 exact 17 ANSWER + 7 CLARIFY uk/ru wording | renderer `answerContent` / `CLARIFY_PROMPTS` | T07 17-template ru+uk golden matrix + all seven CLARIFY classes + genuine reachable conditional branch matrix, including shortlist URL-null in both locales; frozen open+null branch source-checked because current C4 has no genuine producer for that tuple | unknown/missing branch => `FIRST_LINE_RENDERER_INVALID` | NONE | DONE |
 | G2 exact critical formatting / TextRenderer bytes | `formatUah`, hours/phone/counter/list composition, `renderFirstLineText` | T07/T10 goldens cover closed/empty/split-two-interval/open_now true+false/named=0 plus seeded fast-check UAH property | invalid values / unsupported formatting => renderer invalid | NONE | DONE |
 | G3 fixed payment names/no hidden terms | closed `PAYMENT_METHODS` table + exact payment payload validator | T07 ru/uk payment golden incl. UK U+2019 | unknown/duplicate/order-invalid method code rejects | NONE | DONE |
 | G4 WebsiteRenderer exact envelope | `renderFirstLineWebsite` | T08 exact enumerable keys / frozen envelope/items | invalid input/output => no render | NONE | DONE |
@@ -61,7 +61,7 @@ change production services.
 | G8a exact product-URL transport | canonical `publicUrl(...)===value` admission + Website entity encoding; Text raw canonical URL | T09/T12 eight-URL canonical edge matrix + URL-null/non-null shortlist controls + title/URL golden | non-canonical/Liquid-unsafe URL rejects; image never rendered/fetched | NONE | DONE |
 | G8b submitted select title untrusted | C5 emits generated ordinal titles only; C4/C2 authority remains outside renderer | T08 finite items + existing T09c/C4 exact-read regressions | title never authorizes fact/selection; C5 sees no submitted response | NONE | DONE |
 | G9 final Website 1..150000 Unicode code points | `requireFirstLineWebsiteContent` uses code-point iteration after encoding | T13 150000/150001 U+1F600, mixed BMP+astral boundary, empty/Liquid controls | out-of-range => renderer invalid | NONE | DONE |
-| G10 stricter C5 semantic edges | `validateAnswerPayload` / `validateClarifyChoices` | genuine C4 equal RANGE, empty full VARIANT_LIST and empty TOP3 reject; full/partial named>0+named=0, two-interval hours, open_now true+false and UAH goldens | broader-but-genuine C4 public shape that violates C5 semantics rejects | NONE | DONE |
+| G10 stricter C5 semantic edges | `validateAnswerPayload` / `validateClarifyChoices` | genuine C4 equal RANGE, empty full VARIANT_LIST, empty TOP3 and TOP3-with-fewer-than-three reject; TOP3 requires exactly 3 rows when total>3, ALL is bounded to total<=3; hours revalidate ascending/non-overlapping HH:MM intervals; full/partial named>0+named=0, two-interval hours, open_now true+false and UAH goldens | broader-but-genuine C4 public shape that violates C5 semantics rejects | NONE | DONE |
 | G11 Chatwoot runtime/build drift remains activation gate | no runtime binding code added; frozen §40.3/T09b remains authoritative | final manifest requires v4.18 source + production Vite revalidation | unproven/changed runtime blocks later activation, not renderer semantics | NONE | DONE |
 | genuine C4 decision provenance | C4 `genuinePublicDecisions` WeakSet + `isGenuineFirstLineDecision` | genuine true; `structuredClone`, spread clone, null false; renderer rejects clones | forgery/clone/deserialization => renderer invalid | NONE | DONE |
 | exact public reason→template relation | renderer `ANSWER_RELATION` / `CLARIFY_RELATION` + exact 8-key admission | all 17/7 mappings exercised; clone/forgery + exact-shape impossible reason/template tuple reject; C5 stricter edge tests | impossible public tuple rejects even when individually allowlisted | NONE | DONE |
@@ -76,15 +76,46 @@ change production services.
 | C25 routing stays downstream | no routing planner/state/action change for C25 | changed-surface/static scan + lifecycle prose | no new follow-up capability claim | NONE | DONE |
 | Chatwoot core remains untouched | only BabyPark repository files change | exact changed surface | core patch impossible in this PR | NONE | DONE |
 
+## Exhaustive implementation-review correction inventory
+
+The first complete production-implementation pass continued through the whole
+changed/runtime-adjacent surface after each finding. Two independent blocker
+classes were found and corrected in one batch:
+
+- **B1 — STORE_HOURS public semantic revalidation was too weak.**
+  C5 checked each `HH:MM` interval locally but did not independently recheck
+  ascending/non-overlapping schedule semantics. Genuine provenance must not waive
+  the frozen public-contract relation. C5 now carries a monotonic
+  `previousClose` guard; current genuine split-schedule output remains positive.
+  The current C4 operational resolver already normalizes/sorts and rejects
+  overlaps, so a negative malformed genuine producer is intentionally
+  unreachable without adding a forbidden test-only decision-brand bypass.
+- **B2 — shortlist display cardinality was wider than the frozen display-limit
+  contract.** C5 admitted a genuine `TOP3` with only 1–2 displayed rows and an
+  `ALL` shape above three rows. The frozen §36–§37 contract is now rechecked
+  exactly: `TOP3 => total>3 && products.length===3`;
+  `ALL => 1<=total<=3 && products.length===total`. A genuine C4
+  `total=4/displayed=2` regression proves the old reachable failure and now
+  rejects in both renderers.
+
+A delimiter-string `exactKeys` comparison was also replaced with
+`length + Object.hasOwn` exact membership so C5 does not inherit a comma-key
+collision if an upstream closed-object validator ever regresses. This is
+defense-in-depth, not a separate blocker class.
+
+No additional independent blocker class was found in the remainder of the
+renderer/provenance/output/privacy/scope review.
+
 ## Current executable evidence before immutable final-tree gate
 
-Mutable working-tree development checks (not final merge evidence):
-- `tests/unit/first-line-decision.test.mjs`: 95/95 PASS;
-- adjacent C4/C5 focused set covering decision/continuation/public-safety/
-  clarification/dependency/operational/public-operational-reader surfaces:
-  196/196 PASS;
+Mutable development checks (not final merge evidence):
+- focused `tests/unit/first-line-decision.test.mjs`: 97/97 PASS after B1/B2;
 - syntax checks and `git diff --check`: PASS;
-- package/runtime-dependency diff: empty.
+- package/runtime-dependency diff: empty;
+- the adjacent C4/C5 focused set and root Agreement baseline are intentionally
+  deferred to the one immutable final-tree verification pass after traceability
+  is frozen, rather than repeatedly rerunning the full baseline after each docs
+  evidence edit.
 
 Coverage note:
 - every currently reachable §40.4 conditional branch named by T07/T10 is exercised
