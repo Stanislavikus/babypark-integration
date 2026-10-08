@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
+import fc from 'fast-check';
 
 import {
   FIRST_LINE_EXTRACTION_SCHEMA,
@@ -25,9 +26,16 @@ import {
 import {
   decideFirstLine,
   getFirstLineDecisionPrivateContext,
+  isGenuineFirstLineDecision,
   FirstLineDecisionError,
   FIRST_LINE_DECISION_BASIS_SCHEMA,
 } from '../../src/copilot/first-line-decision.mjs';
+import {
+  FirstLineRendererError,
+  renderFirstLineText,
+  renderFirstLineWebsite,
+  requireFirstLineWebsiteContent,
+} from '../../src/copilot/first-line-renderer.mjs';
 
 const NOW = '2026-10-06T12:00:00.000Z';
 const PRODUCT_A = 'prod_11111111-1111-4111-8111-111111111111';
@@ -361,6 +369,18 @@ test('C11 payment methods uses genuine basis and returns exact eight-key decisio
     requested_slot: null,
     choices: [],
   });
+});
+
+test('C5 provenance capability recognizes only genuine in-process public decisions', () => {
+  const fixture = build({
+    text: 'Какие способы оплаты есть?',
+    knowledgeStore: knowledge([commerceRow()]),
+  });
+  const decision = decideFirstLine(basis(fixture));
+  assert.equal(isGenuineFirstLineDecision(decision), true);
+  assert.equal(isGenuineFirstLineDecision(structuredClone(decision)), false);
+  assert.equal(isGenuineFirstLineDecision({ ...decision }), false);
+  assert.equal(isGenuineFirstLineDecision(null), false);
 });
 
 test('C60d basis is single-use and forged/reconstructed tokens reject', () => {
@@ -3874,4 +3894,953 @@ test('review B4 Decision Context hashes only the frozen conditional §45 canonic
     .update(canonicalKnowledgeJson(humanCanonicalInput))
     .digest('hex');
   assert.equal(humanContext.decision_context_id, expectedHumanId);
+});
+
+
+function c5ProductPriceDecision({
+  reason = 'PRODUCT_PRICE_RANGE',
+  currency = 'UAH',
+  min = 27_300_00,
+  max = 30_000_00,
+  language = 'ru',
+} = {}) {
+  const c = catalog({
+    priceFact: {
+      catalog: { generation_id: 'g1' },
+      product_id: PRODUCT_A,
+      status: 'FACT',
+      reason,
+      ...(reason === 'PRODUCT_NOT_IN_STOCK'
+        ? {}
+        : {
+            currency,
+            min_current_minor: min,
+            max_current_minor: max,
+          }),
+    },
+  });
+  return decideFirstLine(basis(build({
+    text: 'Сколько стоит UPPAbaby Cruz V2?',
+    language,
+    spans: [{
+      kind: 'PRODUCT',
+      turn_index: 1,
+      quote: 'UPPAbaby Cruz V2',
+      occurrence: 1,
+    }],
+    catalogService: c,
+  })));
+}
+
+function c5PaymentDecision(language = 'ru') {
+  return decideFirstLine(basis(build({
+    text: 'Какие способы оплаты есть?',
+    language,
+    knowledgeStore: knowledge([commerceRow({
+      effect_value: {
+        methods: ['BANK_TRANSFER', 'CASH_COURIER', 'COD_NOVA_POSHTA'],
+      },
+    })]),
+  })));
+}
+
+function c5ProductClarifyDecision(language = 'ru', labels = null) {
+  const c = catalog({
+    productMode: 'AMBIGUOUS',
+    labels: labels === null
+      ? null
+      : {
+          [PRODUCT_A]: labels[0],
+          [PRODUCT_B]: labels[1],
+        },
+  });
+  return decideFirstLine(basis(build({
+    text: 'Сколько стоит Дубль?',
+    language,
+    spans: [{
+      kind: 'PRODUCT',
+      turn_index: 1,
+      quote: 'Дубль',
+      occurrence: 1,
+    }],
+    catalogService: c,
+  })));
+}
+
+function c5VariantClarifyDecision(language = 'ru') {
+  const c = storeStockAmbiguousCatalog(2);
+  return decideFirstLine(basis(build({
+    text: 'Есть Дубль в магазине?',
+    language,
+    spans: [
+      {
+        kind: 'PRODUCT',
+        turn_index: 1,
+        quote: 'Дубль',
+        occurrence: 1,
+      },
+      {
+        kind: 'STORE',
+        turn_index: 1,
+        quote: 'магазине',
+        occurrence: 1,
+      },
+    ],
+    catalogService: c,
+    knowledgeStore: identityVocabulary('STORE', 1, 'магазине'),
+  })));
+}
+
+test('C5 renderer T11 requires genuine decision and HUMAN stays silent', () => {
+  const answer = c5PaymentDecision();
+  const human = decideFirstLine(basis(build({ text: 'Какая доставка?' })));
+
+  assert.deepEqual(renderFirstLineText(answer), {
+    schema: 'bp.first-line.text-render/1',
+    content: 'Способы оплаты: банковский перевод, наличными курьеру, наложенный платеж в Новой почте.',
+  });
+  assert.deepEqual(renderFirstLineWebsite(answer), {
+    schema: 'bp.first-line.website-render/1',
+    content_type: 'text',
+    content: 'Способы оплаты: банковский перевод, наличными курьеру, наложенный платеж в Новой почте.',
+    content_attributes: {},
+  });
+  assert.equal(renderFirstLineText(human), null);
+  assert.equal(renderFirstLineWebsite(human), null);
+
+  for (const forged of [structuredClone(answer), { ...answer }]) {
+    for (const render of [renderFirstLineText, renderFirstLineWebsite]) {
+      assert.throws(
+        () => render(forged),
+        error => error instanceof FirstLineRendererError &&
+          error.code === 'FIRST_LINE_RENDERER_INVALID'
+      );
+    }
+  }
+});
+
+test('C5 renderer T10 exact UAH formatting and non-UAH fail closed', () => {
+  const ru = c5ProductPriceDecision({
+    reason: 'PRODUCT_PRICE_RANGE',
+    min: 27_300_00,
+    max: 30_000_50,
+  });
+  const uk = c5ProductPriceDecision({
+    reason: 'PRODUCT_PRICE_SINGLE',
+    min: 50,
+    max: 50,
+    language: 'uk',
+  });
+  assert.equal(
+    renderFirstLineText(ru).content,
+    'Цена зависит от варианта: от 27 300 грн до 30 000,50 грн.'
+  );
+  assert.equal(renderFirstLineText(uk).content, 'Ціна: 0,50 грн.');
+
+  const usd = c5ProductPriceDecision({
+    reason: 'PRODUCT_PRICE_SINGLE',
+    currency: 'USD',
+    min: 100,
+    max: 100,
+  });
+  assert.throws(
+    () => renderFirstLineWebsite(usd),
+    error => error instanceof FirstLineRendererError &&
+      error.code === 'FIRST_LINE_RENDERER_INVALID'
+  );
+});
+
+test('C5 renderer T07/T08 all CLARIFY classes map exact prompts and finite ordinals', () => {
+  const cases = [
+    ['PRODUCT', 'TPL_CLARIFY_PRODUCT_V1',
+      'Уточните, пожалуйста, какой товар вы имеете в виду.', true],
+    ['CATEGORY', 'TPL_CLARIFY_CATEGORY_V1',
+      'Уточните, пожалуйста, какую категорию вы имеете в виду.', true],
+    ['BRAND', 'TPL_CLARIFY_BRAND_V1',
+      'Уточните, пожалуйста, какой бренд вы имеете в виду.', true],
+    ['STORE', 'TPL_CLARIFY_STORE_V1',
+      'Уточните, пожалуйста, какой магазин вы имеете в виду.', true],
+    ['MONEY', 'TPL_CLARIFY_MONEY_V1',
+      'Уточните, пожалуйста, максимальную сумму в гривнах.', false],
+    ['MISSING_SHORTLIST_ANCHOR', 'TPL_CLARIFY_SHORTLIST_ANCHOR_V1',
+      'Уточните, пожалуйста, категорию товара.', false],
+  ];
+  for (const [kind, template, prompt, finite] of cases) {
+    const item = clarifyCase(kind);
+    const decision = decideFirstLine(basis(build({ ...item, language: 'ru' })));
+    assert.equal(decision.template_id, template);
+    const text = renderFirstLineText(decision);
+    const website = renderFirstLineWebsite(decision);
+    if (finite) {
+      assert.equal(text.content.startsWith(prompt + '\n1. '), true, kind);
+      assert.equal(website.content.startsWith(prompt + '\n1. '), true, kind);
+      assert.equal(website.content_type, 'input_select', kind);
+      assert.deepEqual(
+        website.content_attributes.items,
+        decision.choices.map((row, index) => ({
+          title: String(index + 1),
+          value: row.token,
+        })),
+        kind
+      );
+    } else {
+      assert.equal(text.content, prompt, kind);
+      assert.equal(website.content, prompt, kind);
+      assert.equal(website.content_type, 'text', kind);
+      assert.deepEqual(website.content_attributes, {}, kind);
+    }
+  }
+
+  const variant = c5VariantClarifyDecision();
+  assert.equal(variant.template_id, 'TPL_CLARIFY_VARIANT_V1');
+  assert.equal(
+    renderFirstLineText(variant).content,
+    'Уточните, пожалуйста, какой вариант вы имеете в виду.\n' +
+      '1. Color 1\n2. Color 2'
+  );
+  assert.deepEqual(renderFirstLineWebsite(variant).content_attributes.items, [
+    { title: '1', value: 'bp-choice:1' },
+    { title: '2', value: 'bp-choice:2' },
+  ]);
+});
+
+test('C5 renderer T09a entity-encodes every ASCII punctuation in dynamic labels', () => {
+  const punctuation = [];
+  for (let cp = 0x21; cp <= 0x7e; cp += 1) {
+    const ch = String.fromCharCode(cp);
+    if (!/[A-Za-z0-9]/u.test(ch)) punctuation.push(ch);
+  }
+  assert.equal(punctuation.length, 32);
+
+  for (const ch of punctuation) {
+    const labelA = 'Label ' + ch + ' alpha';
+    const labelB = 'Label beta ' + ch;
+    const decision = c5ProductClarifyDecision('ru', [labelA, labelB]);
+    const text = renderFirstLineText(decision);
+    const website = renderFirstLineWebsite(decision);
+    assert.equal(text.content.includes(labelA), true, ch);
+    const encoded = '&#x' +
+      ch.codePointAt(0).toString(16).toUpperCase().padStart(2, '0') + ';';
+    assert.equal(
+      website.content.includes(
+        'Label ' + encoded + ' alpha'
+      ),
+      true,
+      ch
+    );
+    assert.equal(website.content.includes(labelA), false, ch);
+  }
+});
+
+test('C5 renderer T09 rejects literal Liquid opener before Website encoding', () => {
+  const decision = c5ProductClarifyDecision('ru', [
+    'Label {{ customer',
+    'Safe label',
+  ]);
+  assert.equal(
+    renderFirstLineText(decision).content.includes('Label {{ customer'),
+    true
+  );
+  assert.throws(
+    () => renderFirstLineWebsite(decision),
+    error => error instanceof FirstLineRendererError &&
+      error.code === 'FIRST_LINE_RENDERER_INVALID'
+  );
+});
+
+function c5PhoneRow({
+  revisionId,
+  namespace,
+  effectFamily,
+  subjectType,
+  subjectId,
+  e164,
+}) {
+  return {
+    revision_id: revisionId,
+    record_type: 'OPERATIONAL_FACT',
+    schema_version: 1,
+    namespace,
+    effect_family: effectFamily,
+    subject_type: subjectType,
+    subject_id: subjectId,
+    scope: {},
+    effect_type: 'PHONE',
+    effect_value: { e164 },
+    state: 'PUBLISHED',
+    effective_from_utc: '2026-01-01T00:00:00.000Z',
+    expires_at_utc: null,
+  };
+}
+
+function c5StoreOperationalDecision(kind, language = 'ru') {
+  const text = kind === 'hours'
+    ? 'До скольки сегодня работает магазин?'
+    : 'Сегодня магазин открыт?';
+  return decideFirstLine(basis(build({
+    text,
+    language,
+    spans: [{
+      kind: 'STORE',
+      turn_index: 1,
+      quote: 'магазин',
+      occurrence: 1,
+    }],
+    catalogService: identityCatalog(),
+    knowledgeStore: knowledge([
+      c61StoreVocabularyRow(),
+      c61OperationalRow(),
+    ]),
+  })));
+}
+
+function c5StorePhoneDecision(language = 'ru') {
+  return decideFirstLine(basis(build({
+    text: 'Какой телефон магазина?',
+    language,
+    spans: [{
+      kind: 'STORE',
+      turn_index: 1,
+      quote: 'магазина',
+      occurrence: 1,
+    }],
+    catalogService: identityCatalog(),
+    knowledgeStore: storePhoneKnowledge(),
+  })));
+}
+
+function c5CallCenterPhoneDecision(language = 'ru') {
+  return decideFirstLine(basis(build({
+    text: 'Какой телефон колл-центра?',
+    language,
+    knowledgeStore: knowledge([
+      c5PhoneRow({
+        revisionId: 'rev-call-center-phone',
+        namespace: 'call_center.phone',
+        effectFamily: 'call_center.phone',
+        subjectType: 'business',
+        subjectId: 'babypark',
+        e164: '+380442222222',
+      }),
+    ]),
+  })));
+}
+
+function c5PrepaymentDecision(language = 'ru') {
+  return decideFirstLine(basis(build({
+    text: 'Какая предоплата?',
+    language,
+    knowledgeStore: knowledge([
+      commerceRow({
+        revision_id: 'prepayment-1',
+        namespace: 'commerce.prepayment',
+        effect_family: 'commerce.prepayment',
+        effect_type: 'PREPAYMENT',
+        effect_value: {
+          amount_minor: 2_730_050,
+          currency: 'UAH',
+        },
+      }),
+    ]),
+  })));
+}
+
+function c5ReturnDecision(language = 'ru', excluded = true) {
+  return decideFirstLine(basis(build({
+    text: 'Какой общий срок возврата?',
+    language,
+    knowledgeStore: knowledge([
+      commerceRow({
+        revision_id: 'return-1',
+        namespace: 'commerce.return_period',
+        effect_family: 'commerce.return_period',
+        effect_type: 'RETURN_PERIOD',
+        effect_value: {
+          applies_to: 'GOOD_QUALITY',
+          calendar_days: 14,
+          purchase_day_excluded: excluded,
+        },
+      }),
+    ]),
+  })));
+}
+
+function c5VariantAnswerDecision({
+  language = 'ru',
+  partial = false,
+  price = false,
+} = {}) {
+  const c = c59VariantAnswerCatalog({ partial, price });
+  return decideFirstLine(basis(build({
+    text: price
+      ? 'Покажи точные цены вариантов UPPAbaby Cruz V2'
+      : 'Какие варианты UPPAbaby Cruz V2 сейчас есть?',
+    language,
+    spans: [{
+      kind: 'PRODUCT',
+      turn_index: 1,
+      quote: 'UPPAbaby Cruz V2',
+      occurrence: 1,
+    }],
+    catalogService: c,
+  })));
+}
+
+function c5ShortlistCatalog({
+  total = 2,
+  displayed = 2,
+  partialSecond = true,
+  presentationOverrides = {},
+} = {}) {
+  const identities = identityCatalog();
+  const products = catalog();
+  const productIds = [
+    PRODUCT_A,
+    PRODUCT_B,
+    'prod_33333333-3333-4333-8333-333333333333',
+  ];
+  return {
+    ...products,
+    listCategories: identities.listCategories,
+    listBrands: identities.listBrands,
+    getStores: identities.getStores,
+    getProduct({ productId }) {
+      const result = products.getProduct({ productId });
+      const override = presentationOverrides[productId] ?? null;
+      if (override !== null) {
+        for (const language of ['ru', 'uk']) {
+          result.product.localized[language] = {
+            title: override.title,
+            url: override.url,
+          };
+        }
+        result.product.images = override.image_url === null
+          ? []
+          : [{ image_id: 'img-safe', variant_id: null, url: override.image_url }];
+      }
+      return result;
+    },
+    searchObjectiveProducts(args) {
+      return {
+        catalog: { generation_id: 'g1' },
+        constraints: {
+          category_id: args.categoryId ?? null,
+          category_match_mode: args.categoryId
+            ? args.categoryMatchMode ?? null
+            : null,
+          brand_id: args.brandId ?? null,
+          min_price_minor: args.minPriceMinor ?? null,
+          max_price_minor: args.maxPriceMinor ?? null,
+          store_id: args.storeId ?? null,
+          display_limit: args.limit ?? 3,
+        },
+        status: 'FACT',
+        reason: 'OBJECTIVE_SHORTLIST',
+        total_product_count: total,
+        displayed_product_count: displayed,
+        products: productIds.slice(0, displayed).map((productId, index) => ({
+          product_id: productId,
+          matching_variant_ids: [],
+          matching_price_min_minor: index === 1 ? 2_800_000 : 2_730_000,
+          matching_price_max_minor: index === 1 ? 3_000_000 : 2_730_000,
+          currency: 'UAH',
+          all_available_variants_match_filters:
+            index === 1 ? !partialSecond : true,
+        })),
+      };
+    },
+  };
+}
+
+function c5ShortlistDecision({
+  language = 'ru',
+  total = 2,
+  displayed = 2,
+  presentationOverrides = {},
+} = {}) {
+  return decideFirstLine(basis(build({
+    text: 'Покажи коляски',
+    language,
+    spans: [{
+      kind: 'CATEGORY',
+      turn_index: 1,
+      quote: 'коляски',
+      occurrence: 1,
+    }],
+    catalogService: c5ShortlistCatalog({ total, displayed, presentationOverrides }),
+    knowledgeStore: identityVocabulary('CATEGORY', 1, 'коляски'),
+  })));
+}
+
+function c5ShortlistEmptyDecision(language = 'ru') {
+  return decideFirstLine(basis(build({
+    text: 'Покажи коляски',
+    language,
+    spans: [{
+      kind: 'CATEGORY',
+      turn_index: 1,
+      quote: 'коляски',
+      occurrence: 1,
+    }],
+    catalogService: objectiveEmptyIdentityCatalog(),
+    knowledgeStore: identityVocabulary('CATEGORY', 1, 'коляски'),
+  })));
+}
+
+function c5StoreStockDecision({
+  language = 'ru',
+  inStock = true,
+  withLabel = true,
+} = {}) {
+  const c = storeStockAmbiguousCatalog(2);
+  c.getStoreStockFact = () => ({
+    contract: 'bp.catalog.store-stock-fact/1',
+    catalog: { generation_id: 'g1' },
+    requested_product_id: PRODUCT_A,
+    requested_variant_id: null,
+    store_id: storeId(1),
+    status: 'FACT',
+    reason: 'STORE_STOCK',
+    product_id: PRODUCT_A,
+    variant_id: variantId(1),
+    selection_mode: 'SINGLE_ACTIVE_IN_STOCK_VARIANT',
+    in_stock: inStock,
+    presentation: {
+      variant_label: withLabel ? 'Color 1' : null,
+      sku: withLabel ? 'SKU-1' : null,
+    },
+  });
+  return decideFirstLine(basis(build({
+    text: 'Есть UPPAbaby Cruz V2 в магазине?',
+    language,
+    spans: [
+      {
+        kind: 'PRODUCT',
+        turn_index: 1,
+        quote: 'UPPAbaby Cruz V2',
+        occurrence: 1,
+      },
+      {
+        kind: 'STORE',
+        turn_index: 1,
+        quote: 'магазине',
+        occurrence: 1,
+      },
+    ],
+    catalogService: c,
+    knowledgeStore: identityVocabulary('STORE', 1, 'магазине'),
+  })));
+}
+
+test('C5 renderer T07 exact ANSWER wording covers all 17 templates in ru/uk', () => {
+  const factories = [
+    [
+      'TPL_STORE_OPEN_STATUS_V1',
+      language => c5StoreOperationalDecision('open', language),
+      'Магазин сейчас открыт до 20:00.',
+      'Магазин зараз відкритий до 20:00.',
+    ],
+    [
+      'TPL_STORE_HOURS_TODAY_V1',
+      language => c5StoreOperationalDecision('hours', language),
+      'График на сегодня: 10:00–20:00. Сейчас магазин открыт.',
+      'Графік на сьогодні: 10:00–20:00. Зараз магазин відкритий.',
+    ],
+    [
+      'TPL_STORE_PHONE_V1',
+      c5StorePhoneDecision,
+      'Телефон магазина: +380441234567.',
+      'Телефон магазину: +380441234567.',
+    ],
+    [
+      'TPL_CALL_CENTER_PHONE_V1',
+      c5CallCenterPhoneDecision,
+      'Телефон контакт-центра: +380442222222.',
+      'Телефон контакт-центру: +380442222222.',
+    ],
+    [
+      'TPL_PAYMENT_METHODS_V1',
+      c5PaymentDecision,
+      'Способы оплаты: банковский перевод, наличными курьеру, наложенный платеж в Новой почте.',
+      'Способи оплати: банківський переказ, готівкою кур’єру, післяплата у Новій пошті.',
+    ],
+    [
+      'TPL_PREPAYMENT_V1',
+      c5PrepaymentDecision,
+      'Предоплата: 27 300,50 грн.',
+      'Передоплата: 27 300,50 грн.',
+    ],
+    [
+      'TPL_RETURN_PERIOD_V1',
+      c5ReturnDecision,
+      'Срок возврата товара надлежащего качества (календарные дни): 14. День покупки не учитывается.',
+      'Період повернення товару належної якості (календарні дні): 14. День покупки не враховується.',
+    ],
+    [
+      'TPL_PRODUCT_PRICE_SINGLE_V1',
+      language => c5ProductPriceDecision({
+        reason: 'PRODUCT_PRICE_SINGLE',
+        min: 2_730_000,
+        max: 2_730_000,
+        language,
+      }),
+      'Цена: 27 300 грн.',
+      'Ціна: 27 300 грн.',
+    ],
+    [
+      'TPL_PRODUCT_PRICE_RANGE_V1',
+      language => c5ProductPriceDecision({
+        reason: 'PRODUCT_PRICE_RANGE',
+        min: 2_730_000,
+        max: 3_000_000,
+        language,
+      }),
+      'Цена зависит от варианта: от 27 300 грн до 30 000 грн.',
+      'Ціна залежить від варіанта: від 27 300 грн до 30 000 грн.',
+    ],
+    [
+      'TPL_PRODUCT_NOT_IN_STOCK_V1',
+      language => c5ProductPriceDecision({
+        reason: 'PRODUCT_NOT_IN_STOCK',
+        language,
+      }),
+      'Сейчас товара нет в наличии.',
+      'Зараз товару немає в наявності.',
+    ],
+    [
+      'TPL_VARIANT_LIST_V1',
+      language => c5VariantAnswerDecision({ language }),
+      'Доступные варианты (2/2): Blue, Red.',
+      'Доступні варіанти (2/2): Blue, Red.',
+    ],
+    [
+      'TPL_VARIANT_LIST_PARTIAL_V1',
+      language => c5VariantAnswerDecision({ language, partial: true }),
+      'Варианты с доступными названиями (2/3): Blue, Red.',
+      'Варіанти з доступними назвами (2/3): Blue, Red.',
+    ],
+    [
+      'TPL_VARIANT_PRICE_LIST_V1',
+      language => c5VariantAnswerDecision({ language, price: true }),
+      'Цены вариантов:\n• Blue — 100 грн\n• Red — 120 грн',
+      'Ціни варіантів:\n• Blue — 100 грн\n• Red — 120 грн',
+    ],
+    [
+      'TPL_SHORTLIST_TOP3_V1',
+      language => c5ShortlistDecision({
+        language,
+        total: 5,
+        displayed: 3,
+      }),
+      'Количество найденных товаров: 5. Первые результаты:\n' +
+        '1. UPPAbaby Cruz V2 — 27 300 грн\n' +
+        'https://babypark.ua/product-1111\n' +
+        '2. UPPAbaby Cruz Other — 28 000 грн–30 000 грн (частичное соответствие модели)\n' +
+        'https://babypark.ua/product-2222\n' +
+        '3. Product 33333333 — 27 300 грн\n' +
+        'https://babypark.ua/product-3333',
+      'Кількість знайдених товарів: 5. Перші результати:\n' +
+        '1. UPPAbaby Cruz V2 — 27 300 грн\n' +
+        'https://babypark.ua/product-1111\n' +
+        '2. UPPAbaby Cruz Other — 28 000 грн–30 000 грн (часткова відповідність моделі)\n' +
+        'https://babypark.ua/product-2222\n' +
+        '3. Product 33333333 — 27 300 грн\n' +
+        'https://babypark.ua/product-3333',
+    ],
+    [
+      'TPL_SHORTLIST_ALL_V1',
+      language => c5ShortlistDecision({ language }),
+      'Найденные товары:\n' +
+        '1. UPPAbaby Cruz V2 — 27 300 грн\n' +
+        'https://babypark.ua/product-1111\n' +
+        '2. UPPAbaby Cruz Other — 28 000 грн–30 000 грн (частичное соответствие модели)\n' +
+        'https://babypark.ua/product-2222',
+      'Знайдені товари:\n' +
+        '1. UPPAbaby Cruz V2 — 27 300 грн\n' +
+        'https://babypark.ua/product-1111\n' +
+        '2. UPPAbaby Cruz Other — 28 000 грн–30 000 грн (часткова відповідність моделі)\n' +
+        'https://babypark.ua/product-2222',
+    ],
+    [
+      'TPL_SHORTLIST_EMPTY_V1',
+      c5ShortlistEmptyDecision,
+      'По заданным условиям товары не найдены.',
+      'За заданими умовами товарів не знайдено.',
+    ],
+    [
+      'TPL_STORE_STOCK_V1',
+      language => c5StoreStockDecision({ language }),
+      'Вариант «Color 1» есть в наличии в этом магазине.',
+      'Варіант «Color 1» є в наявності в цьому магазині.',
+    ],
+  ];
+
+  assert.equal(factories.length, 17);
+  for (const [template, factory, ru, uk] of factories) {
+    for (const [language, expected] of [['ru', ru], ['uk', uk]]) {
+      const decision = factory(language);
+      assert.equal(decision.template_id, template, template + '/' + language);
+      assert.equal(
+        renderFirstLineText(decision).content,
+        expected,
+        template + '/' + language
+      );
+      const website = renderFirstLineWebsite(decision);
+      assert.equal(website.content_type, 'text', template + '/' + language);
+      assert.equal(website.content.endsWith('\n'), false, template + '/' + language);
+    }
+  }
+});
+
+test('C5 renderer T07 conditional branches cover return/store-stock variants', () => {
+  assert.equal(
+    renderFirstLineText(c5ReturnDecision('ru', false)).content,
+    'Срок возврата товара надлежащего качества (календарные дни): 14. День покупки учитывается.'
+  );
+  assert.equal(
+    renderFirstLineText(c5ReturnDecision('uk', false)).content,
+    'Період повернення товару належної якості (календарні дні): 14. День покупки враховується.'
+  );
+  assert.equal(
+    renderFirstLineText(c5StoreStockDecision({
+      language: 'ru',
+      inStock: false,
+      withLabel: false,
+    })).content,
+    'Нет в наличии в этом магазине.'
+  );
+  assert.equal(
+    renderFirstLineText(c5StoreStockDecision({
+      language: 'uk',
+      inStock: true,
+      withLabel: false,
+    })).content,
+    'Є в наявності в цьому магазині.'
+  );
+  assert.equal(
+    renderFirstLineText(c5StoreStockDecision({
+      language: 'ru',
+      inStock: false,
+      withLabel: true,
+    })).content,
+    'Варианта «Color 1» нет в наличии в этом магазине.'
+  );
+});
+
+
+test('C5 renderer stricter T10 invariants reject genuine-but-broader C4 shapes', () => {
+  const equalRange = c5ProductPriceDecision({
+    reason: 'PRODUCT_PRICE_RANGE',
+    min: 2_730_000,
+    max: 2_730_000,
+  });
+  assert.equal(equalRange.decision, 'ANSWER');
+  assert.throws(
+    () => renderFirstLineText(equalRange),
+    error => error instanceof FirstLineRendererError &&
+      error.code === 'FIRST_LINE_RENDERER_INVALID'
+  );
+
+  const emptyVariantCatalog = catalog();
+  emptyVariantCatalog.getAvailableVariantsFact = ({ productId }) => ({
+    contract: 'bp.catalog.available-variants-fact/1',
+    catalog: { generation_id: 'g1' },
+    product_id: productId,
+    status: 'FACT',
+    reason: 'VARIANT_LIST',
+    total_variant_count: 0,
+    displayable_label_count: 0,
+    label_complete: true,
+    variants: [],
+  });
+  const emptyVariant = decideFirstLine(basis(build({
+    text: 'Какие варианты UPPAbaby Cruz V2 сейчас есть?',
+    spans: [{
+      kind: 'PRODUCT',
+      turn_index: 1,
+      quote: 'UPPAbaby Cruz V2',
+      occurrence: 1,
+    }],
+    catalogService: emptyVariantCatalog,
+  })));
+  assert.equal(emptyVariant.template_id, 'TPL_VARIANT_LIST_V1');
+  assert.throws(
+    () => renderFirstLineWebsite(emptyVariant),
+    error => error instanceof FirstLineRendererError &&
+      error.code === 'FIRST_LINE_RENDERER_INVALID'
+  );
+
+  const emptyTop3 = c5ShortlistDecision({ total: 5, displayed: 0 });
+  assert.equal(emptyTop3.template_id, 'TPL_SHORTLIST_TOP3_V1');
+  assert.throws(
+    () => renderFirstLineWebsite(emptyTop3),
+    error => error instanceof FirstLineRendererError &&
+      error.code === 'FIRST_LINE_RENDERER_INVALID'
+  );
+});
+
+test('C5 renderer T09/T12 shortlist URL and title use exact Website entity transport', () => {
+  const rawUrl = 'https://babypark.ua/p/HQn6R(.b=7|eT';
+  const imageUrl = 'https://cdn.example.org/pixel.png';
+  const decision = c5ShortlistDecision({
+    total: 1,
+    displayed: 1,
+    presentationOverrides: {
+      [PRODUCT_A]: {
+        title: 'Model Black_1',
+        url: rawUrl,
+        image_url: imageUrl,
+      },
+    },
+  });
+  const text = renderFirstLineText(decision).content;
+  const website = renderFirstLineWebsite(decision).content;
+
+  assert.equal(text.includes('Model Black_1'), true);
+  assert.equal(text.includes(rawUrl), true);
+  assert.equal(text.includes(imageUrl), false);
+  assert.equal(website.includes('Model Black&#x5F;1'), true);
+  assert.equal(
+    website.includes(
+      'https&#x3A;&#x2F;&#x2F;babypark&#x2E;ua&#x2F;p&#x2F;' +
+      'HQn6R&#x28;&#x2E;b&#x3D;7&#x7C;eT'
+    ),
+    true
+  );
+  assert.equal(website.includes(rawUrl), false);
+  assert.equal(website.includes(imageUrl), false);
+});
+
+test('C5 renderer T09 canonical URL Liquid boundary rejects literal and permits percent encoding', () => {
+  const literal = c5ShortlistDecision({
+    total: 1,
+    displayed: 1,
+    presentationOverrides: {
+      [PRODUCT_A]: {
+        title: 'Safe model',
+        url: 'https://babypark.ua/a?x={{agent.name}}',
+        image_url: null,
+      },
+    },
+  });
+  assert.equal(
+    renderFirstLineText(literal).content.includes(
+      'https://babypark.ua/a?x={{agent.name}}'
+    ),
+    true
+  );
+  assert.throws(
+    () => renderFirstLineWebsite(literal),
+    error => error instanceof FirstLineRendererError &&
+      error.code === 'FIRST_LINE_RENDERER_INVALID'
+  );
+
+  const encoded = c5ShortlistDecision({
+    total: 1,
+    displayed: 1,
+    presentationOverrides: {
+      [PRODUCT_A]: {
+        title: 'Safe model',
+        url: 'https://babypark.ua/a?x=%7B%7Bagent.name%7D%7D',
+        image_url: null,
+      },
+    },
+  });
+  const website = renderFirstLineWebsite(encoded).content;
+  assert.equal(website.includes('{{'), false);
+  assert.equal(website.includes('{%'), false);
+  assert.equal(website.includes('&#x25;7B&#x25;7Bagent'), true);
+});
+
+test('C5 renderer T13 final Website content counts Unicode code points exactly', () => {
+  const astral = String.fromCodePoint(0x1F600);
+  const max = astral.repeat(150000);
+  const tooLong = astral.repeat(150001);
+  assert.equal(max.length, 300000);
+  assert.equal(requireFirstLineWebsiteContent(max), max);
+  assert.throws(
+    () => requireFirstLineWebsiteContent(tooLong),
+    error => error instanceof FirstLineRendererError &&
+      error.code === 'FIRST_LINE_RENDERER_INVALID'
+  );
+  assert.throws(
+    () => requireFirstLineWebsiteContent(''),
+    error => error instanceof FirstLineRendererError &&
+      error.code === 'FIRST_LINE_RENDERER_INVALID'
+  );
+  assert.throws(
+    () => requireFirstLineWebsiteContent('x {{ y'),
+    error => error instanceof FirstLineRendererError &&
+      error.code === 'FIRST_LINE_RENDERER_INVALID'
+  );
+});
+
+test('C5 renderer property: exact UAH formatting is deterministic through genuine C4 decisions', () => {
+  const expected = minor => {
+    const major = Math.floor(minor / 100);
+    const cents = minor % 100;
+    const groups = String(major).replace(/\B(?=(\d{3})+(?!\d))/gu, ' ');
+    return cents === 0
+      ? groups + ' грн'
+      : groups + ',' + String(cents).padStart(2, '0') + ' грн';
+  };
+  fc.assert(
+    fc.property(
+      fc.integer({ min: 0, max: 2_000_000_000 }),
+      minor => {
+        const decision = c5ProductPriceDecision({
+          reason: 'PRODUCT_PRICE_SINGLE',
+          min: minor,
+          max: minor,
+          language: 'uk',
+        });
+        assert.equal(
+          renderFirstLineText(decision).content,
+          'Ціна: ' + expected(minor) + '.'
+        );
+      }
+    ),
+    { seed: 550101, numRuns: 100 }
+  );
+});
+
+test('C5 renderer T08 output envelopes are exact frozen public-only shapes', () => {
+  const answer = renderFirstLineWebsite(c5PaymentDecision());
+  assert.deepEqual(Object.keys(answer).sort(), [
+    'content',
+    'content_attributes',
+    'content_type',
+    'schema',
+  ]);
+  assert.equal(Object.isFrozen(answer), true);
+  assert.equal(Object.isFrozen(answer.content_attributes), true);
+  assert.deepEqual(answer.content_attributes, {});
+
+  const clarifyDecision = c5ProductClarifyDecision();
+  const clarify = renderFirstLineWebsite(clarifyDecision);
+  assert.deepEqual(Object.keys(clarify).sort(), [
+    'content',
+    'content_attributes',
+    'content_type',
+    'schema',
+  ]);
+  assert.deepEqual(Object.keys(clarify.content_attributes), ['items']);
+  assert.equal(Object.isFrozen(clarify), true);
+  assert.equal(Object.isFrozen(clarify.content_attributes), true);
+  assert.equal(Object.isFrozen(clarify.content_attributes.items), true);
+  assert.equal(
+    clarify.content_attributes.items.every(
+      item => Object.isFrozen(item) &&
+        Object.keys(item).sort().join(',') === 'title,value'
+    ),
+    true
+  );
+  assert.equal(clarify.content.includes('bp-choice:'), false);
+  for (const row of clarifyDecision.choices) {
+    assert.equal(clarify.content.includes(row.token), false);
+  }
+
+  const text = renderFirstLineText(c5PaymentDecision());
+  assert.deepEqual(Object.keys(text).sort(), ['content', 'schema']);
+  assert.equal(Object.isFrozen(text), true);
 });

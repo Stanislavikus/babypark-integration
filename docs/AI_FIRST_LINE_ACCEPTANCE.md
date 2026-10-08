@@ -2,10 +2,10 @@
 
 Status: FROZEN — Event Ledger v0.7 architecture + C5 renderer acceptance freeze
 Applies to: BabyPark AI First Line Website v1 / Slice C acceptance contract.
-Supersedes: `docs/AI_FIRST_LINE_ACCEPTANCE.md` at canonical main `565f8eb30bf39afa80bb4d59258cc2fd13aa67d5`.
+Supersedes: `docs/AI_FIRST_LINE_ACCEPTANCE.md` at canonical main `1fd2fd6af75270cd4d061bc34aee5504d1211580`.
 Companion: `docs/AI_FIRST_LINE_DESIGN.md`
 Historical research baseline: `e4b3989f852d5de4a868a6f72867b87cb64f8b2d`.
-Contract amendment base: canonical main `565f8eb30bf39afa80bb4d59258cc2fd13aa67d5`.
+Contract amendment base: canonical main `1fd2fd6af75270cd4d061bc34aee5504d1211580`.
 
 This file is the single normative acceptance corpus for AI First Line v0.7. It
 incorporates the complete v0.6 acceptance delta and subsequent v0.7 freezes; no
@@ -1627,9 +1627,9 @@ is merged via PR #107 on canonical main
 `565f8eb30bf39afa80bb4d59258cc2fd13aa67d5`, including the CATEGORY
 `(category_id,category_match_mode)` prerequisite and its HEAVY closure.
 
-This docs-only C5 amendment adds T07–T13 and contains no production renderer or
-C6 implementation. These proposed acceptance rows become authoritative only after
-merge. Production C5 must then run a fresh implementation-options scan and the
-applicable verification/review closure under the then-current AI Working Agreement.
-C6 send-time U01–U07 remains a separate downstream implementation stage.
+T07–T13 are already the merged C5 acceptance contract. This bounded
+implementation amendment adds the repository C5 renderer and genuine-decision
+capability needed to satisfy them; it does not change their expected behavior.
+C5 remains unconnected/not deployed and performs no Chatwoot POST. C6 send-time
+U01–U07 remains a separate downstream implementation stage.
 
