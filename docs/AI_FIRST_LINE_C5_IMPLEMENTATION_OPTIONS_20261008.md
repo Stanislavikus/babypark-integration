@@ -1,7 +1,7 @@
 # C5 production renderer — implementation-options gate
 
-Status: EVIDENCE — NON-NORMATIVE  
-Applies to: BabyPark AI First Line / bounded C5 production renderer implementation stage.  
+Status: EVIDENCE — NON-NORMATIVE
+Applies to: BabyPark AI First Line / bounded C5 production renderer implementation stage.
 Supersedes: none.
 
 PRODUCTION IMPLEMENTATION IN THIS CHECKPOINT: NONE.
