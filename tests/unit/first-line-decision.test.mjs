@@ -4964,7 +4964,8 @@ async function c5LoadRendererInternalsForTest() {
       "'./first-line-public-safety.mjs'",
       JSON.stringify(safetyUrl)
     ) +
-    '\nexport { answerContent as __c5AnswerContentForTest };\n';
+    '\nexport { answerContent as __c5AnswerContentForTest, ' +
+    'validatePublicDecisionRelation as __c5ValidatePublicDecisionRelationForTest };\n';
   return import(
     'data:text/javascript;base64,' + Buffer.from(source).toString('base64')
   );
@@ -5282,13 +5283,22 @@ test('C5 renderer T09a canonical product URL edge matrix uses exact entity trans
   }
 });
 
-test('C5 renderer T11 rejects an exact-shape impossible public tuple', () => {
+test('C5 renderer T11 independently rejects an impossible public relation', async () => {
   const decision = c5PaymentDecision();
   const impossible = {
     ...decision,
     reason: 'PRODUCT_PRICE_SINGLE',
   };
   assert.deepEqual(Object.keys(impossible).sort(), Object.keys(decision).sort());
+  assert.equal(isGenuineFirstLineDecision(impossible), false);
+
+  const internals = await c5LoadRendererInternalsForTest();
+  assert.throws(
+    () => internals.__c5ValidatePublicDecisionRelationForTest(impossible),
+    error => error?.name === 'FirstLineRendererError' &&
+      error?.code === 'FIRST_LINE_RENDERER_INVALID'
+  );
+
   for (const render of [renderFirstLineText, renderFirstLineWebsite]) {
     assert.throws(
       () => render(impossible),
@@ -5296,6 +5306,15 @@ test('C5 renderer T11 rejects an exact-shape impossible public tuple', () => {
         error.code === 'FIRST_LINE_RENDERER_INVALID'
     );
   }
+
+  const rendererSource = fs.readFileSync(
+    new URL('../../src/copilot/first-line-renderer.mjs', import.meta.url),
+    'utf8'
+  );
+  assert.match(
+    rendererSource,
+    /function validateDecision\(decision\) \{[\s\S]*validatePublicDecisionRelation\(decision\);/u
+  );
 });
 
 test('C5 renderer T13 mixed BMP/astral final Website length is code-point based', () => {
@@ -5347,6 +5366,23 @@ test('C5 review B1 schedule admission preserves ascending non-overlap semantics'
   assert.match(
     rendererSource,
     /let previousClose = null;[\s\S]*interval\.open < previousClose[\s\S]*previousClose = interval\.close;/u
+  );
+});
+
+test('C5 review B5 normative lifecycle names both renderers implemented but unconnected', () => {
+  const design = fs.readFileSync(
+    new URL('../../docs/AI_FIRST_LINE_DESIGN.md', import.meta.url),
+    'utf8'
+  );
+  assert.equal(design.includes('planned WebsiteRenderer;'), false);
+  assert.equal(design.includes('planned TextRenderer;'), false);
+  assert.equal(
+    design.includes('implemented WebsiteRenderer (repository C5; unconnected/not deployed);'),
+    true
+  );
+  assert.equal(
+    design.includes('implemented TextRenderer (repository C5; unconnected/not deployed);'),
+    true
   );
 });
 

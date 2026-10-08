@@ -370,13 +370,12 @@ function validateClarifyChoices(decision, relation) {
   return exactDistinctLabels(labels, decision.response_locale);
 }
 
-function validateDecision(decision) {
-  if (!isGenuineFirstLineDecision(decision) ||
-      !exactKeys(decision, DECISION_KEYS) ||
+function validatePublicDecisionRelation(decision) {
+  if (!exactKeys(decision, DECISION_KEYS) ||
       decision.schema !== FIRST_LINE_DECISION_SCHEMA ||
       typeof decision.reason !== 'string' ||
       decision.reason.length === 0) {
-    invalid('renderer requires one genuine exact C4 public decision');
+    invalid('public decision shape is invalid');
   }
 
   if (decision.decision === 'HUMAN') {
@@ -423,6 +422,13 @@ function validateDecision(decision) {
   if (!validateClarifyChoices(decision, relation)) {
     invalid('CLARIFY public relation is invalid');
   }
+}
+
+function validateDecision(decision) {
+  if (!isGenuineFirstLineDecision(decision)) {
+    invalid('renderer requires one genuine exact C4 public decision');
+  }
+  validatePublicDecisionRelation(decision);
 }
 
 function formatUah(minor) {

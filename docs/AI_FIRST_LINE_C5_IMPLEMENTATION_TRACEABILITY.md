@@ -64,7 +64,7 @@ change production services.
 | G10 stricter C5 semantic edges | `validateAnswerPayload` / `validateClarifyChoices` | genuine C4 equal RANGE, empty full VARIANT_LIST, empty TOP3 and TOP3-with-fewer-than-three reject; TOP3 requires exactly 3 rows when total>3, ALL is bounded to total<=3; hours revalidate ascending/non-overlapping HH:MM intervals; full/partial named>0+named=0, two-interval hours, open_now true+false and UAH goldens | broader-but-genuine C4 public shape that violates C5 semantics rejects | NONE | DONE |
 | G11 Chatwoot runtime/build drift remains activation gate | no runtime binding code added; frozen §40.3/T09b remains authoritative | final manifest requires v4.18 source + production Vite revalidation | unproven/changed runtime blocks later activation, not renderer semantics | NONE | DONE |
 | genuine C4 decision provenance | C4 `genuinePublicDecisions` WeakSet + `isGenuineFirstLineDecision` | genuine true; `structuredClone`, spread clone, null false; renderer rejects clones | forgery/clone/deserialization => renderer invalid | NONE | DONE |
-| exact public reason→template relation | renderer `ANSWER_RELATION` / `CLARIFY_RELATION` + exact 8-key admission | all 17/7 mappings exercised; clone/forgery + exact-shape impossible reason/template tuple reject; C5 stricter edge tests | impossible public tuple rejects even when individually allowlisted | NONE | DONE |
+| exact public reason→template relation | renderer internal `validatePublicDecisionRelation` + `ANSWER_RELATION` / `CLARIFY_RELATION` + exact 8-key admission | all 17/7 mappings exercised; exact committed renderer bytes are loaded into a disposable in-memory module and the internal production relation validator independently rejects an exact-shape impossible reason/template tuple; public renderer clone/forgery regressions separately prove provenance rejection; C5 stricter edge tests remain green | impossible public tuple rejects even when individually allowlisted; provenance cannot substitute for relation validation | NONE | DONE |
 | exact public payload / safe-label / URL revalidation | `validateAnswerPayload`, `exactPublicLabel`, `exactDistinctLabels`, `exactCanonicalUrl` | C4-safe genuine fixtures + stricter edge + dynamic URL tests | missing/extra/unsafe/non-canonical data rejects | NONE | DONE |
 | HUMAN public silence | renderer genuine HUMAN branch | T11 HUMAN -> `null` for Website/Text | HUMAN never becomes fallback AI text | NONE | DONE |
 | exact locale/no fallback | validator admits only `uk|ru`; fixed locale maps | all 17 ANSWER in both locales + all seven CLARIFY classes | missing/foreign locale => renderer invalid | NONE | DONE |
@@ -79,7 +79,7 @@ change production services.
 ## Exhaustive implementation-review correction inventory
 
 The exhaustive production-implementation review continued through the whole
-changed/runtime-adjacent surface after each finding. Four independent blocker
+changed/runtime-adjacent surface after each finding. Six independent blocker
 classes were found across review passes and corrected in coherent batches:
 
 - **B1 — STORE_HOURS public semantic revalidation was too weak.**
@@ -105,8 +105,7 @@ classes were found across review passes and corrected in coherent batches:
   and CLARIFY closed relation maps now require Object.hasOwn before lookup;
   prompt lookup is likewise own-key guarded. Current C4 cannot honestly brand
   an arbitrary unknown reason, so the regression asserts the exact own-key
-  production guards while the existing genuine impossible-known-pair T11
-  remains executable.
+  production guards.
 - **B4 — T07 executable locale/branch coverage was incomplete.**
   The all-CLARIFY matrix exercised only ru, and the frozen STORE_OPEN_STATUS
   open=true + closes_at_local=null branch was source-regex checked only.
@@ -116,6 +115,22 @@ classes were found across review passes and corrected in coherent batches:
   relative import specifiers to exact file URLs and appending a test-only
   export of the existing internal answerContent; tracked production bytes and
   production API remain unchanged.
+- **B5 — normative Slice C lifecycle summary remained stale.**
+  The authoritative DESIGN still called WebsiteRenderer/TextRenderer `planned`
+  after this branch had implemented both repository adapters. The summary now
+  states both are implemented in repository C5 while remaining unconnected and
+  not deployed; a focused static regression rejects recurrence of the stale
+  `planned` wording.
+- **B6 — T11 relation evidence was provenance-only.**
+  The prior impossible-pair test spread-cloned a genuine decision, so WeakSet
+  provenance rejected it before the reason-to-template relation guard ran.
+  The renderer now factors its existing pure exact public-relation admission
+  into internal `validatePublicDecisionRelation`, which `validateDecision`
+  invokes after genuine provenance. The exact committed renderer source is
+  loaded into a disposable in-memory module for test only and the internal
+  production relation validator independently rejects the impossible pair.
+  Public renderer clone/forgery regressions remain separate. No production
+  bypass/export or test-only decision branding is added.
 
 A delimiter-string `exactKeys` comparison was also replaced with
 `length + Object.hasOwn` exact membership so C5 does not inherit a comma-key
@@ -128,7 +143,8 @@ renderer/provenance/output/privacy/scope review.
 ## Current executable evidence before immutable final-tree gate
 
 Mutable development checks (not final merge evidence):
-- focused `tests/unit/first-line-decision.test.mjs`: 99/99 PASS after B1/B2/B3/B4;
+- focused `tests/unit/first-line-decision.test.mjs`: 100/100 PASS after B1–B6;
+- B5 lifecycle static assertion and B6 independent exact-source relation-validator regression: PASS;
 - syntax checks and `git diff --check`: PASS;
 - package/runtime-dependency diff: empty;
 - the adjacent C4/C5 focused set and root Agreement baseline are intentionally

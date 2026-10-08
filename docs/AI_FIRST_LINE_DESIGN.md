@@ -3155,8 +3155,8 @@ No customer messages.
 - ObjectiveConstraintLatch;
 - ANSWER/CLARIFY/HUMAN;
 - deterministic templates;
-- planned WebsiteRenderer;
-- planned TextRenderer;
+- implemented WebsiteRenderer (repository C5; unconnected/not deployed);
+- implemented TextRenderer (repository C5; unconnected/not deployed);
 - public messages only for ANSWER/CLARIFY;
 - HUMAN sends no AI preface;
 - native handoff;
