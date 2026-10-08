@@ -2,10 +2,11 @@
 
 Status: FROZEN — Event Ledger v0.7 architecture + C5 renderer contract
 Applies to: BabyPark AI First Line Website v1 / Slice C normative design.
-Supersedes: `docs/AI_FIRST_LINE_DESIGN.md` at canonical main `565f8eb30bf39afa80bb4d59258cc2fd13aa67d5`.
-Implementation: C1/C2a/C2b/C2c/C3/C4 are merged; this amendment is a docs-only
-C5 pre-code contract freeze and contains no production C5 implementation.
-Contract amendment base: canonical main `565f8eb30bf39afa80bb4d59258cc2fd13aa67d5`.
+Supersedes: `docs/AI_FIRST_LINE_DESIGN.md` at canonical main `1fd2fd6af75270cd4d061bc34aee5504d1211580`.
+Implementation: C1/C2a/C2b/C2c/C3/C4 are merged; this amendment adds the
+repository C5 deterministic renderer implementation. C5 is not wired to C6,
+deployed, or customer-facing in this stage.
+Contract amendment base: canonical main `1fd2fd6af75270cd4d061bc34aee5504d1211580`.
 Chatwoot runtime verified: package v4.18.0; deployed tracked sources and the
 current gitignored production Vite manifest/chunks/source maps were verified
 against the running target. Exact hashes/equivalence evidence is recorded in
@@ -2627,8 +2628,8 @@ Initial adapters:
 - WebsiteRenderer;
 - TextRenderer.
 
-TextRenderer is a planned deterministic C5 adapter. It is not implemented or
-connected to Viber/Telegram production by this pre-code C5 contract amendment.
+TextRenderer is the deterministic C5 text adapter implemented by this bounded
+repository stage. It remains unconnected to Viber/Telegram production.
 
 ### 40.2 C5 genuine-decision and exact output boundary
 
@@ -3154,8 +3155,8 @@ No customer messages.
 - ObjectiveConstraintLatch;
 - ANSWER/CLARIFY/HUMAN;
 - deterministic templates;
-- planned WebsiteRenderer;
-- planned TextRenderer;
+- implemented WebsiteRenderer (repository C5; unconnected/not deployed);
+- implemented TextRenderer (repository C5; unconnected/not deployed);
 - public messages only for ANSWER/CLARIFY;
 - HUMAN sends no AI preface;
 - native handoff;
@@ -3241,13 +3242,15 @@ Slice C umbrella issue #75 remains the frozen program boundary. C1/C2a/C2b/C2c/C
 are merged historical evidence and C4 deterministic decision runtime is merged via
 PR #107 on canonical main `565f8eb30bf39afa80bb4d59258cc2fd13aa67d5`.
 The prior CATEGORY-pair prerequisite is therefore implemented and reviewed.
-This docs-only C5 amendment freezes the complete C5 renderer / Website-transport
-contract in §40.2–§40.4: exact wording/output/formatting, genuine-decision
-provenance, transient-output/privacy boundary, Chatwoot Liquid and Markdown
-neutrality, native `input_select` ordinal transport, the 150000 Unicode
-code-point content bound, product-URL plain-text transport, and runtime-drift
-revalidation. It contains no production C5/C6 code and does not authorize
-renderer/send implementation. C5 production work must start as a later bounded stage under the
-then-current AI Working Agreement with a fresh alternatives scan; C6 remains a
-separate downstream stage. This v0.7 file is the single normative design source;
-no delta document applies.
+The merged C5 contract in §40.2–§40.4 freezes exact
+wording/output/formatting, genuine-decision provenance,
+transient-output/privacy, Chatwoot Liquid/Markdown neutrality, native
+`input_select` ordinal transport, the 150000 Unicode code-point content bound,
+product-URL plain-text transport, and runtime-drift revalidation. This bounded
+implementation amendment adds the repository C5 renderer and the minimal
+C4-owned genuine-decision capability required by that already-frozen contract;
+it does not change those semantics. C5 remains unconnected/not deployed and
+performs no Chatwoot POST. C6 remains a separate downstream implementation
+stage, including its send-time reauthorization and C25 routing prerequisite.
+This v0.7 file remains the single normative design source; no delta document
+applies.

@@ -9,6 +9,7 @@ export const FIRST_LINE_DECISION_BASIS_SCHEMA = 'bp.first-line.decision-basis/1'
 const basisSnapshots = new WeakMap();
 const consumedBasis = new WeakSet();
 const decisionPrivateContexts = new WeakMap();
+const genuinePublicDecisions = new WeakSet();
 
 const CLARIFY = Object.freeze({
   AMBIGUOUS_PRODUCT: Object.freeze({
@@ -297,6 +298,7 @@ function publicDecision(snapshot) {
   if (privateContext !== null) {
     decisionPrivateContexts.set(output, deepCloneFreeze(privateContext));
   }
+  genuinePublicDecisions.add(output);
   return output;
 }
 
@@ -312,6 +314,12 @@ export function registerDecisionBasis(capability, snapshot) {
 
 export function getFirstLineDecisionPrivateContext(decision) {
   return decisionPrivateContexts.get(decision) ?? null;
+}
+
+export function isGenuineFirstLineDecision(decision) {
+  return decision !== null &&
+    typeof decision === 'object' &&
+    genuinePublicDecisions.has(decision);
 }
 
 export function decideFirstLine(token) {
