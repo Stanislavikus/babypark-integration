@@ -1,15 +1,16 @@
-# BabyPark AI First Line — Acceptance Corpus v0.7
+# BabyPark AI First Line — Acceptance Corpus v0.8
 
-Status: FROZEN — Event Ledger v0.7 architecture + C5 renderer acceptance freeze
+Status: FROZEN — C6/C25 pre-implementation safety acceptance + prior v0.7/C5 acceptance
 Applies to: BabyPark AI First Line Website v1 / Slice C acceptance contract.
-Supersedes: `docs/AI_FIRST_LINE_ACCEPTANCE.md` at canonical main `1fd2fd6af75270cd4d061bc34aee5504d1211580`.
+Supersedes: `docs/AI_FIRST_LINE_ACCEPTANCE.md` at canonical main `09cbf704aba2a6bab4aa1ccacf904926286c3977`.
 Companion: `docs/AI_FIRST_LINE_DESIGN.md`
 Historical research baseline: `e4b3989f852d5de4a868a6f72867b87cb64f8b2d`.
-Contract amendment base: canonical main `1fd2fd6af75270cd4d061bc34aee5504d1211580`.
+Contract amendment base: canonical main `09cbf704aba2a6bab4aa1ccacf904926286c3977`.
 
-This file is the single normative acceptance corpus for AI First Line v0.7. It
-incorporates the complete v0.6 acceptance delta and subsequent v0.7 freezes; no
-separate delta document is required to interpret expected behavior.
+This file is the single normative acceptance corpus for AI First Line v0.8. It
+incorporates the complete prior acceptance corpus plus the C6/C25
+pre-implementation safety freeze; no separate normative delta document is
+required to interpret expected behavior.
 
 This file is intended to become executable golden test data.
 Do not silently change classifications while implementing.
@@ -110,8 +111,12 @@ For multi-turn cases, `customer_messages[]` preserves episode history.
 | C22 | Relevant IN_STOCK offers contain UAH + EUR. | HUMAN / MIXED_CURRENCY |
 | C23 | Trusted IN_STOCK offer has `current_minor == 0`. | HUMAN / ZERO_PRICE_UNVERIFIED |
 | C24 | IN_STOCK priced variants plus EXPECTED variants without offers. | Price answer uses IN_STOCK cohort only |
-| C25 | "Да, покажите точные цены вариантов" after a range answer; all IN_STOCK priced variants have safe labels. | ANSWER / VARIANT_PRICE_LIST with `TPL_VARIANT_PRICE_LIST_V1`; payload contains label+current_minor only, no IDs/SKU. |
-| C25a | Same factual price list but at least one priced variant has no safe display label. | HUMAN / PRODUCT_VARIANT_NOT_RESOLVABLE; do not expose variant_id/SKU and do not publish a partial unlabeled price list. |
+| C25 | "Да, покажите точные цены вариантов" is the next actionable customer turn after one CONFIRMED `ANSWER / PRODUCT_PRICE_RANGE` in the same active episode; the confirmed action promoted only its canonical PRODUCT `product_id`; the exact current-turn text matches one frozen §21.1 VARIANT_PRICE_LIST predicate independently of `intent_hint`; the new turn adds no identity/constraint row; all current IN_STOCK priced variants have safe labels. | Continue the same episode; ANSWER / VARIANT_PRICE_LIST with `TPL_VARIANT_PRICE_LIST_V1`; reread current Catalog authority; payload contains label+current_minor only, no IDs/SKU. |
+| C25a | Same proven dependent C25 route but at least one current priced variant has no safe display label. | HUMAN / PRODUCT_VARIANT_NOT_RESOLVABLE; do not expose variant_id/SKU and do not publish a partial unlabeled price list. |
+| C25b | The follow-up text matches a frozen VARIANT_PRICE_LIST predicate but there is no unique immediately preceding CONFIRMED PRODUCT_PRICE_RANGE action/product promotion, an intervening actionable/ownership-blocking event exists, or promoted PRODUCT provenance is missing/corrupt. | Do not inherit product context. Fail closed to HUMAN unless the current turn independently satisfies an ordinary standalone reviewed route. |
+| C25c | After a confirmed range answer, the next turn independently supplies any PRODUCT/CATEGORY/BRAND/STORE/MONEY identity or constraint row together with variant-price wording. | Treat the turn as standalone under Q09; old PRODUCT is not inherited. Current standalone C2/C3/C4 decides or fails closed. |
+| C25d | Russian and Ukrainian exact-turn controls cover both price-before-variant and variant-before-price word orders, including "Да, покажите точные цены вариантов" and "Так, покажіть точні ціни варіантів". Model `intent_hint` is missing, wrong or changed. | The same frozen §21.1 deterministic predicates classify all four language/order controls identically; `intent_hint` cannot create or suppress C25 eligibility. |
+| C25e | A near-miss current turn lacks the frozen price+variant language, or the prior answer promoted only a variant-level interpretation without the required product promotion. | Do not infer dependent C25 from conversational plausibility. No old PRODUCT/variant context is inherited; ordinary standalone routing/HUMAN applies. |
 | C26 | "Какие варианты Joolz Aer2 сейчас есть?" All IN_STOCK variant labels safe. | ANSWER / VARIANT_LIST |
 | C27 | IN_STOCK: Black; EXPECTED: Blue; question "Какие варианты сейчас есть?" | ANSWER listing Black only |
 | C28 | 7 IN_STOCK variants, 5 safe labels, 2 suppressed by display sanitizer. | ANSWER / VARIANT_LIST_PARTIAL; explicitly total=7, named=5 |
@@ -874,27 +879,37 @@ Expected:
 - absent source key is inserted and increments `stream_revision`.
 
 ### Q21 — final authorizing snapshot catches late lower source IDs
-Plan an action from a stream containing source 101. Before final action gating,
-a previously uncommitted source message 100 becomes visible and contains a
-constraint that changes the decision.
+Plan an action from a stream containing source 101. Allow optional
+non-authorizing preflight plus the transient extraction draft to complete; do
+not run authorizing C2/C3/C4/C5 from that draft yet. Before the final
+authorizing gate, a previously uncommitted source message 100 becomes visible
+and contains a constraint that changes the decision.
 
 Expected:
-- one Chatwoot whole-conversation authorizing query uses
+- only the final Chatwoot whole-conversation query is authorizing and uses
   `after=0,before=2147483648,filter_internal_messages=true`;
+- current Chatwoot ownership is also re-read at that final gate;
 - the snapshot contains both visible 100 and 101 when total public/non-activity
   rows are below 1000;
 - unseen 100 is ingested and increments `stream_revision`;
-- prepared action becomes STALE and performs zero public POSTs;
-- replanning includes the late constraint.
+- the pre-snapshot extraction draft/non-authorizing work cannot authorize or be
+  converted into a C4/C5 send for the old revision;
+- post-snapshot exact-read recertification/C2/C3/C4/C5 for that old action does
+  not proceed to SENDING;
+- the old action performs zero public POSTs;
+- continuation ownership is not orphaned: the durable liveness path replans the
+  newer revision and includes the late constraint.
 
 ### Q22 — 1000-row authorizing snapshot fails closed
-The authorizing query returns exactly 1000 public/non-activity rows.
+The final authorizing query returns exactly 1000 public/non-activity rows.
 
 Expected:
 - result is `HISTORY_UNPROVABLE`;
 - no recursive/multi-query scan may authorize the public side effect;
 - no AI POST occurs;
-- routing fails open to HUMAN under the reviewed policy.
+- the current revision is not left as an orphan STALE terminal;
+- durable HUMAN ownership remains/replaces relay ownership until native handoff
+  succeeds.
 
 ### Q23 — unknown public automation row is default-deny
 Conversation topology contains a public outgoing Chatwoot automation message with
@@ -914,7 +929,9 @@ Expected:
 - final authorizing snapshot/reread sees the covered row as deleted or otherwise
   invalid for the action basis;
 - action is not sent;
-- deleted replacement text is never fed to extraction.
+- deleted replacement text is never fed to extraction;
+- if no strictly newer revision/replacement owns continuation, durable HUMAN
+  ownership is established rather than terminalizing an orphan STALE row.
 
 ### Q25 — exactly one action for one stream revision
 Run duplicate webhook/job/planner attempts against the same
@@ -930,9 +947,13 @@ Expected:
 An action is PREPARED or GATING and a newer stream revision requires replanning.
 
 Expected:
-- at most one PREPARED/GATING/SENDING/UNCERTAIN-like action exists for the stream;
-- an unsent PREPARED/GATING action may be atomically marked stale/cancelled and
-  replaced in one `episode.sqlite` transaction;
+- at most one PREPARED/GATING/SENDING/UNCERTAIN/handoff-owned action exists for
+  the stream;
+- an unsent PREPARED/GATING action may be marked STALE/CANCELLED without handoff
+  only when a strictly newer accepted revision or atomic standalone replacement
+  takes continuation ownership in the same transaction;
+- same-revision reject/deadline/authority failure routes to durable HUMAN instead
+  of orphan STALE;
 - relay claim and replacement race through CAS/`BEGIN IMMEDIATE`, never two sends.
 
 ### Q27 — SENDING/UNCERTAIN blocks a newer AI action
@@ -961,10 +982,12 @@ Commit PREPARED/GATING action state in `episode.sqlite`, then simulate loss or
 recreation of `copilot.sqlite`.
 
 Expected:
-- PublicActionRelay discovers/reclaims the durable nonterminal action from
-  `episode.sqlite`;
-- the action either confirms, stales/cancels safely, or hands off by deadline;
-- no accepted action is orphaned merely because its originating input job vanished.
+- PublicActionRelay/liveness recovery discovers the durable nonterminal action
+  from `episode.sqlite`;
+- it either confirms, is atomically superseded by a strictly newer owned
+  revision, or obtains durable HUMAN ownership by deadline;
+- no accepted action/open turn is orphaned merely because its originating input
+  job vanished.
 
 ### Q30 — semantic commit precedes copilot terminalization
 Crash at each boundary of:
@@ -996,23 +1019,291 @@ Expected:
 - schema-v2 Event Ledger unique source keys + accepted `event_seq` supersede that
   runtime role before production activation.
 
+### Q33 — semantic scope drift is not a same-descriptor refresh
+Prepare an action from semantic scope v1. Before send-time reauthorization,
+parameterize a current C2 change to exactly one canonical slot: PRODUCT,
+PRODUCT.variant, CATEGORY/match_mode, BRAND, STORE or customer MONEY, while
+keeping action type/reason/template/locale otherwise identical.
+
+Expected:
+- fresh semantic scope differs from the immutable prepared scope;
+- zero public POSTs;
+- no old scope is rewritten to the new value;
+- current-revision continuation obtains durable HUMAN ownership;
+- by contrast, changes only to current price/stock/policy/hours/presentation or
+  shortlist contents with an identical semantic scope follow ordinary U01/U03
+  descriptor-preserving freshness.
+
+### Q34 — expensive extraction is outside the final authorization window
+Let optional preflight plus the transient extraction-producer draft complete.
+Before the final authorizing snapshot, parameterize a human assignment/status
+takeover, human public reply, other-bot/unknown public row or a new customer
+event.
+
+Expected:
+- current ownership is exact-read at the final window;
+- one final whole-conversation snapshot is the only authorizing topology
+  snapshot;
+- ownership/topology/revision drift blocks before post-snapshot semantics and
+  performs zero public POSTs;
+- when the final snapshot passes, covered customer text is exact-reread and must
+  byte-match the transient extraction input before that draft can be recertified;
+- deterministic C2/C3, fresh C4 dynamic authority and C5 run only after that
+  snapshot;
+- a STRUCTURED_SUBMISSION used by the decision is exact-read/re-proven inside
+  the final window and once more after render before local send admission;
+- no earlier preflight/extraction observation authorizes send.
+
+### Q35 — SENDING is a permanent no-POST-retry boundary
+Reach durable SENDING and parameterize: timeout, reset, malformed response, 4xx,
+429, 5xx, process crash before request, process crash after remote commit,
+webhook-before-response and authoritative-read-before-webhook.
+
+Expected:
+- at most one Chatwoot POST attempt for the action id;
+- no HTTP retry/backoff repeats a public POST;
+- zero matching source tags never proves non-send;
+- one unique authoritative BabyPark row with `source_id=action_id` confirms
+  monotonically/idempotently;
+- no positive proof by the bounded reconciliation deadline => durable HUMAN;
+- multiple matching tags => fail closed to durable HUMAN/anomaly handling, never
+  choose the first row.
+
+### Q36 — durable action corruption fails closed before send
+Parameterize persisted corruption: candidate ordinals with a hole/duplicate/tail
+loss against the stored count, mixed candidate slots, null/detached episode or
+unpaired episode/version, basis event from another stream, missing basis event,
+CLARIFY reservation not pointing back to its action, or confirmed message
+provenance not matching one BabyPark public reply/source id.
+
+Expected:
+- action read/attestation/admission fails closed deterministically;
+- no corrupted candidate list is reindexed into new ordinal meaning;
+- no public POST occurs;
+- continuation goes to durable HUMAN/anomaly handling where recovery cannot
+  prove one safe owner.
+
+### Q37 — liveness does not depend on the originating input job
+Let the relay/final snapshot itself ingest a late relevant event that increments
+`stream_revision`; delete/recreate `copilot.sqlite` so no input job remains.
+
+Expected:
+- the old action sends nothing;
+- independent liveness/recovery derives the open turn and ownership from
+  `episode.sqlite`;
+- the newer revision is replanned or handed off by its deadline;
+- no accepted actionable turn remains permanently silent because no webhook/job
+  happens to retrigger it.
+
+### Q38 — PRODUCT promotion occurs only on confirmed range answer
+Prepare `ANSWER / PRODUCT_PRICE_RANGE` for product A with semantic-scope PRODUCT
+A. Crash after SENDING and recover confirmation from a unique Chatwoot
+`source_id=action_id`.
+
+Expected:
+- PREPARED/GATING/SENDING/UNCERTAIN never promote product A to stable episode
+  state;
+- CONFIRMED and PRODUCT promotion commit atomically;
+- promoted PRODUCT provenance is the confirmed BabyPark reply `event_seq`;
+- restart after confirmation can prove the C25 predecessor without serialized
+  C4/render data;
+- scope mismatch before send gives HUMAN and promotes nothing.
+
+### Q39 — timing values are evidence-bound configuration
+For lease, authority/extraction timeouts, deadline, pre-SENDING retry budget and
+UNCERTAIN reconciliation window, test a configuration satisfying the measured
+or inherited timing relationships and one violating them.
+
+Expected:
+- no acceptance vector freezes a guessed numeric value;
+- startup validation accepts only the evidence-bound valid relationship;
+- an invalid relationship fails closed before the relay can claim/send;
+- changing measured/frozen timing authority is a reviewed configuration/contract
+  event, not an ad-hoc code constant.
+
+### Q40 — structured submission arriving before local CLARIFY confirmation is not lost
+A CLARIFY public message is visible to the customer and receives a native
+`message_updated` submission while BabyPark still holds the action as SENDING
+because its outgoing confirmation event/response has not yet reconciled.
+
+Expected:
+- the unconfirmed submission cannot mutate stable selection state;
+- it is not converted into a synthetic customer ledger row;
+- reconciliation first proves the unique CLARIFY action/message;
+- independent liveness then exact-rereads the same message and processes the
+  still-current submission under Q10a/Q10b;
+- loss/reordering of the webhook cannot make the valid submission permanently
+  disappear or permit a second CLARIFY.
+
+### Q41 — restore older than a public send cannot create a duplicate
+Restore `episode.sqlite` from a verified backup that predates a public send,
+while Chatwoot still contains the configured AgentBot public reply carrying an
+action/source id unknown to the restored local ledger/action state.
+
+Expected:
+- authoritative reconciliation/classification discovers the public BabyPark row;
+- an unprovable local action/source relation is an ownership/continuity blocker;
+- AI performs zero replacement/retry POSTs and fails open to HUMAN/recovery;
+- the restored node never guesses that absence of the local action proves the
+  remote send did not occur.
+
+### Q42 — episode.sqlite has one local writable authority in v1
+Attempt Website First Line activation with two writable hosts, a writable
+replica/active-active copy, or network-filesystem locking for `episode.sqlite`.
+Repeat with one local-filesystem writable database on one host/process domain and
+off-host backup that is never concurrently writable authority.
+
+Expected:
+- multi-host/replicated/network-filesystem writable topology is outside the v1
+  concurrency contract and activation is blocked;
+- one local writable authority may proceed when all other activation gates pass;
+- backup/restore artifacts are not writable peers and cannot serve traffic until
+  an explicit restore/cutover makes exactly one copy authoritative;
+- changing this boundary requires a separately reviewed durable-store/
+  concurrency contract rather than silently relying on SQLite locking semantics
+  the current design has not proven.
+
+### Q43 — one permanent semantic outcome per stream revision
+For one accepted `(stream_id,stream_revision)`, commit each outcome class in
+separate parameterized runs: ANSWER, CLARIFY, HUMAN and NON_ACTIONABLE_ACK.
+Then delete/recreate `copilot.sqlite`, restart workers, replay duplicate
+webhooks/jobs and make a nondeterministic extraction producer attempt to return
+a different class for that same revision.
+
+Expected:
+- `episode.sqlite` exposes exactly one previously committed semantic outcome
+  owner for that revision;
+- retries/restarts/replays reuse that class and cannot replace it with another
+  class;
+- ANSWER/CLARIFY reuse the existing public-action identity and cannot reserve or
+  POST twice;
+- HUMAN remains HUMAN until §43 terminal ownership proof;
+- NON_ACTIONABLE_ACK remains no-public-action and cannot later become
+  ANSWER/CLARIFY/HUMAN;
+- no disposable execution store is semantic replay authority.
+
+### Q44 — HUMAN owns the stream revision and has no NOT_SENT escape
+Parameterize HUMAN arising (a) during normal planning with an active episode,
+(b) before a safe episode can be established because topology/ownership is
+unprovable, and (c) from a relay-owned ANSWER/CLARIFY rejection. Also transition
+an owning unsent CLARIFY to HUMAN and accept newer customer events while handoff
+is still pending.
+
+Expected:
+- HUMAN is a permanent `episode.sqlite` stream+revision outcome; it binds
+  episode/version when safely provable and may be unbound only for the
+  pre-episode unprovable case;
+- before disposable work disappears, exactly one durable HUMAN owner exists;
+- once HUMAN owns continuation, newer customer events may be ingested but cannot
+  create/supersede with a newer AI outcome before §43 terminal ownership proof;
+- v1 exposes no actionable-current-revision `NOT_SENT` terminal semantic path;
+- CLARIFY -> HUMAN keeps its consumed one-prompt reservation until episode
+  closure; no second CLARIFY becomes possible;
+- a strictly newer AI-owned replacement may release an unsent CLARIFY
+  reservation only before any HUMAN outcome is committed.
+
+### Q45 — customer events accepted during SENDING remain visible after confirmation
+Let action A reach SENDING or UNCERTAIN. Accept one or more supported customer
+events C1,C2 while A is unresolved. Then ingest A's authoritative outgoing
+confirmation row *after* C1/C2 so the confirmation receives a larger local
+`event_seq`. Repeat across restart and all relevant ingestion/webhook
+permutations.
+
+Expected:
+- each C event is durably associated as deferred behind A without storing
+  customer content;
+- unique confirmation of A makes C1,C2 the next open customer turn in their own
+  accepted `event_seq` order; the later-accepted outgoing confirmation row
+  cannot hide them as an artificial latest boundary;
+- C25 adjacency can use that proven post-A relation when C1 is the dependent
+  follow-up after a confirmed PRODUCT_PRICE_RANGE;
+- if A instead remains UNCERTAIN and transfers to HUMAN, or ownership is lost,
+  the deferred customer events stay under HUMAN/non-AI ownership and cannot
+  independently launch another AI action;
+- no ordering rule consults numeric Chatwoot ID, `created_at` or webhook
+  delivery order.
+
+### Q46 — C25 matcher is exact, symmetric and intent-hint independent
+Exercise both frozen §21.1 predicates with Russian/Ukrainian controls in
+price-before-variant and variant-before-price order, including C25/C25d.
+Parameterize missing/wrong model `intent_hint`, near-miss language, a new
+identity/constraint row and absent/corrupt prior PRODUCT_PRICE_RANGE promotion.
+
+Expected:
+- exact text matching the frozen predicates classifies symmetrically in ru/uk
+  regardless of `intent_hint`;
+- promoted context contributes only canonical `product_id`, never
+  `variant_id`, price or rendered bytes;
+- near-miss language does not inherit old context;
+- any new identity/constraint makes the turn standalone;
+- missing/corrupt predecessor provenance cannot be guessed from conversation
+  plausibility.
+
+### Q47 — native HUMAN handoff is state-reconciled and never reopens blindly
+For a durable HUMAN outcome, parameterize the exact current Chatwoot state before
+each attempt: pending+configured AgentBot, already human/open non-AI, resolved,
+snoozed, another bot, malformed/unknown/unavailable. For the permitted native
+handoff attempt, parameterize success, timeout/reset/unknown response and process
+restart before terminalization.
+
+Expected:
+- only exact pending+configured-AgentBot+no-human ownership permits a native
+  handoff/status write;
+- already human/open non-AI requires no write and terminalizes
+  `HANDOFF_DONE/human_takeover`;
+- resolved/snoozed/other-bot/other proven non-AI state performs no reopen/write
+  and terminalizes `OWNERSHIP_LOST/ownership_lost`;
+- unknown/unavailable performs no write and remains durable/retryable;
+- every success or unknown-result attempt is followed by an exact ownership read
+  before terminalization or another attempt;
+- response loss never proves non-commit and does not authorize a blind immediate
+  repeat;
+- duplicate trigger creates no public message and cannot reopen a state that no
+  longer satisfies the pending configured-AgentBot precondition.
+
 ## I. Handoff vectors
 
-### H01 — HUMAN successful
+### H01 — HUMAN successful / already achieved
 - no AI public preface;
-- native pending->open succeeds;
-- after open, AI sends zero public messages.
+- before disposable execution may finish, one permanent same-revision HUMAN
+  outcome is committed in the `episode.sqlite` semantic concern;
+- exact pre-attempt ownership proves either pending+configured AgentBot, allowing
+  one native handoff attempt, or already human/open non-AI ownership, requiring
+  no write;
+- exact post-attempt/current ownership proves human/open non-AI before
+  `HANDOFF_DONE`;
+- only after that proof does a bound logical episode close as
+  `human_takeover`;
+- after human ownership, AI sends zero public messages.
 
-### H02 — handoff API failure
+### H02 — handoff failure/unknown outcome remains durable
 - no false public "transferred" message exists;
-- work remains non-terminal/retryable;
-- reconciler remains safety path.
+- timeout/reset/unknown response does not prove non-commit and is followed by an
+  exact ownership reread before another attempt;
+- malformed/unknown/unavailable ownership performs no write and keeps HUMAN
+  durable/retryable;
+- loss/supersession/recreation of `copilot.sqlite` cannot lose either a
+  planning-time or relay-originated HUMAN obligation;
+- a retry driver is execution only, never sole semantic truth.
 
-### H03 — later public outgoing from human/template
-Existing gate continues to block stale AI handoff/action.
+### H03 — ownership already left BabyPark AI
+Parameterize resolved, snoozed, another bot, or another proven non-AI/non-human
+ownership state before a handoff attempt or on the post-attempt reread.
 
-### H04 — duplicate webhook
-Must not cause duplicate handoff.
+Expected:
+- no native reopen/toggle write and no public AI message;
+- HUMAN terminalizes as `OWNERSHIP_LOST`;
+- a bound episode closes as `ownership_lost`;
+- later customer events do not revive that closed episode automatically.
+
+### H04 — duplicate trigger / later public outgoing
+Duplicate webhook/reconcile trigger, or a later public outgoing from a human,
+template/other bot, must not create a duplicate handoff or stale AI action.
+
+Expected:
+- exact ownership/topology recheck wins over the old trigger;
+- no public handoff preface;
+- a state that no longer proves pending+configured AgentBot is never reopened.
 
 ## J. Private-note Slice D vectors
 
@@ -1517,10 +1808,10 @@ Expected:
 - one `FIRST_LINE_RENDERER_INVALID` failure family;
 - no fallback content and no old/prepared render reuse;
 - no renderer output/log/cache/digest is durable;
-- C5 performs no Chatwoot/network call. The separately scoped future C6 stage
-  **must** treat renderer failure as zero public POST and follow the already
-  frozen native-HUMAN/fail-closed policy; this C5 amendment does not claim an
-  existing renderer/send integration or freeze C6's exact state transition.
+- C5 performs no Chatwoot/network call. C6 **must** treat renderer failure as
+  zero public POST and transfer the current-revision continuation to the durable
+  native-HUMAN path frozen in DESIGN §§29.7–29.8; C5 itself still claims no
+  renderer/send integration.
 
 ## U. C6 send-time semantic reauthorization
 
@@ -1542,7 +1833,9 @@ PRODUCT_PRICE_SINGLE. Repeat with a policy/operational decision changing to HUMA
 Expected:
 - old action performs zero POSTs;
 - no old payload is used;
-- action fails closed/stales and native HUMAN path owns continuation;
+- if no strictly newer revision/replacement owns continuation, durable native
+  HUMAN ownership replaces the relay claim rather than orphaning the same
+  revision as STALE;
 - same-revision idempotency is not bypassed by silently mutating the old action.
 
 ### U03 — stock/policy value may change under the same descriptor
@@ -1603,9 +1896,11 @@ Expected:
 Parameterize exact-read failure, C2/C3 certification failure, current authority
 failure, unknown C4 tuple, renderer validation failure and descriptor mismatch.
 
-Expected: zero public POST. Retry only where the existing bounded authority
-failure policy permits; otherwise fail open to native HUMAN. A previously
-prepared render payload is never a fallback because no such payload is durable.
+Expected: zero public POST. Pre-SENDING authority-read retry is allowed only
+under the separately reviewed evidence-bound timing/retry policy and while the
+current claim/deadline remain valid; otherwise fail open to durable native HUMAN.
+A previously prepared render payload is never a fallback because no such payload
+is durable.
 
 ### U07 — mutable structured selection is re-proven immediately before send
 A stable slot was committed from `STRUCTURED_SUBMISSION` on confirmed CLARIFY
@@ -1621,15 +1916,130 @@ Expected:
 - any mutation => zero POST and native HUMAN fail closed; no stable-slot rewrite;
 - restart between selection commit and final gate does not weaken the check.
 
-The v0.7 acceptance corpus remains frozen for Slice C umbrella issue #75.
+### U08 — canonical semantic scope is immutable action provenance
+Prepare each reviewed family with a certified combination of resolved
+PRODUCT/variant, CATEGORY/match_mode, BRAND, STORE and MONEY slots, including
+null/absent controls. Reauthorize with either identical slots or exactly one
+changed canonical slot while keeping public descriptor fields equal.
+
+Expected:
+- the prepared action stores only descriptor version + exact typed semantic
+  scope, never text/extraction/dynamic business facts;
+- C4 derives the scope from every resolved certified singular slot after any
+  proven clarification discharge; caller-supplied/pruned scope is rejected;
+- exact scope equality is required before send;
+- one changed canonical slot => zero POST + durable HUMAN;
+- current dynamic facts/presentation may change under an identical scope as
+  allowed by U01/U03.
+
+### U09 — final window excludes the variable extraction producer
+Allow optional preflight ingestion and produce one transient extraction draft.
+Then enter the final authorizing window and interleave ownership/status,
+topology, customer-text and dynamic-authority changes at each boundary.
+
+Expected:
+- preflight and extraction draft never authorize POST;
+- current conversation ownership/status plus one whole-conversation statement
+  snapshot gate the final window;
+- newly ingested relevant event or ownership/prerequisite drift stops with zero
+  POST before post-snapshot C2/C3/C4/C5;
+- covered customer text is exact-reread after the snapshot; byte drift discards
+  the draft, while unchanged text allows that same transient extraction to be
+  re-certified against the new exact-read capabilities;
+- deterministic C2/C3 and fresh C4 Catalog/Knowledge/`now` reads occur after
+  the snapshot, followed by deterministic C5;
+- a mutable structured selection is re-proven in the post-snapshot semantic path
+  and once more after render before CAS;
+- the final CAS rechecks lease/revision/episode/reservation/deadline;
+- only then may one POST attempt occur.
+
+### U10 — SENDING has exactly one POST attempt and monotonic reconciliation
+From SENDING, parameterize successful 2xx, timeout/reset, all HTTP failure
+classes, response/webhook/read reordering, process crashes and source-tag
+cardinality 0/1/>1.
+
+Expected:
+- no path performs a second POST for the same action id;
+- one unique authoritative tagged BabyPark reply confirms idempotently;
+- caller/reconciler racing after confirmation cannot regress CONFIRMED to
+  UNCERTAIN;
+- zero tag remains unproven and, after the bounded window, hands off;
+- >1 tags fail closed to HUMAN/anomaly handling instead of choosing a row.
+
+### U11 — same-revision rejection has durable HUMAN ownership
+Parameterize HISTORY_UNPROVABLE, source deletion/reclassification, descriptor or
+scope mismatch, renderer failure, expired deadline and permanent reauthorization
+failure where no newer revision/standalone replacement owns continuation.
+
+Expected:
+- zero public POSTs;
+- action/turn is not left as terminal STALE/CANCELLED silence;
+- before any disposable job/claim may disappear, the HUMAN obligation is
+  idempotently durable in the `episode.sqlite` semantic concern;
+- execution/reconcile jobs may drive the handoff but are not sole semantic truth;
+- a bound episode closes only after §43 proves either human/open non-AI ownership
+  (`human_takeover`) or a proven non-AI ownership-loss state
+  (`ownership_lost`); unknown/unavailable ownership keeps HUMAN live.
+
+### U12 — corrupted durable action metadata never acquires new meaning
+Parameterize candidate count/ordinal holes and duplicates, mixed slot names,
+detached episode/version, cross-stream/missing basis event, broken clarification
+back-reference and broken confirmation provenance.
+
+Expected:
+- persisted reads/admission fail closed before public side effects;
+- an ordinal is never renumbered after corruption;
+- no action with unprovable episode/basis ownership reaches SENDING;
+- corruption recovery cannot create a second CLARIFY or release post-SENDING
+  budget.
+
+### U13 — C25 survives restart but only through confirmed PRODUCT promotion
+Prepare a PRODUCT_PRICE_RANGE action, crash at PREPARED/GATING/SENDING/UNCERTAIN,
+then exercise positive confirmation and the next C25-style follow-up.
+
+Expected:
+- no pre-confirmation state promotes product identity;
+- confirmation plus canonical PRODUCT `product_id` stable-slot promotion is
+  atomic and provenance-bound to the confirmed reply event; `variant_id` is
+  never promoted by C25;
+- the immediate no-new-identity follow-up must satisfy one exact frozen §21.1
+  VARIANT_PRICE_LIST predicate independently of model `intent_hint`, then
+  continues the same episode and rereads current variant prices;
+- any missing/intervening/mismatched predecessor provenance, near-miss language
+  or a new identity/constraint makes the old product unavailable to the
+  dependent route;
+- no old price/render bytes are reused.
+
+### U14 — timing authority is measured/configured, not guessed
+Provide one evidence-bound configuration and parameterize invalid relationships
+between lease, pre-SENDING external-call budgets, POST timeout, deadline/read
+retry budget and reconciliation window.
+
+Expected:
+- production code contains no acceptance-derived guessed duration;
+- startup/config verification rejects unsafe relationships before work is
+  claimed;
+- lease expiry before final CAS yields zero POST and fresh reconstruction under a
+  new claim;
+- after SENDING, timing only governs reconciliation/handoff, never POST retry.
+
+The prior v0.7 acceptance corpus remains frozen for Slice C umbrella issue #75.
 C1/C2a/C2b/C2c/C3 are merged under their previously reviewed contracts and C4
 is merged via PR #107 on canonical main
 `565f8eb30bf39afa80bb4d59258cc2fd13aa67d5`, including the CATEGORY
 `(category_id,category_match_mode)` prerequisite and its HEAVY closure.
 
-T07–T13 are already the merged C5 acceptance contract. This bounded
-implementation amendment adds the repository C5 renderer and genuine-decision
-capability needed to satisfy them; it does not change their expected behavior.
-C5 remains unconnected/not deployed and performs no Chatwoot POST. C6 send-time
-U01–U07 remains a separate downstream implementation stage.
+T07–T13 remain the merged C5 acceptance contract. v0.8 adds the C6/C25
+pre-implementation safety vectors Q33–Q47 and U08–U14, extends the C25 corpus
+through C25e, and tightens Q21/Q22/Q24/Q26/Q29/H01–H04. The added vectors cover
+the permanent same-revision semantic outcome fence, stream/revision HUMAN
+ownership and NOT_SENT prohibition, CLARIFY-budget retention on HUMAN,
+deferred-behind-action customer events, exact symmetric ru/uk C25 language,
+self-contained state-reconciled native handoff/ownership_lost, and the exact
+final-window ordering.
+
+It selects no implementation product or scheduler and adds no production code.
+C5 remains unconnected/not deployed and performs no Chatwoot POST. C6/C25
+implementation remains downstream of this contract freeze and the
+Agreement-required fresh implementation-options gates.
 
