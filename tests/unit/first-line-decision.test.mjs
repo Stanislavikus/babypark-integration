@@ -4844,3 +4844,382 @@ test('C5 renderer T08 output envelopes are exact frozen public-only shapes', () 
   assert.deepEqual(Object.keys(text).sort(), ['content', 'schema']);
   assert.equal(Object.isFrozen(text), true);
 });
+
+function c5StoreOperationalCustomDecision({
+  kind = 'open',
+  language = 'ru',
+  rows = [c61OperationalRow()],
+  nowUtc = NOW,
+} = {}) {
+  const text = kind === 'hours'
+    ? 'До скольки сегодня работает магазин?'
+    : 'Сегодня магазин открыт?';
+  const fixture = build({
+    text,
+    language,
+    spans: [{
+      kind: 'STORE',
+      turn_index: 1,
+      quote: 'магазин',
+      occurrence: 1,
+    }],
+    catalogService: identityCatalog(),
+    knowledgeStore: knowledge([
+      c61StoreVocabularyRow(),
+      ...rows,
+    ]),
+  });
+  return decideFirstLine(createFirstLineDecisionBasis({
+    ...fixture,
+    nowUtc,
+  }));
+}
+
+function c5VariantPartialNoneNamedDecision(language = 'ru') {
+  const c = catalog();
+  c.getAvailableVariantsFact = ({ productId }) => ({
+    contract: 'bp.catalog.available-variants-fact/1',
+    catalog: { generation_id: 'g1' },
+    product_id: productId,
+    status: 'FACT',
+    reason: 'VARIANT_LIST_PARTIAL',
+    total_variant_count: 3,
+    displayable_label_count: 0,
+    label_complete: false,
+    variants: [
+      { variant_id: variantId(1), sku: 'SKU-1', label: null },
+      { variant_id: variantId(2), sku: 'SKU-2', label: null },
+      { variant_id: variantId(3), sku: 'SKU-3', label: null },
+    ],
+  });
+  return decideFirstLine(basis(build({
+    text: 'Какие варианты UPPAbaby Cruz V2 сейчас есть?',
+    language,
+    spans: [{
+      kind: 'PRODUCT',
+      turn_index: 1,
+      quote: 'UPPAbaby Cruz V2',
+      occurrence: 1,
+    }],
+    catalogService: c,
+  })));
+}
+
+function c5ExpectedWebsiteDynamic(value) {
+  return [...value].map(ch => {
+    const cp = ch.codePointAt(0);
+    return (
+      (cp >= 0x21 && cp <= 0x2f) ||
+      (cp >= 0x3a && cp <= 0x40) ||
+      (cp >= 0x5b && cp <= 0x60) ||
+      (cp >= 0x7b && cp <= 0x7e)
+    )
+      ? '&#x' + cp.toString(16).toUpperCase().padStart(2, '0') + ';'
+      : ch;
+  }).join('');
+}
+
+test('C5 renderer T07/T10 genuine conditional branch matrix is complete for current C4 producers', () => {
+  for (const [language, expected] of [
+    ['ru', 'Магазин сейчас закрыт.'],
+    ['uk', 'Магазин зараз зачинений.'],
+  ]) {
+    const decision = c5StoreOperationalCustomDecision({
+      language,
+      nowUtc: '2026-10-06T18:00:00.000Z',
+    });
+    assert.equal(decision.template_id, 'TPL_STORE_OPEN_STATUS_V1');
+    assert.deepEqual(decision.render_payload, {
+      open: false,
+      closes_at_local: null,
+    });
+    assert.equal(renderFirstLineText(decision).content, expected);
+  }
+
+  for (const [language, expected] of [
+    ['ru', 'Сегодня магазин закрыт.'],
+    ['uk', 'Сьогодні магазин зачинений.'],
+  ]) {
+    const decision = c5StoreOperationalCustomDecision({
+      kind: 'hours',
+      language,
+      rows: [c61OperationalRow({
+        effect_value: { tuesday: [] },
+      })],
+    });
+    assert.equal(decision.template_id, 'TPL_STORE_HOURS_TODAY_V1');
+    assert.deepEqual(decision.render_payload, {
+      open_now: false,
+      intervals: [],
+    });
+    assert.equal(renderFirstLineText(decision).content, expected);
+  }
+
+  const splitRows = [c61OperationalRow({
+    effect_value: {
+      tuesday: [
+        { open: '10:00', close: '12:00' },
+        { open: '14:00', close: '20:00' },
+      ],
+    },
+  })];
+  for (const [language, nowUtc, expectedOpen, expected] of [
+    [
+      'ru',
+      '2026-10-06T10:00:00.000Z',
+      false,
+      'График на сегодня: 10:00–12:00, 14:00–20:00. Сейчас магазин закрыт.',
+    ],
+    [
+      'uk',
+      '2026-10-06T10:00:00.000Z',
+      false,
+      'Графік на сьогодні: 10:00–12:00, 14:00–20:00. Зараз магазин зачинений.',
+    ],
+    [
+      'ru',
+      '2026-10-06T12:00:00.000Z',
+      true,
+      'График на сегодня: 10:00–12:00, 14:00–20:00. Сейчас магазин открыт.',
+    ],
+    [
+      'uk',
+      '2026-10-06T12:00:00.000Z',
+      true,
+      'Графік на сьогодні: 10:00–12:00, 14:00–20:00. Зараз магазин відкритий.',
+    ],
+  ]) {
+    const decision = c5StoreOperationalCustomDecision({
+      kind: 'hours',
+      language,
+      rows: splitRows,
+      nowUtc,
+    });
+    assert.equal(decision.template_id, 'TPL_STORE_HOURS_TODAY_V1');
+    assert.equal(decision.render_payload.open_now, expectedOpen);
+    assert.deepEqual(decision.render_payload.intervals, [
+      { open: '10:00', close: '12:00' },
+      { open: '14:00', close: '20:00' },
+    ]);
+    assert.equal(renderFirstLineText(decision).content, expected);
+  }
+
+  for (const [language, expected] of [
+    [
+      'ru',
+      'Количество доступных вариантов: 3. Названия недоступны.',
+    ],
+    [
+      'uk',
+      'Кількість доступних варіантів: 3. Назви недоступні.',
+    ],
+  ]) {
+    const decision = c5VariantPartialNoneNamedDecision(language);
+    assert.equal(decision.template_id, 'TPL_VARIANT_LIST_PARTIAL_V1');
+    assert.deepEqual(decision.render_payload, {
+      total_variant_count: 3,
+      named_variant_count: 0,
+      labels: [],
+    });
+    assert.equal(renderFirstLineText(decision).content, expected);
+  }
+
+  for (const [language, inStock, withLabel, expected] of [
+    ['ru', true, false, 'Есть в наличии в этом магазине.'],
+    ['ru', false, false, 'Нет в наличии в этом магазине.'],
+    ['ru', true, true, 'Вариант «Color 1» есть в наличии в этом магазине.'],
+    ['ru', false, true, 'Варианта «Color 1» нет в наличии в этом магазине.'],
+    ['uk', true, false, 'Є в наявності в цьому магазині.'],
+    ['uk', false, false, 'Немає в наявності в цьому магазині.'],
+    ['uk', true, true, 'Варіант «Color 1» є в наявності в цьому магазині.'],
+    ['uk', false, true, 'Варіанта «Color 1» немає в наявності в цьому магазині.'],
+  ]) {
+    const decision = c5StoreStockDecision({ language, inStock, withLabel });
+    assert.equal(renderFirstLineText(decision).content, expected);
+  }
+
+  const noUrl = c5ShortlistDecision({
+    total: 1,
+    displayed: 1,
+    presentationOverrides: {
+      [PRODUCT_A]: {
+        title: 'No URL model',
+        url: null,
+        image_url: 'https://cdn.babypark.ua/pixel.png',
+      },
+    },
+  });
+  assert.equal(noUrl.template_id, 'TPL_SHORTLIST_ALL_V1');
+  assert.equal(noUrl.render_payload.products[0].product_url, null);
+  assert.equal(
+    renderFirstLineText(noUrl).content,
+    'Найденные товары:\n1. No URL model — 27 300 грн'
+  );
+  assert.equal(
+    renderFirstLineWebsite(noUrl).content.includes('pixel.png'),
+    false
+  );
+
+  // The merged public C4 schema intentionally admits open=true + null close,
+  // but the current operational resolver has no genuine producer for that
+  // tuple. Keep source-level evidence for the frozen renderer branch without
+  // adding any test-only decision-brand bypass.
+  const rendererSource = fs.readFileSync(
+    new URL('../../src/copilot/first-line-renderer.mjs', import.meta.url),
+    'utf8'
+  );
+  assert.match(
+    rendererSource,
+    /if \(p\.closes_at_local === null\)[\s\S]*Магазин зараз відкритий\.[\s\S]*Магазин сейчас открыт\./u
+  );
+});
+
+test('C5 renderer T09/T09a compound dynamic controls stay exact before/after Website transport', () => {
+  const controls = [
+    '[Коляска](https://evil.example)',
+    'Коляска https://evil.example Blue',
+    'Blue *bold* _x_ #tag',
+    'First.Go',
+    '200*90 см',
+    'Black_1',
+    '<b>Blue</b>',
+    '<a href="https://evil.example">Click</a>',
+    '<img src="https://evil.example/pixel.png">',
+    '&copy;',
+    'trailing \\',
+    'foo...bar',
+    'a--b',
+    'a---b',
+    '(c)',
+    '(tm)',
+    '"quoted"',
+    "'single'",
+    'Label www.example.com',
+    'Label a@example.com',
+  ];
+
+  for (const control of controls) {
+    const label = 'A ' + control;
+    const clarify = c5ProductClarifyDecision('ru', [label, 'B safe']);
+    assert.equal(renderFirstLineText(clarify).content.includes(label), true);
+    assert.equal(
+      renderFirstLineWebsite(clarify).content.includes(
+        c5ExpectedWebsiteDynamic(label)
+      ),
+      true,
+      control
+    );
+
+    const answer = c5ShortlistDecision({
+      total: 1,
+      displayed: 1,
+      presentationOverrides: {
+        [PRODUCT_A]: {
+          title: label,
+          url: null,
+          image_url: null,
+        },
+      },
+    });
+    assert.equal(renderFirstLineText(answer).content.includes(label), true);
+    assert.equal(
+      renderFirstLineWebsite(answer).content.includes(
+        c5ExpectedWebsiteDynamic(label)
+      ),
+      true,
+      control
+    );
+  }
+
+  const brace = c5ProductClarifyDecision('ru', ['Label {safe}', 'B safe']);
+  assert.equal(
+    renderFirstLineWebsite(brace).content.includes(
+      'Label &#x7B;safe&#x7D;'
+    ),
+    true
+  );
+});
+
+test('C5 renderer T09 rejects both Liquid opener families on genuine dynamic labels', () => {
+  for (const unsafe of [
+    'Label {{contact.email}}',
+    'Label {{agent.name}}',
+    'Label {% assign x = 1 %}',
+  ]) {
+    const decision = c5ProductClarifyDecision('ru', [unsafe, 'Safe label']);
+    assert.equal(renderFirstLineText(decision).content.includes(unsafe), true);
+    assert.throws(
+      () => renderFirstLineWebsite(decision),
+      error => error instanceof FirstLineRendererError &&
+        error.code === 'FIRST_LINE_RENDERER_INVALID',
+      unsafe
+    );
+  }
+});
+
+test('C5 renderer T09a canonical product URL edge matrix uses exact entity transport', () => {
+  const urls = [
+    'https://babypark.ua/product/test',
+    'https://babypark.ua/foo)',
+    'https://babypark.ua/foo.',
+    'https://babypark.ua/%28foo%29',
+    'https://babypark.ua/p/HQn6R(.b=7|eT',
+    'https://babypark.ua/p/E!+KyV@-tD8TAVhnRPMSXoZ%',
+    'https://shop.babypark.ua/p?q=WJK||1B9MB=zz',
+    'https://shop.babypark.ua/a?x=%7Bz%7D',
+  ];
+  for (const url of urls) {
+    const decision = c5ShortlistDecision({
+      total: 1,
+      displayed: 1,
+      presentationOverrides: {
+        [PRODUCT_A]: {
+          title: 'Safe model',
+          url,
+          image_url: null,
+        },
+      },
+    });
+    const canonical = decision.render_payload.products[0].product_url;
+    assert.equal(canonical, url);
+    assert.equal(renderFirstLineText(decision).content.includes(canonical), true);
+    assert.equal(
+      renderFirstLineWebsite(decision).content.includes(
+        c5ExpectedWebsiteDynamic(canonical)
+      ),
+      true,
+      url
+    );
+  }
+});
+
+test('C5 renderer T11 rejects an exact-shape impossible public tuple', () => {
+  const decision = c5PaymentDecision();
+  const impossible = {
+    ...decision,
+    reason: 'PRODUCT_PRICE_SINGLE',
+  };
+  assert.deepEqual(Object.keys(impossible).sort(), Object.keys(decision).sort());
+  for (const render of [renderFirstLineText, renderFirstLineWebsite]) {
+    assert.throws(
+      () => render(impossible),
+      error => error instanceof FirstLineRendererError &&
+        error.code === 'FIRST_LINE_RENDERER_INVALID'
+    );
+  }
+});
+
+test('C5 renderer T13 mixed BMP/astral final Website length is code-point based', () => {
+  const astral = String.fromCodePoint(0x1F600);
+  const atBound = 'a'.repeat(149999) + astral;
+  const overBound = 'a'.repeat(149999) + astral + astral;
+  assert.equal([...atBound].length, 150000);
+  assert.equal(atBound.length, 150001);
+  assert.equal(requireFirstLineWebsiteContent(atBound), atBound);
+  assert.equal([...overBound].length, 150001);
+  assert.throws(
+    () => requireFirstLineWebsiteContent(overBound),
+    error => error instanceof FirstLineRendererError &&
+      error.code === 'FIRST_LINE_RENDERER_INVALID'
+  );
+});

@@ -50,21 +50,21 @@ change production services.
 
 | Requirement / invariant | Production artifact | Regression / evidence | Fail-closed behavior | Durable-state impact | Status |
 |---|---|---|---|---|---|
-| G1 exact 17 ANSWER + 7 CLARIFY uk/ru wording | renderer `answerContent` / `CLARIFY_PROMPTS` | T07 17-template ru+uk golden matrix + all seven CLARIFY classes | unknown/missing branch => `FIRST_LINE_RENDERER_INVALID` | NONE | DONE |
-| G2 exact critical formatting / TextRenderer bytes | `formatUah`, hours/phone/counter/list composition, `renderFirstLineText` | T07/T10 golden vectors + seeded fast-check UAH property | invalid values / unsupported formatting => renderer invalid | NONE | DONE |
+| G1 exact 17 ANSWER + 7 CLARIFY uk/ru wording | renderer `answerContent` / `CLARIFY_PROMPTS` | T07 17-template ru+uk golden matrix + all seven CLARIFY classes + genuine reachable conditional branch matrix; frozen open+null branch source-checked because current C4 has no genuine producer for that tuple | unknown/missing branch => `FIRST_LINE_RENDERER_INVALID` | NONE | DONE |
+| G2 exact critical formatting / TextRenderer bytes | `formatUah`, hours/phone/counter/list composition, `renderFirstLineText` | T07/T10 goldens cover closed/empty/split-two-interval/open_now true+false/named=0 plus seeded fast-check UAH property | invalid values / unsupported formatting => renderer invalid | NONE | DONE |
 | G3 fixed payment names/no hidden terms | closed `PAYMENT_METHODS` table + exact payment payload validator | T07 ru/uk payment golden incl. UK U+2019 | unknown/duplicate/order-invalid method code rejects | NONE | DONE |
 | G4 WebsiteRenderer exact envelope | `renderFirstLineWebsite` | T08 exact enumerable keys / frozen envelope/items | invalid input/output => no render | NONE | DONE |
 | G5 TextRenderer exact output | `renderFirstLineText` | T07/T08 exact `{schema,content}`, no trailing LF | invalid input/output => no render | NONE | DONE |
 | G6 single renderer failure family | `FirstLineRendererError` / `invalid(...)` | clone/forgery, non-UAH, stricter-edge, Liquid, length regressions | code=`FIRST_LINE_RENDERER_INVALID`; no fallback/old render | NONE | DONE |
-| G7 Chatwoot Liquid safety | `liquidUnsafe`, `encodeWebsiteDynamic`, `requireFirstLineWebsiteContent` | T09 dynamic label + canonical URL literal/percent-encoded controls | literal `{{` / `{%` => renderer invalid before/final output | NONE | DONE |
-| G8 Widget/Dashboard display-neutral dynamic transport | `encodeWebsiteDynamic` | all 32 ASCII punctuation exact `&#xHH;`; final immutable verification replays deployed v4.18 native surfaces | any unsafe dynamic Website value rejects; no alternate escaping fallback | NONE | DONE |
-| G8a exact product-URL transport | canonical `publicUrl(...)===value` admission + Website entity encoding; Text raw canonical URL | T09/T12 URL edge + shortlist title/URL golden | non-canonical/Liquid-unsafe URL rejects; image never rendered/fetched | NONE | DONE |
+| G7 Chatwoot Liquid safety | `liquidUnsafe`, `encodeWebsiteDynamic`, `requireFirstLineWebsiteContent` | T09 genuine dynamic controls cover `{{contact.email}}`, `{{agent.name}}`, `{% assign x = 1 %}`, normal braces, canonical URL literal/percent-encoded controls | literal `{{` / `{%` => renderer invalid before/final output | NONE | DONE |
+| G8 Widget/Dashboard display-neutral dynamic transport | `encodeWebsiteDynamic` | all 32 ASCII punctuation exact `&#xHH;` plus Markdown/link/HTML/entity/backslash/typographer/domain/email controls through genuine CLARIFY + ANSWER fixtures; final immutable verification replays deployed v4.18 native surfaces | any unsafe dynamic Website value rejects; no alternate escaping fallback | NONE | DONE |
+| G8a exact product-URL transport | canonical `publicUrl(...)===value` admission + Website entity encoding; Text raw canonical URL | T09/T12 eight-URL canonical edge matrix + URL-null/non-null shortlist controls + title/URL golden | non-canonical/Liquid-unsafe URL rejects; image never rendered/fetched | NONE | DONE |
 | G8b submitted select title untrusted | C5 emits generated ordinal titles only; C4/C2 authority remains outside renderer | T08 finite items + existing T09c/C4 exact-read regressions | title never authorizes fact/selection; C5 sees no submitted response | NONE | DONE |
-| G9 final Website 1..150000 Unicode code points | `requireFirstLineWebsiteContent` uses code-point iteration after encoding | T13 150000/150001 U+1F600 + empty/Liquid controls | out-of-range => renderer invalid | NONE | DONE |
-| G10 stricter C5 semantic edges | `validateAnswerPayload` / `validateClarifyChoices` | genuine C4 equal RANGE, empty full VARIANT_LIST and empty TOP3 reject; full/partial/UAH goldens | broader-but-genuine C4 public shape that violates C5 semantics rejects | NONE | DONE |
+| G9 final Website 1..150000 Unicode code points | `requireFirstLineWebsiteContent` uses code-point iteration after encoding | T13 150000/150001 U+1F600, mixed BMP+astral boundary, empty/Liquid controls | out-of-range => renderer invalid | NONE | DONE |
+| G10 stricter C5 semantic edges | `validateAnswerPayload` / `validateClarifyChoices` | genuine C4 equal RANGE, empty full VARIANT_LIST and empty TOP3 reject; full/partial named>0+named=0, two-interval hours, open_now true+false and UAH goldens | broader-but-genuine C4 public shape that violates C5 semantics rejects | NONE | DONE |
 | G11 Chatwoot runtime/build drift remains activation gate | no runtime binding code added; frozen §40.3/T09b remains authoritative | final manifest requires v4.18 source + production Vite revalidation | unproven/changed runtime blocks later activation, not renderer semantics | NONE | DONE |
 | genuine C4 decision provenance | C4 `genuinePublicDecisions` WeakSet + `isGenuineFirstLineDecision` | genuine true; `structuredClone`, spread clone, null false; renderer rejects clones | forgery/clone/deserialization => renderer invalid | NONE | DONE |
-| exact public reason→template relation | renderer `ANSWER_RELATION` / `CLARIFY_RELATION` + exact 8-key admission | all 17/7 mappings exercised; C5 stricter edge tests | impossible public tuple rejects even when individually allowlisted | NONE | DONE |
+| exact public reason→template relation | renderer `ANSWER_RELATION` / `CLARIFY_RELATION` + exact 8-key admission | all 17/7 mappings exercised; clone/forgery + exact-shape impossible reason/template tuple reject; C5 stricter edge tests | impossible public tuple rejects even when individually allowlisted | NONE | DONE |
 | exact public payload / safe-label / URL revalidation | `validateAnswerPayload`, `exactPublicLabel`, `exactDistinctLabels`, `exactCanonicalUrl` | C4-safe genuine fixtures + stricter edge + dynamic URL tests | missing/extra/unsafe/non-canonical data rejects | NONE | DONE |
 | HUMAN public silence | renderer genuine HUMAN branch | T11 HUMAN -> `null` for Website/Text | HUMAN never becomes fallback AI text | NONE | DONE |
 | exact locale/no fallback | validator admits only `uk|ru`; fixed locale maps | all 17 ANSWER in both locales + all seven CLARIFY classes | missing/foreign locale => renderer invalid | NONE | DONE |
@@ -79,11 +79,20 @@ change production services.
 ## Current executable evidence before immutable final-tree gate
 
 Mutable working-tree development checks (not final merge evidence):
-- `tests/unit/first-line-decision.test.mjs`: 89/89 PASS;
+- `tests/unit/first-line-decision.test.mjs`: 95/95 PASS;
 - adjacent C4/C5 focused set covering decision/continuation/public-safety/
-  clarification/dependency/operational surfaces: 189/189 PASS;
+  clarification/dependency/operational/public-operational-reader surfaces:
+  196/196 PASS;
 - syntax checks and `git diff --check`: PASS;
 - package/runtime-dependency diff: empty.
+
+Coverage note:
+- every currently reachable §40.4 conditional branch named by T07/T10 is exercised
+  through the genuine C4 pipeline;
+- the frozen `TPL_STORE_OPEN_STATUS_V1` `open=true` +
+  `closes_at_local=null` branch remains part of the renderer contract but has no
+  current genuine C4 operational-state producer. Its branch bytes are source-
+  checked without introducing a test-only decision-brand/provenance bypass.
 
 The final immutable verification manifest must re-run the applicable focused
 checks and the Agreement-required root baseline on one exact committed HEAD/tree,
