@@ -156,10 +156,12 @@ function invalid(message) {
 }
 
 function exactKeys(value, expected) {
-  return value !== null &&
-    typeof value === 'object' &&
-    !Array.isArray(value) &&
-    Object.keys(value).sort().join(',') === [...expected].sort().join(',');
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) {
+    return false;
+  }
+  const keys = Object.keys(value);
+  return keys.length === expected.length &&
+    expected.every(key => Object.hasOwn(value, key));
 }
 
 function codePoints(value) {
@@ -225,16 +227,26 @@ function validateAnswerPayload(templateId, payload, locale) {
         typeof payload.open === 'boolean' &&
         (payload.closes_at_local === null || hhmm(payload.closes_at_local)) &&
         (payload.open || payload.closes_at_local === null);
-    case 'TPL_STORE_HOURS_TODAY_V1':
-      return exactKeys(payload, ['open_now', 'intervals']) &&
-        typeof payload.open_now === 'boolean' &&
-        Array.isArray(payload.intervals) &&
-        payload.intervals.every(interval =>
-          exactKeys(interval, ['open', 'close']) &&
-          hhmm(interval.open) && hhmm(interval.close) &&
-          interval.open < interval.close
-        ) &&
-        (!payload.open_now || payload.intervals.length > 0);
+    case 'TPL_STORE_HOURS_TODAY_V1': {
+      if (!exactKeys(payload, ['open_now', 'intervals']) ||
+          typeof payload.open_now !== 'boolean' ||
+          !Array.isArray(payload.intervals) ||
+          (payload.open_now && payload.intervals.length === 0)) {
+        return false;
+      }
+      let previousClose = null;
+      for (const interval of payload.intervals) {
+        if (!exactKeys(interval, ['open', 'close']) ||
+            !hhmm(interval.open) ||
+            !hhmm(interval.close) ||
+            interval.open >= interval.close ||
+            (previousClose !== null && interval.open < previousClose)) {
+          return false;
+        }
+        previousClose = interval.close;
+      }
+      return true;
+    }
     case 'TPL_STORE_PHONE_V1':
     case 'TPL_CALL_CENTER_PHONE_V1':
       return exactKeys(payload, ['e164']) &&
@@ -315,17 +327,16 @@ function validateAnswerPayload(templateId, payload, locale) {
     case 'TPL_SHORTLIST_TOP3_V1':
       return exactKeys(payload, ['total_product_count', 'products']) &&
         positiveInteger(payload.total_product_count) &&
+        payload.total_product_count > 3 &&
         Array.isArray(payload.products) &&
-        payload.products.length >= 1 &&
-        payload.products.length <= 3 &&
-        payload.total_product_count > payload.products.length &&
+        payload.products.length === 3 &&
         payload.products.every(validateShortlistItem);
     case 'TPL_SHORTLIST_ALL_V1':
       return exactKeys(payload, ['total_product_count', 'products']) &&
         positiveInteger(payload.total_product_count) &&
+        payload.total_product_count <= 3 &&
         Array.isArray(payload.products) &&
-        payload.products.length >= 1 &&
-        payload.total_product_count === payload.products.length &&
+        payload.products.length === payload.total_product_count &&
         payload.products.every(validateShortlistItem);
     case 'TPL_STORE_STOCK_V1':
       return exactKeys(payload, ['in_stock', 'variant_label']) &&
