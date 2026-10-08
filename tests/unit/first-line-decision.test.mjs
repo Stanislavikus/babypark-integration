@@ -4052,56 +4052,84 @@ test('C5 renderer T10 exact UAH formatting and non-UAH fail closed', () => {
 
 test('C5 renderer T07/T08 all CLARIFY classes map exact prompts and finite ordinals', () => {
   const cases = [
-    ['PRODUCT', 'TPL_CLARIFY_PRODUCT_V1',
-      'Уточните, пожалуйста, какой товар вы имеете в виду.', true],
-    ['CATEGORY', 'TPL_CLARIFY_CATEGORY_V1',
-      'Уточните, пожалуйста, какую категорию вы имеете в виду.', true],
-    ['BRAND', 'TPL_CLARIFY_BRAND_V1',
-      'Уточните, пожалуйста, какой бренд вы имеете в виду.', true],
-    ['STORE', 'TPL_CLARIFY_STORE_V1',
-      'Уточните, пожалуйста, какой магазин вы имеете в виду.', true],
-    ['MONEY', 'TPL_CLARIFY_MONEY_V1',
-      'Уточните, пожалуйста, максимальную сумму в гривнах.', false],
-    ['MISSING_SHORTLIST_ANCHOR', 'TPL_CLARIFY_SHORTLIST_ANCHOR_V1',
-      'Уточните, пожалуйста, категорию товара.', false],
+    ['PRODUCT', 'TPL_CLARIFY_PRODUCT_V1', {
+      ru: 'Уточните, пожалуйста, какой товар вы имеете в виду.',
+      uk: 'Уточніть, будь ласка, який товар ви маєте на увазі.',
+    }, true],
+    ['CATEGORY', 'TPL_CLARIFY_CATEGORY_V1', {
+      ru: 'Уточните, пожалуйста, какую категорию вы имеете в виду.',
+      uk: 'Уточніть, будь ласка, яку категорію ви маєте на увазі.',
+    }, true],
+    ['BRAND', 'TPL_CLARIFY_BRAND_V1', {
+      ru: 'Уточните, пожалуйста, какой бренд вы имеете в виду.',
+      uk: 'Уточніть, будь ласка, який бренд ви маєте на увазі.',
+    }, true],
+    ['STORE', 'TPL_CLARIFY_STORE_V1', {
+      ru: 'Уточните, пожалуйста, какой магазин вы имеете в виду.',
+      uk: 'Уточніть, будь ласка, який магазин ви маєте на увазі.',
+    }, true],
+    ['MONEY', 'TPL_CLARIFY_MONEY_V1', {
+      ru: 'Уточните, пожалуйста, максимальную сумму в гривнах.',
+      uk: 'Уточніть, будь ласка, максимальну суму в гривнях.',
+    }, false],
+    ['MISSING_SHORTLIST_ANCHOR', 'TPL_CLARIFY_SHORTLIST_ANCHOR_V1', {
+      ru: 'Уточните, пожалуйста, категорию товара.',
+      uk: 'Уточніть, будь ласка, категорію товару.',
+    }, false],
   ];
-  for (const [kind, template, prompt, finite] of cases) {
-    const item = clarifyCase(kind);
-    const decision = decideFirstLine(basis(build({ ...item, language: 'ru' })));
-    assert.equal(decision.template_id, template);
-    const text = renderFirstLineText(decision);
-    const website = renderFirstLineWebsite(decision);
-    if (finite) {
-      assert.equal(text.content.startsWith(prompt + '\n1. '), true, kind);
-      assert.equal(website.content.startsWith(prompt + '\n1. '), true, kind);
-      assert.equal(website.content_type, 'input_select', kind);
-      assert.deepEqual(
-        website.content_attributes.items,
-        decision.choices.map((row, index) => ({
-          title: String(index + 1),
-          value: row.token,
-        })),
-        kind
-      );
-    } else {
-      assert.equal(text.content, prompt, kind);
-      assert.equal(website.content, prompt, kind);
-      assert.equal(website.content_type, 'text', kind);
-      assert.deepEqual(website.content_attributes, {}, kind);
+
+  for (const [kind, template, prompts, finite] of cases) {
+    for (const language of ['ru', 'uk']) {
+      const item = clarifyCase(kind);
+      const decision = decideFirstLine(basis(build({ ...item, language })));
+      const prompt = prompts[language];
+      assert.equal(decision.template_id, template, kind + '/' + language);
+      const text = renderFirstLineText(decision);
+      const website = renderFirstLineWebsite(decision);
+      if (finite) {
+        assert.equal(text.content.startsWith(prompt + '\n1. '), true,
+          kind + '/' + language);
+        assert.equal(website.content.startsWith(prompt + '\n1. '), true,
+          kind + '/' + language);
+        assert.equal(website.content_type, 'input_select',
+          kind + '/' + language);
+        assert.deepEqual(
+          website.content_attributes.items,
+          decision.choices.map((row, index) => ({
+            title: String(index + 1),
+            value: row.token,
+          })),
+          kind + '/' + language
+        );
+      } else {
+        assert.equal(text.content, prompt, kind + '/' + language);
+        assert.equal(website.content, prompt, kind + '/' + language);
+        assert.equal(website.content_type, 'text', kind + '/' + language);
+        assert.deepEqual(website.content_attributes, {},
+          kind + '/' + language);
+      }
     }
   }
 
-  const variant = c5VariantClarifyDecision();
-  assert.equal(variant.template_id, 'TPL_CLARIFY_VARIANT_V1');
-  assert.equal(
-    renderFirstLineText(variant).content,
-    'Уточните, пожалуйста, какой вариант вы имеете в виду.\n' +
-      '1. Color 1\n2. Color 2'
-  );
-  assert.deepEqual(renderFirstLineWebsite(variant).content_attributes.items, [
-    { title: '1', value: 'bp-choice:1' },
-    { title: '2', value: 'bp-choice:2' },
-  ]);
+  for (const [language, prompt] of [
+    ['ru', 'Уточните, пожалуйста, какой вариант вы имеете в виду.'],
+    ['uk', 'Уточніть, будь ласка, який варіант ви маєте на увазі.'],
+  ]) {
+    const variant = c5VariantClarifyDecision(language);
+    assert.equal(variant.template_id, 'TPL_CLARIFY_VARIANT_V1');
+    assert.equal(
+      renderFirstLineText(variant).content,
+      prompt + '\n1. Color 1\n2. Color 2'
+    );
+    assert.equal(
+      renderFirstLineWebsite(variant).content.startsWith(prompt + '\n1. '),
+      true
+    );
+    assert.deepEqual(renderFirstLineWebsite(variant).content_attributes.items, [
+      { title: '1', value: 'bp-choice:1' },
+      { title: '2', value: 'bp-choice:2' },
+    ]);
+  }
 });
 
 test('C5 renderer T09a entity-encodes every ASCII punctuation in dynamic labels', () => {
@@ -4919,6 +4947,72 @@ function c5ExpectedWebsiteDynamic(value) {
   }).join('');
 }
 
+async function c5LoadRendererInternalsForTest() {
+  const rendererUrl = new URL(
+    '../../src/copilot/first-line-renderer.mjs',
+    import.meta.url
+  );
+  const decisionUrl = new URL('./first-line-decision.mjs', rendererUrl).href;
+  const safetyUrl = new URL('./first-line-public-safety.mjs', rendererUrl).href;
+  let source = fs.readFileSync(rendererUrl, 'utf8');
+  source = source
+    .replace(
+      "'./first-line-decision.mjs'",
+      JSON.stringify(decisionUrl)
+    )
+    .replace(
+      "'./first-line-public-safety.mjs'",
+      JSON.stringify(safetyUrl)
+    ) +
+    '\nexport { answerContent as __c5AnswerContentForTest };\n';
+  return import(
+    'data:text/javascript;base64,' + Buffer.from(source).toString('base64')
+  );
+}
+
+test('C5 renderer T07 executes the frozen open+null branch in ru/uk from exact production bytes', async () => {
+  const internals = await c5LoadRendererInternalsForTest();
+  for (const [language, expected] of [
+    ['ru', 'Магазин сейчас открыт.'],
+    ['uk', 'Магазин зараз відкритий.'],
+  ]) {
+    const decision = {
+      template_id: 'TPL_STORE_OPEN_STATUS_V1',
+      render_payload: { open: true, closes_at_local: null },
+      response_locale: language,
+    };
+    assert.equal(
+      internals.__c5AnswerContentForTest(decision, false),
+      expected,
+      language + '/text'
+    );
+    assert.equal(
+      internals.__c5AnswerContentForTest(decision, true),
+      expected,
+      language + '/website'
+    );
+  }
+});
+
+test('C5 review B3 closed relation maps admit only own keys before lookup', () => {
+  const rendererSource = fs.readFileSync(
+    new URL('../../src/copilot/first-line-renderer.mjs', import.meta.url),
+    'utf8'
+  );
+  assert.match(
+    rendererSource,
+    /Object\.hasOwn\(ANSWER_RELATION, decision\.reason\)[\s\S]*const allowed = ANSWER_RELATION\[decision\.reason\]/u
+  );
+  assert.match(
+    rendererSource,
+    /Object\.hasOwn\(CLARIFY_RELATION, decision\.reason\)[\s\S]*const relation = CLARIFY_RELATION\[decision\.reason\]/u
+  );
+  assert.match(
+    rendererSource,
+    /Object\.hasOwn\(CLARIFY_PROMPTS, decision\.template_id\)/u
+  );
+});
+
 test('C5 renderer T07/T10 genuine conditional branch matrix is complete for current C4 producers', () => {
   for (const [language, expected] of [
     ['ru', 'Магазин сейчас закрыт.'],
@@ -5065,16 +5159,8 @@ test('C5 renderer T07/T10 genuine conditional branch matrix is complete for curr
 
   // The merged public C4 schema intentionally admits open=true + null close,
   // but the current operational resolver has no genuine producer for that
-  // tuple. Keep source-level evidence for the frozen renderer branch without
-  // adding any test-only decision-brand bypass.
-  const rendererSource = fs.readFileSync(
-    new URL('../../src/copilot/first-line-renderer.mjs', import.meta.url),
-    'utf8'
-  );
-  assert.match(
-    rendererSource,
-    /if \(p\.closes_at_local === null\)[\s\S]*Магазин зараз відкритий\.[\s\S]*Магазин сейчас открыт\./u
-  );
+  // tuple. The dedicated T07 test above executes that exact production branch
+  // from a disposable in-memory module without exposing a production bypass.
 });
 
 test('C5 renderer T09/T09a compound dynamic controls stay exact before/after Website transport', () => {

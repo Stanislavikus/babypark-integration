@@ -50,7 +50,7 @@ change production services.
 
 | Requirement / invariant | Production artifact | Regression / evidence | Fail-closed behavior | Durable-state impact | Status |
 |---|---|---|---|---|---|
-| G1 exact 17 ANSWER + 7 CLARIFY uk/ru wording | renderer `answerContent` / `CLARIFY_PROMPTS` | T07 17-template ru+uk golden matrix + all seven CLARIFY classes + genuine reachable conditional branch matrix, including shortlist URL-null in both locales; frozen open+null branch source-checked because current C4 has no genuine producer for that tuple | unknown/missing branch => `FIRST_LINE_RENDERER_INVALID` | NONE | DONE |
+| G1 exact 17 ANSWER + 7 CLARIFY uk/ru wording | renderer `answerContent` / `CLARIFY_PROMPTS` | T07 17-template ru+uk golden matrix + all seven CLARIFY classes in both locales + genuine reachable conditional branch matrix, including shortlist URL-null in both locales; frozen open+null branch executed in both locales from exact production renderer bytes through a disposable in-memory module because current C4 has no genuine producer for that tuple | unknown/missing branch => `FIRST_LINE_RENDERER_INVALID` | NONE | DONE |
 | G2 exact critical formatting / TextRenderer bytes | `formatUah`, hours/phone/counter/list composition, `renderFirstLineText` | T07/T10 goldens cover closed/empty/split-two-interval/open_now true+false/named=0 plus seeded fast-check UAH property | invalid values / unsupported formatting => renderer invalid | NONE | DONE |
 | G3 fixed payment names/no hidden terms | closed `PAYMENT_METHODS` table + exact payment payload validator | T07 ru/uk payment golden incl. UK U+2019 | unknown/duplicate/order-invalid method code rejects | NONE | DONE |
 | G4 WebsiteRenderer exact envelope | `renderFirstLineWebsite` | T08 exact enumerable keys / frozen envelope/items | invalid input/output => no render | NONE | DONE |
@@ -78,9 +78,9 @@ change production services.
 
 ## Exhaustive implementation-review correction inventory
 
-The first complete production-implementation pass continued through the whole
-changed/runtime-adjacent surface after each finding. Two independent blocker
-classes were found and corrected in one batch:
+The exhaustive production-implementation review continued through the whole
+changed/runtime-adjacent surface after each finding. Four independent blocker
+classes were found across review passes and corrected in coherent batches:
 
 - **B1 — STORE_HOURS public semantic revalidation was too weak.**
   C5 checked each `HH:MM` interval locally but did not independently recheck
@@ -98,6 +98,25 @@ classes were found and corrected in one batch:
   `total=4/displayed=2` regression proves the old reachable failure and now
   rejects in both renderers.
 
+- **B3 — closed ANSWER relation lookup was not prototype-total.**
+  C5 indexed the ordinary ANSWER_RELATION object before proving own membership,
+  so an upstream-regression reason such as __proto__/constructor could escape
+  the single renderer error family as a generic JavaScript TypeError. ANSWER
+  and CLARIFY closed relation maps now require Object.hasOwn before lookup;
+  prompt lookup is likewise own-key guarded. Current C4 cannot honestly brand
+  an arbitrary unknown reason, so the regression asserts the exact own-key
+  production guards while the existing genuine impossible-known-pair T11
+  remains executable.
+- **B4 — T07 executable locale/branch coverage was incomplete.**
+  The all-CLARIFY matrix exercised only ru, and the frozen STORE_OPEN_STATUS
+  open=true + closes_at_local=null branch was source-regex checked only.
+  Every CLARIFY class is now exercised in both ru and uk. The currently
+  unreachable open+null branch is executed in both locales by loading the exact
+  committed renderer source into a disposable in-memory module, rewriting only
+  relative import specifiers to exact file URLs and appending a test-only
+  export of the existing internal answerContent; tracked production bytes and
+  production API remain unchanged.
+
 A delimiter-string `exactKeys` comparison was also replaced with
 `length + Object.hasOwn` exact membership so C5 does not inherit a comma-key
 collision if an upstream closed-object validator ever regresses. This is
@@ -109,7 +128,7 @@ renderer/provenance/output/privacy/scope review.
 ## Current executable evidence before immutable final-tree gate
 
 Mutable development checks (not final merge evidence):
-- focused `tests/unit/first-line-decision.test.mjs`: 97/97 PASS after B1/B2;
+- focused `tests/unit/first-line-decision.test.mjs`: 99/99 PASS after B1/B2/B3/B4;
 - syntax checks and `git diff --check`: PASS;
 - package/runtime-dependency diff: empty;
 - the adjacent C4/C5 focused set and root Agreement baseline are intentionally
@@ -122,8 +141,9 @@ Coverage note:
   through the genuine C4 pipeline;
 - the frozen `TPL_STORE_OPEN_STATUS_V1` `open=true` +
   `closes_at_local=null` branch remains part of the renderer contract but has no
-  current genuine C4 operational-state producer. Its branch bytes are source-
-  checked without introducing a test-only decision-brand/provenance bypass.
+  current genuine C4 operational-state producer. Its exact branch logic/bytes are executed from the committed production
+  source in a disposable in-memory module; no production test hook or
+  decision-brand/provenance bypass is added.
 
 The final immutable verification manifest must re-run the applicable focused
 checks and the Agreement-required root baseline on one exact committed HEAD/tree,

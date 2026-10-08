@@ -398,9 +398,11 @@ function validateDecision(decision) {
   }
 
   if (decision.decision === 'ANSWER') {
+    if (!Object.hasOwn(ANSWER_RELATION, decision.reason)) {
+      invalid('ANSWER public relation is invalid');
+    }
     const allowed = ANSWER_RELATION[decision.reason];
-    if (!allowed ||
-        !allowed.has(decision.template_id) ||
+    if (!allowed.has(decision.template_id) ||
         decision.requested_slot !== null ||
         !Array.isArray(decision.choices) ||
         decision.choices.length !== 0 ||
@@ -414,8 +416,11 @@ function validateDecision(decision) {
     return;
   }
 
+  if (!Object.hasOwn(CLARIFY_RELATION, decision.reason)) {
+    invalid('CLARIFY public relation is invalid');
+  }
   const relation = CLARIFY_RELATION[decision.reason];
-  if (!relation || !validateClarifyChoices(decision, relation)) {
+  if (!validateClarifyChoices(decision, relation)) {
     invalid('CLARIFY public relation is invalid');
   }
 }
@@ -631,7 +636,14 @@ function answerContent(decision, website) {
 }
 
 function clarifyContent(decision, website) {
-  const prompt = CLARIFY_PROMPTS[decision.template_id]?.[decision.response_locale];
+  if (!Object.hasOwn(CLARIFY_PROMPTS, decision.template_id)) {
+    invalid('unknown CLARIFY prompt');
+  }
+  const prompts = CLARIFY_PROMPTS[decision.template_id];
+  if (!Object.hasOwn(prompts, decision.response_locale)) {
+    invalid('unknown CLARIFY prompt');
+  }
+  const prompt = prompts[decision.response_locale];
   if (typeof prompt !== 'string') invalid('unknown CLARIFY prompt');
   if (decision.choices.length === 0) return prompt;
   const dynamic = value => website ? encodeWebsiteDynamic(value) : value;
