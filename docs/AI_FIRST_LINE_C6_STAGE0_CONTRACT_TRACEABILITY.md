@@ -53,8 +53,10 @@ for the HEAVY exact-tree review/confirmation required to merge this amendment.
    reads, one variable extraction, deterministic C2/C3, fresh C4 and deterministic
    C5 are S1 and remain non-authorizing. S2 is the one final whole-conversation
    Chatwoot topology snapshot, followed by exact covered-text equality,
-   structured-selection re-proof, the final current ownership/status read and
-   local SENDING CAS.
+   structured-selection re-proof and the shared strict current-conversation
+   decoder. Only configured Website inbox + `pending + SAME_AGENTBOT` may reach
+   local SENDING CAS; every other inbox/status/owner result performs zero POST and
+   attaches durable HUMAN continuation.
 3. Prepared action provenance includes an exact typed canonical semantic scope,
    not only public reason/template/locale. C4 derives it from every effective
    certified canonical slot/constraint it actually consumes; callers cannot
@@ -126,7 +128,7 @@ for the HEAVY exact-tree review/confirmation required to merge this amendment.
 
 | Requirement / invariant | Normative artifact | Acceptance verification | Fail-closed behavior | Durable-state impact | Status |
 |---|---|---|---|---|---|
-| S1 semantic rebuild/fresh C4/C5 is non-authorizing; S2 is the one final whole-conversation topology snapshot followed by exact text/structured proofs, final current ownership/status read and local SENDING CAS | DESIGN §29.7 | Q21, Q34, U09 | Any S2 topology/text/proof/final-ownership/local-CAS drift => discard S1 result, zero POST | No transcript persistence | DONE |
+| S1 semantic rebuild/fresh C4/C5 is non-authorizing; S2 is the one final whole-conversation topology snapshot followed by exact text/structured proofs and the shared strict current-conversation decoder; only configured Website inbox + `pending + SAME_AGENTBOT` may reach local SENDING CAS | DESIGN §29.7, §43 | Q21, Q34, Q58, H01/H04, U09 | Any S2 topology/text/proof/inbox/status/owner/local-CAS drift => discard S1 result, zero POST + durable HUMAN continuation; legacy ownership projection/evaluator is forbidden | No transcript persistence; existing PUBLIC_ACTION origin gains bounded HUMAN continuation only | DONE |
 | Structured selections keep original provenance and are reread/re-proven at send authorization; ANSWER confirmation never rewrites that provenance | DESIGN §29.0.1, §29.1, §29.7 | Q10c, C25f, Q38, U07/U13 | Changed/missing/multiple submission => zero POST + HUMAN | Existing canonical stable-selection provenance only | DONE |
 | NON_ACTIONABLE_ACK is permanent silence only after the closed deterministic exact-text ACK proof **and** one stale-safe owning-store admission over the unchanged certified routing basis; C3 CLEAR, extraction/intent_hint and heuristics are never ACK authority | DESIGN §29.2 | Q51 | Any non-exact/multi-event/pending-clarification/unknown shape or changed revision/head/fingerprint/episode/owner commits zero ACK state and continues stale rebuild/ordinary processing | Same-revision ACK origin + current episode close atomically only on unchanged basis; no customer text/digest | DONE |
 | Descriptor v1 contains complete effective canonical scope; MONEY uses nullable non-negative UAH min/max bounds actually consumed by C4 and fail-closed relational validation (currency/bounds/range/provenance); dynamic facts are excluded | DESIGN §29.7 | Q33/Q52, U01/U03/U08 | Canonical slot/bound/relation mismatch => zero POST + HUMAN continuation | Future action provenance only; no text/dynamic payload | DONE |
@@ -268,7 +270,33 @@ historical evidence of the prior pass and was never a ZERO-BLOCKER result.
 | V09/R5 blocker | Contract correction | Regression/acceptance proof required | Status |
 |---|---|---|---|
 | V09/R5-B1 — raw human/bot predicates still overlapped the claimed disjoint matrix | DESIGN §43 now decodes exactly one owner_class first and evaluates a status×owner-class partition; contradictory/malformed wire becomes UNKNOWN before the matrix and cannot also match a terminal branch | Q47/Q56/Q58, H01–H04, U11 | DONE |
-| V09/R5-B2 — ownership wire authority was under-specified and legacy normalizeConversation() maps every non-AgentBot assignee to human, including deployed Enterprise Captain::Assistant | DESIGN §43 freezes a closed wire decoder for UNASSIGNED/HUMAN_USER/SAME_AGENTBOT/OTHER_AGENTBOT/OTHER_AUTOMATION/UNKNOWN, explicitly maps Captain::Assistant to OTHER_AUTOMATION, forbids the legacy projection for C6, and states that a future write must enforce competing-owner absence server-side rather than trusting the pre-read | Q47/Q56–Q58, H01–H04 | DONE |
+| V09/R5-B2 — ownership wire authority was under-specified and legacy normalizeConversation() maps every non-AgentBot assignee to human, including deployed Enterprise Captain::Assistant | DESIGN §43 freezes a closed wire decoder for UNASSIGNED/HUMAN_USER/SAME_AGENTBOT/OTHER_AGENTBOT/OTHER_AUTOMATION/UNKNOWN, explicitly maps Captain::Assistant to OTHER_AUTOMATION and states that a future handoff write must enforce competing-owner absence server-side rather than trusting the pre-read. The R5 correction closed §43 handoff authority; V10-B1 later identified the separate S2 send-admission scope gap and the successor correction below expands the same decoder/prohibition to all C6 ownership authority | Q47/Q56–Q58, H01–H04 | DONE; S2 SCOPE COMPLETED BY V10-B1 |
+
+## Isolated V10 blocker closure map
+
+The run-independent HEAVY confirmation on
+`HEAD=f9a52044e758b7ebefbb435942e454e0d03d5052`,
+`TREE=b12c66be61c7e3a542a8f33f9909e348539e1c6c`,
+`BASE=09cbf704aba2a6bab4aa1ccacf904926286c3977`,
+`GOV=e777fce4af8e8c3372f1f9de9ef7d00f786c2c89`, bound to Manifest V6
+`ba158794cb6ee12851dfd3a76d79a8fc27b966fceff7b7426c66153d0ad10a34`,
+found one new root-cause blocker after independently re-verifying R1–R5.
+The normalized isolated report is preserved outside the branch as
+`C6_STAGE0_V6_V10_OPUS55.txt` with SHA-256
+`f85301f32558f1b4bd7b63f6047325bb7bb2a0ec5436d2c93c5c489e06cf9fb9`.
+This table maps the one-batch successor correction; the prior V09 clean result
+and Manifest V6 no longer close the HEAVY gate for this successor tree.
+
+| V10 blocker | Contract correction | Regression/acceptance proof required | Status |
+|---|---|---|---|
+| V10-B1 — S2 send-time ownership admission predicate was unfrozen and not bound to the closed decoder | DESIGN §29.7.2 + §43 now use one strict decoder for every C6 ownership authority, require a positive configured Website `inbox_id`, and freeze the only send-eligible tuple as configured Website inbox + `pending + SAME_AGENTBOT`; every other inbox/status/owner/unknown/unavailable result performs zero POST, attaches durable HUMAN continuation and continues only through §43. Legacy `normalizeConversation()` / `evaluateOwnership()` are forbidden as C6 ownership authority | Q34/Q58, H01/H04, U09; full status×owner×inbox cross-product plus no-new-message bulk/automation status-race vector | DONE |
+
+The successor required-verification manifest MUST additionally prove from the
+deployed Chatwoot v4.18.0 source that account-conversation JSON exports
+`inbox_id` and that stock bulk/automation status paths can change status without
+requiring a new public message or clearing the configured AgentBot owner. It
+MUST statically prove no C6 send/relay ownership path imports or calls legacy
+`normalizeConversation()` / `evaluateOwnership()`.
 
 R5 external-fit closure is not supplied by prose alone. The successor-tree
 required-verification manifest MUST freshly bind the deployed Chatwoot v4.18.0
@@ -278,9 +306,10 @@ HEAD/TREE and hash/assert at least:
 - `app/views/api/v1/conversations/partials/_conversation.json.jbuilder`;
 - `enterprise/app/views/enterprise/api/v1/conversations/partials/_assignee.json.jbuilder`;
 - production `ChatwootApp.enterprise? == true`;
-and MUST statically prove the repository C6 path does not reuse the legacy
-`normalizeConversation()` as §43 ownership authority. No ZERO-BLOCKER claim is
-valid until that evidence passes on the exact successor tree.
+and MUST statically prove no C6 ownership-authority path — including S2
+send admission and §43 handoff — imports/calls legacy `normalizeConversation()`
+or `evaluateOwnership()`. No ZERO-BLOCKER claim is valid until that evidence
+passes on the exact successor tree.
 
 ## Required HEAVY review focus
 
@@ -292,9 +321,11 @@ must continue past the first finding and specifically challenge:
 - whether permanent NON_ACTIONABLE_ACK can arise only from the closed exact-text
   proof and one unchanged-basis owning-store ACK admission CAS, never from C3
   CLEAR, extraction/model confidence, multi-event text or stale routing state;
-- whether S1/S2 ordering keeps dynamic facts fresh and makes topology/ownership
-  the final practical authorization without claiming impossible cross-system
-  atomicity;
+- whether S1/S2 ordering keeps dynamic facts fresh and the final strict current-
+  conversation read authorizes send **only** for configured Website inbox +
+  `pending + SAME_AGENTBOT`; explicitly challenge no-new-message bulk/automation
+  status drift, unknown/malformed ownership and legacy ownership-helper reuse,
+  without claiming impossible cross-system atomicity;
 - whether immutable semantic origin, monotonic HUMAN continuation and late
   remote-send evidence remain non-reversible under every race/restart ordering;
 - whether HUMAN/liveness state and native-handoff attempt/outcome evidence are

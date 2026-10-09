@@ -1056,13 +1056,17 @@ Expected:
 - every covered customer message is exact-reread after S2 and must byte-match the
   exact S1 semantic input before the same extraction can be re-certified;
 - any STRUCTURED_SUBMISSION used by the decision is exact-read/re-proven after S2;
-- only **after** those topology/text/structured proofs, current ownership/status is
-  exact-read and must still prove the Website AgentBot prerequisites immediately
-  before local send admission;
+- only **after** those topology/text/structured proofs, exact-read the current
+  account-conversation wire and use the same strict C6 decoder as §43; require a
+  positive `inbox_id` equal to the configured Website inbox and exactly
+  `pending + SAME_AGENTBOT`; this is the only send-eligible tuple;
+- every other inbox/status/owner result, malformed/unknown/unavailable wire or
+  decoder failure performs zero POST, attaches durable HUMAN continuation to the
+  immutable PUBLIC_ACTION origin, and may continue only through §43;
 - C4 dynamic authority was freshly read immediately before S2; no previous
   prepared/rendered value is a fallback;
-- only unchanged S2 topology + text/structured proof + final current ownership +
-  local CAS may reach SENDING.
+- only unchanged S2 topology + text/structured proof + configured Website inbox
+  + `pending + SAME_AGENTBOT` + local CAS may reach SENDING.
 
 ### Q35 — SENDING is a permanent no-POST-retry boundary
 Reach durable SENDING and parameterize: timeout, reset, malformed response, 4xx,
@@ -1596,9 +1600,13 @@ Expected:
 - any unknown/malformed/inconsistent shape is `UNKNOWN` and default-deny;
 - supported status is exactly `open / pending / resolved / snoozed`; any
   other/malformed/unavailable status is unknown/default-deny;
-- C6 handoff authority does not call or reuse the legacy
-  `normalizeConversation()` projection that maps every non-AgentBot assignee
-  type to human;
+- current `inbox_id` is a positive safe integer; missing/invalid inbox is
+  unknown/default-deny, and S2 requires exact equality with the configured
+  Website inbox;
+- every C6 ownership authority, including S2 send admission and §43 handoff,
+  does not call/reuse legacy `normalizeConversation()` or `evaluateOwnership()`;
+  `normalizeConversation()` maps every non-AgentBot assignee type to human and
+  `evaluateOwnership()` also relies on forbidden message-id ordering authority;
 - the stock single `assigned_entity` wire may drive current read-only
   reconciliation, but it is not proof of the negative future-write predicate
   'no competing human/other automation';
@@ -1619,6 +1627,9 @@ Expected:
   cannot satisfy H01;
 - no BabyPark status/ownership write is performed to establish this proof;
 - only after that proof does a bound logical episode close as `human_takeover`;
+- before this reconciliation can run for a relay-originated failure, S2 has
+  already required configured Website inbox + `pending + SAME_AGENTBOT`; any
+  other current inbox/status/owner attached durable HUMAN with zero POST;
 - after human/non-AI ownership, AI sends zero public messages.
 
 ### H02 — unresolved/current-v4.18 handoff remains durable
@@ -1664,6 +1675,9 @@ Expected:
   still pending+configured BabyPark AgentBot conversation;
 - a resolved/snoozed conversation is never reopened and another automation
   owner is never displaced;
+- if any `open/resolved/snoozed + SAME_AGENTBOT` or other non-send-eligible
+  tuple appears between S1 and the final S2 ownership read without a new public
+  message/revision, S2 still performs zero POST and attaches durable HUMAN;
 - if a later exact read strictly decodes
   `open + HUMAN_USER|UNASSIGNED`, H01 may close `human_takeover` without a
   BabyPark status write.
@@ -2315,15 +2329,21 @@ Expected:
   semantic input before the same extraction/capabilities are re-certified;
 - mutable structured selection used by the decision is exact-reread/re-proven
   after S2;
-- current conversation ownership/status is exact-read **after** those S2 text/
-  structured proofs and is the final external ownership gate before local CAS;
+- current account-conversation ownership/status/inbox is exact-read **after**
+  those S2 text/structured proofs through the same strict decoder as §43 and is
+  the final external ownership gate before local CAS;
+- send admission requires exactly configured Website inbox +
+  `pending + SAME_AGENTBOT`; every other tuple/mismatch/unknown/unavailable read
+  performs zero POST and attaches durable HUMAN continuation, even when no new
+  public row changed `stream_revision`; this includes bulk/automation status
+  changes that leave the same AgentBot owner;
 - C4 dynamic authority was freshly read immediately before S2; dynamic changes
   after the final C4 read are the explicitly accepted irreducible cross-system
   race, not permission to reuse older prepared facts;
 - the final CAS rechecks origin/action/HUMAN absence plus
   lease/revision/episode/reservation/deadline;
-- only unchanged S2 topology/text/structured proof + final current ownership +
-  CAS permits the one POST attempt.
+- only unchanged S2 topology/text/structured proof + configured Website inbox
+  + `pending + SAME_AGENTBOT` + CAS permits the one POST attempt.
 
 ### U10 — SENDING has exactly one POST attempt and monotonic reconciliation
 From SENDING, parameterize successful 2xx, timeout/reset, all HTTP failure
@@ -2456,8 +2476,10 @@ cover:
 - complete canonical semantic scope including non-negative nullable lower/upper
   UAH customer-money bounds and fail-closed currency/range/provenance integrity;
 - S1 non-authorizing semantic rebuild followed by final S2 Chatwoot topology,
-  exact text/structured/C25-causality proof, final current ownership/status and
-  local CAS;
+  exact text/structured/C25-causality proof, then the shared strict current-
+  conversation decoder; only configured Website inbox +
+  `pending + SAME_AGENTBOT` may reach local CAS, otherwise zero POST + durable
+  HUMAN continuation;
 - stale-backup recovery barriers for silent ACK/HUMAN/action ownership;
 - semantic liveness plus operational escalation when Chatwoot authority cannot
   prove physical handoff;

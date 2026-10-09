@@ -2454,10 +2454,16 @@ Only after fresh C4 and C5 output exist may the relay enter S2:
    same conversation, unique normal-CONFIRMED predecessor and unchanged
    predecessor/stable-selection provenance. Neither deferred metadata nor
    `event_seq` can substitute for this causal reply proof;
-7. exact-read **current** Chatwoot conversation ownership/status **after** those
-   topology/text/structured/C25-causality proofs and require the configured
-   Website inbox/AgentBot prerequisites. This is the final external ownership
-   gate before local send admission;
+7. exact-read the **current** Chatwoot account-conversation wire **after**
+   those topology/text/structured/C25-causality proofs. Decode ownership/status
+   with the one closed C6 conversation decoder in §43 and decode `inbox_id` as
+   a positive safe integer. The **only** send-eligible tuple is
+   `inbox_id == configured Website inbox` + `pending + SAME_AGENTBOT`.
+   Missing/invalid/mismatched inbox, every other reviewed status/owner class,
+   `UNKNOWN`, malformed/unavailable wire or decoder failure authorizes zero
+   public POSTs: attach absorbing durable HUMAN continuation to this immutable
+   PUBLIC_ACTION origin and continue only through §43 read-only reconciliation.
+   This is the final external ownership gate before local send admission;
 8. require the immutable semantic-origin fence still identifies this exact public
    action, no durable HUMAN continuation has been attached, and the prepared
    stream_revision/episode/version/latch/reservation/current GATING lease/deadline
@@ -2472,12 +2478,21 @@ statement scoped to the conversation, with `id >= 0`, no upper predicate and
 topology visible to that statement snapshot. A result count of exactly 1000 is
 `HISTORY_UNPROVABLE`; no AI public POST is authorized.
 
-If S2 ingests a relevant event, current ownership/status no longer proves
-Website AgentBot prerequisites, covered customer bytes differ, structured
-selection differs, C25 native reply provenance differs/fails, deferred/action
-provenance is corrupt, effective MONEY relational integrity fails, or any local
-CAS predicate differs, the S1 decision/render is discarded and performs zero
-public POSTs. It is never reused by a later claim.
+If S2 ingests a relevant event, the current account-conversation read is not
+exactly the configured Website inbox + `pending + SAME_AGENTBOT` send-eligible
+tuple, covered customer bytes differ, structured selection differs, C25 native
+reply provenance differs/fails, deferred/action provenance is corrupt,
+effective MONEY relational integrity fails, or any local CAS predicate differs,
+the S1 decision/render is discarded and performs zero public POSTs. An
+ownership/inbox failure attaches durable HUMAN continuation before any later
+handoff/reconciliation work; the S1 result is never reused by a later claim.
+
+`stream_revision` equality never substitutes for the final current
+ownership/status/inbox read. On the verified Chatwoot v4.18.0 tuple, bulk and
+automation status changes can make a conversation `open`, `resolved` or
+`snoozed` while leaving the configured AgentBot owner and without creating a
+new customer/public message; such a state is therefore reachable without a
+BabyPark revision change and must fail S2 send admission.
 
 This ordering deliberately makes conversation topology/ownership the last full
 external authorization before local send admission while keeping Catalog/
@@ -3449,22 +3464,29 @@ No partial public price before handoff.
 
 ## 43. Native HUMAN handoff v1
 
-This section is the complete Website First Line v1 handoff authority. Legacy
-AgentBot safety documents may be consulted as historical evidence but do not
-authorize C6 behavior.
+This section is the complete Website First Line v1 HUMAN handoff authority and
+also defines the one closed current-conversation ownership decoder reused by
+§29.7.2 S2 send admission. Legacy AgentBot safety documents may be consulted as
+historical evidence but do not authorize C6 behavior.
 
 HUMAN creates **no public AI handoff preface**. Once durable HUMAN continuation
 owns the stream under §29.8, BabyPark may only pursue native ownership
 transfer/reconciliation; no later AI answer/clarification may supersede it.
 
-Every ownership decision uses an exact current Chatwoot conversation read. The
-configured Website AgentBot identity is explicit. C6 MUST NOT use the legacy
-`normalizeConversation()` ownership projection for §43 authority: that helper
-treats every non-`AgentBot` `assignee_type` as human and therefore cannot
-distinguish other supported automation owners on deployed Enterprise Chatwoot.
+Every C6 ownership decision uses an exact current Chatwoot account-conversation
+read. The configured Website inbox and AgentBot identities are explicit. C6
+MUST NOT use the legacy `normalizeConversation()` ownership projection or
+`evaluateOwnership()` as ownership authority for either §29.7.2 S2 or §43:
+the projection treats every non-`AgentBot` `assignee_type` as human, while the
+legacy evaluator also relies on Chatwoot message-id ordering that v0.8 forbids
+as causal/current-turn authority.
 
-Before §43.1, the current wire is decoded once into one closed
-`owner_class` plus one reviewed status. The only accepted owner classes are:
+Before either §29.7.2 S2 send admission or §43.1 reconciliation, the current
+wire is decoded once into one closed `owner_class` plus one reviewed status.
+The exact wire `inbox_id` must also be a positive safe integer. Missing/invalid
+`inbox_id` is unknown authority; for S2, any value other than the configured
+Website inbox is a send-admission failure and cannot authorize a public POST.
+The only accepted owner classes are:
 - `UNASSIGNED` — both `meta.assignee` and `meta.assignee_type` are absent;
 - `HUMAN_USER` — `meta.assignee_type == 'User'` and
   `meta.assignee.id` is a positive safe integer;
@@ -3479,8 +3501,17 @@ Before §43.1, the current wire is decoded once into one closed
   unavailable read.
 
 The reviewed current statuses are exactly `open / pending / resolved / snoozed`.
-Any other/malformed/unavailable status is `UNKNOWN`. An `UNKNOWN` owner or
-status always takes the default-deny branch.
+Any other/malformed/unavailable status is `UNKNOWN`. An `UNKNOWN` owner/status
+or missing/invalid current inbox always default-denies.
+
+The same decoded wire has two context-specific consumers and they must not be
+conflated:
+- **before HUMAN, §29.7.2 S2 send admission** permits exactly configured Website
+  inbox + `pending + SAME_AGENTBOT`; every other tuple/mismatch/unavailable
+  read performs zero POST and attaches durable HUMAN continuation;
+- **after HUMAN owns continuation, §43.1 handoff reconciliation** applies the
+  disjoint matrix below. In that context even `pending + SAME_AGENTBOT` remains
+  unresolved HUMAN and cannot authorize an AI public action.
 
 The stock account-conversation JSON serializes one `assigned_entity` and the
 normal validated human-assignment path clears AgentBot ownership. That is
@@ -3492,8 +3523,9 @@ MUST NOT treat this pre-read as proof of the negative write precondition
 atomically enforce its expected owner/status/competing-owner predicates or be
 monotonic-safe under every intervening state.
 
-Any sender/assignee/status shape not proven by this closed decoder is
-default-deny.
+Any inbox/sender/assignee/status shape not proven by this closed decoder is
+default-deny. Inbox mismatch never proves takeover/loss by itself; it blocks AI
+send and leaves the resulting HUMAN obligation to §43 reconciliation.
 
 Deployed Chatwoot v4.18.0 does **not** provide a safe automated native handoff
 write for this contract. Stage-0 source-fit proves all of the following for the
@@ -3843,8 +3875,10 @@ No customer messages.
   revision may terminate as orphan STALE/CANCELLED/NOT_SENT;
 - S1/preflight + variable extraction + fresh semantic C2/C3/C4/C5 are
   non-authorizing; only S2, the final whole-conversation Chatwoot snapshot plus
-  exact text/structured proof and then final current ownership/status, may
-  precede the local send CAS;
+  exact text/structured proof and then one strict current-conversation decoder,
+  may precede the local send CAS. Public send eligibility is exactly configured
+  Website inbox + `pending + SAME_AGENTBOT`; every other inbox/status/owner
+  result performs zero POST and attaches durable HUMAN continuation;
 - immutable descriptor v1 + complete typed canonical semantic scope protect
   product/variant/category/brand/store/customer-money interpretation, including
   every effective **non-negative** nullable min/max bound actually consumed by C4
@@ -4009,8 +4043,10 @@ narrow C25 route, the exhaustive Stage-0 inventories freeze:
    event/deferred/message-ID/created_at ordering never substitutes for causality;
 9. a two-phase authorization model: S1 semantic rebuild/fresh C4/C5 remains
    non-authorizing; S2 is the final complete Chatwoot topology snapshot followed
-   by current text/structured/C25-causality proof, current ownership/status and
-   the local send CAS;
+   by current text/structured/C25-causality proof and the one closed current
+   conversation decoder. Only configured Website inbox +
+   `pending + SAME_AGENTBOT` may reach the local send CAS; every other
+   inbox/status/owner result attaches durable HUMAN continuation with zero POST;
 10. complete canonical customer-money semantic scope, including non-negative
     nullable `min_price_minor` and `max_price_minor`, exact UAH/range/provenance
     relational integrity and merged support for a customer constraint of 0;
@@ -4020,12 +4056,14 @@ narrow C25 route, the exhaustive Stage-0 inventories freeze:
     falsely promising physical handoff while Chatwoot authority is unavailable;
     bounded outage escalation produces operator-attention while HUMAN remains
     absorbing;
-13. a self-contained §43 handoff protocol with a strict closed ownership-wire
-    decoder and mutually exclusive status×owner matrix, including
-    `Captain::Assistant => OTHER_AUTOMATION`, unknown=>default-deny and an
-    explicit deployed-v4.18 prohibition on automated AgentBot
-    `toggle_status(open)`: current `open|pending + SAME_AGENTBOT` remains durable
-    HUMAN/operator-manual, only `open + HUMAN_USER|UNASSIGNED` proves takeover,
+13. one strict closed current-conversation ownership-wire decoder shared by S2
+    send admission and §43 handoff, including strict current `inbox_id`,
+    `Captain::Assistant => OTHER_AUTOMATION`, unknown=>default-deny and a
+    mutually exclusive §43 status×owner matrix, plus an explicit deployed-v4.18
+    prohibition on automated AgentBot
+    `toggle_status(open)`: once HUMAN owns continuation, current
+    `open|pending + SAME_AGENTBOT` remains durable HUMAN/operator-manual, while
+    only `open + HUMAN_USER|UNASSIGNED` proves takeover,
     and a future separately proven safe primitive must enforce competing-owner
     absence in its own write before crossing the durable `episode.sqlite`
     attempt/dispatch boundary;
