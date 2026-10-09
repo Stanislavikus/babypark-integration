@@ -2602,14 +2602,22 @@ origin and attaches a durable HUMAN continuation obligation to it; the action is
 not rewritten as a new planning outcome. Input-job/reconcile rows may drive §43
 handoff attempts but are never the sole semantic record.
 
-The same owning semantic store also owns native-handoff attempt history required
-by §43. A HUMAN owner may have at most one unresolved handoff attempt. The
-durable attempt identity/state is committed before the external write boundary
-and survives worker lease expiry, restart and deletion/recreation of
-`copilot.sqlite`. No disposable execution lease can erase/reclassify an
-outcome-unknown attempt or authorize another write. Positive deterministic
-non-commit evidence, if a later implementation can prove it, is bounded durable
-attempt metadata and never customer content.
+The same owning semantic store also owns native-handoff attempt history whenever
+§43 has an independently proven **safe automated handoff primitive** to call. On
+the deployed Chatwoot v4.18.0 tuple verified for Stage 0, the current AgentBot
+`toggle_status(open)` path is **not** such a primitive and MUST NOT be called by
+Website First Line automation: §43 therefore remains read/reconcile/manual for a
+pending conversation still owned by the configured BabyPark AgentBot.
+
+If a later downstream stage proves and owner-approves a safe automated primitive
+under a fresh Agreement §§1–3 native-first fit gate, a HUMAN owner may have at
+most one unresolved handoff attempt. Its durable attempt identity/state is
+committed before that primitive's external write boundary and survives worker
+lease expiry, restart and deletion/recreation of `copilot.sqlite`. No disposable
+execution lease can erase/reclassify an outcome-unknown attempt or authorize
+another write. Positive deterministic non-commit evidence, if the selected
+primitive can prove it, is bounded durable attempt metadata and never customer
+content.
 
 Once HUMAN continuation exists, later customer events may still be ingested for
 topology/recovery but cannot supersede it with a newer autonomous AI outcome.
@@ -3453,86 +3461,120 @@ Every ownership decision uses an exact current Chatwoot conversation read. The
 configured Website AgentBot identity is explicit; any sender/assignee/status
 shape not covered below is default-deny.
 
-Native handoff has its own durable at-most-once network-attempt boundary in
-`episode.sqlite`; `copilot.sqlite` state is never enough to prove whether a
-write was attempted. Under one durable HUMAN continuation owner:
-- before the first native handoff write, atomically create one stable
-  `handoff_attempt_id` and reserve it for the current stream/revision/HUMAN
-  owner;
-- after the final exact pre-attempt ownership read proves the write-eligible
-  state, durably cross that attempt into a dispatch/outcome-unknown boundary
-  **before** invoking Chatwoot;
-- once that boundary is durable, crash, lease expiry, process restart, lost
-  response or deletion/recreation of `copilot.sqlite` never authorizes another
-  automatic handoff write for that attempt;
-- a later attempt identity may be created only after **positive deterministic
-  non-commit evidence** for the prior attempt is durably attached to the same
-  HUMAN owner and a new exact pre-attempt ownership read again proves the
-  write-eligible state;
-- absence of response, elapsed time, lease expiry, `pending` state, connection
-  ambiguity or missing execution-row evidence is not non-commit proof.
+Deployed Chatwoot v4.18.0 does **not** provide a safe automated native handoff
+write for this contract. Stage-0 source-fit proves all of the following for the
+current account-conversation `toggle_status(open)` path:
+- `ConversationPolicy#show?` authorizes any AgentBot to access the conversation;
+  it does not require the conversation to remain assigned to that AgentBot;
+- `bot_handoff?` checks only AgentBot caller + current `pending` status +
+  requested `open`; it does not atomically require the configured BabyPark
+  AgentBot to still own the conversation and exposes no expected-owner/status
+  CAS or idempotency key;
+- if the status changes before request handling, the generic status branch may
+  set `open`; therefore a stale pre-read can reopen a resolved/snoozed
+  conversation;
+- if another AgentBot becomes owner while status remains `pending`, the
+  BabyPark AgentBot request can still enter `bot_handoff!`, clear that other
+  bot, open the conversation and dispatch a handoff event.
 
-A crash after durable dispatch reservation but before the process can prove that
-request bytes were sent may conservatively leave HUMAN unresolved and raise
-§29.8.2 operator attention. False HUMAN/manual recovery is acceptable; guessing
-"unsent" and issuing a second native handoff is not. Attempt metadata is bounded
-machine state only and contains no customer text/content digest.
+Those mutations cannot be made safe by a post-read: the displaced ownership or
+reopened state may already have been destroyed. The bounded public-send residual
+race accepted by §29.7 does not authorize this different mutable handoff race.
+Website First Line therefore **MUST NOT call the deployed v4.18.0 AgentBot
+`toggle_status(open)` path automatically**. Chatwoot core patches/forks remain
+forbidden.
 
-### 43.1 Pre-attempt matrix
+Current v1 handoff execution on this deployed tuple is consequently
+**read/reconcile/operator-manual**:
+- exact current ownership/status reads may prove handoff already achieved or
+  BabyPark ownership already lost;
+- a still `pending` conversation owned by the configured BabyPark AgentBot is
+  durable HUMAN but has **no authorized automated handoff write**. Keep HUMAN
+  absorbing, raise §29.8.2 operator-attention according to the measured
+  escalation policy, and require manual/native operator action outside autonomous
+  AI;
+- `open` while the same configured BabyPark AgentBot still owns the
+  conversation is likewise unresolved HUMAN, never proof of human takeover;
+- no elapsed time, execution lease or repeated read creates write authority.
 
-Before a native handoff write:
-1. **open + no configured AgentBot ownership** — handoff is already achieved
-   (whether a human is assigned explicitly or the open non-AI queue owns it).
-   Perform no write; terminalize `HANDOFF_DONE` and close a bound episode as
-   `human_takeover`.
-2. **exactly pending + configured Website AgentBot + no human owner** — one native
-   AgentBot handoff/status transition may be attempted only when no prior
-   outcome-unknown durable handoff attempt blocks it under the boundary above.
-   The exact ownership read and durable dispatch reservation are both required
-   before the external write.
-3. **resolved/snoozed, another bot, or another proven state where the configured
-   AgentBot no longer owns a handoff-eligible pending conversation** — perform no
+A later production stage may automate handoff only if a fresh Agreement §§1–3
+native-first fit gate, bound to the actual deployed/target Chatwoot tuple,
+proves an allowed primitive whose **write itself** either:
+1. atomically requires current `pending` + current configured BabyPark AgentBot
+   ownership + no human/other-bot ownership; or
+2. is monotonic-safe for every state that can arise after the last authority
+   read.
+A custom Chatwoot core patch/fork is not an allowed way to satisfy that proof.
+
+Only after such a safe primitive is separately selected and owner-approved does
+the durable network-attempt protocol become active. Then, under one durable
+HUMAN continuation owner:
+- before the first automated write, atomically create one stable
+  `handoff_attempt_id` for the current stream/revision/HUMAN owner;
+- after a fresh exact ownership read proves that safe primitive's write-eligible
+  state, durably cross the attempt into a dispatch/outcome-unknown boundary
+  **before** invoking the primitive;
+- crash, lease expiry, restart, lost response or deletion/recreation of
+  `copilot.sqlite` never authorizes another write for that outcome-unknown
+  attempt;
+- a later attempt may exist only after positive deterministic non-commit evidence
+  for the prior attempt is durably attached to the same HUMAN owner and a new
+  exact read again proves write eligibility;
+- elapsed time, `pending`, missing execution rows, connection ambiguity or lack
+  of response is never non-commit proof.
+
+Attempt metadata is bounded machine state only and contains no customer
+text/content digest.
+
+### 43.1 Disjoint current-ownership matrix
+
+The predicates below are mutually exclusive and default-deny. In particular,
+"no configured AgentBot" is **not** enough for human takeover: `HANDOFF_DONE`
+requires **no AgentBot ownership at all**.
+
+1. **open + no AgentBot owner at all** — either a human is explicitly assigned
+   or the conversation is provably open in the non-AI/unassigned queue.
+   Handoff is already achieved. Perform no BabyPark status write; terminalize
+   `HANDOFF_DONE` and close a bound episode as `human_takeover`.
+2. **any status + another AgentBot owner** — BabyPark AI no longer owns the
+   conversation. Perform no write; terminalize `OWNERSHIP_LOST` and close a
+   bound episode as `ownership_lost`.
+3. **resolved or snoozed without another AgentBot owner** — perform no
    reopen/toggle write; terminalize `OWNERSHIP_LOST` and close a bound episode
    as `ownership_lost`.
-4. **open + the same configured AgentBot still owning** — this is a reachable
-   read→toggle race residue on deployed Chatwoot v4.18.0. Perform no automated
-   status write and no AI public action. HUMAN remains durable until a later
-   exact read proves one of the terminal/attemptable states above.
-5. **unknown/malformed/unavailable ownership/status** — perform no write. HUMAN
-   remains durable/retryable and silent.
+4. **open + the same configured BabyPark AgentBot still owning** — unresolved
+   HUMAN. Perform no automated status write and no AI public action.
+5. **pending + the same configured BabyPark AgentBot + no human owner** — on the
+   deployed v4.18.0 tuple, unresolved HUMAN with no authorized automated write.
+   Operator/manual handoff remains required. A future separately proven safe
+   primitive may make this state write-eligible only under the gate above.
+6. **simultaneous human + AgentBot ownership, malformed/unknown/unavailable
+   ownership, unsupported status, or any other shape not proven above** —
+   default-deny. Perform no write; HUMAN remains durable and silent, with
+   operator-attention when its measured escalation window expires.
 
-### 43.2 Post-attempt reconciliation
+### 43.2 Reconciliation
 
-A successful/2xx native handoff call is not by itself terminal proof. After every
-successful, failed-with-unknown-outcome, timeout/reset or restart-recovered
-attempt, exact-read ownership again:
-- open + no configured AgentBot => `HANDOFF_DONE / human_takeover`;
-- resolved/snoozed/other-bot/other proven non-handoff-eligible state =>
+Every current read and every future-safe-primitive post-attempt read uses exactly
+the same disjoint matrix:
+- open + **no AgentBot owner at all** => `HANDOFF_DONE / human_takeover`;
+- another AgentBot, or resolved/snoozed proven ownership loss =>
   `OWNERSHIP_LOST / ownership_lost`, never reopen;
-- open + same configured AgentBot => race residue; no automated retry/write;
-- pending + configured AgentBot => handoff is still owed, but neither that read
-  nor elapsed measured time proves the prior outcome-unknown request cannot still
-  commit. The durable handoff-attempt record remains blocking. Another automated
-  attempt is allowed only when positive deterministic provider/transport
-  evidence proves the prior request is no longer in-flight and cannot later
-  commit, that non-commit proof is durably attached to the prior attempt, and a
-  fresh pre-attempt ownership read again proves the write-eligible state. If no
-  such proof exists, do not retry automatically; keep HUMAN live and use §29.8.2
-  operator-attention/escalation;
-- unknown/unavailable => remain durable/retryable and silent; expiry of the
-  measured escalation window raises §29.8.2 operational attention, never false
-  terminal success.
+- open + same configured BabyPark AgentBot => unresolved HUMAN, no automated
+  write;
+- pending + same configured BabyPark AgentBot => unresolved HUMAN. On deployed
+  v4.18.0 there is no automated write. If a future safe primitive has an
+  outcome-unknown prior attempt, the durable attempt remains blocking and only
+  positive deterministic non-commit evidence + a fresh write-eligible read may
+  permit another attempt;
+- unknown/malformed/unavailable => unresolved HUMAN, no write; measured expiry
+  raises §29.8.2 operator attention, never false terminal success.
 
-This makes handoff recovery state-reconciled rather than blindly replayed. A
-duplicate trigger cannot create a public message, cannot reopen resolved/snoozed
-ownership, and cannot automatically repeat a handoff whose prior network outcome
-is still unprovable.
-
-There is an unavoidable residual read-to-native-toggle race because deployed
-Chatwoot v4.18.0 provides no conditional ownership/status CAS for this handoff
-operation and Chatwoot core patches are forbidden. Website First Line v1 accepts
-only that bounded race after exact pre-attempt authority; every reachable
-post-state is then default-deny classified as above.
+A duplicate trigger cannot create a public message, reopen resolved/snoozed
+ownership, displace another AgentBot or manufacture human takeover. Current
+v4.18.0 handoff reconciliation is read-only with respect to status/ownership; any
+future automated primitive remains subject to the durable at-most-once attempt
+boundary above.
 
 A pending-HUMAN/C3-latched episode may terminalize through **either**
 `human_takeover` or `ownership_lost`. Both permanently end autonomous AI
@@ -3793,11 +3835,14 @@ No customer messages.
 - implemented WebsiteRenderer (repository C5; unconnected/not deployed);
 - implemented TextRenderer (repository C5; unconnected/not deployed);
 - public messages only for ANSWER/CLARIFY;
-- HUMAN sends no AI preface and follows self-contained §43 state-reconciled
-  native handoff/ownership-loss rules, including explicit open+same-AgentBot
-  race residue, latched ownership_lost terminalization and a durable
-  `episode.sqlite` handoff-attempt/dispatch boundary before any native write so
-  execution-store loss cannot recreate an outcome-unknown attempt;
+- HUMAN sends no AI preface and follows self-contained §43 read/reconcile rules
+  with a mutually exclusive ownership matrix: open+no AgentBot owner at all may
+  prove `human_takeover`, another AgentBot/resolved/snoozed prove ownership loss,
+  while open/pending+same configured BabyPark AgentBot remains durable HUMAN;
+  deployed Chatwoot v4.18.0 `toggle_status(open)` is explicitly **not** a safe
+  automated handoff primitive and is forbidden for Website First Line. Any future
+  separately proven/approved safe primitive must use the durable `episode.sqlite`
+  attempt/dispatch no-retry boundary before its native write;
 - one local-filesystem writable `episode.sqlite` authority in v1;
 - measured/inherited timing thresholds only;
 - decision trace.
@@ -3927,14 +3972,16 @@ narrow C25 route, the exhaustive Stage-0 inventories freeze:
     falsely promising physical handoff while Chatwoot authority is unavailable;
     bounded outage escalation produces operator-attention while HUMAN remains
     absorbing;
-13. a self-contained §43 native handoff protocol with pre/post ownership reads,
-    explicit open+same-AgentBot race residue, `human_takeover` versus
-    `ownership_lost`, and a durable `episode.sqlite` handoff-attempt/dispatch
-    boundary before the native side effect so an outcome-unknown request cannot
-    be recreated by execution-store loss/lease expiry;
-14. complete requirements traceability through Q55/C25h for restart, crash,
+13. a self-contained §43 handoff protocol with a mutually exclusive current
+    ownership matrix and explicit deployed-v4.18 prohibition on automated
+    AgentBot `toggle_status(open)`: current pending/open+same configured bot
+    remains durable HUMAN/operator-manual, another bot/resolved/snoozed is
+    ownership loss, and only open+no AgentBot owner at all proves takeover; any
+    future separately proven safe primitive must cross the durable
+    `episode.sqlite` attempt/dispatch boundary before its native side effect;
+14. complete requirements traceability through Q57/C25h for restart, crash,
     corruption, replay, restore, outage, late-confirmation, exact ACK, MONEY,
-    handoff-attempt and causal dependent-follow-up permutations.
+    handoff-attempt, handoff-TOCTOU and causal dependent-follow-up permutations.
 
 It does not select a scheduler/workflow product, extraction producer or other
 implementation option; those decisions still require fresh Agreement §§1–3
