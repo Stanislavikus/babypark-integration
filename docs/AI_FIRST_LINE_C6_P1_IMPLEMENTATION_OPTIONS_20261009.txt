@@ -1,0 +1,502 @@
+C6-P1 IMPLEMENTATION OPTIONS — DURABLE SEMANTIC PREREQUISITES
+
+Status: PRE-CODE IMPLEMENTATION-OPTIONS EVIDENCE — NON-NORMATIVE
+Applies to: BabyPark AI First Line C6-P1 durable semantic prerequisites only
+Supersedes: C6-P1 V4 scan SHA-256 dfc51436431724048da980035af39813592786c8e9e7bfc5d30523fe6a4ba31c; generated V3 draft SHA-256 961f9c9950c49e8dc31ffd28780f68c0839a213ab50ac71bc343883279522baf remains INVALID/non-evidence
+
+NORMALIZATION=UTF-8; LF; exactly one final newline
+SCAN_UTC=2026-10-09T12:55:48Z
+REPOSITORY=Stanislavikus/babypark-integration
+CANONICAL_BASE=254206a379c0595578366fd06559341538bd09ab
+CANONICAL_BASE_TREE=42fd4766ee0b94f0b47d2dc4d29905db47bb96a6
+GOV_BLOB=e777fce4af8e8c3372f1f9de9ef7d00f786c2c89
+RISK_TIER_PROVISIONAL=HEAVY
+
+1. BOUNDED STAGE
+
+C6-P1 changes only the durable semantic/state-store concern required by the
+merged C6/C25 v0.8 contract. This stage may change FirstLineStateStore schema,
+migration, state transitions, validators and owned tests/traceability.
+
+Explicitly OUT OF SCOPE for C6-P1:
+- Chatwoot public POST/send client;
+- S1/S2 network orchestration and final Chatwoot current-conversation read;
+- extraction producer / LLM;
+- scheduler/timer/worker deployment;
+- automated Chatwoot handoff write;
+- operator-attention transport;
+- C25 dependent routing and shared matcher patch;
+- production activation/cutover.
+
+2. COMPLETE APPLICABLE REQUIREMENTS / FIT TEST
+
+P1-R01 — episode.sqlite remains the single durable semantic owner; no second
+durable workflow/state truth may become authoritative.
+P1-R02 — additive, explicitly attested schema evolution from current schema v3;
+runtime open must not silently auto-migrate. Production migration itself requires
+a verified backup before execution.
+P1-R03 — one immutable semantic origin per committed stream revision:
+PUBLIC_ACTION(action_id), DIRECT_HUMAN or NON_ACTIONABLE_ACK.
+P1-R04 — PUBLIC_ACTION origin/action provenance is permanent; fail-closed execution
+may attach monotonic durable HUMAN continuation but must not replace/replan origin.
+DIRECT_HUMAN, NON_ACTIONABLE_ACK and HUMAN continuation are absorbing for autonomous AI.
+P1-R05 — prepared public action durably stores non-dynamic descriptor/provenance
+required by v0.8, including public reason/template_id/response_locale and complete
+canonical semantic scope actually consumed by C4, with relational provenance.
+Dynamic price/stock/policy/hours/labels/rendered payload and customer raw/normalized
+text/content digests remain forbidden durable state.
+P1-R06 — MONEY scope is exact UAH when a bound exists, nullable non-negative safe
+integer min/max, zero representable, min<=max, with provenance; invalid/mixed shapes
+fail closed.
+P1-R07 — customer-event acceptance while same-stream action is SENDING/UNCERTAIN
+atomically commits accepted event + stream revision + immutable deferred-parent
+action relation in the same owning-store transaction; relation is scheduling only.
+P1-R08 — same-revision action failure cannot silently orphan semantic work as
+STALE/CANCELLED/NOT_SENT; HUMAN continuation semantics and safe supersession rules
+must be durable and concurrency-safe.
+P1-R09 — owning CLARIFY -> HUMAN keeps the one-prompt reservation consumed;
+only a safe strictly-newer pre-HUMAN AI replacement may release it.
+P1-R10 — durable SENDING is a permanent no-POST-retry boundary; current/late
+confirmation evidence must be representable monotonically without restoring AI after HUMAN.
+P1-R11 — recovery barrier / semantic recovery metadata required by the contract must
+be representable fail-closed; stale backup must never infer missing semantic fences.
+P1-R12 — one local-filesystem writable episode.sqlite authority; SQL uniqueness,
+foreign keys, BEGIN IMMEDIATE/CAS-style transitions, schema attestation and corruption
+checks remain enforceable.
+P1-R13 — customer text/PII minimization and storage-policy invariants remain intact.
+P1-R14 — no new runtime dependency unless a higher-order native/repo/OSS option is
+a proven fit and reduces implementation burden without loss of quality.
+
+3. CURRENT IMPLEMENTED/PROVEN REPOSITORY BASELINE
+
+Current FirstLineStateStore schema v3 already provides:
+- Node built-in node:sqlite DatabaseSync; no runtime package dependency;
+- BEGIN IMMEDIATE transactional writer helper and 5000 ms busy timeout;
+- unique source-event identity and deterministic local event_seq;
+- one active episode per stream;
+- canonical stable-slot provenance and typed constraint latches;
+- public_actions with unique (stream_id, prepared_stream_revision);
+- one live action per stream for PREPARED/GATING/SENDING/UNCERTAIN;
+- PREPARED -> GATING lease claim, SENDING, UNCERTAIN and confirmation primitives;
+- atomic CLARIFY reservation and transient reservation attestation;
+- explicit schema fingerprint/column/index attestation and v2->v3 explicit migration;
+- tests covering the existing v0.7/v3 store invariants.
+
+Current baseline is NOT a complete v0.8 P1 fit. It does not yet implement durable
+semantic_origin, DIRECT_HUMAN, NON_ACTIONABLE_ACK, monotonic HUMAN continuation,
+complete semantic_scope, reason/template_id/response_locale descriptor fields,
+deferred-parent relation, recovery barrier/operator-attention semantic metadata,
+or the v0.8 same-revision terminal semantics. Current topology-only public-action
+gate may still mark SENDING using v0.7 rules; that gate is outside P1 and must not
+be wired as production C6 before P2.
+
+Existing generic src/ops/durable-sqlite-backup.mjs is a proven repository primitive
+for encrypted/integrity-checked/fsynced SQLite backup/restore. It is not itself the
+P1 state-machine implementation, but it is a likely reusable activation prerequisite.
+config/storage-policy.yaml already declares episode.sqlite durable and marks its
+required off-host backup REQUIRED_NOT_CONFIGURED; therefore no production schema
+migration/activation is authorized by P1 implementation alone.
+
+4. DISCOVERY PATHS
+
+Repository inspection:
+- package.json; src/copilot/first-line-state-store.mjs;
+- src/copilot/first-line-public-action-gate.mjs; src/copilot/service.mjs;
+- src/ops/durable-sqlite-backup.mjs; config/storage-policy.yaml;
+- merged docs/AI_FIRST_LINE_DESIGN.md, AI_FIRST_LINE_ACCEPTANCE.md and
+  AI_FIRST_LINE_C6_STAGE0_CONTRACT_TRACEABILITY.md on canonical base.
+
+External discovery source reconciliation:
+- GitHub owner release API was used to resolve mutable npm-index ambiguity for BullMQ;
+  authoritative owner release at final freeze is v6.3.12, published 2026-10-09.
+- owner release API also reconfirmed pg-boss 12.37.1, Graphile Worker 0.18.0,
+  Temporal TypeScript SDK 1.24.0, Hatchet server 0.110.5 and Trigger.dev 4.7.3.
+
+External discovery queries/sources included:
+- current XState package and Stately persistence documentation;
+- BullMQ idempotent-jobs/retry/PostgreSQL documentation;
+- current pg-boss and Graphile Worker package metadata;
+- Temporal TypeScript SDK/runtime documentation;
+- Hatchet release/repository/SDK documentation;
+- Trigger.dev release/repository/self-hosting material;
+- Inngest server licensing/self-hosting material;
+- Bree package documentation;
+- Agenda and Faktory release/license material.
+
+5. CANDIDATE MATRIX
+
+CANDIDATE A — deployed Chatwoot v4.18.0 native capability
+Order: 1 — native component capability
+Version/source tuple: v4.18.0; deployed HEAD 9f920b549c14491a4e587687a3eed5d21c6ccc7d;
+deployed TREE 16432eeeef9153f7aff66be382e04a20e6f5683a.
+License/terms: Chatwoot Community source is MIT; deployed Enterprise runtime is
+used under the existing BabyPark deployment, but C6 may not patch Chatwoot core.
+Result: FAIL P1.
+Reason: Chatwoot is transcript/transport/current-owner authority, not BabyPark's
+durable semantic owner. Making it own P1 semantic-origin/CAS/provenance would require
+core/schema behavior or a second semantic truth and would violate the frozen architecture
+and core-patch rule.
+Burden: high/forbidden if implemented as core patch.
+
+CANDIDATE B — Node 24 built-in node:sqlite + existing FirstLineStateStore v3
+Order: 2 — implemented/proven repository capability, using runtime-native SQLite API
+Version tuple: repository base 254206a379c0595578366fd06559341538bd09ab;
+production Node v24.20.0; current state schema v3.
+License/terms: Node.js runtime already deployed; no new package/runtime dependency.
+Result: PARTIAL, not a complete existing fit.
+Fit: already closes the required single-store/SQL transaction/uniqueness/attestation
+foundation and most v0.7 action/clarification primitives.
+Gap: P1-R03..R11 v0.8 durable structures/transitions are not implemented.
+Burden: LOWEST if extended additively; preserves proven tests/data model and avoids
+a second persistence system.
+
+CANDIDATE C — XState 5.33.2
+Order: 3 — maintained OSS
+Version: 5.33.2 (current npm evidence at scan time).
+License: MIT. Dependencies: 0.
+Result: FAIL as a complete P1 fit; PARTIAL modeling utility only.
+Evidence/fit: XState can model state machines and expose persisted actor snapshots,
+but the host must persist/restore those snapshots. v5 documentation states invocations
+restart on restore and persisted shape must remain compatible/serializable.
+Why not selected: it does not provide BabyPark's required SQL foreign-key/unique-index/
+BEGIN IMMEDIATE/CAS/provenance/schema-attestation invariants, so we would still need the
+existing state store while adding a second state representation/migration surface.
+That is slower/higher-risk than the bounded v3->v4 extension and does not improve quality.
+
+CANDIDATE D — BullMQ 6.3.12
+Order: 3 — maintained OSS
+Version: v6.3.12, owner GitHub release published 2026-10-09T08:04:29Z.
+License: MIT.
+Backend: Redis by default; current docs also provide PostgreSQL backend.
+Result: FAIL P1.
+Evidence/fit: BullMQ provides job/worker durability and retries; its own docs require
+retryable jobs to be idempotent. Job state would live in Redis/PostgreSQL.
+Why not selected: it is execution scheduling, not semantic-origin/domain-state authority;
+adds a second durable store and cannot replace P1 SQL provenance/constraints. It also
+does not solve external ambiguous POST by itself.
+
+CANDIDATE E — pg-boss 12.37.1
+Order: 3 — maintained OSS
+Version: npm 12.37.1 observed at scan time; PostgreSQL 13+; Node 22.12+.
+License: MIT.
+Result: FAIL P1.
+Why: reliable PostgreSQL job execution, but requires PostgreSQL and creates a second
+durable execution concern; it does not implement the frozen episode semantic model.
+
+CANDIDATE F — Graphile Worker 0.18.0
+Order: 3 — maintained OSS
+Version: 0.18.0.
+License: MIT.
+Backend: PostgreSQL.
+Result: FAIL P1 for the same semantic-owner/second-store reason; appropriate only as
+a later execution-driver candidate if PostgreSQL were already a justified platform.
+
+CANDIDATE G — Temporal TypeScript SDK 1.24.0 / Temporal server
+Order: 3 — maintained OSS
+Version: @temporalio/worker 1.24.0.
+License: MIT for SDK; Temporal server OSS.
+Result: FAIL P1.
+Why: mature durable workflow engine but requires a Temporal service and moves workflow
+state into another durable system. P1 still needs BabyPark SQL domain invariants and
+external side effects still require idempotency/fencing. Integration burden is much higher.
+
+CANDIDATE H — Hatchet server 0.110.5 / TypeScript SDK current line
+Order: 3 — maintained OSS
+Server release: v0.110.5, published 2026-10-06.
+TypeScript SDK observed: 1.34.0.
+License: MIT.
+Result: FAIL P1.
+Why: durable task/workflow platform with queueing/retries; adds Hatchet durable execution
+state/service and does not replace episode.sqlite semantic constraints.
+
+CANDIDATE I — Trigger.dev 4.7.3
+Order: 3 — maintained OSS
+Release: v4.7.3, commit 10b9960, published 2026-10-06.
+License: Apache-2.0.
+Result: FAIL P1.
+Why: full durable workflow/self-host platform, materially heavier than an additive local
+state-store extension and still a second durable execution/state concern.
+
+CANDIDATE J — Inngest self-hosted server / CLI 1.44.0
+Order: 4 for server licensing fit, not qualifying simple permissive OSS server
+Version evidence: inngest-cli 1.44.0 current npm tag observed at scan time.
+License: server/CLI SSPL with delayed Apache-2.0 publication; SDKs Apache-2.0.
+Result: FAIL/EXCLUDE P1.
+Why: licensing/architecture burden plus separate durable orchestration server; no P1 fit.
+
+CANDIDATE K — Bree 9.2.9
+Order: 3 — maintained OSS
+License: MIT.
+Result: DEFERRED TO C6-P3, NOT A P1 CANDIDATE.
+Reason: lightweight scheduler; explicitly recommends using the application's persistent
+database for idempotency and does not force Redis/Mongo. It does not implement P1 semantic
+state. Host-native systemd 255 must be evaluated before Bree in P3.
+
+CANDIDATE L — Agenda 6.2.6
+Order: 3 — maintained OSS
+Version: agenda 6.2.6 (repository release metadata surfaced via agendash 8.2.4).
+License: MIT.
+Result: DEFERRED/FAIL P1; scheduler/queue concern requiring its own storage, not semantic state.
+
+CANDIDATE M — Faktory server 1.10.0
+Order: 3/4 architecture-fit depending deployment terms
+Version: 1.10.0, published 2026-08-10.
+License: server AGPL-3.0; client/worker libraries are not covered by server AGPL.
+Result: DEFERRED/FAIL P1.
+Reason: separate persistent job server/retry system; no P1 semantic-state fit and materially
+higher operational/licensing burden than existing state store.
+
+
+CANDIDATE N — DBOS Transact TypeScript 5.2
+Order: 3 — maintained OSS
+Version: v5.2, published 2026-09-29.
+License: MIT.
+SQLite status at scan time: upstream PR #1288 is OPEN and unmerged. The PR itself states
+that its SQLite system database is for local development/tests and that Postgres remains
+the recommended production system database.
+Result: FAIL P1.
+Why: the released TS production path still requires its own DBOS system database/runtime;
+the unreleased SQLite proposal cannot be production evidence. Even if merged later, DBOS
+workflow state would be a separate durable model and would not replace BabyPark's exact
+semantic-origin/provenance/relational constraints.
+
+CANDIDATE O — Restate 1.7.13
+Order: 4 for current server terms; not qualifying permissive OSS server
+Version: v1.7.13, published 2026-10-01.
+License: Business Source License 1.1 with an Additional Use Grant; changes to Apache-2.0
+four years after each release. Current license explicitly states BSL is not Open Source.
+Result: FAIL P1.
+Why: separate durable runtime/journal/KV service and non-permissive current server license;
+does not replace episode.sqlite semantic-domain invariants and adds greater operational burden.
+
+CANDIDATE P — TanStack Workflow core 0.0.4 / runtime 0.0.3
+Order: 3 — maintained OSS but very early pre-1.0 line
+License: MIT.
+Result: FAIL P1.
+Fit: headless TypeScript durable-execution engine with pluggable event log/store.
+Why not selected: persistence/timers/leases are host contracts, so BabyPark would still need
+to build and maintain a durable adapter plus a second workflow representation beside the
+domain semantic store. It does not supply the exact relational uniqueness/provenance schema
+required by P1. Current 0.0.x maturity adds avoidable production risk.
+
+CANDIDATE Q — Reflow TS 0.7.0
+Order: 3 — OSS
+Version: v0.7.0, published 2026-08-10.
+License: MIT.
+Runtime/storage: supports its own SQLite workflow store including built-in node:sqlite;
+workflow runs have leases, persisted step outputs, automatic retry/reclaim/resume.
+Result: FAIL P1.
+Why: own workflow history/step-output schema is a second durable semantic/execution model;
+generic automatic retry/reclaim is especially unsuitable as authority around BabyPark's
+permanent SENDING no-POST-retry boundary. Persisted step outputs also create unnecessary
+privacy/dynamic-payload pressure. Using it would not remove the P1 state-store work.
+
+CANDIDATE R — Botpress + Chatwoot integration
+Order: not materially plausible for P1 after functional fit test
+Result: FAIL P1 before commercial/license evaluation.
+Why: chatbot/orchestration platform, not a replacement for BabyPark's bounded local semantic
+state authority. Moving dialogue state there would violate the frozen authority split rather
+than satisfy P1. Because it fails mandatory functional/architecture fit first, commercial
+terms do not alter the P1 decision.
+
+CANDIDATE S — Tysel experimental runtime
+Order: discovered research candidate; not materially plausible for production P1
+Observed evidence: @tysel/types 0.1.1 / early 0.x ecosystem with limited authoritative
+production evidence discoverable at scan time.
+Result: EXCLUDE P1.
+Why: immature/experimental runtime; no evidence it closes the exact P1 relational/state
+invariants better or faster than extending the proven store. Re-evaluate only after a stable
+maintained release and authoritative production/storage contract exist.
+
+CANDIDATE T — Litestream 0.5.17
+Order: 3 — maintained OSS, but BACKUP/RECOVERY concern rather than P1 state machine
+Version: v0.5.17, published 2026-08-31.
+License: Apache-2.0.
+Result: DEFER TO SEPARATE BACKUP/RPO FIT STAGE; NOT A P1 IMPLEMENTATION.
+Positive fit: standalone SQLite disaster-recovery replication to file/S3; no Chatwoot/core
+dependency and potentially much better RPO than periodic snapshot backups.
+Critical current incompatibility: Litestream creates `_litestream_lock` in the SOURCE SQLite
+schema. FirstLineStateStore v3 attests an exact sqlite_master fingerprint and fails closed on
+any unexpected schema object. Therefore Litestream cannot be attached to episode.sqlite as a
+zero-change drop-in today. A separate PoC/contract change would be required before adoption.
+Decision for backup stage: evaluate the already-implemented
+`src/ops/durable-sqlite-backup.mjs` first under Agreement order 2; evaluate Litestream only
+if the existing primitive cannot meet measured RPO/RTO/restore requirements without loss of
+quality.
+
+6A. CHATWOOT UPGRADE-RESILIENCE EVIDENCE — DOWNSTREAM, NOT P1 SCOPE
+
+The additional Chatwoot research does not change P1's bounded semantic-store scope, but it
+creates mandatory P2/activation research inputs:
+- deployed Chatwoot remains v4.18.0, HEAD 9f920b549c14491a4e587687a3eed5d21c6ccc7d,
+  TREE 16432eeeef9153f7aff66be382e04a20e6f5683a;
+- Chatwoot 4.13 introduced dedicated signing secrets for API Channel and Agent Bot webhooks;
+- current Chatwoot webhook contract uses X-Chatwoot-Signature, X-Chatwoot-Timestamp and
+  X-Chatwoot-Delivery; signature verification requires raw request bytes;
+- Chatwoot has had webhook payload/format regressions across upgrades, including the
+  channel-rendered-HTML/raw-content correction around 4.12.1;
+- current docs still warn that conversation_status_changed is not supported when using
+  Agent Bot APIs instead of webhooks. Therefore no C6 authority decision may depend on
+  receiving that event;
+- v0.8's final exact live conversation read remains the authority, so webhook events are
+  triggers/hints only.
+
+P2/activation MUST therefore fit-gate and verify, before production activation:
+1. one centralized Chatwoot wire anti-corruption adapter; unknown/malformed required shape
+   default-denies while additive unknown fields do not crash parsing;
+2. HMAC verification over raw body using the exact configured AgentBot/webhook secret,
+   bounded timestamp freshness/replay policy, and X-Chatwoot-Delivery dedupe where supplied;
+3. source event idempotency remains semantic-store UNIQUE(stream_id, source_message_id);
+   ingress delivery dedupe is a separate transport concern and must not become semantic truth;
+4. contract fixtures/source-fit tests bound to the deployed Chatwoot version plus the target
+   upgrade version before every Chatwoot upgrade;
+5. final S2 current-conversation read remains mandatory regardless of webhook order/loss;
+6. upgrade runbook: staged source/API fixture verification, migration check, then production
+   rollout with rollback; a new Chatwoot version is never assumed wire-compatible.
+
+Already-implemented BabyPark evidence reduces new work: current
+`createFirstLineChatwootAuthorityReader()` is already a centralized strict parser for the
+authoritative read path; unknown public topology fails closed, and episode.sqlite stores
+opaque Chatwoot conversation/message/source identifiers rather than customer phone identity.
+Legacy normalizeConversation/evaluateOwnership remain forbidden as C6 authority by v0.8.
+
+WhatsApp BSUID changes are real channel-upgrade risk but are OUT OF SCOPE for Website First
+Line C6-P1. They must not widen this bounded stage.
+
+
+5A. P1 PHYSICAL-STATE SHAPE FROZEN BEFORE CODE
+
+The alternatives decision remains the existing store, but the minimum custom delta is not
+authorization for JS-only invariants. Under Agreement §5, state that claims cardinality,
+immutability, same-stream linkage or monotonic ownership must be enforced by SQLite
+constraints/indexes/foreign keys/triggers wherever SQLite can express it.
+
+P1-S01 — semantic origin is a separate durable relation, not inferred from public_actions.
+It has one immutable key `(stream_id, stream_revision)` and exactly one origin kind:
+`PUBLIC_ACTION`, `DIRECT_HUMAN`, or `NON_ACTIONABLE_ACK`.
+A PUBLIC_ACTION origin requires non-null action_id and relational proof that the referenced
+action belongs to the same stream and prepared revision. DIRECT_HUMAN/NON_ACTIONABLE_ACK
+require action_id NULL. Duplicate/different origin for one revision is rejected by DB state.
+
+P1-S02 — durable continuation ownership is modeled independently from action lifecycle.
+A PUBLIC_ACTION origin may monotonically acquire HUMAN continuation without replacing the
+origin or erasing action evidence. DIRECT_HUMAN is already absorbing. The schema must
+enforce at most one unresolved continuation owner per stream across live public-action and
+HUMAN-owned work; this invariant must not depend only on the current public_actions partial
+index because DIRECT_HUMAN has no action row. A dedicated owner relation and/or DB triggers
+may be used, but a second AI action while HUMAN ownership is unresolved must be impossible.
+
+P1-S03 — HUMAN continuation terminal evidence is representable without reopening AI.
+Store-level terminal outcomes include the frozen `human_takeover` and `ownership_lost`
+semantics, while the network/Chatwoot proof that authorizes those transitions remains P2.
+Late remote-send proof after HUMAN may append historical confirmation evidence but never
+remove HUMAN ownership or restore autonomous AI.
+
+P1-S04 — deferred-parent is a separate immutable same-stream relation, one at most per
+accepted customer event. It references the exact owning action/stream with relational
+integrity. Event insert + stream revision increment + deferred relation commit is one
+BEGIN IMMEDIATE transaction. Reparent/update to another action is forbidden; relation is
+scheduling topology only and never C25 causality.
+
+P1-S05 — descriptor/scope v1 is relationally checkable durable provenance, not opaque
+unchecked JSON. It must represent descriptor_version=1, reason, template_id,
+response_locale exactly uk|ru, source-event coverage and canonical semantic scope:
+PRODUCT(product_id,variant_id nullable), CATEGORY(category_id,match_mode), BRAND, STORE,
+and MONEY(currency,min_price_minor,max_price_minor).
+
+P1-S06 — MONEY DB checks are fail-closed: both bounds nullable; at least one bound when MONEY
+exists; any present bound is a non-negative INTEGER; currency is exactly UAH when MONEY
+exists; min<=max when both exist; integer zero is valid. Corrupt/partial/mixed-currency
+persisted scope cannot be read as a valid action.
+
+P1-S07 — new v4 tables are STRICT where compatible. Existing v3 tables are not gratuitously
+rewritten during migration. Immutability/cardinality rules SQLite cannot express with
+CHECK/UNIQUE/FK are enforced with named triggers. Tables/indexes/triggers are included in
+the exact sqlite_master fingerprint and column/index/trigger attestation.
+
+P1-S08 — migration is explicit `migrateV3ToV4`, following the proven v2->v3 pattern:
+0600 file; foreign_keys/busy_timeout; integrity_check; exact v3 user_version + metadata +
+sqlite_master fingerprint + source columns/indexes; one atomic migration transaction;
+advance metadata/user_version together; close/reopen and attest exact v4. `open()` on v3
+must fail; it must never auto-migrate.
+
+P1-S09 — historical v3 action states remain readable for migration compatibility, including
+NOT_SENT/HANDOFF_DONE, but v4 store APIs must not create a same-revision actionable
+NOT_SENT escape or use an old terminal state to release continuation ownership while HUMAN
+is unresolved. STALE/CANCELLED are allowed only under the frozen strictly-newer/atomic
+replacement rules.
+
+P1-S10 — clarification reservation remains consumed through HUMAN escalation and all
+post-SENDING outcomes. Only the frozen safe pre-SENDING strictly-newer replacement path may
+release an unsent reservation. No migration/default may reset clarification_prompts_sent.
+
+P1-S11 — required store-level tests are part of P1, not deferred:
+- duplicate/different same-revision origin rejected;
+- PUBLIC_ACTION origin/action stream+revision mismatch rejected;
+- origin mutation/deletion through normal store API rejected;
+- HUMAN continuation cannot be removed or followed by a second AI action;
+- DIRECT_HUMAN blocks AI ownership without any public_actions row;
+- deferred parent cross-stream/missing/duplicate/reparent rejected;
+- crash/exception cannot commit event without its required deferred relation or vice versa;
+- descriptor/scope corrupt combinations fail read/open/transition as applicable;
+- UAH zero and nullable-bound MONEY controls; mixed/non-UAH/negative/min>max rejected;
+- explicit v3->v4 migration success plus wrong-fingerprint/version/corruption rejection;
+- v3 open does not auto-migrate;
+- schema fingerprint includes new tables/indexes/triggers;
+- concurrent stale writers cannot create two origins/owners/actions.
+
+P1-S12 — P1 does NOT implement S1/S2 Chatwoot reads, webhook HMAC, public POST, scheduler,
+operator-attention delivery, C25 routing or deployment. It may expose narrow store APIs that
+P2 later calls, but cannot claim external proof it does not own.
+
+Runtime capability check on 2026-10-09:
+- development host: Node v22.22.2, SQLite 3.51.2;
+- production Chatwoot host: Node v24.20.0, SQLite 3.53.4;
+- STRICT tables, partial unique indexes, composite foreign keys and triggers were executed
+  successfully on both runtimes using built-in node:sqlite.
+
+This corrects the external review's SQLite 3.47.2 version statement while confirming its
+capability conclusion.
+
+6. DECISION-ORDER CONCLUSION
+
+Native Chatwoot capability is not a fit for P1 and may not be patched.
+The implemented repository FirstLineStateStore v3 is the correct proven foundation but is
+not itself a complete v0.8 fit. No native/repository/OSS/external candidate discovered — including DBOS TS, Restate,
+TanStack Workflow, Reflow TS, and the previously scanned workflow engines — closes all P1
+requirements while preserving episode.sqlite as the sole semantic owner without adding a
+second durable state representation/service, requiring an unreleased backend, or recreating
+the required SQL invariants.
+
+Therefore the first proven-fit path is the Agreement order-5 option:
+
+RECOMMENDATION=MINIMAL_CUSTOM_EXTENSION_OF_EXISTING_FIRST_LINE_STATE_STORE
+NEW_RUNTIME_DEPENDENCIES=0
+NEW_DURABLE_SYSTEMS=0
+CHATWOOT_CORE_CHANGES=0
+
+The implementation must be a bounded additive v3->v4 evolution of the existing proven
+episode.sqlite state store and must implement P1-S01..P1-S12 above with DB-enforced
+cardinality/immutability/linkage wherever expressible, plus focused state/property/race/
+crash/migration tests. It must not introduce XState/workflow-engine snapshots as semantic
+truth and must not implement scheduler, network send, C25 routing or deployment in P1.
+
+7. PRE-CODE OWNER DECISION REQUIRED
+
+No production code may begin until the owner explicitly approves this recommendation bound
+to the normalized SHA-256 of this evidence artifact.
+
+8. DOWNSTREAM NOTES (NOT AUTHORIZATION)
+
+- C6-P2 must run/refresh its own alternatives scan for S1/S2 relay/send/reconcile/Chatwoot APIs.
+- C6-P3 must evaluate host-native systemd 255 first for liveness scheduling; Bree 9.2.9 is
+  a plausible OSS fallback. Operator-attention must separately fit-gate Chatwoot-native
+  monotonic signals such as labels/private notes before custom signaling.
+- C25 must run/refresh its own scan and prove one shared C4/C25 matcher parity.
+- Production v3->v4 migration/activation remains blocked until the required episode.sqlite
+  backup is configured and verified; current storage policy says REQUIRED_NOT_CONFIGURED.
+- Backup/RPO is now its own future fit stage: existing durable-sqlite-backup.mjs first;
+  Litestream 0.5.17 only after a PoC resolves its source-schema `_litestream_lock` conflict
+  with FirstLineStateStore exact schema attestation.
+- P2/activation must include the signed-webhook/version-fixture/live-reread upgrade controls
+  in §6A; those are not authorization to expand C6-P1.
