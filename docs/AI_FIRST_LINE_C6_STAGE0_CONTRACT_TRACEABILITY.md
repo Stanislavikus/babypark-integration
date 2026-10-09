@@ -276,10 +276,13 @@ a ZERO-BLOCKER claim.
 | V09/R5-B2 — AgentBot-only authority can misclassify valid Enterprise AI owners/unknown types as human or unassigned; legacy normalizer coerces any non-AgentBot type to human | DESIGN §43.0 freezes an exact Enterprise-aware allowlist: User, configured AgentBot, other AgentBot, deployed `Captain::Assistant` as OTHER_PROVEN_AI, exact null/null unassigned, every other shape UNKNOWN; legacy coercion is explicitly forbidden for C6 | Q58/Q56, H01–H04 | DONE |
 
 R5-G1 is a gate-evidence blocker. The successor manifest MUST carry R4-G1 and
-also bind the deployed conversation serializer/model evidence
-(`app/views/api/v1/conversations/partials/_conversation.json.jbuilder`,
+also bind the complete deployed conversation owner JSON/model evidence:
+`app/views/api/v1/conversations/partials/_conversation.json.jbuilder`,
+`app/views/api/v1/models/_agent.json.jbuilder`,
+`app/views/api/v1/models/_agent_bot_slim.json.jbuilder`,
 `enterprise/app/views/enterprise/api/v1/conversations/partials/_assignee.json.jbuilder`,
-`app/models/conversation.rb`) plus a reproducible proof that the deployed tuple
+`enterprise/app/views/api/v1/models/captain/_assistant_slim.json.jbuilder`, and
+`app/models/conversation.rb`, plus a reproducible proof that the deployed tuple
 has `ChatwootApp.enterprise? == true`. Future production C6 verification must
 also prove strict decoder parity and non-reuse of the legacy
 `normalizeConversation()` non-AgentBot=>human coercion.
