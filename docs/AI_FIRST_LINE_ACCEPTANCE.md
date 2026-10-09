@@ -20,7 +20,7 @@ A semantic change requires review and, where applicable,
 ## A. Verified implementation facts that motivated this corpus
 
 ### Chatwoot 4.18
-- AgentBot ownership/fail-open foundation is already merged.
+- Historical AgentBot ownership/reconciler plumbing is already merged, but v0.8 §43/Q57 supersedes its handoff authority: deployed v4.18 AgentBot `toggle_status(open)` is not an authorized Website First Line handoff write.
 - Reconciler rejects any later public outgoing/template through `later_public_outgoing`.
 - HUMAN v1 therefore sends no public AI preface.
 - Chatwoot `messages.source_id` has a normal non-unique index, not a unique constraint.
@@ -1652,7 +1652,6 @@ Expected:
   `human_takeover` without a BabyPark status write.
 
 ## J. Private-note Slice D vectors
-## J. Private-note Slice D vectors
 
 ### N01
 `createHandoffNote()` public API has no `private` parameter.
@@ -2341,10 +2340,10 @@ Expected:
 - before any disposable job/claim may disappear, HUMAN continuation is durable
   in the `episode.sqlite` semantic concern;
 - execution/reconcile jobs may drive handoff but are not sole semantic truth;
-- a bound episode closes only after §43 proves either open+no-AgentBot ownership
-  (`human_takeover`) or a proven non-AI/non-handoff-eligible ownership state
-  (`ownership_lost`); unresolved open+same-AgentBot or unknown authority keeps
-  HUMAN live.
+- a bound episode closes only after the strict §43.0 decoder + §43.2 matrix
+  proves either `open + USER_OWNER/UNASSIGNED` (`human_takeover`) or an exact
+  `OWNERSHIP_LOST` row; configured-bot, pending human/unassigned, unknown owner
+  or unknown status keeps HUMAN live.
 
 ### U12 — corrupted durable semantic metadata never acquires new meaning
 Parameterize candidate count/ordinal holes and duplicates, mixed slot names,
