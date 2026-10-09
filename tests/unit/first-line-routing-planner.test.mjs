@@ -13,6 +13,7 @@ import {
   OPEN_TURN_PROJECTION_SCHEMA,
   projectOpenTurn,
 } from '../../src/copilot/first-line-routing-planner.mjs';
+import { testActionDescriptor } from '../helpers/first-line-action-descriptor.mjs';
 
 const NOW = 2_000_000_000_000;
 const PRODUCT_1 = 'prod_11111111-1111-4111-8111-111111111111';
@@ -118,6 +119,7 @@ function automationPublic(sourceMessageId) {
 function confirmedBabyparkReply(store, streamId, sourceMessageId) {
   const stream = store.getConversationStream(streamId);
   const action = store.preparePublicAction({
+    descriptor: testActionDescriptor(),
     streamId,
     preparedStreamRevision: stream.stream_revision,
     actionType: 'ANSWER',
@@ -174,6 +176,7 @@ test('routing snapshot atomically exposes live clarification reservation and can
   const episode = store.beginEpisode({ streamId: stream.stream_id });
 
   const action = store.preparePublicAction({
+    descriptor: testActionDescriptor(),
     streamId: stream.stream_id,
     episodeId: episode.episode_id,
     expectedEpisodeVersion: episode.version,
@@ -273,6 +276,7 @@ test('confirmed action cannot bless unsupported BabyPark reply metadata', t => {
 
   const current = store.getConversationStream(stream.stream_id);
   const action = store.preparePublicAction({
+    descriptor: testActionDescriptor(),
     streamId: stream.stream_id,
     preparedStreamRevision: current.stream_revision,
     actionType: 'ANSWER',
@@ -507,6 +511,7 @@ test('confirmed CLARIFY input_select is a trusted response boundary for text-col
   store.ingestConversationEvent(stream.stream_id, customerEvent(101));
   const episode = store.beginEpisode({ streamId: stream.stream_id });
   const action = store.preparePublicAction({
+    descriptor: testActionDescriptor(),
     streamId: stream.stream_id,
     episodeId: episode.episode_id,
     expectedEpisodeVersion: episode.version,

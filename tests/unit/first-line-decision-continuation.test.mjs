@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
+import { testActionDescriptor } from '../helpers/first-line-action-descriptor.mjs';
 
 import {
   FIRST_LINE_EXTRACTION_SCHEMA,
@@ -261,6 +262,7 @@ function preparedCategoryContinuation(t) {
   store.ingestConversationEvent(stream.stream_id, customerEvent(101));
   const episode = store.beginEpisode({ streamId: stream.stream_id });
   const action = store.preparePublicAction({
+    descriptor: testActionDescriptor(),
     streamId: stream.stream_id,
     episodeId: episode.episode_id,
     expectedEpisodeVersion: episode.version,
@@ -444,6 +446,7 @@ function resolveBasis(text, spans, knowledgeStore, catalogService, sourceMessage
 
 function confirmRequestedClarification(store, streamId, episode, requestedSlot) {
   const action = store.preparePublicAction({
+    descriptor: testActionDescriptor(),
     streamId,
     episodeId: episode.episode_id,
     expectedEpisodeVersion: episode.version,
@@ -970,6 +973,7 @@ function genericStructuredContinuation(t, {
   store.ingestConversationEvent(stream.stream_id, customerEvent(sourceMessageId));
   const episode = store.beginEpisode({ streamId: stream.stream_id });
   const action = store.preparePublicAction({
+    descriptor: testActionDescriptor(),
     streamId: stream.stream_id,
     episodeId: episode.episode_id,
     expectedEpisodeVersion: episode.version,

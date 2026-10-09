@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
+import { testActionDescriptor } from '../helpers/first-line-action-descriptor.mjs';
 
 import {
   FIRST_LINE_EXTRACTION_SCHEMA,
@@ -90,6 +91,7 @@ function confirmClarify(store, streamId, episode, {
 } = {}) {
   const stream = store.getConversationStream(streamId);
   const action = store.preparePublicAction({
+    descriptor: testActionDescriptor(),
     streamId,
     episodeId: episode.episode_id,
     expectedEpisodeVersion: episode.version,
@@ -751,6 +753,7 @@ test('certified C3 latch is committed atomically with standalone episode start',
   );
   assert.throws(
     () => store.preparePublicAction({
+      descriptor: testActionDescriptor(),
       streamId: stream.stream_id,
       episodeId: result.transition.episode.episode_id,
       expectedEpisodeVersion: result.transition.episode.version,

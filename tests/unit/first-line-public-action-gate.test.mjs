@@ -5,6 +5,7 @@ import path from 'node:path';
 import test from 'node:test';
 import { FirstLineStateStore } from '../../src/copilot/first-line-state-store.mjs';
 import { gatePublicActionToSending } from '../../src/copilot/first-line-public-action-gate.mjs';
+import { testActionDescriptor } from '../helpers/first-line-action-descriptor.mjs';
 
 const NOW = 2_000_000_000_000;
 
@@ -47,6 +48,7 @@ function prepareClaim(store) {
   });
   store.ingestConversationEvent(stream.stream_id, customer(101));
   const action = store.preparePublicAction({
+    descriptor: testActionDescriptor(),
     streamId: stream.stream_id,
     preparedStreamRevision: 1,
     actionType: 'ANSWER',
@@ -144,6 +146,7 @@ test('covered source deletion or reclassification stales the action without a PO
   });
   store2.ingestConversationEvent(stream2.stream_id, customer(201));
   const action2 = store2.preparePublicAction({
+    descriptor: testActionDescriptor(),
     streamId: stream2.stream_id, preparedStreamRevision: 1, actionType: 'ANSWER',
     basisEventSeqs: [1], deadlineAt: NOW + 60_000,
   });
@@ -230,6 +233,7 @@ test('episode drift stales a claimed CLARIFY action instead of leaving GATING li
   store.ingestConversationEvent(stream.stream_id, customer(101));
   let episode = store.beginEpisode({ streamId: stream.stream_id });
   const action = store.preparePublicAction({
+    descriptor: testActionDescriptor(),
     streamId: stream.stream_id,
     episodeId: episode.episode_id,
     expectedEpisodeVersion: 1,
@@ -258,11 +262,12 @@ test('episode drift stales a claimed CLARIFY action instead of leaving GATING li
 
   assert.equal(result.code, 'STALE');
   assert.equal(result.action.state, 'STALE');
+  assert.equal(result.action.continuation_owner.owner_kind, 'HUMAN');
   episode = store.getEpisode(episode.episode_id);
   assert.equal(episode.state, 'active');
-  assert.equal(episode.clarification_prompts_sent, 0);
-  assert.equal(episode.clarification_action_id, null);
-  assert.equal(episode.version, 4);
+  assert.equal(episode.clarification_prompts_sent, 1);
+  assert.equal(episode.clarification_action_id, action.action_id);
+  assert.equal(episode.version, 3);
 });
 
 test('closed episode remains immutable when its claimed CLARIFY action becomes stale', async t => {
@@ -273,6 +278,7 @@ test('closed episode remains immutable when its claimed CLARIFY action becomes s
   store.ingestConversationEvent(stream.stream_id, customer(101));
   let episode = store.beginEpisode({ streamId: stream.stream_id });
   const action = store.preparePublicAction({
+    descriptor: testActionDescriptor(),
     streamId: stream.stream_id,
     episodeId: episode.episode_id,
     expectedEpisodeVersion: 1,
@@ -327,6 +333,7 @@ test('deadline expiry during final gate stales the action and never reaches SEND
   });
   store.ingestConversationEvent(stream.stream_id, customer(101));
   const action = store.preparePublicAction({
+    descriptor: testActionDescriptor(),
     streamId: stream.stream_id,
     preparedStreamRevision: 1,
     actionType: 'ANSWER',

@@ -3,12 +3,16 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { DatabaseSync } from 'node:sqlite';
 
-const SCHEMA_VERSION = 3;
-const PREVIOUS_SCHEMA_VERSION = 2;
+const SCHEMA_VERSION = 4;
+const PREVIOUS_SCHEMA_VERSION = 3;
+const V2_SCHEMA_VERSION = 2;
+const V3_SCHEMA_VERSION = 3;
 const V2_SCHEMA_MASTER_SHA256 =
   'd84094598ffb3371293f8b361f88b19b2997a7e37a79ce5226abcd62326da19e';
 const V3_SCHEMA_MASTER_SHA256 =
   'e7a9f211d23e2439bcd63a29fb3b9ed1569e3958ca536c240af00876dd410e07';
+const V4_SCHEMA_MASTER_SHA256 =
+  'b1b7386747c89ae917b56d53489b2d3f31df68d6aca6ca3b810fc02ea4dd48c2';
 const BUSY_TIMEOUT_MS = 5000;
 const MAX_PRESENTED_CANDIDATES = 20;
 // A whole-conversation authorizing snapshot is unprovable at 1000 public rows;
@@ -83,9 +87,371 @@ const CONSTRAINT_LATCH_ORDER = Object.freeze([
   'OTHER_UNCONSUMED_CONSTRAINT',
 ]);
 
+const V4_ADDITIONS_SCHEMA_SQL = `
+CREATE UNIQUE INDEX public_actions_action_stream_revision
+  ON public_actions(action_id, stream_id, prepared_stream_revision);
+CREATE UNIQUE INDEX public_actions_action_stream
+  ON public_actions(action_id, stream_id);
+CREATE UNIQUE INDEX episodes_episode_stream
+  ON episodes(episode_id, stream_id);
+CREATE TABLE public_action_source_events (
+  action_id TEXT NOT NULL,
+  ordinal INTEGER NOT NULL CHECK(ordinal >= 1),
+  stream_id TEXT NOT NULL,
+  event_seq INTEGER NOT NULL CHECK(event_seq >= 1),
+  PRIMARY KEY(action_id, ordinal),
+  UNIQUE(action_id, event_seq),
+  FOREIGN KEY(action_id, stream_id)
+    REFERENCES public_actions(action_id, stream_id) ON DELETE RESTRICT,
+  FOREIGN KEY(stream_id, event_seq)
+    REFERENCES conversation_events(stream_id, event_seq) ON DELETE RESTRICT
+) STRICT;
+CREATE TABLE public_action_descriptors (
+  action_id TEXT PRIMARY KEY,
+  stream_id TEXT NOT NULL,
+  descriptor_version INTEGER NOT NULL CHECK(descriptor_version=1),
+  reason TEXT NOT NULL CHECK(length(reason) BETWEEN 1 AND 160),
+  template_id TEXT NOT NULL CHECK(length(template_id) BETWEEN 1 AND 160),
+  response_locale TEXT NOT NULL CHECK(response_locale IN ('uk','ru')),
+  product_id TEXT,
+  product_event_seq INTEGER CHECK(product_event_seq IS NULL OR product_event_seq >= 1),
+  variant_id TEXT,
+  variant_event_seq INTEGER CHECK(variant_event_seq IS NULL OR variant_event_seq >= 1),
+  category_id TEXT,
+  category_match_mode TEXT CHECK(category_match_mode IS NULL OR category_match_mode IN ('NODE_ONLY','INCLUDE_DESCENDANTS')),
+  category_event_seq INTEGER CHECK(category_event_seq IS NULL OR category_event_seq >= 1),
+  brand_id TEXT,
+  brand_event_seq INTEGER CHECK(brand_event_seq IS NULL OR brand_event_seq >= 1),
+  store_id TEXT,
+  store_event_seq INTEGER CHECK(store_event_seq IS NULL OR store_event_seq >= 1),
+  money_currency TEXT,
+  money_currency_event_seq INTEGER CHECK(money_currency_event_seq IS NULL OR money_currency_event_seq >= 1),
+  min_price_minor INTEGER,
+  min_price_event_seq INTEGER CHECK(min_price_event_seq IS NULL OR min_price_event_seq >= 1),
+  max_price_minor INTEGER,
+  max_price_event_seq INTEGER CHECK(max_price_event_seq IS NULL OR max_price_event_seq >= 1),
+  FOREIGN KEY(action_id, stream_id)
+    REFERENCES public_actions(action_id, stream_id) ON DELETE RESTRICT,
+  FOREIGN KEY(stream_id, product_event_seq)
+    REFERENCES conversation_events(stream_id, event_seq) ON DELETE RESTRICT,
+  FOREIGN KEY(stream_id, variant_event_seq)
+    REFERENCES conversation_events(stream_id, event_seq) ON DELETE RESTRICT,
+  FOREIGN KEY(stream_id, category_event_seq)
+    REFERENCES conversation_events(stream_id, event_seq) ON DELETE RESTRICT,
+  FOREIGN KEY(stream_id, brand_event_seq)
+    REFERENCES conversation_events(stream_id, event_seq) ON DELETE RESTRICT,
+  FOREIGN KEY(stream_id, store_event_seq)
+    REFERENCES conversation_events(stream_id, event_seq) ON DELETE RESTRICT,
+  FOREIGN KEY(stream_id, money_currency_event_seq)
+    REFERENCES conversation_events(stream_id, event_seq) ON DELETE RESTRICT,
+  FOREIGN KEY(stream_id, min_price_event_seq)
+    REFERENCES conversation_events(stream_id, event_seq) ON DELETE RESTRICT,
+  FOREIGN KEY(stream_id, max_price_event_seq)
+    REFERENCES conversation_events(stream_id, event_seq) ON DELETE RESTRICT,
+  CHECK(
+    (product_id IS NULL AND product_event_seq IS NULL AND
+     variant_id IS NULL AND variant_event_seq IS NULL) OR
+    (product_id IS NOT NULL AND product_event_seq IS NOT NULL AND
+      ((variant_id IS NULL AND variant_event_seq IS NULL) OR
+       (variant_id IS NOT NULL AND variant_event_seq IS NOT NULL)))
+  ),
+  CHECK(
+    (category_id IS NULL AND category_match_mode IS NULL AND category_event_seq IS NULL) OR
+    (category_id IS NOT NULL AND category_match_mode IS NOT NULL AND category_event_seq IS NOT NULL)
+  ),
+  CHECK((brand_id IS NULL) = (brand_event_seq IS NULL)),
+  CHECK((store_id IS NULL) = (store_event_seq IS NULL)),
+  CHECK(
+    (money_currency IS NULL AND money_currency_event_seq IS NULL AND
+     min_price_minor IS NULL AND min_price_event_seq IS NULL AND
+     max_price_minor IS NULL AND max_price_event_seq IS NULL) OR
+    (money_currency='UAH' AND money_currency_event_seq IS NOT NULL AND
+      (min_price_minor IS NOT NULL OR max_price_minor IS NOT NULL) AND
+      ((min_price_minor IS NULL AND min_price_event_seq IS NULL) OR
+       (min_price_minor IS NOT NULL AND min_price_event_seq IS NOT NULL AND
+        min_price_minor >= 0 AND min_price_minor <= 9007199254740991)) AND
+      ((max_price_minor IS NULL AND max_price_event_seq IS NULL) OR
+       (max_price_minor IS NOT NULL AND max_price_event_seq IS NOT NULL AND
+        max_price_minor >= 0 AND max_price_minor <= 9007199254740991)) AND
+      (min_price_minor IS NULL OR max_price_minor IS NULL OR min_price_minor <= max_price_minor))
+  )
+) STRICT;
+CREATE TABLE legacy_v3_actions (
+  action_id TEXT PRIMARY KEY REFERENCES public_actions(action_id) ON DELETE RESTRICT,
+  marker TEXT NOT NULL CHECK(marker='DESCRIPTOR_UNAVAILABLE')
+) STRICT;
+CREATE TRIGGER legacy_v3_actions_no_update
+BEFORE UPDATE ON legacy_v3_actions
+BEGIN
+  SELECT RAISE(ABORT,'legacy_v3_action_marker_immutable');
+END;
+CREATE TRIGGER legacy_v3_actions_no_delete
+BEFORE DELETE ON legacy_v3_actions
+BEGIN
+  SELECT RAISE(ABORT,'legacy_v3_action_marker_immutable');
+END;
+CREATE TABLE semantic_origins (
+  stream_id TEXT NOT NULL,
+  stream_revision INTEGER NOT NULL CHECK(stream_revision >= 1),
+  origin_kind TEXT NOT NULL CHECK(origin_kind IN ('PUBLIC_ACTION','DIRECT_HUMAN','NON_ACTIONABLE_ACK')),
+  action_id TEXT,
+  created_at INTEGER NOT NULL CHECK(created_at >= 0),
+  PRIMARY KEY(stream_id, stream_revision),
+  FOREIGN KEY(stream_id) REFERENCES conversation_streams(stream_id) ON DELETE RESTRICT,
+  FOREIGN KEY(action_id, stream_id, stream_revision)
+    REFERENCES public_actions(action_id, stream_id, prepared_stream_revision) ON DELETE RESTRICT,
+  CHECK(
+    (origin_kind='PUBLIC_ACTION' AND action_id IS NOT NULL) OR
+    (origin_kind IN ('DIRECT_HUMAN','NON_ACTIONABLE_ACK') AND action_id IS NULL)
+  )
+) STRICT;
+CREATE TABLE continuation_owners (
+  stream_id TEXT NOT NULL,
+  stream_revision INTEGER NOT NULL CHECK(stream_revision >= 1),
+  owner_kind TEXT NOT NULL CHECK(owner_kind IN ('PUBLIC_ACTION','HUMAN')),
+  action_id TEXT,
+  episode_id TEXT,
+  episode_version INTEGER CHECK(episode_version IS NULL OR episode_version >= 1),
+  human_reason TEXT CHECK(human_reason IS NULL OR length(human_reason) BETWEEN 1 AND 160),
+  terminal_outcome TEXT CHECK(terminal_outcome IS NULL OR terminal_outcome IN (
+    'CONFIRMED','SUPERSEDED','HUMAN_TAKEOVER','OWNERSHIP_LOST','LEGACY_V3_TERMINAL'
+  )),
+  created_at INTEGER NOT NULL CHECK(created_at >= 0),
+  updated_at INTEGER NOT NULL CHECK(updated_at >= 0),
+  terminal_at INTEGER CHECK(terminal_at IS NULL OR terminal_at >= 0),
+  PRIMARY KEY(stream_id, stream_revision),
+  FOREIGN KEY(stream_id, stream_revision)
+    REFERENCES semantic_origins(stream_id, stream_revision) ON DELETE RESTRICT,
+  FOREIGN KEY(action_id, stream_id, stream_revision)
+    REFERENCES public_actions(action_id, stream_id, prepared_stream_revision) ON DELETE RESTRICT,
+  FOREIGN KEY(episode_id, stream_id)
+    REFERENCES episodes(episode_id, stream_id) ON DELETE RESTRICT,
+  CHECK((episode_id IS NULL) = (episode_version IS NULL)),
+  CHECK(
+    (owner_kind='PUBLIC_ACTION' AND action_id IS NOT NULL AND human_reason IS NULL) OR
+    (owner_kind='HUMAN' AND human_reason IS NOT NULL)
+  ),
+  CHECK(
+    (terminal_outcome IS NULL AND terminal_at IS NULL) OR
+    (terminal_outcome IS NOT NULL AND terminal_at IS NOT NULL)
+  ),
+  CHECK(
+    terminal_outcome IS NULL OR
+    (owner_kind='PUBLIC_ACTION' AND terminal_outcome IN ('CONFIRMED','SUPERSEDED','LEGACY_V3_TERMINAL')) OR
+    (owner_kind='HUMAN' AND terminal_outcome IN ('HUMAN_TAKEOVER','OWNERSHIP_LOST','LEGACY_V3_TERMINAL'))
+  )
+) STRICT;
+CREATE UNIQUE INDEX one_unresolved_continuation_owner_per_stream
+  ON continuation_owners(stream_id) WHERE terminal_outcome IS NULL;
+CREATE TABLE deferred_event_parents (
+  stream_id TEXT NOT NULL,
+  event_seq INTEGER NOT NULL CHECK(event_seq >= 1),
+  action_id TEXT NOT NULL,
+  created_at INTEGER NOT NULL CHECK(created_at >= 0),
+  PRIMARY KEY(stream_id, event_seq),
+  FOREIGN KEY(stream_id, event_seq)
+    REFERENCES conversation_events(stream_id, event_seq) ON DELETE RESTRICT,
+  FOREIGN KEY(action_id, stream_id)
+    REFERENCES public_actions(action_id, stream_id) ON DELETE RESTRICT
+) STRICT;
+CREATE TABLE recovery_barriers (
+  recovery_epoch INTEGER PRIMARY KEY CHECK(recovery_epoch >= 1),
+  authority_key INTEGER NOT NULL DEFAULT 1 CHECK(authority_key=1),
+  reason TEXT NOT NULL CHECK(length(reason) BETWEEN 1 AND 160),
+  entered_at INTEGER NOT NULL CHECK(entered_at >= 0),
+  completion_kind TEXT CHECK(completion_kind IS NULL OR completion_kind IN (
+    'LOSSLESS_SEMANTIC_CUT','HUMAN_QUARANTINE_COMPLETE'
+  )),
+  completed_at INTEGER CHECK(completed_at IS NULL OR completed_at >= 0),
+  CHECK((completion_kind IS NULL) = (completed_at IS NULL))
+) STRICT;
+CREATE UNIQUE INDEX one_active_recovery_barrier
+  ON recovery_barriers(authority_key) WHERE completed_at IS NULL;
+CREATE TRIGGER semantic_origins_validate_insert
+BEFORE INSERT ON semantic_origins
+WHEN NEW.origin_kind IN ('DIRECT_HUMAN','NON_ACTIONABLE_ACK') AND
+  NOT EXISTS (
+    SELECT 1 FROM conversation_streams cs
+    WHERE cs.stream_id=NEW.stream_id AND cs.stream_revision=NEW.stream_revision
+  )
+BEGIN
+  SELECT RAISE(ABORT,'semantic_origin_revision_not_current');
+END;
+CREATE TRIGGER semantic_origins_no_update
+BEFORE UPDATE ON semantic_origins
+BEGIN
+  SELECT RAISE(ABORT,'semantic_origin_immutable');
+END;
+CREATE TRIGGER semantic_origins_no_delete
+BEFORE DELETE ON semantic_origins
+BEGIN
+  SELECT RAISE(ABORT,'semantic_origin_immutable');
+END;
+CREATE TRIGGER public_action_descriptors_validate_insert
+BEFORE INSERT ON public_action_descriptors
+WHEN
+  (NEW.product_event_seq IS NOT NULL AND NOT EXISTS (
+    SELECT 1 FROM public_action_source_events s
+    WHERE s.action_id=NEW.action_id AND s.stream_id=NEW.stream_id
+      AND s.event_seq=NEW.product_event_seq
+  )) OR
+  (NEW.variant_event_seq IS NOT NULL AND NOT EXISTS (
+    SELECT 1 FROM public_action_source_events s
+    WHERE s.action_id=NEW.action_id AND s.stream_id=NEW.stream_id
+      AND s.event_seq=NEW.variant_event_seq
+  )) OR
+  (NEW.category_event_seq IS NOT NULL AND NOT EXISTS (
+    SELECT 1 FROM public_action_source_events s
+    WHERE s.action_id=NEW.action_id AND s.stream_id=NEW.stream_id
+      AND s.event_seq=NEW.category_event_seq
+  )) OR
+  (NEW.brand_event_seq IS NOT NULL AND NOT EXISTS (
+    SELECT 1 FROM public_action_source_events s
+    WHERE s.action_id=NEW.action_id AND s.stream_id=NEW.stream_id
+      AND s.event_seq=NEW.brand_event_seq
+  )) OR
+  (NEW.store_event_seq IS NOT NULL AND NOT EXISTS (
+    SELECT 1 FROM public_action_source_events s
+    WHERE s.action_id=NEW.action_id AND s.stream_id=NEW.stream_id
+      AND s.event_seq=NEW.store_event_seq
+  )) OR
+  (NEW.money_currency_event_seq IS NOT NULL AND NOT EXISTS (
+    SELECT 1 FROM public_action_source_events s
+    WHERE s.action_id=NEW.action_id AND s.stream_id=NEW.stream_id
+      AND s.event_seq=NEW.money_currency_event_seq
+  )) OR
+  (NEW.min_price_event_seq IS NOT NULL AND NOT EXISTS (
+    SELECT 1 FROM public_action_source_events s
+    WHERE s.action_id=NEW.action_id AND s.stream_id=NEW.stream_id
+      AND s.event_seq=NEW.min_price_event_seq
+  )) OR
+  (NEW.max_price_event_seq IS NOT NULL AND NOT EXISTS (
+    SELECT 1 FROM public_action_source_events s
+    WHERE s.action_id=NEW.action_id AND s.stream_id=NEW.stream_id
+      AND s.event_seq=NEW.max_price_event_seq
+  ))
+BEGIN
+  SELECT RAISE(ABORT,'public_action_descriptor_provenance_outside_basis');
+END;
+CREATE TRIGGER public_action_descriptors_no_update
+BEFORE UPDATE ON public_action_descriptors
+BEGIN
+  SELECT RAISE(ABORT,'public_action_descriptor_immutable');
+END;
+CREATE TRIGGER public_action_descriptors_no_delete
+BEFORE DELETE ON public_action_descriptors
+BEGIN
+  SELECT RAISE(ABORT,'public_action_descriptor_immutable');
+END;
+CREATE TRIGGER public_action_source_events_no_update
+BEFORE UPDATE ON public_action_source_events
+BEGIN
+  SELECT RAISE(ABORT,'public_action_source_event_immutable');
+END;
+CREATE TRIGGER public_action_source_events_no_delete
+BEFORE DELETE ON public_action_source_events
+BEGIN
+  SELECT RAISE(ABORT,'public_action_source_event_immutable');
+END;
+CREATE TRIGGER deferred_event_parents_validate_insert
+BEFORE INSERT ON deferred_event_parents
+WHEN
+  NOT EXISTS (
+    SELECT 1 FROM conversation_events ce
+    WHERE ce.stream_id=NEW.stream_id AND ce.event_seq=NEW.event_seq
+      AND ce.event_kind='CUSTOMER_MESSAGE'
+  ) OR
+  NOT EXISTS (
+    SELECT 1 FROM public_actions pa
+    WHERE pa.action_id=NEW.action_id AND pa.stream_id=NEW.stream_id
+      AND pa.state IN ('SENDING','UNCERTAIN')
+  )
+BEGIN
+  SELECT RAISE(ABORT,'deferred_event_parent_invalid');
+END;
+CREATE TRIGGER deferred_event_parents_no_update
+BEFORE UPDATE ON deferred_event_parents
+BEGIN
+  SELECT RAISE(ABORT,'deferred_event_parent_immutable');
+END;
+CREATE TRIGGER deferred_event_parents_no_delete
+BEFORE DELETE ON deferred_event_parents
+BEGIN
+  SELECT RAISE(ABORT,'deferred_event_parent_immutable');
+END;
+CREATE TRIGGER continuation_owners_validate_insert
+BEFORE INSERT ON continuation_owners
+WHEN
+  (NEW.owner_kind='PUBLIC_ACTION' AND NOT EXISTS (
+    SELECT 1 FROM semantic_origins so
+    WHERE so.stream_id=NEW.stream_id AND so.stream_revision=NEW.stream_revision
+      AND so.origin_kind='PUBLIC_ACTION' AND so.action_id=NEW.action_id
+  )) OR
+  (NEW.owner_kind='HUMAN' AND NOT EXISTS (
+    SELECT 1 FROM semantic_origins so
+    WHERE so.stream_id=NEW.stream_id AND so.stream_revision=NEW.stream_revision
+      AND (
+        (so.origin_kind='PUBLIC_ACTION' AND so.action_id=NEW.action_id) OR
+        (so.origin_kind='DIRECT_HUMAN' AND NEW.action_id IS NULL)
+      )
+  ))
+BEGIN
+  SELECT RAISE(ABORT,'continuation_owner_origin_mismatch');
+END;
+CREATE TRIGGER continuation_owners_no_delete
+BEFORE DELETE ON continuation_owners
+BEGIN
+  SELECT RAISE(ABORT,'continuation_owner_history_immutable');
+END;
+CREATE TRIGGER continuation_owners_monotonic_update
+BEFORE UPDATE ON continuation_owners
+WHEN
+  NEW.stream_id <> OLD.stream_id OR
+  NEW.stream_revision <> OLD.stream_revision OR
+  COALESCE(NEW.action_id,'') <> COALESCE(OLD.action_id,'') OR
+  COALESCE(NEW.episode_id,'') <> COALESCE(OLD.episode_id,'') OR
+  (
+    COALESCE(NEW.episode_version,-1) <> COALESCE(OLD.episode_version,-1) AND
+    NOT (
+      OLD.owner_kind='PUBLIC_ACTION' AND NEW.owner_kind='HUMAN' AND
+      OLD.episode_id IS NOT NULL AND NEW.episode_version >= OLD.episode_version
+    )
+  ) OR
+  (OLD.owner_kind='HUMAN' AND NEW.owner_kind<>'HUMAN') OR
+  (OLD.terminal_outcome IS NOT NULL AND (
+    COALESCE(NEW.terminal_outcome,'') <> OLD.terminal_outcome OR
+    COALESCE(NEW.terminal_at,-1) <> OLD.terminal_at OR
+    NEW.owner_kind <> OLD.owner_kind OR
+    COALESCE(NEW.human_reason,'') <> COALESCE(OLD.human_reason,'')
+  )) OR
+  (OLD.owner_kind='HUMAN' AND COALESCE(NEW.human_reason,'') <> OLD.human_reason) OR
+  (OLD.owner_kind='PUBLIC_ACTION' AND NEW.owner_kind='PUBLIC_ACTION' AND NEW.human_reason IS NOT NULL)
+BEGIN
+  SELECT RAISE(ABORT,'continuation_owner_non_monotonic');
+END;
+CREATE TRIGGER recovery_barriers_no_delete
+BEFORE DELETE ON recovery_barriers
+BEGIN
+  SELECT RAISE(ABORT,'recovery_barrier_history_immutable');
+END;
+CREATE TRIGGER recovery_barriers_monotonic_update
+BEFORE UPDATE ON recovery_barriers
+WHEN
+  NEW.recovery_epoch <> OLD.recovery_epoch OR
+  NEW.authority_key <> OLD.authority_key OR
+  NEW.reason <> OLD.reason OR
+  NEW.entered_at <> OLD.entered_at OR
+  OLD.completed_at IS NOT NULL OR
+  NEW.completed_at IS NULL OR
+  NEW.completion_kind IS NULL
+BEGIN
+  SELECT RAISE(ABORT,'recovery_barrier_non_monotonic');
+END;
+`;
+
 const SCHEMA = `
 PRAGMA foreign_keys=ON;
-PRAGMA user_version=3;
+PRAGMA user_version=4;
 CREATE TABLE metadata (
   singleton INTEGER PRIMARY KEY CHECK(singleton=1),
   schema_version INTEGER NOT NULL,
@@ -194,6 +560,7 @@ CREATE TABLE public_action_candidates (
   value_json TEXT NOT NULL,
   PRIMARY KEY(action_id, ordinal)
 );
+${V4_ADDITIONS_SCHEMA_SQL}
 `;
 
 const EXPECTED_COLUMNS = Object.freeze({
@@ -205,10 +572,32 @@ const EXPECTED_COLUMNS = Object.freeze({
   episode_constraint_latches: ['episode_id','latch_class','first_event_seq','created_at'],
   public_actions: ['action_id','stream_id','episode_id','episode_version','prepared_stream_revision','action_type','state','basis_event_seqs_json','requested_slot','lease_token','lease_expires_at','attempts','deadline_at','confirmed_source_message_id','terminal_reason','created_at','updated_at','send_started_at','confirmed_at'],
   public_action_candidates: ['action_id','slot_name','ordinal','value_json'],
+  public_action_source_events: ['action_id','ordinal','stream_id','event_seq'],
+  public_action_descriptors: ['action_id','stream_id','descriptor_version','reason','template_id','response_locale','product_id','product_event_seq','variant_id','variant_event_seq','category_id','category_match_mode','category_event_seq','brand_id','brand_event_seq','store_id','store_event_seq','money_currency','money_currency_event_seq','min_price_minor','min_price_event_seq','max_price_minor','max_price_event_seq'],
+  legacy_v3_actions: ['action_id','marker'],
+  semantic_origins: ['stream_id','stream_revision','origin_kind','action_id','created_at'],
+  continuation_owners: ['stream_id','stream_revision','owner_kind','action_id','episode_id','episode_version','human_reason','terminal_outcome','created_at','updated_at','terminal_at'],
+  deferred_event_parents: ['stream_id','event_seq','action_id','created_at'],
+  recovery_barriers: ['recovery_epoch','authority_key','reason','entered_at','completion_kind','completed_at'],
 });
-const EXPECTED_COLUMNS_V2 = Object.freeze(
+const V4_TABLES = new Set([
+  'public_action_source_events',
+  'public_action_descriptors',
+  'legacy_v3_actions',
+  'semantic_origins',
+  'continuation_owners',
+  'deferred_event_parents',
+  'recovery_barriers',
+]);
+const EXPECTED_COLUMNS_V3 = Object.freeze(
   Object.fromEntries(
     Object.entries(EXPECTED_COLUMNS)
+      .filter(([table]) => !V4_TABLES.has(table))
+  )
+);
+const EXPECTED_COLUMNS_V2 = Object.freeze(
+  Object.fromEntries(
+    Object.entries(EXPECTED_COLUMNS_V3)
       .filter(([table]) => table !== 'episode_constraint_latches')
   )
 );
@@ -239,9 +628,44 @@ const REQUIRED_INDEXES_V2 = new Set([
   'one_live_public_action_per_stream',
   'sqlite_autoindex_public_actions_2',
 ]);
-const REQUIRED_INDEXES = new Set([
+const REQUIRED_INDEXES_V3 = new Set([
   ...REQUIRED_INDEXES_V2,
   'sqlite_autoindex_episode_constraint_latches_1',
+]);
+const REQUIRED_INDEXES = new Set([
+  ...REQUIRED_INDEXES_V3,
+  'public_actions_action_stream_revision',
+  'public_actions_action_stream',
+  'episodes_episode_stream',
+  'sqlite_autoindex_public_action_source_events_1',
+  'sqlite_autoindex_public_action_source_events_2',
+  'sqlite_autoindex_public_action_descriptors_1',
+  'sqlite_autoindex_legacy_v3_actions_1',
+  'sqlite_autoindex_semantic_origins_1',
+  'sqlite_autoindex_continuation_owners_1',
+  'one_unresolved_continuation_owner_per_stream',
+  'sqlite_autoindex_deferred_event_parents_1',
+  'one_active_recovery_barrier',
+]);
+const REQUIRED_TRIGGERS = new Set([
+  'semantic_origins_validate_insert',
+  'semantic_origins_no_update',
+  'semantic_origins_no_delete',
+  'public_action_descriptors_validate_insert',
+  'public_action_descriptors_no_update',
+  'public_action_descriptors_no_delete',
+  'legacy_v3_actions_no_update',
+  'legacy_v3_actions_no_delete',
+  'public_action_source_events_no_update',
+  'public_action_source_events_no_delete',
+  'deferred_event_parents_validate_insert',
+  'deferred_event_parents_no_update',
+  'deferred_event_parents_no_delete',
+  'continuation_owners_validate_insert',
+  'continuation_owners_no_delete',
+  'continuation_owners_monotonic_update',
+  'recovery_barriers_no_delete',
+  'recovery_barriers_monotonic_update',
 ]);
 
 export class FirstLineStateError extends Error {
@@ -484,6 +908,277 @@ function normalizeCandidate(candidate) {
   }
   return { slot: candidate.slot, value: normalizeSlotValue(candidate.slot, candidate.value) };
 }
+function normalizeSemanticScope(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value) ||
+      Object.keys(value).sort().join(',') !== 'brand_id,category,money,product,store_id') {
+    fail('FIRST_LINE_ACTION_DESCRIPTOR_INVALID',
+      'semantic_scope must contain exactly product, category, brand_id, store_id and money');
+  }
+
+  let product = null;
+  if (value.product !== null) {
+    if (!value.product || typeof value.product !== 'object' ||
+        Array.isArray(value.product) ||
+        Object.keys(value.product).sort().join(',') !== 'product_id,variant_id') {
+      fail('FIRST_LINE_ACTION_DESCRIPTOR_INVALID',
+        'semantic_scope.product must contain product_id and variant_id');
+    }
+    product = Object.freeze({
+      product_id: normalizeSlotValue('product_id', value.product.product_id),
+      variant_id: value.product.variant_id === null
+        ? null
+        : normalizeSlotValue('variant_id', value.product.variant_id),
+    });
+  }
+
+  let category = null;
+  if (value.category !== null) {
+    if (!value.category || typeof value.category !== 'object' ||
+        Array.isArray(value.category) ||
+        Object.keys(value.category).sort().join(',') !== 'category_id,match_mode') {
+      fail('FIRST_LINE_ACTION_DESCRIPTOR_INVALID',
+        'semantic_scope.category must contain category_id and match_mode');
+    }
+    category = Object.freeze({
+      category_id: normalizeSlotValue('category_id', value.category.category_id),
+      match_mode: normalizeSlotValue('category_match_mode', value.category.match_mode),
+    });
+  }
+
+  const brandId = value.brand_id === null
+    ? null
+    : normalizeSlotValue('brand_id', value.brand_id);
+  const storeId = value.store_id === null
+    ? null
+    : normalizeSlotValue('store_id', value.store_id);
+
+  let money = null;
+  if (value.money !== null) {
+    if (!value.money || typeof value.money !== 'object' ||
+        Array.isArray(value.money) ||
+        Object.keys(value.money).sort().join(',') !==
+          'currency,max_price_minor,min_price_minor') {
+      fail('FIRST_LINE_ACTION_DESCRIPTOR_INVALID',
+        'semantic_scope.money must contain currency and both nullable bounds');
+    }
+    if (value.money.currency !== 'UAH') {
+      fail('FIRST_LINE_ACTION_DESCRIPTOR_INVALID',
+        'semantic_scope.money currency must be UAH');
+    }
+    const min = value.money.min_price_minor === null
+      ? null
+      : nonNegativeInteger(value.money.min_price_minor, 'min_price_minor');
+    const max = value.money.max_price_minor === null
+      ? null
+      : nonNegativeInteger(value.money.max_price_minor, 'max_price_minor');
+    if (min === null && max === null) {
+      fail('FIRST_LINE_ACTION_DESCRIPTOR_INVALID',
+        'semantic_scope.money requires at least one bound');
+    }
+    if (min !== null && max !== null && min > max) {
+      fail('FIRST_LINE_ACTION_DESCRIPTOR_INVALID',
+        'semantic_scope.money min must not exceed max');
+    }
+    money = Object.freeze({
+      currency: 'UAH',
+      min_price_minor: min,
+      max_price_minor: max,
+    });
+  }
+
+  return Object.freeze({
+    product,
+    category,
+    brand_id: brandId,
+    store_id: storeId,
+    money,
+  });
+}
+
+function normalizeActionDescriptor(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value) ||
+      Object.keys(value).sort().join(',') !==
+        'descriptor_version,reason,response_locale,semantic_scope,template_id') {
+    fail('FIRST_LINE_ACTION_DESCRIPTOR_INVALID',
+      'descriptor must contain exactly version, reason, template, locale and semantic scope');
+  }
+  if (value.descriptor_version !== 1) {
+    fail('FIRST_LINE_ACTION_DESCRIPTOR_INVALID',
+      'descriptor_version must be exactly 1');
+  }
+  return Object.freeze({
+    descriptor_version: 1,
+    reason: safeToken(value.reason, 'descriptor_reason'),
+    template_id: safeToken(value.template_id, 'template_id'),
+    response_locale: enumValue(
+      value.response_locale,
+      new Set(['uk', 'ru']),
+      'response_locale'
+    ),
+    semantic_scope: normalizeSemanticScope(value.semantic_scope),
+  });
+}
+
+function expectedScopeProvenanceKeys(descriptor) {
+  const scope = descriptor.semantic_scope;
+  const keys = [];
+  if (scope.product !== null) {
+    keys.push('product_id');
+    if (scope.product.variant_id !== null) keys.push('variant_id');
+  }
+  if (scope.category !== null) {
+    keys.push('category_id', 'category_match_mode');
+  }
+  if (scope.brand_id !== null) keys.push('brand_id');
+  if (scope.store_id !== null) keys.push('store_id');
+  if (scope.money !== null) {
+    keys.push('currency');
+    if (scope.money.min_price_minor !== null) keys.push('min_price_minor');
+    if (scope.money.max_price_minor !== null) keys.push('max_price_minor');
+  }
+  return keys.sort();
+}
+
+function normalizeScopeProvenance(value, descriptor, basis) {
+  const expectedKeys = expectedScopeProvenanceKeys(descriptor);
+  const supplied = value ?? {};
+  if (!supplied || typeof supplied !== 'object' || Array.isArray(supplied)) {
+    fail('FIRST_LINE_ACTION_DESCRIPTOR_INVALID',
+      'scope provenance must be an object');
+  }
+  const actualKeys = Object.keys(supplied).sort();
+  if (actualKeys.join(',') !== expectedKeys.join(',')) {
+    fail('FIRST_LINE_ACTION_DESCRIPTOR_INVALID',
+      'scope provenance keys must exactly match effective semantic scope', {
+        expected_keys: expectedKeys,
+        actual_keys: actualKeys,
+      });
+  }
+
+  const basisSet = new Set(basis);
+  const normalized = {};
+  for (const key of expectedKeys) {
+    const seq = positiveInteger(
+      supplied[key],
+      'scope_provenance_' + key
+    );
+    if (!basisSet.has(seq)) {
+      fail('FIRST_LINE_ACTION_DESCRIPTOR_INVALID',
+        'scope provenance must reference an action basis event', {
+          scope_key: key,
+          event_seq: seq,
+        });
+    }
+    normalized[key] = seq;
+  }
+
+  if (descriptor.semantic_scope.category !== null &&
+      normalized.category_id !== normalized.category_match_mode) {
+    fail('FIRST_LINE_ACTION_DESCRIPTOR_INVALID',
+      'CATEGORY id/match_mode must share one source-event provenance');
+  }
+  if (descriptor.semantic_scope.money !== null) {
+    const boundSources = [];
+    if (descriptor.semantic_scope.money.min_price_minor !== null) {
+      boundSources.push(normalized.min_price_minor);
+    }
+    if (descriptor.semantic_scope.money.max_price_minor !== null) {
+      boundSources.push(normalized.max_price_minor);
+    }
+    if (!boundSources.includes(normalized.currency)) {
+      fail('FIRST_LINE_ACTION_DESCRIPTOR_INVALID',
+        'MONEY currency provenance must be owned by an effective bound');
+    }
+  }
+
+  return Object.freeze(normalized);
+}
+
+function descriptorSqlValues(streamId, descriptor, provenance) {
+  const scope = descriptor.semantic_scope;
+  return [
+    streamId,
+    descriptor.descriptor_version,
+    descriptor.reason,
+    descriptor.template_id,
+    descriptor.response_locale,
+    scope.product?.product_id ?? null,
+    provenance.product_id ?? null,
+    scope.product?.variant_id ?? null,
+    provenance.variant_id ?? null,
+    scope.category?.category_id ?? null,
+    scope.category?.match_mode ?? null,
+    provenance.category_id ?? null,
+    scope.brand_id,
+    provenance.brand_id ?? null,
+    scope.store_id,
+    provenance.store_id ?? null,
+    scope.money?.currency ?? null,
+    provenance.currency ?? null,
+    scope.money?.min_price_minor ?? null,
+    provenance.min_price_minor ?? null,
+    scope.money?.max_price_minor ?? null,
+    provenance.max_price_minor ?? null,
+  ];
+}
+
+function persistedActionDescriptor(row, actionId) {
+  if (!row) return null;
+  return persistedGuard(() => normalizeActionDescriptor({
+    descriptor_version: row.descriptor_version,
+    reason: row.reason,
+    template_id: row.template_id,
+    response_locale: row.response_locale,
+    semantic_scope: {
+      product: row.product_id === null
+        ? null
+        : { product_id: row.product_id, variant_id: row.variant_id },
+      category: row.category_id === null
+        ? null
+        : { category_id: row.category_id, match_mode: row.category_match_mode },
+      brand_id: row.brand_id,
+      store_id: row.store_id,
+      money: row.money_currency === null
+        ? null
+        : {
+            currency: row.money_currency,
+            min_price_minor: row.min_price_minor,
+            max_price_minor: row.max_price_minor,
+          },
+    },
+  }), 'persisted public action descriptor is invalid', { action_id: actionId });
+}
+
+function persistedScopeProvenance(row, descriptor, basis, actionId, streamId) {
+  return persistedGuard(() => {
+    if (row.stream_id !== streamId) {
+      fail('FIRST_LINE_VALUE_INVALID',
+        'descriptor stream does not match public action stream');
+    }
+    const supplied = {};
+    if (row.product_event_seq !== null) supplied.product_id = row.product_event_seq;
+    if (row.variant_event_seq !== null) supplied.variant_id = row.variant_event_seq;
+    if (row.category_event_seq !== null) {
+      supplied.category_id = row.category_event_seq;
+      supplied.category_match_mode = row.category_event_seq;
+    }
+    if (row.brand_event_seq !== null) supplied.brand_id = row.brand_event_seq;
+    if (row.store_event_seq !== null) supplied.store_id = row.store_event_seq;
+    if (row.money_currency_event_seq !== null) {
+      supplied.currency = row.money_currency_event_seq;
+    }
+    if (row.min_price_event_seq !== null) {
+      supplied.min_price_minor = row.min_price_event_seq;
+    }
+    if (row.max_price_event_seq !== null) {
+      supplied.max_price_minor = row.max_price_event_seq;
+    }
+    return normalizeScopeProvenance(supplied, descriptor, basis);
+  }, 'persisted public action scope provenance is invalid', {
+    action_id: actionId,
+  });
+}
+
 function normalizeBasisEventSeqs(value) {
   if (!Array.isArray(value) || value.length < 1) fail('FIRST_LINE_ACTION_BASIS_INVALID', 'basis event seqs must be non-empty');
   const out = value.map((v, i) => positiveInteger(v, 'basis_event_seq_' + i));
@@ -609,29 +1304,29 @@ export class FirstLineStateStore {
     }
     const db = new DatabaseSync(resolved);
     try {
-      db.exec(`PRAGMA foreign_keys=ON; PRAGMA busy_timeout=${BUSY_TIMEOUT_MS}`);
+      db.exec('PRAGMA foreign_keys=ON; PRAGMA busy_timeout=' + BUSY_TIMEOUT_MS);
       const integrity = db.prepare('PRAGMA integrity_check').get().integrity_check;
       if (integrity !== 'ok') {
         fail('FIRST_LINE_DB_INVALID', 'pre-migration integrity check failed', { integrity });
       }
       const version = Number(db.prepare('PRAGMA user_version').get().user_version);
-      if (version === SCHEMA_VERSION) {
-        return FirstLineStateStore.open(file, options);
+      if (version === V3_SCHEMA_VERSION) {
+        return Object.freeze({ schema_version: V3_SCHEMA_VERSION });
       }
-      if (version !== PREVIOUS_SCHEMA_VERSION) {
+      if (version !== V2_SCHEMA_VERSION) {
         fail('FIRST_LINE_DB_MIGRATION_UNSUPPORTED',
-          'database schema cannot be migrated by this release', {
-            expected_from: PREVIOUS_SCHEMA_VERSION,
-            expected_to: SCHEMA_VERSION,
+          'database schema cannot be migrated by the v2-to-v3 step', {
+            expected_from: V2_SCHEMA_VERSION,
+            expected_to: V3_SCHEMA_VERSION,
             actual: version,
           });
       }
       const metadata = db.prepare(
         'SELECT schema_version FROM metadata WHERE singleton=1'
       ).get();
-      if (Number(metadata?.schema_version) !== PREVIOUS_SCHEMA_VERSION) {
+      if (Number(metadata?.schema_version) !== V2_SCHEMA_VERSION) {
         fail('FIRST_LINE_DB_MIGRATION_UNSUPPORTED',
-          'database metadata does not match migration source');
+          'database metadata does not match v2 migration source');
       }
       const sourceSchemaFingerprint = schemaMasterFingerprint(db);
       if (sourceSchemaFingerprint !== V2_SCHEMA_MASTER_SHA256) {
@@ -642,11 +1337,11 @@ export class FirstLineStateStore {
           });
       }
       for (const [table, columns] of Object.entries(EXPECTED_COLUMNS_V2)) {
-        const actual = db.prepare(`PRAGMA table_info(${table})`).all().map(row => row.name);
+        const actual = db.prepare('PRAGMA table_info(' + table + ')').all().map(row => row.name);
         if (actual.length !== columns.length ||
             actual.some((name, index) => name !== columns[index])) {
           fail('FIRST_LINE_DB_MIGRATION_UNSUPPORTED',
-            'migration source schema attestation failed', {
+            'v2 migration source schema attestation failed', {
               table, actual, expected: columns,
             });
         }
@@ -658,15 +1353,205 @@ export class FirstLineStateStore {
       for (const name of REQUIRED_INDEXES_V2) {
         if (!sourceIndexes.has(name)) {
           fail('FIRST_LINE_DB_MIGRATION_UNSUPPORTED',
-            'migration source required index is missing', { index: name });
+            'v2 migration source required index is missing', { index: name });
         }
       }
       tx(db, () => {
         db.exec(LATCH_SCHEMA_SQL);
         db.prepare('UPDATE metadata SET schema_version=? WHERE singleton=1')
-          .run(SCHEMA_VERSION);
-        db.exec(`PRAGMA user_version=${SCHEMA_VERSION}`);
+          .run(V3_SCHEMA_VERSION);
+        db.exec('PRAGMA user_version=' + V3_SCHEMA_VERSION);
       });
+      const after = Number(db.prepare('PRAGMA user_version').get().user_version);
+      const afterMeta = Number(
+        db.prepare('SELECT schema_version FROM metadata WHERE singleton=1')
+          .get()?.schema_version
+      );
+      if (after !== V3_SCHEMA_VERSION || afterMeta !== V3_SCHEMA_VERSION) {
+        fail('FIRST_LINE_DB_MIGRATION_FAILED',
+          'v2-to-v3 schema version did not advance atomically', {
+            user_version: after,
+            metadata_version: afterMeta,
+          });
+      }
+      return Object.freeze({ schema_version: V3_SCHEMA_VERSION });
+    } finally {
+      try { db.close(); } catch {}
+      fs.chmodSync(resolved, 0o600);
+    }
+  }
+
+  static migrateV3ToV4(file, options = {}) {
+    const resolved = path.resolve(file);
+    if (!fs.existsSync(resolved)) fail('FIRST_LINE_DB_MISSING', 'database is missing');
+    if ((fs.statSync(resolved).mode & 0o077) !== 0) {
+      fail('FIRST_LINE_DB_PERMISSIONS_UNSAFE', 'database must be mode 0600');
+    }
+    const db = new DatabaseSync(resolved);
+    try {
+      db.exec('PRAGMA foreign_keys=ON; PRAGMA busy_timeout=' + BUSY_TIMEOUT_MS);
+      const integrity = db.prepare('PRAGMA integrity_check').get().integrity_check;
+      if (integrity !== 'ok') {
+        fail('FIRST_LINE_DB_INVALID', 'pre-migration integrity check failed', { integrity });
+      }
+      const version = Number(db.prepare('PRAGMA user_version').get().user_version);
+      if (version === SCHEMA_VERSION) {
+        return FirstLineStateStore.open(file, options);
+      }
+      if (version !== V3_SCHEMA_VERSION) {
+        fail('FIRST_LINE_DB_MIGRATION_UNSUPPORTED',
+          'database schema cannot be migrated by the v3-to-v4 step', {
+            expected_from: V3_SCHEMA_VERSION,
+            expected_to: SCHEMA_VERSION,
+            actual: version,
+          });
+      }
+      const metadata = db.prepare(
+        'SELECT schema_version FROM metadata WHERE singleton=1'
+      ).get();
+      if (Number(metadata?.schema_version) !== V3_SCHEMA_VERSION) {
+        fail('FIRST_LINE_DB_MIGRATION_UNSUPPORTED',
+          'database metadata does not match v3 migration source');
+      }
+      const sourceSchemaFingerprint = schemaMasterFingerprint(db);
+      if (sourceSchemaFingerprint !== V3_SCHEMA_MASTER_SHA256) {
+        fail('FIRST_LINE_DB_MIGRATION_UNSUPPORTED',
+          'database sqlite_master does not match the frozen v3 schema', {
+            expected_schema_fingerprint: V3_SCHEMA_MASTER_SHA256,
+            actual_schema_fingerprint: sourceSchemaFingerprint,
+          });
+      }
+      for (const [table, columns] of Object.entries(EXPECTED_COLUMNS_V3)) {
+        const actual = db.prepare('PRAGMA table_info(' + table + ')').all().map(row => row.name);
+        if (actual.length !== columns.length ||
+            actual.some((name, index) => name !== columns[index])) {
+          fail('FIRST_LINE_DB_MIGRATION_UNSUPPORTED',
+            'v3 migration source schema attestation failed', {
+              table, actual, expected: columns,
+            });
+        }
+      }
+      const sourceIndexes = new Set(
+        db.prepare("SELECT name FROM sqlite_master WHERE type='index'").all()
+          .map(row => row.name)
+      );
+      for (const name of REQUIRED_INDEXES_V3) {
+        if (!sourceIndexes.has(name)) {
+          fail('FIRST_LINE_DB_MIGRATION_UNSUPPORTED',
+            'v3 migration source required index is missing', { index: name });
+        }
+      }
+
+      const actions = db.prepare(
+        'SELECT * FROM public_actions ORDER BY created_at,action_id'
+      ).all().map(row => {
+        const basis = persistedGuard(
+          () => normalizeBasisEventSeqs(parseJson(row.basis_event_seqs_json)),
+          'v3 action basis is corrupt before migration',
+          { action_id: row.action_id }
+        );
+        if ((row.episode_id === null) !== (row.episode_version === null)) {
+          fail('FIRST_LINE_DB_MIGRATION_UNSUPPORTED',
+            'v3 action episode provenance is incomplete', { action_id: row.action_id });
+        }
+        for (const eventSeq of basis) {
+          const event = db.prepare(
+            'SELECT 1 AS ok FROM conversation_events WHERE stream_id=? AND event_seq=?'
+          ).get(row.stream_id, eventSeq);
+          if (!event) {
+            fail('FIRST_LINE_DB_MIGRATION_UNSUPPORTED',
+              'v3 action basis references missing/cross-stream event', {
+                action_id: row.action_id,
+                stream_id: row.stream_id,
+                event_seq: eventSeq,
+              });
+          }
+        }
+        if (row.episode_id !== null) {
+          const episode = db.prepare(
+            'SELECT stream_id FROM episodes WHERE episode_id=?'
+          ).get(row.episode_id);
+          if (!episode || episode.stream_id !== row.stream_id ||
+              !Number.isSafeInteger(row.episode_version) || row.episode_version < 1) {
+            fail('FIRST_LINE_DB_MIGRATION_UNSUPPORTED',
+              'v3 action episode provenance is invalid', { action_id: row.action_id });
+          }
+        }
+        return { row, basis };
+      });
+
+      tx(db, () => {
+        db.exec(V4_ADDITIONS_SCHEMA_SQL);
+        for (const { row, basis } of actions) {
+          for (const [index, eventSeq] of basis.entries()) {
+            db.prepare(
+              'INSERT INTO public_action_source_events ' +
+              '(action_id,ordinal,stream_id,event_seq) VALUES (?,?,?,?)'
+            ).run(row.action_id, index + 1, row.stream_id, eventSeq);
+          }
+          db.prepare(
+            "INSERT INTO legacy_v3_actions(action_id,marker) " +
+            "VALUES (?,'DESCRIPTOR_UNAVAILABLE')"
+          ).run(row.action_id);
+          db.prepare(
+            "INSERT INTO semantic_origins " +
+            "(stream_id,stream_revision,origin_kind,action_id,created_at) " +
+            "VALUES (?,?,'PUBLIC_ACTION',?,?)"
+          ).run(
+            row.stream_id,
+            row.prepared_stream_revision,
+            row.action_id,
+            row.created_at
+          );
+
+          const live = LIVE_ACTION_STATES.has(row.state);
+          const ownerKind = live ? 'HUMAN' : 'PUBLIC_ACTION';
+          const humanReason = live ? 'migration_v3_descriptor_missing' : null;
+          let ownerEpisodeVersion = row.episode_version;
+          if (live && row.episode_id !== null) {
+            const currentEpisode = db.prepare(
+              'SELECT stream_id,state,version FROM episodes WHERE episode_id=?'
+            ).get(row.episode_id);
+            if (currentEpisode?.state === 'active' &&
+                currentEpisode.stream_id === row.stream_id &&
+                currentEpisode.version >= row.episode_version) {
+              ownerEpisodeVersion = currentEpisode.version;
+            }
+          }
+          let terminalOutcome = null;
+          let terminalAt = null;
+          if (!live) {
+            terminalOutcome = row.state === 'CONFIRMED'
+              ? 'CONFIRMED'
+              : 'LEGACY_V3_TERMINAL';
+            terminalAt = row.state === 'CONFIRMED'
+              ? (row.confirmed_at ?? row.updated_at)
+              : row.updated_at;
+          }
+          db.prepare(
+            'INSERT INTO continuation_owners ' +
+            '(stream_id,stream_revision,owner_kind,action_id,episode_id,episode_version,' +
+            'human_reason,terminal_outcome,created_at,updated_at,terminal_at) ' +
+            'VALUES (?,?,?,?,?,?,?,?,?,?,?)'
+          ).run(
+            row.stream_id,
+            row.prepared_stream_revision,
+            ownerKind,
+            row.action_id,
+            row.episode_id,
+            ownerEpisodeVersion,
+            humanReason,
+            terminalOutcome,
+            row.created_at,
+            row.updated_at,
+            terminalAt
+          );
+        }
+        db.prepare('UPDATE metadata SET schema_version=? WHERE singleton=1')
+          .run(SCHEMA_VERSION);
+        db.exec('PRAGMA user_version=' + SCHEMA_VERSION);
+      });
+
       const after = Number(db.prepare('PRAGMA user_version').get().user_version);
       const afterMeta = Number(
         db.prepare('SELECT schema_version FROM metadata WHERE singleton=1')
@@ -674,15 +1559,15 @@ export class FirstLineStateStore {
       );
       if (after !== SCHEMA_VERSION || afterMeta !== SCHEMA_VERSION) {
         fail('FIRST_LINE_DB_MIGRATION_FAILED',
-          'schema version did not advance atomically', {
+          'v3-to-v4 schema version did not advance atomically', {
             user_version: after,
             metadata_version: afterMeta,
           });
       }
     } finally {
       try { db.close(); } catch {}
+      fs.chmodSync(resolved, 0o600);
     }
-    fs.chmodSync(resolved, 0o600);
     return FirstLineStateStore.open(file, options);
   }
 
@@ -755,28 +1640,87 @@ export class FirstLineStateStore {
     const at = this.now();
     return tx(this.db, () => {
       const stream = this.#requireStream(id);
-      const existing = this.db.prepare('SELECT * FROM conversation_events WHERE stream_id=? AND source_message_id=?')
-        .get(id, normalized.sourceMessageId);
-      if (existing) return { inserted: false, event: this.#eventDto(existing), stream: this.#readStream(id) };
+      const existing = this.db.prepare(
+        'SELECT * FROM conversation_events WHERE stream_id=? AND source_message_id=?'
+      ).get(id, normalized.sourceMessageId);
+      if (existing) {
+        const deferredParent = this.#readDeferredParent(id, existing.event_seq);
+        return {
+          inserted: false,
+          event: this.#eventDto(existing),
+          stream: this.#readStream(id),
+          deferred_parent: deferredParent,
+        };
+      }
+
+      let deferredAction = null;
+      if (normalized.eventKind === 'CUSTOMER_MESSAGE') {
+        const owner = this.#readUnresolvedOwner(id);
+        if (!owner || owner.owner_kind !== 'HUMAN') {
+          const sending = this.db.prepare(
+            "SELECT action_id,prepared_stream_revision,state FROM public_actions " +
+            "WHERE stream_id=? AND state IN ('SENDING','UNCERTAIN')"
+          ).all(id);
+          if (sending.length > 1) {
+            fail('FIRST_LINE_DB_CORRUPT',
+              'multiple same-stream SENDING/UNCERTAIN actions exist', { stream_id: id });
+          }
+          if (sending.length === 1) {
+            const action = sending[0];
+            if (!owner ||
+                owner.owner_kind !== 'PUBLIC_ACTION' ||
+                owner.action_id !== action.action_id ||
+                owner.stream_revision !== action.prepared_stream_revision) {
+              fail('FIRST_LINE_DB_CORRUPT',
+                'SENDING/UNCERTAIN action lacks matching continuation owner', {
+                  stream_id: id,
+                  action_id: action.action_id,
+                });
+            }
+            deferredAction = action;
+          }
+        }
+      }
 
       const seq = stream.last_event_seq + 1;
-      this.db.prepare(`INSERT INTO conversation_events
-        (stream_id,event_seq,source_message_id,event_kind,message_type,sender_class,sender_id,content_type,
-         deleted_flag,unsupported_flag,has_attachments,source_id,accepted_at)
-        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(
-          id, seq, normalized.sourceMessageId, normalized.eventKind, normalized.messageType,
-          normalized.senderClass, normalized.senderId, normalized.contentType, normalized.deleted,
-          normalized.unsupported, normalized.hasAttachments, normalized.sourceId, at
-        );
-      const changed = this.db.prepare(`UPDATE conversation_streams
-        SET last_event_seq=?,stream_revision=stream_revision+1,updated_at=?
-        WHERE stream_id=? AND last_event_seq=? AND stream_revision=?`)
-        .run(seq, at, id, stream.last_event_seq, stream.stream_revision).changes;
-      if (changed !== 1) fail('FIRST_LINE_STALE_WRITE', 'stream changed before event append', { stream_id: id });
+      this.db.prepare(
+        'INSERT INTO conversation_events ' +
+        '(stream_id,event_seq,source_message_id,event_kind,message_type,sender_class,sender_id,content_type,' +
+        'deleted_flag,unsupported_flag,has_attachments,source_id,accepted_at) ' +
+        'VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)'
+      ).run(
+        id, seq, normalized.sourceMessageId, normalized.eventKind, normalized.messageType,
+        normalized.senderClass, normalized.senderId, normalized.contentType, normalized.deleted,
+        normalized.unsupported, normalized.hasAttachments, normalized.sourceId, at
+      );
+      const changed = this.db.prepare(
+        'UPDATE conversation_streams ' +
+        'SET last_event_seq=?,stream_revision=stream_revision+1,updated_at=? ' +
+        'WHERE stream_id=? AND last_event_seq=? AND stream_revision=?'
+      ).run(seq, at, id, stream.last_event_seq, stream.stream_revision).changes;
+      if (changed !== 1) {
+        fail('FIRST_LINE_STALE_WRITE',
+          'stream changed before event append', { stream_id: id });
+      }
+
+      if (deferredAction) {
+        this.db.prepare(
+          'INSERT INTO deferred_event_parents(stream_id,event_seq,action_id,created_at) ' +
+          'VALUES (?,?,?,?)'
+        ).run(id, seq, deferredAction.action_id, at);
+      }
+
       return {
         inserted: true,
-        event: this.#eventDto(this.db.prepare('SELECT * FROM conversation_events WHERE stream_id=? AND event_seq=?').get(id, seq)),
+        event: this.#eventDto(
+          this.db.prepare(
+            'SELECT * FROM conversation_events WHERE stream_id=? AND event_seq=?'
+          ).get(id, seq)
+        ),
         stream: this.#readStream(id),
+        deferred_parent: deferredAction
+          ? this.#readDeferredParent(id, seq)
+          : null,
       };
     });
   }
@@ -898,27 +1842,98 @@ export class FirstLineStateStore {
     const id = safeToken(actionId, 'action_id');
     return tx(this.db, () => {
       const action = this.#requireAction(id);
-      if (action.state !== 'SENDING' && action.state !== 'UNCERTAIN') {
-        fail('FIRST_LINE_ACTION_STATE_INVALID', 'only SENDING/UNCERTAIN may confirm from ledger',
-          { action_id: id, state: action.state });
+      if (action.state === 'CONFIRMED') {
+        return this.#readAction(id);
+      }
+      if (!['SENDING', 'UNCERTAIN', 'HANDOFF_DONE', 'CANCELLED', 'STALE']
+        .includes(action.state)) {
+        fail('FIRST_LINE_ACTION_STATE_INVALID',
+          'action state cannot accept authoritative send evidence', {
+            action_id: id,
+            state: action.state,
+          });
       }
       const rows = this.db.prepare(
         'SELECT * FROM conversation_events WHERE stream_id=? AND source_id=? ORDER BY event_seq'
       ).all(action.stream_id, id);
       if (rows.length === 0) return null;
       if (rows.length !== 1) {
-        fail('FIRST_LINE_SOURCE_ID_AMBIGUOUS', 'multiple ledger events share action source id',
-          { action_id: id, count: rows.length });
+        fail('FIRST_LINE_SOURCE_ID_AMBIGUOUS',
+          'multiple ledger events share action source id', {
+            action_id: id,
+            count: rows.length,
+          });
       }
       const event = this.#eventDto(rows[0]);
       if (event.event_kind !== 'BABYPARK_PUBLIC_REPLY') {
-        fail('FIRST_LINE_ACTION_CONFIRMATION_INVALID', 'action source id is attached to non-BabyPark event',
-          { action_id: id, event_kind: event.event_kind });
+        fail('FIRST_LINE_ACTION_CONFIRMATION_INVALID',
+          'action source id is attached to non-BabyPark event', {
+            action_id: id,
+            event_kind: event.event_kind,
+          });
       }
+      const origin = this.#readSemanticOrigin(
+        action.stream_id,
+        action.prepared_stream_revision
+      );
+      const owner = this.#readContinuationOwner(
+        action.stream_id,
+        action.prepared_stream_revision
+      );
+      if (!origin || origin.origin_kind !== 'PUBLIC_ACTION' ||
+          origin.action_id !== id || !owner || owner.action_id !== id) {
+        fail('FIRST_LINE_DB_CORRUPT',
+          'public action confirmation lacks immutable origin/owner', {
+            action_id: id,
+          });
+      }
+      if (owner.owner_kind === 'PUBLIC_ACTION' &&
+          !['SENDING', 'UNCERTAIN'].includes(action.state)) {
+        fail('FIRST_LINE_ACTION_STATE_INVALID',
+          'only unresolved SENDING/UNCERTAIN public owner may normally confirm', {
+            action_id: id,
+            state: action.state,
+          });
+      }
+
       const at = this.now();
-      this.db.prepare(`UPDATE public_actions SET state='CONFIRMED',confirmed_source_message_id=?,confirmed_at=?,
-        lease_token=NULL,lease_expires_at=NULL,updated_at=? WHERE action_id=?`)
-        .run(event.source_message_id, at, at, id);
+      if (owner.owner_kind === 'HUMAN') {
+        this.db.prepare(
+          'UPDATE public_actions SET confirmed_source_message_id=?,confirmed_at=?,' +
+          'updated_at=? WHERE action_id=?'
+        ).run(event.source_message_id, at, at, id);
+        return this.#readAction(id);
+      }
+      if (owner.terminal_outcome !== null) {
+        fail('FIRST_LINE_ACTION_STATE_INVALID',
+          'terminal continuation cannot be confirmed again', {
+            action_id: id,
+            terminal_outcome: owner.terminal_outcome,
+          });
+      }
+
+      const ownerChanged = this.db.prepare(
+        "UPDATE continuation_owners SET terminal_outcome='CONFIRMED'," +
+        'terminal_at=?,updated_at=? WHERE stream_id=? AND stream_revision=? ' +
+        "AND owner_kind='PUBLIC_ACTION' AND action_id=? AND terminal_outcome IS NULL"
+      ).run(
+        at,
+        at,
+        action.stream_id,
+        action.prepared_stream_revision,
+        id
+      ).changes;
+      if (ownerChanged !== 1) {
+        fail('FIRST_LINE_STALE_WRITE',
+          'continuation owner changed before confirmation', {
+            action_id: id,
+          });
+      }
+      this.db.prepare(
+        "UPDATE public_actions SET state='CONFIRMED',confirmed_source_message_id=?," +
+        'confirmed_at=?,lease_token=NULL,lease_expires_at=NULL,updated_at=? ' +
+        'WHERE action_id=?'
+      ).run(event.source_message_id, at, at, id);
       return this.#readAction(id);
     });
   }
@@ -927,7 +1942,17 @@ export class FirstLineStateStore {
     const stream = safeToken(streamId, 'stream_id');
     const at = this.now();
     return tx(this.db, () => {
-      this.#requireStream(stream);
+      const currentStream = this.#requireStream(stream);
+      this.#assertAutonomousAllowed();
+      this.#assertNoHumanContinuation(stream);
+      if (currentStream.stream_revision > 0 &&
+          this.#readSemanticOrigin(stream, currentStream.stream_revision)) {
+        fail('FIRST_LINE_SEMANTIC_ORIGIN_CONFLICT',
+          'current stream revision already has an immutable semantic outcome', {
+            stream_id: stream,
+            stream_revision: currentStream.stream_revision,
+          });
+      }
       const active = this.db.prepare("SELECT episode_id FROM episodes WHERE stream_id=? AND state='active'").get(stream);
       if (active) fail('FIRST_LINE_EPISODE_ACTIVE_EXISTS', 'stream already has active episode', { stream_id: stream });
       const episodeId = safeToken(this.episodeIdFactory(), 'episode_id');
@@ -973,6 +1998,8 @@ export class FirstLineStateStore {
     const normalized = Object.entries(patch).map(([name, value]) => [name, value == null ? null : normalizeSlotValue(name, value)]);
     return tx(this.db, () => {
       const episode = this.#requireActiveEpisode(id, version);
+      this.#assertAutonomousAllowed();
+      this.#assertNoHumanContinuation(episode.stream_id);
       if (derived !== null) {
         const provenance = this.db.prepare(
           'SELECT 1 AS ok FROM conversation_events WHERE stream_id=? AND event_seq=?'
@@ -1001,7 +2028,9 @@ export class FirstLineStateStore {
     const closeReason = enumValue(reason, allowed, 'close_reason');
     const at = this.now();
     return tx(this.db, () => {
-      this.#requireActiveEpisode(id, version);
+      const episode = this.#requireActiveEpisode(id, version);
+      this.#assertAutonomousAllowed();
+      this.#assertNoHumanContinuation(episode.stream_id);
       const pendingLatch = this.db.prepare(
         'SELECT latch_class FROM episode_constraint_latches WHERE episode_id=? LIMIT 1'
       ).get(id) ?? null;
@@ -1060,6 +2089,8 @@ export class FirstLineStateStore {
         fail('FIRST_LINE_ROUTING_PLAN_STALE',
           'stream changed after constraint plan', { stream_id: stream });
       }
+      this.#assertAutonomousAllowed();
+      this.#assertNoHumanContinuation(stream);
       const currentLedger = this.#readRoutingLedger(currentStream);
       if (currentLedger.fingerprint !== expectedLedgerFingerprint) {
         fail('FIRST_LINE_ROUTING_PLAN_STALE',
@@ -1341,10 +2372,10 @@ export class FirstLineStateStore {
 
       let staledAction = null;
       if (liveAction) {
-        this.#finishUnsentAction(
+        this.#supersedeUnsentAction(
           liveAction,
-          'STALE',
           'standalone_episode_replaced',
+          'STALE',
           transitionAt
         );
         staledAction = this.#readAction(liveAction.action_id);
@@ -1479,6 +2510,17 @@ export class FirstLineStateStore {
           expected_through_event_seq: through,
           current_last_event_seq: currentStream.last_event_seq,
         });
+      }
+      this.#assertAutonomousAllowed();
+      this.#assertNoHumanContinuation(stream);
+      const committedOrigin = this.#readSemanticOrigin(stream, revision);
+      if (committedOrigin) {
+        fail('FIRST_LINE_SEMANTIC_ORIGIN_CONFLICT',
+          'selection revision already has an immutable semantic origin', {
+            stream_id: stream,
+            stream_revision: revision,
+            origin_kind: committedOrigin.origin_kind,
+          });
       }
 
       const currentLedger = this.#readRoutingLedger(currentStream);
@@ -1667,6 +2709,7 @@ export class FirstLineStateStore {
   preparePublicAction({
     streamId, episodeId = null, expectedEpisodeVersion = null, preparedStreamRevision,
     actionType, basisEventSeqs, requestedSlot = null, presentedCandidates = [], deadlineAt,
+    descriptor, scopeProvenance = {},
   }) {
     const stream = safeToken(streamId, 'stream_id');
     const revision = positiveInteger(preparedStreamRevision, 'prepared_stream_revision');
@@ -1674,16 +2717,25 @@ export class FirstLineStateStore {
     const basis = normalizeBasisEventSeqs(basisEventSeqs);
     const requested = normalizeRequestedSlot(requestedSlot);
     const deadline = positiveInteger(deadlineAt, 'deadline_at');
-    if (!Array.isArray(presentedCandidates) || presentedCandidates.length > MAX_PRESENTED_CANDIDATES) {
-      fail('FIRST_LINE_CANDIDATE_LIMIT_EXCEEDED', 'candidate list exceeds bound', { limit: MAX_PRESENTED_CANDIDATES });
+    const normalizedDescriptor = normalizeActionDescriptor(descriptor);
+    const normalizedScopeProvenance = normalizeScopeProvenance(
+      scopeProvenance,
+      normalizedDescriptor,
+      basis
+    );
+    if (!Array.isArray(presentedCandidates) ||
+        presentedCandidates.length > MAX_PRESENTED_CANDIDATES) {
+      fail('FIRST_LINE_CANDIDATE_LIMIT_EXCEEDED',
+        'candidate list exceeds bound', { limit: MAX_PRESENTED_CANDIDATES });
     }
     const candidates = presentedCandidates.map(normalizeCandidate);
     if (type === 'CLARIFY' && requested == null && candidates.length === 0) {
-      fail('FIRST_LINE_CLARIFICATION_INVALID', 'CLARIFY requires requested slot or candidates');
+      fail('FIRST_LINE_CLARIFICATION_INVALID',
+        'CLARIFY requires requested slot or candidates');
     }
     if (type === 'CLARIFY' && requested === 'money') {
       fail('FIRST_LINE_CLARIFICATION_INVALID',
-        'generic money clarification is legacy-only; v3 requires max_price_minor');
+        'generic money clarification is legacy-only; v4 requires max_price_minor');
     }
     if (type === 'CLARIFY' && requested !== null && candidates.length > 0 &&
         candidates.some(candidate => candidate.slot !== requested)) {
@@ -1693,15 +2745,30 @@ export class FirstLineStateStore {
         });
     }
     const epId = episodeId == null ? null : safeToken(episodeId, 'episode_id');
-    const epVersion = epId == null ? null : positiveInteger(expectedEpisodeVersion, 'expected_episode_version');
+    const epVersion = epId == null
+      ? null
+      : positiveInteger(expectedEpisodeVersion, 'expected_episode_version');
     const at = this.now();
 
     return tx(this.db, () => {
       const currentStream = this.#requireStream(stream);
+      this.#assertAutonomousAllowed();
       if (currentStream.stream_revision !== revision) {
-        fail('FIRST_LINE_ACTION_STALE_REVISION', 'prepared revision is not current', {
-          prepared_stream_revision: revision, current_stream_revision: currentStream.stream_revision,
-        });
+        fail('FIRST_LINE_ACTION_STALE_REVISION',
+          'prepared revision is not current', {
+            prepared_stream_revision: revision,
+            current_stream_revision: currentStream.stream_revision,
+          });
+      }
+
+      const unresolvedOwner = this.#readUnresolvedOwner(stream);
+      if (unresolvedOwner?.owner_kind === 'HUMAN') {
+        fail('FIRST_LINE_HUMAN_CONTINUATION_ACTIVE',
+          'durable HUMAN continuation blocks autonomous AI action', {
+            stream_id: stream,
+            owner_revision: unresolvedOwner.stream_revision,
+            action_id: unresolvedOwner.action_id,
+          });
       }
 
       for (const seq of basis) {
@@ -1709,14 +2776,59 @@ export class FirstLineStateStore {
           'SELECT 1 AS ok FROM conversation_events WHERE stream_id=? AND event_seq=?'
         ).get(stream, seq);
         if (!event) {
-          fail('FIRST_LINE_ACTION_BASIS_INVALID', 'action basis references an unknown stream event',
-            { stream_id: stream, event_seq: seq });
+          fail('FIRST_LINE_ACTION_BASIS_INVALID',
+            'action basis references an unknown stream event', {
+              stream_id: stream,
+              event_seq: seq,
+            });
         }
       }
 
-      const sameRevision = this.db.prepare('SELECT action_id FROM public_actions WHERE stream_id=? AND prepared_stream_revision=?')
-        .get(stream, revision);
-      if (sameRevision) return this.#readAction(sameRevision.action_id);
+      const sameRevision = this.db.prepare(
+        'SELECT action_id FROM public_actions WHERE stream_id=? AND prepared_stream_revision=?'
+      ).get(stream, revision);
+      if (sameRevision) {
+        const origin = this.#readSemanticOrigin(stream, revision);
+        if (!origin || origin.origin_kind !== 'PUBLIC_ACTION' ||
+            origin.action_id !== sameRevision.action_id) {
+          fail('FIRST_LINE_DB_CORRUPT',
+            'same-revision action lacks immutable PUBLIC_ACTION origin', {
+              stream_id: stream,
+              stream_revision: revision,
+            });
+        }
+        const existing = this.#readAction(sameRevision.action_id);
+        if (!existing.descriptor) {
+          fail('FIRST_LINE_ACTION_DESCRIPTOR_MISSING',
+            'legacy action has no v4 descriptor and cannot be replayed autonomously', {
+              action_id: existing.action_id,
+            });
+        }
+        if (existing.action_type !== type ||
+            existing.episode_id !== epId ||
+            canonicalJson(existing.basis_event_seqs) !== canonicalJson(basis) ||
+            (existing.requested_slot ?? null) !== requested ||
+            canonicalJson(existing.presented_candidates) !== canonicalJson(candidates) ||
+            canonicalJson(existing.descriptor) !== canonicalJson(normalizedDescriptor) ||
+            canonicalJson(existing.scope_provenance) !== canonicalJson(normalizedScopeProvenance)) {
+          fail('FIRST_LINE_ACTION_REPLAY_CONFLICT',
+            'same-revision retry does not match immutable action semantics', {
+              action_id: existing.action_id,
+              stream_revision: revision,
+            });
+        }
+        return existing;
+      }
+
+      const existingOrigin = this.#readSemanticOrigin(stream, revision);
+      if (existingOrigin) {
+        fail('FIRST_LINE_SEMANTIC_ORIGIN_CONFLICT',
+          'stream revision already has an immutable non-action semantic origin', {
+            stream_id: stream,
+            stream_revision: revision,
+            origin_kind: existingOrigin.origin_kind,
+          });
+      }
 
       const activeHead = this.db.prepare(
         "SELECT episode_id FROM episodes WHERE stream_id=? AND state='active'"
@@ -1735,8 +2847,12 @@ export class FirstLineStateStore {
       if (epId !== null) {
         episode = this.#requireActiveEpisode(epId, epVersion);
         if (episode.stream_id !== stream) {
-          fail('FIRST_LINE_ACTION_EPISODE_STREAM_MISMATCH', 'episode does not belong to action stream',
-            { episode_id: epId, stream_id: stream, episode_stream_id: episode.stream_id });
+          fail('FIRST_LINE_ACTION_EPISODE_STREAM_MISMATCH',
+            'episode does not belong to action stream', {
+              episode_id: epId,
+              stream_id: stream,
+              episode_stream_id: episode.stream_id,
+            });
         }
         if (!activeEpisode || activeEpisode.episode_id !== episode.episode_id) {
           fail('FIRST_LINE_ACTION_STALE_EPISODE',
@@ -1760,66 +2876,162 @@ export class FirstLineStateStore {
         }
       }
 
-      const live = this.db.prepare(`SELECT * FROM public_actions WHERE stream_id=? AND state IN
-        ('PREPARED','GATING','SENDING','UNCERTAIN')`).get(stream);
+      const live = this.db.prepare(
+        "SELECT * FROM public_actions WHERE stream_id=? " +
+        "AND state IN ('PREPARED','GATING','SENDING','UNCERTAIN')"
+      ).get(stream);
       if (live && (live.state === 'SENDING' || live.state === 'UNCERTAIN')) {
-        fail('FIRST_LINE_ACTION_SEND_UNRESOLVED', 'existing send must be reconciled before another action', {
-          action_id: live.action_id, state: live.state,
-        });
+        fail('FIRST_LINE_ACTION_SEND_UNRESOLVED',
+          'existing send must be reconciled before another action', {
+            action_id: live.action_id,
+            state: live.state,
+          });
+      }
+      if (live && (!unresolvedOwner ||
+          unresolvedOwner.owner_kind !== 'PUBLIC_ACTION' ||
+          unresolvedOwner.action_id !== live.action_id ||
+          unresolvedOwner.stream_revision !== live.prepared_stream_revision)) {
+        fail('FIRST_LINE_DB_CORRUPT',
+          'live public action lacks matching continuation owner', {
+            action_id: live.action_id,
+            stream_id: stream,
+          });
       }
 
       const replacingClarification =
-        Boolean(live && episode && live.action_type === 'CLARIFY' && live.episode_id === epId);
+        Boolean(live && episode && live.action_type === 'CLARIFY' &&
+          live.episode_id === epId);
       if (replacingClarification &&
           (episode.clarification_prompts_sent !== 1 ||
            episode.clarification_action_id !== live.action_id)) {
-        fail('FIRST_LINE_ACTION_STALE_EPISODE', 'live clarification no longer owns its episode reservation',
-          { action_id: live.action_id, episode_id: epId });
+        fail('FIRST_LINE_ACTION_STALE_EPISODE',
+          'live clarification no longer owns its episode reservation', {
+            action_id: live.action_id,
+            episode_id: epId,
+          });
       }
 
       if (type === 'CLARIFY') {
-        if (!episode) fail('FIRST_LINE_CLARIFICATION_INVALID', 'CLARIFY requires active episode');
+        if (!episode) {
+          fail('FIRST_LINE_CLARIFICATION_INVALID',
+            'CLARIFY requires active episode');
+        }
         const reservationFree =
-          episode.clarification_prompts_sent === 0 && episode.clarification_action_id === null;
+          episode.clarification_prompts_sent === 0 &&
+          episode.clarification_action_id === null;
         if (!reservationFree && !replacingClarification) {
-          fail('FIRST_LINE_CLARIFICATION_LIMIT_REACHED', 'clarification already reserved/sent');
+          fail('FIRST_LINE_CLARIFICATION_LIMIT_REACHED',
+            'clarification already reserved/sent');
         }
       }
 
       if (live) {
-        this.#cancelUnsentAction(live, 'newer_stream_revision');
+        this.#supersedeUnsentAction(live, 'newer_stream_revision');
         if (episode && replacingClarification) {
           episode = this.#requireActiveEpisode(epId, epVersion + 1);
         }
+      } else if (unresolvedOwner) {
+        fail('FIRST_LINE_DB_CORRUPT',
+          'unresolved PUBLIC_ACTION owner has no live action', {
+            stream_id: stream,
+            owner_revision: unresolvedOwner.stream_revision,
+          });
       }
 
       if (type === 'CLARIFY' &&
-          (episode.clarification_prompts_sent !== 0 || episode.clarification_action_id !== null)) {
-        fail('FIRST_LINE_CLARIFICATION_LIMIT_REACHED', 'clarification reservation was not safely released');
+          (episode.clarification_prompts_sent !== 0 ||
+           episode.clarification_action_id !== null)) {
+        fail('FIRST_LINE_CLARIFICATION_LIMIT_REACHED',
+          'clarification reservation was not safely released');
       }
 
       const actionId = safeToken(this.actionIdFactory(), 'action_id');
       const actionEpisodeVersion = episode === null
         ? null
         : (type === 'CLARIFY' ? episode.version + 1 : episode.version);
-      this.db.prepare(`INSERT INTO public_actions
-        (action_id,stream_id,episode_id,episode_version,prepared_stream_revision,action_type,state,
-         basis_event_seqs_json,requested_slot,deadline_at,created_at,updated_at)
-        VALUES (?,?,?,?,?,?,'PREPARED',?,?,?,?,?)`).run(
-          actionId, stream, epId, actionEpisodeVersion, revision, type, canonicalJson(basis), requested, deadline, at, at
-        );
+
+      this.db.prepare(
+        "INSERT INTO public_actions " +
+        "(action_id,stream_id,episode_id,episode_version,prepared_stream_revision,action_type,state," +
+        "basis_event_seqs_json,requested_slot,deadline_at,created_at,updated_at) " +
+        "VALUES (?,?,?,?,?,?,'PREPARED',?,?,?,?,?)"
+      ).run(
+        actionId,
+        stream,
+        epId,
+        actionEpisodeVersion,
+        revision,
+        type,
+        canonicalJson(basis),
+        requested,
+        deadline,
+        at,
+        at
+      );
 
       for (const [index, candidate] of candidates.entries()) {
-        this.db.prepare(`INSERT INTO public_action_candidates(action_id,slot_name,ordinal,value_json)
-          VALUES (?,?,?,?)`).run(actionId, candidate.slot, index + 1, canonicalJson(candidate.value));
+        this.db.prepare(
+          'INSERT INTO public_action_candidates(action_id,slot_name,ordinal,value_json) ' +
+          'VALUES (?,?,?,?)'
+        ).run(actionId, candidate.slot, index + 1, canonicalJson(candidate.value));
+      }
+      for (const [index, eventSeq] of basis.entries()) {
+        this.db.prepare(
+          'INSERT INTO public_action_source_events(action_id,ordinal,stream_id,event_seq) ' +
+          'VALUES (?,?,?,?)'
+        ).run(actionId, index + 1, stream, eventSeq);
       }
 
+      this.db.prepare(
+        'INSERT INTO public_action_descriptors ' +
+        '(action_id,stream_id,descriptor_version,reason,template_id,response_locale,' +
+        'product_id,product_event_seq,variant_id,variant_event_seq,' +
+        'category_id,category_match_mode,category_event_seq,' +
+        'brand_id,brand_event_seq,store_id,store_event_seq,' +
+        'money_currency,money_currency_event_seq,min_price_minor,min_price_event_seq,' +
+        'max_price_minor,max_price_event_seq) ' +
+        'VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)'
+      ).run(
+        actionId,
+        ...descriptorSqlValues(
+          stream,
+          normalizedDescriptor,
+          normalizedScopeProvenance
+        )
+      );
+
+      this.db.prepare(
+        "INSERT INTO semantic_origins " +
+        "(stream_id,stream_revision,origin_kind,action_id,created_at) " +
+        "VALUES (?,?,'PUBLIC_ACTION',?,?)"
+      ).run(stream, revision, actionId, at);
+
+      this.db.prepare(
+        "INSERT INTO continuation_owners " +
+        "(stream_id,stream_revision,owner_kind,action_id,episode_id,episode_version," +
+        "human_reason,terminal_outcome,created_at,updated_at,terminal_at) " +
+        "VALUES (?,?,'PUBLIC_ACTION',?,?,?,NULL,NULL,?,?,NULL)"
+      ).run(
+        stream,
+        revision,
+        actionId,
+        epId,
+        actionEpisodeVersion,
+        at,
+        at
+      );
+
       if (type === 'CLARIFY') {
-        const changed = this.db.prepare(`UPDATE episodes SET clarification_prompts_sent=1,requested_slot=?,
-          clarification_action_id=?,version=version+1,updated_at=?
-          WHERE episode_id=? AND state='active' AND version=? AND clarification_prompts_sent=0 AND clarification_action_id IS NULL`)
-          .run(requested, actionId, at, epId, episode.version).changes;
-        if (changed !== 1) fail('FIRST_LINE_STALE_WRITE', 'episode changed before clarification reservation');
+        const changed = this.db.prepare(
+          'UPDATE episodes SET clarification_prompts_sent=1,requested_slot=?,' +
+          'clarification_action_id=?,version=version+1,updated_at=? ' +
+          "WHERE episode_id=? AND state='active' AND version=? " +
+          'AND clarification_prompts_sent=0 AND clarification_action_id IS NULL'
+        ).run(requested, actionId, at, epId, episode.version).changes;
+        if (changed !== 1) {
+          fail('FIRST_LINE_STALE_WRITE',
+            'episode changed before clarification reservation');
+        }
       }
       return this.#readAction(actionId);
     });
@@ -1830,15 +3042,27 @@ export class FirstLineStateStore {
     const claim = safeToken(token, 'lease_token');
     const at = this.now();
     return tx(this.db, () => {
-      const row = this.db.prepare(`SELECT * FROM public_actions
-        WHERE state IN ('PREPARED','GATING')
-          AND (lease_expires_at IS NULL OR lease_expires_at<=?)
-        ORDER BY created_at,action_id LIMIT 1`).get(at);
+      this.#assertAutonomousAllowed();
+      const row = this.db.prepare(
+        "SELECT pa.* FROM public_actions pa " +
+        "JOIN continuation_owners co ON co.stream_id=pa.stream_id " +
+        "AND co.stream_revision=pa.prepared_stream_revision " +
+        "AND co.action_id=pa.action_id " +
+        "JOIN semantic_origins so ON so.stream_id=pa.stream_id " +
+        "AND so.stream_revision=pa.prepared_stream_revision " +
+        "AND so.origin_kind='PUBLIC_ACTION' AND so.action_id=pa.action_id " +
+        "JOIN public_action_descriptors pad ON pad.action_id=pa.action_id " +
+        "WHERE pa.state IN ('PREPARED','GATING') " +
+        "AND co.owner_kind='PUBLIC_ACTION' AND co.terminal_outcome IS NULL " +
+        "AND (pa.lease_expires_at IS NULL OR pa.lease_expires_at<=?) " +
+        "ORDER BY pa.created_at,pa.action_id LIMIT 1"
+      ).get(at);
       if (!row) return null;
-      const changed = this.db.prepare(`UPDATE public_actions SET state='GATING',lease_token=?,lease_expires_at=?,
-        attempts=attempts+1,updated_at=? WHERE action_id=? AND state=? AND
-        (lease_expires_at IS NULL OR lease_expires_at<=?)`)
-        .run(claim, at + lease, at, row.action_id, row.state, at).changes;
+      const changed = this.db.prepare(
+        "UPDATE public_actions SET state='GATING',lease_token=?,lease_expires_at=?," +
+        "attempts=attempts+1,updated_at=? WHERE action_id=? AND state=? AND " +
+        "(lease_expires_at IS NULL OR lease_expires_at<=?)"
+      ).run(claim, at + lease, at, row.action_id, row.state, at).changes;
       return changed === 1 ? this.#readAction(row.action_id) : null;
     });
   }
@@ -1848,10 +3072,42 @@ export class FirstLineStateStore {
     const token = safeToken(leaseToken, 'lease_token');
     const at = this.now();
     return tx(this.db, () => {
-      const action = this.#requireAction(id);
+      this.#assertAutonomousAllowed();
+      const action = this.#readAction(id);
+      if (!action) {
+        fail('FIRST_LINE_ACTION_NOT_FOUND',
+          'public action not found', { action_id: id });
+      }
       if (action.state !== 'GATING' || action.lease_token !== token) {
         fail('FIRST_LINE_ACTION_CLAIM_INVALID', 'action is not held by this gating claim', { action_id: id });
       }
+      const origin = this.#readSemanticOrigin(
+        action.stream_id,
+        action.prepared_stream_revision
+      );
+      const owner = this.#readContinuationOwner(
+        action.stream_id,
+        action.prepared_stream_revision
+      );
+      const descriptorRow = this.db.prepare(
+        'SELECT * FROM public_action_descriptors WHERE action_id=?'
+      ).get(id);
+      if (!origin || origin.origin_kind !== 'PUBLIC_ACTION' ||
+          origin.action_id !== id ||
+          !owner || owner.owner_kind !== 'PUBLIC_ACTION' ||
+          owner.action_id !== id || owner.terminal_outcome !== null) {
+        fail('FIRST_LINE_ACTION_CLAIM_INVALID',
+          'GATING action no longer owns autonomous continuation', {
+            action_id: id,
+          });
+      }
+      if (!descriptorRow) {
+        fail('FIRST_LINE_ACTION_DESCRIPTOR_MISSING',
+          'v4 send admission requires immutable descriptor', {
+            action_id: id,
+          });
+      }
+      persistedActionDescriptor(descriptorRow, id);
       if (!Number.isSafeInteger(action.lease_expires_at) || action.lease_expires_at <= at) {
         fail('FIRST_LINE_ACTION_CLAIM_EXPIRED', 'gating claim expired before SENDING', { action_id: id });
       }
@@ -1936,14 +3192,550 @@ export class FirstLineStateStore {
 
   listRecoverablePublicActions({ now = this.now() } = {}) {
     nonNegativeInteger(now, 'now');
-    return readTx(this.db, () => this.db.prepare(`SELECT action_id FROM public_actions
-      WHERE state IN ('PREPARED','GATING','SENDING','UNCERTAIN')
-      ORDER BY created_at,action_id`).all().map(row => this.#readAction(row.action_id)));
+    return readTx(this.db, () => this.db.prepare(
+      "SELECT pa.action_id FROM public_actions pa " +
+      "JOIN continuation_owners co ON co.stream_id=pa.stream_id " +
+      "AND co.stream_revision=pa.prepared_stream_revision " +
+      "AND co.action_id=pa.action_id " +
+      "WHERE pa.state IN ('PREPARED','GATING','SENDING','UNCERTAIN') " +
+      "AND co.owner_kind='PUBLIC_ACTION' AND co.terminal_outcome IS NULL " +
+      "ORDER BY pa.created_at,pa.action_id"
+    ).all().map(row => this.#readAction(row.action_id)));
   }
 
   getPublicAction(actionId) {
     const id = safeToken(actionId, 'action_id');
     return readTx(this.db, () => this.#readAction(id));
+  }
+
+  getSemanticOrigin(streamId, streamRevision) {
+    const stream = safeToken(streamId, 'stream_id');
+    const revision = positiveInteger(streamRevision, 'stream_revision');
+    return readTx(this.db, () => {
+      this.#requireStream(stream);
+      return this.#readSemanticOrigin(stream, revision);
+    });
+  }
+
+  getContinuationOwner(streamId, streamRevision) {
+    const stream = safeToken(streamId, 'stream_id');
+    const revision = positiveInteger(streamRevision, 'stream_revision');
+    return readTx(this.db, () => {
+      this.#requireStream(stream);
+      return this.#readContinuationOwner(stream, revision);
+    });
+  }
+
+  getUnresolvedContinuationOwner(streamId) {
+    const stream = safeToken(streamId, 'stream_id');
+    return readTx(this.db, () => {
+      this.#requireStream(stream);
+      return this.#readUnresolvedOwner(stream);
+    });
+  }
+
+  getDeferredEventParent(streamId, eventSeq) {
+    const stream = safeToken(streamId, 'stream_id');
+    const seq = positiveInteger(eventSeq, 'event_seq');
+    return readTx(this.db, () => {
+      this.#requireStream(stream);
+      return this.#readDeferredParent(stream, seq);
+    });
+  }
+
+  getActiveRecoveryBarrier() {
+    return readTx(this.db, () => this.#readRecoveryBarrier());
+  }
+
+  enterRecoveryBarrier({ reason }) {
+    const barrierReason = safeToken(reason, 'recovery_reason');
+    const at = this.now();
+    return tx(this.db, () => {
+      const active = this.#readRecoveryBarrier();
+      if (active) return active;
+      const nextEpoch = Number(this.db.prepare(
+        'SELECT COALESCE(MAX(recovery_epoch),0)+1 AS next_epoch FROM recovery_barriers'
+      ).get().next_epoch);
+      positiveInteger(nextEpoch, 'recovery_epoch');
+      this.db.prepare(
+        'INSERT INTO recovery_barriers ' +
+        '(recovery_epoch,authority_key,reason,entered_at,completion_kind,completed_at) ' +
+        'VALUES (?,1,?,?,NULL,NULL)'
+      ).run(nextEpoch, barrierReason, at);
+      return this.#readRecoveryBarrier();
+    });
+  }
+
+  completeRecoveryBarrier(recoveryEpoch, { completion }) {
+    const epoch = positiveInteger(recoveryEpoch, 'recovery_epoch');
+    const completionKind = enumValue(
+      completion,
+      new Set(['LOSSLESS_SEMANTIC_CUT', 'HUMAN_QUARANTINE_COMPLETE']),
+      'recovery_completion'
+    );
+    const at = this.now();
+    return tx(this.db, () => {
+      const active = this.#readRecoveryBarrier();
+      if (!active || active.recovery_epoch !== epoch) {
+        fail('FIRST_LINE_RECOVERY_BARRIER_STALE',
+          'recovery barrier is no longer the active recovery epoch', {
+            recovery_epoch: epoch,
+            active_recovery_epoch: active?.recovery_epoch ?? null,
+          });
+      }
+      if (completionKind === 'HUMAN_QUARANTINE_COMPLETE') {
+        const unresolvedPublic = this.db.prepare(
+          "SELECT COUNT(*) AS n FROM continuation_owners " +
+          "WHERE terminal_outcome IS NULL AND owner_kind='PUBLIC_ACTION'"
+        ).get().n;
+        if (unresolvedPublic !== 0) {
+          fail('FIRST_LINE_RECOVERY_BARRIER_UNSAFE_COMPLETION',
+            'HUMAN quarantine cannot complete while public continuation remains live', {
+              unresolved_public_owners: unresolvedPublic,
+            });
+        }
+      }
+      const changed = this.db.prepare(
+        'UPDATE recovery_barriers SET completion_kind=?,completed_at=? ' +
+        'WHERE recovery_epoch=? AND completed_at IS NULL'
+      ).run(completionKind, at, epoch).changes;
+      if (changed !== 1) {
+        fail('FIRST_LINE_STALE_WRITE',
+          'recovery barrier changed before completion', {
+            recovery_epoch: epoch,
+          });
+      }
+      return this.#readRecoveryBarrier(epoch);
+    });
+  }
+
+  commitDirectHumanOrigin({
+    streamId,
+    streamRevision,
+    reason,
+    episodeId = null,
+    expectedEpisodeVersion = null,
+  }) {
+    const stream = safeToken(streamId, 'stream_id');
+    const revision = positiveInteger(streamRevision, 'stream_revision');
+    const humanReason = safeToken(reason, 'human_reason');
+    const requestedEpisodeId = episodeId === null
+      ? null
+      : safeToken(episodeId, 'episode_id');
+    const requestedEpisodeVersion = requestedEpisodeId === null
+      ? null
+      : positiveInteger(expectedEpisodeVersion, 'expected_episode_version');
+    const at = this.now();
+
+    return tx(this.db, () => {
+      const currentStream = this.#requireStream(stream);
+      if (currentStream.stream_revision !== revision) {
+        fail('FIRST_LINE_ROUTING_PLAN_STALE',
+          'DIRECT_HUMAN origin requires the current stream revision', {
+            expected_stream_revision: revision,
+            current_stream_revision: currentStream.stream_revision,
+          });
+      }
+
+      const existing = this.#readSemanticOrigin(stream, revision);
+      if (existing) {
+        if (existing.origin_kind !== 'DIRECT_HUMAN') {
+          fail('FIRST_LINE_SEMANTIC_ORIGIN_CONFLICT',
+            'stream revision already has another semantic origin', {
+              stream_id: stream,
+              stream_revision: revision,
+              origin_kind: existing.origin_kind,
+            });
+        }
+        const owner = this.#readContinuationOwner(stream, revision);
+        if (!owner || owner.owner_kind !== 'HUMAN' ||
+            owner.action_id !== null ||
+            owner.human_reason !== humanReason) {
+          fail('FIRST_LINE_DB_CORRUPT',
+            'DIRECT_HUMAN origin lacks matching durable HUMAN owner', {
+              stream_id: stream,
+              stream_revision: revision,
+            });
+        }
+        return Object.freeze({ origin: existing, continuation_owner: owner });
+      }
+
+      const unresolved = this.#readUnresolvedOwner(stream);
+      if (unresolved) {
+        fail('FIRST_LINE_CONTINUATION_OWNER_CONFLICT',
+          'another continuation already owns the stream', {
+            stream_id: stream,
+            owner_revision: unresolved.stream_revision,
+            owner_kind: unresolved.owner_kind,
+          });
+      }
+      const action = this.db.prepare(
+        'SELECT action_id FROM public_actions WHERE stream_id=? AND prepared_stream_revision=?'
+      ).get(stream, revision);
+      if (action) {
+        fail('FIRST_LINE_DB_CORRUPT',
+          'same-revision action exists without semantic origin', {
+            stream_id: stream,
+            stream_revision: revision,
+            action_id: action.action_id,
+          });
+      }
+
+      const activeHead = this.db.prepare(
+        "SELECT episode_id FROM episodes WHERE stream_id=? AND state='active'"
+      ).get(stream) ?? null;
+      let boundEpisode = null;
+      if (activeHead) {
+        boundEpisode = this.#readEpisode(activeHead.episode_id);
+        if (requestedEpisodeId !== null &&
+            (requestedEpisodeId !== boundEpisode.episode_id ||
+             requestedEpisodeVersion !== boundEpisode.version)) {
+          fail('FIRST_LINE_STALE_WRITE',
+            'active episode changed before DIRECT_HUMAN commit', {
+              stream_id: stream,
+              active_episode_id: boundEpisode.episode_id,
+              active_episode_version: boundEpisode.version,
+            });
+        }
+      } else if (requestedEpisodeId !== null) {
+        fail('FIRST_LINE_STALE_WRITE',
+          'requested DIRECT_HUMAN episode is no longer active', {
+            episode_id: requestedEpisodeId,
+          });
+      }
+
+      this.db.prepare(
+        "INSERT INTO semantic_origins " +
+        "(stream_id,stream_revision,origin_kind,action_id,created_at) " +
+        "VALUES (?,?,'DIRECT_HUMAN',NULL,?)"
+      ).run(stream, revision, at);
+      this.db.prepare(
+        "INSERT INTO continuation_owners " +
+        "(stream_id,stream_revision,owner_kind,action_id,episode_id,episode_version," +
+        "human_reason,terminal_outcome,created_at,updated_at,terminal_at) " +
+        "VALUES (?,?,'HUMAN',NULL,?,?,?,NULL,?,?,NULL)"
+      ).run(
+        stream,
+        revision,
+        boundEpisode?.episode_id ?? null,
+        boundEpisode?.version ?? null,
+        humanReason,
+        at,
+        at
+      );
+      return Object.freeze({
+        origin: this.#readSemanticOrigin(stream, revision),
+        continuation_owner: this.#readContinuationOwner(stream, revision),
+      });
+    });
+  }
+
+  commitNonActionableAckOrigin({
+    streamId,
+    streamRevision,
+    episodeId = null,
+    expectedEpisodeVersion = null,
+  }) {
+    const stream = safeToken(streamId, 'stream_id');
+    const revision = positiveInteger(streamRevision, 'stream_revision');
+    const requestedEpisodeId = episodeId === null
+      ? null
+      : safeToken(episodeId, 'episode_id');
+    const requestedEpisodeVersion = requestedEpisodeId === null
+      ? null
+      : positiveInteger(expectedEpisodeVersion, 'expected_episode_version');
+    const at = this.now();
+
+    return tx(this.db, () => {
+      const currentStream = this.#requireStream(stream);
+      this.#assertAutonomousAllowed();
+      this.#assertNoHumanContinuation(stream);
+      if (currentStream.stream_revision !== revision) {
+        fail('FIRST_LINE_ROUTING_PLAN_STALE',
+          'NON_ACTIONABLE_ACK requires the current stream revision', {
+            expected_stream_revision: revision,
+            current_stream_revision: currentStream.stream_revision,
+          });
+      }
+
+      const existing = this.#readSemanticOrigin(stream, revision);
+      if (existing) {
+        if (existing.origin_kind !== 'NON_ACTIONABLE_ACK') {
+          fail('FIRST_LINE_SEMANTIC_ORIGIN_CONFLICT',
+            'stream revision already has another semantic origin', {
+              stream_id: stream,
+              stream_revision: revision,
+              origin_kind: existing.origin_kind,
+            });
+        }
+        return existing;
+      }
+
+      if (this.#readUnresolvedOwner(stream)) {
+        fail('FIRST_LINE_CONTINUATION_OWNER_CONFLICT',
+          'ACK cannot replace a live public/HUMAN continuation', {
+            stream_id: stream,
+          });
+      }
+      const action = this.db.prepare(
+        'SELECT action_id FROM public_actions WHERE stream_id=? AND prepared_stream_revision=?'
+      ).get(stream, revision);
+      if (action) {
+        fail('FIRST_LINE_DB_CORRUPT',
+          'same-revision action exists without semantic origin', {
+            stream_id: stream,
+            stream_revision: revision,
+            action_id: action.action_id,
+          });
+      }
+
+      const activeHead = this.db.prepare(
+        "SELECT episode_id FROM episodes WHERE stream_id=? AND state='active'"
+      ).get(stream) ?? null;
+      if (activeHead) {
+        if (requestedEpisodeId === null) {
+          fail('FIRST_LINE_ACTION_EPISODE_REQUIRED',
+            'ACK must CAS-close the active episode in the same transaction', {
+              stream_id: stream,
+              active_episode_id: activeHead.episode_id,
+            });
+        }
+        const episode = this.#requireActiveEpisode(
+          requestedEpisodeId,
+          requestedEpisodeVersion
+        );
+        if (episode.stream_id !== stream ||
+            episode.episode_id !== activeHead.episode_id) {
+          fail('FIRST_LINE_ACTION_EPISODE_STREAM_MISMATCH',
+            'ACK episode does not own the stream', {
+              episode_id: requestedEpisodeId,
+              stream_id: stream,
+            });
+        }
+        const latch = this.db.prepare(
+          'SELECT latch_class FROM episode_constraint_latches WHERE episode_id=? LIMIT 1'
+        ).get(episode.episode_id) ?? null;
+        if (latch) {
+          fail('FIRST_LINE_PENDING_HUMAN_LATCH',
+            'pending HUMAN latch forbids silent ACK', {
+              episode_id: episode.episode_id,
+              latch_class: latch.latch_class,
+            });
+        }
+        const changed = this.db.prepare(
+          "UPDATE episodes SET state='closed',version=version+1,updated_at=?," +
+          "closed_at=?,close_reason='non_actionable_ack' " +
+          "WHERE episode_id=? AND stream_id=? AND state='active' AND version=?"
+        ).run(
+          at,
+          at,
+          episode.episode_id,
+          stream,
+          episode.version
+        ).changes;
+        if (changed !== 1) {
+          fail('FIRST_LINE_STALE_WRITE',
+            'episode changed before ACK commit', {
+              episode_id: episode.episode_id,
+            });
+        }
+      } else if (requestedEpisodeId !== null) {
+        fail('FIRST_LINE_STALE_WRITE',
+          'requested ACK episode is no longer active', {
+            episode_id: requestedEpisodeId,
+          });
+      }
+
+      this.db.prepare(
+        "INSERT INTO semantic_origins " +
+        "(stream_id,stream_revision,origin_kind,action_id,created_at) " +
+        "VALUES (?,?,'NON_ACTIONABLE_ACK',NULL,?)"
+      ).run(stream, revision, at);
+      return this.#readSemanticOrigin(stream, revision);
+    });
+  }
+
+  escalatePublicActionToHuman(actionId, { reason }) {
+    const id = safeToken(actionId, 'action_id');
+    const humanReason = safeToken(reason, 'human_reason');
+    const at = this.now();
+    return tx(this.db, () => {
+      const action = this.#requireAction(id);
+      const origin = this.#readSemanticOrigin(
+        action.stream_id,
+        action.prepared_stream_revision
+      );
+      const owner = this.#readContinuationOwner(
+        action.stream_id,
+        action.prepared_stream_revision
+      );
+      if (!origin || origin.origin_kind !== 'PUBLIC_ACTION' ||
+          origin.action_id !== id || !owner || owner.action_id !== id) {
+        fail('FIRST_LINE_DB_CORRUPT',
+          'public action lacks immutable origin/continuation owner', {
+            action_id: id,
+          });
+      }
+      if (owner.terminal_outcome !== null) {
+        fail('FIRST_LINE_ACTION_STATE_INVALID',
+          'terminal continuation cannot escalate to HUMAN', {
+            action_id: id,
+            terminal_outcome: owner.terminal_outcome,
+          });
+      }
+      if (owner.owner_kind === 'HUMAN') {
+        if (owner.human_reason !== humanReason) {
+          fail('FIRST_LINE_HUMAN_CONTINUATION_ACTIVE',
+            'HUMAN continuation reason is immutable', {
+              action_id: id,
+              human_reason: owner.human_reason,
+            });
+        }
+        return owner;
+      }
+
+      let humanEpisodeVersion = owner.episode_version;
+      if (owner.episode_id !== null) {
+        const currentEpisode = this.#readEpisode(owner.episode_id);
+        if (currentEpisode?.state === 'active' &&
+            currentEpisode.stream_id === action.stream_id &&
+            currentEpisode.version >= owner.episode_version) {
+          humanEpisodeVersion = currentEpisode.version;
+        }
+      }
+      const changed = this.db.prepare(
+        "UPDATE continuation_owners SET owner_kind='HUMAN',human_reason=?," +
+        'episode_version=?,updated_at=? ' +
+        "WHERE stream_id=? AND stream_revision=? AND owner_kind='PUBLIC_ACTION' " +
+        'AND action_id=? AND terminal_outcome IS NULL'
+      ).run(
+        humanReason,
+        humanEpisodeVersion,
+        at,
+        action.stream_id,
+        action.prepared_stream_revision,
+        id
+      ).changes;
+      if (changed !== 1) {
+        fail('FIRST_LINE_STALE_WRITE',
+          'continuation changed before HUMAN escalation', {
+            action_id: id,
+          });
+      }
+      return this.#readContinuationOwner(
+        action.stream_id,
+        action.prepared_stream_revision
+      );
+    });
+  }
+
+  terminalizeHumanContinuation(
+    streamId,
+    streamRevision,
+    { outcome }
+  ) {
+    const stream = safeToken(streamId, 'stream_id');
+    const revision = positiveInteger(streamRevision, 'stream_revision');
+    const terminalOutcome = enumValue(
+      outcome,
+      new Set(['HUMAN_TAKEOVER', 'OWNERSHIP_LOST']),
+      'human_terminal_outcome'
+    );
+    const at = this.now();
+    return tx(this.db, () => {
+      const owner = this.#readContinuationOwner(stream, revision);
+      if (!owner || owner.owner_kind !== 'HUMAN') {
+        fail('FIRST_LINE_ACTION_STATE_INVALID',
+          'only HUMAN continuation may terminalize as handoff/ownership loss', {
+            stream_id: stream,
+            stream_revision: revision,
+          });
+      }
+      if (owner.terminal_outcome !== null) {
+        if (owner.terminal_outcome !== terminalOutcome) {
+          fail('FIRST_LINE_ACTION_STATE_INVALID',
+            'HUMAN continuation already has a different terminal outcome', {
+              stream_id: stream,
+              stream_revision: revision,
+              terminal_outcome: owner.terminal_outcome,
+            });
+        }
+        return owner;
+      }
+
+      if (owner.episode_id !== null) {
+        const episode = this.#readEpisode(owner.episode_id);
+        if (!episode || episode.stream_id !== stream) {
+          fail('FIRST_LINE_DB_CORRUPT',
+            'HUMAN continuation episode is missing/mismatched', {
+              stream_id: stream,
+              episode_id: owner.episode_id,
+            });
+        }
+        if (episode.state === 'active') {
+          if (episode.version !== owner.episode_version) {
+            fail('FIRST_LINE_STALE_WRITE',
+              'HUMAN continuation episode version changed before terminal proof', {
+                episode_id: owner.episode_id,
+                expected_version: owner.episode_version,
+                actual_version: episode.version,
+              });
+          }
+          const closeReason = terminalOutcome === 'HUMAN_TAKEOVER'
+            ? 'human_takeover'
+            : 'ownership_lost';
+          const changed = this.db.prepare(
+            "UPDATE episodes SET state='closed',version=version+1,updated_at=?," +
+            'closed_at=?,close_reason=? ' +
+            "WHERE episode_id=? AND stream_id=? AND state='active' AND version=?"
+          ).run(
+            at,
+            at,
+            closeReason,
+            owner.episode_id,
+            stream,
+            owner.episode_version
+          ).changes;
+          if (changed !== 1) {
+            fail('FIRST_LINE_STALE_WRITE',
+              'episode changed before HUMAN terminalization', {
+                episode_id: owner.episode_id,
+              });
+          }
+        }
+      }
+
+      const changed = this.db.prepare(
+        'UPDATE continuation_owners SET terminal_outcome=?,terminal_at=?,updated_at=? ' +
+        "WHERE stream_id=? AND stream_revision=? AND owner_kind='HUMAN' " +
+        'AND terminal_outcome IS NULL'
+      ).run(terminalOutcome, at, at, stream, revision).changes;
+      if (changed !== 1) {
+        fail('FIRST_LINE_STALE_WRITE',
+          'HUMAN continuation changed before terminalization', {
+            stream_id: stream,
+            stream_revision: revision,
+          });
+      }
+
+      if (owner.action_id !== null) {
+        const action = this.#requireAction(owner.action_id);
+        if (['PREPARED', 'GATING', 'SENDING', 'UNCERTAIN'].includes(action.state)) {
+          this.db.prepare(
+            "UPDATE public_actions SET state='HANDOFF_DONE',terminal_reason=?," +
+            'lease_token=NULL,lease_expires_at=NULL,updated_at=? WHERE action_id=?'
+          ).run(
+            terminalOutcome === 'HUMAN_TAKEOVER'
+              ? 'human_takeover'
+              : 'ownership_lost',
+            at,
+            owner.action_id
+          );
+        }
+      }
+
+      return this.#readContinuationOwner(stream, revision);
+    });
   }
 
   issueClarificationReservationAttestation(
@@ -2035,39 +3827,167 @@ export class FirstLineStateStore {
     const id = safeToken(actionId, 'action_id');
     const terminalReason = safeToken(reason, 'terminal_reason');
     if (terminalState !== 'CANCELLED' && terminalState !== 'STALE') {
-      fail('FIRST_LINE_ACTION_STATE_INVALID', 'invalid unsent terminal state', { terminal_state: terminalState });
+      fail('FIRST_LINE_ACTION_STATE_INVALID',
+        'invalid unsent terminal state', { terminal_state: terminalState });
     }
     return tx(this.db, () => {
       const action = this.#requireAction(id);
-      this.#finishUnsentAction(action, terminalState, terminalReason);
+      if (action.state !== 'PREPARED' && action.state !== 'GATING') {
+        fail('FIRST_LINE_ACTION_STATE_INVALID',
+          'only unsent action may become terminal', {
+            action_id: action.action_id,
+            state: action.state,
+          });
+      }
+      const stream = this.#requireStream(action.stream_id);
+      if (stream.stream_revision < action.prepared_stream_revision) {
+        fail('FIRST_LINE_DB_CORRUPT',
+          'action revision is newer than owning stream', { action_id: action.action_id });
+      }
+      if (stream.stream_revision > action.prepared_stream_revision) {
+        this.#supersedeUnsentAction(
+          action,
+          terminalReason,
+          terminalState
+        );
+      } else {
+        this.#attachHumanToUnsentAction(
+          action,
+          terminalReason,
+          terminalState
+        );
+      }
       return this.#readAction(id);
     });
   }
 
   #cancelUnsentAction(action, reason) {
-    this.#finishUnsentAction(action, 'CANCELLED', reason);
+    this.#supersedeUnsentAction(action, reason, 'CANCELLED');
   }
 
-  #finishUnsentAction(action, terminalState, reason, at = this.now()) {
+  #supersedeUnsentAction(
+    action,
+    reason,
+    terminalState = 'CANCELLED',
+    at = this.now()
+  ) {
     if (action.state !== 'PREPARED' && action.state !== 'GATING') {
-      fail('FIRST_LINE_ACTION_STATE_INVALID', 'only unsent action may become terminal', { action_id: action.action_id });
+      fail('FIRST_LINE_ACTION_STATE_INVALID',
+        'only unsent action may be superseded', { action_id: action.action_id });
     }
+    const stream = this.#requireStream(action.stream_id);
+    if (stream.stream_revision <= action.prepared_stream_revision) {
+      fail('FIRST_LINE_ACTION_STALE_REVISION',
+        'unsent action may release ownership only after a newer stream revision', {
+          action_id: action.action_id,
+          action_revision: action.prepared_stream_revision,
+          current_stream_revision: stream.stream_revision,
+        });
+    }
+    const owner = this.#readContinuationOwner(
+      action.stream_id,
+      action.prepared_stream_revision
+    );
+    if (!owner || owner.owner_kind !== 'PUBLIC_ACTION' ||
+        owner.action_id !== action.action_id ||
+        owner.terminal_outcome !== null) {
+      fail('FIRST_LINE_HUMAN_CONTINUATION_ACTIVE',
+        'action cannot be superseded after continuation left public ownership', {
+          action_id: action.action_id,
+        });
+    }
+
     if (action.action_type === 'CLARIFY' && action.episode_id) {
-      const episode = this.db.prepare('SELECT * FROM episodes WHERE episode_id=?').get(action.episode_id);
-      if (episode?.state === 'active' && episode.clarification_action_id === action.action_id) {
-        const changed = this.db.prepare(`UPDATE episodes SET clarification_prompts_sent=0,requested_slot=NULL,
-          clarification_action_id=NULL,version=version+1,updated_at=?
-          WHERE episode_id=? AND state='active' AND clarification_action_id=?`)
-          .run(at, action.episode_id, action.action_id).changes;
+      const episode = this.db.prepare(
+        'SELECT * FROM episodes WHERE episode_id=?'
+      ).get(action.episode_id);
+      if (episode?.state === 'active' &&
+          episode.clarification_action_id === action.action_id) {
+        const changed = this.db.prepare(
+          'UPDATE episodes SET clarification_prompts_sent=0,requested_slot=NULL,' +
+          'clarification_action_id=NULL,version=version+1,updated_at=? ' +
+          "WHERE episode_id=? AND state='active' AND clarification_action_id=?"
+        ).run(at, action.episode_id, action.action_id).changes;
         if (changed !== 1) {
-          fail('FIRST_LINE_STALE_WRITE', 'clarification reservation changed before unsent action terminalization',
-            { action_id: action.action_id, episode_id: action.episode_id });
+          fail('FIRST_LINE_STALE_WRITE',
+            'clarification reservation changed before safe supersession', {
+              action_id: action.action_id,
+              episode_id: action.episode_id,
+            });
         }
       }
     }
-    this.db.prepare(`UPDATE public_actions SET state=?,terminal_reason=?,lease_token=NULL,
-      lease_expires_at=NULL,updated_at=? WHERE action_id=?`)
-      .run(terminalState, reason, at, action.action_id);
+
+    const ownerChanged = this.db.prepare(
+      "UPDATE continuation_owners SET terminal_outcome='SUPERSEDED'," +
+      'terminal_at=?,updated_at=? WHERE stream_id=? AND stream_revision=? ' +
+      "AND owner_kind='PUBLIC_ACTION' AND action_id=? AND terminal_outcome IS NULL"
+    ).run(
+      at,
+      at,
+      action.stream_id,
+      action.prepared_stream_revision,
+      action.action_id
+    ).changes;
+    if (ownerChanged !== 1) {
+      fail('FIRST_LINE_STALE_WRITE',
+        'continuation owner changed before supersession', {
+          action_id: action.action_id,
+        });
+    }
+
+    this.db.prepare(
+      'UPDATE public_actions SET state=?,terminal_reason=?,lease_token=NULL,' +
+      'lease_expires_at=NULL,updated_at=? WHERE action_id=?'
+    ).run(terminalState, reason, at, action.action_id);
+  }
+
+  #attachHumanToUnsentAction(action, reason, terminalState, at = this.now()) {
+    const owner = this.#readContinuationOwner(
+      action.stream_id,
+      action.prepared_stream_revision
+    );
+    if (!owner || owner.action_id !== action.action_id ||
+        owner.terminal_outcome !== null) {
+      fail('FIRST_LINE_DB_CORRUPT',
+        'unsent action lacks unresolved continuation owner', {
+          action_id: action.action_id,
+        });
+    }
+    if (owner.owner_kind === 'PUBLIC_ACTION') {
+      let humanEpisodeVersion = owner.episode_version;
+      if (owner.episode_id !== null) {
+        const currentEpisode = this.#readEpisode(owner.episode_id);
+        if (currentEpisode?.state === 'active' &&
+            currentEpisode.stream_id === action.stream_id &&
+            currentEpisode.version >= owner.episode_version) {
+          humanEpisodeVersion = currentEpisode.version;
+        }
+      }
+      const changed = this.db.prepare(
+        "UPDATE continuation_owners SET owner_kind='HUMAN',human_reason=?," +
+        'episode_version=?,updated_at=? ' +
+        "WHERE stream_id=? AND stream_revision=? AND owner_kind='PUBLIC_ACTION' " +
+        'AND action_id=? AND terminal_outcome IS NULL'
+      ).run(
+        reason,
+        humanEpisodeVersion,
+        at,
+        action.stream_id,
+        action.prepared_stream_revision,
+        action.action_id
+      ).changes;
+      if (changed !== 1) {
+        fail('FIRST_LINE_STALE_WRITE',
+          'continuation changed before HUMAN escalation', {
+            action_id: action.action_id,
+          });
+      }
+    }
+    this.db.prepare(
+      'UPDATE public_actions SET state=?,terminal_reason=?,lease_token=NULL,' +
+      'lease_expires_at=NULL,updated_at=? WHERE action_id=?'
+    ).run(terminalState, reason, at, action.action_id);
   }
 
   #readRoutingLedger(stream) {
@@ -2163,6 +4083,212 @@ export class FirstLineStateStore {
       suffix_truncated: stream.last_event_seq > rows.length,
       fingerprint: routingLedgerFingerprint(eventSuffix),
     };
+  }
+
+  #readSemanticOrigin(streamId, streamRevision) {
+    const row = this.db.prepare(
+      'SELECT * FROM semantic_origins WHERE stream_id=? AND stream_revision=?'
+    ).get(streamId, streamRevision);
+    if (!row) return null;
+    persistedGuard(() => {
+      safeToken(row.stream_id, 'stream_id');
+      positiveInteger(row.stream_revision, 'stream_revision');
+      enumValue(
+        row.origin_kind,
+        new Set(['PUBLIC_ACTION', 'DIRECT_HUMAN', 'NON_ACTIONABLE_ACK']),
+        'origin_kind'
+      );
+      if (row.action_id !== null) safeToken(row.action_id, 'action_id');
+      nonNegativeInteger(row.created_at, 'created_at');
+      if (row.origin_kind === 'PUBLIC_ACTION' && row.action_id === null) {
+        fail('FIRST_LINE_VALUE_INVALID', 'PUBLIC_ACTION origin requires action id');
+      }
+      if (row.origin_kind !== 'PUBLIC_ACTION' && row.action_id !== null) {
+        fail('FIRST_LINE_VALUE_INVALID', 'non-action origin cannot carry action id');
+      }
+    }, 'persisted semantic origin is invalid', {
+      stream_id: streamId,
+      stream_revision: streamRevision,
+    });
+    return Object.freeze({
+      stream_id: row.stream_id,
+      stream_revision: row.stream_revision,
+      origin_kind: row.origin_kind,
+      action_id: row.action_id,
+      created_at: row.created_at,
+    });
+  }
+
+  #readContinuationOwner(streamId, streamRevision) {
+    const row = this.db.prepare(
+      'SELECT * FROM continuation_owners WHERE stream_id=? AND stream_revision=?'
+    ).get(streamId, streamRevision);
+    if (!row) return null;
+    persistedGuard(() => {
+      safeToken(row.stream_id, 'stream_id');
+      positiveInteger(row.stream_revision, 'stream_revision');
+      enumValue(row.owner_kind, new Set(['PUBLIC_ACTION', 'HUMAN']), 'owner_kind');
+      if (row.action_id !== null) safeToken(row.action_id, 'action_id');
+      if (row.episode_id !== null) safeToken(row.episode_id, 'episode_id');
+      if (row.episode_version !== null) positiveInteger(row.episode_version, 'episode_version');
+      if ((row.episode_id === null) !== (row.episode_version === null)) {
+        fail('FIRST_LINE_VALUE_INVALID', 'continuation episode pair is incomplete');
+      }
+      if (row.human_reason !== null) safeToken(row.human_reason, 'human_reason');
+      if (row.owner_kind === 'PUBLIC_ACTION' &&
+          (row.action_id === null || row.human_reason !== null)) {
+        fail('FIRST_LINE_VALUE_INVALID', 'PUBLIC_ACTION continuation shape is invalid');
+      }
+      if (row.owner_kind === 'HUMAN' && row.human_reason === null) {
+        fail('FIRST_LINE_VALUE_INVALID', 'HUMAN continuation requires reason');
+      }
+      if (row.terminal_outcome !== null) {
+        enumValue(
+          row.terminal_outcome,
+          new Set([
+            'CONFIRMED', 'SUPERSEDED', 'HUMAN_TAKEOVER',
+            'OWNERSHIP_LOST', 'LEGACY_V3_TERMINAL',
+          ]),
+          'terminal_outcome'
+        );
+      }
+      nonNegativeInteger(row.created_at, 'created_at');
+      nonNegativeInteger(row.updated_at, 'updated_at');
+      if (row.terminal_at !== null) nonNegativeInteger(row.terminal_at, 'terminal_at');
+      if ((row.terminal_outcome === null) !== (row.terminal_at === null)) {
+        fail('FIRST_LINE_VALUE_INVALID', 'continuation terminal pair is incomplete');
+      }
+    }, 'persisted continuation owner is invalid', {
+      stream_id: streamId,
+      stream_revision: streamRevision,
+    });
+    return Object.freeze({
+      stream_id: row.stream_id,
+      stream_revision: row.stream_revision,
+      owner_kind: row.owner_kind,
+      action_id: row.action_id,
+      episode_id: row.episode_id,
+      episode_version: row.episode_version,
+      human_reason: row.human_reason,
+      terminal_outcome: row.terminal_outcome,
+      created_at: row.created_at,
+      updated_at: row.updated_at,
+      terminal_at: row.terminal_at,
+    });
+  }
+
+  #readUnresolvedOwner(streamId) {
+    const rows = this.db.prepare(
+      'SELECT stream_revision FROM continuation_owners ' +
+      'WHERE stream_id=? AND terminal_outcome IS NULL'
+    ).all(streamId);
+    if (rows.length > 1) {
+      fail('FIRST_LINE_DB_CORRUPT',
+        'multiple unresolved continuation owners exist', { stream_id: streamId });
+    }
+    return rows.length === 1
+      ? this.#readContinuationOwner(streamId, rows[0].stream_revision)
+      : null;
+  }
+
+  #readDeferredParent(streamId, eventSeq) {
+    const row = this.db.prepare(
+      'SELECT * FROM deferred_event_parents WHERE stream_id=? AND event_seq=?'
+    ).get(streamId, eventSeq);
+    if (!row) return null;
+    persistedGuard(() => {
+      safeToken(row.stream_id, 'stream_id');
+      positiveInteger(row.event_seq, 'event_seq');
+      safeToken(row.action_id, 'action_id');
+      nonNegativeInteger(row.created_at, 'created_at');
+      const event = this.db.prepare(
+        'SELECT event_kind FROM conversation_events WHERE stream_id=? AND event_seq=?'
+      ).get(row.stream_id, row.event_seq);
+      const action = this.db.prepare(
+        'SELECT stream_id FROM public_actions WHERE action_id=?'
+      ).get(row.action_id);
+      if (!event || event.event_kind !== 'CUSTOMER_MESSAGE' ||
+          !action || action.stream_id !== row.stream_id) {
+        fail('FIRST_LINE_VALUE_INVALID',
+          'deferred parent relationship is inconsistent');
+      }
+    }, 'persisted deferred event parent is invalid', {
+      stream_id: streamId,
+      event_seq: eventSeq,
+    });
+    return Object.freeze({
+      stream_id: row.stream_id,
+      event_seq: row.event_seq,
+      action_id: row.action_id,
+      created_at: row.created_at,
+    });
+  }
+  #readRecoveryBarrier(recoveryEpoch = null) {
+    const row = recoveryEpoch === null
+      ? this.db.prepare(
+          'SELECT * FROM recovery_barriers WHERE completed_at IS NULL ' +
+          'ORDER BY recovery_epoch DESC LIMIT 1'
+        ).get()
+      : this.db.prepare(
+          'SELECT * FROM recovery_barriers WHERE recovery_epoch=?'
+        ).get(recoveryEpoch);
+    if (!row) return null;
+    persistedGuard(() => {
+      positiveInteger(row.recovery_epoch, 'recovery_epoch');
+      if (row.authority_key !== 1) {
+        fail('FIRST_LINE_VALUE_INVALID',
+          'recovery barrier authority key must be 1');
+      }
+      safeToken(row.reason, 'recovery_reason');
+      nonNegativeInteger(row.entered_at, 'entered_at');
+      if (row.completion_kind !== null) {
+        enumValue(
+          row.completion_kind,
+          new Set(['LOSSLESS_SEMANTIC_CUT', 'HUMAN_QUARANTINE_COMPLETE']),
+          'recovery_completion'
+        );
+      }
+      if (row.completed_at !== null) {
+        nonNegativeInteger(row.completed_at, 'completed_at');
+      }
+      if ((row.completion_kind === null) !== (row.completed_at === null)) {
+        fail('FIRST_LINE_VALUE_INVALID',
+          'recovery completion pair is incomplete');
+      }
+    }, 'persisted recovery barrier is invalid', {
+      recovery_epoch: row.recovery_epoch,
+    });
+    return Object.freeze({
+      recovery_epoch: row.recovery_epoch,
+      reason: row.reason,
+      entered_at: row.entered_at,
+      completion_kind: row.completion_kind,
+      completed_at: row.completed_at,
+    });
+  }
+
+  #assertAutonomousAllowed() {
+    const barrier = this.#readRecoveryBarrier();
+    if (barrier) {
+      fail('FIRST_LINE_RECOVERY_BARRIER_ACTIVE',
+        'autonomous semantic work is disabled during recovery', {
+          recovery_epoch: barrier.recovery_epoch,
+          reason: barrier.reason,
+        });
+    }
+  }
+
+  #assertNoHumanContinuation(streamId) {
+    const owner = this.#readUnresolvedOwner(streamId);
+    if (owner?.owner_kind === 'HUMAN') {
+      fail('FIRST_LINE_HUMAN_CONTINUATION_ACTIVE',
+        'durable HUMAN continuation blocks autonomous semantic mutation', {
+          stream_id: streamId,
+          owner_revision: owner.stream_revision,
+          action_id: owner.action_id,
+        });
+    }
+    return owner;
   }
 
   #requireStream(streamId) {
@@ -2342,45 +4468,221 @@ export class FirstLineStateStore {
   }
 
   #readAction(actionId) {
-    const row = this.db.prepare('SELECT * FROM public_actions WHERE action_id=?').get(actionId);
+    const row = this.db.prepare(
+      'SELECT * FROM public_actions WHERE action_id=?'
+    ).get(actionId);
     if (!row) return null;
-    if (!ACTION_TYPES.has(row.action_type) || (!LIVE_ACTION_STATES.has(row.state) && !TERMINAL_ACTION_STATES.has(row.state))) {
-      fail('FIRST_LINE_DB_CORRUPT', 'persisted public action enum is invalid', { action_id: actionId });
+    if (!ACTION_TYPES.has(row.action_type) ||
+        (!LIVE_ACTION_STATES.has(row.state) &&
+         !TERMINAL_ACTION_STATES.has(row.state))) {
+      fail('FIRST_LINE_DB_CORRUPT',
+        'persisted public action enum is invalid', { action_id: actionId });
     }
     persistedGuard(() => {
       safeToken(row.action_id, 'action_id');
       safeToken(row.stream_id, 'stream_id');
       if (row.episode_id !== null) safeToken(row.episode_id, 'episode_id');
-      if (row.episode_version !== null) positiveInteger(row.episode_version, 'episode_version');
+      if (row.episode_version !== null) {
+        positiveInteger(row.episode_version, 'episode_version');
+      }
+      if ((row.episode_id === null) !== (row.episode_version === null)) {
+        fail('FIRST_LINE_VALUE_INVALID',
+          'public action episode provenance pair is incomplete');
+      }
       positiveInteger(row.prepared_stream_revision, 'prepared_stream_revision');
       normalizeRequestedSlot(row.requested_slot);
       if (row.lease_token !== null) safeToken(row.lease_token, 'lease_token');
-      if (row.lease_expires_at !== null) nonNegativeInteger(row.lease_expires_at, 'lease_expires_at');
+      if (row.lease_expires_at !== null) {
+        nonNegativeInteger(row.lease_expires_at, 'lease_expires_at');
+      }
       nonNegativeInteger(row.attempts, 'attempts');
       positiveInteger(row.deadline_at, 'deadline_at');
-      if (row.confirmed_source_message_id !== null) positiveInteger(row.confirmed_source_message_id, 'confirmed_source_message_id');
-      if (row.terminal_reason !== null) safeToken(row.terminal_reason, 'terminal_reason');
+      if (row.confirmed_source_message_id !== null) {
+        positiveInteger(
+          row.confirmed_source_message_id,
+          'confirmed_source_message_id'
+        );
+      }
+      if (row.terminal_reason !== null) {
+        safeToken(row.terminal_reason, 'terminal_reason');
+      }
       nonNegativeInteger(row.created_at, 'created_at');
       nonNegativeInteger(row.updated_at, 'updated_at');
-      if (row.send_started_at !== null) nonNegativeInteger(row.send_started_at, 'send_started_at');
-      if (row.confirmed_at !== null) nonNegativeInteger(row.confirmed_at, 'confirmed_at');
+      if (row.send_started_at !== null) {
+        nonNegativeInteger(row.send_started_at, 'send_started_at');
+      }
+      if (row.confirmed_at !== null) {
+        nonNegativeInteger(row.confirmed_at, 'confirmed_at');
+      }
     }, 'persisted public action metadata is invalid', { action_id: actionId });
-    const basis = parseJson(row.basis_event_seqs_json);
-    normalizeBasisEventSeqs(basis);
-    const candidates = this.db.prepare('SELECT * FROM public_action_candidates WHERE action_id=? ORDER BY ordinal').all(actionId)
-      .map(item => {
-        const value = parseJson(item.value_json);
-        return validatePersistedCandidate(item.slot_name, value);
-      });
+
+    const basis = persistedGuard(
+      () => normalizeBasisEventSeqs(parseJson(row.basis_event_seqs_json)),
+      'persisted public action basis is invalid',
+      { action_id: actionId }
+    );
+    const sourceRows = this.db.prepare(
+      'SELECT * FROM public_action_source_events WHERE action_id=? ORDER BY ordinal'
+    ).all(actionId);
+    if (sourceRows.length !== basis.length) {
+      fail('FIRST_LINE_DB_CORRUPT',
+        'public action relational source coverage count differs from basis', {
+          action_id: actionId,
+          expected: basis.length,
+          actual: sourceRows.length,
+        });
+    }
+    for (const [index, sourceRow] of sourceRows.entries()) {
+      if (sourceRow.ordinal !== index + 1 ||
+          sourceRow.stream_id !== row.stream_id ||
+          sourceRow.event_seq !== basis[index]) {
+        fail('FIRST_LINE_DB_CORRUPT',
+          'public action relational source coverage is non-canonical', {
+            action_id: actionId,
+            ordinal: sourceRow.ordinal,
+          });
+      }
+      const event = this.db.prepare(
+        'SELECT 1 AS ok FROM conversation_events WHERE stream_id=? AND event_seq=?'
+      ).get(sourceRow.stream_id, sourceRow.event_seq);
+      if (!event) {
+        fail('FIRST_LINE_DB_CORRUPT',
+          'public action source coverage references missing event', {
+            action_id: actionId,
+            event_seq: sourceRow.event_seq,
+          });
+      }
+    }
+
+    const candidateRows = this.db.prepare(
+      'SELECT * FROM public_action_candidates WHERE action_id=? ORDER BY ordinal'
+    ).all(actionId);
+    const candidates = candidateRows.map((item, index) => {
+      if (item.ordinal !== index + 1) {
+        fail('FIRST_LINE_DB_CORRUPT',
+          'public action candidate ordinals are not contiguous', {
+            action_id: actionId,
+            expected_ordinal: index + 1,
+            actual_ordinal: item.ordinal,
+          });
+      }
+      const value = parseJson(item.value_json);
+      return validatePersistedCandidate(item.slot_name, value);
+    });
+
+    const descriptorRow = this.db.prepare(
+      'SELECT * FROM public_action_descriptors WHERE action_id=?'
+    ).get(actionId) ?? null;
+    const legacyMarker = this.db.prepare(
+      'SELECT marker FROM legacy_v3_actions WHERE action_id=?'
+    ).get(actionId) ?? null;
+    if ((descriptorRow === null) === (legacyMarker === null)) {
+      fail('FIRST_LINE_DB_CORRUPT',
+        'action must have exactly one v4 descriptor or legacy-v3 marker', {
+          action_id: actionId,
+        });
+    }
+    if (legacyMarker && legacyMarker.marker !== 'DESCRIPTOR_UNAVAILABLE') {
+      fail('FIRST_LINE_DB_CORRUPT',
+        'legacy-v3 action marker is invalid', { action_id: actionId });
+    }
+    const descriptor = descriptorRow
+      ? persistedActionDescriptor(descriptorRow, actionId)
+      : null;
+    const scopeProvenance = descriptorRow
+      ? persistedScopeProvenance(
+          descriptorRow,
+          descriptor,
+          basis,
+          actionId,
+          row.stream_id
+        )
+      : null;
+
+    const origin = this.#readSemanticOrigin(
+      row.stream_id,
+      row.prepared_stream_revision
+    );
+    if (!origin || origin.origin_kind !== 'PUBLIC_ACTION' ||
+        origin.action_id !== actionId) {
+      fail('FIRST_LINE_DB_CORRUPT',
+        'public action lacks matching immutable semantic origin', {
+          action_id: actionId,
+          stream_id: row.stream_id,
+          stream_revision: row.prepared_stream_revision,
+        });
+    }
+    const owner = this.#readContinuationOwner(
+      row.stream_id,
+      row.prepared_stream_revision
+    );
+    const ownerEpisodeMatches = owner &&
+      owner.episode_id === row.episode_id &&
+      (
+        owner.episode_version === row.episode_version ||
+        (owner.owner_kind === 'HUMAN' &&
+         owner.episode_id !== null &&
+         owner.episode_version >= row.episode_version)
+      );
+    if (!owner || owner.action_id !== actionId || !ownerEpisodeMatches) {
+      fail('FIRST_LINE_DB_CORRUPT',
+        'public action continuation owner is missing/mismatched', {
+          action_id: actionId,
+        });
+    }
+    if (owner.owner_kind === 'PUBLIC_ACTION' &&
+        owner.terminal_outcome === null &&
+        !LIVE_ACTION_STATES.has(row.state)) {
+      fail('FIRST_LINE_DB_CORRUPT',
+        'unresolved PUBLIC_ACTION owner points to terminal action state', {
+          action_id: actionId,
+          state: row.state,
+        });
+    }
+    if (owner.owner_kind === 'PUBLIC_ACTION' &&
+        owner.terminal_outcome === 'CONFIRMED' &&
+        row.state !== 'CONFIRMED') {
+      fail('FIRST_LINE_DB_CORRUPT',
+        'CONFIRMED continuation conflicts with action state', {
+          action_id: actionId,
+          state: row.state,
+        });
+    }
+    if (owner.owner_kind === 'HUMAN' &&
+        owner.terminal_outcome !== null &&
+        LIVE_ACTION_STATES.has(row.state)) {
+      fail('FIRST_LINE_DB_CORRUPT',
+        'terminal HUMAN continuation still exposes live action state', {
+          action_id: actionId,
+          state: row.state,
+        });
+    }
+
     return {
-      action_id: row.action_id, stream_id: row.stream_id, episode_id: row.episode_id,
-      episode_version: row.episode_version, prepared_stream_revision: row.prepared_stream_revision,
-      action_type: row.action_type, state: row.state, basis_event_seqs: basis,
-      requested_slot: row.requested_slot, presented_candidates: candidates,
-      lease_token: row.lease_token, lease_expires_at: row.lease_expires_at, attempts: row.attempts,
-      deadline_at: row.deadline_at, confirmed_source_message_id: row.confirmed_source_message_id,
-      terminal_reason: row.terminal_reason, created_at: row.created_at, updated_at: row.updated_at,
-      send_started_at: row.send_started_at, confirmed_at: row.confirmed_at,
+      action_id: row.action_id,
+      stream_id: row.stream_id,
+      episode_id: row.episode_id,
+      episode_version: row.episode_version,
+      prepared_stream_revision: row.prepared_stream_revision,
+      action_type: row.action_type,
+      state: row.state,
+      basis_event_seqs: basis,
+      requested_slot: row.requested_slot,
+      presented_candidates: candidates,
+      descriptor,
+      scope_provenance: scopeProvenance,
+      semantic_origin: origin,
+      continuation_owner: owner,
+      lease_token: row.lease_token,
+      lease_expires_at: row.lease_expires_at,
+      attempts: row.attempts,
+      deadline_at: row.deadline_at,
+      confirmed_source_message_id: row.confirmed_source_message_id,
+      terminal_reason: row.terminal_reason,
+      created_at: row.created_at,
+      updated_at: row.updated_at,
+      send_started_at: row.send_started_at,
+      confirmed_at: row.confirmed_at,
     };
   }
 
@@ -2392,9 +4694,9 @@ export class FirstLineStateStore {
       fail('FIRST_LINE_DB_INVALID', 'schema/integrity version check failed', { user_version: version, metadata_version: metadata?.schema_version, integrity });
     }
     const schemaFingerprint = schemaMasterFingerprint(this.db);
-    if (schemaFingerprint !== V3_SCHEMA_MASTER_SHA256) {
-      fail('FIRST_LINE_DB_INVALID', 'database sqlite_master does not match the frozen v3 schema', {
-        expected_schema_fingerprint: V3_SCHEMA_MASTER_SHA256,
+    if (schemaFingerprint !== V4_SCHEMA_MASTER_SHA256) {
+      fail('FIRST_LINE_DB_INVALID', 'database sqlite_master does not match the frozen v4 schema', {
+        expected_schema_fingerprint: V4_SCHEMA_MASTER_SHA256,
         actual_schema_fingerprint: schemaFingerprint,
       });
     }
@@ -2407,6 +4709,13 @@ export class FirstLineStateStore {
     const indexes = new Set(this.db.prepare("SELECT name FROM sqlite_master WHERE type='index'").all().map(row => row.name));
     for (const name of REQUIRED_INDEXES) {
       if (!indexes.has(name)) fail('FIRST_LINE_DB_INVALID', 'required index missing', { index: name });
+    }
+    const triggers = new Set(
+      this.db.prepare("SELECT name FROM sqlite_master WHERE type='trigger'").all()
+        .map(row => row.name)
+    );
+    for (const name of REQUIRED_TRIGGERS) {
+      if (!triggers.has(name)) fail('FIRST_LINE_DB_INVALID', 'required trigger missing', { trigger: name });
     }
   }
 }

@@ -10,6 +10,7 @@ import {
   FirstLineStateStore,
   SCHEMA_VERSION,
 } from '../../src/copilot/first-line-state-store.mjs';
+import { testActionDescriptor } from '../helpers/first-line-action-descriptor.mjs';
 
 const NOW = 2_000_000_000_000;
 const PRODUCT_1 = 'prod_11111111-1111-4111-8111-111111111111';
@@ -60,11 +61,11 @@ function customerEvent(id, overrides = {}) {
   };
 }
 
-test('schema v3 is private, attested, and uses explicit busy timeout', t => {
+test('schema v4 is private, attested, and uses explicit busy timeout', t => {
   const { store, file } = tempStore(t);
-  assert.equal(SCHEMA_VERSION, 3);
+  assert.equal(SCHEMA_VERSION, 4);
   assert.equal(fs.statSync(file).mode & 0o777, 0o600);
-  assert.equal(store.db.prepare('PRAGMA user_version').get().user_version, 3);
+  assert.equal(store.db.prepare('PRAGMA user_version').get().user_version, 4);
   assert.equal(store.db.prepare('PRAGMA busy_timeout').get().timeout, BUSY_TIMEOUT_MS);
 
   const tables = new Set(store.db.prepare(
@@ -73,6 +74,8 @@ test('schema v3 is private, attested, and uses explicit busy timeout', t => {
   for (const name of [
     'conversation_streams','conversation_events','episodes','episode_slots',
     'episode_constraint_latches','public_actions','public_action_candidates',
+    'public_action_source_events','public_action_descriptors','legacy_v3_actions',
+    'semantic_origins','continuation_owners','deferred_event_parents','recovery_barriers',
   ]) assert.equal(tables.has(name), true, name);
 });
 
@@ -136,6 +139,7 @@ test('same stream revision is permanently idempotent for public actions', t => {
   store.ingestConversationEvent(stream.stream_id, customerEvent(101));
 
   const first = store.preparePublicAction({
+    descriptor: testActionDescriptor(),
     streamId: stream.stream_id,
     preparedStreamRevision: 1,
     actionType: 'ANSWER',
@@ -143,6 +147,7 @@ test('same stream revision is permanently idempotent for public actions', t => {
     deadlineAt: NOW + 60_000,
   });
   const retry = store.preparePublicAction({
+    descriptor: testActionDescriptor(),
     streamId: stream.stream_id,
     preparedStreamRevision: 1,
     actionType: 'ANSWER',
@@ -152,6 +157,7 @@ test('same stream revision is permanently idempotent for public actions', t => {
   assert.equal(retry.action_id, first.action_id);
 
   expectCode(() => store.preparePublicAction({
+    descriptor: testActionDescriptor(),
     streamId: stream.stream_id,
     preparedStreamRevision: 1,
     actionType: 'ANSWER',
@@ -165,12 +171,14 @@ test('newer revision atomically replaces only unsent PREPARED/GATING action', t 
   const stream = makeStream(store);
   store.ingestConversationEvent(stream.stream_id, customerEvent(101));
   const oldAction = store.preparePublicAction({
+    descriptor: testActionDescriptor(),
     streamId: stream.stream_id, preparedStreamRevision: 1, actionType: 'ANSWER',
     basisEventSeqs: [1], deadlineAt: NOW + 60_000,
   });
 
   store.ingestConversationEvent(stream.stream_id, customerEvent(102));
   const newer = store.preparePublicAction({
+    descriptor: testActionDescriptor(),
     streamId: stream.stream_id, preparedStreamRevision: 2, actionType: 'ANSWER',
     basisEventSeqs: [1,2], deadlineAt: NOW + 60_000,
   });
@@ -189,6 +197,7 @@ test('GATING to SENDING is fenced by current stream revision', t => {
   const stream = makeStream(store);
   store.ingestConversationEvent(stream.stream_id, customerEvent(101));
   const action = store.preparePublicAction({
+    descriptor: testActionDescriptor(),
     streamId: stream.stream_id, preparedStreamRevision: 1, actionType: 'ANSWER',
     basisEventSeqs: [1], deadlineAt: NOW + 60_000,
   });
@@ -202,6 +211,7 @@ test('GATING to SENDING is fenced by current stream revision', t => {
   assert.equal(store.getPublicAction(action.action_id).state, 'GATING');
 
   const replacement = store.preparePublicAction({
+    descriptor: testActionDescriptor(),
     streamId: stream.stream_id, preparedStreamRevision: 2, actionType: 'ANSWER',
     basisEventSeqs: [1,2], deadlineAt: NOW + 60_000,
   });
@@ -214,6 +224,7 @@ test('SENDING and UNCERTAIN block a second public action after newer customer ev
   const stream = makeStream(store);
   store.ingestConversationEvent(stream.stream_id, customerEvent(101));
   const action = store.preparePublicAction({
+    descriptor: testActionDescriptor(),
     streamId: stream.stream_id, preparedStreamRevision: 1, actionType: 'ANSWER',
     basisEventSeqs: [1], deadlineAt: NOW + 60_000,
   });
@@ -222,24 +233,27 @@ test('SENDING and UNCERTAIN block a second public action after newer customer ev
 
   store.ingestConversationEvent(stream.stream_id, customerEvent(102));
   expectCode(() => store.preparePublicAction({
+    descriptor: testActionDescriptor(),
     streamId: stream.stream_id, preparedStreamRevision: 2, actionType: 'ANSWER',
     basisEventSeqs: [1,2], deadlineAt: NOW + 60_000,
   }), 'FIRST_LINE_ACTION_SEND_UNRESOLVED');
 
   store.markActionUncertain(action.action_id);
   expectCode(() => store.preparePublicAction({
+    descriptor: testActionDescriptor(),
     streamId: stream.stream_id, preparedStreamRevision: 2, actionType: 'ANSWER',
     basisEventSeqs: [1,2], deadlineAt: NOW + 60_000,
   }), 'FIRST_LINE_ACTION_SEND_UNRESOLVED');
 });
 
-test('CLARIFY reservation is atomic, one-shot, and releasable only before SENDING', t => {
+test('CLARIFY reservation stays consumed when current revision escalates to HUMAN', t => {
   const { store } = tempStore(t);
   const stream = makeStream(store);
   store.ingestConversationEvent(stream.stream_id, customerEvent(101));
   let episode = store.beginEpisode({ streamId: stream.stream_id });
 
   const action = store.preparePublicAction({
+    descriptor: testActionDescriptor(),
     streamId: stream.stream_id,
     episodeId: episode.episode_id,
     expectedEpisodeVersion: 1,
@@ -257,6 +271,7 @@ test('CLARIFY reservation is atomic, one-shot, and releasable only before SENDIN
   assert.equal(action.episode_version, 2);
 
   const retry = store.preparePublicAction({
+    descriptor: testActionDescriptor(),
     streamId: stream.stream_id,
     episodeId: episode.episode_id,
     expectedEpisodeVersion: 2,
@@ -268,32 +283,30 @@ test('CLARIFY reservation is atomic, one-shot, and releasable only before SENDIN
     deadlineAt: NOW + 60_000,
   });
   assert.equal(retry.action_id, action.action_id);
-  assert.equal(store.getEpisode(episode.episode_id).version, 2);
 
-  store.cancelActionBeforeSend(action.action_id, { reason: 'stale_before_send' });
+  const cancelled = store.cancelActionBeforeSend(
+    action.action_id,
+    { reason: 'current_revision_fail_closed' }
+  );
+  assert.equal(cancelled.state, 'CANCELLED');
+  assert.equal(cancelled.continuation_owner.owner_kind, 'HUMAN');
   episode = store.getEpisode(episode.episode_id);
-  assert.equal(episode.clarification_prompts_sent, 0);
-  assert.equal(episode.clarification_action_id, null);
-  assert.equal(episode.requested_slot, null);
-  assert.equal(episode.version, 3);
+  assert.equal(episode.clarification_prompts_sent, 1);
+  assert.equal(episode.clarification_action_id, action.action_id);
+  assert.equal(episode.requested_slot, 'store_id');
+  assert.equal(episode.version, 2);
 
   store.ingestConversationEvent(stream.stream_id, customerEvent(102));
-  const action2 = store.preparePublicAction({
+  expectCode(() => store.preparePublicAction({
+    descriptor: testActionDescriptor(),
     streamId: stream.stream_id,
     episodeId: episode.episode_id,
-    expectedEpisodeVersion: 3,
+    expectedEpisodeVersion: 2,
     preparedStreamRevision: 2,
-    actionType: 'CLARIFY',
+    actionType: 'ANSWER',
     basisEventSeqs: [1,2],
-    requestedSlot: 'product_id',
-    presentedCandidates: [{ slot: 'product_id', value: PRODUCT_1 }],
     deadlineAt: NOW + 60_000,
-  });
-  store.claimNextPublicAction({ leaseMs: 10_000, token: 'relay-2' });
-  store.markActionSending(action2.action_id, 'relay-2');
-  expectCode(() => store.cancelActionBeforeSend(action2.action_id),
-    'FIRST_LINE_ACTION_STATE_INVALID');
-  assert.equal(store.getEpisode(episode.episode_id).clarification_prompts_sent, 1);
+  }), 'FIRST_LINE_HUMAN_CONTINUATION_ACTIVE');
 });
 
 test('action basis and episode must belong to the same stream', t => {
@@ -308,6 +321,7 @@ test('action basis and episode must belong to the same stream', t => {
   const episode = store.beginEpisode({ streamId: b.stream_id });
 
   expectCode(() => store.preparePublicAction({
+    descriptor: testActionDescriptor(),
     streamId: a.stream_id,
     episodeId: episode.episode_id,
     expectedEpisodeVersion: 1,
@@ -330,6 +344,7 @@ test('nonterminal public action survives restart independently of copilot state'
   const stream = makeStream(store);
   store.ingestConversationEvent(stream.stream_id, customerEvent(101));
   store.preparePublicAction({
+    descriptor: testActionDescriptor(),
     streamId: stream.stream_id, preparedStreamRevision: 1, actionType: 'ANSWER',
     basisEventSeqs: [1], deadlineAt: NOW + 60_000,
   });
@@ -366,6 +381,7 @@ test('SENDING/UNCERTAIN action confirms only from unique BabyPark source_id even
   const stream = makeStream(store);
   store.ingestConversationEvent(stream.stream_id, customerEvent(101));
   const action = store.preparePublicAction({
+    descriptor: testActionDescriptor(),
     streamId: stream.stream_id, preparedStreamRevision: 1, actionType: 'ANSWER',
     basisEventSeqs: [1], deadlineAt: NOW + 60_000,
   });
@@ -402,6 +418,7 @@ test('expired relay lease cannot transition GATING to SENDING', t => {
   const stream = makeStream(store);
   store.ingestConversationEvent(stream.stream_id, customerEvent(101));
   const action = store.preparePublicAction({
+    descriptor: testActionDescriptor(),
     streamId: stream.stream_id, preparedStreamRevision: 1, actionType: 'ANSWER',
     basisEventSeqs: [1], deadlineAt: NOW + 60_000,
   });
@@ -418,6 +435,7 @@ test('episode semantic drift blocks a CLARIFY send even without a new customer e
   store.ingestConversationEvent(stream.stream_id, customerEvent(101));
   let episode = store.beginEpisode({ streamId: stream.stream_id });
   const action = store.preparePublicAction({
+    descriptor: testActionDescriptor(),
     streamId: stream.stream_id,
     episodeId: episode.episode_id,
     expectedEpisodeVersion: 1,
@@ -458,6 +476,7 @@ test('read path rejects manually corrupted public action metadata', t => {
   const stream = makeStream(store);
   store.ingestConversationEvent(stream.stream_id, customerEvent(101));
   const action = store.preparePublicAction({
+    descriptor: testActionDescriptor(),
     streamId: stream.stream_id,
     preparedStreamRevision: 1,
     actionType: 'ANSWER',
@@ -477,6 +496,7 @@ test('cancelling an unsent CLARIFY never mutates an already closed episode', t =
   store.ingestConversationEvent(stream.stream_id, customerEvent(101));
   let episode = store.beginEpisode({ streamId: stream.stream_id });
   const action = store.preparePublicAction({
+    descriptor: testActionDescriptor(),
     streamId: stream.stream_id,
     episodeId: episode.episode_id,
     expectedEpisodeVersion: 1,
@@ -511,6 +531,7 @@ test('newer revision atomically replaces an unsent CLARIFY with ANSWER using the
   store.ingestConversationEvent(stream.stream_id, customerEvent(101));
   let episode = store.beginEpisode({ streamId: stream.stream_id });
   const oldAction = store.preparePublicAction({
+    descriptor: testActionDescriptor(),
     streamId: stream.stream_id,
     episodeId: episode.episode_id,
     expectedEpisodeVersion: 1,
@@ -525,6 +546,7 @@ test('newer revision atomically replaces an unsent CLARIFY with ANSWER using the
 
   store.ingestConversationEvent(stream.stream_id, customerEvent(102));
   const next = store.preparePublicAction({
+    descriptor: testActionDescriptor(),
     streamId: stream.stream_id,
     episodeId: episode.episode_id,
     expectedEpisodeVersion: 2,
@@ -549,6 +571,7 @@ test('newer revision atomically replaces an unsent CLARIFY with one new CLARIFY 
   store.ingestConversationEvent(stream.stream_id, customerEvent(101));
   let episode = store.beginEpisode({ streamId: stream.stream_id });
   const oldAction = store.preparePublicAction({
+    descriptor: testActionDescriptor(),
     streamId: stream.stream_id,
     episodeId: episode.episode_id,
     expectedEpisodeVersion: 1,
@@ -562,6 +585,7 @@ test('newer revision atomically replaces an unsent CLARIFY with one new CLARIFY 
 
   store.ingestConversationEvent(stream.stream_id, customerEvent(102));
   const next = store.preparePublicAction({
+    descriptor: testActionDescriptor(),
     streamId: stream.stream_id,
     episodeId: episode.episode_id,
     expectedEpisodeVersion: 2,
@@ -615,6 +639,7 @@ test('mixed-slot CLARIFY reservation is rejected before clarification budget mut
   const episode = store.beginEpisode({ streamId: stream.stream_id });
 
   expectCode(() => store.preparePublicAction({
+    descriptor: testActionDescriptor(),
     streamId: stream.stream_id,
     episodeId: episode.episode_id,
     expectedEpisodeVersion: episode.version,
@@ -651,27 +676,37 @@ test('explicit v2 to v3 migration is additive and preserves existing state', t =
   store.close();
 
   const raw = new DatabaseSync(file);
-  raw.exec('DROP TABLE episode_constraint_latches');
-  raw.exec('PRAGMA user_version=2');
+  raw.exec('PRAGMA foreign_keys=OFF');
+  raw.exec("DROP TABLE recovery_barriers; DROP TABLE deferred_event_parents; DROP TABLE continuation_owners; DROP TABLE semantic_origins; DROP TABLE legacy_v3_actions; DROP TABLE public_action_descriptors; DROP TABLE public_action_source_events; DROP INDEX episodes_episode_stream; DROP INDEX public_actions_action_stream; DROP INDEX public_actions_action_stream_revision; DROP TABLE episode_constraint_latches; PRAGMA user_version=2;");
   raw.prepare('UPDATE metadata SET schema_version=2 WHERE singleton=1').run();
+  raw.exec('PRAGMA foreign_keys=ON');
   raw.close();
 
   const migrated = FirstLineStateStore.migrateV2ToV3(file, {
     now: () => NOW + 1,
   });
-  t.after(() => { try { migrated.close(); } catch {} });
+  assert.equal(migrated.schema_version, 3);
 
-  assert.equal(migrated.db.prepare('PRAGMA user_version').get().user_version, 3);
+  const after = new DatabaseSync(file);
+  t.after(() => { try { after.close(); } catch {} });
+  assert.equal(after.prepare('PRAGMA user_version').get().user_version, 3);
   assert.equal(
-    migrated.db.prepare('SELECT schema_version FROM metadata WHERE singleton=1')
+    after.prepare('SELECT schema_version FROM metadata WHERE singleton=1')
       .get().schema_version,
     3
   );
   assert.equal(
-    migrated.getEpisode(episode.episode_id).stable_slots.product_id.value,
+    JSON.parse(after.prepare(
+      "SELECT value_json FROM episode_slots WHERE episode_id=? AND slot_name='product_id'"
+    ).get(episode.episode_id).value_json),
     PRODUCT_1
   );
-  assert.equal(migrated.listEpisodeConstraintLatches(episode.episode_id).length, 0);
+  assert.equal(
+    after.prepare(
+      'SELECT COUNT(*) AS n FROM episode_constraint_latches WHERE episode_id=?'
+    ).get(episode.episode_id).n,
+    0
+  );
 });
 
 test('pending constraint latch blocks standalone replacement and public action preparation', t => {
@@ -710,6 +745,7 @@ test('pending constraint latch blocks standalone replacement and public action p
   }), 'FIRST_LINE_PENDING_HUMAN_LATCH');
 
   expectCode(() => store.preparePublicAction({
+    descriptor: testActionDescriptor(),
     streamId: stream.stream_id,
     episodeId: transition.episode.episode_id,
     expectedEpisodeVersion: transition.episode.version,
@@ -797,6 +833,7 @@ test('v3 refuses to create legacy generic money clarification reservations', t =
   store.ingestConversationEvent(stream.stream_id, customerEvent(101));
   const episode = store.beginEpisode({ streamId: stream.stream_id });
   expectCode(() => store.preparePublicAction({
+    descriptor: testActionDescriptor(),
     streamId: stream.stream_id,
     episodeId: episode.episode_id,
     expectedEpisodeVersion: episode.version,
@@ -815,6 +852,7 @@ test('latch committed after action preparation prevents GATING to SENDING', t =>
   store.ingestConversationEvent(stream.stream_id, customerEvent(101));
   const episode = store.beginEpisode({ streamId: stream.stream_id });
   const action = store.preparePublicAction({
+    descriptor: testActionDescriptor(),
     streamId: stream.stream_id,
     episodeId: episode.episode_id,
     expectedEpisodeVersion: episode.version,
@@ -859,6 +897,7 @@ test('routing snapshot cannot commit a new latch after its ANSWER has reached SE
   assert.equal(snapshot.live_public_action, null);
 
   const action = store.preparePublicAction({
+    descriptor: testActionDescriptor(),
     streamId: stream.stream_id,
     episodeId: episode.episode_id,
     expectedEpisodeVersion: episode.version,
@@ -969,6 +1008,7 @@ test('latched episode rejects every non-HUMAN close reason and keeps later ANSWE
     expectedEpisodeVersion: episode.version,
   }), 'FIRST_LINE_PENDING_HUMAN_LATCH');
   expectCode(() => store.preparePublicAction({
+    descriptor: testActionDescriptor(),
     streamId: stream.stream_id,
     episodeId: episode.episode_id,
     expectedEpisodeVersion: episode.version,
@@ -1152,6 +1192,7 @@ test('active episode rejects detached customer-visible action preparation', t =>
   store.beginEpisode({ streamId: stream.stream_id });
 
   expectCode(() => store.preparePublicAction({
+    descriptor: testActionDescriptor(),
     streamId: stream.stream_id,
     preparedStreamRevision: 1,
     actionType: 'ANSWER',
@@ -1173,6 +1214,7 @@ test('legacy detached prepared action cannot reach SENDING after active episode 
   const episode = store.beginEpisode({ streamId: stream.stream_id });
 
   const action = store.preparePublicAction({
+    descriptor: testActionDescriptor(),
     streamId: stream.stream_id,
     episodeId: episode.episode_id,
     expectedEpisodeVersion: episode.version,
@@ -1182,34 +1224,20 @@ test('legacy detached prepared action cannot reach SENDING after active episode 
     deadlineAt: NOW + 60_000,
   });
 
-  // Simulate a legacy/corrupt detached durable row that predates the v3 fence.
+  // Simulate a legacy/corrupt detached durable row. v4 fails closed as soon as
+  // the action is read because immutable continuation provenance disagrees.
   store.db.prepare(
     'UPDATE public_actions SET episode_id=NULL,episode_version=NULL WHERE action_id=?'
   ).run(action.action_id);
 
-  const snapshot = store.readRoutingSnapshot(stream.stream_id);
-  store.commitConstraintLatchesFromRoutingPlan({
-    streamId: stream.stream_id,
-    expectedStreamRevision: snapshot.stream.stream_revision,
-    expectedThroughEventSeq: snapshot.stream.last_event_seq,
-    expectedRoutingLedgerFingerprint: snapshot.routing_ledger_fingerprint,
-    expectedEpisodeId: episode.episode_id,
-    expectedEpisodeVersion: episode.version,
-    expectedLiveActionId: snapshot.live_public_action.action_id,
-    expectedLiveActionState: snapshot.live_public_action.state,
-    constraintLatches: [{
-      latch_class: 'UNSUPPORTED_EXCLUSION',
-      source_event_seq: 1,
-    }],
-    constraintBasisEventSeqs: [1],
-  });
-
-  store.claimNextPublicAction({ leaseMs: 30_000, token: 'legacy-detached' });
   expectCode(
-    () => store.markActionSending(action.action_id, 'legacy-detached'),
-    'FIRST_LINE_ACTION_STALE_EPISODE'
+    () => store.readRoutingSnapshot(stream.stream_id),
+    'FIRST_LINE_DB_CORRUPT'
   );
-  assert.equal(store.getPublicAction(action.action_id).state, 'GATING');
+  expectCode(
+    () => store.getPublicAction(action.action_id),
+    'FIRST_LINE_DB_CORRUPT'
+  );
 });
 
 test('v2 migration rejects unexpected trigger before versions or public actions mutate', t => {
@@ -1217,6 +1245,7 @@ test('v2 migration rejects unexpected trigger before versions or public actions 
   const stream = makeStream(store);
   store.ingestConversationEvent(stream.stream_id, customerEvent(101));
   const action = store.preparePublicAction({
+    descriptor: testActionDescriptor(),
     streamId: stream.stream_id,
     preparedStreamRevision: 1,
     actionType: 'ANSWER',
@@ -1333,6 +1362,7 @@ test('confirmed CATEGORY candidate selection commits id and match mode atomicall
     match_mode: 'NODE_ONLY',
   });
   const action = store.preparePublicAction({
+    descriptor: testActionDescriptor(),
     streamId: stream.stream_id,
     episodeId: episode.episode_id,
     expectedEpisodeVersion: episode.version,

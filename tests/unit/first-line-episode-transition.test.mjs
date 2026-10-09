@@ -9,6 +9,7 @@ import {
   FirstLineStateStore,
 } from '../../src/copilot/first-line-state-store.mjs';
 import { projectOpenTurn } from '../../src/copilot/first-line-routing-planner.mjs';
+import { testActionDescriptor } from '../helpers/first-line-action-descriptor.mjs';
 
 const NOW = 2_000_000_000_000;
 const PRODUCT_1 = 'prod_11111111-1111-4111-8111-111111111111';
@@ -90,6 +91,7 @@ function expectCode(fn, code) {
 
 function reserveClarification(store, streamId, episode) {
   return store.preparePublicAction({
+    descriptor: testActionDescriptor(),
     streamId,
     episodeId: episode.episode_id,
     expectedEpisodeVersion: episode.version,
@@ -242,6 +244,7 @@ test('SENDING and UNCERTAIN block standalone episode replacement', t => {
     store.ingestConversationEvent(stream.stream_id, customerEvent(101));
     const old = store.beginEpisode({ streamId: stream.stream_id });
     const action = store.preparePublicAction({
+      descriptor: testActionDescriptor(),
       streamId: stream.stream_id,
       episodeId: old.episode_id,
       expectedEpisodeVersion: old.version,
@@ -308,6 +311,7 @@ test('terminal action on the current revision permanently blocks episode replace
     store.ingestConversationEvent(stream.stream_id, customerEvent(101));
     const old = store.beginEpisode({ streamId: stream.stream_id });
     const action = store.preparePublicAction({
+      descriptor: testActionDescriptor(),
       streamId: stream.stream_id,
       episodeId: old.episode_id,
       expectedEpisodeVersion: old.version,

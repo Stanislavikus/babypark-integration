@@ -5,6 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import fc from 'fast-check';
+import { testActionDescriptor } from '../helpers/first-line-action-descriptor.mjs';
 
 import {
   FIRST_LINE_EXTRACTION_SCHEMA,
@@ -1095,6 +1096,7 @@ function reservedAmbiguousProductFixture(
   });
   const episode = store.beginEpisode({ streamId: stream.stream_id });
   const action = store.preparePublicAction({
+    descriptor: testActionDescriptor(),
     streamId: stream.stream_id,
     episodeId: episode.episode_id,
     expectedEpisodeVersion: episode.version,
@@ -1522,6 +1524,7 @@ function budgetOneFixture(t, {
   });
   const episode = store.beginEpisode({ streamId: stream.stream_id });
   const action = store.preparePublicAction({
+    descriptor: testActionDescriptor(),
     streamId: stream.stream_id,
     episodeId: episode.episode_id,
     expectedEpisodeVersion: episode.version,
@@ -2683,6 +2686,7 @@ function budgetOneProjection(t, text) {
   });
   const episode = store.beginEpisode({ streamId: stream.stream_id });
   store.preparePublicAction({
+    descriptor: testActionDescriptor(),
     streamId: stream.stream_id,
     episodeId: episode.episode_id,
     expectedEpisodeVersion: episode.version,
