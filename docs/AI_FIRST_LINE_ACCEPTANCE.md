@@ -111,14 +111,15 @@ For multi-turn cases, `customer_messages[]` preserves episode history.
 | C22 | Relevant IN_STOCK offers contain UAH + EUR. | HUMAN / MIXED_CURRENCY |
 | C23 | Trusted IN_STOCK offer has `current_minor == 0`. | HUMAN / ZERO_PRICE_UNVERIFIED |
 | C24 | IN_STOCK priced variants plus EXPECTED variants without offers. | Price answer uses IN_STOCK cohort only |
-| C25 | "Да, покажите точные цены вариантов" is the next actionable customer turn after one **normal-CONFIRMED before HUMAN escalation** `ANSWER / PRODUCT_PRICE_RANGE` in the same active episode; the predecessor action/source ledger relation is unique and its immutable semantic scope contains canonical `product.product_id`; the exact current-turn text matches one frozen §21.1 VARIANT_PRICE_LIST predicate independently of `intent_hint`; the new turn adds no identity/constraint row; all current IN_STOCK priced variants have safe labels. | Continue the same episode; use only predecessor semantic-scope `product_id` as historical continuation context; ANSWER / VARIANT_PRICE_LIST with `TPL_VARIANT_PRICE_LIST_V1`; reread current Catalog authority; payload contains label+current_minor only, no IDs/SKU. |
+| C25 | One supported Website incoming message contains "Да, покажите точные цены вариантов", its exact current Chatwoot row has `content_attributes.in_reply_to == predecessor.confirmed_source_message_id` and `in_reply_to_external_id == predecessor.action_id`, and that predecessor is the unique **normal-CONFIRMED before HUMAN escalation** `ANSWER / PRODUCT_PRICE_RANGE` in the same active episode with canonical semantic-scope `product.product_id`. The exact dependent-message text matches one frozen §21.1 predicate independently of `intent_hint`; the new turn adds no identity/constraint row; all current IN_STOCK priced variants have safe labels. | Continue the same episode; use only predecessor semantic-scope `product_id` as historical continuation context; ANSWER / VARIANT_PRICE_LIST with `TPL_VARIANT_PRICE_LIST_V1`; reread current Catalog authority; payload contains label+current_minor only, no IDs/SKU. |
 | C25a | Same proven dependent C25 route but at least one current priced variant has no safe display label. | HUMAN / PRODUCT_VARIANT_NOT_RESOLVABLE; do not expose variant_id/SKU and do not publish a partial unlabeled price list. |
-| C25b | The follow-up text matches a frozen VARIANT_PRICE_LIST predicate but there is no unique normal-CONFIRMED PRODUCT_PRICE_RANGE predecessor, its semantic-scope product/action/source/deferred provenance is missing/corrupt, HUMAN escalation occurred before source proof, or an intervening actionable/ownership-blocking event exists. | Do not inherit product context. Fail closed to HUMAN unless the current turn independently satisfies an ordinary standalone reviewed route. |
-| C25c | After a confirmed range answer, the next turn independently supplies any PRODUCT/CATEGORY/BRAND/STORE/MONEY identity or constraint row together with variant-price wording. | Treat the turn as standalone under Q09; predecessor PRODUCT is not inherited. Current standalone C2/C3/C4 decides or fails closed. |
-| C25d | Russian and Ukrainian exact-turn controls cover both price-before-variant and variant-before-price word orders, including "Да, покажите точные цены вариантов" and "Так, покажіть точні ціни варіантів". Model `intent_hint` is missing, wrong or changed. | The same frozen §21.1 deterministic predicates classify all four language/order controls identically; `intent_hint` cannot create or suppress C25 eligibility. |
-| C25e | A near-miss current turn lacks the frozen price+variant language, the predecessor has only late remote-send evidence after HUMAN escalation, or predecessor semantic scope lacks one provable product_id. | Do not infer dependent C25 from conversational plausibility. No old PRODUCT/variant context is inherited; ordinary standalone routing/HUMAN applies. |
+| C25b | Variant-price wording matches, but the native reply relation is absent/partial/malformed, points to another message/conversation/action, or the referenced action is not one unique normal-CONFIRMED PRODUCT_PRICE_RANGE predecessor. | Do not infer causality from event_seq, message-id magnitude, created_at, webhook order or deferred-parent metadata. Do not inherit PRODUCT; ordinary standalone routing/HUMAN applies. |
+| C25c | A causally proven reply to a confirmed range answer independently supplies any PRODUCT/CATEGORY/BRAND/STORE/MONEY identity or constraint row together with variant-price wording. | Treat the turn as standalone under Q09; predecessor PRODUCT is not inherited. Current standalone C2/C3/C4 decides or fails closed. |
+| C25d | Russian and Ukrainian exact-turn controls cover both price-before-variant and variant-before-price word orders, including "Да, покажите точные цены вариантов" and "Так, покажіть точні ціни варіантів". Model `intent_hint` is missing, wrong or changed. | The frozen §21.1 predicates classify all four language/order controls identically; `intent_hint` cannot create or suppress C25 eligibility. Before C25 activation, production C4 must use one shared matcher with exact parity to those predicates. |
+| C25e | A near-miss dependent message lacks the frozen price+variant language, the predecessor has only late remote-send evidence after HUMAN escalation, or predecessor semantic scope lacks one provable product_id. | Do not infer dependent C25 from conversational plausibility. No old PRODUCT/variant context is inherited; ordinary standalone routing/HUMAN applies. |
 | C25f | The normal-confirmed range predecessor used a stable product selected through native STRUCTURED_SUBMISSION. Its stable `derived_through_event_seq` still points to the confirmed CLARIFY event; before C25 send, current `submitted_values` is changed/missing/multiple/unknown. | Stable provenance is never rewritten by range confirmation. C25 re-proves the structured source under §29.7; mutation => zero POST + HUMAN. |
-| C25g | The normal-confirmed range predecessor came from an exact-message product and no product stable slot exists. Restart before the dependent follow-up. | The predecessor action's immutable semantic-scope `product_id` + authoritative action/source relation are sufficient historical context; no synthetic stable-slot promotion is required. |
+| C25g | The normal-confirmed range predecessor came from an exact-message product and no product stable slot exists. Restart before the causally proven dependent reply. | The predecessor action's immutable semantic-scope `product_id` + authoritative action/source + exact native reply relation are sufficient historical context; no synthetic stable-slot promotion is required. |
+| C25h | Customer text looks exactly like C25 and is accepted while predecessor is SENDING/UNCERTAIN or later via backfill, but it has no exact native reply pair to that predecessor. | Deferred/event acceptance order is scheduling only, not causality. Never inherit PRODUCT. Even if the predecessor later normally CONFIRMS, process this turn only as standalone/HUMAN. |
 | C26 | "Какие варианты Joolz Aer2 сейчас есть?" All IN_STOCK variant labels safe. | ANSWER / VARIANT_LIST |
 | C27 | IN_STOCK: Black; EXPECTED: Blue; question "Какие варианты сейчас есть?" | ANSWER listing Black only |
 | C28 | 7 IN_STOCK variants, 5 safe labels, 2 suppressed by display sanitizer. | ANSWER / VARIANT_LIST_PARTIAL; explicitly total=7, named=5 |
@@ -1257,8 +1258,10 @@ Expected:
 - duplicate delivery verifies/reuses the immutable relation and cannot reparent;
 - normal confirmation of A before HUMAN makes C1,C2 the next open turn in their
   accepted `event_seq` order; the later-accepted outgoing row cannot hide them;
-- C25 adjacency may use that relation only when A is a normal-CONFIRMED
-  PRODUCT_PRICE_RANGE predecessor;
+- the deferred relation keeps C1/C2 schedulable after A resolves but is never
+  C25 causal proof. C25 may inherit PRODUCT only when the exact incoming Website
+  message independently proves the native reply pair to one normal-CONFIRMED
+  PRODUCT_PRICE_RANGE predecessor under §21.1/Q55;
 - if A acquires HUMAN continuation, ownership is lost, or only gains late
   remote-send evidence after HUMAN, C1/C2 remain HUMAN/non-AI and cannot launch
   autonomous AI;
@@ -1376,6 +1379,139 @@ Expected:
 - operational attention is not a fourth public decision class and contains no
   customer transcript/content digest.
 
+### Q51 — NON_ACTIONABLE_ACK has one deterministic exact-text proof
+Parameterize one complete open turn containing exactly one supported customer
+text message with each of:
+- `спасибо`;
+- `Спасибо!!!`;
+- `дякую`;
+- `Дякую !`;
+- `ок`;
+- `добре`;
+- `спасибо ❤️`;
+- `Спасибо, а сколько стоит доставка?`;
+and separately parameterize a two-customer-message open turn, a pending CLARIFY
+reservation and wrong/missing/changing model `intent_hint`. For every exact-ACK
+control, interleave before the durable commit: one newer accepted customer event,
+changed `routing_ledger_fingerprint`, changed stream head/revision, changed active
+episode/version, a newly live public/HUMAN owner, and a duplicate/restart after an
+already committed ACK.
+
+Expected:
+- only standalone Russian/Ukrainian thank-you text matching
+  `/^(?:спасибо|дякую)(?:\s*\p{P})*$/iu` after the frozen transient
+  NFC/whitespace normalization may enter ACK admission;
+- attachment/unknown shape, emoji, extra words, multiple customer messages,
+  pending CLARIFY/HUMAN/latch or any non-match cannot become ACK;
+- C3 CLEAR and `intent_hint` never authorize or suppress ACK;
+- the exact-text proof alone is non-authorizing: one `BEGIN IMMEDIATE` admission
+  rechecks the exact expected `stream_revision`, `through_event_seq`,
+  `routing_ledger_fingerprint`, active episode/version when present, absence of
+  live public/HUMAN/pending-CLARIFY/latch ownership and absence of a conflicting
+  same-revision semantic origin;
+- any changed/newer predicate => zero ACK mutation/zero episode close and stale
+  rebuild/ordinary fail-closed processing;
+- the ACK origin plus current episode close (when an active episode exists) commit
+  atomically only on the unchanged certified basis;
+- mixed social+actionable text continues ordinary C2/C3/C4 and cannot be made
+  permanently silent by a model/heuristic classifier;
+- after exact ACK commits, duplicate trigger/restart reuses the immutable origin
+  idempotently and cannot replace it with another outcome.
+
+### Q52 — MONEY semantic scope preserves merged zero support and validates relations
+Parameterize effective durable MONEY state as:
+1. `max=0,currency=UAH`;
+2. valid max-only;
+3. valid min-only;
+4. valid min<=max;
+5. min>max;
+6. bound with missing currency;
+7. bound with non-UAH currency;
+8. currency-only;
+9. malformed/non-safe-integer bound;
+10. requested max-price clarification where max/currency provenance differs.
+
+Expected:
+- cases 1–4 are representable semantic-scope MONEY with non-negative safe
+  integer bounds and exact UAH;
+- case 1 is a customer constraint value, not authority to call a catalog zero
+  price "free";
+- cases 5–9 fail closed before C4/public send and are never silently normalized
+  into a UAH objective constraint;
+- lower/upper bounds may retain different valid source-event provenance;
+- requested max-price clarification still requires atomic same-provenance
+  `max_price_minor + currency=UAH`;
+- S1/S2 reauthorization preserves/revalidates every effective bound and exact
+  descriptor equality.
+
+### Q53 — C25/C4 matcher implementation must equal the frozen §21.1 contract before activation
+On this docs-only Stage-0 tree, compare the frozen §21.1 target predicates with
+the merged C4 `VARIANT_PRICE_LIST` matcher. Then, in the future C25 production
+stage, run exact code/contract parity tests after the required C4 change.
+
+Expected:
+- Stage 0 records the known current drift rather than claiming present code
+  parity: the merged forward-order C4 branch lacks Ukrainian `цін`;
+- Stage 0 changes no production matcher code;
+- C25 production/activation is blocked until one shared C4 matcher implements
+  exactly both frozen §21.1 predicates;
+- C25 routing imports/reuses that shared matcher and cannot maintain a separate
+  NLP/regex implementation;
+- matcher input uses the same ordered exact-read text combination as C4
+  (transient customer contents joined with LF);
+- ru/uk × both word orders and near-miss controls pass independently of
+  `intent_hint`.
+
+### Q54 — native handoff attempt is durable before the network side effect
+Start from one durable HUMAN owner with exact
+pending+configured-AgentBot+no-human ownership. Crash/restart at each boundary:
+(a) before durable handoff-attempt reservation,
+(b) after reservation but before durable dispatch/outcome-unknown boundary,
+(c) after that boundary but before invoking Chatwoot,
+(d) after request dispatch before response,
+(e) after timeout/reset/unknown response.
+Delete/recreate `copilot.sqlite`, expire execution leases and start duplicate
+runners. Then separately supply reviewed positive deterministic non-commit
+evidence for the prior attempt.
+
+Expected:
+- `episode.sqlite` owns the attempt identity/state; disposable execution state
+  cannot make a prior attempt disappear;
+- only one runner can reserve/cross the first write boundary for one attempt;
+- once dispatch/outcome-unknown is durable, restart/lease expiry/pending state/
+  elapsed time never cause another automatic handoff write;
+- crash at (c) may conservatively remain HUMAN/operator-attention even if no
+  request bytes were actually sent;
+- a later attempt is possible only after positive deterministic non-commit proof
+  is durably attached to the previous attempt plus one fresh exact ownership
+  read;
+- no handoff-attempt metadata contains customer transcript/content digest.
+
+### Q55 — C25 dependency requires native causal reply provenance
+Parameterize a C25-looking customer message with:
+1. exact Widget `in_reply_to` equal to the unique normal-confirmed range
+   message and `in_reply_to_external_id` equal to its `action_id`;
+2. no reply relation;
+3. only one of the two fields matching;
+4. reply to another conversation/message/action;
+5. reply to late-send-after-HUMAN evidence;
+6. message accepted while predecessor is SENDING/UNCERTAIN, then predecessor
+   normally confirms;
+7. an older backfilled message accepted after local predecessor confirmation;
+8. valid pair at planning that is changed/missing at final S2 reread.
+
+Expected:
+- only case 1 may establish C25 dependency, subject to all other C25 gates;
+- cases 2–7 never inherit PRODUCT merely from event_seq, Chatwoot message-id
+  magnitude, created_at, webhook order or deferred-parent metadata;
+- case 6 may become eligible only when its exact native reply pair itself proves
+  the predecessor relation; SENDING/deferred state alone proves nothing;
+- case 8 performs zero POST and fails closed;
+- same-conversation predecessor, unique normal confirmation, action/source
+  relation and immutable semantic-scope product are re-proven at S2;
+- the bounded reply identifiers may be durable topology metadata, but no quoted
+  customer/public text or content-derived digest becomes durable.
+
 ## I. Handoff vectors
 
 ### H01 — HUMAN successful / already achieved
@@ -1384,8 +1520,9 @@ Expected:
   DIRECT_HUMAN origin or relay-originated HUMAN has the immutable PUBLIC_ACTION
   origin plus durable HUMAN continuation in `episode.sqlite`;
 - exact pre-attempt ownership proves either pending+configured AgentBot, allowing
-  one native handoff attempt, or open+no configured AgentBot ownership,
-  requiring no write;
+  one native handoff attempt only after its `episode.sqlite` attempt identity and
+  dispatch/outcome boundary are durably reserved, or open+no configured AgentBot
+  ownership, requiring no write;
 - exact post-attempt/current ownership proves open+no configured AgentBot before
   `HANDOFF_DONE`;
 - only after that proof does a bound logical episode close as
@@ -1394,6 +1531,9 @@ Expected:
 
 ### H02 — handoff failure/unknown outcome remains durable
 - no false public "transferred" message exists;
+- the handoff attempt identity/state lives in `episode.sqlite` and is committed
+  before the external write boundary; loss/recreation of `copilot.sqlite`,
+  worker restart or lease expiry cannot erase it;
 - timeout/reset/unknown response does not prove non-commit and is followed by an
   exact ownership reread;
 - open+same configured AgentBot after the attempt is unresolved race residue:
@@ -1401,8 +1541,9 @@ Expected:
 - pending+configured AgentBot does not by itself authorize retry after an
   outcome-unknown prior attempt; elapsed measured time is not positive proof of
   non-commit. Another automated attempt requires deterministic provider/transport
-  evidence that the old request cannot still commit, then a fresh pre-attempt
-  read. If such proof is unavailable, no automated retry occurs;
+  evidence that the old request cannot still commit, that evidence is durably
+  attached to the old attempt, then a fresh pre-attempt read. If such proof is
+  unavailable, no automated retry occurs;
 - malformed/unknown/unavailable ownership performs no write and keeps HUMAN
   durable/retryable; when the measured escalation window expires it additionally
   raises §29.8.2 operator-attention without fabricating terminal success;
@@ -2153,13 +2294,17 @@ Expected:
 - any existing stable product selection keeps its original
   `derived_through_event_seq`; if structured, C25 re-proves current
   `submitted_values` before send;
-- the immediate no-new-identity follow-up must satisfy one exact frozen §21.1
-  VARIANT_PRICE_LIST predicate independently of model `intent_hint`, then uses
-  only predecessor scope product_id and rereads current variant prices;
+- the dependent turn must be exactly one supported Website customer message
+  whose current exact read proves both native reply fields to the unique
+  normal-confirmed predecessor, and must satisfy one exact frozen §21.1
+  VARIANT_PRICE_LIST predicate independently of model `intent_hint`; only then
+  may it use predecessor scope product_id and reread current variant prices;
+- event_seq, Chatwoot message-id magnitude, created_at, webhook order and
+  deferred-parent metadata never substitute for the native reply proof;
 - late source proof after HUMAN is never a C25 predecessor;
-- any missing/intervening/mismatched predecessor/stable/deferred provenance,
-  near-miss language or new identity/constraint makes old product context
-  unavailable;
+- any missing/mutated/mismatched native reply pair or predecessor/stable
+  provenance, near-miss language or new identity/constraint makes old product
+  context unavailable;
 - predecessor variant_id, old price/label/render bytes are never inherited.
 
 ### U14 — timing authority is measured/configured, not guessed
@@ -2188,27 +2333,38 @@ is merged via PR #107 on canonical main
 `(category_id,category_match_mode)` prerequisite and its HEAVY closure.
 
 T07–T13 remain the merged C5 acceptance contract. v0.8 adds the C6/C25
-pre-implementation safety vectors Q33–Q50 and U08–U14, extends the C25 corpus
-through C25g, and tightens Q21/Q22/Q24/Q26/Q29/H01–H04. The exhaustive vectors
+pre-implementation safety vectors Q33–Q55 and U08–U14, extends the C25 corpus
+through C25h, and tightens Q21/Q22/Q24/Q26/Q29/H01–H04. The exhaustive vectors
 cover:
 - immutable same-revision semantic origins plus monotonic PUBLIC_ACTION -> HUMAN
   continuation rather than destructive outcome replacement;
 - stream/revision HUMAN ownership, NOT_SENT prohibition and CLARIFY-budget
   retention;
+- permanent NON_ACTIONABLE_ACK silence only after the closed deterministic
+  exact-text proof plus one unchanged-basis owning-store admission CAS that
+  atomically commits ACK/current-episode close, never model/extraction/C3
+  confidence or stale routing state;
 - late remote-send proof that can never reverse HUMAN or become C25 context;
-- atomic/corruption-checked deferred-behind-action customer events;
-- exact symmetric ru/uk C25 language using predecessor semantic-scope product_id
-  without rewriting stable selection provenance;
-- complete canonical semantic scope including nullable lower/upper customer-money
-  bounds actually consumed by C4;
+- atomic/corruption-checked deferred-behind-action customer events that remain
+  scheduling/topology only and never causal inheritance evidence;
+- exact symmetric ru/uk §21.1 target matcher behavior plus an explicit known
+  merged-C4 Ukrainian-forward drift that blocks C25 production/activation until
+  one shared production matcher proves exact parity;
+- C25 causal dependency only through the exact Website native
+  `in_reply_to + in_reply_to_external_id` pair to the unique normal-confirmed
+  range predecessor, re-proven at S2;
+- complete canonical semantic scope including non-negative nullable lower/upper
+  UAH customer-money bounds and fail-closed currency/range/provenance integrity;
 - S1 non-authorizing semantic rebuild followed by final S2 Chatwoot topology,
-  exact text/structured proof, final current ownership/status and local CAS;
+  exact text/structured/C25-causality proof, final current ownership/status and
+  local CAS;
 - stale-backup recovery barriers for silent ACK/HUMAN/action ownership;
 - semantic liveness plus operational escalation when Chatwoot authority cannot
   prove physical handoff;
-- self-contained state-reconciled native handoff/ownership_lost including
-  open+same-AgentBot race residue and no blind retry of an outcome-unknown
-  handoff request.
+- self-contained state-reconciled native handoff/ownership_lost including a
+  durable `episode.sqlite` handoff-attempt/dispatch boundary before the network
+  write, open+same-AgentBot race residue and no blind recreation/retry of an
+  outcome-unknown handoff after worker/lease/`copilot.sqlite` loss.
 
 It selects no implementation product or scheduler and adds no production code.
 C5 remains unconnected/not deployed and performs no Chatwoot POST. C6/C25

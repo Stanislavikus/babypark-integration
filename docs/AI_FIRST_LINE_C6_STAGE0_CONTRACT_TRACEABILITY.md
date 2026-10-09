@@ -58,8 +58,10 @@ for the HEAVY exact-tree review/confirmation required to merge this amendment.
 3. Prepared action provenance includes an exact typed canonical semantic scope,
    not only public reason/template/locale. C4 derives it from every effective
    certified canonical slot/constraint it actually consumes; callers cannot
-   prune it. MONEY includes nullable `min_price_minor` and `max_price_minor`
-   under UAH when either bound exists.
+   prune it. MONEY uses nullable **non-negative** `min_price_minor` /
+   `max_price_minor`, requires exact UAH when a bound exists, rejects
+   currency-only/missing/non-UAH/impossible ranges, and retains each bound's
+   valid provenance.
 4. Dynamic business truth remains transient and fresh: current price, stock,
    policy, hours, labels and rendered payload are never added to durable action
    state.
@@ -75,15 +77,19 @@ for the HEAVY exact-tree review/confirmation required to merge this amendment.
    Execution/reconcile jobs may drive handoff but are not semantic truth.
 8. Customer-event acceptance while a same-stream action is SENDING/UNCERTAIN
    atomically commits event + stream revision + immutable deferred-parent action
-   relation in one owning-store transaction; corruption fails closed.
+   relation in one owning-store transaction; corruption fails closed. That
+   relation is scheduling/topology only and never causal authority for C25.
 9. Durable SENDING is the permanent no-POST-retry boundary. Unique source proof
    before HUMAN gives normal CONFIRMED. Unique proof discovered after HUMAN is
    historical late-remote evidence only and cannot restore AI/C25/episode
    continuation.
 10. C25 remains before production activation, not before generic C6-core design.
-    It uses only semantic-scope product_id from a normal-CONFIRMED range
-    predecessor plus authoritative action/source/topology provenance; ANSWER
-    confirmation never creates/rewrites stable product-selection provenance.
+    It uses only semantic-scope product_id from a unique normal-CONFIRMED range
+    predecessor plus the exact Website native reply pair
+    `(in_reply_to=confirmed_source_message_id,
+    in_reply_to_external_id=action_id)`; event/deferred ordering never substitutes
+    for causal proof. ANSWER confirmation never creates/rewrites stable
+    product-selection provenance.
 11. A stale backup/restore does not infer missing silent ACK/HUMAN/action fences.
     Unless a lossless semantic cut is proven, autonomous AI remains disabled
     behind an explicit recovery barrier and ambiguous lost-interval work fails
@@ -94,12 +100,23 @@ for the HEAVY exact-tree review/confirmation required to merge this amendment.
     while HUMAN remains absorbing.
 13. Native HUMAN handoff is self-contained in DESIGN §43. Exact pre/post
     ownership reads govern writes/terminalization; open+same-AgentBot race
-    residue remains HUMAN. An outcome-unknown handoff request is never retried
-    merely because time elapsed or a reread is still pending+AgentBot; another
-    automated write requires positive non-commit evidence plus a fresh read.
-14. The exact symmetric ru/uk §21.1 matcher is independent of model intent_hint;
-    predecessor variant_id/dynamic/rendered values are never inherited.
-15. Numeric timing thresholds are measured/inherited under Agreement §8 rather
+    residue remains HUMAN. `episode.sqlite` durably reserves handoff attempt and
+    dispatch/outcome state before the network write. An outcome-unknown request
+    survives execution-store loss and is never retried merely because time
+    elapsed or a reread is still pending+AgentBot; another automated write
+    requires durable positive non-commit evidence plus a fresh read.
+14. NON_ACTIONABLE_ACK is authorized only by the closed deterministic exact-text
+    §29.2 predicate over one supported customer text event. C3 CLEAR, heuristics,
+    extraction and model intent_hint are never ACK authority. The exact-text proof
+    is non-authorizing until one owning-store BEGIN IMMEDIATE admission rechecks
+    the exact routing basis/stream head/episode ownership and atomically commits
+    the ACK origin + current episode close; any newer/stale predicate yields zero
+    ACK mutation.
+15. The exact symmetric ru/uk §21.1 predicates are the **target shared C4/C25
+    matcher contract**. Stage 0 explicitly records that merged C4 still lacks the
+    Ukrainian forward `цін` branch; C25 production/activation is blocked until
+    one shared production matcher proves exact contract parity.
+16. Numeric timing thresholds are measured/inherited under Agreement §8 rather
     than invented in this contract; timing alone cannot prove remote non-commit.
 
 ## Requirements traceability terminal
@@ -108,7 +125,8 @@ for the HEAVY exact-tree review/confirmation required to merge this amendment.
 |---|---|---|---|---|---|
 | S1 semantic rebuild/fresh C4/C5 is non-authorizing; S2 is the one final whole-conversation topology snapshot followed by exact text/structured proofs, final current ownership/status read and local SENDING CAS | DESIGN §29.7 | Q21, Q34, U09 | Any S2 topology/text/proof/final-ownership/local-CAS drift => discard S1 result, zero POST | No transcript persistence | DONE |
 | Structured selections keep original provenance and are reread/re-proven at send authorization; ANSWER confirmation never rewrites that provenance | DESIGN §29.0.1, §29.1, §29.7 | Q10c, C25f, Q38, U07/U13 | Changed/missing/multiple submission => zero POST + HUMAN | Existing canonical stable-selection provenance only | DONE |
-| Descriptor v1 contains complete effective canonical scope, including nullable UAH min/max bounds actually consumed by C4; dynamic facts are excluded | DESIGN §29.7 | Q33, U01/U03/U08 | Canonical slot/bound mismatch => zero POST + HUMAN continuation | Future action provenance only; no text/dynamic payload | DONE |
+| NON_ACTIONABLE_ACK is permanent silence only after the closed deterministic exact-text ACK proof **and** one stale-safe owning-store admission over the unchanged certified routing basis; C3 CLEAR, extraction/intent_hint and heuristics are never ACK authority | DESIGN §29.2 | Q51 | Any non-exact/multi-event/pending-clarification/unknown shape or changed revision/head/fingerprint/episode/owner commits zero ACK state and continues stale rebuild/ordinary processing | Same-revision ACK origin + current episode close atomically only on unchanged basis; no customer text/digest | DONE |
+| Descriptor v1 contains complete effective canonical scope; MONEY uses nullable non-negative UAH min/max bounds actually consumed by C4 and fail-closed relational validation (currency/bounds/range/provenance); dynamic facts are excluded | DESIGN §29.7 | Q33/Q52, U01/U03/U08 | Canonical slot/bound/relation mismatch => zero POST + HUMAN continuation | Future action provenance only; no text/dynamic payload | DONE |
 | Every customer-visible ANSWER/CLARIFY action has non-null episode/version and fail-closed relational provenance | DESIGN §29.8 | Q36, U12 | Corrupt/detached/cross-stream state => zero POST + HUMAN/anomaly | Future schema/read validation | DONE |
 | Persisted CLARIFY candidate ordinals cannot acquire new meaning after corruption | DESIGN §29.8–§29.9 | Q36, U04/U12 | Count/order/slot corruption => reject; never reindex | Future candidate count/order proof | DONE |
 | Each committed same-revision semantic origin is immutable: PUBLIC_ACTION(action_id), DIRECT_HUMAN or NON_ACTIONABLE_ACK; PUBLIC_ACTION may only add absorbing HUMAN continuation | DESIGN §29.8 | Q29, Q43/Q44, Q48, U10/U11 | Replay/restart/extractor drift cannot replace origin or restore AI after HUMAN | Future same-store origin fence + HUMAN continuation metadata | DONE |
@@ -118,10 +136,11 @@ for the HEAVY exact-tree review/confirmation required to merge this amendment.
 | SENDING permits at most one public POST attempt ever; late positive proof after HUMAN is historical evidence only | DESIGN §29.8 | Q27, Q35, Q48, U10 | Unknown outcome never reposts; late proof never revives AI/C25 | SENDING/UNCERTAIN + monotonic source evidence/HUMAN | DONE |
 | `source_id=action_id` is correlation only; zero matches never proves non-send and >1 is anomaly | DESIGN §29.8 | Q27, Q35/Q48, U10 | Zero => reconcile/HUMAN; >1 => HUMAN/anomaly | Confirmed source identity only | DONE |
 | Semantic liveness survives loss of `copilot.sqlite`; by deadline there is a durable public path or HUMAN owner, not a false promise of external handoff success | DESIGN §29.8.2 | Q29, Q37, Q50, H02, U14 | External outage keeps HUMAN absorbing and raises operator-attention | `episode.sqlite` semantic owner + bounded operational fault metadata | DONE |
-| Customer-event acceptance while same-stream action is SENDING/UNCERTAIN atomically commits event + revision + immutable deferred-parent relation | DESIGN §29.5 | Q36, Q40/Q45, U12 | Missing/cross-stream/conflicting relation => no AI; manual/HUMAN recovery | Bounded action-reference metadata only; no customer content | DONE |
+| Customer-event acceptance while same-stream action is SENDING/UNCERTAIN atomically commits event + revision + immutable deferred-parent relation; that relation is scheduling/topology only and never C25 causal authority | DESIGN §29.5 | Q36, Q40/Q45/Q55, U12 | Missing/cross-stream/conflicting relation => no AI; relation alone never inherits PRODUCT | Bounded action-reference metadata only; no customer content | DONE |
 | Stale backup cannot replay silent ACK/HUMAN/action history as new AI work; unsafe restore requires a recovery barrier unless a lossless semantic cut is proven | DESIGN §29.8.1 | Q41, Q49 | RECOVERY_UNPROVABLE/HISTORY_UNPROVABLE => AI disabled + HUMAN/manual recovery | Bounded recovery epoch/baseline/ownership metadata only | DONE |
-| C25 is a narrow ANSWER-dependent continuation using immutable semantic-scope product_id from a normal-CONFIRMED predecessor; no ANSWER stable-slot promotion/rewrite | DESIGN §21.1, §29.1 | C25–C25g, Q38, Q45/Q46/Q48, U13 | Near miss/new identity/missing/late provenance => no inheritance | Existing action provenance; existing selection provenance preserved | DONE |
-| Native HUMAN handoff is self-contained/state-reconciled; outcome-unknown attempt is never automatically retried from pending/time passage alone | DESIGN §29.8.2, §43 | Q44, Q47/Q50, H01–H04, U11/U14 | No blind reopen/retry/public preface; unknown remains HUMAN + operational attention | HUMAN continuation + handoff/operational metadata | DONE |
+| C25 is a narrow ANSWER-dependent continuation using immutable semantic-scope product_id from a unique normal-CONFIRMED predecessor plus exact same-conversation Website native reply pair; event/deferred order is non-causal and no ANSWER stable-slot promotion/rewrite occurs | DESIGN §21.1, §29.1, §29.7 | C25–C25h, Q38, Q45/Q46/Q48/Q55, U13 | Missing/partial/mismatched/late reply provenance or new identity => no inheritance | Existing action/selection provenance + bounded reply identifiers; no customer text | DONE |
+| Frozen §21.1 predicates are the target shared C4/C25 matcher; current merged C4 forward branch drift is explicit and blocks C25 production/activation until one shared implementation proves exact parity | DESIGN §21.1, §50–§51 | C25d, Q46/Q53 | Current drift cannot be hidden by a second C25 matcher; no activation until parity proof | No durable-state change; downstream production prerequisite only | DONE |
+| Native HUMAN handoff is self-contained/state-reconciled and has a durable episode.sqlite attempt/dispatch boundary before the network write; outcome-unknown attempt survives execution-store loss and is never automatically retried from pending/time passage alone | DESIGN §29.8, §29.8.2, §43 | Q44, Q47/Q50/Q54, H01–H04, U11/U14 | No blind reopen/retry/public preface; unknown attempt remains blocking HUMAN + operational attention | HUMAN continuation + bounded handoff-attempt/non-commit/operational metadata | DONE |
 | Timing values are measured/inherited; timing alone is never proof of remote non-commit | DESIGN §29.8.2, §43 | Q39, Q47/Q50, U14 | Unsafe config => no claim/send; no positive non-commit evidence => no handoff retry | Configuration/provenance only | DONE |
 | Website First Line v1 has exactly one local-filesystem writable `episode.sqlite` authority; multi-host/network-FS/writable replicas require a separate durable-store contract | DESIGN §29.8 | Q42/Q49 | Unsupported writer/recovery topology blocks activation | Backup non-authoritative until proven cutover/recovery | DONE |
 | No scheduler/workflow/extraction/operations implementation is selected by Stage 0 | DESIGN §29.8.2, §51 + this evidence | Changed-surface review | Every downstream production stage requires fresh §§1–3 evidence | NONE | DONE |
@@ -143,7 +162,7 @@ tree; it is not itself a zero-BLOCKER claim.
 | R1-B4 — customer follow-up accepted while SENDING can be hidden | DESIGN §29.5 freezes an atomic deferred-behind-action relation with customer-event acceptance/revision and corruption checks | Q40/Q45, U12 | DONE |
 | R1-B5 — C25 matcher under-specified / locale asymmetry | DESIGN §21.1 freezes exact symmetric ru/uk predicates, intent-hint independence and normal-CONFIRMED predecessor semantic-scope product_id without stable-slot promotion | C25–C25g, Q38/Q46/Q48, U13 | DONE |
 | R1-B6 — final-window acceptance inconsistency | DESIGN §29.7 and Q21/Q34/U09 align on non-authorizing S1 semantic rebuild and one final S2 topology snapshot followed by exact text/structured proof, final current ownership read and CAS | Q21, Q34, U09 | DONE |
-| R1-B7 — traceability/closeout incomplete | DESIGN §50/§51, ACCEPTANCE tail and this terminal enumerate Q33–Q50/U08–U14 plus complete R1/V09 invariants | deterministic static traceability check | DONE |
+| R1-B7 — traceability/closeout incomplete | DESIGN §50/§51, ACCEPTANCE tail and this terminal enumerate Q33–Q55/U08–U14 plus complete R1/R2/R3 invariants | deterministic static traceability check | DONE |
 
 ## Exhaustive V09/R2 blocker closure map
 
@@ -171,40 +190,77 @@ ZERO-BLOCKER claim.
 | V09-B7 — deferred-parent relation lacked atomic acceptance boundary | DESIGN §29.5 makes customer-event insert + revision + same-stream deferred parent one owning transaction; corrupt relation fails closed | Q36/Q45, U12 | DONE |
 | V09-B8 — outcome-unknown native handoff could be blindly retried from pending/time passage | DESIGN §43 requires positive non-commit evidence plus fresh pre-attempt read; otherwise HUMAN remains live with §29.8.2 escalation | Q39/Q47/Q50, H02, U14 | DONE |
 
+## Exhaustive V09/R3 blocker closure map
+
+The exhaustive HEAVY verification on
+`HEAD=016f0ee51898ddbb7237a2f120c252b57ca2f142`,
+`TREE=534345bfd088bcbf3c79605acfdfd8ab906bef70`,
+`BASE=09cbf704aba2a6bab4aa1ccacf904926286c3977`,
+`GOV=e777fce4af8e8c3372f1f9de9ef7d00f786c2c89`, bound to manifest
+`2f4a302063ae94982e85f87d4cf1784db183451ca13137d606f7fb3acdbef6a0`,
+found five additional independent root-cause classes after re-verifying the
+complete R1 and R2 inventories. The normalized inventory is preserved outside
+the branch as `C6_STAGE0_V09_INVENTORY_R3_CANONICAL.txt` with SHA-256
+`5ed6cfdff02d85fb743f9554463c8580962c646e22aa612946960512ed33a224`.
+This canonical reconstruction supersedes an unavailable transient external-only
+R3 evidence file; the five root-cause classes and exact reviewed basis are
+unchanged, while R3-B1 explicitly includes the stale-safe ACK admission seam
+found before successor-tree commit.
+This table maps their one-batch correction on the successor tree; it is not a
+ZERO-BLOCKER claim.
+
+| V09/R3 blocker | Contract correction | Regression/acceptance proof required | Status |
+|---|---|---|---|
+| V09/R3-B1 — permanent silent ACK lacked deterministic authorization **and stale-safe admission** | DESIGN §29.2 freezes one closed exact-text ACK proof over one supported customer text event, makes that proof non-authorizing until one BEGIN IMMEDIATE CAS rechecks the exact certified routing basis/episode/owner state, and atomically commits ACK+episode close only if unchanged; C3 CLEAR, heuristics, extraction and intent_hint are not ACK authority | Q51 | DONE |
+| V09/R3-B2 — MONEY semantic scope rejected reachable zero and lacked relational integrity | DESIGN §29.7 uses non-negative bounds and freezes UAH/bounds/range/provenance validation while preserving the stricter atomic max-price clarification pair | Q52, Q33/U08 | DONE |
+| V09/R3-B3 — frozen C25 matcher claimed parity with merged C4 that did not exist | DESIGN §21.1 explicitly makes the predicates the target shared C4/C25 contract, records current forward-Ukrainian drift, forbids a second C25 matcher and blocks C25 production/activation until parity | C25d, Q46/Q53 | DONE |
+| V09/R3-B4 — handoff no-retry policy lacked durable attempt evidence before network write | DESIGN §29.8/§43 makes episode.sqlite own handoff attempt identity plus dispatch/outcome boundary before the side effect; execution-store loss/lease expiry cannot erase an unknown attempt | Q54, Q47/H01/H02 | DONE |
+| V09/R3-B5 — C25 treated local/deferred order as causal customer dependency | DESIGN §21.1/§29.5/§29.7 requires the exact Website native reply pair to the same unique normal-CONFIRMED range predecessor; deferred/event order remains scheduling only and S2 re-proves the pair | C25–C25h, Q55 | DONE |
+
 ## Required HEAVY review focus
 
 The exhaustive review and isolated confirmation for this docs-only amendment
 must continue past the first finding and specifically challenge:
 - whether semantic-scope v1 is minimal yet complete for every canonical slot C4
-  can actually consume, including nullable lower/upper money bounds, while
-  containing no dynamic authority;
+  can actually consume, with non-negative nullable UAH money bounds and exact
+  relational integrity while containing no dynamic authority;
+- whether permanent NON_ACTIONABLE_ACK can arise only from the closed exact-text
+  proof and one unchanged-basis owning-store ACK admission CAS, never from C3
+  CLEAR, extraction/model confidence, multi-event text or stale routing state;
 - whether S1/S2 ordering keeps dynamic facts fresh and makes topology/ownership
   the final practical authorization without claiming impossible cross-system
   atomicity;
 - whether immutable semantic origin, monotonic HUMAN continuation and late
   remote-send evidence remain non-reversible under every race/restart ordering;
-- whether HUMAN/liveness state is durably owned by the semantic store while
-  execution/reconcile jobs remain drivers rather than a second semantic truth;
+- whether HUMAN/liveness state and native-handoff attempt/outcome evidence are
+  durably owned by the semantic store while execution/reconcile jobs remain
+  drivers rather than a second semantic truth;
 - whether STALE/CANCELLED/NOT_SENT rules admit any orphan or false takeover;
 - whether deferred-parent event acceptance is atomic, same-stream, immutable and
-  corruption-checked;
+  corruption-checked **without** ever being used as causal C25 evidence;
 - whether stale restore can ever reinterpret a pre-recovery customer row as new
   AI work without a proven lossless semantic cut;
 - whether no-retry SENDING/UNCERTAIN/normal-CONFIRMED/late-evidence transitions
   cover all crash/response/webhook orderings monotonically;
-- whether native handoff can ever be blindly retried after an outcome-unknown
-  request, especially pending/open+same-AgentBot races;
+- whether native handoff can ever be replayed after a durable outcome-unknown
+  attempt merely because a lease/job was lost or Chatwoot still reads pending;
 - whether external outage liveness raises durable operational attention without
   inventing physical handoff success;
 - whether corruption invariants catch ordinal holes/tail loss, detached/cross-
-  stream provenance, conflicting origins and deferred-parent corruption;
-- whether C25 is sufficiently narrow, preserves structured-selection provenance
-  and cannot use late HUMAN-era source proof or old dynamic facts;
+  stream provenance, conflicting origins, invalid MONEY shape and deferred-parent
+  corruption;
+- whether C25 requires the exact same-conversation native reply pair at planning
+  and S2, preserves structured-selection provenance, and never infers causality
+  from event_seq/message-id/created_at/webhook/deferred ordering;
+- whether the target shared C4/C25 matcher contract is explicitly distinguished
+  from the known current merged C4 Ukrainian-forward drift and blocks activation
+  until exact production parity is proven;
 - whether timing language defines measurable relationships without inventing
   numeric values or treating elapsed time as non-commit proof;
 - whether the single-host/local-filesystem SQLite writer/recovery boundary is
   explicit enough and does not accidentally prohibit ordinary off-host backup;
-- whether every new acceptance vector is consistent with the merged prior corpus.
+- whether every new acceptance vector Q51–Q55/C25h is consistent with the merged
+  prior corpus.
 
 ## Stage 0 non-goals
 
