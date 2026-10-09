@@ -1286,11 +1286,11 @@ Expected:
   plausibility.
 
 ### Q47 — native HUMAN handoff is state-reconciled and never reopens blindly
-For durable HUMAN continuation on deployed Chatwoot v4.18.0, parameterize exact
-current state: open+no AgentBot owner, open+configured BabyPark AgentBot,
-pending+configured BabyPark AgentBot, open/pending+another AgentBot, resolved,
-snoozed, human-assigned open, malformed/unknown/unavailable. Separately, only for
-a future §43-approved safe automated primitive, parameterize success,
+For durable HUMAN continuation on deployed Chatwoot v4.18.0, first apply the
+strict Q58/§43 ownership decoder, then parameterize the full supported
+status × `owner_class` matrix from Q56 plus malformed/unknown/unavailable wire
+shapes. Separately, only for a future §43-approved safe automated primitive,
+parameterize success,
 timeout/reset/unknown response, concurrent state change and restart before
 terminalization.
 
@@ -1298,15 +1298,17 @@ Expected:
 - current v4.18.0 performs **no automated `toggle_status(open)` write** for
   pending+configured BabyPark AgentBot; HUMAN remains durable with operator/
   manual handoff;
-- only open+**no AgentBot owner at all** may prove `HANDOFF_DONE/human_takeover`,
-  whether a human is assigned or the open non-AI/unassigned queue is proven;
-- any other AgentBot is exclusively `OWNERSHIP_LOST/ownership_lost`, including
-  `open + other AgentBot`; it is never human takeover;
+- only `open + HUMAN_USER|UNASSIGNED` may prove
+  `HANDOFF_DONE/human_takeover`; `Captain::Assistant`/other automation can never
+  satisfy takeover;
+- `OTHER_AGENTBOT|OTHER_AUTOMATION` is exclusively
+  `OWNERSHIP_LOST/ownership_lost`, including `open`; it is never human takeover;
 - resolved/snoozed performs no reopen/write and terminalizes
-  `OWNERSHIP_LOST/ownership_lost` when ownership loss is proven;
-- open+same configured BabyPark AgentBot is unresolved HUMAN with no automated
+  `OWNERSHIP_LOST/ownership_lost` only through the disjoint Q56 matrix;
+- `open|pending + SAME_AGENTBOT` is unresolved HUMAN with no current automated
   status write/retry and no AI public action;
-- malformed/unknown/unavailable performs no write and remains durable HUMAN;
+- `UNKNOWN` owner/status or malformed/unavailable wire performs no write and
+  remains durable HUMAN;
 - a future safe primitive may write only after the separately frozen write-time
   safety/fit proof and durable attempt boundary; unknown outcome then follows
   the no-blind-retry rules of Q54;
@@ -1519,28 +1521,29 @@ Expected:
   customer/public text or content-derived digest becomes durable.
 
 ### Q56 — handoff ownership matrix is mutually exclusive
-Parameterize current exact Chatwoot ownership/status as:
-1. `open` + explicit human assignee + no AgentBot owner;
-2. `open` + no human + no AgentBot owner (proven open non-AI/unassigned queue);
-3. `open` + another AgentBot + no human;
-4. `pending` + another AgentBot + no human;
-5. `open` + the configured BabyPark AgentBot + no human;
-6. `pending` + the configured BabyPark AgentBot + no human;
-7. simultaneous human + AgentBot ownership, malformed assignee shape, unsupported
-   status, or unavailable ownership authority.
+First decode the current exact Chatwoot conversation wire into one §43
+`owner_class`: `UNASSIGNED / HUMAN_USER / SAME_AGENTBOT / OTHER_AGENTBOT /
+OTHER_AUTOMATION / UNKNOWN`. Then parameterize every supported status
+`open / pending / resolved / snoozed` against every owner class plus an
+unsupported status.
 
 Expected:
-- cases 1–2 only => `HANDOFF_DONE / human_takeover`, with zero BabyPark status
-  write;
-- cases 3–4 => `OWNERSHIP_LOST / ownership_lost`, with zero BabyPark write;
-- case 5 => unresolved durable HUMAN, zero automated write;
-- case 6 => unresolved durable HUMAN on deployed v4.18.0 and zero automated
-  `toggle_status(open)` write; only a separately proven future safe primitive
-  may make this state write-eligible;
-- case 7 => default-deny unresolved HUMAN, zero write;
-- no tuple matches both `HANDOFF_DONE` and `OWNERSHIP_LOST`;
-- `open + no configured AgentBot` is never treated as sufficient by itself:
-  another AgentBot is ownership loss, not human takeover.
+- `open + HUMAN_USER|UNASSIGNED` only =>
+  `HANDOFF_DONE / human_takeover`, with zero BabyPark status write;
+- any reviewed status + `OTHER_AGENTBOT|OTHER_AUTOMATION` =>
+  `OWNERSHIP_LOST / ownership_lost`, with zero BabyPark write;
+- `resolved|snoozed + UNASSIGNED|HUMAN_USER|SAME_AGENTBOT` =>
+  `OWNERSHIP_LOST / ownership_lost`, never reopen;
+- `open + SAME_AGENTBOT` => unresolved durable HUMAN, zero automated write;
+- `pending + SAME_AGENTBOT` => unresolved durable HUMAN on deployed v4.18.0
+  and zero automated `toggle_status(open)` write; only a separately proven
+  future safe primitive may make this state write-eligible;
+- every other tuple, `UNKNOWN` owner/status and malformed/inconsistent wire
+  shape => default-deny unresolved HUMAN, zero write;
+- every decoded tuple maps to exactly one outcome branch; no tuple matches both
+  `HANDOFF_DONE` and `OWNERSHIP_LOST`;
+- another automation is never normalized to a human merely because it is not an
+  AgentBot.
 
 ### Q57 — deployed Chatwoot v4.18 toggle_status is not a safe automated handoff primitive
 Bind this vector to the deployed/source tuple required by the Stage-0 verification
@@ -1567,10 +1570,41 @@ Expected:
 - unchanged pending+configured remains durable HUMAN with operator-attention/
   manual-native transfer rather than unsafe automation;
 - a future automated primitive is allowed only after a fresh Agreement §§1–3
-  native-first fit gate proves its write atomically enforces current expected
-  ownership/status (including no human/other bot) or is monotonic-safe under all
-  intervening states;
+  native-first fit gate proves its **write itself** atomically enforces current
+  expected ownership/status plus server-side absence of any competing
+  human/other automation owner, or is monotonic-safe under all intervening
+  states. A BabyPark pre-read decoding `SAME_AGENTBOT` is not enough to prove
+  those negative write predicates;
 - Chatwoot core patch/fork is never an allowed workaround.
+
+### Q58 — strict Chatwoot ownership wire decoder is fail-closed
+Bind to the deployed Chatwoot v4.18.0 Enterprise source/runtime tuple and
+parameterize exact account-conversation JSON ownership shapes:
+- no `meta.assignee` and no `meta.assignee_type`;
+- `User` + positive assignee id;
+- configured `AgentBot` + positive id;
+- another `AgentBot` + positive id;
+- `Captain::Assistant` + positive id;
+- unknown assignee type, missing/invalid id, one field present without the
+  other, malformed `meta/assignee`, unavailable read and synthetic
+  contradictory ownership evidence.
+
+Expected:
+- decode exactly to `UNASSIGNED / HUMAN_USER / SAME_AGENTBOT /
+  OTHER_AGENTBOT / OTHER_AUTOMATION / UNKNOWN` respectively;
+- `Captain::Assistant` is `OTHER_AUTOMATION`, never `HUMAN_USER`;
+- any unknown/malformed/inconsistent shape is `UNKNOWN` and default-deny;
+- supported status is exactly `open / pending / resolved / snoozed`; any
+  other/malformed/unavailable status is unknown/default-deny;
+- C6 handoff authority does not call or reuse the legacy
+  `normalizeConversation()` projection that maps every non-AgentBot assignee
+  type to human;
+- the stock single `assigned_entity` wire may drive current read-only
+  reconciliation, but it is not proof of the negative future-write predicate
+  'no competing human/other automation';
+- a future automated primitive must enforce that negative predicate atomically
+  in its own server-side write (or be monotonic-safe) before the durable
+  attempt protocol may activate.
 
 ## I. Handoff vectors
 
@@ -1579,22 +1613,21 @@ Expected:
 - before disposable execution may finish, planning-time HUMAN has a durable
   DIRECT_HUMAN origin or relay-originated HUMAN has the immutable PUBLIC_ACTION
   origin plus durable HUMAN continuation in `episode.sqlite`;
-- `HANDOFF_DONE` requires an exact current read proving `open` **and no
-  AgentBot owner at all**: either a human is explicitly assigned or the open
-  non-AI/unassigned queue is proven;
-- `open + another AgentBot` is not successful handoff and cannot satisfy H01;
+- `HANDOFF_DONE` requires the strict §43 decoder to prove
+  `open + owner_class in {HUMAN_USER, UNASSIGNED}`;
+- `open + OTHER_AGENTBOT|OTHER_AUTOMATION` is not successful handoff and
+  cannot satisfy H01;
 - no BabyPark status/ownership write is performed to establish this proof;
 - only after that proof does a bound logical episode close as `human_takeover`;
 - after human/non-AI ownership, AI sends zero public messages.
 
 ### H02 — unresolved/current-v4.18 handoff remains durable
 - no false public "transferred" message exists;
-- on deployed Chatwoot v4.18.0, `pending + configured BabyPark AgentBot + no
-  human` has no authorized automated handoff write. Website First Line does not
-  call AgentBot `toggle_status(open)`; HUMAN remains durable and operator/manual
-  handoff is required;
-- `open + same configured BabyPark AgentBot` is unresolved HUMAN, not
-  `human_takeover`;
+- on deployed Chatwoot v4.18.0, `pending + SAME_AGENTBOT` has no authorized
+  automated handoff write. Website First Line does not call AgentBot
+  `toggle_status(open)`; HUMAN remains durable and operator/manual handoff is
+  required;
+- `open + SAME_AGENTBOT` is unresolved HUMAN, not `human_takeover`;
 - malformed/unknown/unavailable ownership performs no write and keeps HUMAN
   durable; measured escalation raises §29.8.2 operator-attention without
   fabricating terminal success;
@@ -1608,12 +1641,14 @@ Expected:
 - a reconcile/attention driver is execution only, never sole semantic truth.
 
 ### H03 — ownership already left BabyPark AI
-Parameterize resolved, snoozed, **open or pending with another AgentBot**, or
-another proven non-AI/non-human ownership state on the current exact read.
+Parameterize any reviewed status with `OTHER_AGENTBOT` or
+`OTHER_AUTOMATION`, plus resolved/snoozed with
+`UNASSIGNED|HUMAN_USER|SAME_AGENTBOT`.
 
 Expected:
 - no native reopen/toggle write and no public AI message;
-- any other AgentBot maps only to `OWNERSHIP_LOST`, never `HANDOFF_DONE`;
+- `OTHER_AGENTBOT|OTHER_AUTOMATION` maps only to `OWNERSHIP_LOST`, never
+  `HANDOFF_DONE`;
 - HUMAN terminalizes as `OWNERSHIP_LOST`;
 - a bound episode closes as `ownership_lost`;
 - later customer events do not revive that closed episode automatically.
@@ -1627,10 +1662,11 @@ Expected:
 - no public handoff preface;
 - current deployed v4.18.0 performs no autonomous status/ownership write for a
   still pending+configured BabyPark AgentBot conversation;
-- a resolved/snoozed conversation is never reopened and another AgentBot is
-  never displaced;
-- if later exact read proves open+no AgentBot owner at all, H01 may close
-  `human_takeover` without a BabyPark status write.
+- a resolved/snoozed conversation is never reopened and another automation
+  owner is never displaced;
+- if a later exact read strictly decodes
+  `open + HUMAN_USER|UNASSIGNED`, H01 may close `human_takeover` without a
+  BabyPark status write.
 
 ## J. Private-note Slice D vectors
 
@@ -2321,10 +2357,10 @@ Expected:
 - before any disposable job/claim may disappear, HUMAN continuation is durable
   in the `episode.sqlite` semantic concern;
 - execution/reconcile jobs may drive handoff but are not sole semantic truth;
-- a bound episode closes only after §43's disjoint current-state matrix proves
-  either open+**no AgentBot owner at all** (`human_takeover`) or proven ownership
-  loss such as another AgentBot/resolved/snoozed (`ownership_lost`); unresolved
-  open/pending+same configured BabyPark AgentBot or unknown/malformed authority
+- a bound episode closes only after the strict Q58 decoder + §43 matrix proves
+  either `open + HUMAN_USER|UNASSIGNED` (`human_takeover`) or the explicit
+  `OWNERSHIP_LOST` branches (`ownership_lost`);
+- `SAME_AGENTBOT` open/pending, `UNKNOWN` owner/status or malformed authority
   keeps HUMAN live, and current deployed v4.18.0 performs no automated
   `toggle_status(open)` write.
 
@@ -2397,7 +2433,7 @@ is merged via PR #107 on canonical main
 `(category_id,category_match_mode)` prerequisite and its HEAVY closure.
 
 T07–T13 remain the merged C5 acceptance contract. v0.8 adds the C6/C25
-pre-implementation safety vectors Q33–Q57 and U08–U14, extends the C25 corpus
+pre-implementation safety vectors Q33–Q58 and U08–U14, extends the C25 corpus
 through C25h, and tightens Q21/Q22/Q24/Q26/Q29/H01–H04. The exhaustive vectors
 cover:
 - immutable same-revision semantic origins plus monotonic PUBLIC_ACTION -> HUMAN
@@ -2425,10 +2461,12 @@ cover:
 - stale-backup recovery barriers for silent ACK/HUMAN/action ownership;
 - semantic liveness plus operational escalation when Chatwoot authority cannot
   prove physical handoff;
-- self-contained state-reconciled native handoff/ownership_lost with a disjoint
-  ownership matrix and explicit deployed-v4.18 prohibition on autonomous
-  `toggle_status(open)` because its write-time ownership/status predicate is not
-  safe under races; current pending+configured ownership remains durable HUMAN +
+- self-contained state-reconciled native handoff/ownership_lost with a strict
+  allowlisted ownership wire decoder plus disjoint status×owner matrix, including
+  explicit `Captain::Assistant` => `OTHER_AUTOMATION` and unknown=>default-deny,
+  plus the deployed-v4.18 prohibition on autonomous `toggle_status(open)` because
+  its write-time ownership/status predicate is not safe under races; current
+  `pending + SAME_AGENTBOT` remains durable HUMAN +
   operator/manual handoff, while any future separately proven safe automated
   primitive must use the durable `episode.sqlite` attempt/dispatch no-retry
   boundary before its network write.

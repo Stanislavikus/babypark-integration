@@ -3458,8 +3458,42 @@ owns the stream under §29.8, BabyPark may only pursue native ownership
 transfer/reconciliation; no later AI answer/clarification may supersede it.
 
 Every ownership decision uses an exact current Chatwoot conversation read. The
-configured Website AgentBot identity is explicit; any sender/assignee/status
-shape not covered below is default-deny.
+configured Website AgentBot identity is explicit. C6 MUST NOT use the legacy
+`normalizeConversation()` ownership projection for §43 authority: that helper
+treats every non-`AgentBot` `assignee_type` as human and therefore cannot
+distinguish other supported automation owners on deployed Enterprise Chatwoot.
+
+Before §43.1, the current wire is decoded once into one closed
+`owner_class` plus one reviewed status. The only accepted owner classes are:
+- `UNASSIGNED` — both `meta.assignee` and `meta.assignee_type` are absent;
+- `HUMAN_USER` — `meta.assignee_type == 'User'` and
+  `meta.assignee.id` is a positive safe integer;
+- `SAME_AGENTBOT` — `meta.assignee_type == 'AgentBot'` and the positive
+  assignee id equals the configured BabyPark Website AgentBot id;
+- `OTHER_AGENTBOT` — `meta.assignee_type == 'AgentBot'` with another
+  positive id;
+- `OTHER_AUTOMATION` — on the deployed Enterprise v4.18.0 tuple,
+  `meta.assignee_type == 'Captain::Assistant'` with a positive id;
+- `UNKNOWN` — any missing/inconsistent id/type pair, any other assignee type,
+  malformed `meta/assignee`, contradictory synthetic ownership evidence, or an
+  unavailable read.
+
+The reviewed current statuses are exactly `open / pending / resolved / snoozed`.
+Any other/malformed/unavailable status is `UNKNOWN`. An `UNKNOWN` owner or
+status always takes the default-deny branch.
+
+The stock account-conversation JSON serializes one `assigned_entity` and the
+normal validated human-assignment path clears AgentBot ownership. That is
+sufficient for the **current read-only reconciliation matrix**, but the external
+wire is not proof that no hidden competing database owner could exist after an
+out-of-contract/corrupt write. Therefore a future automated handoff primitive
+MUST NOT treat this pre-read as proof of the negative write precondition
+"no human/other automation". The primitive's own server-side write must
+atomically enforce its expected owner/status/competing-owner predicates or be
+monotonic-safe under every intervening state.
+
+Any sender/assignee/status shape not proven by this closed decoder is
+default-deny.
 
 Deployed Chatwoot v4.18.0 does **not** provide a safe automated native handoff
 write for this contract. Stage-0 source-fit proves all of the following for the
@@ -3501,10 +3535,13 @@ A later production stage may automate handoff only if a fresh Agreement §§1–
 native-first fit gate, bound to the actual deployed/target Chatwoot tuple,
 proves an allowed primitive whose **write itself** either:
 1. atomically requires current `pending` + current configured BabyPark AgentBot
-   ownership + no human/other-bot ownership; or
+   ownership and server-side absence of any competing human/other automation
+   owner; or
 2. is monotonic-safe for every state that can arise after the last authority
    read.
-A custom Chatwoot core patch/fork is not an allowed way to satisfy that proof.
+The pre-read `SAME_AGENTBOT` class alone is never proof of those negative
+write predicates. A custom Chatwoot core patch/fork is not an allowed way to
+satisfy that proof.
 
 Only after such a safe primitive is separately selected and owner-approved does
 the durable network-attempt protocol become active. Then, under one durable
@@ -3528,47 +3565,56 @@ text/content digest.
 
 ### 43.1 Disjoint current-ownership matrix
 
-The predicates below are mutually exclusive and default-deny. In particular,
-"no configured AgentBot" is **not** enough for human takeover: `HANDOFF_DONE`
-requires **no AgentBot ownership at all**.
+The matrix consumes exactly one decoded `owner_class` plus one reviewed status.
+It is mutually exclusive by construction and default-deny.
 
-1. **open + no AgentBot owner at all** — either a human is explicitly assigned
-   or the conversation is provably open in the non-AI/unassigned queue.
-   Handoff is already achieved. Perform no BabyPark status write; terminalize
-   `HANDOFF_DONE` and close a bound episode as `human_takeover`.
-2. **any status + another AgentBot owner** — BabyPark AI no longer owns the
-   conversation. Perform no write; terminalize `OWNERSHIP_LOST` and close a
-   bound episode as `ownership_lost`.
-3. **resolved or snoozed without another AgentBot owner** — perform no
-   reopen/toggle write; terminalize `OWNERSHIP_LOST` and close a bound episode
-   as `ownership_lost`.
-4. **open + the same configured BabyPark AgentBot still owning** — unresolved
-   HUMAN. Perform no automated status write and no AI public action.
-5. **pending + the same configured BabyPark AgentBot + no human owner** — on the
-   deployed v4.18.0 tuple, unresolved HUMAN with no authorized automated write.
-   Operator/manual handoff remains required. A future separately proven safe
-   primitive may make this state write-eligible only under the gate above.
-6. **simultaneous human + AgentBot ownership, malformed/unknown/unavailable
-   ownership, unsupported status, or any other shape not proven above** —
-   default-deny. Perform no write; HUMAN remains durable and silent, with
-   operator-attention when its measured escalation window expires.
+1. **`open + owner_class in {HUMAN_USER, UNASSIGNED}`** — handoff is already
+   achieved into explicit human ownership or the proven non-AI/unassigned open
+   queue. Perform no BabyPark status write; terminalize `HANDOFF_DONE` and
+   close a bound episode as `human_takeover`.
+2. **any reviewed status + `owner_class in {OTHER_AGENTBOT,
+   OTHER_AUTOMATION}`** — BabyPark AI no longer owns the conversation. Perform
+   no write; terminalize `OWNERSHIP_LOST` and close a bound episode as
+   `ownership_lost`. Another automation is never reclassified as human.
+3. **`resolved|snoozed + owner_class in {UNASSIGNED, HUMAN_USER,
+   SAME_AGENTBOT}`** — perform no reopen/toggle write; terminalize
+   `OWNERSHIP_LOST` and close a bound episode as `ownership_lost`.
+4. **`open + SAME_AGENTBOT`** — unresolved HUMAN. Perform no automated status
+   write and no AI public action.
+5. **`pending + SAME_AGENTBOT`** — on the deployed v4.18.0 tuple, unresolved
+   HUMAN with no authorized automated write. Operator/manual handoff remains
+   required. A future separately proven safe primitive may make this state
+   write-eligible only under the gate above.
+6. **all remaining tuples** — including `UNKNOWN` owner/status,
+   `pending + HUMAN_USER|UNASSIGNED`, malformed/inconsistent wire ownership or
+   any unsupported status — default-deny. Perform no write; HUMAN remains
+   durable and silent, with operator-attention when its measured escalation
+   window expires.
+
+No raw wire observation is evaluated against more than one normal branch. A
+synthetic contradictory ownership fixture decodes to `UNKNOWN` before the
+matrix and therefore cannot also match a terminal branch.
 
 ### 43.2 Reconciliation
 
-Every current read and every future-safe-primitive post-attempt read uses exactly
-the same disjoint matrix:
-- open + **no AgentBot owner at all** => `HANDOFF_DONE / human_takeover`;
-- another AgentBot, or resolved/snoozed proven ownership loss =>
+Every current read and every future-safe-primitive post-attempt read first runs
+the same closed owner decoder and then the same disjoint matrix:
+- `open + HUMAN_USER|UNASSIGNED` => `HANDOFF_DONE / human_takeover`;
+- `OTHER_AGENTBOT|OTHER_AUTOMATION` on any reviewed status, or
+  `resolved|snoozed + UNASSIGNED|HUMAN_USER|SAME_AGENTBOT` =>
   `OWNERSHIP_LOST / ownership_lost`, never reopen;
-- open + same configured BabyPark AgentBot => unresolved HUMAN, no automated
-  write;
-- pending + same configured BabyPark AgentBot => unresolved HUMAN. On deployed
-  v4.18.0 there is no automated write. If a future safe primitive has an
-  outcome-unknown prior attempt, the durable attempt remains blocking and only
-  positive deterministic non-commit evidence + a fresh write-eligible read may
-  permit another attempt;
-- unknown/malformed/unavailable => unresolved HUMAN, no write; measured expiry
-  raises §29.8.2 operator attention, never false terminal success.
+- `open + SAME_AGENTBOT` => unresolved HUMAN, no automated write;
+- `pending + SAME_AGENTBOT` => unresolved HUMAN. On deployed v4.18.0 there is
+  no automated write. If a future safe primitive has an outcome-unknown prior
+  attempt, the durable attempt remains blocking and only positive deterministic
+  non-commit evidence + a fresh write-eligible read may permit another attempt;
+- `UNKNOWN` owner/status and every remaining tuple => unresolved HUMAN, no
+  write; measured expiry raises §29.8.2 operator attention, never false terminal
+  success.
+
+`Captain::Assistant` is an explicitly recognized `OTHER_AUTOMATION` on the
+deployed Enterprise tuple, never a human. Any future/unknown assignee type
+remains `UNKNOWN` until a reviewed contract change adds it.
 
 A duplicate trigger cannot create a public message, reopen resolved/snoozed
 ownership, displace another AgentBot or manufacture human takeover. Current
@@ -3836,10 +3882,12 @@ No customer messages.
 - implemented TextRenderer (repository C5; unconnected/not deployed);
 - public messages only for ANSWER/CLARIFY;
 - HUMAN sends no AI preface and follows self-contained §43 read/reconcile rules
-  with a mutually exclusive ownership matrix: open+no AgentBot owner at all may
-  prove `human_takeover`, another AgentBot/resolved/snoozed prove ownership loss,
-  while open/pending+same configured BabyPark AgentBot remains durable HUMAN;
-  deployed Chatwoot v4.18.0 `toggle_status(open)` is explicitly **not** a safe
+  with a closed ownership wire decoder and mutually exclusive status×owner
+  matrix: `open + HUMAN_USER|UNASSIGNED` may prove `human_takeover`,
+  `OTHER_AGENTBOT|OTHER_AUTOMATION` or the explicit resolved/snoozed branches
+  prove ownership loss, while `open|pending + SAME_AGENTBOT` remains durable
+  HUMAN and `UNKNOWN` default-denies; deployed Chatwoot v4.18.0
+  `toggle_status(open)` is explicitly **not** a safe
   automated handoff primitive and is forbidden for Website First Line. Any future
   separately proven/approved safe primitive must use the durable `episode.sqlite`
   attempt/dispatch no-retry boundary before its native write;
@@ -3972,14 +4020,16 @@ narrow C25 route, the exhaustive Stage-0 inventories freeze:
     falsely promising physical handoff while Chatwoot authority is unavailable;
     bounded outage escalation produces operator-attention while HUMAN remains
     absorbing;
-13. a self-contained §43 handoff protocol with a mutually exclusive current
-    ownership matrix and explicit deployed-v4.18 prohibition on automated
-    AgentBot `toggle_status(open)`: current pending/open+same configured bot
-    remains durable HUMAN/operator-manual, another bot/resolved/snoozed is
-    ownership loss, and only open+no AgentBot owner at all proves takeover; any
-    future separately proven safe primitive must cross the durable
-    `episode.sqlite` attempt/dispatch boundary before its native side effect;
-14. complete requirements traceability through Q57/C25h for restart, crash,
+13. a self-contained §43 handoff protocol with a strict closed ownership-wire
+    decoder and mutually exclusive status×owner matrix, including
+    `Captain::Assistant => OTHER_AUTOMATION`, unknown=>default-deny and an
+    explicit deployed-v4.18 prohibition on automated AgentBot
+    `toggle_status(open)`: current `open|pending + SAME_AGENTBOT` remains durable
+    HUMAN/operator-manual, only `open + HUMAN_USER|UNASSIGNED` proves takeover,
+    and a future separately proven safe primitive must enforce competing-owner
+    absence in its own write before crossing the durable `episode.sqlite`
+    attempt/dispatch boundary;
+14. complete requirements traceability through Q58/C25h for restart, crash,
     corruption, replay, restore, outage, late-confirmation, exact ACK, MONEY,
     handoff-attempt, handoff-TOCTOU and causal dependent-follow-up permutations.
 

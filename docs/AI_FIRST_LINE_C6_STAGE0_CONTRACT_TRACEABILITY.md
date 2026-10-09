@@ -143,7 +143,7 @@ for the HEAVY exact-tree review/confirmation required to merge this amendment.
 | Stale backup cannot replay silent ACK/HUMAN/action history as new AI work; unsafe restore requires a recovery barrier unless a lossless semantic cut is proven | DESIGN §29.8.1 | Q41, Q49 | RECOVERY_UNPROVABLE/HISTORY_UNPROVABLE => AI disabled + HUMAN/manual recovery | Bounded recovery epoch/baseline/ownership metadata only | DONE |
 | C25 is a narrow ANSWER-dependent continuation using immutable semantic-scope product_id from a unique normal-CONFIRMED predecessor plus exact same-conversation Website native reply pair; event/deferred order is non-causal and no ANSWER stable-slot promotion/rewrite occurs | DESIGN §21.1, §29.1, §29.7 | C25–C25h, Q38, Q45/Q46/Q48/Q55, U13 | Missing/partial/mismatched/late reply provenance or new identity => no inheritance | Existing action/selection provenance + bounded reply identifiers; no customer text | DONE |
 | Frozen §21.1 predicates are the target shared C4/C25 matcher; current merged C4 forward branch drift is explicit and blocks C25 production/activation until one shared implementation proves exact parity | DESIGN §21.1, §50–§51 | C25d, Q46/Q53 | Current drift cannot be hidden by a second C25 matcher; no activation until parity proof | No durable-state change; downstream production prerequisite only | DONE |
-| Native HUMAN handoff is self-contained/state-reconciled with a mutually exclusive ownership matrix; deployed Chatwoot v4.18.0 AgentBot `toggle_status(open)` is not an authorized automated handoff write, so pending/open+same configured bot stays durable HUMAN/operator-manual while another bot/resolved/snoozed is ownership loss and only open+no AgentBot owner at all proves takeover; any future separately proven safe primitive uses the durable attempt/no-retry protocol | DESIGN §29.8, §29.8.2, §43 | Q44, Q47/Q50/Q54/Q56/Q57, H01–H04, U11/U14 | Current v4.18 performs no unsafe automated status write; no blind reopen/displace/retry/public preface; future unknown attempt remains blocking HUMAN + operational attention | HUMAN continuation now; bounded handoff-attempt/non-commit metadata only for a future approved safe primitive | DONE |
+| Native HUMAN handoff is self-contained/state-reconciled through one strict allowlisted Chatwoot ownership decoder and a mutually exclusive status×owner-class matrix; `Captain::Assistant` is OTHER_AUTOMATION, unknown/malformed wire default-denies, and the legacy non-AgentBot=>human normalizer is not C6 authority. Deployed v4.18.0 AgentBot `toggle_status(open)` remains forbidden; any future safe primitive must enforce competing-owner absence in its own write before the durable attempt/no-retry protocol can activate | DESIGN §29.8, §29.8.2, §43 | Q44, Q47/Q50/Q54/Q56–Q58, H01–H04, U11/U14 | Current v4.18 performs no unsafe automated status write; no false human classification, blind reopen/displace/retry/public preface; future unknown attempt remains blocking HUMAN + operational attention | HUMAN continuation now; bounded owner/topology read only; handoff-attempt/non-commit metadata only for a future approved safe primitive | DONE |
 | Timing values are measured/inherited; timing alone is never proof of remote non-commit | DESIGN §29.8.2, §43 | Q39, Q47/Q50, U14 | Unsafe config => no claim/send; no positive non-commit evidence => no handoff retry | Configuration/provenance only | DONE |
 | Website First Line v1 has exactly one local-filesystem writable `episode.sqlite` authority; multi-host/network-FS/writable replicas require a separate durable-store contract | DESIGN §29.8 | Q42/Q49 | Unsupported writer/recovery topology blocks activation | Backup non-authoritative until proven cutover/recovery | DONE |
 | No scheduler/workflow/extraction/operations implementation is selected by Stage 0 | DESIGN §29.8.2, §51 + this evidence | Changed-surface review | Every downstream production stage requires fresh §§1–3 evidence | NONE | DONE |
@@ -165,7 +165,7 @@ tree; it is not itself a zero-BLOCKER claim.
 | R1-B4 — customer follow-up accepted while SENDING can be hidden | DESIGN §29.5 freezes an atomic deferred-behind-action relation with customer-event acceptance/revision and corruption checks | Q40/Q45, U12 | DONE |
 | R1-B5 — C25 matcher under-specified / locale asymmetry | DESIGN §21.1 freezes exact symmetric ru/uk predicates, intent-hint independence and normal-CONFIRMED predecessor semantic-scope product_id without stable-slot promotion | C25–C25g, Q38/Q46/Q48, U13 | DONE |
 | R1-B6 — final-window acceptance inconsistency | DESIGN §29.7 and Q21/Q34/U09 align on non-authorizing S1 semantic rebuild and one final S2 topology snapshot followed by exact text/structured proof, final current ownership read and CAS | Q21, Q34, U09 | DONE |
-| R1-B7 — traceability/closeout incomplete | DESIGN §50/§51, ACCEPTANCE tail and this terminal enumerate Q33–Q57/U08–U14 plus complete R1/R2/R3/R4 invariants | deterministic static traceability check | DONE |
+| R1-B7 — traceability/closeout incomplete | DESIGN §50/§51, ACCEPTANCE tail and this terminal enumerate Q33–Q58/U08–U14 plus complete R1/R2/R3/R4/R5 invariants | deterministic static traceability check | DONE |
 
 ## Exhaustive V09/R2 blocker closure map
 
@@ -237,7 +237,7 @@ not a ZERO-BLOCKER claim.
 
 | V09/R4 blocker | Contract correction | Regression/acceptance proof required | Status |
 |---|---|---|---|
-| V09/R4-B1 — handoff state partition overlapped `open + other AgentBot` between takeover and ownership-loss outcomes | DESIGN §43.1/§43.2 now define one mutually exclusive default-deny matrix: takeover requires open + **no AgentBot owner at all**; any other AgentBot is ownership loss; same configured bot/unknown remains HUMAN | Q47/Q56, H01–H04, U11 | DONE |
+| V09/R4-B1 — handoff state partition overlapped `open + other AgentBot` between takeover and ownership-loss outcomes | The R4 correction removed that specific takeover/other-AgentBot overlap by requiring takeover to exclude AgentBot ownership. A later exhaustive successor pass found broader raw-predicate overlaps and superseded the matrix construction with the R5 owner_class partition | Q47/Q56/Q58, H01–H04, U11 | DONE; BROADER MATRIX FINALIZED IN R5 |
 | V09/R4-B2 — deployed Chatwoot v4.18 `toggle_status(open)` can clear another bot or reopen resolved/snoozed state after a stale pre-read because the write has no expected-assignee/status CAS | DESIGN §29.8/§43 now forbid that current automated write entirely; pending/open+same configured bot remains durable HUMAN/operator-manual; only a future separately proven/approved write-time-safe or monotonic primitive may automate handoff, with the durable attempt/no-retry protocol | Q47/Q54/Q57, H01–H04, U11/U14 | DONE |
 
 R4-G1 is a **gate-evidence blocker, not a contract root class**. It cannot be
@@ -249,6 +249,38 @@ and `app/services/messages/send_email_notification_service.rb`; it must also
 bind the policy/base-controller/assignment source needed to prove why current
 v4.18 automated handoff is unsafe. No ZERO-BLOCKER claim is valid until that
 successor manifest and its required checks pass.
+
+## Exhaustive successor/R5 blocker closure map
+
+The exhaustive successor review on
+`HEAD=00788b4f82f79c50f99152f6b0a7361f46c944f6`,
+`TREE=a9a151733fe8146bd1887e21dd095cb07af15e85`,
+`PARENT=3964ecf5bde41af0140bd616b847fdbe32862788`,
+`BASE=09cbf704aba2a6bab4aa1ccacf904926286c3977`,
+`GOV=e777fce4af8e8c3372f1f9de9ef7d00f786c2c89` found two additional
+independent ownership-authority blockers after re-verifying R1–R4. The
+normalized inventory is preserved outside the branch as
+`C6_STAGE0_V09_INVENTORY_R5.txt` with SHA-256
+`9e4e8f64dc11b5a6bc3ea588d451d760d05881b563e812dfabb70e629a9ebc3a`.
+R5-B1 reopens/supersedes the incomplete R4-B1 matrix correction; R4 remains
+historical evidence of the prior pass and was never a ZERO-BLOCKER result.
+
+| V09/R5 blocker | Contract correction | Regression/acceptance proof required | Status |
+|---|---|---|---|
+| V09/R5-B1 — raw human/bot predicates still overlapped the claimed disjoint matrix | DESIGN §43 now decodes exactly one owner_class first and evaluates a status×owner-class partition; contradictory/malformed wire becomes UNKNOWN before the matrix and cannot also match a terminal branch | Q47/Q56/Q58, H01–H04, U11 | DONE |
+| V09/R5-B2 — ownership wire authority was under-specified and legacy normalizeConversation() maps every non-AgentBot assignee to human, including deployed Enterprise Captain::Assistant | DESIGN §43 freezes a closed wire decoder for UNASSIGNED/HUMAN_USER/SAME_AGENTBOT/OTHER_AGENTBOT/OTHER_AUTOMATION/UNKNOWN, explicitly maps Captain::Assistant to OTHER_AUTOMATION, forbids the legacy projection for C6, and states that a future write must enforce competing-owner absence server-side rather than trusting the pre-read | Q47/Q56–Q58, H01–H04 | DONE |
+
+R5 external-fit closure is not supplied by prose alone. The successor-tree
+required-verification manifest MUST freshly bind the deployed Chatwoot v4.18.0
+HEAD/TREE and hash/assert at least:
+- `app/models/conversation.rb` (`assigned_entity`, `assignee_type`, normal
+  validated owner-reset behavior);
+- `app/views/api/v1/conversations/partials/_conversation.json.jbuilder`;
+- `enterprise/app/views/enterprise/api/v1/conversations/partials/_assignee.json.jbuilder`;
+- production `ChatwootApp.enterprise? == true`;
+and MUST statically prove the repository C6 path does not reuse the legacy
+`normalizeConversation()` as §43 ownership authority. No ZERO-BLOCKER claim is
+valid until that evidence passes on the exact successor tree.
 
 ## Required HEAVY review focus
 
@@ -275,9 +307,12 @@ must continue past the first finding and specifically challenge:
   AI work without a proven lossless semantic cut;
 - whether no-retry SENDING/UNCERTAIN/normal-CONFIRMED/late-evidence transitions
   cover all crash/response/webhook orderings monotonically;
-- whether the §43 current-state matrix is truly disjoint for human/unassigned,
-  same configured AgentBot, another AgentBot, resolved/snoozed and malformed
-  states, with no overlap between `human_takeover` and `ownership_lost`;
+- whether the §43 closed ownership wire decoder maps `User`, configured/other
+  `AgentBot`, deployed `Captain::Assistant`, unassigned and every
+  malformed/unknown shape to exactly one owner_class, never reuses the legacy
+  non-AgentBot=>human projection, and the resulting status×owner matrix is
+  truly disjoint with no overlap between `human_takeover`, `ownership_lost`
+  and unresolved HUMAN;
 - whether deployed Chatwoot v4.18 source still proves the current AgentBot
   `toggle_status(open)` write lacks a safe write-time ownership/status predicate,
   so Website First Line performs no automated handoff mutation on that tuple;
@@ -302,7 +337,7 @@ must continue past the first finding and specifically challenge:
   numeric values or treating elapsed time as non-commit proof;
 - whether the single-host/local-filesystem SQLite writer/recovery boundary is
   explicit enough and does not accidentally prohibit ordinary off-host backup;
-- whether every new acceptance vector Q51–Q57/C25h is consistent with the merged
+- whether every new acceptance vector Q51–Q58/C25h is consistent with the merged
   prior corpus.
 
 ## Stage 0 non-goals
