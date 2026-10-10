@@ -1,7 +1,7 @@
 # BabyPark integration agent operating guide
 
-Status: RUNBOOK — NON-NORMATIVE  
-Applies-to: repository-wide AI-assisted work in `Stanislavikus/babypark-integration`  
+Status: RUNBOOK — NON-NORMATIVE
+Applies-to: repository-wide AI-assisted work in `Stanislavikus/babypark-integration`
 Supersedes: none
 
 `docs/AI_WORKING_AGREEMENT.md` is the sole normative process/governance authority. If this runbook, any template, chat history, memory, issue, PR text, or tool behavior conflicts with the current applicable Agreement, the Agreement wins.
@@ -22,7 +22,7 @@ Reading this runbook never moves, rebases, merges, re-pins, or authorizes a camp
 
 1. Every production implementation-options scan must contain the exact line:
    `RISK CLASSIFICATION: STANDARD` or `RISK CLASSIFICATION: HEAVY`.
-   It must cite the applicable Agreement §7.1/§13 criteria and give concrete reasoning for the bounded change. Ambiguous classification is HEAVY. The executor must not silently lower a tier; the owner must see the classification before production-code work begins.
+   It must cite the applicable Agreement §7.0/§13 criteria and give concrete reasoning for the bounded change. Ambiguous classification is HEAVY. The executor must not silently lower a tier; the owner must see the classification before production-code work begins.
 2. STANDARD uses one exhaustive exact-tree ZERO-BLOCKERS verification pass as defined by Agreement §7.1. HEAVY uses the first exhaustive ZERO-BLOCKERS pass plus one separately triggered run-independent isolated ZERO-BLOCKERS confirmation on the unchanged exact basis. There is no recursive third clean pass.
 3. A blocker triggers a complete inventory of the applicable defect class before fixes. Record all independent root-cause classes, batch-fix the complete known inventory, then verify the new exact tree. Do not re-review the whole system separately for each blocker.
 4. Freeze the formal required-verification manifest only after implementation has reached a stable HEAD. Development checks before that point are allowed, but they are not final-tree gate evidence.
@@ -59,11 +59,15 @@ A formal reviewer receives the exact bounded basis, complete applicable contract
 
 For an isolated HEAVY confirmation, do not provide the first review's clean conclusion, transcript, finding summary, reasoning, or same-context continuation. Follow Agreement §7.1 isolation requirements exactly.
 
-## 6. Production-activation process gate
+## 6. Production-activation operational readiness carry-forward
 
-Before customer-facing First Line production activation, the activation/cutover checklist must explicitly verify:
+These are owner-required operational readiness items for the future customer-facing First Line activation campaign; this RUNBOOK does not create independent normative governance authority.
+
+That future activation campaign must carry the following checks into its own frozen manifest/traceability and prove them before operational go-live:
 
 - provider-side protection for canonical `main` is active and compatible with the Agreement's exact-base/result merge discipline; and
 - the procedural structure validator is installed as an actually required check, not merely advisory.
 
-Until those conditions are proven, production activation is blocked by the operational checklist. Implementation of the validator is intentionally outside the initial documentation/templates campaign and must receive its own bounded risk classification before executable/CI changes are made.
+Once carried into the activation campaign, failure to prove either applicable item blocks that campaign's operational go-live. If enforcing either item would require changing or conflict with the normative Agreement, HALT and amend the Agreement rather than treating this RUNBOOK as governance.
+
+Implementation of the validator is intentionally outside the initial documentation/templates campaign and must receive its own bounded risk classification before executable/CI changes are made.
