@@ -36,7 +36,7 @@ Ambiguous risk classification => HEAVY. The executor must not silently lower the
 - MANIFEST_FROZEN: YES / NO
 - MANIFEST_SHA256:
 
-`CURRENT_STATE.md`, when in scope, must be finalized before manifest freeze. Do not add a state-only commit after freeze.
+`docs/CURRENT_STATE.md`, when in scope, must be finalized before manifest freeze. Do not add a state-only commit after freeze.
 
 ## Scope
 
