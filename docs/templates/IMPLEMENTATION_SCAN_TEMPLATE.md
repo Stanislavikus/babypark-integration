@@ -19,7 +19,13 @@ The applicable `docs/AI_WORKING_AGREEMENT.md` is authoritative. This template do
 
 ## Risk classification
 
-**RISK CLASSIFICATION: STANDARD | HEAVY**
+Final scan MUST contain exactly one of these exact lines (delete the other):
+
+`RISK CLASSIFICATION: STANDARD`
+
+or
+
+`RISK CLASSIFICATION: HEAVY`
 
 - Agreement criteria used: §7.0 / §13:
 - Concrete reasoning for this bounded change:
