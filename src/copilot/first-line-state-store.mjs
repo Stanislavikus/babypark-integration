@@ -6243,26 +6243,50 @@ export class FirstLineStateStore {
       positiveInteger(row.event_seq, 'event_seq');
       safeToken(row.action_id, 'action_id');
       nonNegativeInteger(row.created_at, 'created_at');
+
       const event = this.db.prepare(
         'SELECT event_kind FROM conversation_events WHERE stream_id=? AND event_seq=?'
-      ).get(row.stream_id, row.event_seq);
-      const action = this.db.prepare(
-        'SELECT stream_id,prepared_stream_revision,send_started_at FROM public_actions WHERE action_id=?'
-      ).get(row.action_id);
-      const origin = action
-        ? this.db.prepare(
-            "SELECT origin_kind,action_id FROM semantic_origins " +
-            'WHERE stream_id=? AND stream_revision=?'
-          ).get(row.stream_id, action.prepared_stream_revision)
-        : null;
+      ).get(row.stream_id, row.event_seq) ?? null;
+      const action = this.#readAction(row.action_id);
       if (!event || event.event_kind !== 'CUSTOMER_MESSAGE' ||
           !action || action.stream_id !== row.stream_id ||
+          action.descriptor === null ||
           row.event_seq <= action.prepared_stream_revision ||
-          !Number.isSafeInteger(action.send_started_at) ||
-          !origin || origin.origin_kind !== 'PUBLIC_ACTION' ||
-          origin.action_id !== row.action_id) {
+          !Number.isSafeInteger(action.send_started_at)) {
         fail('FIRST_LINE_VALUE_INVALID',
           'deferred parent relationship is inconsistent');
+      }
+
+      const owner = action.continuation_owner;
+      const unresolvedPublicSend =
+        owner.owner_kind === 'PUBLIC_ACTION' &&
+        owner.terminal_outcome === null &&
+        ['SENDING', 'UNCERTAIN'].includes(action.state);
+
+      const normalConfirmedHistory =
+        owner.owner_kind === 'PUBLIC_ACTION' &&
+        owner.terminal_outcome === 'CONFIRMED' &&
+        action.state === 'CONFIRMED' &&
+        action.confirmation_cut !== null &&
+        row.event_seq <= action.confirmation_cut.confirmed_through_event_seq;
+
+      let humanOwnedHistory = false;
+      if (owner.owner_kind === 'HUMAN') {
+        const humanCut = this.db.prepare(
+          'SELECT human_through_event_seq FROM public_action_human_cuts ' +
+          'WHERE action_id=? AND stream_id=?'
+        ).get(action.action_id, action.stream_id) ?? null;
+        humanOwnedHistory =
+          humanCut !== null &&
+          Number.isSafeInteger(humanCut.human_through_event_seq) &&
+          row.event_seq <= humanCut.human_through_event_seq;
+      }
+
+      if (!unresolvedPublicSend &&
+          !normalConfirmedHistory &&
+          !humanOwnedHistory) {
+        fail('FIRST_LINE_VALUE_INVALID',
+          'deferred parent lies outside its provable SENDING/UNCERTAIN history');
       }
     }, 'persisted deferred event parent is invalid', {
       stream_id: streamId,
