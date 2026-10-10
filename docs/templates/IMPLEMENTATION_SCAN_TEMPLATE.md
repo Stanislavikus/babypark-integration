@@ -1,7 +1,7 @@
 # Implementation options scan template
 
-Status: RUNBOOK — NON-NORMATIVE TEMPLATE  
-Applies-to: bounded implementation-options scans in `Stanislavikus/babypark-integration`  
+Status: RUNBOOK — NON-NORMATIVE TEMPLATE
+Applies-to: bounded implementation-options scans in `Stanislavikus/babypark-integration`
 Supersedes: none
 
 The applicable `docs/AI_WORKING_AGREEMENT.md` is authoritative. This template does not replace Agreement §§1–3, §7, or §13.
@@ -21,7 +21,7 @@ The applicable `docs/AI_WORKING_AGREEMENT.md` is authoritative. This template do
 
 **RISK CLASSIFICATION: STANDARD | HEAVY**
 
-- Agreement criteria used: §7.1 / §13:
+- Agreement criteria used: §7.0 / §13:
 - Concrete reasoning for this bounded change:
 - New safety / authority / state / concurrency / privacy / send primitive? YES / NO
 - Boundary-crossing external runtime dependency? YES / NO
