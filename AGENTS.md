@@ -13,7 +13,7 @@ Before substantive repository work:
 1. Execute the bootstrap in Agreement §12 against canonical `Stanislavikus/babypark-integration`.
 2. List canonical `docs/` fresh.
 3. Fetch/read the applicable current Agreement authority and exact canonical `main` OID as required by §12.
-4. Only after that, read this file and `CURRENT_STATE.md`.
+4. Only after that, read this file and `docs/CURRENT_STATE.md`.
 5. Do not reconstruct process or current state from chat history, cached memory, stale issues, or old review branches.
 
 Reading this runbook never moves, rebases, merges, re-pins, or authorizes a campaign.
@@ -29,7 +29,7 @@ Reading this runbook never moves, rebases, merges, re-pins, or authorizes a camp
 5. One bounded campaign = one branch = one Draft PR, subject to Agreement §8. Group steps that form one coherent state/send machine when this improves interaction coverage. If the diff becomes too large for an exhaustive review, split before the formal manifest is frozen.
 6. Formal closure and merge remain sequential. Research, alternatives evidence, fixtures, runtime evidence, owner decisions, and pre-review defect inventory may proceed in parallel when they do not move the active campaign basis.
 7. Do not reduce Agreement-required exact-tree verification, complete counted tests, fail-closed corruption tests where applicable, isolated R2 for HEAVY, dynamic-fact freshness before customer-facing action, ownership authorization, at-most-once POST/reconciliation, restore proof where applicable, final owner approval, or exact-base/result CAS/lease merge protection. This runbook and ordinary owner/task approval cannot waive or weaken the Agreement.
-8. Current operational state and NEXT STEP are recorded in `CURRENT_STATE.md`; exact truth remains canonical git history plus the Agreement.
+8. Current operational state and NEXT STEP are recorded in `docs/CURRENT_STATE.md`; exact truth remains canonical git history plus the Agreement.
 
 ## 3. Internal checkpoints and pre-review sweeps
 
@@ -42,9 +42,9 @@ Every finding they produce MUST be recorded in the campaign PR (description or c
 
 Findings may not be silently dropped. A formal R1/R2 result is never replaced by an internal checkpoint.
 
-## 4. CURRENT_STATE.md lifecycle
+## 4. docs/CURRENT_STATE.md lifecycle
 
-`CURRENT_STATE.md` is a non-normative campaign-boundary snapshot, not a continuously edited tracker.
+`docs/CURRENT_STATE.md` is a non-normative campaign-boundary snapshot, not a continuously edited tracker.
 
 - Prepare/update it as part of the campaign stable HEAD **before** the required-verification manifest is frozen.
 - It may state what becomes true after successful merge of that campaign and the next intended step.
