@@ -2,10 +2,59 @@
 
 Status: EVIDENCE — operational/current-state record; not normative contract authority.
 Applies to: repository-wide operational and campaign state tracking.
-Supersedes: `docs/CURRENT_STATE.md` at canonical main `f60c42ca929c55b4bd4c06da5da7558bead5b486`.
-Last updated: 2026-10-07
+Supersedes: `docs/CURRENT_STATE.md` at canonical main `92a079cb8d2466ea053927402413608aa1ba53f9`.
+Last updated: 2026-10-10
 Owner: BabyPark
 Source of truth for operational facts: production runtime + verified repository evidence.
+
+## Current campaign/navigation snapshot (2026-10-10)
+
+This top section is the current campaign/navigation snapshot. Exact implementation and merge truth remains canonical Git; normative process/governance authority remains `docs/AI_WORKING_AGREEMENT.md`. Runtime facts that are not restated here must be freshly verified from their authoritative runtime/source before use.
+
+State expected after successful merge of process campaign PR #121:
+
+- C1 / C2a / C2b / C2c / C3 / C4 / C5: merged.
+- C5 deterministic renderer implementation: merged via PR #113; intentionally unconnected/not deployed until downstream C6 wiring/authorization is implemented.
+- C6 Stage 0 contract: merged.
+- C6-P1 durable state-store implementation: merged.
+- C6-P1H1 deferred-parent historical-cut hardening: merged via PR #119 after HEAVY R1 + isolated R2 both reported ZERO BLOCKERS on one exact controlling manifest basis.
+- Review-only PR #120: closed without merge after isolated R2; historical review transport only.
+- Risk-proportional closure process/runbook/templates: process campaign PR #121, represented by this reviewed snapshot.
+- C6-B1 PR #118: paused until process campaign #121 is merged, agreed C5 branch hygiene is complete, and #118 is re-pinned once to resulting canonical `main`.
+
+Next intended sequence after PR #121 merge:
+
+1. Perform C5 branch hygiene only after fresh `git fetch origin`, literal `git merge-base --is-ancestor <branch-head> origin/main` exit 0 for each candidate branch, and proof that no open PR uses that branch as head or base.
+2. Re-pin C6-B1 PR #118 once onto the resulting canonical `main`.
+3. Continue the C6 recovery/runtime sequence under the risk-proportional closure operating model in `AGENTS.md`.
+
+### Carried-forward C6 Runtime defect-sweep item
+
+The future C6 Runtime / relay campaign must explicitly challenge every production path that can reach `markActionUncertain`.
+
+C6-P1H1 review found no non-test production caller on its reviewed tree, so this was non-blocking for PR #119. That fact is not a future authorization assumption. Once relay/reconciliation code introduces a production caller, the bounded campaign must prove that the path reaches `markActionUncertain` only through a state-store flow that has already re-attested the applicable deferred/semantic topology, and that no UNCERTAIN transition can create a send/retry/reconciliation bypass around the frozen SENDING no-retry and fail-closed invariants.
+
+Future campaign disposition:
+- `FIXED` with concrete caller/path tests; or
+- `NOT APPLICABLE` with exact production call-graph evidence.
+
+The item may not be silently dropped.
+
+### Carried-forward pre-activation operational readiness items
+
+This EVIDENCE file is not normative governance authority. It carries the owner's required readiness items forward so the future customer-facing First Line activation campaign cannot lose them.
+
+That activation campaign must include the following checks in its own frozen manifest/traceability before operational go-live:
+
+- provider-side protection for canonical `main` is active and compatible with the Agreement's exact-base/result merge discipline;
+- the procedural structure validator is installed as an actually required check, not merely advisory;
+- all other Agreement/design activation evidence remains required.
+
+Once carried into the activation campaign, an unproven applicable item blocks operational go-live. If making any item normative requires a governance change or conflicts with the Agreement, HALT for an Agreement amendment rather than treating this EVIDENCE file as governance.
+
+## Historical/background operational snapshots
+
+Everything below this heading is retained as historical/background evidence from earlier bounded slices. Phrases such as “current”, “next”, or “active” inside those older sections describe their original snapshot time and do not override the top current campaign/navigation snapshot. Any runtime fact needed for a present decision must be re-verified from its authoritative source.
 
 ## AI First Line Slice A state (2026-10-02)
 
