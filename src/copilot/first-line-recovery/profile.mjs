@@ -439,7 +439,11 @@ async function withFrozenFirstLineSource(
   // The unchanged generic core also stages plaintext in this directory.
   // Require a private parent before either stage can create a file.
   const parent = fs.statSync(artifactDir);
-  if (!parent.isDirectory() || (parent.mode & 0o077) !== 0) {
+  const effectiveUid = typeof process.geteuid === 'function'
+    ? process.geteuid() : null;
+  if (!parent.isDirectory() ||
+      parent.uid !== effectiveUid ||
+      (parent.mode & 0o077) !== 0) {
     fail(
       'FIRST_LINE_BACKUP_PARENT_INSECURE',
       'First Line backup directory must be owner-private (0700)'

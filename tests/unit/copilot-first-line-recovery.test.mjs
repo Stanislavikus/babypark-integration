@@ -232,6 +232,33 @@ test('backup refuses a traversable parent before creating plaintext staging', as
   );
 });
 
+test('backup rejects a private directory owned by another UID', async t => {
+  const f = temp(t);
+  const store = createStore(f.file);
+  store.close();
+  const nativeStat = fs.statSync;
+  t.mock.method(fs, 'statSync', (name, ...args) => {
+    const stat = nativeStat(name, ...args);
+    return path.resolve(name) === f.root
+      ? { uid: (process.geteuid?.() ?? -1) + 1,
+          mode: stat.mode,
+          isDirectory: () => stat.isDirectory() }
+      : stat;
+  });
+  await assertRejectCode(
+    createFirstLineEncryptedBackup({
+      sourcePath: f.file,
+      artifactPath: f.artifact,
+      manifestPath: f.manifest,
+      masterKey: key(),
+      keyId: 'first-line-test-key',
+    }),
+    'FIRST_LINE_BACKUP_PARENT_INSECURE'
+  );
+  assert.equal(fs.existsSync(f.artifact), false);
+  assert.equal(fs.existsSync(f.manifest), false);
+});
+
 test('encrypted First Line backup restores and revalidates semantic evidence', async t => {
   const f = temp(t);
   const store = createStore(f.file);
