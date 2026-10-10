@@ -92,6 +92,22 @@ function forgeDeferredParentWithExactTriggerRestored(
   }
 }
 
+function mutateCutWithExactTriggerRestored(
+  store,
+  { triggerName, sql, params = [] }
+) {
+  const trigger = store.db.prepare(
+    "SELECT sql FROM sqlite_master WHERE type='trigger' AND name=?"
+  ).get(triggerName);
+  assert.equal(typeof trigger?.sql, 'string');
+  store.db.exec('DROP TRIGGER ' + triggerName);
+  try {
+    store.db.prepare(sql).run(...params);
+  } finally {
+    store.db.exec(trigger.sql);
+  }
+}
+
 function babyparkReply(id, actionId) {
   return {
     sourceMessageId: id,
@@ -571,6 +587,135 @@ test('deferred parent HUMAN history is bounded by immutable escalation cut and l
     ),
     'FIRST_LINE_DB_CORRUPT'
   );
+});
+
+
+test('single-row confirmation-cut corruption cannot widen or truncate deferred history', t => {
+  {
+    const { store } = tempStore(t);
+    const stream = makeStream(store, 57);
+    store.ingestConversationEvent(stream.stream_id, customerEvent(101));
+    const action = prepareAnswer(store, stream.stream_id, 1, [1]);
+    store.claimNextPublicAction({ leaseMs: 10_000, token: 'confirm-cut-expand' });
+    store.markActionSending(action.action_id, 'confirm-cut-expand');
+    store.ingestConversationEvent(stream.stream_id, customerEvent(102));
+    store.ingestConversationEvent(
+      stream.stream_id,
+      babyparkReply(103, action.action_id)
+    );
+    store.confirmPublicActionFromLedger(action.action_id);
+    const later = store.ingestConversationEvent(
+      stream.stream_id,
+      customerEvent(104)
+    );
+    assert.equal(later.event.event_seq, 4);
+    assert.equal(later.deferred_parent, null);
+
+    mutateCutWithExactTriggerRestored(store, {
+      triggerName: 'public_action_confirmation_cuts_no_update_v4',
+      sql: 'UPDATE public_action_confirmation_cuts ' +
+        'SET confirmed_through_event_seq=4 WHERE action_id=?',
+      params: [action.action_id],
+    });
+    expectCode(
+      () => store.readRoutingSnapshot(stream.stream_id),
+      'FIRST_LINE_DB_CORRUPT'
+    );
+    expectCode(
+      () => store.ingestConversationEvent(stream.stream_id, customerEvent(104)),
+      'FIRST_LINE_DB_CORRUPT'
+    );
+  }
+
+  {
+    const { store } = tempStore(t);
+    const stream = makeStream(store, 58);
+    store.ingestConversationEvent(stream.stream_id, customerEvent(201));
+    const action = prepareAnswer(store, stream.stream_id, 1, [1]);
+    store.claimNextPublicAction({ leaseMs: 10_000, token: 'confirm-cut-shrink' });
+    store.markActionSending(action.action_id, 'confirm-cut-shrink');
+    store.ingestConversationEvent(stream.stream_id, customerEvent(202));
+    store.ingestConversationEvent(
+      stream.stream_id,
+      babyparkReply(203, action.action_id)
+    );
+    store.confirmPublicActionFromLedger(action.action_id);
+
+    mutateCutWithExactTriggerRestored(store, {
+      triggerName: 'public_action_confirmation_cuts_no_update_v4',
+      sql: 'UPDATE public_action_confirmation_cuts ' +
+        'SET confirmed_through_event_seq=2 WHERE action_id=?',
+      params: [action.action_id],
+    });
+    expectCode(
+      () => store.getPublicAction(action.action_id),
+      'FIRST_LINE_DB_CORRUPT'
+    );
+  }
+});
+
+test('single-row HUMAN escalation-cut corruption cannot widen or truncate deferred history', t => {
+  {
+    const { store } = tempStore(t);
+    const stream = makeStream(store, 59);
+    store.ingestConversationEvent(stream.stream_id, customerEvent(301));
+    const action = prepareAnswer(store, stream.stream_id, 1, [1]);
+    store.claimNextPublicAction({ leaseMs: 10_000, token: 'human-cut-expand' });
+    store.markActionSending(action.action_id, 'human-cut-expand');
+    store.ingestConversationEvent(stream.stream_id, customerEvent(302));
+    store.escalatePublicActionToHuman(action.action_id, {
+      reason: 'cut_corruption_regression',
+    });
+    const later = store.ingestConversationEvent(
+      stream.stream_id,
+      customerEvent(303)
+    );
+    assert.equal(later.event.event_seq, 3);
+    assert.equal(later.deferred_parent, null);
+
+    mutateCutWithExactTriggerRestored(store, {
+      triggerName: 'public_action_human_cuts_no_update_v4',
+      sql: 'UPDATE public_action_human_cuts ' +
+        'SET human_through_event_seq=3 WHERE action_id=?',
+      params: [action.action_id],
+    });
+    expectCode(
+      () => store.ingestConversationEvent(stream.stream_id, customerEvent(303)),
+      'FIRST_LINE_DB_CORRUPT'
+    );
+    expectCode(
+      () => store.terminalizeHumanContinuation(
+        stream.stream_id,
+        action.prepared_stream_revision,
+        { outcome: 'HUMAN_TAKEOVER' }
+      ),
+      'FIRST_LINE_DB_CORRUPT'
+    );
+  }
+
+  {
+    const { store } = tempStore(t);
+    const stream = makeStream(store, 60);
+    store.ingestConversationEvent(stream.stream_id, customerEvent(401));
+    const action = prepareAnswer(store, stream.stream_id, 1, [1]);
+    store.claimNextPublicAction({ leaseMs: 10_000, token: 'human-cut-shrink' });
+    store.markActionSending(action.action_id, 'human-cut-shrink');
+    store.ingestConversationEvent(stream.stream_id, customerEvent(402));
+    store.escalatePublicActionToHuman(action.action_id, {
+      reason: 'cut_corruption_regression',
+    });
+
+    mutateCutWithExactTriggerRestored(store, {
+      triggerName: 'public_action_human_cuts_no_update_v4',
+      sql: 'UPDATE public_action_human_cuts ' +
+        'SET human_through_event_seq=1 WHERE action_id=?',
+      params: [action.action_id],
+    });
+    expectCode(
+      () => store.getDeferredEventParent(stream.stream_id, 2),
+      'FIRST_LINE_DB_CORRUPT'
+    );
+  }
 });
 
 test('descriptor-less migrated v3 action cannot acquire guessed deferred history', t => {

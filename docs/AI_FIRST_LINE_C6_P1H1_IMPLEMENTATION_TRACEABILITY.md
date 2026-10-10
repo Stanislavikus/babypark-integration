@@ -65,8 +65,23 @@ by the external reviewer:
 - recovery-barrier row shape ↔ `#readRecoveryBarrier`.
 
 Those surfaces already have persisted read-side provenance/state attestation in
-addition to their write-time triggers. No second independent blocker class was
-identified in this bounded inventory.
+addition to their write-time triggers. Focused adversarial PoCs also mutate only
+the normal-confirmation or HUMAN-escalation cut while leaving relation/source
+rows unchanged: expanding either cut makes stream-level deferred coverage fail,
+while shrinking it makes the action/relation read fail. These detectable
+single-row cut corruptions therefore return FIRST_LINE_DB_CORRUPT. No second
+independent blocker class was identified in this bounded inventory.
+
+The review also tested a deliberately stronger corruption model by temporarily
+removing immutability triggers and coherently rewriting every mutually
+corroborating witness so the resulting bytes are indistinguishable from a state
+that could have arisen through another legal event ordering. Schema v4 contains
+no independent cryptographic/history witness from which to reconstruct the
+pre-rewrite cut, and the frozen P1/H1 contract does not claim Byzantine/admin
+tamper evidence for such a history-equivalent rewrite. This boundary is not used
+to excuse any inconsistency that remains provable from the current durable
+state; adding tamper-evident historical reconstruction would be a new normative
+storage requirement/schema stage and requires its own fresh Agreement gate.
 
 The corruption injection used for H1 restores the exact v4 trigger bytes before
 the read. The reproduced corrupted DB therefore still has
@@ -79,8 +94,8 @@ drift detection.
 These runs are implementation-development evidence only and do not substitute
 for the later frozen-manifest final-tree checks:
 
-- focused v4 state-store suite: **94/94 PASS**, zero fail/skip/todo/cancelled;
-- broad First Line suite: **444/444 PASS**, zero fail/skip/todo/cancelled;
+- focused v4 state-store suite: **96/96 PASS**, zero fail/skip/todo/cancelled;
+- broad First Line suite: **446/446 PASS**, zero fail/skip/todo/cancelled;
 - the original exact-main corrupted confirmation/HUMAN PoC databases now return
   `FIRST_LINE_DB_CORRUPT` on the affected read/admission paths.
 
