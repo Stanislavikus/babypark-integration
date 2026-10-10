@@ -1,4 +1,9 @@
 <!--
+Status: RUNBOOK — NON-NORMATIVE TEMPLATE
+Applies-to: pull request authoring/gate evidence in Stanislavikus/babypark-integration
+Supersedes: none
+-->
+<!--
 This template is procedural guidance only. docs/AI_WORKING_AGREEMENT.md is authoritative.
 Do not treat filled fields as merge authorization.
 -->
