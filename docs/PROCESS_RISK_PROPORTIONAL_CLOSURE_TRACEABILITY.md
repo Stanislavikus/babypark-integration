@@ -79,7 +79,7 @@ Before freezing the required-verification manifest:
 2. Confirm final changed surface remains exactly documentation/templates/evidence only.
 3. Confirm no executable validator/CI/runtime/governance amendment was introduced.
 4. Confirm all P01..P17 rows are terminal DONE.
-5. Run static consistency checks across Agreement §7.1/§8/§12/§13, `AGENTS.md`, `CLAUDE.md`, `docs/CURRENT_STATE.md`, scan/reviewer/PR templates and this traceability artifact.
+5. Run static consistency checks across Agreement §7.0/§7.1/§8/§12/§13, `AGENTS.md`, `CLAUDE.md`, `docs/CURRENT_STATE.md`, scan/reviewer/PR templates and this traceability artifact.
 6. Then freeze the required-verification manifest on the stable HEAD.
 
 The executable procedural validator/CI wiring remains intentionally excluded and requires a separate bounded classification.
