@@ -1,7 +1,7 @@
 # Formal reviewer packet template
 
-Status: RUNBOOK — NON-NORMATIVE TEMPLATE  
-Applies-to: STANDARD exhaustive reviews and HEAVY exhaustive/isolated confirmation reviews in `Stanislavikus/babypark-integration`  
+Status: RUNBOOK — NON-NORMATIVE TEMPLATE
+Applies-to: STANDARD exhaustive reviews and HEAVY exhaustive/isolated confirmation reviews in `Stanislavikus/babypark-integration`
 Supersedes: none
 
 The applicable `docs/AI_WORKING_AGREEMENT.md` is authoritative. This template is only a transport package for an already classified campaign.
