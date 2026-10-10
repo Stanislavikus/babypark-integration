@@ -1,7 +1,7 @@
 # Claude repository entry point
 
-Status: RUNBOOK — NON-NORMATIVE  
-Applies-to: repository-wide AI-assisted work in `Stanislavikus/babypark-integration`  
+Status: RUNBOOK — NON-NORMATIVE
+Applies-to: repository-wide AI-assisted work in `Stanislavikus/babypark-integration`
 Supersedes: none
 
 Before substantive repository work, execute the bootstrap in `docs/AI_WORKING_AGREEMENT.md` §12 against canonical `Stanislavikus/babypark-integration`.
