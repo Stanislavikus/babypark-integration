@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
-import { testActionDescriptor } from '../helpers/first-line-action-descriptor.mjs';
+import { prepareTestPublicAction, testActionDescriptor } from '../helpers/first-line-action-descriptor.mjs';
 
 import {
   FIRST_LINE_EXTRACTION_SCHEMA,
@@ -90,7 +90,7 @@ function confirmClarify(store, streamId, episode, {
   replyContentType = candidates.length > 0 ? 'input_select' : 'text',
 } = {}) {
   const stream = store.getConversationStream(streamId);
-  const action = store.preparePublicAction({
+  const action = prepareTestPublicAction(store, {
     descriptor: testActionDescriptor(),
     streamId,
     episodeId: episode.episode_id,
@@ -683,7 +683,7 @@ test('forged or serialized positive proof cannot mutate semantic state', t => {
 });
 
 
-test('defense-in-depth rejects a persisted mixed-slot clarification before clearing requested slot', t => {
+test('v4 immutability prevents persisted clarification slot reinterpretation', t => {
   const store = tempStore(t);
   const stream = store.ensureConversationStream({
     sourceProvider: 'chatwoot',
@@ -700,29 +700,11 @@ test('defense-in-depth rejects a persisted mixed-slot clarification before clear
     requestedSlot: 'variant_id',
   });
 
-  store.db.prepare('UPDATE public_actions SET requested_slot=? WHERE action_id=?')
-    .run('store_id', action.action_id);
-  store.db.prepare('UPDATE episodes SET requested_slot=? WHERE episode_id=?')
-    .run('store_id', episode.episode_id);
-
-  const snapshot = store.readRoutingSnapshot(stream.stream_id);
-  const proof = proveStructuredClarificationSubmission({
-    snapshot,
-    exactRead: structuredExactRead(store.getPublicAction(action.action_id)),
-  });
-  assert.equal(proof.code, 'CLARIFICATION_SELECTION_PROVEN');
-  assert.equal(proof.selection.slot, 'variant_id');
-
-  const before = store.loadActiveEpisode(stream.stream_id);
-  expectStateCode(
-    () => applyFirstLineRoute({ store, selectionProof: proof }),
-    'FIRST_LINE_SELECTION_PROVENANCE_INVALID'
-  );
-  const after = store.loadActiveEpisode(stream.stream_id);
-  assert.equal(after.version, before.version);
-  assert.equal(after.requested_slot, 'store_id');
-  assert.equal(after.clarification_action_id, action.action_id);
-  assert.equal(after.stable_slots.variant_id, undefined);
+  assert.throws(() => store.db.prepare(
+    'UPDATE public_actions SET requested_slot=? WHERE action_id=?'
+  ).run('store_id', action.action_id));
+  assert.equal(store.getPublicAction(action.action_id).requested_slot, 'variant_id');
+  assert.equal(store.loadActiveEpisode(stream.stream_id).requested_slot, 'variant_id');
 });
 
 test('certified C3 latch is committed atomically with standalone episode start', t => {
@@ -752,7 +734,7 @@ test('certified C3 latch is committed atomically with standalone episode start',
     ['OTHER_UNCONSUMED_CONSTRAINT']
   );
   assert.throws(
-    () => store.preparePublicAction({
+    () => prepareTestPublicAction(store, {
       descriptor: testActionDescriptor(),
       streamId: stream.stream_id,
       episodeId: result.transition.episode.episode_id,

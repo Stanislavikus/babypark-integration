@@ -12,7 +12,7 @@ const V2_SCHEMA_MASTER_SHA256 =
 const V3_SCHEMA_MASTER_SHA256 =
   'e7a9f211d23e2439bcd63a29fb3b9ed1569e3958ca536c240af00876dd410e07';
 const V4_SCHEMA_MASTER_SHA256 =
-  'b1b7386747c89ae917b56d53489b2d3f31df68d6aca6ca3b810fc02ea4dd48c2';
+  'b22cec88b714eea7569bf2dc96591e901f7e75a36e2424caf6eaaea3c19653a1';
 const BUSY_TIMEOUT_MS = 5000;
 const MAX_PRESENTED_CANDIDATES = 20;
 // A whole-conversation authorizing snapshot is unprovable at 1000 public rows;
@@ -106,6 +106,155 @@ CREATE TABLE public_action_source_events (
   FOREIGN KEY(stream_id, event_seq)
     REFERENCES conversation_events(stream_id, event_seq) ON DELETE RESTRICT
 ) STRICT;
+CREATE TABLE public_action_confirmation_cuts (
+  action_id TEXT PRIMARY KEY,
+  stream_id TEXT NOT NULL,
+  confirmed_through_event_seq INTEGER NOT NULL CHECK(confirmed_through_event_seq >= 1),
+  created_at INTEGER NOT NULL CHECK(created_at >= 0),
+  FOREIGN KEY(action_id, stream_id)
+    REFERENCES public_actions(action_id, stream_id) ON DELETE RESTRICT,
+  FOREIGN KEY(stream_id, confirmed_through_event_seq)
+    REFERENCES conversation_events(stream_id, event_seq) ON DELETE RESTRICT
+) STRICT;
+CREATE TRIGGER public_action_confirmation_cuts_validate_insert_v4
+BEFORE INSERT ON public_action_confirmation_cuts
+WHEN NOT EXISTS (
+  SELECT 1 FROM public_actions pa
+  JOIN conversation_streams cs ON cs.stream_id=pa.stream_id
+  JOIN continuation_owners co
+    ON co.stream_id=pa.stream_id
+    AND co.stream_revision=pa.prepared_stream_revision
+    AND co.action_id=pa.action_id
+  WHERE pa.action_id=NEW.action_id AND pa.stream_id=NEW.stream_id
+    AND pa.state IN ('SENDING','UNCERTAIN')
+    AND pa.send_started_at IS NOT NULL
+    AND cs.last_event_seq=NEW.confirmed_through_event_seq
+    AND cs.stream_revision=cs.last_event_seq
+    AND co.owner_kind='PUBLIC_ACTION' AND co.terminal_outcome IS NULL
+    AND (SELECT COUNT(*) FROM conversation_events ce
+         WHERE ce.stream_id=NEW.stream_id AND ce.source_id=NEW.action_id)=1
+    AND EXISTS (
+      SELECT 1 FROM conversation_events ce
+      WHERE ce.stream_id=NEW.stream_id AND ce.source_id=NEW.action_id
+        AND ce.event_kind='BABYPARK_PUBLIC_REPLY'
+        AND ce.event_seq>pa.prepared_stream_revision
+        AND ce.event_seq<=NEW.confirmed_through_event_seq
+    )
+)
+BEGIN
+  SELECT RAISE(ABORT,'public_action_confirmation_cut_unproven');
+END;
+CREATE TRIGGER public_action_confirmation_cuts_no_update_v4
+BEFORE UPDATE ON public_action_confirmation_cuts
+BEGIN
+  SELECT RAISE(ABORT,'public_action_confirmation_cut_immutable');
+END;
+CREATE TRIGGER public_action_confirmation_cuts_no_delete_v4
+BEFORE DELETE ON public_action_confirmation_cuts
+BEGIN
+  SELECT RAISE(ABORT,'public_action_confirmation_cut_immutable');
+END;
+CREATE TABLE public_action_human_cuts (
+  action_id TEXT PRIMARY KEY,
+  stream_id TEXT NOT NULL,
+  human_through_event_seq INTEGER NOT NULL CHECK(human_through_event_seq >= 1),
+  created_at INTEGER NOT NULL CHECK(created_at >= 0),
+  FOREIGN KEY(action_id, stream_id)
+    REFERENCES public_actions(action_id, stream_id) ON DELETE RESTRICT,
+  FOREIGN KEY(stream_id, human_through_event_seq)
+    REFERENCES conversation_events(stream_id, event_seq) ON DELETE RESTRICT
+) STRICT;
+CREATE TRIGGER public_action_human_cuts_validate_insert_v4
+BEFORE INSERT ON public_action_human_cuts
+WHEN NOT EXISTS (
+  SELECT 1 FROM public_actions pa
+  JOIN public_action_descriptors pad ON pad.action_id=pa.action_id
+  JOIN conversation_streams cs ON cs.stream_id=pa.stream_id
+  JOIN continuation_owners co
+    ON co.stream_id=pa.stream_id
+    AND co.stream_revision=pa.prepared_stream_revision
+    AND co.action_id=pa.action_id
+  WHERE pa.action_id=NEW.action_id AND pa.stream_id=NEW.stream_id
+    AND pa.state IN ('SENDING','UNCERTAIN')
+    AND pa.send_started_at IS NOT NULL
+    AND cs.last_event_seq=NEW.human_through_event_seq
+    AND cs.stream_revision=cs.last_event_seq
+    AND co.owner_kind='PUBLIC_ACTION' AND co.terminal_outcome IS NULL
+    AND NOT EXISTS (
+      SELECT 1 FROM conversation_events ce
+      LEFT JOIN deferred_event_parents dp
+        ON dp.stream_id=ce.stream_id AND dp.event_seq=ce.event_seq
+      WHERE ce.stream_id=pa.stream_id
+        AND ce.event_kind='CUSTOMER_MESSAGE'
+        AND ce.event_seq>pa.prepared_stream_revision
+        AND ce.event_seq<=NEW.human_through_event_seq
+        AND (dp.action_id IS NULL OR dp.action_id<>pa.action_id)
+    )
+)
+BEGIN
+  SELECT RAISE(ABORT,'public_action_human_cut_unproven');
+END;
+CREATE TRIGGER public_action_human_cuts_no_update_v4
+BEFORE UPDATE ON public_action_human_cuts
+BEGIN
+  SELECT RAISE(ABORT,'public_action_human_cut_immutable');
+END;
+CREATE TRIGGER public_action_human_cuts_no_delete_v4
+BEFORE DELETE ON public_action_human_cuts
+BEGIN
+  SELECT RAISE(ABORT,'public_action_human_cut_immutable');
+END;
+CREATE TABLE public_action_candidate_sets (
+  action_id TEXT PRIMARY KEY REFERENCES public_actions(action_id) ON DELETE RESTRICT,
+  candidate_count INTEGER NOT NULL CHECK(candidate_count BETWEEN 0 AND 20),
+  candidate_slot TEXT,
+  CHECK(
+    (candidate_count=0 AND candidate_slot IS NULL) OR
+    (candidate_count>0 AND candidate_slot IS NOT NULL AND length(candidate_slot) BETWEEN 1 AND 64)
+  )
+) STRICT;
+CREATE TRIGGER public_action_candidate_sets_validate_insert_v4
+BEFORE INSERT ON public_action_candidate_sets
+WHEN EXISTS (
+  SELECT 1 FROM semantic_origins so WHERE so.action_id=NEW.action_id
+)
+BEGIN
+  SELECT RAISE(ABORT,'public_action_candidate_set_after_origin');
+END;
+CREATE TRIGGER public_action_candidate_sets_no_update
+BEFORE UPDATE ON public_action_candidate_sets
+BEGIN
+  SELECT RAISE(ABORT,'public_action_candidate_set_immutable');
+END;
+CREATE TRIGGER public_action_candidate_sets_no_delete
+BEFORE DELETE ON public_action_candidate_sets
+BEGIN
+  SELECT RAISE(ABORT,'public_action_candidate_set_immutable');
+END;
+CREATE TRIGGER public_action_candidates_validate_insert_v4
+BEFORE INSERT ON public_action_candidates
+WHEN
+  EXISTS (SELECT 1 FROM semantic_origins so WHERE so.action_id=NEW.action_id) OR
+  NOT EXISTS (
+    SELECT 1 FROM public_action_candidate_sets pcs
+    WHERE pcs.action_id=NEW.action_id
+      AND pcs.candidate_count>0
+      AND NEW.ordinal BETWEEN 1 AND pcs.candidate_count
+      AND pcs.candidate_slot=NEW.slot_name
+  )
+BEGIN
+  SELECT RAISE(ABORT,'public_action_candidate_outside_frozen_set');
+END;
+CREATE TRIGGER public_action_candidates_no_update_v4
+BEFORE UPDATE ON public_action_candidates
+BEGIN
+  SELECT RAISE(ABORT,'public_action_candidate_immutable');
+END;
+CREATE TRIGGER public_action_candidates_no_delete_v4
+BEFORE DELETE ON public_action_candidates
+BEGIN
+  SELECT RAISE(ABORT,'public_action_candidate_immutable');
+END;
 CREATE TABLE public_action_descriptors (
   action_id TEXT PRIMARY KEY,
   stream_id TEXT NOT NULL,
@@ -173,13 +322,25 @@ CREATE TABLE public_action_descriptors (
       ((max_price_minor IS NULL AND max_price_event_seq IS NULL) OR
        (max_price_minor IS NOT NULL AND max_price_event_seq IS NOT NULL AND
         max_price_minor >= 0 AND max_price_minor <= 9007199254740991)) AND
-      (min_price_minor IS NULL OR max_price_minor IS NULL OR min_price_minor <= max_price_minor))
+      (min_price_minor IS NULL OR max_price_minor IS NULL OR min_price_minor <= max_price_minor) AND
+      ((min_price_event_seq IS NOT NULL AND money_currency_event_seq=min_price_event_seq) OR
+       (max_price_event_seq IS NOT NULL AND money_currency_event_seq=max_price_event_seq)))
   )
 ) STRICT;
 CREATE TABLE legacy_v3_actions (
   action_id TEXT PRIMARY KEY REFERENCES public_actions(action_id) ON DELETE RESTRICT,
   marker TEXT NOT NULL CHECK(marker='DESCRIPTOR_UNAVAILABLE')
 ) STRICT;
+CREATE TRIGGER legacy_v3_actions_validate_insert
+BEFORE INSERT ON legacy_v3_actions
+WHEN EXISTS (
+  SELECT 1 FROM semantic_origins so WHERE so.action_id=NEW.action_id
+) OR EXISTS (
+  SELECT 1 FROM public_action_descriptors d WHERE d.action_id=NEW.action_id
+)
+BEGIN
+  SELECT RAISE(ABORT,'legacy_v3_action_conflicts_with_descriptor');
+END;
 CREATE TRIGGER legacy_v3_actions_no_update
 BEFORE UPDATE ON legacy_v3_actions
 BEGIN
@@ -259,21 +420,656 @@ CREATE TABLE recovery_barriers (
   authority_key INTEGER NOT NULL DEFAULT 1 CHECK(authority_key=1),
   reason TEXT NOT NULL CHECK(length(reason) BETWEEN 1 AND 160),
   entered_at INTEGER NOT NULL CHECK(entered_at >= 0),
-  completion_kind TEXT CHECK(completion_kind IS NULL OR completion_kind IN (
-    'LOSSLESS_SEMANTIC_CUT','HUMAN_QUARANTINE_COMPLETE'
-  )),
+  completion_kind TEXT CHECK(completion_kind IS NULL OR completion_kind='LOSSLESS_SEMANTIC_CUT'),
   completed_at INTEGER CHECK(completed_at IS NULL OR completed_at >= 0),
   CHECK((completion_kind IS NULL) = (completed_at IS NULL))
 ) STRICT;
 CREATE UNIQUE INDEX one_active_recovery_barrier
   ON recovery_barriers(authority_key) WHERE completed_at IS NULL;
-CREATE TRIGGER semantic_origins_validate_insert
-BEFORE INSERT ON semantic_origins
-WHEN NEW.origin_kind IN ('DIRECT_HUMAN','NON_ACTIONABLE_ACK') AND
+CREATE TABLE non_actionable_ack_cuts (
+  stream_id TEXT NOT NULL,
+  stream_revision INTEGER NOT NULL CHECK(stream_revision >= 1),
+  ack_through_event_seq INTEGER NOT NULL CHECK(ack_through_event_seq >= 1),
+  episode_id TEXT,
+  episode_version INTEGER CHECK(episode_version IS NULL OR episode_version >= 1),
+  created_at INTEGER NOT NULL CHECK(created_at >= 0),
+  PRIMARY KEY(stream_id, stream_revision),
+  FOREIGN KEY(stream_id, stream_revision)
+    REFERENCES semantic_origins(stream_id, stream_revision) ON DELETE RESTRICT,
+  FOREIGN KEY(stream_id, ack_through_event_seq)
+    REFERENCES conversation_events(stream_id, event_seq) ON DELETE RESTRICT,
+  FOREIGN KEY(episode_id, stream_id)
+    REFERENCES episodes(episode_id, stream_id) ON DELETE RESTRICT,
+  CHECK((episode_id IS NULL) = (episode_version IS NULL))
+) STRICT;
+CREATE TRIGGER non_actionable_ack_cuts_validate_insert_v4
+BEFORE INSERT ON non_actionable_ack_cuts
+WHEN NOT EXISTS (
+  SELECT 1 FROM semantic_origins so
+  JOIN conversation_streams cs ON cs.stream_id=so.stream_id
+  WHERE so.stream_id=NEW.stream_id
+    AND so.stream_revision=NEW.stream_revision
+    AND so.origin_kind='NON_ACTIONABLE_ACK'
+    AND so.action_id IS NULL
+    AND cs.stream_revision=cs.last_event_seq
+    AND cs.stream_revision=NEW.ack_through_event_seq
+    AND NEW.ack_through_event_seq=NEW.stream_revision
+    AND (
+      (NEW.episode_id IS NULL AND NOT EXISTS (
+        SELECT 1 FROM episodes e
+        WHERE e.stream_id=NEW.stream_id AND e.state='active'
+      )) OR
+      EXISTS (
+        SELECT 1 FROM episodes e
+        WHERE e.episode_id=NEW.episode_id AND e.stream_id=NEW.stream_id
+          AND e.state='active' AND e.version=NEW.episode_version
+      )
+    )
+)
+BEGIN
+  SELECT RAISE(ABORT,'non_actionable_ack_cut_unproven');
+END;
+CREATE TRIGGER non_actionable_ack_cuts_no_update_v4
+BEFORE UPDATE ON non_actionable_ack_cuts
+BEGIN
+  SELECT RAISE(ABORT,'non_actionable_ack_cut_immutable');
+END;
+CREATE TRIGGER non_actionable_ack_cuts_no_delete_v4
+BEFORE DELETE ON non_actionable_ack_cuts
+BEGIN
+  SELECT RAISE(ABORT,'non_actionable_ack_cut_immutable');
+END;
+CREATE TABLE human_terminal_cuts (
+  stream_id TEXT NOT NULL,
+  stream_revision INTEGER NOT NULL CHECK(stream_revision >= 1),
+  terminal_through_event_seq INTEGER NOT NULL CHECK(terminal_through_event_seq >= 1),
+  terminal_outcome TEXT NOT NULL CHECK(terminal_outcome IN ('HUMAN_TAKEOVER','OWNERSHIP_LOST')),
+  created_at INTEGER NOT NULL CHECK(created_at >= 0),
+  PRIMARY KEY(stream_id, stream_revision),
+  FOREIGN KEY(stream_id, stream_revision)
+    REFERENCES continuation_owners(stream_id, stream_revision) ON DELETE RESTRICT,
+  FOREIGN KEY(stream_id, terminal_through_event_seq)
+    REFERENCES conversation_events(stream_id, event_seq) ON DELETE RESTRICT
+) STRICT;
+CREATE TRIGGER human_terminal_cuts_validate_insert_v4
+BEFORE INSERT ON human_terminal_cuts
+WHEN NOT EXISTS (
+  SELECT 1 FROM continuation_owners co
+  JOIN conversation_streams cs ON cs.stream_id=co.stream_id
+  WHERE co.stream_id=NEW.stream_id
+    AND co.stream_revision=NEW.stream_revision
+    AND co.owner_kind='HUMAN'
+    AND co.terminal_outcome IS NULL
+    AND cs.stream_revision=cs.last_event_seq
+    AND cs.last_event_seq=NEW.terminal_through_event_seq
+    AND NEW.terminal_through_event_seq>=NEW.stream_revision
+)
+BEGIN
+  SELECT RAISE(ABORT,'human_terminal_cut_unproven');
+END;
+CREATE TRIGGER human_terminal_cuts_no_update_v4
+BEFORE UPDATE ON human_terminal_cuts
+BEGIN
+  SELECT RAISE(ABORT,'human_terminal_cut_immutable');
+END;
+CREATE TRIGGER human_terminal_cuts_no_delete_v4
+BEFORE DELETE ON human_terminal_cuts
+BEGIN
+  SELECT RAISE(ABORT,'human_terminal_cut_immutable');
+END;
+CREATE TRIGGER conversation_events_validate_insert_v4
+BEFORE INSERT ON conversation_events
+WHEN
+  EXISTS (SELECT 1 FROM recovery_barriers WHERE completed_at IS NULL) OR
   NOT EXISTS (
     SELECT 1 FROM conversation_streams cs
-    WHERE cs.stream_id=NEW.stream_id AND cs.stream_revision=NEW.stream_revision
+    WHERE cs.stream_id=NEW.stream_id
+      AND cs.stream_revision=cs.last_event_seq
+      AND NEW.event_seq=cs.last_event_seq+1
   )
+BEGIN
+  SELECT RAISE(ABORT,'conversation_event_append_invalid');
+END;
+CREATE TRIGGER conversation_events_defer_customer_v4
+AFTER INSERT ON conversation_events
+WHEN NEW.event_kind='CUSTOMER_MESSAGE'
+BEGIN
+  SELECT CASE WHEN (
+    SELECT COUNT(*) FROM public_actions pa
+    WHERE pa.stream_id=NEW.stream_id AND pa.state IN ('SENDING','UNCERTAIN')
+  )>1 THEN RAISE(ABORT,'multiple_unresolved_send_actions') END;
+  SELECT CASE WHEN EXISTS (
+    SELECT 1 FROM public_actions pa
+    WHERE pa.stream_id=NEW.stream_id AND pa.state IN ('SENDING','UNCERTAIN')
+  ) AND NOT EXISTS (
+    SELECT 1 FROM public_actions pa
+    JOIN continuation_owners co
+      ON co.stream_id=pa.stream_id
+      AND co.stream_revision=pa.prepared_stream_revision
+      AND co.action_id=pa.action_id
+    WHERE pa.stream_id=NEW.stream_id
+      AND pa.state IN ('SENDING','UNCERTAIN')
+      AND co.terminal_outcome IS NULL
+      AND co.owner_kind IN ('PUBLIC_ACTION','HUMAN')
+  ) THEN RAISE(ABORT,'unresolved_send_owner_missing') END;
+  INSERT INTO deferred_event_parents(stream_id,event_seq,action_id,created_at)
+  SELECT NEW.stream_id,NEW.event_seq,pa.action_id,NEW.accepted_at
+  FROM public_actions pa
+  JOIN continuation_owners co
+    ON co.stream_id=pa.stream_id
+    AND co.stream_revision=pa.prepared_stream_revision
+    AND co.action_id=pa.action_id
+  WHERE pa.stream_id=NEW.stream_id
+    AND pa.state IN ('SENDING','UNCERTAIN')
+    AND pa.send_started_at IS NOT NULL
+    AND co.owner_kind='PUBLIC_ACTION'
+    AND co.terminal_outcome IS NULL;
+END;
+CREATE TRIGGER conversation_events_advance_stream_v4
+AFTER INSERT ON conversation_events
+BEGIN
+  UPDATE conversation_streams
+  SET last_event_seq=NEW.event_seq,
+      stream_revision=stream_revision+1,
+      updated_at=NEW.accepted_at
+  WHERE stream_id=NEW.stream_id
+    AND last_event_seq=NEW.event_seq-1
+    AND stream_revision=NEW.event_seq-1;
+  SELECT CASE WHEN changes()<>1
+    THEN RAISE(ABORT,'conversation_stream_advance_failed') END;
+END;
+CREATE TRIGGER conversation_events_no_update_v4
+BEFORE UPDATE ON conversation_events
+BEGIN
+  SELECT RAISE(ABORT,'conversation_event_immutable');
+END;
+CREATE TRIGGER conversation_events_no_delete_v4
+BEFORE DELETE ON conversation_events
+BEGIN
+  SELECT RAISE(ABORT,'conversation_event_immutable');
+END;
+CREATE TRIGGER conversation_streams_no_delete_v4
+BEFORE DELETE ON conversation_streams
+BEGIN
+  SELECT RAISE(ABORT,'conversation_stream_history_immutable');
+END;
+CREATE TRIGGER conversation_streams_update_guard_v4
+BEFORE UPDATE ON conversation_streams
+WHEN
+  NEW.stream_id<>OLD.stream_id OR
+  NEW.source_provider<>OLD.source_provider OR
+  NEW.source_conversation_id<>OLD.source_conversation_id OR
+  NEW.created_at<>OLD.created_at OR
+  OLD.stream_revision<>OLD.last_event_seq OR
+  NOT (
+    (
+      NEW.stream_revision=OLD.stream_revision+1 AND
+      NEW.last_event_seq=OLD.last_event_seq+1 AND
+      NEW.scan_highwater IS OLD.scan_highwater AND
+      EXISTS (
+        SELECT 1 FROM conversation_events ce
+        WHERE ce.stream_id=OLD.stream_id AND ce.event_seq=NEW.last_event_seq
+      )
+    ) OR
+    (
+      NEW.stream_revision=OLD.stream_revision AND
+      NEW.last_event_seq=OLD.last_event_seq AND
+      NEW.scan_highwater IS NOT NULL AND
+      (OLD.scan_highwater IS NULL OR NEW.scan_highwater>=OLD.scan_highwater)
+    )
+  )
+BEGIN
+  SELECT RAISE(ABORT,'conversation_stream_update_invalid');
+END;
+CREATE TRIGGER public_actions_validate_insert_v4
+BEFORE INSERT ON public_actions
+WHEN
+  NEW.state<>'PREPARED' OR
+  NEW.attempts<>0 OR
+  NEW.lease_token IS NOT NULL OR NEW.lease_expires_at IS NOT NULL OR
+  NEW.confirmed_source_message_id IS NOT NULL OR NEW.terminal_reason IS NOT NULL OR
+  NEW.send_started_at IS NOT NULL OR NEW.confirmed_at IS NOT NULL OR
+  NEW.episode_id IS NULL OR NEW.episode_version IS NULL OR
+  EXISTS (
+    SELECT 1 FROM continuation_owners co
+    WHERE co.stream_id=NEW.stream_id AND co.terminal_outcome IS NULL
+  ) OR
+  NOT EXISTS (
+    SELECT 1 FROM conversation_streams cs
+    WHERE cs.stream_id=NEW.stream_id
+      AND cs.stream_revision=NEW.prepared_stream_revision
+  ) OR
+  NOT EXISTS (
+    SELECT 1 FROM episodes e
+    WHERE e.episode_id=NEW.episode_id AND e.stream_id=NEW.stream_id AND e.state='active'
+      AND (
+        (NEW.action_type='ANSWER' AND NEW.episode_version=e.version) OR
+        (NEW.action_type='CLARIFY' AND NEW.episode_version=e.version+1)
+      )
+  )
+BEGIN
+  SELECT RAISE(ABORT,'public_action_episode_required');
+END;
+CREATE TRIGGER public_actions_immutable_semantics_v4
+BEFORE UPDATE ON public_actions
+WHEN
+  NEW.action_id<>OLD.action_id OR NEW.stream_id<>OLD.stream_id OR
+  COALESCE(NEW.episode_id,'')<>COALESCE(OLD.episode_id,'') OR
+  COALESCE(NEW.episode_version,-1)<>COALESCE(OLD.episode_version,-1) OR
+  NEW.prepared_stream_revision<>OLD.prepared_stream_revision OR
+  NEW.action_type<>OLD.action_type OR
+  NEW.basis_event_seqs_json<>OLD.basis_event_seqs_json OR
+  COALESCE(NEW.requested_slot,'')<>COALESCE(OLD.requested_slot,'') OR
+  NEW.deadline_at<>OLD.deadline_at OR NEW.created_at<>OLD.created_at
+BEGIN
+  SELECT RAISE(ABORT,'public_action_semantics_immutable');
+END;
+CREATE TRIGGER public_actions_monotonic_lifecycle_v4
+BEFORE UPDATE ON public_actions
+WHEN
+  (OLD.state='PREPARED' AND NEW.state NOT IN ('PREPARED','GATING','STALE','CANCELLED','HANDOFF_DONE')) OR
+  (OLD.state='GATING' AND NEW.state NOT IN ('GATING','SENDING','STALE','CANCELLED','HANDOFF_DONE')) OR
+  (OLD.state='SENDING' AND NEW.state NOT IN ('SENDING','UNCERTAIN','CONFIRMED','HANDOFF_DONE')) OR
+  (OLD.state='UNCERTAIN' AND NEW.state NOT IN ('UNCERTAIN','CONFIRMED','HANDOFF_DONE')) OR
+  (OLD.state IN ('CONFIRMED','STALE','CANCELLED','HANDOFF_DONE','NOT_SENT') AND NEW.state<>OLD.state) OR
+  (OLD.state<>'NOT_SENT' AND NEW.state='NOT_SENT') OR
+  (NEW.state='PREPARED' AND
+    (NEW.lease_token IS NOT NULL OR NEW.lease_expires_at IS NOT NULL OR
+     NEW.attempts<>0 OR NEW.send_started_at IS NOT NULL)) OR
+  (NEW.state='GATING' AND
+    (NEW.lease_token IS NULL OR NEW.lease_expires_at IS NULL OR
+     NEW.attempts<1 OR NEW.send_started_at IS NOT NULL OR
+     NEW.lease_expires_at<=NEW.updated_at)) OR
+  (NEW.state='SENDING' AND
+    (NEW.lease_token IS NULL OR NEW.lease_expires_at IS NULL OR
+     NEW.attempts<1 OR NEW.send_started_at IS NULL OR
+     NEW.lease_expires_at<=NEW.updated_at)) OR
+  (NEW.state='UNCERTAIN' AND
+    (NEW.lease_token IS NOT NULL OR NEW.lease_expires_at IS NOT NULL OR
+     NEW.attempts<1 OR NEW.send_started_at IS NULL)) OR
+  (OLD.send_started_at IS NOT NULL AND COALESCE(NEW.send_started_at,-1)<>OLD.send_started_at) OR
+  (OLD.send_started_at IS NULL AND NEW.send_started_at IS NOT NULL AND
+    NOT (OLD.state='GATING' AND NEW.state='SENDING')) OR
+  (NEW.state IN ('PREPARED','GATING','STALE','CANCELLED','NOT_SENT') AND
+    NEW.send_started_at IS NOT NULL) OR
+  ((NEW.confirmed_source_message_id IS NULL) <> (NEW.confirmed_at IS NULL)) OR
+  (OLD.confirmed_source_message_id IS NULL AND NEW.confirmed_source_message_id IS NOT NULL AND
+    (NEW.send_started_at IS NULL OR
+     NEW.state NOT IN ('SENDING','UNCERTAIN','CONFIRMED','HANDOFF_DONE'))) OR
+  (NEW.state='CONFIRMED' AND
+    (NEW.send_started_at IS NULL OR NEW.confirmed_source_message_id IS NULL OR NEW.confirmed_at IS NULL OR
+     NOT EXISTS (
+       SELECT 1 FROM public_action_confirmation_cuts pc
+       WHERE pc.action_id=NEW.action_id AND pc.stream_id=NEW.stream_id
+     ))) OR
+  (OLD.confirmed_source_message_id IS NOT NULL AND COALESCE(NEW.confirmed_source_message_id,-1)<>OLD.confirmed_source_message_id) OR
+  (OLD.confirmed_at IS NOT NULL AND COALESCE(NEW.confirmed_at,-1)<>OLD.confirmed_at)
+BEGIN
+  SELECT RAISE(ABORT,'public_action_lifecycle_non_monotonic');
+END;
+CREATE TRIGGER public_actions_sending_admission_guard_v4
+BEFORE UPDATE OF state ON public_actions
+WHEN OLD.state='GATING' AND NEW.state='SENDING' AND NOT (
+  NEW.lease_token IS OLD.lease_token AND
+  NEW.lease_expires_at IS OLD.lease_expires_at AND
+  NEW.attempts=OLD.attempts AND
+  NEW.deadline_at>NEW.updated_at AND
+  NOT EXISTS (SELECT 1 FROM recovery_barriers WHERE completed_at IS NULL) AND
+  EXISTS (
+    SELECT 1 FROM conversation_streams cs
+    WHERE cs.stream_id=NEW.stream_id
+      AND cs.stream_revision=NEW.prepared_stream_revision
+      AND cs.stream_revision=cs.last_event_seq
+  ) AND
+  EXISTS (
+    SELECT 1 FROM semantic_origins so
+    WHERE so.stream_id=NEW.stream_id
+      AND so.stream_revision=NEW.prepared_stream_revision
+      AND so.origin_kind='PUBLIC_ACTION'
+      AND so.action_id=NEW.action_id
+  ) AND
+  EXISTS (
+    SELECT 1 FROM continuation_owners co
+    WHERE co.stream_id=NEW.stream_id
+      AND co.stream_revision=NEW.prepared_stream_revision
+      AND co.action_id=NEW.action_id
+      AND co.owner_kind='PUBLIC_ACTION'
+      AND co.terminal_outcome IS NULL
+  ) AND
+  EXISTS (
+    SELECT 1 FROM public_action_descriptors pad
+    WHERE pad.action_id=NEW.action_id AND pad.stream_id=NEW.stream_id
+  ) AND
+  EXISTS (
+    SELECT 1 FROM episodes e
+    WHERE e.episode_id=NEW.episode_id
+      AND e.stream_id=NEW.stream_id
+      AND e.state='active'
+      AND e.version=NEW.episode_version
+      AND NOT EXISTS (
+        SELECT 1 FROM episode_constraint_latches ecl
+        WHERE ecl.episode_id=e.episode_id
+      )
+      AND (
+        NEW.action_type='ANSWER' OR
+        (NEW.action_type='CLARIFY' AND
+         e.clarification_prompts_sent=1 AND
+         e.clarification_action_id=NEW.action_id AND
+         e.requested_slot IS NEW.requested_slot)
+      )
+  )
+)
+BEGIN
+  SELECT RAISE(ABORT,'public_action_sending_admission_unproven');
+END;
+CREATE TRIGGER public_actions_handoff_guard_v4
+BEFORE UPDATE OF state ON public_actions
+WHEN OLD.state<>NEW.state AND NEW.state='HANDOFF_DONE' AND NOT EXISTS (
+  SELECT 1 FROM continuation_owners co
+  JOIN episodes e ON e.episode_id=co.episode_id AND e.stream_id=co.stream_id
+  JOIN human_terminal_cuts htc
+    ON htc.stream_id=co.stream_id AND htc.stream_revision=co.stream_revision
+  WHERE co.stream_id=NEW.stream_id
+    AND co.stream_revision=NEW.prepared_stream_revision
+    AND co.action_id=NEW.action_id
+    AND co.owner_kind='HUMAN' AND co.terminal_outcome IS NULL
+    AND e.state='closed' AND e.version=co.episode_version+1
+    AND NEW.terminal_reason IN ('human_takeover','ownership_lost')
+    AND e.close_reason=NEW.terminal_reason
+    AND htc.terminal_outcome=CASE NEW.terminal_reason
+      WHEN 'human_takeover' THEN 'HUMAN_TAKEOVER'
+      ELSE 'OWNERSHIP_LOST'
+    END
+)
+BEGIN
+  SELECT RAISE(ABORT,'public_action_handoff_unproven');
+END;
+CREATE TRIGGER public_actions_terminal_owner_transition_v4
+AFTER UPDATE OF state ON public_actions
+WHEN OLD.state IN ('PREPARED','GATING') AND NEW.state IN ('STALE','CANCELLED')
+BEGIN
+  SELECT CASE WHEN NEW.terminal_reason IS NULL
+    THEN RAISE(ABORT,'public_action_terminal_reason_required') END;
+  UPDATE continuation_owners
+  SET terminal_outcome='SUPERSEDED',terminal_at=NEW.updated_at,updated_at=NEW.updated_at
+  WHERE stream_id=NEW.stream_id
+    AND stream_revision=NEW.prepared_stream_revision
+    AND action_id=NEW.action_id
+    AND owner_kind='PUBLIC_ACTION'
+    AND terminal_outcome IS NULL
+    AND EXISTS (
+      SELECT 1 FROM conversation_streams cs
+      WHERE cs.stream_id=NEW.stream_id
+        AND cs.stream_revision>NEW.prepared_stream_revision
+    );
+  UPDATE continuation_owners
+  SET owner_kind='HUMAN',human_reason=NEW.terminal_reason,
+      episode_version=CASE
+        WHEN episode_id IS NULL THEN NULL
+        ELSE (
+          SELECT e.version FROM episodes e
+          WHERE e.episode_id=continuation_owners.episode_id
+            AND e.stream_id=continuation_owners.stream_id
+            AND e.state='active'
+        )
+      END,
+      updated_at=NEW.updated_at
+  WHERE stream_id=NEW.stream_id
+    AND stream_revision=NEW.prepared_stream_revision
+    AND action_id=NEW.action_id
+    AND owner_kind='PUBLIC_ACTION'
+    AND terminal_outcome IS NULL
+    AND EXISTS (
+      SELECT 1 FROM conversation_streams cs
+      WHERE cs.stream_id=NEW.stream_id
+        AND cs.stream_revision=NEW.prepared_stream_revision
+    );
+  SELECT CASE WHEN NOT EXISTS (
+    SELECT 1 FROM continuation_owners co
+    WHERE co.stream_id=NEW.stream_id
+      AND co.stream_revision=NEW.prepared_stream_revision
+      AND co.action_id=NEW.action_id
+      AND (
+        (co.owner_kind='PUBLIC_ACTION' AND co.terminal_outcome='SUPERSEDED') OR
+        (co.owner_kind='HUMAN' AND co.terminal_outcome IS NULL)
+      )
+  ) THEN RAISE(ABORT,'public_action_terminal_owner_transition_failed') END;
+END;
+CREATE TRIGGER episodes_no_delete_v4
+BEFORE DELETE ON episodes
+BEGIN
+  SELECT RAISE(ABORT,'episode_history_immutable');
+END;
+CREATE TRIGGER episodes_identity_state_guard_v4
+BEFORE UPDATE ON episodes
+WHEN
+  NEW.episode_id<>OLD.episode_id OR
+  NEW.stream_id<>OLD.stream_id OR
+  NEW.created_at<>OLD.created_at OR
+  OLD.state='closed' OR
+  NEW.version<>OLD.version+1 OR
+  (NEW.state='active' AND (NEW.closed_at IS NOT NULL OR NEW.close_reason IS NOT NULL)) OR
+  (NEW.state='closed' AND (
+    NEW.closed_at IS NULL OR NEW.close_reason IS NULL OR
+    NEW.close_reason NOT IN (
+      'completed','replaced','human_takeover','ownership_lost',
+      'non_actionable_ack','superseded','expired'
+    )
+  )) OR
+  (NEW.clarification_prompts_sent=0 AND
+    (NEW.requested_slot IS NOT NULL OR NEW.clarification_action_id IS NOT NULL)) OR
+  (NEW.clarification_action_id IS NULL AND NEW.requested_slot IS NOT NULL)
+BEGIN
+  SELECT RAISE(ABORT,'episode_update_non_monotonic');
+END;
+CREATE TRIGGER episodes_terminal_protocol_guard_v4
+BEFORE UPDATE OF state ON episodes
+WHEN OLD.state='active' AND NEW.state='closed' AND (
+  (NEW.close_reason IN ('human_takeover','ownership_lost') AND NOT EXISTS (
+    SELECT 1 FROM continuation_owners co
+    JOIN human_terminal_cuts htc
+      ON htc.stream_id=co.stream_id AND htc.stream_revision=co.stream_revision
+    WHERE co.stream_id=OLD.stream_id
+      AND co.episode_id=OLD.episode_id
+      AND co.episode_version=OLD.version
+      AND co.owner_kind='HUMAN' AND co.terminal_outcome IS NULL
+      AND htc.terminal_outcome=CASE NEW.close_reason
+        WHEN 'human_takeover' THEN 'HUMAN_TAKEOVER'
+        ELSE 'OWNERSHIP_LOST'
+      END
+  )) OR
+  (NEW.close_reason='non_actionable_ack' AND NOT EXISTS (
+    SELECT 1 FROM semantic_origins so
+    JOIN conversation_streams cs ON cs.stream_id=so.stream_id
+    JOIN non_actionable_ack_cuts ac
+      ON ac.stream_id=so.stream_id AND ac.stream_revision=so.stream_revision
+    WHERE so.stream_id=OLD.stream_id
+      AND so.stream_revision=cs.stream_revision
+      AND so.origin_kind='NON_ACTIONABLE_ACK'
+      AND ac.episode_id=OLD.episode_id
+      AND ac.episode_version=OLD.version
+  ))
+)
+BEGIN
+  SELECT RAISE(ABORT,'episode_terminal_protocol_unproven');
+END;
+CREATE TRIGGER episodes_clarification_open_guard_v4
+BEFORE UPDATE ON episodes
+WHEN OLD.clarification_prompts_sent=0 AND NEW.clarification_prompts_sent=1 AND NOT EXISTS (
+  SELECT 1 FROM public_actions pa
+  JOIN continuation_owners co
+    ON co.stream_id=pa.stream_id
+    AND co.stream_revision=pa.prepared_stream_revision
+    AND co.action_id=pa.action_id
+  WHERE pa.action_id=NEW.clarification_action_id
+    AND pa.stream_id=OLD.stream_id
+    AND pa.episode_id=OLD.episode_id
+    AND pa.episode_version=NEW.version
+    AND pa.action_type='CLARIFY'
+    AND pa.state='PREPARED'
+    AND pa.requested_slot IS NEW.requested_slot
+    AND co.owner_kind='PUBLIC_ACTION'
+    AND co.terminal_outcome IS NULL
+)
+BEGIN
+  SELECT RAISE(ABORT,'clarification_budget_open_unproven');
+END;
+CREATE TRIGGER episodes_clarification_release_guard_v4
+BEFORE UPDATE ON episodes
+WHEN OLD.clarification_prompts_sent=1 AND NEW.clarification_prompts_sent=0 AND NOT EXISTS (
+  SELECT 1 FROM public_actions pa
+  JOIN continuation_owners co
+    ON co.stream_id=pa.stream_id
+    AND co.stream_revision=pa.prepared_stream_revision
+    AND co.action_id=pa.action_id
+  JOIN conversation_streams cs ON cs.stream_id=pa.stream_id
+  WHERE pa.action_id=OLD.clarification_action_id
+    AND pa.stream_id=OLD.stream_id
+    AND pa.episode_id=OLD.episode_id
+    AND pa.action_type='CLARIFY'
+    AND pa.state IN ('STALE','CANCELLED')
+    AND pa.send_started_at IS NULL
+    AND cs.stream_revision>pa.prepared_stream_revision
+    AND co.owner_kind='PUBLIC_ACTION'
+    AND co.terminal_outcome='SUPERSEDED'
+)
+BEGIN
+  SELECT RAISE(ABORT,'clarification_budget_release_unproven');
+END;
+CREATE TRIGGER episodes_clarification_binding_guard_v4
+BEFORE UPDATE ON episodes
+WHEN OLD.clarification_prompts_sent=1 AND NEW.clarification_prompts_sent=1 AND (
+  (NEW.clarification_action_id IS OLD.clarification_action_id AND
+   NEW.requested_slot IS NOT OLD.requested_slot) OR
+  (NEW.clarification_action_id IS NOT OLD.clarification_action_id AND NOT (
+    OLD.clarification_action_id IS NOT NULL AND
+    NEW.clarification_action_id IS NULL AND
+    NEW.requested_slot IS NULL AND
+    EXISTS (
+      SELECT 1 FROM public_actions pa
+      JOIN continuation_owners co
+        ON co.stream_id=pa.stream_id
+        AND co.stream_revision=pa.prepared_stream_revision
+        AND co.action_id=pa.action_id
+      WHERE pa.action_id=OLD.clarification_action_id
+        AND pa.stream_id=OLD.stream_id
+        AND pa.episode_id=OLD.episode_id
+        AND pa.action_type='CLARIFY'
+        AND pa.state='CONFIRMED'
+        AND co.owner_kind='PUBLIC_ACTION'
+        AND co.terminal_outcome='CONFIRMED'
+    )
+  ))
+)
+BEGIN
+  SELECT RAISE(ABORT,'clarification_binding_non_monotonic');
+END;
+CREATE TRIGGER episode_constraint_latches_validate_insert_v4
+BEFORE INSERT ON episode_constraint_latches
+WHEN NOT EXISTS (
+  SELECT 1 FROM episodes e
+  JOIN conversation_events ce
+    ON ce.stream_id=e.stream_id AND ce.event_seq=NEW.first_event_seq
+  WHERE e.episode_id=NEW.episode_id
+)
+BEGIN
+  SELECT RAISE(ABORT,'constraint_latch_provenance_invalid');
+END;
+CREATE TRIGGER episode_constraint_latches_no_update_v4
+BEFORE UPDATE ON episode_constraint_latches
+BEGIN
+  SELECT RAISE(ABORT,'constraint_latch_immutable');
+END;
+CREATE TRIGGER episode_constraint_latches_no_delete_v4
+BEFORE DELETE ON episode_constraint_latches
+BEGIN
+  SELECT RAISE(ABORT,'constraint_latch_immutable');
+END;
+CREATE TRIGGER episode_slots_validate_insert_v4
+BEFORE INSERT ON episode_slots
+WHEN NEW.derived_through_event_seq IS NOT NULL AND NOT EXISTS (
+  SELECT 1 FROM episodes e
+  JOIN conversation_events ce
+    ON ce.stream_id=e.stream_id AND ce.event_seq=NEW.derived_through_event_seq
+  WHERE e.episode_id=NEW.episode_id
+)
+BEGIN
+  SELECT RAISE(ABORT,'episode_slot_provenance_invalid');
+END;
+CREATE TRIGGER episode_slots_validate_update_v4
+BEFORE UPDATE ON episode_slots
+WHEN
+  NEW.episode_id<>OLD.episode_id OR
+  NEW.slot_name<>OLD.slot_name OR
+  (NEW.derived_through_event_seq IS NOT NULL AND NOT EXISTS (
+    SELECT 1 FROM episodes e
+    JOIN conversation_events ce
+      ON ce.stream_id=e.stream_id AND ce.event_seq=NEW.derived_through_event_seq
+    WHERE e.episode_id=NEW.episode_id
+  ))
+BEGIN
+  SELECT RAISE(ABORT,'episode_slot_update_invalid');
+END;
+CREATE TRIGGER semantic_origins_validate_insert
+BEFORE INSERT ON semantic_origins
+WHEN
+  (NEW.origin_kind IN ('DIRECT_HUMAN','NON_ACTIONABLE_ACK') AND (
+    NOT EXISTS (
+      SELECT 1 FROM conversation_streams cs
+      WHERE cs.stream_id=NEW.stream_id AND cs.stream_revision=NEW.stream_revision
+    ) OR
+    EXISTS (
+      SELECT 1 FROM public_actions pa
+      WHERE pa.stream_id=NEW.stream_id
+        AND pa.prepared_stream_revision=NEW.stream_revision
+    )
+  )) OR
+  (NEW.origin_kind='PUBLIC_ACTION' AND NOT EXISTS (
+    SELECT 1 FROM public_actions pa
+    WHERE pa.action_id=NEW.action_id
+      AND pa.stream_id=NEW.stream_id
+      AND pa.prepared_stream_revision=NEW.stream_revision
+      AND (
+        (EXISTS (
+          SELECT 1 FROM public_action_descriptors d
+          WHERE d.action_id=NEW.action_id AND d.stream_id=NEW.stream_id
+        ) AND NOT EXISTS (
+          SELECT 1 FROM legacy_v3_actions l WHERE l.action_id=NEW.action_id
+        )) OR
+        (EXISTS (
+          SELECT 1 FROM legacy_v3_actions l
+          WHERE l.action_id=NEW.action_id
+        ) AND NOT EXISTS (
+          SELECT 1 FROM public_action_descriptors d WHERE d.action_id=NEW.action_id
+        ))
+      )
+      AND EXISTS (
+        SELECT 1 FROM public_action_candidate_sets pcs
+        WHERE pcs.action_id=NEW.action_id
+          AND pcs.candidate_count=(
+            SELECT COUNT(*) FROM public_action_candidates pac
+            WHERE pac.action_id=NEW.action_id
+          )
+      )
+      AND json_valid(pa.basis_event_seqs_json)
+      AND json_type(pa.basis_event_seqs_json)='array'
+      AND json_array_length(pa.basis_event_seqs_json)=(
+        SELECT COUNT(*) FROM public_action_source_events pse
+        WHERE pse.action_id=NEW.action_id
+      )
+      AND NOT EXISTS (
+        SELECT 1 FROM public_action_source_events pse
+        WHERE pse.action_id=NEW.action_id AND (
+          pse.stream_id<>NEW.stream_id OR
+          pse.ordinal<1 OR
+          pse.ordinal>json_array_length(pa.basis_event_seqs_json) OR
+          pse.event_seq<>json_extract(
+            pa.basis_event_seqs_json,
+            '$[' || (pse.ordinal-1) || ']'
+          )
+        )
+      )
+  ))
 BEGIN
   SELECT RAISE(ABORT,'semantic_origin_revision_not_current');
 END;
@@ -290,6 +1086,12 @@ END;
 CREATE TRIGGER public_action_descriptors_validate_insert
 BEFORE INSERT ON public_action_descriptors
 WHEN
+  EXISTS (
+    SELECT 1 FROM semantic_origins so WHERE so.action_id=NEW.action_id
+  ) OR
+  EXISTS (
+    SELECT 1 FROM legacy_v3_actions l WHERE l.action_id=NEW.action_id
+  ) OR
   (NEW.product_event_seq IS NOT NULL AND NOT EXISTS (
     SELECT 1 FROM public_action_source_events s
     WHERE s.action_id=NEW.action_id AND s.stream_id=NEW.stream_id
@@ -343,6 +1145,25 @@ BEFORE DELETE ON public_action_descriptors
 BEGIN
   SELECT RAISE(ABORT,'public_action_descriptor_immutable');
 END;
+CREATE TRIGGER public_action_source_events_validate_insert_v4
+BEFORE INSERT ON public_action_source_events
+WHEN
+  EXISTS (SELECT 1 FROM semantic_origins so WHERE so.action_id=NEW.action_id) OR
+  NOT EXISTS (
+    SELECT 1 FROM public_actions pa
+    WHERE pa.action_id=NEW.action_id AND pa.stream_id=NEW.stream_id
+      AND json_valid(pa.basis_event_seqs_json)
+      AND json_type(pa.basis_event_seqs_json)='array'
+      AND NEW.ordinal BETWEEN 1 AND json_array_length(pa.basis_event_seqs_json)
+      AND NEW.event_seq<=pa.prepared_stream_revision
+      AND json_extract(
+        pa.basis_event_seqs_json,
+        '$[' || (NEW.ordinal-1) || ']'
+      )=NEW.event_seq
+  )
+BEGIN
+  SELECT RAISE(ABORT,'public_action_source_event_outside_prepared_revision');
+END;
 CREATE TRIGGER public_action_source_events_no_update
 BEFORE UPDATE ON public_action_source_events
 BEGIN
@@ -365,6 +1186,8 @@ WHEN
     SELECT 1 FROM public_actions pa
     WHERE pa.action_id=NEW.action_id AND pa.stream_id=NEW.stream_id
       AND pa.state IN ('SENDING','UNCERTAIN')
+      AND pa.send_started_at IS NOT NULL
+      AND NEW.event_seq>pa.prepared_stream_revision
   )
 BEGIN
   SELECT RAISE(ABORT,'deferred_event_parent_invalid');
@@ -382,17 +1205,53 @@ END;
 CREATE TRIGGER continuation_owners_validate_insert
 BEFORE INSERT ON continuation_owners
 WHEN
+  (NEW.action_id IS NOT NULL AND EXISTS (
+    SELECT 1 FROM public_action_descriptors d WHERE d.action_id=NEW.action_id
+  ) AND (
+    NEW.owner_kind<>'PUBLIC_ACTION' OR
+    NEW.terminal_outcome IS NOT NULL OR
+    NEW.human_reason IS NOT NULL
+  )) OR
   (NEW.owner_kind='PUBLIC_ACTION' AND NOT EXISTS (
-    SELECT 1 FROM semantic_origins so
+    SELECT 1
+    FROM semantic_origins so
+    JOIN public_actions pa ON pa.action_id=so.action_id
     WHERE so.stream_id=NEW.stream_id AND so.stream_revision=NEW.stream_revision
       AND so.origin_kind='PUBLIC_ACTION' AND so.action_id=NEW.action_id
+      AND pa.stream_id=NEW.stream_id
+      AND pa.prepared_stream_revision=NEW.stream_revision
+      AND pa.episode_id IS NEW.episode_id
+      AND pa.episode_version IS NEW.episode_version
   )) OR
-  (NEW.owner_kind='HUMAN' AND NOT EXISTS (
+  (NEW.owner_kind='HUMAN' AND NEW.action_id IS NULL AND NOT EXISTS (
     SELECT 1 FROM semantic_origins so
     WHERE so.stream_id=NEW.stream_id AND so.stream_revision=NEW.stream_revision
+      AND so.origin_kind='DIRECT_HUMAN'
       AND (
-        (so.origin_kind='PUBLIC_ACTION' AND so.action_id=NEW.action_id) OR
-        (so.origin_kind='DIRECT_HUMAN' AND NEW.action_id IS NULL)
+        (NEW.episode_id IS NULL AND NEW.episode_version IS NULL) OR
+        EXISTS (
+          SELECT 1 FROM episodes e
+          WHERE e.episode_id=NEW.episode_id AND e.stream_id=NEW.stream_id
+            AND e.state='active' AND e.version=NEW.episode_version
+        )
+      )
+  )) OR
+  (NEW.owner_kind='HUMAN' AND NEW.action_id IS NOT NULL AND NOT EXISTS (
+    SELECT 1
+    FROM semantic_origins so
+    JOIN public_actions pa ON pa.action_id=so.action_id
+    WHERE so.stream_id=NEW.stream_id AND so.stream_revision=NEW.stream_revision
+      AND so.origin_kind='PUBLIC_ACTION' AND so.action_id=NEW.action_id
+      AND pa.stream_id=NEW.stream_id
+      AND pa.prepared_stream_revision=NEW.stream_revision
+      AND pa.episode_id IS NEW.episode_id
+      AND (
+        (pa.episode_id IS NULL AND NEW.episode_version IS NULL) OR
+        (pa.episode_id IS NOT NULL AND NEW.episode_version>=pa.episode_version AND EXISTS (
+          SELECT 1 FROM episodes e
+          WHERE e.episode_id=NEW.episode_id AND e.stream_id=NEW.stream_id
+            AND e.state='active' AND e.version=NEW.episode_version
+        ))
       )
   ))
 BEGIN
@@ -414,10 +1273,27 @@ WHEN
     COALESCE(NEW.episode_version,-1) <> COALESCE(OLD.episode_version,-1) AND
     NOT (
       OLD.owner_kind='PUBLIC_ACTION' AND NEW.owner_kind='HUMAN' AND
-      OLD.episode_id IS NOT NULL AND NEW.episode_version >= OLD.episode_version
+      OLD.episode_id IS NOT NULL AND NEW.episode_version >= OLD.episode_version AND
+      EXISTS (
+        SELECT 1 FROM episodes e
+        WHERE e.episode_id=OLD.episode_id AND e.stream_id=OLD.stream_id
+          AND e.state='active' AND e.version=NEW.episode_version
+      )
     )
   ) OR
   (OLD.owner_kind='HUMAN' AND NEW.owner_kind<>'HUMAN') OR
+  (OLD.owner_kind='PUBLIC_ACTION' AND NEW.owner_kind='HUMAN' AND
+    EXISTS (
+      SELECT 1 FROM public_actions pa
+      JOIN public_action_descriptors pad ON pad.action_id=pa.action_id
+      WHERE pa.action_id=OLD.action_id AND pa.stream_id=OLD.stream_id
+        AND pa.send_started_at IS NOT NULL
+    ) AND NOT EXISTS (
+      SELECT 1 FROM public_action_human_cuts hc
+      WHERE hc.action_id=OLD.action_id AND hc.stream_id=OLD.stream_id
+    )) OR
+  (OLD.owner_kind='PUBLIC_ACTION' AND NEW.owner_kind='HUMAN' AND NEW.terminal_outcome IS NOT NULL) OR
+  (OLD.terminal_outcome IS NULL AND NEW.terminal_outcome='LEGACY_V3_TERMINAL') OR
   (OLD.terminal_outcome IS NOT NULL AND (
     COALESCE(NEW.terminal_outcome,'') <> OLD.terminal_outcome OR
     COALESCE(NEW.terminal_at,-1) <> OLD.terminal_at OR
@@ -428,6 +1304,92 @@ WHEN
   (OLD.owner_kind='PUBLIC_ACTION' AND NEW.owner_kind='PUBLIC_ACTION' AND NEW.human_reason IS NOT NULL)
 BEGIN
   SELECT RAISE(ABORT,'continuation_owner_non_monotonic');
+END;
+CREATE TRIGGER continuation_owners_superseded_guard_v4
+BEFORE UPDATE ON continuation_owners
+WHEN OLD.terminal_outcome IS NULL AND NEW.terminal_outcome='SUPERSEDED' AND (
+  OLD.owner_kind<>'PUBLIC_ACTION' OR
+  NOT EXISTS (
+    SELECT 1
+    FROM public_actions pa
+    JOIN conversation_streams cs ON cs.stream_id=pa.stream_id
+    WHERE pa.action_id=OLD.action_id
+      AND pa.stream_id=OLD.stream_id
+      AND pa.prepared_stream_revision=OLD.stream_revision
+      AND pa.state IN ('STALE','CANCELLED')
+      AND cs.stream_revision>OLD.stream_revision
+  )
+)
+BEGIN
+  SELECT RAISE(ABORT,'continuation_owner_supersession_unproven');
+END;
+CREATE TRIGGER continuation_owners_confirmed_guard_v4
+BEFORE UPDATE ON continuation_owners
+WHEN OLD.terminal_outcome IS NULL AND NEW.terminal_outcome='CONFIRMED' AND (
+  OLD.owner_kind<>'PUBLIC_ACTION' OR
+  NOT EXISTS (
+    SELECT 1 FROM public_action_confirmation_cuts pc
+    WHERE pc.action_id=OLD.action_id AND pc.stream_id=OLD.stream_id
+  ) OR
+  NOT EXISTS (
+    SELECT 1 FROM public_actions pa
+    JOIN conversation_events ce
+      ON ce.stream_id=pa.stream_id
+      AND ce.source_message_id=pa.confirmed_source_message_id
+      AND ce.source_id=pa.action_id
+      AND ce.event_kind='BABYPARK_PUBLIC_REPLY'
+    WHERE pa.action_id=OLD.action_id
+      AND pa.stream_id=OLD.stream_id
+      AND pa.prepared_stream_revision=OLD.stream_revision
+      AND pa.state='CONFIRMED'
+      AND pa.confirmed_source_message_id IS NOT NULL
+      AND pa.confirmed_at IS NOT NULL
+  ) OR
+  (SELECT COUNT(*) FROM conversation_events ce
+   WHERE ce.stream_id=OLD.stream_id AND ce.source_id=OLD.action_id)<>1 OR
+  NOT EXISTS (
+    SELECT 1 FROM conversation_events ce
+    WHERE ce.stream_id=OLD.stream_id AND ce.source_id=OLD.action_id
+      AND ce.event_kind='BABYPARK_PUBLIC_REPLY'
+  )
+)
+BEGIN
+  SELECT RAISE(ABORT,'continuation_owner_confirmation_unproven');
+END;
+CREATE TRIGGER continuation_owners_terminal_episode_v4
+BEFORE UPDATE ON continuation_owners
+WHEN
+  OLD.owner_kind='HUMAN' AND OLD.terminal_outcome IS NULL AND
+  NEW.terminal_outcome IN ('HUMAN_TAKEOVER','OWNERSHIP_LOST') AND (
+    NOT EXISTS (
+      SELECT 1 FROM human_terminal_cuts htc
+      WHERE htc.stream_id=NEW.stream_id
+        AND htc.stream_revision=NEW.stream_revision
+        AND htc.terminal_outcome=NEW.terminal_outcome
+    ) OR
+    (NEW.episode_id IS NOT NULL AND NOT EXISTS (
+      SELECT 1 FROM episodes e
+      WHERE e.episode_id=NEW.episode_id AND e.stream_id=NEW.stream_id
+        AND e.state='closed'
+        AND e.version=OLD.episode_version+1
+        AND e.close_reason=CASE NEW.terminal_outcome
+          WHEN 'HUMAN_TAKEOVER' THEN 'human_takeover'
+          ELSE 'ownership_lost'
+        END
+    )) OR
+    (NEW.action_id IS NOT NULL AND NOT EXISTS (
+      SELECT 1 FROM public_actions pa
+      WHERE pa.action_id=NEW.action_id AND pa.stream_id=NEW.stream_id
+        AND pa.prepared_stream_revision=NEW.stream_revision
+        AND pa.state IN ('HANDOFF_DONE','STALE','CANCELLED')
+        AND (pa.state<>'HANDOFF_DONE' OR pa.terminal_reason=CASE NEW.terminal_outcome
+          WHEN 'HUMAN_TAKEOVER' THEN 'human_takeover'
+          ELSE 'ownership_lost'
+        END)
+    ))
+  )
+BEGIN
+  SELECT RAISE(ABORT,'continuation_owner_terminal_episode_mismatch');
 END;
 CREATE TRIGGER recovery_barriers_no_delete
 BEFORE DELETE ON recovery_barriers
@@ -573,21 +1535,31 @@ const EXPECTED_COLUMNS = Object.freeze({
   public_actions: ['action_id','stream_id','episode_id','episode_version','prepared_stream_revision','action_type','state','basis_event_seqs_json','requested_slot','lease_token','lease_expires_at','attempts','deadline_at','confirmed_source_message_id','terminal_reason','created_at','updated_at','send_started_at','confirmed_at'],
   public_action_candidates: ['action_id','slot_name','ordinal','value_json'],
   public_action_source_events: ['action_id','ordinal','stream_id','event_seq'],
+  public_action_confirmation_cuts: ['action_id','stream_id','confirmed_through_event_seq','created_at'],
+  public_action_human_cuts: ['action_id','stream_id','human_through_event_seq','created_at'],
+  public_action_candidate_sets: ['action_id','candidate_count','candidate_slot'],
   public_action_descriptors: ['action_id','stream_id','descriptor_version','reason','template_id','response_locale','product_id','product_event_seq','variant_id','variant_event_seq','category_id','category_match_mode','category_event_seq','brand_id','brand_event_seq','store_id','store_event_seq','money_currency','money_currency_event_seq','min_price_minor','min_price_event_seq','max_price_minor','max_price_event_seq'],
   legacy_v3_actions: ['action_id','marker'],
   semantic_origins: ['stream_id','stream_revision','origin_kind','action_id','created_at'],
   continuation_owners: ['stream_id','stream_revision','owner_kind','action_id','episode_id','episode_version','human_reason','terminal_outcome','created_at','updated_at','terminal_at'],
   deferred_event_parents: ['stream_id','event_seq','action_id','created_at'],
   recovery_barriers: ['recovery_epoch','authority_key','reason','entered_at','completion_kind','completed_at'],
+  non_actionable_ack_cuts: ['stream_id','stream_revision','ack_through_event_seq','episode_id','episode_version','created_at'],
+  human_terminal_cuts: ['stream_id','stream_revision','terminal_through_event_seq','terminal_outcome','created_at'],
 });
 const V4_TABLES = new Set([
   'public_action_source_events',
+  'public_action_confirmation_cuts',
+  'public_action_human_cuts',
+  'public_action_candidate_sets',
   'public_action_descriptors',
   'legacy_v3_actions',
   'semantic_origins',
   'continuation_owners',
   'deferred_event_parents',
   'recovery_barriers',
+  'non_actionable_ack_cuts',
+  'human_terminal_cuts',
 ]);
 const EXPECTED_COLUMNS_V3 = Object.freeze(
   Object.fromEntries(
@@ -639,6 +1611,9 @@ const REQUIRED_INDEXES = new Set([
   'episodes_episode_stream',
   'sqlite_autoindex_public_action_source_events_1',
   'sqlite_autoindex_public_action_source_events_2',
+  'sqlite_autoindex_public_action_confirmation_cuts_1',
+  'sqlite_autoindex_public_action_human_cuts_1',
+  'sqlite_autoindex_public_action_candidate_sets_1',
   'sqlite_autoindex_public_action_descriptors_1',
   'sqlite_autoindex_legacy_v3_actions_1',
   'sqlite_autoindex_semantic_origins_1',
@@ -646,16 +1621,56 @@ const REQUIRED_INDEXES = new Set([
   'one_unresolved_continuation_owner_per_stream',
   'sqlite_autoindex_deferred_event_parents_1',
   'one_active_recovery_barrier',
+  'sqlite_autoindex_non_actionable_ack_cuts_1',
+  'sqlite_autoindex_human_terminal_cuts_1',
 ]);
 const REQUIRED_TRIGGERS = new Set([
+  'conversation_events_validate_insert_v4',
+  'conversation_events_defer_customer_v4',
+  'conversation_events_advance_stream_v4',
+  'conversation_events_no_update_v4',
+  'conversation_events_no_delete_v4',
+  'conversation_streams_no_delete_v4',
+  'conversation_streams_update_guard_v4',
+  'public_actions_validate_insert_v4',
+  'public_actions_immutable_semantics_v4',
+  'public_actions_monotonic_lifecycle_v4',
+  'public_actions_sending_admission_guard_v4',
+  'public_actions_handoff_guard_v4',
+  'public_actions_terminal_owner_transition_v4',
+  'episodes_no_delete_v4',
+  'episodes_terminal_protocol_guard_v4',
+  'episodes_identity_state_guard_v4',
+  'episodes_clarification_open_guard_v4',
+  'episodes_clarification_release_guard_v4',
+  'episodes_clarification_binding_guard_v4',
+  'episode_constraint_latches_validate_insert_v4',
+  'episode_constraint_latches_no_update_v4',
+  'episode_constraint_latches_no_delete_v4',
+  'episode_slots_validate_insert_v4',
+  'episode_slots_validate_update_v4',
+  'public_action_confirmation_cuts_validate_insert_v4',
+  'public_action_confirmation_cuts_no_update_v4',
+  'public_action_confirmation_cuts_no_delete_v4',
+  'public_action_human_cuts_validate_insert_v4',
+  'public_action_human_cuts_no_update_v4',
+  'public_action_human_cuts_no_delete_v4',
+  'public_action_candidate_sets_validate_insert_v4',
+  'public_action_candidate_sets_no_update',
+  'public_action_candidate_sets_no_delete',
+  'public_action_candidates_validate_insert_v4',
+  'public_action_candidates_no_update_v4',
+  'public_action_candidates_no_delete_v4',
   'semantic_origins_validate_insert',
   'semantic_origins_no_update',
   'semantic_origins_no_delete',
   'public_action_descriptors_validate_insert',
   'public_action_descriptors_no_update',
   'public_action_descriptors_no_delete',
+  'legacy_v3_actions_validate_insert',
   'legacy_v3_actions_no_update',
   'legacy_v3_actions_no_delete',
+  'public_action_source_events_validate_insert_v4',
   'public_action_source_events_no_update',
   'public_action_source_events_no_delete',
   'deferred_event_parents_validate_insert',
@@ -664,8 +1679,17 @@ const REQUIRED_TRIGGERS = new Set([
   'continuation_owners_validate_insert',
   'continuation_owners_no_delete',
   'continuation_owners_monotonic_update',
+  'continuation_owners_superseded_guard_v4',
+  'continuation_owners_confirmed_guard_v4',
+  'continuation_owners_terminal_episode_v4',
   'recovery_barriers_no_delete',
   'recovery_barriers_monotonic_update',
+  'non_actionable_ack_cuts_validate_insert_v4',
+  'non_actionable_ack_cuts_no_update_v4',
+  'non_actionable_ack_cuts_no_delete_v4',
+  'human_terminal_cuts_validate_insert_v4',
+  'human_terminal_cuts_no_update_v4',
+  'human_terminal_cuts_no_delete_v4',
 ]);
 
 export class FirstLineStateError extends Error {
@@ -908,6 +1932,41 @@ function normalizeCandidate(candidate) {
   }
   return { slot: candidate.slot, value: normalizeSlotValue(candidate.slot, candidate.value) };
 }
+function validateCandidateRows(rows, actionId, { expectedCount = null, expectedSlot = undefined } = {}) {
+  if (!Array.isArray(rows)) {
+    fail('FIRST_LINE_DB_CORRUPT', 'persisted candidate rows are not an array', { action_id: actionId });
+  }
+  if (expectedCount !== null && rows.length !== expectedCount) {
+    fail('FIRST_LINE_DB_CORRUPT',
+      'public action candidate count differs from frozen metadata', {
+        action_id: actionId, expected: expectedCount, actual: rows.length,
+      });
+  }
+  const candidates = rows.map((item, index) => {
+    if (item.ordinal !== index + 1) {
+      fail('FIRST_LINE_DB_CORRUPT',
+        'public action candidate ordinals are not contiguous', {
+          action_id: actionId, expected_ordinal: index + 1, actual_ordinal: item.ordinal,
+        });
+    }
+    const value = parseJson(item.value_json);
+    return validatePersistedCandidate(item.slot_name, value);
+  });
+  const slots = new Set(candidates.map(candidate => candidate.slot));
+  if (slots.size > 1) {
+    fail('FIRST_LINE_DB_CORRUPT',
+      'public action candidate reservation mixes slot kinds', { action_id: actionId });
+  }
+  const slot = candidates.length === 0 ? null : candidates[0].slot;
+  if (expectedSlot !== undefined && slot !== expectedSlot) {
+    fail('FIRST_LINE_DB_CORRUPT',
+      'public action candidate slot differs from frozen metadata', {
+        action_id: actionId, expected_slot: expectedSlot, actual_slot: slot,
+      });
+  }
+  return Object.freeze({ candidates: Object.freeze(candidates), candidate_slot: slot });
+}
+
 function normalizeSemanticScope(value) {
   if (!value || typeof value !== 'object' || Array.isArray(value) ||
       Object.keys(value).sort().join(',') !== 'brand_id,category,money,product,store_id') {
@@ -1179,6 +2238,50 @@ function persistedScopeProvenance(row, descriptor, basis, actionId, streamId) {
   });
 }
 
+function validateActionStateEvidence(row, code = 'FIRST_LINE_DB_CORRUPT') {
+  const pairMismatch =
+    (row.confirmed_source_message_id === null) !== (row.confirmed_at === null);
+  const evidenceBeforeBoundary =
+    row.confirmed_source_message_id !== null && row.send_started_at === null;
+  const sentStateMissingBoundary =
+    ['SENDING', 'UNCERTAIN', 'CONFIRMED'].includes(row.state) &&
+    row.send_started_at === null;
+  const confirmedStateMissingEvidence =
+    row.state === 'CONFIRMED' && row.confirmed_source_message_id === null;
+  const leasePairMismatch =
+    (row.lease_token === null) !== (row.lease_expires_at === null);
+  const preparedClaimShapeInvalid =
+    row.state === 'PREPARED' &&
+    (row.lease_token !== null || row.lease_expires_at !== null || row.attempts !== 0);
+  const gatingClaimShapeInvalid =
+    row.state === 'GATING' &&
+    (row.lease_token === null || row.lease_expires_at === null ||
+     row.attempts < 1 || row.send_started_at !== null ||
+     row.lease_expires_at <= row.updated_at);
+  const sendingClaimShapeInvalid =
+    row.state === 'SENDING' &&
+    (row.lease_token === null || row.lease_expires_at === null ||
+     row.attempts < 1 || row.send_started_at === null ||
+     row.lease_expires_at <= row.updated_at);
+  const uncertainClaimShapeInvalid =
+    row.state === 'UNCERTAIN' &&
+    (row.lease_token !== null || row.lease_expires_at !== null ||
+     row.attempts < 1 || row.send_started_at === null);
+  const unsentTerminalHasSendBoundary =
+    ['STALE', 'CANCELLED', 'NOT_SENT'].includes(row.state) &&
+    row.send_started_at !== null;
+  if (pairMismatch || evidenceBeforeBoundary || sentStateMissingBoundary ||
+      confirmedStateMissingEvidence || leasePairMismatch ||
+      preparedClaimShapeInvalid || gatingClaimShapeInvalid ||
+      sendingClaimShapeInvalid || uncertainClaimShapeInvalid ||
+      unsentTerminalHasSendBoundary) {
+    fail(code, 'public action state evidence is inconsistent', {
+      action_id: row.action_id,
+      state: row.state,
+    });
+  }
+}
+
 function normalizeBasisEventSeqs(value) {
   if (!Array.isArray(value) || value.length < 1) fail('FIRST_LINE_ACTION_BASIS_INVALID', 'basis event seqs must be non-empty');
   const out = value.map((v, i) => positiveInteger(v, 'basis_event_seq_' + i));
@@ -1394,6 +2497,13 @@ export class FirstLineStateStore {
       if (integrity !== 'ok') {
         fail('FIRST_LINE_DB_INVALID', 'pre-migration integrity check failed', { integrity });
       }
+      const foreignKeyFailures = db.prepare('PRAGMA foreign_key_check').all();
+      if (foreignKeyFailures.length !== 0) {
+        fail('FIRST_LINE_DB_INVALID',
+          'pre-migration foreign-key check failed', {
+            foreign_key_failures: foreignKeyFailures.length,
+          });
+      }
       const version = Number(db.prepare('PRAGMA user_version').get().user_version);
       if (version === SCHEMA_VERSION) {
         return FirstLineStateStore.open(file, options);
@@ -1442,6 +2552,198 @@ export class FirstLineStateStore {
         }
       }
 
+      const streams = db.prepare(
+        'SELECT * FROM conversation_streams ORDER BY stream_id'
+      ).all();
+      for (const stream of streams) {
+        persistedGuard(() => {
+          safeToken(stream.stream_id, 'stream_id');
+          sourceProvider(stream.source_provider);
+          positiveInteger(stream.source_conversation_id, 'source_conversation_id');
+          nonNegativeInteger(stream.stream_revision, 'stream_revision');
+          nonNegativeInteger(stream.last_event_seq, 'last_event_seq');
+          if (stream.stream_revision !== stream.last_event_seq) {
+            fail('FIRST_LINE_VALUE_INVALID', 'v3 stream counters diverged');
+          }
+          if (stream.scan_highwater !== null) {
+            positiveInteger(stream.scan_highwater, 'scan_highwater');
+          }
+        }, 'v3 stream metadata is corrupt before migration', {
+          stream_id: stream.stream_id,
+        });
+        const rows = db.prepare(
+          'SELECT * FROM conversation_events WHERE stream_id=? ORDER BY event_seq'
+        ).all(stream.stream_id);
+        if (rows.length !== stream.last_event_seq) {
+          fail('FIRST_LINE_DB_MIGRATION_UNSUPPORTED',
+            'v3 stream event count does not match durable head', {
+              stream_id: stream.stream_id,
+              last_event_seq: stream.last_event_seq,
+              event_count: rows.length,
+            });
+        }
+        for (const [index, event] of rows.entries()) {
+          if (event.event_seq !== index + 1) {
+            fail('FIRST_LINE_DB_MIGRATION_UNSUPPORTED',
+              'v3 stream event sequence is not contiguous', {
+                stream_id: stream.stream_id,
+                expected_event_seq: index + 1,
+                actual_event_seq: event.event_seq,
+              });
+          }
+          persistedGuard(() => {
+            positiveInteger(event.source_message_id, 'source_message_id');
+            enumValue(event.event_kind, EVENT_KINDS, 'event_kind');
+            enumValue(event.message_type, MESSAGE_TYPES, 'message_type');
+            enumValue(event.sender_class, SENDER_CLASSES, 'sender_class');
+            if (event.sender_id !== null) positiveInteger(event.sender_id, 'sender_id');
+            contentType(event.content_type);
+            if (![0, 1].includes(event.deleted_flag) ||
+                ![0, 1].includes(event.unsupported_flag) ||
+                ![0, 1].includes(event.has_attachments)) {
+              fail('FIRST_LINE_VALUE_INVALID', 'v3 event flags are invalid');
+            }
+            if (event.source_id !== null) safeToken(event.source_id, 'source_id');
+            nonNegativeInteger(event.accepted_at, 'accepted_at');
+            validateEventTopology({
+              eventKind: event.event_kind,
+              messageType: event.message_type,
+              senderClass: event.sender_class,
+              senderId: event.sender_id,
+            });
+          }, 'v3 event metadata is corrupt before migration', {
+            stream_id: stream.stream_id,
+            event_seq: event.event_seq,
+          });
+        }
+      }
+
+      const episodes = db.prepare(
+        'SELECT * FROM episodes ORDER BY episode_id'
+      ).all();
+      for (const episode of episodes) {
+        try {
+          safeToken(episode.episode_id, 'episode_id');
+          safeToken(episode.stream_id, 'stream_id');
+          enumValue(episode.state, new Set(['active', 'closed']), 'episode_state');
+          positiveInteger(episode.version, 'episode_version');
+          if (![0, 1].includes(episode.clarification_prompts_sent)) {
+            fail('FIRST_LINE_VALUE_INVALID', 'clarification budget is invalid');
+          }
+          const requested = normalizeRequestedSlot(episode.requested_slot);
+          if (episode.clarification_action_id !== null) {
+            safeToken(episode.clarification_action_id, 'clarification_action_id');
+          }
+          if (episode.state === 'active' &&
+              (episode.closed_at !== null || episode.close_reason !== null)) {
+            fail('FIRST_LINE_VALUE_INVALID', 'active episode has terminal metadata');
+          }
+          if (episode.state === 'closed' &&
+              (episode.closed_at === null || episode.close_reason === null)) {
+            fail('FIRST_LINE_VALUE_INVALID', 'closed episode lacks terminal metadata');
+          }
+          if (episode.close_reason !== null) {
+            enumValue(episode.close_reason, new Set([
+              'completed', 'replaced', 'human_takeover', 'ownership_lost',
+              'non_actionable_ack', 'superseded', 'expired',
+            ]), 'close_reason');
+          }
+          if (episode.clarification_prompts_sent === 0 &&
+              (requested !== null || episode.clarification_action_id !== null)) {
+            fail('FIRST_LINE_VALUE_INVALID', 'unused clarification budget has reservation');
+          }
+          if (episode.clarification_action_id === null && requested !== null) {
+            fail('FIRST_LINE_VALUE_INVALID', 'requested slot lacks clarification action');
+          }
+          const clarificationRows = db.prepare(
+            "SELECT action_id,state FROM public_actions WHERE episode_id=? AND action_type='CLARIFY'"
+          ).all(episode.episode_id);
+          if (episode.clarification_prompts_sent === 1 && clarificationRows.length === 0) {
+            fail('FIRST_LINE_VALUE_INVALID', 'consumed clarification budget lacks action history');
+          }
+          if (episode.clarification_prompts_sent === 0 && clarificationRows.some(row =>
+              !['STALE', 'CANCELLED'].includes(row.state))) {
+            fail('FIRST_LINE_VALUE_INVALID',
+              'v3 clarification budget was reset after a consuming action state');
+          }
+          if (episode.clarification_action_id !== null) {
+            const linked = db.prepare(
+              'SELECT stream_id,episode_id,action_type,requested_slot FROM public_actions WHERE action_id=?'
+            ).get(episode.clarification_action_id) ?? null;
+            if (!linked || linked.stream_id !== episode.stream_id ||
+                linked.episode_id !== episode.episode_id || linked.action_type !== 'CLARIFY' ||
+                (linked.requested_slot ?? null) !== (requested ?? null)) {
+              fail('FIRST_LINE_VALUE_INVALID', 'clarification binding is invalid');
+            }
+          }
+        } catch (error) {
+          if (error instanceof FirstLineStateError) {
+            fail('FIRST_LINE_DB_MIGRATION_UNSUPPORTED',
+              'v3 episode metadata is corrupt before migration', {
+                episode_id: episode.episode_id,
+                cause: error.code,
+              });
+          }
+          throw error;
+        }
+
+        const slots = db.prepare(
+          'SELECT * FROM episode_slots WHERE episode_id=? ORDER BY slot_name'
+        ).all(episode.episode_id);
+        const byName = new Map();
+        for (const slot of slots) {
+          let value;
+          try {
+            value = parseJson(slot.value_json);
+            normalizeSlotValue(slot.slot_name, value);
+            if (slot.derived_through_event_seq !== null) {
+              positiveInteger(slot.derived_through_event_seq, 'derived_through_event_seq');
+              const event = db.prepare(
+                'SELECT 1 AS ok FROM conversation_events WHERE stream_id=? AND event_seq=?'
+              ).get(episode.stream_id, slot.derived_through_event_seq);
+              if (!event) fail('FIRST_LINE_VALUE_INVALID', 'slot provenance is outside episode stream');
+            }
+          } catch (error) {
+            if (error instanceof FirstLineStateError) {
+              fail('FIRST_LINE_DB_MIGRATION_UNSUPPORTED',
+                'v3 episode slot is corrupt before migration', {
+                  episode_id: episode.episode_id,
+                  slot_name: slot.slot_name,
+                  cause: error.code,
+                });
+            }
+            throw error;
+          }
+          byName.set(slot.slot_name, slot);
+        }
+        const category = byName.get('category_id') ?? null;
+        const categoryMode = byName.get('category_match_mode') ?? null;
+        if ((category === null) !== (categoryMode === null) ||
+            (category && category.derived_through_event_seq !== categoryMode.derived_through_event_seq)) {
+          fail('FIRST_LINE_DB_MIGRATION_UNSUPPORTED',
+            'v3 CATEGORY stable provenance is incomplete/split', {
+              episode_id: episode.episode_id,
+            });
+        }
+
+        const latches = db.prepare(
+          'SELECT * FROM episode_constraint_latches WHERE episode_id=?'
+        ).all(episode.episode_id);
+        for (const latch of latches) {
+          if (!CONSTRAINT_LATCH_CLASSES.has(latch.latch_class) ||
+              !Number.isSafeInteger(latch.first_event_seq) || latch.first_event_seq < 1 ||
+              !db.prepare(
+                'SELECT 1 AS ok FROM conversation_events WHERE stream_id=? AND event_seq=?'
+              ).get(episode.stream_id, latch.first_event_seq)) {
+            fail('FIRST_LINE_DB_MIGRATION_UNSUPPORTED',
+              'v3 constraint latch provenance is corrupt before migration', {
+                episode_id: episode.episode_id,
+                latch_class: latch.latch_class,
+              });
+          }
+        }
+      }
+
       const actions = db.prepare(
         'SELECT * FROM public_actions ORDER BY created_at,action_id'
       ).all().map(row => {
@@ -1450,11 +2752,33 @@ export class FirstLineStateStore {
           'v3 action basis is corrupt before migration',
           { action_id: row.action_id }
         );
-        if ((row.episode_id === null) !== (row.episode_version === null)) {
+        validateActionStateEvidence(row, 'FIRST_LINE_DB_MIGRATION_UNSUPPORTED');
+        if (row.episode_id === null || row.episode_version === null) {
           fail('FIRST_LINE_DB_MIGRATION_UNSUPPORTED',
-            'v3 action episode provenance is incomplete', { action_id: row.action_id });
+            'v3 customer-visible action lacks required episode provenance', {
+              action_id: row.action_id,
+            });
+        }
+        const actionStream = db.prepare(
+          'SELECT stream_revision FROM conversation_streams WHERE stream_id=?'
+        ).get(row.stream_id) ?? null;
+        if (!actionStream || row.prepared_stream_revision > actionStream.stream_revision) {
+          fail('FIRST_LINE_DB_MIGRATION_UNSUPPORTED',
+            'v3 action revision is outside its stream history', {
+              action_id: row.action_id,
+              prepared_stream_revision: row.prepared_stream_revision,
+              stream_revision: actionStream?.stream_revision ?? null,
+            });
         }
         for (const eventSeq of basis) {
+          if (eventSeq > row.prepared_stream_revision) {
+            fail('FIRST_LINE_DB_MIGRATION_UNSUPPORTED',
+              'v3 action basis contains event newer than prepared revision', {
+                action_id: row.action_id,
+                event_seq: eventSeq,
+                prepared_stream_revision: row.prepared_stream_revision,
+              });
+          }
           const event = db.prepare(
             'SELECT 1 AS ok FROM conversation_events WHERE stream_id=? AND event_seq=?'
           ).get(row.stream_id, eventSeq);
@@ -1469,20 +2793,88 @@ export class FirstLineStateStore {
         }
         if (row.episode_id !== null) {
           const episode = db.prepare(
-            'SELECT stream_id FROM episodes WHERE episode_id=?'
+            'SELECT stream_id,state,version,clarification_prompts_sent,requested_slot,clarification_action_id ' +
+            'FROM episodes WHERE episode_id=?'
           ).get(row.episode_id);
           if (!episode || episode.stream_id !== row.stream_id ||
-              !Number.isSafeInteger(row.episode_version) || row.episode_version < 1) {
+              !Number.isSafeInteger(row.episode_version) || row.episode_version < 1 ||
+              !Number.isSafeInteger(episode.version) || episode.version < row.episode_version) {
             fail('FIRST_LINE_DB_MIGRATION_UNSUPPORTED',
               'v3 action episode provenance is invalid', { action_id: row.action_id });
           }
+          if (LIVE_ACTION_STATES.has(row.state) && episode.state !== 'active') {
+            fail('FIRST_LINE_DB_MIGRATION_UNSUPPORTED',
+              'live v3 action is bound to a closed episode', {
+                action_id: row.action_id,
+                episode_id: row.episode_id,
+              });
+          }
+          if (LIVE_ACTION_STATES.has(row.state) && row.action_type === 'CLARIFY' &&
+              (episode.state !== 'active' || episode.clarification_prompts_sent !== 1 ||
+               episode.clarification_action_id !== row.action_id ||
+               (episode.requested_slot ?? null) !== (row.requested_slot ?? null))) {
+            fail('FIRST_LINE_DB_MIGRATION_UNSUPPORTED',
+              'live v3 CLARIFY reservation is not owned by its episode', {
+                action_id: row.action_id, episode_id: row.episode_id,
+              });
+          }
         }
-        return { row, basis };
+        const sourceMatches = db.prepare(
+          'SELECT source_message_id,event_kind,event_seq FROM conversation_events ' +
+          'WHERE stream_id=? AND source_id=? ORDER BY event_seq'
+        ).all(row.stream_id, row.action_id);
+        if (sourceMatches.length > 1) {
+          fail('FIRST_LINE_DB_MIGRATION_UNSUPPORTED',
+            'v3 action source identity is ambiguous', {
+              action_id: row.action_id,
+              count: sourceMatches.length,
+            });
+        }
+        if (row.confirmed_source_message_id !== null &&
+            (sourceMatches.length !== 1 ||
+             sourceMatches[0].event_kind !== 'BABYPARK_PUBLIC_REPLY' ||
+             sourceMatches[0].source_message_id !== row.confirmed_source_message_id ||
+             sourceMatches[0].event_seq <= row.prepared_stream_revision)) {
+          fail('FIRST_LINE_DB_MIGRATION_UNSUPPORTED',
+            'v3 confirmation provenance is inconsistent', {
+              action_id: row.action_id,
+            });
+        }
+        const candidateRows = db.prepare(
+          'SELECT * FROM public_action_candidates WHERE action_id=? ORDER BY ordinal'
+        ).all(row.action_id);
+        const candidateSet = validateCandidateRows(candidateRows, row.action_id);
+        if (row.action_type === 'ANSWER' &&
+            (row.requested_slot !== null || candidateRows.length !== 0)) {
+          fail('FIRST_LINE_DB_MIGRATION_UNSUPPORTED',
+            'v3 ANSWER carries clarification reservation metadata', { action_id: row.action_id });
+        }
+        if (row.action_type === 'CLARIFY') {
+          if (row.requested_slot === null && candidateRows.length === 0) {
+            fail('FIRST_LINE_DB_MIGRATION_UNSUPPORTED',
+              'v3 CLARIFY has no requested slot or candidates', { action_id: row.action_id });
+          }
+          if (row.requested_slot !== null && candidateSet.candidate_slot !== null &&
+              candidateSet.candidate_slot !== row.requested_slot) {
+            fail('FIRST_LINE_DB_MIGRATION_UNSUPPORTED',
+              'v3 CLARIFY candidate slot conflicts with requested slot', { action_id: row.action_id });
+          }
+        }
+        return {
+          row,
+          basis,
+          candidate_count: candidateRows.length,
+          candidate_slot: candidateSet.candidate_slot,
+        };
       });
 
       tx(db, () => {
         db.exec(V4_ADDITIONS_SCHEMA_SQL);
-        for (const { row, basis } of actions) {
+        for (const { row, basis, candidate_count, candidate_slot } of actions) {
+          db.prepare(
+            'INSERT INTO public_action_candidate_sets(action_id,candidate_count,candidate_slot) ' +
+            'VALUES (?,?,?)'
+          ).run(row.action_id, candidate_count, candidate_slot);
           for (const [index, eventSeq] of basis.entries()) {
             db.prepare(
               'INSERT INTO public_action_source_events ' +
@@ -1644,6 +3036,7 @@ export class FirstLineStateStore {
         'SELECT * FROM conversation_events WHERE stream_id=? AND source_message_id=?'
       ).get(id, normalized.sourceMessageId);
       if (existing) {
+        this.#assertDeferredRelationsValid(id);
         const deferredParent = this.#readDeferredParent(id, existing.event_seq);
         return {
           inserted: false,
@@ -1652,6 +3045,8 @@ export class FirstLineStateStore {
           deferred_parent: deferredParent,
         };
       }
+      this.#assertAutonomousAllowed();
+      this.#assertDeferredRelationsValid(id);
 
       let deferredAction = null;
       if (normalized.eventKind === 'CUSTOMER_MESSAGE') {
@@ -1693,21 +3088,26 @@ export class FirstLineStateStore {
         normalized.senderClass, normalized.senderId, normalized.contentType, normalized.deleted,
         normalized.unsupported, normalized.hasAttachments, normalized.sourceId, at
       );
-      const changed = this.db.prepare(
-        'UPDATE conversation_streams ' +
-        'SET last_event_seq=?,stream_revision=stream_revision+1,updated_at=? ' +
-        'WHERE stream_id=? AND last_event_seq=? AND stream_revision=?'
-      ).run(seq, at, id, stream.last_event_seq, stream.stream_revision).changes;
-      if (changed !== 1) {
-        fail('FIRST_LINE_STALE_WRITE',
-          'stream changed before event append', { stream_id: id });
+      const advancedStream = this.#readStream(id);
+      if (!advancedStream || advancedStream.last_event_seq !== seq ||
+          advancedStream.stream_revision !== stream.stream_revision + 1) {
+        fail('FIRST_LINE_DB_CORRUPT',
+          'event append did not atomically advance stream revision', {
+            stream_id: id,
+            event_seq: seq,
+          });
       }
 
-      if (deferredAction) {
-        this.db.prepare(
-          'INSERT INTO deferred_event_parents(stream_id,event_seq,action_id,created_at) ' +
-          'VALUES (?,?,?,?)'
-        ).run(id, seq, deferredAction.action_id, at);
+      const deferredParent = this.#readDeferredParent(id, seq);
+      if ((deferredAction === null) !== (deferredParent === null) ||
+          (deferredAction !== null && deferredParent.action_id !== deferredAction.action_id)) {
+        fail('FIRST_LINE_DB_CORRUPT',
+          'deferred-parent trigger result differs from accepting transaction', {
+            stream_id: id,
+            event_seq: seq,
+            expected_action_id: deferredAction?.action_id ?? null,
+            actual_action_id: deferredParent?.action_id ?? null,
+          });
       }
 
       return {
@@ -1718,9 +3118,7 @@ export class FirstLineStateStore {
           ).get(id, seq)
         ),
         stream: this.#readStream(id),
-        deferred_parent: deferredAction
-          ? this.#readDeferredParent(id, seq)
-          : null,
+        deferred_parent: deferredParent,
       };
     });
   }
@@ -1739,6 +3137,20 @@ export class FirstLineStateStore {
     return readTx(this.db, () => {
       this.#requireStream(id);
       const stream = this.#readStream(id);
+      this.#assertAutonomousAllowed();
+      this.#assertNoHumanContinuation(id);
+      const currentOrigin = stream.stream_revision > 0
+        ? this.#readSemanticOrigin(id, stream.stream_revision)
+        : null;
+      if (currentOrigin && currentOrigin.origin_kind !== 'PUBLIC_ACTION') {
+        fail('FIRST_LINE_SEMANTIC_ORIGIN_CONFLICT',
+          'current stream revision already has an absorbing non-action origin', {
+            stream_id: id,
+            stream_revision: stream.stream_revision,
+            origin_kind: currentOrigin.origin_kind,
+          });
+      }
+      this.#assertDeferredRelationsValid(id);
 
       const routingLedger = this.#readRoutingLedger(stream);
 
@@ -1776,6 +3188,13 @@ export class FirstLineStateStore {
             clarification_action_id: activeEpisode.clarification_action_id,
           });
         }
+        if (clarificationAction.descriptor === null) {
+          fail('FIRST_LINE_ACTION_DESCRIPTOR_MISSING',
+            'legacy clarification cannot authorize autonomous continuation', {
+              action_id: clarificationAction.action_id,
+              episode_id: activeEpisode.episode_id,
+            });
+        }
       }
 
       let confirmedClarificationAction = null;
@@ -1794,6 +3213,13 @@ export class FirstLineStateStore {
         }
         if (rows.length === 1) {
           confirmedClarificationAction = this.#readAction(rows[0].action_id);
+          if (confirmedClarificationAction?.descriptor === null) {
+            fail('FIRST_LINE_ACTION_DESCRIPTOR_MISSING',
+              'legacy confirmed clarification cannot authorize autonomous continuation', {
+                action_id: confirmedClarificationAction.action_id,
+                episode_id: activeEpisode.episode_id,
+              });
+          }
         }
       }
 
@@ -1841,7 +3267,8 @@ export class FirstLineStateStore {
   confirmPublicActionFromLedger(actionId) {
     const id = safeToken(actionId, 'action_id');
     return tx(this.db, () => {
-      const action = this.#requireAction(id);
+      const action = this.#requireReadableAction(id);
+      this.#assertDeferredRelationsValid(action.stream_id);
       if (action.state === 'CONFIRMED') {
         return this.#readAction(id);
       }
@@ -1872,6 +3299,14 @@ export class FirstLineStateStore {
             event_kind: event.event_kind,
           });
       }
+      if (event.event_seq <= action.prepared_stream_revision) {
+        fail('FIRST_LINE_ACTION_CONFIRMATION_INVALID',
+          'action source event predates its prepared revision', {
+            action_id: id,
+            source_event_seq: event.event_seq,
+            prepared_stream_revision: action.prepared_stream_revision,
+          });
+      }
       const origin = this.#readSemanticOrigin(
         action.stream_id,
         action.prepared_stream_revision
@@ -1886,6 +3321,10 @@ export class FirstLineStateStore {
           'public action confirmation lacks immutable origin/owner', {
             action_id: id,
           });
+      }
+      if (!Number.isSafeInteger(action.send_started_at)) {
+        fail('FIRST_LINE_ACTION_CONFIRMATION_INVALID',
+          'send evidence requires prior SENDING state', { action_id: id });
       }
       if (owner.owner_kind === 'PUBLIC_ACTION' &&
           !['SENDING', 'UNCERTAIN'].includes(action.state)) {
@@ -1912,6 +3351,25 @@ export class FirstLineStateStore {
           });
       }
 
+      const confirmationStream = this.#readStream(action.stream_id);
+      if (!confirmationStream) {
+        fail('FIRST_LINE_DB_CORRUPT',
+          'confirmation stream disappeared before durable cut', { action_id: id });
+      }
+      this.db.prepare(
+        'INSERT INTO public_action_confirmation_cuts ' +
+        '(action_id,stream_id,confirmed_through_event_seq,created_at) VALUES (?,?,?,?)'
+      ).run(id, action.stream_id, confirmationStream.last_event_seq, at);
+
+      const actionChanged = this.db.prepare(
+        "UPDATE public_actions SET state='CONFIRMED',confirmed_source_message_id=?," +
+        'confirmed_at=?,lease_token=NULL,lease_expires_at=NULL,updated_at=? ' +
+        "WHERE action_id=? AND state IN ('SENDING','UNCERTAIN')"
+      ).run(event.source_message_id, at, at, id).changes;
+      if (actionChanged !== 1) {
+        fail('FIRST_LINE_STALE_WRITE',
+          'public action changed before confirmation', { action_id: id });
+      }
       const ownerChanged = this.db.prepare(
         "UPDATE continuation_owners SET terminal_outcome='CONFIRMED'," +
         'terminal_at=?,updated_at=? WHERE stream_id=? AND stream_revision=? ' +
@@ -1929,11 +3387,6 @@ export class FirstLineStateStore {
             action_id: id,
           });
       }
-      this.db.prepare(
-        "UPDATE public_actions SET state='CONFIRMED',confirmed_source_message_id=?," +
-        'confirmed_at=?,lease_token=NULL,lease_expires_at=NULL,updated_at=? ' +
-        'WHERE action_id=?'
-      ).run(event.source_message_id, at, at, id);
       return this.#readAction(id);
     });
   }
@@ -1945,6 +3398,7 @@ export class FirstLineStateStore {
       const currentStream = this.#requireStream(stream);
       this.#assertAutonomousAllowed();
       this.#assertNoHumanContinuation(stream);
+      this.#assertDeferredRelationsValid(stream);
       if (currentStream.stream_revision > 0 &&
           this.#readSemanticOrigin(stream, currentStream.stream_revision)) {
         fail('FIRST_LINE_SEMANTIC_ORIGIN_CONFLICT',
@@ -2000,6 +3454,7 @@ export class FirstLineStateStore {
       const episode = this.#requireActiveEpisode(id, version);
       this.#assertAutonomousAllowed();
       this.#assertNoHumanContinuation(episode.stream_id);
+      this.#assertDeferredRelationsValid(episode.stream_id);
       if (derived !== null) {
         const provenance = this.db.prepare(
           'SELECT 1 AS ok FROM conversation_events WHERE stream_id=? AND event_seq=?'
@@ -2031,6 +3486,16 @@ export class FirstLineStateStore {
       const episode = this.#requireActiveEpisode(id, version);
       this.#assertAutonomousAllowed();
       this.#assertNoHumanContinuation(episode.stream_id);
+      const stream = this.#requireStream(episode.stream_id);
+      if (stream.stream_revision > 0) {
+        fail('FIRST_LINE_EPISODE_CLOSE_PROTOCOL_REQUIRED',
+          'accepted customer work may close only through v0.8 owning-store protocols', {
+            episode_id: id,
+            stream_id: episode.stream_id,
+            stream_revision: stream.stream_revision,
+            requested_close_reason: closeReason,
+          });
+      }
       const pendingLatch = this.db.prepare(
         'SELECT latch_class FROM episode_constraint_latches WHERE episode_id=? LIMIT 1'
       ).get(id) ?? null;
@@ -2091,6 +3556,7 @@ export class FirstLineStateStore {
       }
       this.#assertAutonomousAllowed();
       this.#assertNoHumanContinuation(stream);
+      this.#assertDeferredRelationsValid(stream);
       const currentLedger = this.#readRoutingLedger(currentStream);
       if (currentLedger.fingerprint !== expectedLedgerFingerprint) {
         fail('FIRST_LINE_ROUTING_PLAN_STALE',
@@ -2257,6 +3723,18 @@ export class FirstLineStateStore {
           expected_through_event_seq: through,
           current_last_event_seq: currentStream.last_event_seq,
         });
+      }
+      this.#assertAutonomousAllowed();
+      this.#assertNoHumanContinuation(stream);
+      this.#assertDeferredRelationsValid(stream);
+      const committedOrigin = this.#readSemanticOrigin(stream, revision);
+      if (committedOrigin) {
+        fail('FIRST_LINE_SEMANTIC_ORIGIN_CONFLICT',
+          'standalone transition cannot replace an immutable same-revision origin', {
+            stream_id: stream,
+            stream_revision: revision,
+            origin_kind: committedOrigin.origin_kind,
+          });
       }
 
       const currentLedger = this.#readRoutingLedger(currentStream);
@@ -2513,6 +3991,7 @@ export class FirstLineStateStore {
       }
       this.#assertAutonomousAllowed();
       this.#assertNoHumanContinuation(stream);
+      this.#assertDeferredRelationsValid(stream);
       const committedOrigin = this.#readSemanticOrigin(stream, revision);
       if (committedOrigin) {
         fail('FIRST_LINE_SEMANTIC_ORIGIN_CONFLICT',
@@ -2729,6 +4208,16 @@ export class FirstLineStateStore {
         'candidate list exceeds bound', { limit: MAX_PRESENTED_CANDIDATES });
     }
     const candidates = presentedCandidates.map(normalizeCandidate);
+    const candidateSlots = new Set(candidates.map(candidate => candidate.slot));
+    if (candidateSlots.size > 1) {
+      fail('FIRST_LINE_CLARIFICATION_INVALID',
+        'presented candidates must reserve exactly one slot kind');
+    }
+    const candidateSlot = candidates.length === 0 ? null : candidates[0].slot;
+    if (type === 'ANSWER' && (requested !== null || candidates.length !== 0)) {
+      fail('FIRST_LINE_ACTION_DESCRIPTOR_INVALID',
+        'ANSWER cannot carry clarification reservation metadata');
+    }
     if (type === 'CLARIFY' && requested == null && candidates.length === 0) {
       fail('FIRST_LINE_CLARIFICATION_INVALID',
         'CLARIFY requires requested slot or candidates');
@@ -2744,45 +4233,17 @@ export class FirstLineStateStore {
           requested_slot: requested,
         });
     }
-    const epId = episodeId == null ? null : safeToken(episodeId, 'episode_id');
-    const epVersion = epId == null
-      ? null
-      : positiveInteger(expectedEpisodeVersion, 'expected_episode_version');
+    if (episodeId == null || expectedEpisodeVersion == null) {
+      fail('FIRST_LINE_ACTION_EPISODE_REQUIRED',
+        'every v4 customer-visible public action requires episode identity/version');
+    }
+    const epId = safeToken(episodeId, 'episode_id');
+    const epVersion = positiveInteger(expectedEpisodeVersion, 'expected_episode_version');
     const at = this.now();
 
     return tx(this.db, () => {
       const currentStream = this.#requireStream(stream);
-      this.#assertAutonomousAllowed();
-      if (currentStream.stream_revision !== revision) {
-        fail('FIRST_LINE_ACTION_STALE_REVISION',
-          'prepared revision is not current', {
-            prepared_stream_revision: revision,
-            current_stream_revision: currentStream.stream_revision,
-          });
-      }
-
-      const unresolvedOwner = this.#readUnresolvedOwner(stream);
-      if (unresolvedOwner?.owner_kind === 'HUMAN') {
-        fail('FIRST_LINE_HUMAN_CONTINUATION_ACTIVE',
-          'durable HUMAN continuation blocks autonomous AI action', {
-            stream_id: stream,
-            owner_revision: unresolvedOwner.stream_revision,
-            action_id: unresolvedOwner.action_id,
-          });
-      }
-
-      for (const seq of basis) {
-        const event = this.db.prepare(
-          'SELECT 1 AS ok FROM conversation_events WHERE stream_id=? AND event_seq=?'
-        ).get(stream, seq);
-        if (!event) {
-          fail('FIRST_LINE_ACTION_BASIS_INVALID',
-            'action basis references an unknown stream event', {
-              stream_id: stream,
-              event_seq: seq,
-            });
-        }
-      }
+      this.#assertDeferredRelationsValid(stream);
 
       const sameRevision = this.db.prepare(
         'SELECT action_id FROM public_actions WHERE stream_id=? AND prepared_stream_revision=?'
@@ -2806,6 +4267,7 @@ export class FirstLineStateStore {
         }
         if (existing.action_type !== type ||
             existing.episode_id !== epId ||
+            existing.episode_version !== epVersion ||
             canonicalJson(existing.basis_event_seqs) !== canonicalJson(basis) ||
             (existing.requested_slot ?? null) !== requested ||
             canonicalJson(existing.presented_candidates) !== canonicalJson(candidates) ||
@@ -2828,6 +4290,30 @@ export class FirstLineStateStore {
             stream_revision: revision,
             origin_kind: existingOrigin.origin_kind,
           });
+      }
+
+      this.#assertAutonomousAllowed();
+      if (currentStream.stream_revision !== revision) {
+        fail('FIRST_LINE_ACTION_STALE_REVISION',
+          'prepared revision is not current', {
+            prepared_stream_revision: revision,
+            current_stream_revision: currentStream.stream_revision,
+          });
+      }
+
+      const unresolvedOwner = this.#assertNoHumanContinuation(stream);
+
+      for (const seq of basis) {
+        const event = this.db.prepare(
+          'SELECT 1 AS ok FROM conversation_events WHERE stream_id=? AND event_seq=?'
+        ).get(stream, seq);
+        if (!event) {
+          fail('FIRST_LINE_ACTION_BASIS_INVALID',
+            'action basis references an unknown stream event', {
+              stream_id: stream,
+              event_seq: seq,
+            });
+        }
       }
 
       const activeHead = this.db.prepare(
@@ -2876,10 +4362,11 @@ export class FirstLineStateStore {
         }
       }
 
-      const live = this.db.prepare(
-        "SELECT * FROM public_actions WHERE stream_id=? " +
+      const liveHead = this.db.prepare(
+        "SELECT action_id FROM public_actions WHERE stream_id=? " +
         "AND state IN ('PREPARED','GATING','SENDING','UNCERTAIN')"
-      ).get(stream);
+      ).get(stream) ?? null;
+      const live = liveHead ? this.#requireReadableAction(liveHead.action_id) : null;
       if (live && (live.state === 'SENDING' || live.state === 'UNCERTAIN')) {
         fail('FIRST_LINE_ACTION_SEND_UNRESOLVED',
           'existing send must be reconciled before another action', {
@@ -2946,6 +4433,16 @@ export class FirstLineStateStore {
       }
 
       const actionId = safeToken(this.actionIdFactory(), 'action_id');
+      const actionIdCollision = this.db.prepare(
+        'SELECT 1 AS collision FROM public_actions WHERE action_id=? ' +
+        'UNION ALL SELECT 1 AS collision FROM conversation_events WHERE source_id=? LIMIT 1'
+      ).get(actionId, actionId);
+      if (actionIdCollision) {
+        fail('FIRST_LINE_ACTION_ID_COLLISION',
+          'new public action id already exists in durable action/source identity space', {
+            action_id: actionId,
+          });
+      }
       const actionEpisodeVersion = episode === null
         ? null
         : (type === 'CLARIFY' ? episode.version + 1 : episode.version);
@@ -2969,6 +4466,10 @@ export class FirstLineStateStore {
         at
       );
 
+      this.db.prepare(
+        'INSERT INTO public_action_candidate_sets(action_id,candidate_count,candidate_slot) ' +
+        'VALUES (?,?,?)'
+      ).run(actionId, candidates.length, candidateSlot);
       for (const [index, candidate] of candidates.entries()) {
         this.db.prepare(
           'INSERT INTO public_action_candidates(action_id,slot_name,ordinal,value_json) ' +
@@ -3043,27 +4544,46 @@ export class FirstLineStateStore {
     const at = this.now();
     return tx(this.db, () => {
       this.#assertAutonomousAllowed();
-      const row = this.db.prepare(
-        "SELECT pa.* FROM public_actions pa " +
-        "JOIN continuation_owners co ON co.stream_id=pa.stream_id " +
-        "AND co.stream_revision=pa.prepared_stream_revision " +
-        "AND co.action_id=pa.action_id " +
-        "JOIN semantic_origins so ON so.stream_id=pa.stream_id " +
-        "AND so.stream_revision=pa.prepared_stream_revision " +
-        "AND so.origin_kind='PUBLIC_ACTION' AND so.action_id=pa.action_id " +
-        "JOIN public_action_descriptors pad ON pad.action_id=pa.action_id " +
-        "WHERE pa.state IN ('PREPARED','GATING') " +
-        "AND co.owner_kind='PUBLIC_ACTION' AND co.terminal_outcome IS NULL " +
-        "AND (pa.lease_expires_at IS NULL OR pa.lease_expires_at<=?) " +
-        "ORDER BY pa.created_at,pa.action_id LIMIT 1"
-      ).get(at);
-      if (!row) return null;
-      const changed = this.db.prepare(
-        "UPDATE public_actions SET state='GATING',lease_token=?,lease_expires_at=?," +
-        "attempts=attempts+1,updated_at=? WHERE action_id=? AND state=? AND " +
-        "(lease_expires_at IS NULL OR lease_expires_at<=?)"
-      ).run(claim, at + lease, at, row.action_id, row.state, at).changes;
-      return changed === 1 ? this.#readAction(row.action_id) : null;
+      const rows = this.db.prepare(
+        "SELECT action_id FROM public_actions " +
+        "WHERE state IN ('PREPARED','GATING') " +
+        "AND (lease_expires_at IS NULL OR lease_expires_at<=?) " +
+        "ORDER BY created_at,action_id"
+      ).all(at);
+      for (const row of rows) {
+        const action = this.#readAction(row.action_id);
+        if (!action) {
+          fail('FIRST_LINE_DB_CORRUPT',
+            'claim candidate disappeared from durable state', {
+              action_id: row.action_id,
+            });
+        }
+        this.#assertDeferredRelationsValid(action.stream_id);
+        if (action.continuation_owner.owner_kind !== 'PUBLIC_ACTION' ||
+            action.continuation_owner.terminal_outcome !== null) {
+          continue;
+        }
+        if (action.descriptor === null) {
+          fail('FIRST_LINE_DB_CORRUPT',
+            'autonomous claim candidate lacks v4 descriptor', {
+              action_id: action.action_id,
+            });
+        }
+        const changed = this.db.prepare(
+          "UPDATE public_actions SET state='GATING',lease_token=?,lease_expires_at=?," +
+          "attempts=attempts+1,updated_at=? WHERE action_id=? AND state=? AND " +
+          "(lease_expires_at IS NULL OR lease_expires_at<=?)"
+        ).run(
+          claim,
+          at + lease,
+          at,
+          action.action_id,
+          action.state,
+          at
+        ).changes;
+        if (changed === 1) return this.#readAction(action.action_id);
+      }
+      return null;
     });
   }
 
@@ -3078,6 +4598,7 @@ export class FirstLineStateStore {
         fail('FIRST_LINE_ACTION_NOT_FOUND',
           'public action not found', { action_id: id });
       }
+      this.#assertDeferredRelationsValid(action.stream_id);
       if (action.state !== 'GATING' || action.lease_token !== token) {
         fail('FIRST_LINE_ACTION_CLAIM_INVALID', 'action is not held by this gating claim', { action_id: id });
       }
@@ -3168,7 +4689,7 @@ export class FirstLineStateStore {
     const id = safeToken(actionId, 'action_id');
     const terminalReason = safeToken(reason, 'terminal_reason');
     return tx(this.db, () => {
-      const action = this.#requireAction(id);
+      const action = this.#requireReadableAction(id);
       if (action.state !== 'SENDING' && action.state !== 'UNCERTAIN') {
         fail('FIRST_LINE_ACTION_STATE_INVALID', 'only SENDING may become UNCERTAIN', { state: action.state });
       }
@@ -3192,15 +4713,35 @@ export class FirstLineStateStore {
 
   listRecoverablePublicActions({ now = this.now() } = {}) {
     nonNegativeInteger(now, 'now');
-    return readTx(this.db, () => this.db.prepare(
-      "SELECT pa.action_id FROM public_actions pa " +
-      "JOIN continuation_owners co ON co.stream_id=pa.stream_id " +
-      "AND co.stream_revision=pa.prepared_stream_revision " +
-      "AND co.action_id=pa.action_id " +
-      "WHERE pa.state IN ('PREPARED','GATING','SENDING','UNCERTAIN') " +
-      "AND co.owner_kind='PUBLIC_ACTION' AND co.terminal_outcome IS NULL " +
-      "ORDER BY pa.created_at,pa.action_id"
-    ).all().map(row => this.#readAction(row.action_id)));
+    return readTx(this.db, () => {
+      const rows = this.db.prepare(
+        "SELECT action_id FROM public_actions " +
+        "WHERE state IN ('PREPARED','GATING','SENDING','UNCERTAIN') " +
+        "ORDER BY created_at,action_id"
+      ).all();
+      const recoverable = [];
+      for (const row of rows) {
+        const action = this.#readAction(row.action_id);
+        if (!action) {
+          fail('FIRST_LINE_DB_CORRUPT',
+            'recoverable action disappeared from durable state', {
+              action_id: row.action_id,
+            });
+        }
+        this.#assertDeferredRelationsValid(action.stream_id);
+        if (action.continuation_owner.owner_kind === 'PUBLIC_ACTION' &&
+            action.continuation_owner.terminal_outcome === null) {
+          if (action.descriptor === null) {
+            fail('FIRST_LINE_DB_CORRUPT',
+              'autonomous recoverable action lacks v4 descriptor', {
+                action_id: action.action_id,
+              });
+          }
+          recoverable.push(action);
+        }
+      }
+      return recoverable;
+    });
   }
 
   getPublicAction(actionId) {
@@ -3270,7 +4811,7 @@ export class FirstLineStateStore {
     const epoch = positiveInteger(recoveryEpoch, 'recovery_epoch');
     const completionKind = enumValue(
       completion,
-      new Set(['LOSSLESS_SEMANTIC_CUT', 'HUMAN_QUARANTINE_COMPLETE']),
+      new Set(['LOSSLESS_SEMANTIC_CUT']),
       'recovery_completion'
     );
     const at = this.now();
@@ -3282,18 +4823,6 @@ export class FirstLineStateStore {
             recovery_epoch: epoch,
             active_recovery_epoch: active?.recovery_epoch ?? null,
           });
-      }
-      if (completionKind === 'HUMAN_QUARANTINE_COMPLETE') {
-        const unresolvedPublic = this.db.prepare(
-          "SELECT COUNT(*) AS n FROM continuation_owners " +
-          "WHERE terminal_outcome IS NULL AND owner_kind='PUBLIC_ACTION'"
-        ).get().n;
-        if (unresolvedPublic !== 0) {
-          fail('FIRST_LINE_RECOVERY_BARRIER_UNSAFE_COMPLETION',
-            'HUMAN quarantine cannot complete while public continuation remains live', {
-              unresolved_public_owners: unresolvedPublic,
-            });
-        }
       }
       const changed = this.db.prepare(
         'UPDATE recovery_barriers SET completion_kind=?,completed_at=? ' +
@@ -3329,14 +4858,7 @@ export class FirstLineStateStore {
 
     return tx(this.db, () => {
       const currentStream = this.#requireStream(stream);
-      if (currentStream.stream_revision !== revision) {
-        fail('FIRST_LINE_ROUTING_PLAN_STALE',
-          'DIRECT_HUMAN origin requires the current stream revision', {
-            expected_stream_revision: revision,
-            current_stream_revision: currentStream.stream_revision,
-          });
-      }
-
+      this.#assertDeferredRelationsValid(stream);
       const existing = this.#readSemanticOrigin(stream, revision);
       if (existing) {
         if (existing.origin_kind !== 'DIRECT_HUMAN') {
@@ -3348,16 +4870,41 @@ export class FirstLineStateStore {
             });
         }
         const owner = this.#readContinuationOwner(stream, revision);
-        if (!owner || owner.owner_kind !== 'HUMAN' ||
-            owner.action_id !== null ||
-            owner.human_reason !== humanReason) {
+        if (!owner || owner.owner_kind !== 'HUMAN' || owner.action_id !== null) {
           fail('FIRST_LINE_DB_CORRUPT',
             'DIRECT_HUMAN origin lacks matching durable HUMAN owner', {
               stream_id: stream,
               stream_revision: revision,
             });
         }
+        if (owner.human_reason !== humanReason) {
+          fail('FIRST_LINE_SEMANTIC_ORIGIN_CONFLICT',
+            'DIRECT_HUMAN replay conflicts with immutable HUMAN reason', {
+              stream_id: stream,
+              stream_revision: revision,
+              human_reason: owner.human_reason,
+            });
+        }
+        if (requestedEpisodeId !== null &&
+            (owner.episode_id !== requestedEpisodeId ||
+             owner.episode_version !== requestedEpisodeVersion)) {
+          fail('FIRST_LINE_SEMANTIC_ORIGIN_CONFLICT',
+            'DIRECT_HUMAN replay conflicts with immutable episode binding', {
+              stream_id: stream,
+              stream_revision: revision,
+              episode_id: owner.episode_id,
+              episode_version: owner.episode_version,
+            });
+        }
         return Object.freeze({ origin: existing, continuation_owner: owner });
+      }
+
+      if (currentStream.stream_revision !== revision) {
+        fail('FIRST_LINE_ROUTING_PLAN_STALE',
+          'DIRECT_HUMAN origin requires the current stream revision', {
+            expected_stream_revision: revision,
+            current_stream_revision: currentStream.stream_revision,
+          });
       }
 
       const unresolved = this.#readUnresolvedOwner(stream);
@@ -3433,11 +4980,18 @@ export class FirstLineStateStore {
   commitNonActionableAckOrigin({
     streamId,
     streamRevision,
+    expectedThroughEventSeq,
+    expectedRoutingLedgerFingerprint,
     episodeId = null,
     expectedEpisodeVersion = null,
   }) {
     const stream = safeToken(streamId, 'stream_id');
     const revision = positiveInteger(streamRevision, 'stream_revision');
+    const through = positiveInteger(expectedThroughEventSeq, 'expected_through_event_seq');
+    const expectedLedgerFingerprint = routingLedgerFingerprintValue(
+      expectedRoutingLedgerFingerprint,
+      'expected_routing_ledger_fingerprint'
+    );
     const requestedEpisodeId = episodeId === null
       ? null
       : safeToken(episodeId, 'episode_id');
@@ -3448,16 +5002,7 @@ export class FirstLineStateStore {
 
     return tx(this.db, () => {
       const currentStream = this.#requireStream(stream);
-      this.#assertAutonomousAllowed();
-      this.#assertNoHumanContinuation(stream);
-      if (currentStream.stream_revision !== revision) {
-        fail('FIRST_LINE_ROUTING_PLAN_STALE',
-          'NON_ACTIONABLE_ACK requires the current stream revision', {
-            expected_stream_revision: revision,
-            current_stream_revision: currentStream.stream_revision,
-          });
-      }
-
+      this.#assertDeferredRelationsValid(stream);
       const existing = this.#readSemanticOrigin(stream, revision);
       if (existing) {
         if (existing.origin_kind !== 'NON_ACTIONABLE_ACK') {
@@ -3468,7 +5013,45 @@ export class FirstLineStateStore {
               origin_kind: existing.origin_kind,
             });
         }
+        const ackCut = this.#readNonActionableAckCut(stream, revision);
+        if (!ackCut) {
+          fail('FIRST_LINE_DB_CORRUPT',
+            'NON_ACTIONABLE_ACK origin lacks immutable routing cut', {
+              stream_id: stream,
+              stream_revision: revision,
+            });
+        }
+        if (requestedEpisodeId !== null && ackCut.episode_id !== requestedEpisodeId) {
+          fail('FIRST_LINE_SEMANTIC_ORIGIN_CONFLICT',
+            'NON_ACTIONABLE_ACK replay conflicts with immutable episode binding', {
+              stream_id: stream,
+              stream_revision: revision,
+            });
+        }
         return existing;
+      }
+
+      this.#assertAutonomousAllowed();
+      this.#assertNoHumanContinuation(stream);
+      if (currentStream.stream_revision !== revision ||
+          currentStream.last_event_seq !== through) {
+        fail('FIRST_LINE_ROUTING_PLAN_STALE',
+          'NON_ACTIONABLE_ACK requires the unchanged routed stream head', {
+            expected_stream_revision: revision,
+            current_stream_revision: currentStream.stream_revision,
+            expected_through_event_seq: through,
+            current_last_event_seq: currentStream.last_event_seq,
+          });
+      }
+
+      const currentLedger = this.#readRoutingLedger(currentStream);
+      if (currentLedger.fingerprint !== expectedLedgerFingerprint) {
+        fail('FIRST_LINE_ROUTING_PLAN_STALE',
+          'NON_ACTIONABLE_ACK routing ledger changed before durable commit', {
+            stream_id: stream,
+            expected_routing_ledger_fingerprint: expectedLedgerFingerprint,
+            current_routing_ledger_fingerprint: currentLedger.fingerprint,
+          });
       }
 
       if (this.#readUnresolvedOwner(stream)) {
@@ -3488,6 +5071,12 @@ export class FirstLineStateStore {
             action_id: action.action_id,
           });
       }
+
+      this.db.prepare(
+        "INSERT INTO semantic_origins " +
+        "(stream_id,stream_revision,origin_kind,action_id,created_at) " +
+        "VALUES (?,?,'NON_ACTIONABLE_ACK',NULL,?)"
+      ).run(stream, revision, at);
 
       const activeHead = this.db.prepare(
         "SELECT episode_id FROM episodes WHERE stream_id=? AND state='active'"
@@ -3512,6 +5101,16 @@ export class FirstLineStateStore {
               stream_id: stream,
             });
         }
+        if (episode.clarification_prompts_sent !== 0 ||
+            episode.clarification_action_id !== null ||
+            episode.requested_slot !== null) {
+          fail('FIRST_LINE_CLARIFICATION_LIMIT_REACHED',
+            'silent ACK cannot close an episode with consumed/pending clarification budget', {
+              episode_id: episode.episode_id,
+              clarification_prompts_sent: episode.clarification_prompts_sent,
+              clarification_action_id: episode.clarification_action_id,
+            });
+        }
         const latch = this.db.prepare(
           'SELECT latch_class FROM episode_constraint_latches WHERE episode_id=? LIMIT 1'
         ).get(episode.episode_id) ?? null;
@@ -3522,6 +5121,11 @@ export class FirstLineStateStore {
               latch_class: latch.latch_class,
             });
         }
+        this.db.prepare(
+          'INSERT INTO non_actionable_ack_cuts ' +
+          '(stream_id,stream_revision,ack_through_event_seq,episode_id,episode_version,created_at) ' +
+          'VALUES (?,?,?,?,?,?)'
+        ).run(stream, revision, through, episode.episode_id, episode.version, at);
         const changed = this.db.prepare(
           "UPDATE episodes SET state='closed',version=version+1,updated_at=?," +
           "closed_at=?,close_reason='non_actionable_ack' " +
@@ -3544,13 +5148,14 @@ export class FirstLineStateStore {
           'requested ACK episode is no longer active', {
             episode_id: requestedEpisodeId,
           });
+      } else {
+        this.db.prepare(
+          'INSERT INTO non_actionable_ack_cuts ' +
+          '(stream_id,stream_revision,ack_through_event_seq,episode_id,episode_version,created_at) ' +
+          'VALUES (?,?,?,NULL,NULL,?)'
+        ).run(stream, revision, through, at);
       }
 
-      this.db.prepare(
-        "INSERT INTO semantic_origins " +
-        "(stream_id,stream_revision,origin_kind,action_id,created_at) " +
-        "VALUES (?,?,'NON_ACTIONABLE_ACK',NULL,?)"
-      ).run(stream, revision, at);
       return this.#readSemanticOrigin(stream, revision);
     });
   }
@@ -3560,7 +5165,7 @@ export class FirstLineStateStore {
     const humanReason = safeToken(reason, 'human_reason');
     const at = this.now();
     return tx(this.db, () => {
-      const action = this.#requireAction(id);
+      const action = this.#requireReadableAction(id);
       const origin = this.#readSemanticOrigin(
         action.stream_id,
         action.prepared_stream_revision
@@ -3592,6 +5197,19 @@ export class FirstLineStateStore {
             });
         }
         return owner;
+      }
+
+      this.#assertDeferredRelationsValid(action.stream_id);
+      if (Number.isSafeInteger(action.send_started_at)) {
+        const humanCutStream = this.#readStream(action.stream_id);
+        if (!humanCutStream) {
+          fail('FIRST_LINE_DB_CORRUPT',
+            'HUMAN escalation stream disappeared before durable cut', { action_id: id });
+        }
+        this.db.prepare(
+          'INSERT INTO public_action_human_cuts ' +
+          '(action_id,stream_id,human_through_event_seq,created_at) VALUES (?,?,?,?)'
+        ).run(id, action.stream_id, humanCutStream.last_event_seq, at);
       }
 
       let humanEpisodeVersion = owner.episode_version;
@@ -3660,8 +5278,42 @@ export class FirstLineStateStore {
               terminal_outcome: owner.terminal_outcome,
             });
         }
+        const terminalCut = this.#readHumanTerminalCut(stream, revision);
+        if (!terminalCut || terminalCut.terminal_outcome !== terminalOutcome) {
+          fail('FIRST_LINE_DB_CORRUPT',
+            'terminal HUMAN continuation lacks matching immutable event cut', {
+              stream_id: stream,
+              stream_revision: revision,
+            });
+        }
         return owner;
       }
+
+      this.#assertDeferredRelationsValid(stream);
+      const terminalStream = this.#requireStream(stream);
+      if (terminalStream.last_event_seq < revision) {
+        fail('FIRST_LINE_DB_CORRUPT',
+          'HUMAN terminal cut cannot precede its semantic origin revision', {
+            stream_id: stream,
+            stream_revision: revision,
+            last_event_seq: terminalStream.last_event_seq,
+          });
+      }
+      this.db.prepare(
+        'INSERT INTO human_terminal_cuts ' +
+        '(stream_id,stream_revision,terminal_through_event_seq,terminal_outcome,created_at) ' +
+        'VALUES (?,?,?,?,?)'
+      ).run(
+        stream,
+        revision,
+        terminalStream.last_event_seq,
+        terminalOutcome,
+        at
+      );
+
+      const ownedAction = owner.action_id === null
+        ? null
+        : this.#requireReadableAction(owner.action_id);
 
       if (owner.episode_id !== null) {
         const episode = this.#readEpisode(owner.episode_id);
@@ -3705,6 +5357,28 @@ export class FirstLineStateStore {
         }
       }
 
+      if (ownedAction !== null) {
+        if (['PREPARED', 'GATING', 'SENDING', 'UNCERTAIN'].includes(ownedAction.state)) {
+          const actionChanged = this.db.prepare(
+            "UPDATE public_actions SET state='HANDOFF_DONE',terminal_reason=?," +
+            'lease_token=NULL,lease_expires_at=NULL,updated_at=? WHERE action_id=? AND state=?'
+          ).run(
+            terminalOutcome === 'HUMAN_TAKEOVER'
+              ? 'human_takeover'
+              : 'ownership_lost',
+            at,
+            owner.action_id,
+            ownedAction.state
+          ).changes;
+          if (actionChanged !== 1) {
+            fail('FIRST_LINE_STALE_WRITE',
+              'public action changed before HUMAN terminalization', {
+                action_id: owner.action_id,
+              });
+          }
+        }
+      }
+
       const changed = this.db.prepare(
         'UPDATE continuation_owners SET terminal_outcome=?,terminal_at=?,updated_at=? ' +
         "WHERE stream_id=? AND stream_revision=? AND owner_kind='HUMAN' " +
@@ -3716,22 +5390,6 @@ export class FirstLineStateStore {
             stream_id: stream,
             stream_revision: revision,
           });
-      }
-
-      if (owner.action_id !== null) {
-        const action = this.#requireAction(owner.action_id);
-        if (['PREPARED', 'GATING', 'SENDING', 'UNCERTAIN'].includes(action.state)) {
-          this.db.prepare(
-            "UPDATE public_actions SET state='HANDOFF_DONE',terminal_reason=?," +
-            'lease_token=NULL,lease_expires_at=NULL,updated_at=? WHERE action_id=?'
-          ).run(
-            terminalOutcome === 'HUMAN_TAKEOVER'
-              ? 'human_takeover'
-              : 'ownership_lost',
-            at,
-            owner.action_id
-          );
-        }
       }
 
       return this.#readContinuationOwner(stream, revision);
@@ -3748,8 +5406,15 @@ export class FirstLineStateStore {
       : safeToken(leaseToken, 'lease_token');
     const at = this.now();
     return readTx(this.db, () => {
+      this.#assertAutonomousAllowed();
       const action = this.#readAction(id);
-      if (!action || action.action_type !== 'CLARIFY' ||
+      if (action) {
+        this.#assertNoHumanContinuation(action.stream_id);
+        this.#assertDeferredRelationsValid(action.stream_id);
+      }
+      if (!action || action.continuation_owner?.owner_kind !== 'PUBLIC_ACTION' ||
+          action.continuation_owner?.terminal_outcome !== null ||
+          action.action_type !== 'CLARIFY' ||
           !['PREPARED', 'GATING'].includes(action.state) ||
           action.episode_id === null || action.episode_version === null) {
         fail('FIRST_LINE_CLARIFICATION_ATTESTATION_INVALID',
@@ -3831,7 +5496,7 @@ export class FirstLineStateStore {
         'invalid unsent terminal state', { terminal_state: terminalState });
     }
     return tx(this.db, () => {
-      const action = this.#requireAction(id);
+      const action = this.#requireReadableAction(id);
       if (action.state !== 'PREPARED' && action.state !== 'GATING') {
         fail('FIRST_LINE_ACTION_STATE_INVALID',
           'only unsent action may become terminal', {
@@ -3897,6 +5562,28 @@ export class FirstLineStateStore {
         });
     }
 
+    const actionChanged = this.db.prepare(
+      'UPDATE public_actions SET state=?,terminal_reason=?,lease_token=NULL,' +
+      "lease_expires_at=NULL,updated_at=? WHERE action_id=? AND state IN ('PREPARED','GATING')"
+    ).run(terminalState, reason, at, action.action_id).changes;
+    if (actionChanged !== 1) {
+      fail('FIRST_LINE_STALE_WRITE',
+        'public action changed before supersession', { action_id: action.action_id });
+    }
+    const supersededOwner = this.#readContinuationOwner(
+      action.stream_id,
+      action.prepared_stream_revision
+    );
+    if (!supersededOwner ||
+        supersededOwner.owner_kind !== 'PUBLIC_ACTION' ||
+        supersededOwner.action_id !== action.action_id ||
+        supersededOwner.terminal_outcome !== 'SUPERSEDED') {
+      fail('FIRST_LINE_DB_CORRUPT',
+        'terminal action did not atomically supersede its continuation owner', {
+          action_id: action.action_id,
+        });
+    }
+
     if (action.action_type === 'CLARIFY' && action.episode_id) {
       const episode = this.db.prepare(
         'SELECT * FROM episodes WHERE episode_id=?'
@@ -3917,29 +5604,6 @@ export class FirstLineStateStore {
         }
       }
     }
-
-    const ownerChanged = this.db.prepare(
-      "UPDATE continuation_owners SET terminal_outcome='SUPERSEDED'," +
-      'terminal_at=?,updated_at=? WHERE stream_id=? AND stream_revision=? ' +
-      "AND owner_kind='PUBLIC_ACTION' AND action_id=? AND terminal_outcome IS NULL"
-    ).run(
-      at,
-      at,
-      action.stream_id,
-      action.prepared_stream_revision,
-      action.action_id
-    ).changes;
-    if (ownerChanged !== 1) {
-      fail('FIRST_LINE_STALE_WRITE',
-        'continuation owner changed before supersession', {
-          action_id: action.action_id,
-        });
-    }
-
-    this.db.prepare(
-      'UPDATE public_actions SET state=?,terminal_reason=?,lease_token=NULL,' +
-      'lease_expires_at=NULL,updated_at=? WHERE action_id=?'
-    ).run(terminalState, reason, at, action.action_id);
   }
 
   #attachHumanToUnsentAction(action, reason, terminalState, at = this.now()) {
@@ -3992,6 +5656,30 @@ export class FirstLineStateStore {
 
   #readRoutingLedger(stream) {
     const id = stream.stream_id;
+    let routingFloor = 0;
+    const ackCutRows = this.db.prepare(
+      'SELECT stream_revision FROM non_actionable_ack_cuts WHERE stream_id=? ORDER BY stream_revision'
+    ).all(id);
+    for (const row of ackCutRows) {
+      const cut = this.#readNonActionableAckCut(id, row.stream_revision);
+      routingFloor = Math.max(routingFloor, cut.ack_through_event_seq);
+    }
+    const terminalCutRows = this.db.prepare(
+      'SELECT stream_revision FROM human_terminal_cuts WHERE stream_id=? ORDER BY stream_revision'
+    ).all(id);
+    for (const row of terminalCutRows) {
+      const cut = this.#readHumanTerminalCut(id, row.stream_revision);
+      routingFloor = Math.max(routingFloor, cut.terminal_through_event_seq);
+    }
+    const visibleEventCount = stream.last_event_seq - routingFloor;
+    if (!Number.isSafeInteger(visibleEventCount) || visibleEventCount < 0) {
+      fail('FIRST_LINE_DB_CORRUPT',
+        'HUMAN terminal routing cut is newer than stream head', {
+          stream_id: id,
+          routing_floor: routingFloor,
+          last_event_seq: stream.last_event_seq,
+        });
+    }
     const rows = this.db.prepare(
       'SELECT ce.*,' +
       ' pa.action_id AS confirmed_action_id,' +
@@ -4005,9 +5693,9 @@ export class FirstLineStateStore {
       ' AND pa.stream_id=ce.stream_id' +
       " AND pa.state='CONFIRMED'" +
       ' AND pa.confirmed_source_message_id=ce.source_message_id' +
-      ' WHERE ce.stream_id=?' +
+      ' WHERE ce.stream_id=? AND ce.event_seq>?' +
       ' ORDER BY ce.event_seq DESC LIMIT ?'
-    ).all(id, ROUTING_SUFFIX_FETCH_LIMIT);
+    ).all(id, routingFloor, ROUTING_SUFFIX_FETCH_LIMIT);
 
     let expectedSeq = stream.last_event_seq;
     const descending = rows.map(row => {
@@ -4024,6 +5712,17 @@ export class FirstLineStateStore {
       const event = this.#eventDto(row);
       let confirmedAction = null;
       if (row.confirmed_action_id !== null) {
+        const sourceMatches = this.db.prepare(
+          'SELECT COUNT(*) AS n FROM conversation_events WHERE stream_id=? AND source_id=?'
+        ).get(id, row.confirmed_action_id).n;
+        if (sourceMatches !== 1) {
+          fail('FIRST_LINE_SOURCE_ID_AMBIGUOUS',
+            'confirmed routing boundary no longer has unique source-id evidence', {
+              stream_id: id,
+              action_id: row.confirmed_action_id,
+              count: sourceMatches,
+            });
+        }
         persistedGuard(() => {
           if (event.event_kind !== 'BABYPARK_PUBLIC_REPLY' ||
               event.source_id !== row.confirmed_action_id) {
@@ -4066,21 +5765,26 @@ export class FirstLineStateStore {
       };
     });
 
-    if (stream.last_event_seq === 0 && rows.length !== 0) {
-      fail('FIRST_LINE_DB_CORRUPT', 'empty stream head has persisted routing events', {
-        stream_id: id,
-      });
+    if (visibleEventCount === 0 && rows.length !== 0) {
+      fail('FIRST_LINE_DB_CORRUPT',
+        'routing ledger exposes events at or before terminal HUMAN cut', {
+          stream_id: id,
+          routing_floor: routingFloor,
+        });
     }
-    if (stream.last_event_seq > 0 && rows.length === 0) {
-      fail('FIRST_LINE_DB_CORRUPT', 'non-empty stream head has no routing events', {
-        stream_id: id,
-      });
+    if (visibleEventCount > 0 && rows.length === 0) {
+      fail('FIRST_LINE_DB_CORRUPT',
+        'post-HUMAN routing head has no persisted events', {
+          stream_id: id,
+          routing_floor: routingFloor,
+          last_event_seq: stream.last_event_seq,
+        });
     }
 
     const eventSuffix = descending.reverse();
     return {
       event_suffix: eventSuffix,
-      suffix_truncated: stream.last_event_seq > rows.length,
+      suffix_truncated: visibleEventCount > rows.length,
       fingerprint: routingLedgerFingerprint(eventSuffix),
     };
   }
@@ -4110,6 +5814,29 @@ export class FirstLineStateStore {
       stream_id: streamId,
       stream_revision: streamRevision,
     });
+    const stream = this.db.prepare(
+      'SELECT 1 AS ok FROM conversation_streams WHERE stream_id=?'
+    ).get(row.stream_id) ?? null;
+    if (!stream) {
+      fail('FIRST_LINE_DB_CORRUPT', 'semantic origin references missing stream', {
+        stream_id: row.stream_id,
+        stream_revision: row.stream_revision,
+      });
+    }
+    if (row.origin_kind === 'PUBLIC_ACTION') {
+      const action = this.db.prepare(
+        'SELECT stream_id,prepared_stream_revision FROM public_actions WHERE action_id=?'
+      ).get(row.action_id) ?? null;
+      if (!action || action.stream_id !== row.stream_id ||
+          action.prepared_stream_revision !== row.stream_revision) {
+        fail('FIRST_LINE_DB_CORRUPT',
+          'PUBLIC_ACTION semantic origin/action provenance is inconsistent', {
+            stream_id: row.stream_id,
+            stream_revision: row.stream_revision,
+            action_id: row.action_id,
+          });
+      }
+    }
     return Object.freeze({
       stream_id: row.stream_id,
       stream_revision: row.stream_revision,
@@ -4162,6 +5889,113 @@ export class FirstLineStateStore {
       stream_id: streamId,
       stream_revision: streamRevision,
     });
+
+    const origin = this.db.prepare(
+      'SELECT origin_kind,action_id FROM semantic_origins WHERE stream_id=? AND stream_revision=?'
+    ).get(row.stream_id, row.stream_revision) ?? null;
+    if (!origin) {
+      fail('FIRST_LINE_DB_CORRUPT',
+        'continuation owner lacks immutable semantic origin', {
+          stream_id: row.stream_id, stream_revision: row.stream_revision,
+        });
+    }
+    let action = null;
+    if (row.action_id !== null) {
+      action = this.db.prepare(
+        'SELECT action_id,stream_id,prepared_stream_revision,episode_id,episode_version,state ' +
+        'FROM public_actions WHERE action_id=?'
+      ).get(row.action_id) ?? null;
+      if (!action || origin.origin_kind !== 'PUBLIC_ACTION' ||
+          origin.action_id !== row.action_id ||
+          action.stream_id !== row.stream_id ||
+          action.prepared_stream_revision !== row.stream_revision ||
+          action.episode_id !== row.episode_id ||
+          (row.owner_kind === 'PUBLIC_ACTION' && action.episode_version !== row.episode_version) ||
+          (row.owner_kind === 'HUMAN' && action.episode_id !== null &&
+           row.episode_version < action.episode_version)) {
+        fail('FIRST_LINE_DB_CORRUPT',
+          'continuation owner/action provenance is inconsistent', {
+            stream_id: row.stream_id, stream_revision: row.stream_revision,
+            action_id: row.action_id,
+          });
+      }
+      if (row.owner_kind === 'PUBLIC_ACTION' && row.terminal_outcome === null &&
+          !LIVE_ACTION_STATES.has(action.state)) {
+        fail('FIRST_LINE_DB_CORRUPT',
+          'unresolved PUBLIC_ACTION continuation points to terminal action state', {
+            action_id: row.action_id, state: action.state,
+          });
+      }
+      if (row.owner_kind === 'PUBLIC_ACTION' && row.terminal_outcome === 'CONFIRMED' &&
+          action.state !== 'CONFIRMED') {
+        fail('FIRST_LINE_DB_CORRUPT',
+          'CONFIRMED continuation/action state mismatch', {
+            action_id: row.action_id, state: action.state,
+          });
+      }
+      if (row.owner_kind === 'PUBLIC_ACTION' && row.terminal_outcome === 'SUPERSEDED' &&
+          !['STALE','CANCELLED'].includes(action.state)) {
+        fail('FIRST_LINE_DB_CORRUPT',
+          'SUPERSEDED continuation/action state mismatch', {
+            action_id: row.action_id, state: action.state,
+          });
+      }
+      if (row.owner_kind === 'PUBLIC_ACTION' && row.terminal_outcome === 'LEGACY_V3_TERMINAL' &&
+          !['STALE','CANCELLED','HANDOFF_DONE','NOT_SENT'].includes(action.state)) {
+        fail('FIRST_LINE_DB_CORRUPT',
+          'legacy continuation/action state mismatch', {
+            action_id: row.action_id, state: action.state,
+          });
+      }
+      if (row.owner_kind === 'HUMAN' &&
+          ['HUMAN_TAKEOVER','OWNERSHIP_LOST'].includes(row.terminal_outcome) &&
+          !['HANDOFF_DONE','STALE','CANCELLED'].includes(action.state)) {
+        fail('FIRST_LINE_DB_CORRUPT',
+          'terminal HUMAN continuation/action state mismatch', {
+            action_id: row.action_id, state: action.state,
+          });
+      }
+    } else if (origin.origin_kind !== 'DIRECT_HUMAN' || origin.action_id !== null ||
+               row.owner_kind !== 'HUMAN') {
+      fail('FIRST_LINE_DB_CORRUPT',
+        'actionless continuation is not a DIRECT_HUMAN owner', {
+          stream_id: row.stream_id, stream_revision: row.stream_revision,
+        });
+    }
+
+    if (row.episode_id !== null) {
+      const episode = this.db.prepare(
+        'SELECT stream_id,state,version,close_reason FROM episodes WHERE episode_id=?'
+      ).get(row.episode_id) ?? null;
+      if (!episode || episode.stream_id !== row.stream_id) {
+        fail('FIRST_LINE_DB_CORRUPT',
+          'continuation owner episode is missing or cross-stream', {
+            stream_id: row.stream_id, episode_id: row.episode_id,
+          });
+      }
+      if (row.owner_kind === 'HUMAN' && row.terminal_outcome === null &&
+          (episode.state !== 'active' || episode.version !== row.episode_version)) {
+        fail('FIRST_LINE_DB_CORRUPT',
+          'unresolved HUMAN continuation is not bound to the current active episode version', {
+            episode_id: row.episode_id, expected_version: row.episode_version,
+            actual_version: episode.version, state: episode.state,
+          });
+      }
+      if (row.owner_kind === 'HUMAN' &&
+          ['HUMAN_TAKEOVER','OWNERSHIP_LOST'].includes(row.terminal_outcome)) {
+        const expectedReason = row.terminal_outcome === 'HUMAN_TAKEOVER'
+          ? 'human_takeover'
+          : 'ownership_lost';
+        if (episode.state !== 'closed' || episode.version !== row.episode_version + 1 ||
+            episode.close_reason !== expectedReason) {
+          fail('FIRST_LINE_DB_CORRUPT',
+            'terminal HUMAN continuation lacks matching episode terminal evidence', {
+              episode_id: row.episode_id, terminal_outcome: row.terminal_outcome,
+            });
+        }
+      }
+    }
+
     return Object.freeze({
       stream_id: row.stream_id,
       stream_revision: row.stream_revision,
@@ -4205,10 +6039,20 @@ export class FirstLineStateStore {
         'SELECT event_kind FROM conversation_events WHERE stream_id=? AND event_seq=?'
       ).get(row.stream_id, row.event_seq);
       const action = this.db.prepare(
-        'SELECT stream_id FROM public_actions WHERE action_id=?'
+        'SELECT stream_id,prepared_stream_revision,send_started_at FROM public_actions WHERE action_id=?'
       ).get(row.action_id);
+      const origin = action
+        ? this.db.prepare(
+            "SELECT origin_kind,action_id FROM semantic_origins " +
+            'WHERE stream_id=? AND stream_revision=?'
+          ).get(row.stream_id, action.prepared_stream_revision)
+        : null;
       if (!event || event.event_kind !== 'CUSTOMER_MESSAGE' ||
-          !action || action.stream_id !== row.stream_id) {
+          !action || action.stream_id !== row.stream_id ||
+          row.event_seq <= action.prepared_stream_revision ||
+          !Number.isSafeInteger(action.send_started_at) ||
+          !origin || origin.origin_kind !== 'PUBLIC_ACTION' ||
+          origin.action_id !== row.action_id) {
         fail('FIRST_LINE_VALUE_INVALID',
           'deferred parent relationship is inconsistent');
       }
@@ -4223,6 +6067,337 @@ export class FirstLineStateStore {
       created_at: row.created_at,
     });
   }
+  #assertSemanticOwnershipValid(streamId) {
+    const invalid = this.db.prepare(
+      "SELECT so.stream_revision,so.origin_kind,so.action_id," +
+      "co.owner_kind,co.action_id AS owner_action_id " +
+      "FROM semantic_origins so " +
+      "LEFT JOIN continuation_owners co ON co.stream_id=so.stream_id " +
+      "AND co.stream_revision=so.stream_revision " +
+      "WHERE so.stream_id=? AND (" +
+      "(so.origin_kind='PUBLIC_ACTION' AND (co.stream_id IS NULL OR co.action_id IS NOT so.action_id)) OR " +
+      "(so.origin_kind='DIRECT_HUMAN' AND (co.stream_id IS NULL OR co.owner_kind<>'HUMAN' OR co.action_id IS NOT NULL)) OR " +
+      "(so.origin_kind='NON_ACTIONABLE_ACK' AND co.stream_id IS NOT NULL)" +
+      ") ORDER BY so.stream_revision LIMIT 1"
+    ).get(streamId) ?? null;
+    if (invalid) {
+      fail('FIRST_LINE_DB_CORRUPT',
+        'semantic origin/continuation-owner cardinality is inconsistent', {
+          stream_id: streamId,
+          stream_revision: invalid.stream_revision,
+          origin_kind: invalid.origin_kind,
+          action_id: invalid.action_id,
+        });
+    }
+  }
+
+  #assertDeferredRelationsValid(streamId) {
+    this.#assertSemanticOwnershipValid(streamId);
+    const rows = this.db.prepare(
+      'SELECT event_seq FROM deferred_event_parents WHERE stream_id=? ORDER BY event_seq'
+    ).all(streamId);
+    for (const row of rows) this.#readDeferredParent(streamId, row.event_seq);
+
+    const cutActionRows = this.db.prepare(
+      'SELECT action_id FROM public_action_confirmation_cuts WHERE stream_id=? ' +
+      'UNION SELECT action_id FROM public_action_human_cuts WHERE stream_id=?'
+    ).all(streamId, streamId);
+    for (const row of cutActionRows) this.#readAction(row.action_id);
+
+    const ackCuts = this.db.prepare(
+      'SELECT stream_revision FROM non_actionable_ack_cuts WHERE stream_id=? ORDER BY stream_revision'
+    ).all(streamId);
+    for (const row of ackCuts) {
+      this.#readNonActionableAckCut(streamId, row.stream_revision);
+    }
+    const missingAckCut = this.db.prepare(
+      "SELECT so.stream_revision FROM semantic_origins so " +
+      "LEFT JOIN non_actionable_ack_cuts ac ON ac.stream_id=so.stream_id " +
+      "AND ac.stream_revision=so.stream_revision " +
+      "WHERE so.stream_id=? AND so.origin_kind='NON_ACTIONABLE_ACK' " +
+      'AND ac.stream_id IS NULL LIMIT 1'
+    ).get(streamId);
+    if (missingAckCut) {
+      fail('FIRST_LINE_DB_CORRUPT',
+        'NON_ACTIONABLE_ACK semantic origin lacks immutable routing cut', {
+          stream_id: streamId,
+          stream_revision: missingAckCut.stream_revision,
+        });
+    }
+
+    const terminalCuts = this.db.prepare(
+      'SELECT stream_revision FROM human_terminal_cuts WHERE stream_id=? ORDER BY stream_revision'
+    ).all(streamId);
+    for (const row of terminalCuts) {
+      this.#readHumanTerminalCut(streamId, row.stream_revision);
+    }
+    const missingTerminalCut = this.db.prepare(
+      "SELECT co.stream_revision FROM continuation_owners co " +
+      "LEFT JOIN human_terminal_cuts htc ON htc.stream_id=co.stream_id " +
+      "AND htc.stream_revision=co.stream_revision " +
+      "WHERE co.stream_id=? AND co.owner_kind='HUMAN' " +
+      "AND co.terminal_outcome IN ('HUMAN_TAKEOVER','OWNERSHIP_LOST') " +
+      'AND htc.stream_id IS NULL LIMIT 1'
+    ).get(streamId);
+    if (missingTerminalCut) {
+      fail('FIRST_LINE_DB_CORRUPT',
+        'terminal HUMAN continuation lacks immutable routing boundary', {
+          stream_id: streamId,
+          stream_revision: missingTerminalCut.stream_revision,
+        });
+    }
+
+    const missingConfirmationCut = this.db.prepare(
+      "SELECT pa.action_id FROM public_actions pa " +
+      "JOIN public_action_descriptors pad ON pad.action_id=pa.action_id " +
+      "LEFT JOIN public_action_confirmation_cuts pc ON pc.action_id=pa.action_id " +
+      "AND pc.stream_id=pa.stream_id " +
+      "WHERE pa.stream_id=? AND pa.state='CONFIRMED' AND pc.action_id IS NULL " +
+      'LIMIT 1'
+    ).get(streamId);
+    if (missingConfirmationCut) {
+      fail('FIRST_LINE_DB_CORRUPT',
+        'normal v4 confirmation lacks its immutable local cut', {
+          stream_id: streamId,
+          action_id: missingConfirmationCut.action_id,
+        });
+    }
+
+    const missingHumanCut = this.db.prepare(
+      "SELECT pa.action_id FROM public_actions pa " +
+      "JOIN public_action_descriptors pad ON pad.action_id=pa.action_id " +
+      "JOIN continuation_owners co ON co.stream_id=pa.stream_id " +
+      "AND co.stream_revision=pa.prepared_stream_revision AND co.action_id=pa.action_id " +
+      "LEFT JOIN public_action_human_cuts hc ON hc.action_id=pa.action_id " +
+      "AND hc.stream_id=pa.stream_id " +
+      "WHERE pa.stream_id=? AND pa.send_started_at IS NOT NULL " +
+      "AND co.owner_kind='HUMAN' AND hc.action_id IS NULL LIMIT 1"
+    ).get(streamId);
+    if (missingHumanCut) {
+      fail('FIRST_LINE_DB_CORRUPT',
+        'sent v4 HUMAN continuation lacks its immutable escalation cut', {
+          stream_id: streamId,
+          action_id: missingHumanCut.action_id,
+        });
+    }
+
+    const unresolved = this.db.prepare(
+      "SELECT pa.action_id,pa.prepared_stream_revision FROM public_actions pa " +
+      "JOIN continuation_owners co ON co.stream_id=pa.stream_id " +
+      "AND co.stream_revision=pa.prepared_stream_revision AND co.action_id=pa.action_id " +
+      "WHERE pa.stream_id=? AND pa.state IN ('SENDING','UNCERTAIN') " +
+      "AND pa.send_started_at IS NOT NULL AND co.owner_kind='PUBLIC_ACTION' " +
+      'AND co.terminal_outcome IS NULL'
+    ).all(streamId);
+    if (unresolved.length > 1) {
+      fail('FIRST_LINE_DB_CORRUPT',
+        'multiple unresolved public sends exist while validating deferred topology', {
+          stream_id: streamId,
+          count: unresolved.length,
+        });
+    }
+    for (const action of unresolved) {
+      const missing = this.db.prepare(
+        "SELECT ce.event_seq FROM conversation_events ce " +
+        "LEFT JOIN deferred_event_parents dp " +
+        "ON dp.stream_id=ce.stream_id AND dp.event_seq=ce.event_seq " +
+        "WHERE ce.stream_id=? AND ce.event_kind='CUSTOMER_MESSAGE' " +
+        'AND ce.event_seq>? AND (dp.action_id IS NULL OR dp.action_id<>?) ' +
+        'ORDER BY ce.event_seq LIMIT 1'
+      ).get(streamId, action.prepared_stream_revision, action.action_id);
+      if (missing) {
+        fail('FIRST_LINE_DB_CORRUPT',
+          'customer event accepted behind unresolved send lacks its immutable parent', {
+            stream_id: streamId,
+            event_seq: missing.event_seq,
+            action_id: action.action_id,
+          });
+      }
+    }
+
+    const confirmed = this.db.prepare(
+      "SELECT pa.action_id,pa.prepared_stream_revision,pc.confirmed_through_event_seq " +
+      "FROM public_actions pa " +
+      "JOIN continuation_owners co ON co.stream_id=pa.stream_id " +
+      "AND co.stream_revision=pa.prepared_stream_revision AND co.action_id=pa.action_id " +
+      "JOIN public_action_descriptors pad ON pad.action_id=pa.action_id " +
+      "JOIN public_action_confirmation_cuts pc ON pc.action_id=pa.action_id " +
+      "AND pc.stream_id=pa.stream_id " +
+      "WHERE pa.stream_id=? AND pa.state='CONFIRMED' " +
+      "AND co.owner_kind='PUBLIC_ACTION' AND co.terminal_outcome='CONFIRMED'"
+    ).all(streamId);
+    for (const action of confirmed) {
+      const missing = this.db.prepare(
+        "SELECT ce.event_seq FROM conversation_events ce " +
+        "LEFT JOIN deferred_event_parents dp " +
+        "ON dp.stream_id=ce.stream_id AND dp.event_seq=ce.event_seq " +
+        "WHERE ce.stream_id=? AND ce.event_kind='CUSTOMER_MESSAGE' " +
+        'AND ce.event_seq>? AND ce.event_seq<=? ' +
+        'AND (dp.action_id IS NULL OR dp.action_id<>?) ' +
+        'ORDER BY ce.event_seq LIMIT 1'
+      ).get(
+        streamId,
+        action.prepared_stream_revision,
+        action.confirmed_through_event_seq,
+        action.action_id
+      );
+      if (missing) {
+        fail('FIRST_LINE_DB_CORRUPT',
+          'customer event accepted before normal confirmation lacks its immutable parent', {
+            stream_id: streamId,
+            event_seq: missing.event_seq,
+            action_id: action.action_id,
+          });
+      }
+    }
+
+    const humanCuts = this.db.prepare(
+      "SELECT pa.action_id,pa.prepared_stream_revision,hc.human_through_event_seq " +
+      "FROM public_actions pa " +
+      "JOIN public_action_descriptors pad ON pad.action_id=pa.action_id " +
+      "JOIN public_action_human_cuts hc ON hc.action_id=pa.action_id " +
+      "AND hc.stream_id=pa.stream_id " +
+      "WHERE pa.stream_id=? AND pa.send_started_at IS NOT NULL"
+    ).all(streamId);
+    for (const action of humanCuts) {
+      const missing = this.db.prepare(
+        "SELECT ce.event_seq FROM conversation_events ce " +
+        "LEFT JOIN deferred_event_parents dp " +
+        "ON dp.stream_id=ce.stream_id AND dp.event_seq=ce.event_seq " +
+        "WHERE ce.stream_id=? AND ce.event_kind='CUSTOMER_MESSAGE' " +
+        'AND ce.event_seq>? AND ce.event_seq<=? ' +
+        'AND (dp.action_id IS NULL OR dp.action_id<>?) ' +
+        'ORDER BY ce.event_seq LIMIT 1'
+      ).get(
+        streamId,
+        action.prepared_stream_revision,
+        action.human_through_event_seq,
+        action.action_id
+      );
+      if (missing) {
+        fail('FIRST_LINE_DB_CORRUPT',
+          'customer event accepted before HUMAN escalation lacks its immutable parent', {
+            stream_id: streamId,
+            event_seq: missing.event_seq,
+            action_id: action.action_id,
+          });
+      }
+    }
+  }
+
+  #readNonActionableAckCut(streamId, streamRevision) {
+    const row = this.db.prepare(
+      'SELECT * FROM non_actionable_ack_cuts WHERE stream_id=? AND stream_revision=?'
+    ).get(streamId, streamRevision);
+    if (!row) return null;
+    persistedGuard(() => {
+      safeToken(row.stream_id, 'stream_id');
+      positiveInteger(row.stream_revision, 'stream_revision');
+      positiveInteger(row.ack_through_event_seq, 'ack_through_event_seq');
+      if (row.episode_id !== null) safeToken(row.episode_id, 'episode_id');
+      if (row.episode_version !== null) positiveInteger(row.episode_version, 'episode_version');
+      if ((row.episode_id === null) !== (row.episode_version === null)) {
+        fail('FIRST_LINE_VALUE_INVALID', 'ACK cut episode binding is incomplete');
+      }
+      nonNegativeInteger(row.created_at, 'created_at');
+    }, 'persisted NON_ACTIONABLE_ACK cut is invalid', {
+      stream_id: streamId,
+      stream_revision: streamRevision,
+    });
+    const origin = this.db.prepare(
+      'SELECT origin_kind,action_id FROM semantic_origins WHERE stream_id=? AND stream_revision=?'
+    ).get(row.stream_id, row.stream_revision) ?? null;
+    const stream = this.db.prepare(
+      'SELECT last_event_seq,stream_revision FROM conversation_streams WHERE stream_id=?'
+    ).get(row.stream_id) ?? null;
+    const event = this.db.prepare(
+      'SELECT 1 AS ok FROM conversation_events WHERE stream_id=? AND event_seq=?'
+    ).get(row.stream_id, row.ack_through_event_seq) ?? null;
+    if (!origin || origin.origin_kind !== 'NON_ACTIONABLE_ACK' || origin.action_id !== null ||
+        !stream || stream.stream_revision !== stream.last_event_seq ||
+        row.ack_through_event_seq !== row.stream_revision ||
+        row.ack_through_event_seq > stream.last_event_seq || !event) {
+      fail('FIRST_LINE_DB_CORRUPT',
+        'NON_ACTIONABLE_ACK cut does not match semantic origin/stream history', {
+          stream_id: row.stream_id,
+          stream_revision: row.stream_revision,
+        });
+    }
+    if (row.episode_id !== null) {
+      const episode = this.db.prepare(
+        'SELECT stream_id,state,version,close_reason FROM episodes WHERE episode_id=?'
+      ).get(row.episode_id) ?? null;
+      if (!episode || episode.stream_id !== row.stream_id || episode.state !== 'closed' ||
+          episode.version !== row.episode_version + 1 ||
+          episode.close_reason !== 'non_actionable_ack') {
+        fail('FIRST_LINE_DB_CORRUPT',
+          'NON_ACTIONABLE_ACK cut episode binding is inconsistent', {
+            stream_id: row.stream_id,
+            stream_revision: row.stream_revision,
+            episode_id: row.episode_id,
+          });
+      }
+    }
+    return Object.freeze({
+      stream_id: row.stream_id,
+      stream_revision: row.stream_revision,
+      ack_through_event_seq: row.ack_through_event_seq,
+      episode_id: row.episode_id,
+      episode_version: row.episode_version,
+      created_at: row.created_at,
+    });
+  }
+
+  #readHumanTerminalCut(streamId, streamRevision) {
+    const row = this.db.prepare(
+      'SELECT * FROM human_terminal_cuts WHERE stream_id=? AND stream_revision=?'
+    ).get(streamId, streamRevision);
+    if (!row) return null;
+    persistedGuard(() => {
+      safeToken(row.stream_id, 'stream_id');
+      positiveInteger(row.stream_revision, 'stream_revision');
+      positiveInteger(row.terminal_through_event_seq, 'terminal_through_event_seq');
+      enumValue(
+        row.terminal_outcome,
+        new Set(['HUMAN_TAKEOVER', 'OWNERSHIP_LOST']),
+        'human_terminal_outcome'
+      );
+      nonNegativeInteger(row.created_at, 'created_at');
+    }, 'persisted HUMAN terminal cut is invalid', {
+      stream_id: streamId,
+      stream_revision: streamRevision,
+    });
+    const owner = this.db.prepare(
+      'SELECT owner_kind,terminal_outcome,terminal_at FROM continuation_owners ' +
+      'WHERE stream_id=? AND stream_revision=?'
+    ).get(row.stream_id, row.stream_revision) ?? null;
+    const stream = this.db.prepare(
+      'SELECT last_event_seq,stream_revision FROM conversation_streams WHERE stream_id=?'
+    ).get(row.stream_id) ?? null;
+    const event = this.db.prepare(
+      'SELECT 1 AS ok FROM conversation_events WHERE stream_id=? AND event_seq=?'
+    ).get(row.stream_id, row.terminal_through_event_seq) ?? null;
+    if (!owner || owner.owner_kind !== 'HUMAN' ||
+        owner.terminal_outcome !== row.terminal_outcome ||
+        owner.terminal_at === null ||
+        !stream || stream.stream_revision !== stream.last_event_seq ||
+        row.terminal_through_event_seq < row.stream_revision ||
+        row.terminal_through_event_seq > stream.last_event_seq || !event) {
+      fail('FIRST_LINE_DB_CORRUPT',
+        'HUMAN terminal cut does not match terminal continuation/stream history', {
+          stream_id: row.stream_id,
+          stream_revision: row.stream_revision,
+        });
+    }
+    return Object.freeze({
+      stream_id: row.stream_id,
+      stream_revision: row.stream_revision,
+      terminal_through_event_seq: row.terminal_through_event_seq,
+      terminal_outcome: row.terminal_outcome,
+      created_at: row.created_at,
+    });
+  }
+
   #readRecoveryBarrier(recoveryEpoch = null) {
     const row = recoveryEpoch === null
       ? this.db.prepare(
@@ -4244,7 +6419,7 @@ export class FirstLineStateStore {
       if (row.completion_kind !== null) {
         enumValue(
           row.completion_kind,
-          new Set(['LOSSLESS_SEMANTIC_CUT', 'HUMAN_QUARANTINE_COMPLETE']),
+          new Set(['LOSSLESS_SEMANTIC_CUT']),
           'recovery_completion'
         );
       }
@@ -4288,7 +6463,30 @@ export class FirstLineStateStore {
           action_id: owner.action_id,
         });
     }
+    this.#assertLegacyAutonomousSafe(streamId);
     return owner;
+  }
+
+  #assertLegacyAutonomousSafe(streamId) {
+    const legacy = this.db.prepare(
+      "SELECT pa.action_id,pa.state,pa.prepared_stream_revision " +
+      "FROM public_actions pa JOIN legacy_v3_actions l ON l.action_id=pa.action_id " +
+      "WHERE pa.stream_id=? " +
+      'ORDER BY pa.prepared_stream_revision DESC,pa.created_at DESC,pa.action_id DESC LIMIT 1'
+    ).get(streamId) ?? null;
+    if (!legacy || legacy.state === 'CONFIRMED') return;
+    const floor = Number(this.db.prepare(
+      'SELECT COALESCE(MAX(terminal_through_event_seq),0) AS n ' +
+      'FROM human_terminal_cuts WHERE stream_id=?'
+    ).get(streamId).n);
+    if (Number.isSafeInteger(floor) && floor >= legacy.prepared_stream_revision) return;
+    fail('FIRST_LINE_LEGACY_STATE_UNPROVABLE',
+      'legacy v3 terminal action cannot authorize autonomous v0.8 continuation', {
+        stream_id: streamId,
+        action_id: legacy.action_id,
+        action_state: legacy.state,
+        prepared_stream_revision: legacy.prepared_stream_revision,
+      });
   }
 
   #requireStream(streamId) {
@@ -4296,10 +6494,13 @@ export class FirstLineStateStore {
     if (!row) fail('FIRST_LINE_STREAM_NOT_FOUND', 'conversation stream not found', { stream_id: streamId });
     return row;
   }
-  #requireAction(actionId) {
-    const row = this.db.prepare('SELECT * FROM public_actions WHERE action_id=?').get(actionId);
-    if (!row) fail('FIRST_LINE_ACTION_NOT_FOUND', 'public action not found', { action_id: actionId });
-    return row;
+  #requireReadableAction(actionId) {
+    const action = this.#readAction(actionId);
+    if (!action) {
+      fail('FIRST_LINE_ACTION_NOT_FOUND',
+        'public action not found', { action_id: actionId });
+    }
+    return action;
   }
   #requireActiveEpisode(episodeId, expectedVersion) {
     const row = this.db.prepare('SELECT * FROM episodes WHERE episode_id=?').get(episodeId);
@@ -4323,6 +6524,10 @@ export class FirstLineStateStore {
       positiveInteger(row.source_conversation_id, 'source_conversation_id');
       nonNegativeInteger(row.stream_revision, 'stream_revision');
       nonNegativeInteger(row.last_event_seq, 'last_event_seq');
+      if (row.stream_revision !== row.last_event_seq) {
+        fail('FIRST_LINE_VALUE_INVALID',
+          'stream revision and accepted event sequence diverged');
+      }
       if (row.scan_highwater !== null) positiveInteger(row.scan_highwater, 'scan_highwater');
       nonNegativeInteger(row.created_at, 'created_at');
       nonNegativeInteger(row.updated_at, 'updated_at');
@@ -4436,15 +6641,78 @@ export class FirstLineStateStore {
           'clarification_prompts_sent must be exactly 0 or 1');
       }
       if (row.clarification_action_id !== null) safeToken(row.clarification_action_id, 'clarification_action_id');
+      if (row.state === 'active' &&
+          (row.closed_at !== null || row.close_reason !== null)) {
+        fail('FIRST_LINE_VALUE_INVALID', 'active episode carries terminal metadata');
+      }
+      if (row.state === 'closed' &&
+          (row.closed_at === null || row.close_reason === null)) {
+        fail('FIRST_LINE_VALUE_INVALID', 'closed episode lacks terminal metadata');
+      }
+      if (row.clarification_prompts_sent === 0 &&
+          (row.requested_slot !== null || row.clarification_action_id !== null)) {
+        fail('FIRST_LINE_VALUE_INVALID',
+          'unused clarification budget cannot carry reservation metadata');
+      }
+      if (row.clarification_action_id === null && row.requested_slot !== null) {
+        fail('FIRST_LINE_VALUE_INVALID',
+          'requested clarification slot lacks owning action');
+      }
       nonNegativeInteger(row.created_at, 'created_at');
       nonNegativeInteger(row.updated_at, 'updated_at');
       if (row.closed_at !== null) nonNegativeInteger(row.closed_at, 'closed_at');
-      if (row.close_reason !== null) safeToken(row.close_reason, 'close_reason');
+      if (row.close_reason !== null) {
+        enumValue(row.close_reason, new Set([
+          'completed', 'replaced', 'human_takeover', 'ownership_lost',
+          'non_actionable_ack', 'superseded', 'expired',
+        ]), 'close_reason');
+      }
     }, 'persisted episode metadata is invalid', { episode_id: episodeId });
+    const clarificationRows = this.db.prepare(
+      "SELECT action_id,state FROM public_actions WHERE episode_id=? AND action_type='CLARIFY'"
+    ).all(row.episode_id);
+    if (row.clarification_prompts_sent === 1 && clarificationRows.length === 0) {
+      fail('FIRST_LINE_DB_CORRUPT',
+        'consumed clarification budget lacks durable action history', {
+          episode_id: row.episode_id,
+        });
+    }
+    if (row.clarification_prompts_sent === 0 && clarificationRows.some(item =>
+        !['STALE', 'CANCELLED'].includes(item.state))) {
+      fail('FIRST_LINE_DB_CORRUPT',
+        'clarification budget was reset after a consuming action state', {
+          episode_id: row.episode_id,
+        });
+    }
+    if (row.clarification_action_id !== null) {
+      const linked = this.db.prepare(
+        'SELECT stream_id,episode_id,action_type,requested_slot FROM public_actions WHERE action_id=?'
+      ).get(row.clarification_action_id) ?? null;
+      if (!linked || linked.stream_id !== row.stream_id ||
+          linked.episode_id !== row.episode_id || linked.action_type !== 'CLARIFY' ||
+          (linked.requested_slot ?? null) !== (row.requested_slot ?? null)) {
+        fail('FIRST_LINE_DB_CORRUPT', 'persisted clarification binding is invalid', {
+          episode_id: row.episode_id,
+        });
+      }
+    }
     const slots = {};
     for (const item of this.db.prepare('SELECT * FROM episode_slots WHERE episode_id=? ORDER BY slot_name').all(episodeId)) {
       const value = parseJson(item.value_json);
       validatePersistedSlot(item.slot_name, value);
+      if (item.derived_through_event_seq !== null) {
+        positiveInteger(item.derived_through_event_seq, 'derived_through_event_seq');
+        const source = this.db.prepare(
+          'SELECT 1 AS ok FROM conversation_events WHERE stream_id=? AND event_seq=?'
+        ).get(row.stream_id, item.derived_through_event_seq);
+        if (!source) {
+          fail('FIRST_LINE_DB_CORRUPT', 'persisted slot provenance is outside episode stream', {
+            episode_id: row.episode_id,
+            slot_name: item.slot_name,
+            event_seq: item.derived_through_event_seq,
+          });
+        }
+      }
       slots[item.slot_name] = { value, derived_through_event_seq: item.derived_through_event_seq };
     }
     if (slots.category_match_mode && !slots.category_id) {
@@ -4515,6 +6783,7 @@ export class FirstLineStateStore {
         nonNegativeInteger(row.confirmed_at, 'confirmed_at');
       }
     }, 'persisted public action metadata is invalid', { action_id: actionId });
+    validateActionStateEvidence(row);
 
     const basis = persistedGuard(
       () => normalizeBasisEventSeqs(parseJson(row.basis_event_seqs_json)),
@@ -4535,7 +6804,8 @@ export class FirstLineStateStore {
     for (const [index, sourceRow] of sourceRows.entries()) {
       if (sourceRow.ordinal !== index + 1 ||
           sourceRow.stream_id !== row.stream_id ||
-          sourceRow.event_seq !== basis[index]) {
+          sourceRow.event_seq !== basis[index] ||
+          sourceRow.event_seq > row.prepared_stream_revision) {
         fail('FIRST_LINE_DB_CORRUPT',
           'public action relational source coverage is non-canonical', {
             action_id: actionId,
@@ -4554,21 +6824,46 @@ export class FirstLineStateStore {
       }
     }
 
+    const candidateSetRow = this.db.prepare(
+      'SELECT * FROM public_action_candidate_sets WHERE action_id=?'
+    ).get(actionId) ?? null;
+    if (!candidateSetRow || !Number.isSafeInteger(candidateSetRow.candidate_count) ||
+        candidateSetRow.candidate_count < 0 ||
+        candidateSetRow.candidate_count > MAX_PRESENTED_CANDIDATES) {
+      fail('FIRST_LINE_DB_CORRUPT',
+        'public action lacks valid frozen candidate-count metadata', { action_id: actionId });
+    }
+    if (candidateSetRow.candidate_slot !== null) {
+      persistedGuard(
+        () => safeToken(candidateSetRow.candidate_slot, 'candidate_slot', { max: 64 }),
+        'persisted candidate slot metadata is invalid',
+        { action_id: actionId }
+      );
+    }
     const candidateRows = this.db.prepare(
       'SELECT * FROM public_action_candidates WHERE action_id=? ORDER BY ordinal'
     ).all(actionId);
-    const candidates = candidateRows.map((item, index) => {
-      if (item.ordinal !== index + 1) {
-        fail('FIRST_LINE_DB_CORRUPT',
-          'public action candidate ordinals are not contiguous', {
-            action_id: actionId,
-            expected_ordinal: index + 1,
-            actual_ordinal: item.ordinal,
-          });
-      }
-      const value = parseJson(item.value_json);
-      return validatePersistedCandidate(item.slot_name, value);
+    const candidateSet = validateCandidateRows(candidateRows, actionId, {
+      expectedCount: candidateSetRow.candidate_count,
+      expectedSlot: candidateSetRow.candidate_slot,
     });
+    const candidates = candidateSet.candidates;
+    if (row.action_type === 'ANSWER' &&
+        (row.requested_slot !== null || candidates.length !== 0)) {
+      fail('FIRST_LINE_DB_CORRUPT',
+        'persisted ANSWER carries clarification reservation metadata', { action_id: actionId });
+    }
+    if (row.action_type === 'CLARIFY') {
+      if (row.requested_slot === null && candidates.length === 0) {
+        fail('FIRST_LINE_DB_CORRUPT',
+          'persisted CLARIFY has no requested slot or candidates', { action_id: actionId });
+      }
+      if (row.requested_slot !== null && candidateSet.candidate_slot !== null &&
+          row.requested_slot !== candidateSet.candidate_slot) {
+        fail('FIRST_LINE_DB_CORRUPT',
+          'persisted CLARIFY candidate slot conflicts with requested slot', { action_id: actionId });
+      }
+    }
 
     const descriptorRow = this.db.prepare(
       'SELECT * FROM public_action_descriptors WHERE action_id=?'
@@ -4586,6 +6881,30 @@ export class FirstLineStateStore {
       fail('FIRST_LINE_DB_CORRUPT',
         'legacy-v3 action marker is invalid', { action_id: actionId });
     }
+    if (descriptorRow && (row.episode_id === null || row.episode_version === null)) {
+      fail('FIRST_LINE_DB_CORRUPT',
+        'v4 public action is detached from required episode identity', { action_id: actionId });
+    }
+    let boundEpisode = null;
+    if (row.episode_id !== null) {
+      boundEpisode = this.#readEpisode(row.episode_id);
+      if (!boundEpisode || boundEpisode.stream_id !== row.stream_id) {
+        fail('FIRST_LINE_DB_CORRUPT',
+          'public action episode is missing or belongs to another stream', {
+            action_id: actionId, episode_id: row.episode_id, stream_id: row.stream_id,
+          });
+      }
+      if (row.action_type === 'CLARIFY' && LIVE_ACTION_STATES.has(row.state) &&
+          (boundEpisode.state !== 'active' ||
+           boundEpisode.clarification_prompts_sent !== 1 ||
+           boundEpisode.clarification_action_id !== actionId ||
+           (boundEpisode.requested_slot ?? null) !== (row.requested_slot ?? null))) {
+        fail('FIRST_LINE_DB_CORRUPT',
+          'live CLARIFY reservation does not point back to its owning action', {
+            action_id: actionId, episode_id: row.episode_id,
+          });
+      }
+    }
     const descriptor = descriptorRow
       ? persistedActionDescriptor(descriptorRow, actionId)
       : null;
@@ -4598,6 +6917,37 @@ export class FirstLineStateStore {
           row.stream_id
         )
       : null;
+    const confirmationCutRow = this.db.prepare(
+      'SELECT * FROM public_action_confirmation_cuts WHERE action_id=?'
+    ).get(actionId) ?? null;
+    if (descriptorRow && row.state === 'CONFIRMED' && !confirmationCutRow) {
+      fail('FIRST_LINE_DB_CORRUPT',
+        'normal v4 confirmation lacks immutable local confirmation cut', {
+          action_id: actionId,
+        });
+    }
+    if ((!descriptorRow || row.state !== 'CONFIRMED') && confirmationCutRow) {
+      fail('FIRST_LINE_DB_CORRUPT',
+        'confirmation cut exists outside normal v4 CONFIRMED state', {
+          action_id: actionId,
+          state: row.state,
+        });
+    }
+    if (confirmationCutRow) {
+      persistedGuard(() => {
+        safeToken(confirmationCutRow.action_id, 'action_id');
+        safeToken(confirmationCutRow.stream_id, 'stream_id');
+        positiveInteger(
+          confirmationCutRow.confirmed_through_event_seq,
+          'confirmed_through_event_seq'
+        );
+        nonNegativeInteger(confirmationCutRow.created_at, 'created_at');
+        if (confirmationCutRow.stream_id !== row.stream_id ||
+            confirmationCutRow.confirmed_through_event_seq <= row.prepared_stream_revision) {
+          fail('FIRST_LINE_VALUE_INVALID', 'confirmation cut is outside action stream/revision');
+        }
+      }, 'persisted confirmation cut is invalid', { action_id: actionId });
+    }
 
     const origin = this.#readSemanticOrigin(
       row.stream_id,
@@ -4648,6 +6998,24 @@ export class FirstLineStateStore {
           state: row.state,
         });
     }
+    if (owner.owner_kind === 'PUBLIC_ACTION' &&
+        owner.terminal_outcome === 'SUPERSEDED' &&
+        !['STALE', 'CANCELLED'].includes(row.state)) {
+      fail('FIRST_LINE_DB_CORRUPT',
+        'SUPERSEDED continuation conflicts with action state', {
+          action_id: actionId,
+          state: row.state,
+        });
+    }
+    if (owner.owner_kind === 'PUBLIC_ACTION' &&
+        owner.terminal_outcome === 'LEGACY_V3_TERMINAL' &&
+        !['STALE', 'CANCELLED', 'HANDOFF_DONE', 'NOT_SENT'].includes(row.state)) {
+      fail('FIRST_LINE_DB_CORRUPT',
+        'legacy terminal continuation conflicts with action state', {
+          action_id: actionId,
+          state: row.state,
+        });
+    }
     if (owner.owner_kind === 'HUMAN' &&
         owner.terminal_outcome !== null &&
         LIVE_ACTION_STATES.has(row.state)) {
@@ -4656,6 +7024,84 @@ export class FirstLineStateStore {
           action_id: actionId,
           state: row.state,
         });
+    }
+
+    const humanCutRow = this.db.prepare(
+      'SELECT * FROM public_action_human_cuts WHERE action_id=?'
+    ).get(actionId) ?? null;
+    const requiresHumanCut = descriptorRow !== null &&
+      owner.owner_kind === 'HUMAN' && row.send_started_at !== null;
+    if (requiresHumanCut && humanCutRow === null) {
+      fail('FIRST_LINE_DB_CORRUPT',
+        'sent v4 action in HUMAN continuation lacks immutable escalation cut', {
+          action_id: actionId,
+        });
+    }
+    if (humanCutRow !== null) {
+      persistedGuard(() => {
+        safeToken(humanCutRow.action_id, 'action_id');
+        safeToken(humanCutRow.stream_id, 'stream_id');
+        positiveInteger(humanCutRow.human_through_event_seq, 'human_through_event_seq');
+        nonNegativeInteger(humanCutRow.created_at, 'created_at');
+        if (descriptorRow === null || owner.owner_kind !== 'HUMAN' ||
+            row.send_started_at === null ||
+            humanCutRow.stream_id !== row.stream_id ||
+            humanCutRow.human_through_event_seq < row.prepared_stream_revision) {
+          fail('FIRST_LINE_VALUE_INVALID',
+            'HUMAN escalation cut conflicts with public action ownership');
+        }
+      }, 'persisted HUMAN escalation cut is invalid', { action_id: actionId });
+    }
+
+    const sourceMatches = this.db.prepare(
+      'SELECT * FROM conversation_events WHERE stream_id=? AND source_id=? ORDER BY event_seq'
+    ).all(row.stream_id, actionId);
+    if (sourceMatches.length > 1) {
+      fail('FIRST_LINE_SOURCE_ID_AMBIGUOUS',
+        'multiple ledger rows claim the same public action source id', {
+          action_id: actionId, count: sourceMatches.length,
+        });
+    }
+    if (sourceMatches.length === 1) {
+      const sourceEvent = this.#eventDto(sourceMatches[0]);
+      if (sourceEvent.event_kind !== 'BABYPARK_PUBLIC_REPLY') {
+        fail('FIRST_LINE_DB_CORRUPT',
+          'public action source id is attached to a non-BabyPark event', {
+            action_id: actionId, event_kind: sourceEvent.event_kind,
+          });
+      }
+      if (sourceEvent.event_seq <= row.prepared_stream_revision) {
+        fail('FIRST_LINE_DB_CORRUPT',
+          'public action source event predates its prepared revision', {
+            action_id: actionId,
+            source_event_seq: sourceEvent.event_seq,
+            prepared_stream_revision: row.prepared_stream_revision,
+          });
+      }
+      if (confirmationCutRow &&
+          sourceEvent.event_seq > confirmationCutRow.confirmed_through_event_seq) {
+        fail('FIRST_LINE_DB_CORRUPT',
+          'confirmation source event is newer than its immutable local cut', {
+            action_id: actionId,
+            source_event_seq: sourceEvent.event_seq,
+            confirmed_through_event_seq: confirmationCutRow.confirmed_through_event_seq,
+          });
+      }
+      if (row.confirmed_source_message_id !== null &&
+          sourceEvent.source_message_id !== row.confirmed_source_message_id) {
+        fail('FIRST_LINE_DB_CORRUPT',
+          'confirmed public action points to a different source message', { action_id: actionId });
+      }
+    }
+    if (row.confirmed_source_message_id !== null && sourceMatches.length !== 1) {
+      fail('FIRST_LINE_DB_CORRUPT',
+        'confirmation evidence does not resolve to one authoritative BabyPark row', {
+          action_id: actionId, confirmed_source_message_id: row.confirmed_source_message_id,
+        });
+    }
+    if (row.state === 'CONFIRMED' && row.confirmed_source_message_id === null) {
+      fail('FIRST_LINE_DB_CORRUPT',
+        'CONFIRMED action lacks authoritative source-message evidence', { action_id: actionId });
     }
 
     return {
@@ -4673,6 +7119,12 @@ export class FirstLineStateStore {
       scope_provenance: scopeProvenance,
       semantic_origin: origin,
       continuation_owner: owner,
+      confirmation_cut: confirmationCutRow === null
+        ? null
+        : Object.freeze({
+            confirmed_through_event_seq: confirmationCutRow.confirmed_through_event_seq,
+            created_at: confirmationCutRow.created_at,
+          }),
       lease_token: row.lease_token,
       lease_expires_at: row.lease_expires_at,
       attempts: row.attempts,
@@ -4690,8 +7142,15 @@ export class FirstLineStateStore {
     const version = this.db.prepare('PRAGMA user_version').get().user_version;
     const metadata = this.db.prepare('SELECT schema_version FROM metadata WHERE singleton=1').get();
     const integrity = this.db.prepare('PRAGMA integrity_check').get().integrity_check;
-    if (version !== SCHEMA_VERSION || metadata?.schema_version !== SCHEMA_VERSION || integrity !== 'ok') {
-      fail('FIRST_LINE_DB_INVALID', 'schema/integrity version check failed', { user_version: version, metadata_version: metadata?.schema_version, integrity });
+    const foreignKeyFailures = this.db.prepare('PRAGMA foreign_key_check').all();
+    if (version !== SCHEMA_VERSION || metadata?.schema_version !== SCHEMA_VERSION ||
+        integrity !== 'ok' || foreignKeyFailures.length !== 0) {
+      fail('FIRST_LINE_DB_INVALID', 'schema/integrity version check failed', {
+        user_version: version,
+        metadata_version: metadata?.schema_version,
+        integrity,
+        foreign_key_failures: foreignKeyFailures.length,
+      });
     }
     const schemaFingerprint = schemaMasterFingerprint(this.db);
     if (schemaFingerprint !== V4_SCHEMA_MASTER_SHA256) {

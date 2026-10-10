@@ -16,3 +16,25 @@ export function testActionDescriptor(overrides = {}) {
     },
   };
 }
+
+export function ensureTestEpisode(store, streamId) {
+  return store.loadActiveEpisode(streamId) ?? store.beginEpisode({ streamId });
+}
+
+export function prepareTestPublicAction(store, args) {
+  let episodeId = args.episodeId ?? null;
+  let expectedEpisodeVersion = args.expectedEpisodeVersion ?? null;
+  if (episodeId === null) {
+    const episode = ensureTestEpisode(store, args.streamId);
+    episodeId = episode.episode_id;
+    expectedEpisodeVersion = episode.version;
+  } else if (expectedEpisodeVersion === null) {
+    const episode = store.getEpisode(episodeId);
+    expectedEpisodeVersion = episode?.version ?? null;
+  }
+  return store.preparePublicAction({
+    ...args,
+    episodeId,
+    expectedEpisodeVersion,
+  });
+}

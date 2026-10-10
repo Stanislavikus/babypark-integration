@@ -9,7 +9,7 @@ import {
   FirstLineStateStore,
 } from '../../src/copilot/first-line-state-store.mjs';
 import { projectOpenTurn } from '../../src/copilot/first-line-routing-planner.mjs';
-import { testActionDescriptor } from '../helpers/first-line-action-descriptor.mjs';
+import { prepareTestPublicAction, testActionDescriptor } from '../helpers/first-line-action-descriptor.mjs';
 
 const NOW = 2_000_000_000_000;
 const PRODUCT_1 = 'prod_11111111-1111-4111-8111-111111111111';
@@ -90,7 +90,7 @@ function expectCode(fn, code) {
 }
 
 function reserveClarification(store, streamId, episode) {
-  return store.preparePublicAction({
+  return prepareTestPublicAction(store, {
     descriptor: testActionDescriptor(),
     streamId,
     episodeId: episode.episode_id,
@@ -243,7 +243,7 @@ test('SENDING and UNCERTAIN block standalone episode replacement', t => {
     const stream = makeStream(store, terminalState === 'SENDING' ? 55 : 56);
     store.ingestConversationEvent(stream.stream_id, customerEvent(101));
     const old = store.beginEpisode({ streamId: stream.stream_id });
-    const action = store.preparePublicAction({
+    const action = prepareTestPublicAction(store, {
       descriptor: testActionDescriptor(),
       streamId: stream.stream_id,
       episodeId: old.episode_id,
@@ -292,7 +292,7 @@ test('current-revision PREPARED action cannot be cancelled by standalone transit
   assert.equal(projected.plan_token.live_action_id, action.action_id);
   assert.equal(projected.plan_token.live_action_state, 'PREPARED');
 
-  expectCode(() => applyStandalone(store, projected), 'FIRST_LINE_ROUTING_PLAN_STALE');
+  expectCode(() => applyStandalone(store, projected), 'FIRST_LINE_SEMANTIC_ORIGIN_CONFLICT');
   assert.equal(store.getPublicAction(action.action_id).state, 'PREPARED');
   const current = store.getEpisode(old.episode_id);
   assert.equal(current.state, 'active');
@@ -310,7 +310,7 @@ test('terminal action on the current revision permanently blocks episode replace
     const stream = makeStream(store, terminalState === 'CANCELLED' ? 57 : 58);
     store.ingestConversationEvent(stream.stream_id, customerEvent(101));
     const old = store.beginEpisode({ streamId: stream.stream_id });
-    const action = store.preparePublicAction({
+    const action = prepareTestPublicAction(store, {
       descriptor: testActionDescriptor(),
       streamId: stream.stream_id,
       episodeId: old.episode_id,
@@ -326,12 +326,14 @@ test('terminal action on the current revision permanently blocks episode replace
       store.markActionStaleBeforeSend(action.action_id, { reason: 'test_stale' });
     }
 
-    const projected = projection(store, stream.stream_id);
-    assert.equal(projected.plan_token.stream_revision, 1);
-    assert.equal(projected.plan_token.live_action_id, null);
-
-    expectCode(() => applyStandalone(store, projected), 'FIRST_LINE_ROUTING_PLAN_STALE');
-    assert.equal(store.getPublicAction(action.action_id).state, terminalState);
+    expectCode(
+      () => projection(store, stream.stream_id),
+      'FIRST_LINE_HUMAN_CONTINUATION_ACTIVE'
+    );
+    const terminal = store.getPublicAction(action.action_id);
+    assert.equal(terminal.state, terminalState);
+    assert.equal(terminal.continuation_owner.owner_kind, 'HUMAN');
+    assert.equal(terminal.continuation_owner.terminal_outcome, null);
     assert.equal(store.getEpisode(old.episode_id).state, 'active');
     assert.equal(store.loadActiveEpisode(stream.stream_id).episode_id, old.episode_id);
   }
@@ -371,6 +373,7 @@ test('corrupt persisted stream metadata fails closed before episode mutation', t
   const old = store.beginEpisode({ streamId: stream.stream_id });
   const projected = projection(store, stream.stream_id);
 
+  store.db.exec('DROP TRIGGER conversation_streams_update_guard_v4');
   store.db.prepare(
     "UPDATE conversation_streams SET source_provider='corrupt-provider' WHERE stream_id=?"
   ).run(stream.stream_id);
@@ -386,37 +389,36 @@ test('corrupt persisted stream metadata fails closed before episode mutation', t
   );
 });
 
-test('deleted accepted ledger row invalidates the routing plan before mutation', t => {
+test('accepted ledger rows cannot be deleted after local acceptance', t => {
   const { store } = tempStore(t);
   const stream = makeStream(store);
   store.ingestConversationEvent(stream.stream_id, customerEvent(101));
   store.ingestConversationEvent(stream.stream_id, customerEvent(102));
   const old = store.beginEpisode({ streamId: stream.stream_id });
-  const projected = projection(store, stream.stream_id);
 
-  store.db.prepare(
+  assert.throws(() => store.db.prepare(
     'DELETE FROM conversation_events WHERE stream_id=? AND event_seq=?'
-  ).run(stream.stream_id, 1);
+  ).run(stream.stream_id, 1));
 
-  expectCode(() => applyStandalone(store, projected), 'FIRST_LINE_ROUTING_PLAN_STALE');
+  assert.deepEqual(
+    store.listConversationEvents(stream.stream_id).map(event => event.event_seq),
+    [1, 2]
+  );
   assert.equal(store.getEpisode(old.episode_id).state, 'active');
-  assert.equal(store.loadActiveEpisode(stream.stream_id).episode_id, old.episode_id);
 });
 
-test('valid-looking ledger metadata mutation invalidates routing fingerprint', t => {
+test('accepted ledger semantics cannot be mutated after local acceptance', t => {
   const { store } = tempStore(t);
   const stream = makeStream(store);
   store.ingestConversationEvent(stream.stream_id, customerEvent(101));
   const old = store.beginEpisode({ streamId: stream.stream_id });
-  const projected = projection(store, stream.stream_id);
 
-  store.db.prepare(
+  assert.throws(() => store.db.prepare(
     'UPDATE conversation_events SET unsupported_flag=1 WHERE stream_id=? AND event_seq=?'
-  ).run(stream.stream_id, 1);
+  ).run(stream.stream_id, 1));
 
-  expectCode(() => applyStandalone(store, projected), 'FIRST_LINE_ROUTING_PLAN_STALE');
+  assert.equal(store.listConversationEvents(stream.stream_id)[0].unsupported, false);
   assert.equal(store.getEpisode(old.episode_id).state, 'active');
-  assert.equal(store.loadActiveEpisode(stream.stream_id).episode_id, old.episode_id);
 });
 
 test('new accepted event makes a routing plan stale before mutation', t => {

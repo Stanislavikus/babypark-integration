@@ -5,7 +5,7 @@ import path from 'node:path';
 import test from 'node:test';
 import { FirstLineStateStore } from '../../src/copilot/first-line-state-store.mjs';
 import { gatePublicActionToSending } from '../../src/copilot/first-line-public-action-gate.mjs';
-import { testActionDescriptor } from '../helpers/first-line-action-descriptor.mjs';
+import { prepareTestPublicAction, testActionDescriptor } from '../helpers/first-line-action-descriptor.mjs';
 
 const NOW = 2_000_000_000_000;
 
@@ -47,7 +47,7 @@ function prepareClaim(store) {
     sourceProvider: 'chatwoot', sourceConversationId: 55,
   });
   store.ingestConversationEvent(stream.stream_id, customer(101));
-  const action = store.preparePublicAction({
+  const action = prepareTestPublicAction(store, {
     descriptor: testActionDescriptor(),
     streamId: stream.stream_id,
     preparedStreamRevision: 1,
@@ -145,7 +145,7 @@ test('covered source deletion or reclassification stales the action without a PO
     sourceProvider: 'chatwoot', sourceConversationId: 56,
   });
   store2.ingestConversationEvent(stream2.stream_id, customer(201));
-  const action2 = store2.preparePublicAction({
+  const action2 = prepareTestPublicAction(store2, {
     descriptor: testActionDescriptor(),
     streamId: stream2.stream_id, preparedStreamRevision: 1, actionType: 'ANSWER',
     basisEventSeqs: [1], deadlineAt: NOW + 60_000,
@@ -232,7 +232,7 @@ test('episode drift stales a claimed CLARIFY action instead of leaving GATING li
   });
   store.ingestConversationEvent(stream.stream_id, customer(101));
   let episode = store.beginEpisode({ streamId: stream.stream_id });
-  const action = store.preparePublicAction({
+  const action = prepareTestPublicAction(store, {
     descriptor: testActionDescriptor(),
     streamId: stream.stream_id,
     episodeId: episode.episode_id,
@@ -270,18 +270,18 @@ test('episode drift stales a claimed CLARIFY action instead of leaving GATING li
   assert.equal(episode.version, 3);
 });
 
-test('closed episode remains immutable when its claimed CLARIFY action becomes stale', async t => {
+test('terminal HUMAN handoff closes the episode and makes the old gate permanently ineligible', async t => {
   const store = tempStore(t);
   const stream = store.ensureConversationStream({
     sourceProvider: 'chatwoot', sourceConversationId: 55,
   });
   store.ingestConversationEvent(stream.stream_id, customer(101));
-  let episode = store.beginEpisode({ streamId: stream.stream_id });
-  const action = store.preparePublicAction({
+  const episode = store.beginEpisode({ streamId: stream.stream_id });
+  const action = prepareTestPublicAction(store, {
     descriptor: testActionDescriptor(),
     streamId: stream.stream_id,
     episodeId: episode.episode_id,
-    expectedEpisodeVersion: 1,
+    expectedEpisodeVersion: episode.version,
     preparedStreamRevision: 1,
     actionType: 'CLARIFY',
     basisEventSeqs: [1],
@@ -289,30 +289,31 @@ test('closed episode remains immutable when its claimed CLARIFY action becomes s
     deadlineAt: NOW + 60_000,
   });
   store.claimNextPublicAction({ leaseMs: 10_000, token: 'relay-1' });
-  episode = store.closeEpisode(episode.episode_id, {
-    reason: 'human_takeover',
-    expectedVersion: 2,
+  store.escalatePublicActionToHuman(action.action_id, {
+    reason: 'ownership_proven_human',
   });
-  assert.equal(episode.state, 'closed');
-  assert.equal(episode.version, 3);
-
-  const result = await gatePublicActionToSending({
-    store,
-    authorityReader: authority([customer(101)]),
-    actionId: action.action_id,
-    leaseToken: 'relay-1',
-    sourceConversationId: 55,
+  store.terminalizeHumanContinuation(stream.stream_id, 1, {
+    outcome: 'HUMAN_TAKEOVER',
   });
 
-  assert.equal(result.code, 'STALE');
-  assert.equal(result.action.state, 'STALE');
+  await assert.rejects(
+    () => gatePublicActionToSending({
+      store,
+      authorityReader: authority([customer(101)]),
+      actionId: action.action_id,
+      leaseToken: 'relay-1',
+      sourceConversationId: 55,
+    }),
+    error => error?.code === 'FIRST_LINE_ACTION_NOT_GATING'
+  );
+
   const closed = store.getEpisode(episode.episode_id);
   assert.equal(closed.state, 'closed');
-  assert.equal(closed.version, 3);
+  assert.equal(closed.close_reason, 'human_takeover');
   assert.equal(closed.clarification_prompts_sent, 1);
   assert.equal(closed.clarification_action_id, action.action_id);
+  assert.equal(store.getPublicAction(action.action_id).state, 'HANDOFF_DONE');
 });
-
 
 test('deadline expiry during final gate stales the action and never reaches SENDING', async t => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'first-line-gate-deadline-'));
@@ -332,7 +333,7 @@ test('deadline expiry during final gate stales the action and never reaches SEND
     sourceProvider: 'chatwoot', sourceConversationId: 55,
   });
   store.ingestConversationEvent(stream.stream_id, customer(101));
-  const action = store.preparePublicAction({
+  const action = prepareTestPublicAction(store, {
     descriptor: testActionDescriptor(),
     streamId: stream.stream_id,
     preparedStreamRevision: 1,

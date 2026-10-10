@@ -13,7 +13,7 @@ import {
   OPEN_TURN_PROJECTION_SCHEMA,
   projectOpenTurn,
 } from '../../src/copilot/first-line-routing-planner.mjs';
-import { testActionDescriptor } from '../helpers/first-line-action-descriptor.mjs';
+import { prepareTestPublicAction, testActionDescriptor } from '../helpers/first-line-action-descriptor.mjs';
 
 const NOW = 2_000_000_000_000;
 const PRODUCT_1 = 'prod_11111111-1111-4111-8111-111111111111';
@@ -118,7 +118,7 @@ function automationPublic(sourceMessageId) {
 
 function confirmedBabyparkReply(store, streamId, sourceMessageId) {
   const stream = store.getConversationStream(streamId);
-  const action = store.preparePublicAction({
+  const action = prepareTestPublicAction(store, {
     descriptor: testActionDescriptor(),
     streamId,
     preparedStreamRevision: stream.stream_revision,
@@ -175,7 +175,7 @@ test('routing snapshot atomically exposes live clarification reservation and can
   store.ingestConversationEvent(stream.stream_id, customerEvent(101));
   const episode = store.beginEpisode({ streamId: stream.stream_id });
 
-  const action = store.preparePublicAction({
+  const action = prepareTestPublicAction(store, {
     descriptor: testActionDescriptor(),
     streamId: stream.stream_id,
     episodeId: episode.episode_id,
@@ -269,13 +269,13 @@ test('confirmed BabyPark action is a trusted response boundary', t => {
   assert.equal(projected.boundary.confirmed_action_id, action.action_id);
 });
 
-test('confirmed action cannot bless unsupported BabyPark reply metadata', t => {
+test('accepted BabyPark reply metadata is immutable before confirmation', t => {
   const { store } = tempStore(t);
   const stream = makeStream(store);
   store.ingestConversationEvent(stream.stream_id, customerEvent(101));
 
   const current = store.getConversationStream(stream.stream_id);
-  const action = store.preparePublicAction({
+  const action = prepareTestPublicAction(store, {
     descriptor: testActionDescriptor(),
     streamId: stream.stream_id,
     preparedStreamRevision: current.stream_revision,
@@ -289,16 +289,10 @@ test('confirmed action cannot bless unsupported BabyPark reply metadata', t => {
     stream.stream_id,
     babyparkReply(102, action.action_id)
   );
-  store.db.prepare(
+  assert.throws(() => store.db.prepare(
     'UPDATE conversation_events SET deleted_flag=1 WHERE stream_id=? AND source_message_id=?'
-  ).run(stream.stream_id, 102);
-  store.confirmPublicActionFromLedger(action.action_id);
-  store.ingestConversationEvent(stream.stream_id, customerEvent(103));
-
-  const projected = projectOpenTurn(store.readRoutingSnapshot(stream.stream_id));
-  assert.equal(projected.code, 'TOPOLOGY_UNPROVABLE');
-  assert.equal(projected.reason, 'UNSUPPORTED_CONFIRMED_BABYPARK_REPLY');
-  assert.equal(projected.boundary.source_message_id, 102);
+  ).run(stream.stream_id, 102));
+  assert.equal(store.confirmPublicActionFromLedger(action.action_id).state, 'CONFIRMED');
 });
 
 test('configured AgentBot reply without confirmed durable action fails closed', t => {
@@ -510,7 +504,7 @@ test('confirmed CLARIFY input_select is a trusted response boundary for text-col
   const stream = makeStream(store);
   store.ingestConversationEvent(stream.stream_id, customerEvent(101));
   const episode = store.beginEpisode({ streamId: stream.stream_id });
-  const action = store.preparePublicAction({
+  const action = prepareTestPublicAction(store, {
     descriptor: testActionDescriptor(),
     streamId: stream.stream_id,
     episodeId: episode.episode_id,
