@@ -21,7 +21,7 @@ Do not treat filled fields as merge authorization.
 
 - RISK_TIER: STANDARD / HEAVY
 - RISK CLASSIFICATION:
-- AGREEMENT_CRITERIA: §7.1 / §13
+- AGREEMENT_CRITERIA: §7.0 / §13
 - CLASSIFICATION_REASON:
 - OWNER_RISK_VISIBILITY: PENDING / SEEN
 
@@ -67,16 +67,16 @@ No finding may disappear silently.
 - FINAL_GATE_EVIDENCE_BUNDLE:
 - OWNER_FINAL_APPROVAL:
 
-STANDARD: one exhaustive ZERO-BLOCKERS pass.  
-HEAVY: R1 ZERO BLOCKERS + one isolated R2 ZERO BLOCKERS.  
+STANDARD: one exhaustive ZERO-BLOCKERS pass.
+HEAVY: R1 ZERO BLOCKERS + one isolated R2 ZERO BLOCKERS.
 No third clean pass is required by Agreement §7.1.
 
 ## Activation/cutover applicability
 
-If this PR participates in customer-facing First Line activation:
+If this PR participates in customer-facing First Line activation, carry these owner-required operational readiness items into that campaign's frozen manifest/traceability:
 
 - [ ] provider-side canonical `main` protection is active and compatible with exact-base/result guarded merge;
 - [ ] procedural structure validator is an actually required check, not advisory;
 - [ ] all Agreement/design activation evidence is complete.
 
-Unchecked applicable activation items block activation.
+Once carried into the activation campaign, unchecked applicable items block operational go-live. This non-normative template does not create or replace governance authority; the applicable Agreement remains controlling.
