@@ -6,15 +6,15 @@ Supersedes: none
 
 The applicable `docs/AI_WORKING_AGREEMENT.md` remains the sole normative process/governance authority.
 
-## Draft campaign basis
+## Campaign basis after required re-pin
 
 - canonical repository: `Stanislavikus/babypark-integration`
-- draft base/main: `84cf2d14b07d7ceb5a3b9b896bc090b57a816761`
-- draft base tree: `08dda57316adfad98f94d7e935ba1a50dd2d0f8c`
+- canonical base/main after C6-P1H1 merge: `92a079cb8d2466ea053927402413608aa1ba53f9`
+- base tree: `d10cfecf3d7bbda1784910d68062ee96bd48716c`
 - Agreement blob: `e777fce4af8e8c3372f1f9de9ef7d00f786c2c89`
-- prepared while C6-P1H1 PR #119 remained open on its independent HEAVY confirmation basis.
+- process branch was cleanly re-pinned once from its pre-#119 draft base onto this exact canonical base before stable-head/manifest freeze.
 
-This is a pre-closure draft. After #119 resolves, this campaign must be cleanly re-pinned once to then-current canonical `main`, `CURRENT_STATE.md` must be refreshed, and this basis section must be updated before any formal manifest freeze.
+PR #119 is merged; review-only PR #120 is closed without merge. No formal process-campaign manifest existed before this re-pin, so no formal closure evidence was invalidated or reused.
 
 ## Scope
 
@@ -38,7 +38,7 @@ RUNTIME DEPENDENCY CHANGE: NONE.
 
 ## Risk classification
 
-RISK CLASSIFICATION: STANDARD (PROVISIONAL UNTIL POST-#119 RE-PIN / FINAL SURFACE)
+RISK CLASSIFICATION: STANDARD
 
 Reasoning against Agreement §7.1/§13:
 
@@ -47,7 +47,7 @@ Reasoning against Agreement §7.1/§13:
 - it does not amend `docs/AI_WORKING_AGREEMENT.md`;
 - if the final surface adds an executable validator, CI enforcement semantics, or another condition that makes classification ambiguous, the campaign must be reclassified before closure; ambiguity => HEAVY.
 
-The owner has explicitly requested risk-proportional closure documentation and no silent tier lowering. Final classification remains bound to the final post-re-pin surface.
+The final post-re-pin surface remains documentation/templates and repository-process evidence only. It introduces no production behavior, executable validator/CI enforcement, safety/authority/state/concurrency/privacy/send primitive, runtime dependency, schema, deployment, or external runtime boundary. Under Agreement §7.1/§13 this is a STANDARD campaign. Any later executable/CI expansion is a separate bounded classification and is not authorized by this campaign.
 
 ## Requirement → artifact traceability
 
@@ -62,7 +62,7 @@ The owner has explicitly requested risk-proportional closure documentation and n
 | P07 | One bounded campaign/branch/Draft PR; split oversized diff before manifest | `AGENTS.md §2` | Compare to Agreement §8; split rule is non-normative operational guidance | DONE |
 | P08 | Parallelize research/evidence/fixtures/decisions without moving active formal basis; closure/merge sequential | `AGENTS.md §2` | Static text check | DONE |
 | P09 | Do not weaken exact-tree/tests/fail-closed/R2/freshness/ownership/POST/restore/owner/CAS gates | `AGENTS.md §2` | Compare to applicable Agreement/design requirements | DONE |
-| P10 | `CURRENT_STATE.md` is campaign-boundary snapshot, written before manifest freeze; no future merge identity; no state-only commits | `AGENTS.md §4`, `CURRENT_STATE.md`, PR template | Static text check; draft banner must be removed/refreshed before closure | IN PROGRESS |
+| P10 | `CURRENT_STATE.md` is campaign-boundary snapshot, written before manifest freeze; no future merge identity; no state-only commits | `AGENTS.md §4`, `CURRENT_STATE.md`, PR template | Snapshot refreshed after #119/re-pin; no future merge identity; ready before manifest freeze | DONE |
 | P11 | Internal checkpoint findings are tracked to `FIXED` or `NOT APPLICABLE` before manifest freeze | `AGENTS.md §3`, PR template | PR finding-disposition check | DONE |
 | P12 | Reviewer packet carries exact basis and finite tier rule; HEAVY R2 isolation omits R1 conclusion/reasoning | reviewer template, `AGENTS.md §5` | Compare to Agreement §7.1 | DONE |
 | P13 | PR exposes campaign/risk/stable-head/manifest fields from first view | `.github/pull_request_template.md` | Static field check | DONE |
@@ -70,18 +70,15 @@ The owner has explicitly requested risk-proportional closure documentation and n
 | P15 | Avoid turning this initial process campaign into executable/CI scope without reclassification | this file, `CURRENT_STATE.md` | Exact changed-surface check before manifest | DONE |
 | P16 | Carry H1 NF-2 into the future C6 Runtime/relay defect sweep: any production path reaching `markActionUncertain` must prove the applicable state-store/deferred topology attestation and no send/retry/reconciliation bypass | `CURRENT_STATE.md` carried-forward defect-sweep section | Future runtime campaign must disposition as `FIXED` with caller/path tests or `NOT APPLICABLE` with exact production call-graph evidence; may not be silently dropped | DONE |
 
-## Closure prerequisites still open
+## Final stable-head prerequisites before manifest freeze
 
-This draft MUST NOT freeze a formal verification manifest yet.
+Before freezing the required-verification manifest:
 
-Before formal closure:
+1. Convert stale umbrella issue #75 to a pointer to `CURRENT_STATE.md` + canonical Git/Agreement rather than maintaining a second roadmap.
+2. Confirm final changed surface remains exactly documentation/templates/evidence only.
+3. Confirm no executable validator/CI/runtime/governance amendment was introduced.
+4. Confirm all P01..P16 rows are terminal DONE.
+5. Run static consistency checks across Agreement §7.1/§8/§12/§13, `AGENTS.md`, `CLAUDE.md`, `CURRENT_STATE.md`, scan/reviewer/PR templates and this traceability artifact.
+6. Then freeze the required-verification manifest on the stable HEAD.
 
-1. PR #119 outcome must be known.
-2. Re-pin this branch once onto then-current canonical `main`.
-3. Refresh `CURRENT_STATE.md` and remove its draft-process banner.
-4. Refresh this exact basis and final risk classification.
-5. Confirm the final changed surface remains documentation/templates only, or reclassify if it does not.
-6. Ensure every in-scope traceability row is terminal; P10 must be DONE.
-7. Only then freeze the required-verification manifest on the stable HEAD.
-
-The executable procedural validator/CI wiring is intentionally excluded from this initial campaign and must not be smuggled into the final tree without an explicit bounded classification decision.
+The executable procedural validator/CI wiring remains intentionally excluded and requires a separate bounded classification.
