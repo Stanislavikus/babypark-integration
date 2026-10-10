@@ -1,7 +1,7 @@
 # Risk-proportional closure process campaign — traceability
 
-Status: EVIDENCE — NON-NORMATIVE  
-Applies-to: documentation/templates campaign `docs/risk-proportional-closure-process`  
+Status: EVIDENCE — NON-NORMATIVE
+Applies-to: documentation/templates campaign `docs/risk-proportional-closure-process`
 Supersedes: none
 
 The applicable `docs/AI_WORKING_AGREEMENT.md` remains the sole normative process/governance authority.
@@ -28,26 +28,26 @@ Documentation/templates only:
 - `.github/pull_request_template.md`;
 - this traceability artifact.
 
-PRODUCTION IMPLEMENTATION: NONE.  
-AGREEMENT AMENDMENT: NONE.  
-VALIDATOR / CI EXECUTABLE CHANGE: NONE.  
-PRODUCTION WRITE: NONE.  
-DEPLOYMENT: NONE.  
-SCHEMA MIGRATION: NONE.  
+PRODUCTION IMPLEMENTATION: NONE.
+AGREEMENT AMENDMENT: NONE.
+VALIDATOR / CI EXECUTABLE CHANGE: NONE.
+PRODUCTION WRITE: NONE.
+DEPLOYMENT: NONE.
+SCHEMA MIGRATION: NONE.
 RUNTIME DEPENDENCY CHANGE: NONE.
 
 ## Risk classification
 
 RISK CLASSIFICATION: STANDARD
 
-Reasoning against Agreement §7.1/§13:
+Reasoning against Agreement §7.0/§13:
 
 - this draft introduces no production behavior, safety/authority/state/concurrency/privacy/send primitive, schema, runtime dependency, deployment, or external runtime boundary;
 - it restates existing Agreement closure semantics and supplies non-normative operational/templates only;
 - it does not amend `docs/AI_WORKING_AGREEMENT.md`;
 - if the final surface adds an executable validator, CI enforcement semantics, or another condition that makes classification ambiguous, the campaign must be reclassified before closure; ambiguity => HEAVY.
 
-The final post-re-pin surface remains documentation/templates and repository-process evidence only. It introduces no production behavior, executable validator/CI enforcement, safety/authority/state/concurrency/privacy/send primitive, runtime dependency, schema, deployment, or external runtime boundary. Under Agreement §7.1/§13 this is a STANDARD campaign. Any later executable/CI expansion is a separate bounded classification and is not authorized by this campaign.
+The final post-re-pin surface remains documentation/templates and repository-process evidence only. It introduces no production behavior, executable validator/CI enforcement, safety/authority/state/concurrency/privacy/send primitive, runtime dependency, schema, deployment, or external runtime boundary. Under Agreement §7.0/§13 this is a STANDARD campaign. Any later executable/CI expansion is a separate bounded classification and is not authorized by this campaign.
 
 ## Requirement → artifact traceability
 
@@ -55,7 +55,7 @@ The final post-re-pin surface remains documentation/templates and repository-pro
 |---|---|---|---|---|
 | P01 | Preserve Agreement §12 bootstrap before runbook/state reads | `AGENTS.md §1`, `CLAUDE.md` | Static text check; Agreement remains untouched | DONE |
 | P02 | Agreement is sole normative authority; runbook/templates cannot override it | metadata/header in all process files | Static conflict check | DONE |
-| P03 | Every implementation scan exposes explicit `RISK CLASSIFICATION` with §7.1/§13 reasoning; ambiguity => HEAVY; no silent lowering | `AGENTS.md §2`, scan template, PR template | Exact-string/static check | DONE |
+| P03 | Every implementation scan exposes explicit `RISK CLASSIFICATION` with §7.0/§13 reasoning; ambiguity => HEAVY; no silent lowering | `AGENTS.md §2`, scan template, PR template | Exact-string/static check | DONE |
 | P04 | STANDARD finite closure = one exhaustive zero-blocker pass; HEAVY = R1 + one isolated R2; no third recursive pass | `AGENTS.md §2`, reviewer template, PR template | Compare text to Agreement §7.1 | DONE |
 | P05 | Full defect-class inventory then coherent batch fix; do not restart whole review per blocker | `AGENTS.md §2` | Compare to Agreement §7.1 inventory/batch-fix protocol | DONE |
 | P06 | Freeze formal manifest only on stable implementation HEAD | `AGENTS.md §2`, PR template | Static text check | DONE |
@@ -66,7 +66,7 @@ The final post-re-pin surface remains documentation/templates and repository-pro
 | P11 | Internal checkpoint findings are tracked to `FIXED` or `NOT APPLICABLE` before manifest freeze | `AGENTS.md §3`, PR template | PR finding-disposition check | DONE |
 | P12 | Reviewer packet carries exact basis and finite tier rule; HEAVY R2 isolation omits R1 conclusion/reasoning | reviewer template, `AGENTS.md §5` | Compare to Agreement §7.1 | DONE |
 | P13 | PR exposes campaign/risk/stable-head/manifest fields from first view | `.github/pull_request_template.md` | Static field check | DONE |
-| P14 | Pre-activation checklist includes provider-side `main` protection and procedural validator as required check | `AGENTS.md §6`, `CURRENT_STATE.md`, PR template | Static checklist presence; implementation/enforcement is later bounded work | DONE |
+| P14 | Carry owner-required pre-activation readiness items for provider-side `main` protection and procedural validator without creating a second normative authority | `AGENTS.md §6`, `CURRENT_STATE.md`, PR template | Future activation campaign must bind/prove them in its manifest/traceability; Agreement remains controlling | DONE |
 | P15 | Avoid turning this initial process campaign into executable/CI scope without reclassification | this file, `CURRENT_STATE.md` | Exact changed-surface check before manifest | DONE |
 | P16 | Carry H1 NF-2 into the future C6 Runtime/relay defect sweep: any production path reaching `markActionUncertain` must prove the applicable state-store/deferred topology attestation and no send/retry/reconciliation bypass | `CURRENT_STATE.md` carried-forward defect-sweep section | Future runtime campaign must disposition as `FIXED` with caller/path tests or `NOT APPLICABLE` with exact production call-graph evidence; may not be silently dropped | DONE |
 | P17 | Retire stale issue #75 as a second roadmap and keep one repository state snapshot | issue #75 pointer + `CURRENT_STATE.md` | #75 now points to Agreement/Git/`CURRENT_STATE.md` and forbids checklist duplication | DONE |
