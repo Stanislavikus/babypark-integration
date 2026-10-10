@@ -291,6 +291,7 @@ test('terminal HUMAN handoff closes the episode and makes the old gate permanent
   store.claimNextPublicAction({ leaseMs: 10_000, token: 'relay-1' });
   store.escalatePublicActionToHuman(action.action_id, {
     reason: 'ownership_proven_human',
+    leaseToken: 'relay-1',
   });
   store.terminalizeHumanContinuation(stream.stream_id, 1, {
     outcome: 'HUMAN_TAKEOVER',

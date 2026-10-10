@@ -89,13 +89,13 @@ export async function gatePublicActionToSending({
   const current = store.getPublicAction(actionId);
   const currentStream = store.getConversationStream(before.stream_id);
   if (currentStream.stream_revision !== current.prepared_stream_revision) {
-    const stale = store.markActionStaleBeforeSend(actionId, { reason: 'stream_revision_changed' });
+    const stale = store.markActionStaleBeforeSend(actionId, { reason: 'stream_revision_changed', leaseToken });
     return { code: 'STALE', action: stale, insertedEvents: inserted, snapshotRowCount: snapshot.rowCount };
   }
 
   const coverage = basisStillValid(current, basisEvents(store, current), sourceMap(snapshot.events));
   if (!coverage.ok) {
-    const stale = store.markActionStaleBeforeSend(actionId, { reason: coverage.reason });
+    const stale = store.markActionStaleBeforeSend(actionId, { reason: coverage.reason, leaseToken });
     return {
       code: 'STALE',
       action: stale,
@@ -125,7 +125,7 @@ export async function gatePublicActionToSending({
           : error.code === 'FIRST_LINE_ACTION_DEADLINE_EXPIRED'
             ? 'deadline_expired_before_sending'
             : 'stream_revision_changed_before_sending';
-        const stale = store.markActionStaleBeforeSend(actionId, { reason });
+        const stale = store.markActionStaleBeforeSend(actionId, { reason, leaseToken });
         return { code: 'STALE', action: stale, insertedEvents: inserted, snapshotRowCount: snapshot.rowCount };
       }
     }

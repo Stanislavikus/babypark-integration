@@ -12,7 +12,7 @@ const V2_SCHEMA_MASTER_SHA256 =
 const V3_SCHEMA_MASTER_SHA256 =
   'e7a9f211d23e2439bcd63a29fb3b9ed1569e3958ca536c240af00876dd410e07';
 const V4_SCHEMA_MASTER_SHA256 =
-  'b22cec88b714eea7569bf2dc96591e901f7e75a36e2424caf6eaaea3c19653a1';
+  '5750a215f3e4b72dd689be3a88c953bdb0f40beef13605269113a2423c76f3cd';
 const BUSY_TIMEOUT_MS = 5000;
 const MAX_PRESENTED_CANDIDATES = 20;
 // A whole-conversation authorizing snapshot is unprovable at 1000 public rows;
@@ -707,13 +707,53 @@ WHEN
 BEGIN
   SELECT RAISE(ABORT,'public_action_lifecycle_non_monotonic');
 END;
+CREATE TRIGGER public_actions_claim_cas_guard_v4
+BEFORE UPDATE ON public_actions
+WHEN NEW.state='GATING' AND (
+  EXISTS (SELECT 1 FROM recovery_barriers WHERE completed_at IS NULL) OR
+  NEW.updated_at<OLD.updated_at OR
+  NEW.updated_at>bp_now_ms() OR
+  bp_mutation_lease_token() IS NOT NEW.lease_token OR
+  NEW.terminal_reason IS NOT NULL OR
+  NEW.lease_expires_at IS NULL OR NEW.lease_expires_at<=bp_now_ms() OR
+  NOT EXISTS (
+    SELECT 1 FROM continuation_owners co
+    WHERE co.stream_id=NEW.stream_id
+      AND co.stream_revision=NEW.prepared_stream_revision
+      AND co.action_id=NEW.action_id
+      AND co.owner_kind='PUBLIC_ACTION'
+      AND co.terminal_outcome IS NULL
+  ) OR
+  NOT EXISTS (
+    SELECT 1 FROM public_action_descriptors pad
+    WHERE pad.action_id=NEW.action_id AND pad.stream_id=NEW.stream_id
+  ) OR
+  NOT (
+    (OLD.state='PREPARED' AND
+     OLD.lease_token IS NULL AND OLD.lease_expires_at IS NULL AND
+     NEW.attempts=OLD.attempts+1) OR
+    (OLD.state='GATING' AND
+     OLD.lease_token IS NOT NULL AND OLD.lease_expires_at IS NOT NULL AND
+     OLD.lease_expires_at<=bp_now_ms() AND
+     NEW.attempts=OLD.attempts+1)
+  )
+)
+BEGIN
+  SELECT RAISE(ABORT,'public_action_claim_cas_unproven');
+END;
 CREATE TRIGGER public_actions_sending_admission_guard_v4
 BEFORE UPDATE OF state ON public_actions
 WHEN OLD.state='GATING' AND NEW.state='SENDING' AND NOT (
   NEW.lease_token IS OLD.lease_token AND
   NEW.lease_expires_at IS OLD.lease_expires_at AND
   NEW.attempts=OLD.attempts AND
-  NEW.deadline_at>NEW.updated_at AND
+  bp_mutation_lease_token() IS OLD.lease_token AND
+  NEW.updated_at>=OLD.updated_at AND
+  NEW.updated_at<=bp_now_ms() AND
+  NEW.send_started_at=NEW.updated_at AND
+  NEW.terminal_reason IS OLD.terminal_reason AND
+  OLD.lease_expires_at>bp_now_ms() AND
+  NEW.deadline_at>bp_now_ms() AND
   NOT EXISTS (SELECT 1 FROM recovery_barriers WHERE completed_at IS NULL) AND
   EXISTS (
     SELECT 1 FROM conversation_streams cs
@@ -761,6 +801,21 @@ WHEN OLD.state='GATING' AND NEW.state='SENDING' AND NOT (
 )
 BEGIN
   SELECT RAISE(ABORT,'public_action_sending_admission_unproven');
+END;
+CREATE TRIGGER public_actions_gating_terminal_claim_guard_v4
+BEFORE UPDATE OF state ON public_actions
+WHEN OLD.state='GATING' AND NEW.state IN ('STALE','CANCELLED') AND
+  EXISTS (
+    SELECT 1 FROM conversation_streams cs
+    WHERE cs.stream_id=OLD.stream_id
+      AND cs.stream_revision=OLD.prepared_stream_revision
+  ) AND (
+    OLD.lease_token IS NULL OR OLD.lease_expires_at IS NULL OR
+    OLD.lease_expires_at<=bp_now_ms() OR
+    bp_mutation_lease_token() IS NOT OLD.lease_token
+  )
+BEGIN
+  SELECT RAISE(ABORT,'public_action_gating_terminal_claim_unproven');
 END;
 CREATE TRIGGER public_actions_handoff_guard_v4
 BEFORE UPDATE OF state ON public_actions
@@ -1305,6 +1360,35 @@ WHEN
 BEGIN
   SELECT RAISE(ABORT,'continuation_owner_non_monotonic');
 END;
+CREATE TRIGGER continuation_owners_human_escalation_claim_guard_v4
+BEFORE UPDATE OF owner_kind ON continuation_owners
+WHEN OLD.owner_kind='PUBLIC_ACTION' AND NEW.owner_kind='HUMAN' AND
+  EXISTS (
+    SELECT 1 FROM public_actions pa
+    WHERE pa.action_id=OLD.action_id
+      AND pa.stream_id=OLD.stream_id
+      AND pa.prepared_stream_revision=OLD.stream_revision
+      AND pa.state IN ('PREPARED','GATING')
+  ) AND (
+    NOT EXISTS (
+      SELECT 1 FROM conversation_streams cs
+      WHERE cs.stream_id=OLD.stream_id
+        AND cs.stream_revision=OLD.stream_revision
+    ) OR
+    EXISTS (
+      SELECT 1 FROM public_actions pa
+      WHERE pa.action_id=OLD.action_id
+        AND pa.state='GATING'
+        AND (
+          pa.lease_token IS NULL OR pa.lease_expires_at IS NULL OR
+          pa.lease_expires_at<=bp_now_ms() OR
+          bp_mutation_lease_token() IS NOT pa.lease_token
+        )
+    )
+  )
+BEGIN
+  SELECT RAISE(ABORT,'continuation_owner_human_escalation_claim_unproven');
+END;
 CREATE TRIGGER continuation_owners_superseded_guard_v4
 BEFORE UPDATE ON continuation_owners
 WHEN OLD.terminal_outcome IS NULL AND NEW.terminal_outcome='SUPERSEDED' AND (
@@ -1635,7 +1719,9 @@ const REQUIRED_TRIGGERS = new Set([
   'public_actions_validate_insert_v4',
   'public_actions_immutable_semantics_v4',
   'public_actions_monotonic_lifecycle_v4',
+  'public_actions_claim_cas_guard_v4',
   'public_actions_sending_admission_guard_v4',
+  'public_actions_gating_terminal_claim_guard_v4',
   'public_actions_handoff_guard_v4',
   'public_actions_terminal_owner_transition_v4',
   'episodes_no_delete_v4',
@@ -1679,6 +1765,7 @@ const REQUIRED_TRIGGERS = new Set([
   'continuation_owners_validate_insert',
   'continuation_owners_no_delete',
   'continuation_owners_monotonic_update',
+  'continuation_owners_human_escalation_claim_guard_v4',
   'continuation_owners_superseded_guard_v4',
   'continuation_owners_confirmed_guard_v4',
   'continuation_owners_terminal_episode_v4',
@@ -2379,6 +2466,8 @@ function normalizeEvent(event) {
 }
 
 export class FirstLineStateStore {
+  #mutationLeaseToken = null;
+
   static create(file, {
     now = () => Date.now(),
     streamIdFactory = () => 'stream_' + crypto.randomUUID(),
@@ -2981,6 +3070,14 @@ export class FirstLineStateStore {
     this.file = file; this.now = now; this.streamIdFactory = streamIdFactory;
     this.episodeIdFactory = episodeIdFactory; this.actionIdFactory = actionIdFactory;
     this.db = new DatabaseSync(file);
+    this.db.function('bp_now_ms', () => {
+      const value = this.now();
+      if (!Number.isSafeInteger(value) || value < 0) {
+        throw new RangeError('FirstLineStateStore now() must return a non-negative safe integer');
+      }
+      return value;
+    });
+    this.db.function('bp_mutation_lease_token', () => this.#mutationLeaseToken);
     this.db.exec(`PRAGMA foreign_keys=ON; PRAGMA busy_timeout=${BUSY_TIMEOUT_MS}`);
   }
   close() { this.db.close(); }
@@ -4569,18 +4666,20 @@ export class FirstLineStateStore {
               action_id: action.action_id,
             });
         }
-        const changed = this.db.prepare(
-          "UPDATE public_actions SET state='GATING',lease_token=?,lease_expires_at=?," +
-          "attempts=attempts+1,updated_at=? WHERE action_id=? AND state=? AND " +
-          "(lease_expires_at IS NULL OR lease_expires_at<=?)"
-        ).run(
-          claim,
-          at + lease,
-          at,
-          action.action_id,
-          action.state,
-          at
-        ).changes;
+        const changed = this.#withMutationLeaseToken(claim, () =>
+          this.db.prepare(
+            "UPDATE public_actions SET state='GATING',lease_token=?,lease_expires_at=?," +
+            "attempts=attempts+1,updated_at=? WHERE action_id=? AND state=? AND " +
+            "(lease_expires_at IS NULL OR lease_expires_at<=?)"
+          ).run(
+            claim,
+            at + lease,
+            at,
+            action.action_id,
+            action.state,
+            at
+          ).changes
+        );
         if (changed === 1) return this.#readAction(action.action_id);
       }
       return null;
@@ -4677,9 +4776,11 @@ export class FirstLineStateStore {
         fail('FIRST_LINE_ACTION_STALE_EPISODE',
           'bound episode is no longer active before SENDING', { action_id: id });
       }
-      const changed = this.db.prepare(`UPDATE public_actions SET state='SENDING',send_started_at=?,updated_at=?
-        WHERE action_id=? AND state='GATING' AND lease_token=? AND lease_expires_at>? AND deadline_at>?`)
-        .run(at, at, id, token, at, at).changes;
+      const changed = this.#withMutationLeaseToken(token, () =>
+        this.db.prepare(`UPDATE public_actions SET state='SENDING',send_started_at=?,updated_at=?
+          WHERE action_id=? AND state='GATING' AND lease_token=? AND lease_expires_at>? AND deadline_at>?`)
+          .run(at, at, id, token, at, at).changes
+      );
       if (changed !== 1) fail('FIRST_LINE_STALE_WRITE', 'action changed before SENDING');
       return this.#readAction(id);
     });
@@ -4703,12 +4804,28 @@ export class FirstLineStateStore {
   }
 
 
-  cancelActionBeforeSend(actionId, { reason = 'cancelled_before_send' } = {}) {
-    return this.#finishActionBeforeSend(actionId, 'CANCELLED', reason);
+  cancelActionBeforeSend(
+    actionId,
+    { reason = 'cancelled_before_send', leaseToken = null } = {}
+  ) {
+    return this.#finishActionBeforeSend(
+      actionId,
+      'CANCELLED',
+      reason,
+      leaseToken
+    );
   }
 
-  markActionStaleBeforeSend(actionId, { reason = 'stale_before_send' } = {}) {
-    return this.#finishActionBeforeSend(actionId, 'STALE', reason);
+  markActionStaleBeforeSend(
+    actionId,
+    { reason = 'stale_before_send', leaseToken = null } = {}
+  ) {
+    return this.#finishActionBeforeSend(
+      actionId,
+      'STALE',
+      reason,
+      leaseToken
+    );
   }
 
   listRecoverablePublicActions({ now = this.now() } = {}) {
@@ -5160,9 +5277,15 @@ export class FirstLineStateStore {
     });
   }
 
-  escalatePublicActionToHuman(actionId, { reason }) {
+  escalatePublicActionToHuman(
+    actionId,
+    { reason, leaseToken = null }
+  ) {
     const id = safeToken(actionId, 'action_id');
     const humanReason = safeToken(reason, 'human_reason');
+    const suppliedLease = leaseToken === null
+      ? null
+      : safeToken(leaseToken, 'lease_token');
     const at = this.now();
     return tx(this.db, () => {
       const action = this.#requireReadableAction(id);
@@ -5199,6 +5322,43 @@ export class FirstLineStateStore {
         return owner;
       }
 
+      if (action.state === 'PREPARED' || action.state === 'GATING') {
+        const currentStream = this.#requireStream(action.stream_id);
+        if (currentStream.stream_revision !== action.prepared_stream_revision) {
+          fail('FIRST_LINE_ACTION_STALE_REVISION',
+            'superseded unsent action cannot acquire HUMAN continuation', {
+              action_id: id,
+              action_revision: action.prepared_stream_revision,
+              current_stream_revision: currentStream.stream_revision,
+            });
+        }
+        if (action.state === 'GATING') {
+          if (suppliedLease === null || action.lease_token !== suppliedLease) {
+            fail('FIRST_LINE_ACTION_CLAIM_INVALID',
+              'current GATING action may escalate only under its live lease', {
+                action_id: id,
+              });
+          }
+          if (!Number.isSafeInteger(action.lease_expires_at) ||
+              action.lease_expires_at <= at) {
+            fail('FIRST_LINE_ACTION_CLAIM_EXPIRED',
+              'GATING claim expired before HUMAN escalation', {
+                action_id: id,
+              });
+          }
+        } else if (suppliedLease !== null) {
+          fail('FIRST_LINE_ACTION_CLAIM_INVALID',
+            'PREPARED HUMAN escalation does not accept a lease token', {
+              action_id: id,
+            });
+        }
+      } else if (suppliedLease !== null) {
+        fail('FIRST_LINE_ACTION_CLAIM_INVALID',
+          'post-SENDING HUMAN escalation does not use a GATING lease', {
+            action_id: id,
+          });
+      }
+
       this.#assertDeferredRelationsValid(action.stream_id);
       if (Number.isSafeInteger(action.send_started_at)) {
         const humanCutStream = this.#readStream(action.stream_id);
@@ -5221,7 +5381,7 @@ export class FirstLineStateStore {
           humanEpisodeVersion = currentEpisode.version;
         }
       }
-      const changed = this.db.prepare(
+      const changeOwner = () => this.db.prepare(
         "UPDATE continuation_owners SET owner_kind='HUMAN',human_reason=?," +
         'episode_version=?,updated_at=? ' +
         "WHERE stream_id=? AND stream_revision=? AND owner_kind='PUBLIC_ACTION' " +
@@ -5234,6 +5394,9 @@ export class FirstLineStateStore {
         action.prepared_stream_revision,
         id
       ).changes;
+      const changed = action.state === 'GATING'
+        ? this.#withMutationLeaseToken(suppliedLease, changeOwner)
+        : changeOwner();
       if (changed !== 1) {
         fail('FIRST_LINE_STALE_WRITE',
           'continuation changed before HUMAN escalation', {
@@ -5488,9 +5651,25 @@ export class FirstLineStateStore {
     });
   }
 
-  #finishActionBeforeSend(actionId, terminalState, reason) {
+  #withMutationLeaseToken(token, fn) {
+    if (this.#mutationLeaseToken !== null) {
+      fail('FIRST_LINE_INTERNAL_STATE_INVALID',
+        'nested lease mutation context is forbidden');
+    }
+    this.#mutationLeaseToken = token;
+    try {
+      return fn();
+    } finally {
+      this.#mutationLeaseToken = null;
+    }
+  }
+
+  #finishActionBeforeSend(actionId, terminalState, reason, leaseToken = null) {
     const id = safeToken(actionId, 'action_id');
     const terminalReason = safeToken(reason, 'terminal_reason');
+    const suppliedLease = leaseToken === null
+      ? null
+      : safeToken(leaseToken, 'lease_token');
     if (terminalState !== 'CANCELLED' && terminalState !== 'STALE') {
       fail('FIRST_LINE_ACTION_STATE_INVALID',
         'invalid unsent terminal state', { terminal_state: terminalState });
@@ -5515,7 +5694,36 @@ export class FirstLineStateStore {
           terminalReason,
           terminalState
         );
+      } else if (action.state === 'GATING') {
+        const at = this.now();
+        if (suppliedLease === null || action.lease_token !== suppliedLease) {
+          fail('FIRST_LINE_ACTION_CLAIM_INVALID',
+            'current GATING action may terminalize only under its live lease', {
+              action_id: action.action_id,
+            });
+        }
+        if (!Number.isSafeInteger(action.lease_expires_at) ||
+            action.lease_expires_at <= at) {
+          fail('FIRST_LINE_ACTION_CLAIM_EXPIRED',
+            'GATING claim expired before unsent terminalization', {
+              action_id: action.action_id,
+            });
+        }
+        this.#withMutationLeaseToken(suppliedLease, () =>
+          this.#attachHumanToUnsentAction(
+            action,
+            terminalReason,
+            terminalState,
+            at
+          )
+        );
       } else {
+        if (suppliedLease !== null) {
+          fail('FIRST_LINE_ACTION_CLAIM_INVALID',
+            'PREPARED terminalization does not accept a lease token', {
+              action_id: action.action_id,
+            });
+        }
         this.#attachHumanToUnsentAction(
           action,
           terminalReason,

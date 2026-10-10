@@ -3186,7 +3186,10 @@ test('P1 regression: raw GATING to SENDING cannot bypass autonomous admission pr
 
   {
     const { store, action } = makeGating({ conversationId: 502 });
-    store.escalatePublicActionToHuman(action.action_id, { reason: 'handoff' });
+    store.escalatePublicActionToHuman(action.action_id, {
+      reason: 'handoff',
+      leaseToken: 'raw-send-lease',
+    });
     assert.throws(() => store.db.prepare(
       "UPDATE public_actions SET state='SENDING',send_started_at=?,updated_at=? WHERE action_id=?"
     ).run(NOW, NOW, action.action_id));
@@ -3291,4 +3294,113 @@ test('P1 regression: migrated post-selection CONFIRMED CLARIFY cannot become aut
     () => migrated.readRoutingSnapshot(stream.stream_id),
     'FIRST_LINE_ACTION_DESCRIPTOR_MISSING'
   );
+});
+
+test('P1 regression: lease CAS rejects raw expired claim, early reclaim and backdated SENDING', t => {
+  let now = NOW;
+  const { store } = tempStore(t, { now: () => now });
+  const stream = makeStream(store);
+  store.ingestConversationEvent(stream.stream_id, customerEvent(101));
+  const episode = store.beginEpisode({ streamId: stream.stream_id });
+  const action = prepareAnswer(store, stream.stream_id, 1, [1], {
+    episodeId: episode.episode_id,
+    expectedEpisodeVersion: episode.version,
+  });
+
+  assert.throws(() => store.db.prepare(
+    "UPDATE public_actions SET state='GATING',lease_token='raw-expired'," +
+    'lease_expires_at=?,attempts=1,updated_at=? WHERE action_id=?'
+  ).run(now - 1, now - 2, action.action_id));
+
+  const live = store.claimNextPublicAction({
+    leaseMs: 10_000,
+    token: 'live-lease',
+  });
+  assert.equal(live.lease_token, 'live-lease');
+
+  assert.throws(() => store.db.prepare(
+    "UPDATE public_actions SET state='GATING',lease_token='stolen'," +
+    'lease_expires_at=?,attempts=attempts+1,updated_at=? WHERE action_id=?'
+  ).run(now + 20_000, now, action.action_id));
+
+  now += 10_001;
+  assert.throws(() => store.db.prepare(
+    "UPDATE public_actions SET state='SENDING',send_started_at=?,updated_at=? " +
+    'WHERE action_id=?'
+  ).run(NOW, NOW, action.action_id));
+
+  const after = store.getPublicAction(action.action_id);
+  assert.equal(after.state, 'GATING');
+  assert.equal(after.lease_token, 'live-lease');
+});
+
+test('P1 regression: stale worker cannot mutate a freshly reclaimed GATING action', t => {
+  let now = NOW;
+  const { store } = tempStore(t, { now: () => now });
+  const stream = makeStream(store);
+  store.ingestConversationEvent(stream.stream_id, customerEvent(101));
+  const episode = store.beginEpisode({ streamId: stream.stream_id });
+  const action = prepareAnswer(store, stream.stream_id, 1, [1], {
+    episodeId: episode.episode_id,
+    expectedEpisodeVersion: episode.version,
+  });
+
+  store.claimNextPublicAction({ leaseMs: 10, token: 'old-worker' });
+  now += 11;
+  const fresh = store.claimNextPublicAction({
+    leaseMs: 10_000,
+    token: 'fresh-worker',
+  });
+  assert.equal(fresh.lease_token, 'fresh-worker');
+
+  expectCode(() => store.markActionStaleBeforeSend(action.action_id, {
+    reason: 'stale_worker',
+    leaseToken: 'old-worker',
+  }), 'FIRST_LINE_ACTION_CLAIM_INVALID');
+  expectCode(() => store.cancelActionBeforeSend(action.action_id, {
+    reason: 'stale_worker',
+    leaseToken: 'old-worker',
+  }), 'FIRST_LINE_ACTION_CLAIM_INVALID');
+  expectCode(() => store.escalatePublicActionToHuman(action.action_id, {
+    reason: 'stale_worker',
+    leaseToken: 'old-worker',
+  }), 'FIRST_LINE_ACTION_CLAIM_INVALID');
+
+  const stillFresh = store.getPublicAction(action.action_id);
+  assert.equal(stillFresh.state, 'GATING');
+  assert.equal(stillFresh.lease_token, 'fresh-worker');
+  assert.equal(stillFresh.continuation_owner.owner_kind, 'PUBLIC_ACTION');
+
+  const refused = store.markActionStaleBeforeSend(action.action_id, {
+    reason: 'current_worker_fail_closed',
+    leaseToken: 'fresh-worker',
+  });
+  assert.equal(refused.state, 'STALE');
+  assert.equal(refused.continuation_owner.owner_kind, 'HUMAN');
+});
+
+test('P1 regression: advanced stream revision cannot turn old unsent action into HUMAN', t => {
+  let now = NOW;
+  const { store } = tempStore(t, { now: () => now });
+  const stream = makeStream(store);
+  store.ingestConversationEvent(stream.stream_id, customerEvent(101));
+  const episode = store.beginEpisode({ streamId: stream.stream_id });
+  const action = prepareAnswer(store, stream.stream_id, 1, [1], {
+    episodeId: episode.episode_id,
+    expectedEpisodeVersion: episode.version,
+  });
+  store.claimNextPublicAction({ leaseMs: 10_000, token: 'old-revision' });
+
+  store.ingestConversationEvent(stream.stream_id, customerEvent(102));
+  expectCode(() => store.escalatePublicActionToHuman(action.action_id, {
+    reason: 'old_revision',
+    leaseToken: 'old-revision',
+  }), 'FIRST_LINE_ACTION_STALE_REVISION');
+
+  const superseded = store.markActionStaleBeforeSend(action.action_id, {
+    reason: 'newer_stream_revision',
+  });
+  assert.equal(superseded.state, 'STALE');
+  assert.equal(superseded.continuation_owner.owner_kind, 'PUBLIC_ACTION');
+  assert.equal(superseded.continuation_owner.terminal_outcome, 'SUPERSEDED');
 });
