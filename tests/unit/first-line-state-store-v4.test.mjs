@@ -71,6 +71,27 @@ function customerEvent(id, overrides = {}) {
   };
 }
 
+
+function forgeDeferredParentWithExactTriggerRestored(
+  store,
+  { streamId, eventSeq, actionId, createdAt = NOW }
+) {
+  const trigger = store.db.prepare(
+    "SELECT sql FROM sqlite_master WHERE type='trigger' " +
+    "AND name='deferred_event_parents_validate_insert'"
+  ).get();
+  assert.equal(typeof trigger?.sql, 'string');
+  store.db.exec('DROP TRIGGER deferred_event_parents_validate_insert');
+  try {
+    store.db.prepare(
+      'INSERT INTO deferred_event_parents(stream_id,event_seq,action_id,created_at) ' +
+      'VALUES (?,?,?,?)'
+    ).run(streamId, eventSeq, actionId, createdAt);
+  } finally {
+    store.db.exec(trigger.sql);
+  }
+}
+
 function babyparkReply(id, actionId) {
   return {
     sourceMessageId: id,
@@ -378,6 +399,214 @@ test('deferred parent is same-stream immutable scheduling topology only', t => {
     'INSERT INTO deferred_event_parents(stream_id,event_seq,action_id,created_at) ' +
     "VALUES (?,1,'missing-action',?)"
   ).run(second.stream_id, NOW));
+});
+
+
+test('deferred parent read proves unresolved SENDING/UNCERTAIN ownership and rejects unsent history', t => {
+  const { store } = tempStore(t);
+  const stream = makeStream(store);
+  store.ingestConversationEvent(stream.stream_id, customerEvent(101));
+  const unsent = prepareAnswer(store, stream.stream_id, 1, [1]);
+
+  store.ingestConversationEvent(stream.stream_id, customerEvent(102));
+  assert.equal(store.getDeferredEventParent(stream.stream_id, 2), null);
+  forgeDeferredParentWithExactTriggerRestored(store, {
+    streamId: stream.stream_id,
+    eventSeq: 2,
+    actionId: unsent.action_id,
+  });
+  expectCode(
+    () => store.getDeferredEventParent(stream.stream_id, 2),
+    'FIRST_LINE_DB_CORRUPT'
+  );
+});
+
+
+test('deferred parent remains readable while the exact public send is UNCERTAIN', t => {
+  const { store } = tempStore(t);
+  const stream = makeStream(store);
+  store.ingestConversationEvent(stream.stream_id, customerEvent(101));
+  const action = prepareAnswer(store, stream.stream_id, 1, [1]);
+  store.claimNextPublicAction({ leaseMs: 10_000, token: 'relay-uncertain-parent' });
+  store.markActionSending(action.action_id, 'relay-uncertain-parent');
+
+  const accepted = store.ingestConversationEvent(
+    stream.stream_id,
+    customerEvent(102)
+  );
+  assert.equal(accepted.deferred_parent.action_id, action.action_id);
+  store.markActionUncertain(action.action_id);
+
+  const parent = store.getDeferredEventParent(stream.stream_id, 2);
+  assert.equal(parent.action_id, action.action_id);
+  assert.equal(store.getPublicAction(action.action_id).state, 'UNCERTAIN');
+});
+
+test('deferred parent confirmed history is bounded by immutable confirmation cut across all callers', t => {
+  const { store, file } = tempStore(t);
+  const stream = makeStream(store);
+  store.ingestConversationEvent(stream.stream_id, customerEvent(101));
+  const action = prepareAnswer(store, stream.stream_id, 1, [1]);
+  store.claimNextPublicAction({ leaseMs: 10_000, token: 'relay-confirm-cut' });
+  store.markActionSending(action.action_id, 'relay-confirm-cut');
+
+  const deferred = store.ingestConversationEvent(
+    stream.stream_id,
+    customerEvent(102)
+  );
+  assert.equal(deferred.event.event_seq, 2);
+  assert.equal(deferred.deferred_parent.action_id, action.action_id);
+
+  store.ingestConversationEvent(
+    stream.stream_id,
+    babyparkReply(103, action.action_id)
+  );
+  const confirmed = store.confirmPublicActionFromLedger(action.action_id);
+  assert.equal(confirmed.state, 'CONFIRMED');
+  assert.equal(confirmed.confirmation_cut.confirmed_through_event_seq, 3);
+  assert.equal(
+    store.getDeferredEventParent(stream.stream_id, 2).action_id,
+    action.action_id
+  );
+
+  const later = store.ingestConversationEvent(
+    stream.stream_id,
+    customerEvent(104)
+  );
+  assert.equal(later.event.event_seq, 4);
+  assert.equal(later.deferred_parent, null);
+  forgeDeferredParentWithExactTriggerRestored(store, {
+    streamId: stream.stream_id,
+    eventSeq: 4,
+    actionId: action.action_id,
+  });
+
+  expectCode(
+    () => store.getDeferredEventParent(stream.stream_id, 4),
+    'FIRST_LINE_DB_CORRUPT'
+  );
+  expectCode(
+    () => store.readRoutingSnapshot(stream.stream_id),
+    'FIRST_LINE_DB_CORRUPT'
+  );
+  expectCode(
+    () => store.ingestConversationEvent(stream.stream_id, customerEvent(104)),
+    'FIRST_LINE_DB_CORRUPT'
+  );
+
+  store.close();
+  const reopened = FirstLineStateStore.open(file);
+  t.after(() => { try { reopened.close(); } catch {} });
+  expectCode(
+    () => reopened.getDeferredEventParent(stream.stream_id, 4),
+    'FIRST_LINE_DB_CORRUPT'
+  );
+});
+
+test('deferred parent HUMAN history is bounded by immutable escalation cut and late evidence cannot widen it', t => {
+  const { store } = tempStore(t);
+  const stream = makeStream(store);
+  store.ingestConversationEvent(stream.stream_id, customerEvent(101));
+  const action = prepareAnswer(store, stream.stream_id, 1, [1]);
+  store.claimNextPublicAction({ leaseMs: 10_000, token: 'relay-human-cut' });
+  store.markActionSending(action.action_id, 'relay-human-cut');
+
+  const deferred = store.ingestConversationEvent(
+    stream.stream_id,
+    customerEvent(102)
+  );
+  assert.equal(deferred.event.event_seq, 2);
+  assert.equal(deferred.deferred_parent.action_id, action.action_id);
+
+  store.escalatePublicActionToHuman(action.action_id, {
+    reason: 'reconciliation_exhausted',
+  });
+  const humanCut = store.db.prepare(
+    'SELECT human_through_event_seq FROM public_action_human_cuts WHERE action_id=?'
+  ).get(action.action_id);
+  assert.equal(humanCut.human_through_event_seq, 2);
+  assert.equal(
+    store.getDeferredEventParent(stream.stream_id, 2).action_id,
+    action.action_id
+  );
+
+  const later = store.ingestConversationEvent(
+    stream.stream_id,
+    customerEvent(103)
+  );
+  assert.equal(later.event.event_seq, 3);
+  assert.equal(later.deferred_parent, null);
+
+  store.ingestConversationEvent(
+    stream.stream_id,
+    babyparkReply(104, action.action_id)
+  );
+  const late = store.confirmPublicActionFromLedger(action.action_id);
+  assert.equal(late.continuation_owner.owner_kind, 'HUMAN');
+  assert.equal(
+    store.db.prepare(
+      'SELECT human_through_event_seq FROM public_action_human_cuts WHERE action_id=?'
+    ).get(action.action_id).human_through_event_seq,
+    2
+  );
+
+  forgeDeferredParentWithExactTriggerRestored(store, {
+    streamId: stream.stream_id,
+    eventSeq: 3,
+    actionId: action.action_id,
+  });
+  expectCode(
+    () => store.getDeferredEventParent(stream.stream_id, 3),
+    'FIRST_LINE_DB_CORRUPT'
+  );
+  expectCode(
+    () => store.ingestConversationEvent(stream.stream_id, customerEvent(103)),
+    'FIRST_LINE_DB_CORRUPT'
+  );
+  expectCode(
+    () => store.terminalizeHumanContinuation(
+      stream.stream_id,
+      action.prepared_stream_revision,
+      { outcome: 'HUMAN_TAKEOVER' }
+    ),
+    'FIRST_LINE_DB_CORRUPT'
+  );
+});
+
+test('descriptor-less migrated v3 action cannot acquire guessed deferred history', t => {
+  const { store, file } = tempStore(t);
+  const stream = makeStream(store);
+  store.ingestConversationEvent(stream.stream_id, customerEvent(101));
+  const action = prepareAnswer(store, stream.stream_id, 1, [1]);
+  store.claimNextPublicAction({ leaseMs: 10_000, token: 'relay-legacy-parent' });
+  store.markActionSending(action.action_id, 'relay-legacy-parent');
+  store.close();
+
+  stripV4ToExactV3(file);
+  FirstLineStateStore.migrateV3ToV4(file);
+
+  const migrated = FirstLineStateStore.open(file);
+  t.after(() => { try { migrated.close(); } catch {} });
+  assert.equal(migrated.getPublicAction(action.action_id).descriptor, null);
+  assert.equal(
+    migrated.getContinuationOwner(stream.stream_id, 1).owner_kind,
+    'HUMAN'
+  );
+
+  const later = migrated.ingestConversationEvent(
+    stream.stream_id,
+    customerEvent(102)
+  );
+  assert.equal(later.deferred_parent, null);
+  forgeDeferredParentWithExactTriggerRestored(migrated, {
+    streamId: stream.stream_id,
+    eventSeq: 2,
+    actionId: action.action_id,
+  });
+  expectCode(
+    () => migrated.getDeferredEventParent(stream.stream_id, 2),
+    'FIRST_LINE_DB_CORRUPT'
+  );
 });
 
 test('event plus required deferred parent is one crash-atomic transaction', t => {
