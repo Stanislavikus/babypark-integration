@@ -2,7 +2,7 @@
 
 Status: EVIDENCE — operational/current-state record; not normative contract authority.
 Applies to: repository-wide operational and campaign state tracking.
-Supersedes: `docs/CURRENT_STATE.md` at canonical main `92a079cb8d2466ea053927402413608aa1ba53f9`.
+Supersedes: `docs/CURRENT_STATE.md` at canonical main `a45a8644e05df2584a2b75f2a3b47446811ae984`.
 Last updated: 2026-10-10
 Owner: BabyPark
 Source of truth for operational facts: production runtime + verified repository evidence.
@@ -11,7 +11,7 @@ Source of truth for operational facts: production runtime + verified repository 
 
 This top section is the current campaign/navigation snapshot. Exact implementation and merge truth remains canonical Git; normative process/governance authority remains `docs/AI_WORKING_AGREEMENT.md`. Runtime facts that are not restated here must be freshly verified from their authoritative runtime/source before use.
 
-State expected after successful merge of process campaign PR #121:
+State expected after successful merge of C6-B1 PR #118:
 
 - C1 / C2a / C2b / C2c / C3 / C4 / C5: merged.
 - C5 deterministic renderer implementation: merged via PR #113; intentionally unconnected/not deployed until downstream C6 wiring/authorization is implemented.
@@ -19,14 +19,17 @@ State expected after successful merge of process campaign PR #121:
 - C6-P1 durable state-store implementation: merged.
 - C6-P1H1 deferred-parent historical-cut hardening: merged via PR #119 after HEAVY R1 + isolated R2 both reported ZERO BLOCKERS on one exact controlling manifest basis.
 - Review-only PR #120: closed without merge after isolated R2; historical review transport only.
-- Risk-proportional closure process/runbook/templates: process campaign PR #121, represented by this reviewed snapshot.
-- C6-B1 PR #118: paused until process campaign #121 is merged, agreed C5 branch hygiene is complete, and #118 is re-pinned once to resulting canonical `main`.
+- Risk-proportional closure process/runbook/templates: merged via PR #121.
+- Agreed stale C5 branch hygiene: completed and independently confirmed after fresh fetch/prune.
+- C6-B1 durable backup/recovery profile: repository implementation provided by PR #118; it reuses the existing generic encrypted SQLite backup core, adds First Line semantic restore verification plus thin backup/restore CLI, adds zero runtime dependencies and zero durable systems, performs no production write, and is not a production deployment/activation.
+- C6-B1 recovery verification includes the C6-P1H1/#119 semantic-corruption class: SQLite integrity alone is insufficient; forged deferred-parent history must fail the First Line semantic verifier.
+- Existing Knowledge recovery regression remains part of the counted recovery verification surface.
 
-Next intended sequence after PR #121 merge:
+Next intended sequence after successful C6-B1 merge:
 
-1. Perform C5 branch hygiene only after fresh `git fetch origin`, literal `git merge-base --is-ancestor <branch-head> origin/main` exit 0 for each candidate branch, and proof that no open PR uses that branch as head or base.
-2. Re-pin C6-B1 PR #118 once onto the resulting canonical `main`.
-3. Continue the C6 recovery/runtime sequence under the risk-proportional closure operating model in `AGENTS.md`.
+1. Run C6-B2 as a separate operational stage: refresh its §1–§3 gate, bind owner-approved RPO/RTO and recovery-key custody/source plus a specific off-host target, reverify the complete then-current production/runtime topology, create/configure the first production v4 recovery path only under explicit deployment authority, and prove an independent-host scratch restore.
+2. Only after the recovery prerequisites required by the frozen design are proven, continue the C6 runtime sequence: relay/S1 -> S2 -> POST/reconciliation -> HUMAN -> scheduler/liveness/operator attention -> C25.
+3. Keep customer-facing First Line activation blocked until its own campaign binds/proves provider-side canonical-`main` protection and the procedural structure validator as an actually required check.
 
 ### Carried-forward C6 Runtime defect-sweep item
 

@@ -458,7 +458,7 @@
       "scope": "file",
       "location": "/var/lib/babypark-integration/episode.sqlite",
       "owner": "BabyPark First Line semantic runtime",
-      "purpose": "Durable Event Ledger v0.7 semantic state: conversation streams/events and stream revisions, episode/open-turn projections, canonical semantic provenance, typed unsupported-constraint latches with accepted-event provenance, clarification reservations, and public-action/outbox recovery metadata. No routine raw customer body, residue text/tokens or content digest.",
+      "purpose": "Durable AI First Line v0.8/C6 semantic state: conversation streams/events and stream revisions, episode/open-turn projections, canonical semantic provenance and ownership, typed unsupported-constraint latches, clarification reservations, public-action/outbox recovery metadata, deferred-parent history, immutable routing cuts, and recovery barriers. No routine raw customer body, residue text/tokens or content digest.",
       "state_class": "durable",
       "thresholds": {
         "metric": "rows",
@@ -477,7 +477,7 @@
         "dry_run_required": true,
         "delete_guard": "Never delete or reset live/nonterminal public actions, active episode state, typed constraint latches for an active episode, or source-event identity needed for dedupe/reconciliation. Never infer ALREADY_KNOWN from a scan highwater."
       },
-      "recovery": "Restore from verified durable backup. Before schema v2->v3 migration take a verified backup; migration is explicit and additive, never automatic on runtime open. Rollback is old release plus restored v2 backup, not live-table deletion. If state is unavailable or corrupt, fail First Line closed and hand off; never guess prior semantic selections, constraint latches, event topology, clarification budget, or uncertain send outcome.",
+      "recovery": "Restore only from an authenticated encrypted durable backup into an unused scratch path, validate SQLite integrity and exact v4 schema, then run the First Line semantic recovery verifier across persisted streams/events, episodes/latches/slots, public actions, origins/owners, deferred-parent history, immutable cuts, and recovery barriers. A verified backup is not by itself a lossless semantic cut: stale/uncertain recovery remains fail-closed behind the recovery-barrier/HUMAN procedure unless a separately proven lossless cut exists. Schema migration requires a verified pre-migration backup and explicit migration authority. If state is unavailable or corrupt, fail First Line closed and hand off; never guess prior semantic selections, latches, event topology, clarification budget, ownership, or uncertain send outcome.",
       "backup": {
         "required": true,
         "off_host": true,
