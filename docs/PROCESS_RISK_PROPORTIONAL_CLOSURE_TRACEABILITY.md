@@ -69,6 +69,7 @@ The final post-re-pin surface remains documentation/templates and repository-pro
 | P14 | Pre-activation checklist includes provider-side `main` protection and procedural validator as required check | `AGENTS.md §6`, `CURRENT_STATE.md`, PR template | Static checklist presence; implementation/enforcement is later bounded work | DONE |
 | P15 | Avoid turning this initial process campaign into executable/CI scope without reclassification | this file, `CURRENT_STATE.md` | Exact changed-surface check before manifest | DONE |
 | P16 | Carry H1 NF-2 into the future C6 Runtime/relay defect sweep: any production path reaching `markActionUncertain` must prove the applicable state-store/deferred topology attestation and no send/retry/reconciliation bypass | `CURRENT_STATE.md` carried-forward defect-sweep section | Future runtime campaign must disposition as `FIXED` with caller/path tests or `NOT APPLICABLE` with exact production call-graph evidence; may not be silently dropped | DONE |
+| P17 | Retire stale issue #75 as a second roadmap and keep one repository state snapshot | issue #75 pointer + `CURRENT_STATE.md` | #75 now points to Agreement/Git/`CURRENT_STATE.md` and forbids checklist duplication | DONE |
 
 ## Final stable-head prerequisites before manifest freeze
 
@@ -77,7 +78,7 @@ Before freezing the required-verification manifest:
 1. Convert stale umbrella issue #75 to a pointer to `CURRENT_STATE.md` + canonical Git/Agreement rather than maintaining a second roadmap.
 2. Confirm final changed surface remains exactly documentation/templates/evidence only.
 3. Confirm no executable validator/CI/runtime/governance amendment was introduced.
-4. Confirm all P01..P16 rows are terminal DONE.
+4. Confirm all P01..P17 rows are terminal DONE.
 5. Run static consistency checks across Agreement §7.1/§8/§12/§13, `AGENTS.md`, `CLAUDE.md`, `CURRENT_STATE.md`, scan/reviewer/PR templates and this traceability artifact.
 6. Then freeze the required-verification manifest on the stable HEAD.
 
