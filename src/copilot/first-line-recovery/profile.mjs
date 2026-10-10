@@ -435,6 +435,16 @@ async function withFrozenFirstLineSource(
   const source = path.resolve(sourcePath);
   const artifact = path.resolve(artifactPath);
   const artifactDir = path.dirname(artifact);
+  // SQLite backup() creates plaintext with the process umask (often 0644).
+  // The unchanged generic core also stages plaintext in this directory.
+  // Require a private parent before either stage can create a file.
+  const parent = fs.statSync(artifactDir);
+  if (!parent.isDirectory() || (parent.mode & 0o077) !== 0) {
+    fail(
+      'FIRST_LINE_BACKUP_PARENT_INSECURE',
+      'First Line backup directory must be owner-private (0700)'
+    );
+  }
   const snapshotPath = path.join(
     artifactDir,
     `.${path.basename(artifact)}.first-line-source-snapshot.` +

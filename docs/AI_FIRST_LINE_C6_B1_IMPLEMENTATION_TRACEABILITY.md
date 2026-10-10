@@ -51,6 +51,11 @@ The adapter:
 - emits aggregate counts/histograms plus one evidence SHA-256 only: no stream,
   action, episode, source-message, sender/contact ID, raw/normalized customer
   body, attachment URL, email/phone or customer-content-derived digest;
+- requires the encrypted-artifact staging directory to be owner-private
+  (no group/other permission bits) before invoking either SQLite backup;
+  node:sqlite backup() otherwise creates a temporary plaintext file with
+  process-umask permissions, observed as 0644 under umask 022; failure is
+  explicit/fail-closed rather than changing directory permissions;
 - removes the transient plaintext source snapshot (plus WAL/SHM/journal
   sidecars) on success or failure;
 - reuses the existing AES-256-GCM + authenticated manifest + checksum + scratch
@@ -77,7 +82,7 @@ Package commands:
 | B1-R07 | verified backup does not self-authorize AI after stale restore | profile only verifies; storage-policy recovery text preserves recovery-barrier/HUMAN rule and requires separately proven lossless cut | DONE |
 | B1-R08 | no age-only deletion of only verified recovery copy | no cleanup implementation added; existing durable retention rule remains; B2 owns operational retention/target | DONE |
 | B1-R09 | no new durable system | no DB/service introduced; encrypted artifacts remain recovery evidence | DONE |
-| B1-R10 | privacy / no new raw customer-content persistence | semantic evidence is aggregate-only; dedicated test proves semantic/source identifiers are absent | DONE |
+| B1-R10 | privacy / no new raw customer-content persistence | aggregate-only evidence test; B1 requires owner-private artifact parent before plaintext snapshot/generic staging; path-permission regression | DONE |
 | B1-R11 | zero production creation/migration/activation in B1 | no deployment or production write path added; CLI is explicit operator tooling only | DONE |
 | B1-R12 | implementation economy / reuse existing proven core | generic durable backup core reused byte-for-byte; zero new dependency/backup engine | DONE |
 
@@ -87,7 +92,7 @@ Package commands:
 |---|---|---|---|
 | U1 | Do not duplicate state-store invariants in verifier | comprehensive deferred/cut/ownership rules are delegated to the state store's existing idempotent duplicate-admission attestation; later traversal is query-only; adapter SQL is enumeration/aggregate/simple barrier metadata only | DONE |
 | U2 | Add #119 corruption regression with SQLite integrity still OK | focused test for forged post-confirmation deferred parent: `PRAGMA integrity_check=ok`, semantic verifier returns `FIRST_LINE_DB_CORRUPT` | DONE |
-| U3 | Keep Knowledge recovery regression counted on new tree | focused combined run: 14 First Line + existing 4 Knowledge = 18/18 PASS | DONE |
+| U3 | Keep Knowledge recovery regression counted on new tree | post-hardening combined run: 15 First Line + existing 4 Knowledge = 19/19 PASS | DONE |
 | U4 | Prepare B2 owner inputs in parallel | exact fields prepared below; numeric/key/off-host values intentionally not invented in B1 | DONE |
 
 ## B2 owner inputs prepared, not invented
@@ -129,6 +134,13 @@ finding. Two independent root-cause classes were identified and batch-fixed:
   `query_only` for the remaining traversal. Manual ACK/HUMAN semantic-rule
   copies were removed.
 
+- `B1-CP03` — world-readable plaintext backup staging: Node SQLite backup()
+  creates a destination with process umask (observed 0644 under umask 022),
+  before the later chmod 0600; this also affects the unchanged generic core
+  used by B1. FIXED within the First Line adapter by refusing any artifact
+  staging parent with group/other permissions before the first snapshot;
+  regression was RED on aa27f3a and GREEN after the B1 fix.
+
 The sweep also challenged action source/candidate/descriptor/legacy coverage,
 semantic origin/owner cardinality, confirmation/human/ACK cuts, recovery
 barriers, aggregate-only privacy evidence, CLI secret/error output, transient
@@ -165,6 +177,9 @@ stable implementation HEAD.
   1190/1190, legacy 13/13, refactor 13/13; zero fail/skip/todo/cancelled.
   Post-batch root log SHA-256:
   `c8a03bd477debe5a67fc326700742ee75011641617e4c2516960b91d9ff0a64e`.
+- After `B1-CP03` hardening, focused First Line is 15/15 PASS and combined
+  First Line + Knowledge is 19/19 PASS; full final-head baseline and HEAVY
+  closure must be rerun on the committed hardened tree.
 - This traceability update itself is not final-tree gate evidence. Exact-tree
   manifest verification must rerun every required check, including root
   `npm test`, after the final stable implementation HEAD is committed and the

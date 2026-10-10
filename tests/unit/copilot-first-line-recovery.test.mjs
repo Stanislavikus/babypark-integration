@@ -205,6 +205,33 @@ test('recovery evidence is aggregate-only and exposes no semantic identifiers', 
   }
 });
 
+test('backup refuses a traversable parent before creating plaintext staging', async t => {
+  const f = temp(t);
+  const store = createStore(f.file);
+  store.close();
+  fs.chmodSync(f.root, 0o755);
+
+  await assertRejectCode(
+    createFirstLineEncryptedBackup({
+      sourcePath: f.file,
+      artifactPath: f.artifact,
+      manifestPath: f.manifest,
+      masterKey: key(),
+      keyId: 'first-line-test-key',
+    }),
+    'FIRST_LINE_BACKUP_PARENT_INSECURE'
+  );
+  assert.equal(fs.existsSync(f.artifact), false);
+  assert.equal(fs.existsSync(f.manifest), false);
+  assert.equal(
+    fs.readdirSync(f.root).some(name =>
+      name.includes('.first-line-source-snapshot.') ||
+      name.startsWith('.tmp-')
+    ),
+    false
+  );
+});
+
 test('encrypted First Line backup restores and revalidates semantic evidence', async t => {
   const f = temp(t);
   const store = createStore(f.file);
