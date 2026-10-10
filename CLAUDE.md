@@ -9,6 +9,6 @@ Before substantive repository work, execute the bootstrap in `docs/AI_WORKING_AG
 After the Agreement authority is selected and read, read:
 
 1. `AGENTS.md`
-2. `CURRENT_STATE.md`
+2. `docs/CURRENT_STATE.md`
 
 Do not use this file as governance. On any conflict, the applicable `docs/AI_WORKING_AGREEMENT.md` wins.
