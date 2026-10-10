@@ -1,4 +1,6 @@
-import { DatabaseSync } from 'node:sqlite';
+import crypto from 'node:crypto';
+import fs from 'node:fs';
+import { DatabaseSync, backup as sqliteBackup } from 'node:sqlite';
 import path from 'node:path';
 import {
   canonicalBackupJson,
@@ -25,10 +27,6 @@ export class FirstLineRecoveryError extends Error {
 
 function fail(code, message, details = {}) {
   throw new FirstLineRecoveryError(code, message, details);
-}
-
-function semanticKey(streamId, streamRevision) {
-  return `${streamId}\u0000${streamRevision}`;
 }
 
 function sortedCounts(rows, field) {
@@ -73,15 +71,6 @@ function enumerateSemanticRows(filePath) {
       'SELECT stream_id,event_seq FROM deferred_event_parents ' +
       'ORDER BY stream_id,event_seq'
     ).all();
-    const ackCuts = db.prepare(
-      'SELECT stream_id,stream_revision,ack_through_event_seq ' +
-      'FROM non_actionable_ack_cuts ORDER BY stream_id,stream_revision'
-    ).all();
-    const humanTerminalCuts = db.prepare(
-      'SELECT stream_id,stream_revision,terminal_through_event_seq,' +
-      'terminal_outcome FROM human_terminal_cuts ' +
-      'ORDER BY stream_id,stream_revision'
-    ).all();
     const recoveryBarriers = db.prepare(
       'SELECT recovery_epoch,authority_key,reason,entered_at,completion_kind,' +
       'completed_at FROM recovery_barriers ORDER BY recovery_epoch'
@@ -94,8 +83,6 @@ function enumerateSemanticRows(filePath) {
       origins,
       owners,
       deferred,
-      ackCuts,
-      humanTerminalCuts,
       recoveryBarriers,
       summary: Object.freeze({
         schema_version: Number(
@@ -178,87 +165,6 @@ function enumerateSemanticRows(filePath) {
   }
 }
 
-function assertAckCutCoverage(inventory, streamsById) {
-  const ackOrigins = new Set(
-    inventory.origins
-      .filter(row => row.origin_kind === 'NON_ACTIONABLE_ACK')
-      .map(row => semanticKey(row.stream_id, row.stream_revision))
-  );
-  const cuts = new Map(
-    inventory.ackCuts.map(row => [
-      semanticKey(row.stream_id, row.stream_revision),
-      row,
-    ])
-  );
-  if (ackOrigins.size !== cuts.size) {
-    fail(
-      'FIRST_LINE_RECOVERY_ACK_COVERAGE_INVALID',
-      'NON_ACTIONABLE_ACK origin/cut cardinality differs',
-      { origins: ackOrigins.size, cuts: cuts.size }
-    );
-  }
-  for (const originKey of ackOrigins) {
-    const cut = cuts.get(originKey);
-    if (!cut) {
-      fail(
-        'FIRST_LINE_RECOVERY_ACK_COVERAGE_INVALID',
-        'NON_ACTIONABLE_ACK origin lacks immutable cut'
-      );
-    }
-    const stream = streamsById.get(cut.stream_id);
-    if (!stream ||
-        cut.ack_through_event_seq !== cut.stream_revision ||
-        cut.ack_through_event_seq > stream.last_event_seq) {
-      fail(
-        'FIRST_LINE_RECOVERY_ACK_COVERAGE_INVALID',
-        'NON_ACTIONABLE_ACK cut is outside validated stream history'
-      );
-    }
-  }
-}
-
-function assertHumanTerminalCutCoverage(
-  inventory,
-  streamsById,
-  ownersByKey
-) {
-  const terminalOwnerKeys = new Set(
-    inventory.owners
-      .filter(row =>
-        row.owner_kind === 'HUMAN' &&
-        ['HUMAN_TAKEOVER', 'OWNERSHIP_LOST'].includes(row.terminal_outcome)
-      )
-      .map(row => semanticKey(row.stream_id, row.stream_revision))
-  );
-  const cuts = new Map(
-    inventory.humanTerminalCuts.map(row => [
-      semanticKey(row.stream_id, row.stream_revision),
-      row,
-    ])
-  );
-  if (terminalOwnerKeys.size !== cuts.size) {
-    fail(
-      'FIRST_LINE_RECOVERY_HUMAN_TERMINAL_COVERAGE_INVALID',
-      'terminal HUMAN owner/cut cardinality differs',
-      { owners: terminalOwnerKeys.size, cuts: cuts.size }
-    );
-  }
-  for (const ownerKey of terminalOwnerKeys) {
-    const cut = cuts.get(ownerKey);
-    const owner = ownersByKey.get(ownerKey);
-    const stream = cut ? streamsById.get(cut.stream_id) : null;
-    if (!cut || !owner || !stream ||
-        cut.terminal_outcome !== owner.terminal_outcome ||
-        cut.terminal_through_event_seq < cut.stream_revision ||
-        cut.terminal_through_event_seq > stream.last_event_seq) {
-      fail(
-        'FIRST_LINE_RECOVERY_HUMAN_TERMINAL_COVERAGE_INVALID',
-        'terminal HUMAN cut is inconsistent with validated owner/stream'
-      );
-    }
-  }
-}
-
 function assertRecoveryBarrierRows(inventory, activeBarrier) {
   const active = inventory.recoveryBarriers.filter(
     row => row.completion_kind === null
@@ -304,6 +210,21 @@ function assertRecoveryBarrierRows(inventory, activeBarrier) {
   }
 }
 
+function duplicateAdmissionInput(event) {
+  return {
+    sourceMessageId: event.source_message_id,
+    eventKind: event.event_kind,
+    messageType: event.message_type,
+    senderClass: event.sender_class,
+    senderId: event.sender_id,
+    contentType: event.content_type,
+    deleted: event.deleted,
+    unsupported: event.unsupported,
+    hasAttachments: event.has_attachments,
+    sourceId: event.source_id,
+  };
+}
+
 export function buildFirstLineRecoveryEvidence(filePath) {
   const inventory = enumerateSemanticRows(filePath);
   if (inventory.summary.schema_version !== SCHEMA_VERSION) {
@@ -319,7 +240,9 @@ export function buildFirstLineRecoveryEvidence(filePath) {
 
   const store = FirstLineStateStore.open(filePath);
   try {
-    const streamsById = new Map();
+    const changesBefore = Number(
+      store.db.prepare('SELECT total_changes() AS n').get().n
+    );
     for (const streamId of inventory.streamIds) {
       const stream = store.getConversationStream(streamId);
       if (!stream) {
@@ -335,9 +258,38 @@ export function buildFirstLineRecoveryEvidence(filePath) {
           'validated stream event count differs from durable head'
         );
       }
-      streamsById.set(streamId, stream);
+      if (events.length > 0) {
+        // Reuse the existing duplicate-admission path because it invokes the
+        // state store's complete deferred/cut/ownership attestation before it
+        // returns the already accepted event. The exact source event guarantees
+        // the idempotent branch; total_changes below proves no data mutation.
+        const replay = store.ingestConversationEvent(
+          streamId,
+          duplicateAdmissionInput(events[0])
+        );
+        if (replay.inserted !== false) {
+          fail(
+            'FIRST_LINE_RECOVERY_ATTESTATION_MUTATED',
+            'semantic attestation unexpectedly inserted an event'
+          );
+        }
+      }
       store.getUnresolvedContinuationOwner(streamId);
     }
+    const changesAfter = Number(
+      store.db.prepare('SELECT total_changes() AS n').get().n
+    );
+    if (changesAfter !== changesBefore) {
+      fail(
+        'FIRST_LINE_RECOVERY_ATTESTATION_MUTATED',
+        'semantic attestation changed durable rows',
+        { before: changesBefore, after: changesAfter }
+      );
+    }
+
+    // Comprehensive state-store attestation above completed without mutation.
+    // Lock the remaining traversal to read-only at SQLite level.
+    store.db.exec('PRAGMA query_only=ON');
 
     for (const episodeId of inventory.episodeIds) {
       const episode = store.getEpisode(episodeId);
@@ -373,7 +325,6 @@ export function buildFirstLineRecoveryEvidence(filePath) {
       }
     }
 
-    const ownersByKey = new Map();
     for (const row of inventory.owners) {
       const owner = store.getContinuationOwner(
         row.stream_id,
@@ -385,10 +336,6 @@ export function buildFirstLineRecoveryEvidence(filePath) {
           'enumerated continuation owner disappeared'
         );
       }
-      ownersByKey.set(
-        semanticKey(row.stream_id, row.stream_revision),
-        owner
-      );
     }
 
     for (const row of inventory.deferred) {
@@ -409,12 +356,6 @@ export function buildFirstLineRecoveryEvidence(filePath) {
     const recoverableActions = store.listRecoverablePublicActions();
 
     const activeBarrier = store.getActiveRecoveryBarrier();
-    assertAckCutCoverage(inventory, streamsById);
-    assertHumanTerminalCutCoverage(
-      inventory,
-      streamsById,
-      ownersByKey
-    );
     assertRecoveryBarrierRows(inventory, activeBarrier);
 
     const body = Object.freeze({
@@ -486,6 +427,37 @@ export function verifyFirstLineRecoveryEvidence(
   });
 }
 
+async function withFrozenFirstLineSource(
+  sourcePath,
+  artifactPath,
+  fn
+) {
+  const source = path.resolve(sourcePath);
+  const artifact = path.resolve(artifactPath);
+  const artifactDir = path.dirname(artifact);
+  const snapshotPath = path.join(
+    artifactDir,
+    `.${path.basename(artifact)}.first-line-source-snapshot.` +
+      `${process.pid}.${crypto.randomUUID()}.sqlite`
+  );
+
+  let sourceDb = null;
+  try {
+    sourceDb = new DatabaseSync(source, { readOnly: true });
+    sourceDb.exec('PRAGMA busy_timeout=5000');
+    await sqliteBackup(sourceDb, snapshotPath);
+    sourceDb.close();
+    sourceDb = null;
+    fs.chmodSync(snapshotPath, 0o600);
+    return await fn(snapshotPath);
+  } finally {
+    try { sourceDb?.close(); } catch {}
+    for (const suffix of ['', '-wal', '-shm', '-journal']) {
+      try { fs.rmSync(snapshotPath + suffix, { force: true }); } catch {}
+    }
+  }
+}
+
 export async function createFirstLineEncryptedBackup({
   sourcePath,
   artifactPath,
@@ -494,17 +466,26 @@ export async function createFirstLineEncryptedBackup({
   keyId,
   createdAtUtc,
 }) {
-  const semanticEvidence =
-    buildFirstLineRecoveryEvidence(sourcePath);
-  return createEncryptedSqliteBackup({
+  // Freeze one SQLite-consistent source image first. Semantic evidence and the
+  // encrypted artifact are both derived from this immutable snapshot, avoiding
+  // a live-write race between semantic traversal and the generic backup step.
+  return withFrozenFirstLineSource(
     sourcePath,
     artifactPath,
-    manifestPath,
-    masterKey,
-    keyId,
-    semanticEvidence,
-    createdAtUtc,
-  });
+    async frozenPath => {
+      const semanticEvidence =
+        buildFirstLineRecoveryEvidence(frozenPath);
+      return createEncryptedSqliteBackup({
+        sourcePath: frozenPath,
+        artifactPath,
+        manifestPath,
+        masterKey,
+        keyId,
+        semanticEvidence,
+        createdAtUtc,
+      });
+    }
+  );
 }
 
 export async function verifyAndRestoreFirstLineBackup({

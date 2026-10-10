@@ -14,7 +14,6 @@ import {
 } from '../../src/ops/durable-sqlite-backup.mjs';
 import {
   FIRST_LINE_RECOVERY_EVIDENCE_SCHEMA,
-  FirstLineRecoveryError,
   buildFirstLineRecoveryEvidence,
   createFirstLineEncryptedBackup,
   verifyAndRestoreFirstLineBackup,
@@ -224,6 +223,13 @@ test('encrypted First Line backup restores and revalidates semantic evidence', a
   });
   assert.match(created.artifact_sha256, /^[a-f0-9]{64}$/);
   assert.match(created.plaintext_sha256, /^[a-f0-9]{64}$/);
+  assert.equal(
+    fs.readdirSync(f.root).some(
+      name => name.includes('.first-line-source-snapshot.')
+    ),
+    false,
+    'plaintext semantic source snapshot must be removed after backup'
+  );
 
   const restored = await verifyAndRestoreFirstLineBackup({
     artifactPath: f.artifact,
@@ -270,6 +276,23 @@ test('normal confirmed deferred history passes semantic verification', t => {
   assert.equal(evidence.row_counts.deferred_event_parents, 1);
   assert.equal(evidence.action_states.CONFIRMED, 1);
   assert.equal(evidence.owner_terminal_outcomes.CONFIRMED, 1);
+
+  const db = new DatabaseSync(f.file);
+  restoreTriggerAfterMutation(
+    db,
+    'deferred_event_parents_no_delete',
+    () => db.prepare(
+      'DELETE FROM deferred_event_parents ' +
+      'WHERE stream_id=? AND event_seq=2'
+    ).run(stream.stream_id)
+  );
+  db.close();
+  assert.equal(sqliteIntegrity(f.file), 'ok');
+  assertCode(
+    () => verifyFirstLineRecoveryEvidence(f.file, evidence),
+    'FIRST_LINE_DB_CORRUPT',
+    FirstLineStateError
+  );
 });
 
 test('DIRECT_HUMAN continuation is valid recovery state', t => {
@@ -314,6 +337,23 @@ test('NON_ACTIONABLE_ACK with immutable cut is valid recovery state', t => {
   const evidence = buildFirstLineRecoveryEvidence(f.file);
   assert.equal(evidence.origin_kinds.NON_ACTIONABLE_ACK, 1);
   assert.equal(evidence.row_counts.non_actionable_ack_cuts, 1);
+
+  const db = new DatabaseSync(f.file);
+  restoreTriggerAfterMutation(
+    db,
+    'non_actionable_ack_cuts_no_update_v4',
+    () => db.prepare(
+      'UPDATE non_actionable_ack_cuts SET episode_version=episode_version+1 ' +
+      'WHERE stream_id=? AND stream_revision=1'
+    ).run(stream.stream_id)
+  );
+  db.close();
+  assert.equal(sqliteIntegrity(f.file), 'ok');
+  assertCode(
+    () => verifyFirstLineRecoveryEvidence(f.file, evidence),
+    'FIRST_LINE_DB_CORRUPT',
+    FirstLineStateError
+  );
 });
 
 test('active recovery barrier is preserved as valid fail-closed state', t => {
@@ -434,7 +474,7 @@ test('schema tamper is rejected even when SQLite integrity is ok', t => {
   );
 });
 
-test('#119 forged deferred parent fails semantic verifier while integrity_check is ok', t => {
+test('#119 forged deferred parent fails semantic verifier while integrity_check is ok', async t => {
   const f = temp(t);
   const store = createStore(f.file);
   const stream = makeStream(store);
@@ -481,6 +521,27 @@ test('#119 forged deferred parent fails semantic verifier while integrity_check 
     'FIRST_LINE_DB_CORRUPT',
     FirstLineStateError
   );
+
+  await assertRejectCode(
+    createFirstLineEncryptedBackup({
+      sourcePath: f.file,
+      artifactPath: f.artifact,
+      manifestPath: f.manifest,
+      masterKey: key(),
+      keyId: 'first-line-test-key',
+    }),
+    'FIRST_LINE_DB_CORRUPT',
+    FirstLineStateError
+  );
+  assert.equal(fs.existsSync(f.artifact), false);
+  assert.equal(fs.existsSync(f.manifest), false);
+  assert.equal(
+    fs.readdirSync(f.root).some(
+      name => name.includes('.first-line-source-snapshot.')
+    ),
+    false,
+    'failed semantic backup must remove plaintext source snapshot'
+  );
 });
 
 test('missing NON_ACTIONABLE_ACK cut fails semantic coverage', t => {
@@ -516,8 +577,8 @@ test('missing NON_ACTIONABLE_ACK cut fails semantic coverage', t => {
   assert.equal(sqliteIntegrity(f.file), 'ok');
   assertCode(
     () => verifyFirstLineRecoveryEvidence(f.file, expected),
-    'FIRST_LINE_RECOVERY_ACK_COVERAGE_INVALID',
-    FirstLineRecoveryError
+    'FIRST_LINE_DB_CORRUPT',
+    FirstLineStateError
   );
 });
 
@@ -556,7 +617,7 @@ test('missing terminal HUMAN cut fails semantic coverage', t => {
   assert.equal(sqliteIntegrity(f.file), 'ok');
   assertCode(
     () => verifyFirstLineRecoveryEvidence(f.file, expected),
-    'FIRST_LINE_RECOVERY_HUMAN_TERMINAL_COVERAGE_INVALID',
-    FirstLineRecoveryError
+    'FIRST_LINE_DB_CORRUPT',
+    FirstLineStateError
   );
 });

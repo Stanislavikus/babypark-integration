@@ -29,19 +29,30 @@ C6-B1 adds a First Line semantic adapter over the existing generic Durable
 SQLite Backup Profile.
 
 The adapter:
-- opens/attests the restored v4 DB through `FirstLineStateStore.open()`;
-- enumerates only persisted IDs/keys needed to traverse the semantic graph;
-- validates streams/events, episodes/slots/latches, actions/descriptors/source
-  coverage/cuts, semantic origins, continuation owners and deferred parents
-  through existing public state-store getters;
-- validates the #119 deferred-parent class through
-  `getDeferredEventParent()`, so the historical-cut rule remains owned by the
-  state store rather than being reimplemented in the recovery adapter;
-- uses direct read-only SQL only for bounded enumeration/aggregate evidence and
-  coverage of ACK/HUMAN terminal cut tables that have no public getter;
+- first freezes the live source with the native `node:sqlite backup()`
+  primitive into a mode-0600 transient snapshot; semantic evidence and the
+  final encrypted artifact are both derived from that one frozen SQLite image,
+  eliminating live-write evidence/artifact skew without modifying the generic
+  backup core;
+- opens/attests the frozen/restored v4 DB through
+  `FirstLineStateStore.open()`;
+- for every non-empty stream, replays one exact already-accepted event through
+  the existing idempotent duplicate-admission path. That path invokes the state
+  store's complete deferred/cut/ownership attestation, including the #119
+  historical-parent rules and missing-row permutations; `total_changes()`
+  must remain zero;
+- after the comprehensive state-store attestation, enables SQLite
+  `query_only` and traverses streams/events, episodes/slots/latches,
+  actions/descriptors/source coverage/cuts, origins, owners and deferred
+  parents through existing public getters;
+- uses direct read-only SQL only for deterministic ID enumeration, aggregate
+  evidence and simple recovery-barrier history metadata; it does not
+  reimplement deferred/ACK/HUMAN-cut semantic rules;
 - emits aggregate counts/histograms plus one evidence SHA-256 only: no stream,
   action, episode, source-message, sender/contact ID, raw/normalized customer
   body, attachment URL, email/phone or customer-content-derived digest;
+- removes the transient plaintext source snapshot (plus WAL/SHM/journal
+  sidecars) on success or failure;
 - reuses the existing AES-256-GCM + authenticated manifest + checksum + scratch
   restore implementation without modifying the generic backup engine.
 
@@ -57,12 +68,12 @@ Package commands:
 
 | ID | Requirement | Implementation / evidence | Status |
 |---|---|---|---|
-| B1-R01 | SQLite-supported consistent backup; no raw copy as sole mechanism | existing `createEncryptedSqliteBackup()` uses `node:sqlite backup()`; generic core unchanged | DONE |
+| B1-R01 | SQLite-supported consistent backup; no raw copy as sole mechanism | B1 freezes one native `node:sqlite backup()` source snapshot so evidence/artifact share one cut, then existing `createEncryptedSqliteBackup()` encrypts/verifies it; generic core unchanged | DONE |
 | B1-R02 | SQLite integrity + exact schema v4 attestation | generic restore integrity/user_version + `FirstLineStateStore.open()` exact schema fingerprint/columns/indexes/triggers | DONE |
 | B1-R03 | encrypted artifact + checksum + authenticated manifest; wrong key/tamper fail closed | reused generic AES-256-GCM/HMAC profile; focused wrong-key/artifact/manifest tests | DONE |
 | B1-R04 | off-host capable; backup is never writable semantic peer | B1 emits encrypted artifact/manifest only; transport remains B2; semantic authority remains `episode.sqlite` | DONE |
 | B1-R05 | independent unused scratch restore | reused generic `verifyAndRestoreEncryptedSqliteBackup()`; CLI requires explicit unused scratch path | DONE |
-| B1-R06 | exhaustive First Line semantic restore verification | `src/copilot/first-line-recovery/profile.mjs`; public state-store traversal + bounded cut coverage; #119 corruption regression | DONE |
+| B1-R06 | exhaustive First Line semantic restore verification | `src/copilot/first-line-recovery/profile.mjs`; exact state-store duplicate-admission attestation + public getter traversal; forged and missing #119/cut corruption regressions | DONE |
 | B1-R07 | verified backup does not self-authorize AI after stale restore | profile only verifies; storage-policy recovery text preserves recovery-barrier/HUMAN rule and requires separately proven lossless cut | DONE |
 | B1-R08 | no age-only deletion of only verified recovery copy | no cleanup implementation added; existing durable retention rule remains; B2 owns operational retention/target | DONE |
 | B1-R09 | no new durable system | no DB/service introduced; encrypted artifacts remain recovery evidence | DONE |
@@ -74,7 +85,7 @@ Package commands:
 
 | ID | Owner note | Disposition | Status |
 |---|---|---|---|
-| U1 | Do not duplicate state-store invariants in verifier | semantic rules are delegated to state-store open/getter paths; adapter SQL is enumeration/aggregate/cut-coverage only | DONE |
+| U1 | Do not duplicate state-store invariants in verifier | comprehensive deferred/cut/ownership rules are delegated to the state store's existing idempotent duplicate-admission attestation; later traversal is query-only; adapter SQL is enumeration/aggregate/simple barrier metadata only | DONE |
 | U2 | Add #119 corruption regression with SQLite integrity still OK | focused test for forged post-confirmation deferred parent: `PRAGMA integrity_check=ok`, semantic verifier returns `FIRST_LINE_DB_CORRUPT` | DONE |
 | U3 | Keep Knowledge recovery regression counted on new tree | focused combined run: 14 First Line + existing 4 Knowledge = 18/18 PASS | DONE |
 | U4 | Prepare B2 owner inputs in parallel | exact fields prepared below; numeric/key/off-host values intentionally not invented in B1 | DONE |
@@ -99,6 +110,31 @@ The carried-forward C6 Runtime `markActionUncertain` item remains open. C6-B1
 does not create a production caller and does not close or waive that defect
 sweep.
 
+## Internal exhaustive defect-sweep checkpoint
+
+Before manifest freeze, the implementation surface was swept beyond the first
+finding. Two independent root-cause classes were identified and batch-fixed:
+
+- `B1-CP01` — semantic evidence/live-backup TOCTOU: evidence was initially
+  computed from the live source before the generic backup snapshot, so a
+  concurrent accepted write could yield a valid SQLite artifact with evidence
+  from another semantic cut. FIXED by one native frozen source snapshot from
+  which both evidence and encrypted artifact are derived; transient plaintext
+  staging is removed on success/failure.
+- `B1-CP02` — incomplete/duplicative topology attestation: per-row getters
+  plus adapter-owned ACK/HUMAN coverage could drift from the state store and
+  miss missing historical deferred-parent/cardinality permutations. FIXED by
+  invoking the existing state-store duplicate-admission attestation once per
+  non-empty stream, proving `total_changes()==0`, then switching to
+  `query_only` for the remaining traversal. Manual ACK/HUMAN semantic-rule
+  copies were removed.
+
+The sweep also challenged action source/candidate/descriptor/legacy coverage,
+semantic origin/owner cardinality, confirmation/human/ACK cuts, recovery
+barriers, aggregate-only privacy evidence, CLI secret/error output, transient
+plaintext cleanup, generic-core immutability and B2 boundary ownership.
+No additional independent blocker class was found.
+
 ## Development verification checkpoint
 
 These are development checks, not final HEAVY gate evidence. The final frozen
@@ -118,15 +154,21 @@ stable implementation HEAD.
   `first-line:backup` followed by `first-line:restore-verify`
   => encrypted backup PASS, scratch restore PASS, semantic verifier PASS,
   SQLite user_version=4.
-- Development root `npm test` after fresh `npm ci --ignore-scripts`: PASS.
-  Unit 1190/1190, legacy 13/13, refactor 13/13; zero
-  fail/skip/todo/cancelled. Development log SHA-256:
+- Earlier pre-batch development root `npm test` after fresh
+  `npm ci --ignore-scripts`: PASS at its then-current tree — unit 1190/1190,
+  legacy 13/13, refactor 13/13; log SHA-256
   `d1a9267ef6093867da9bfd4f19862c4b5a8a220a9873552688447e898a472a4d`.
-- The subsequent `docs/CURRENT_STATE.md` campaign-snapshot update changes the
-  final tree, so this development root run is not final gate evidence.
-  Exact-tree manifest verification must rerun root `npm test` after the stable
-  implementation HEAD is committed/frozen. Exhaustive HEAVY R1 and isolated
-  R2 also remain pending.
+  It is superseded as development evidence by the CP01/CP02 batch fix.
+- Post-batch development verification: focused 14/14 PASS, combined recovery
+  18/18 PASS, storage-policy validator PASS, CLI backup->restore semantic smoke
+  PASS with transient staging cleanup, and root `npm test` PASS — unit
+  1190/1190, legacy 13/13, refactor 13/13; zero fail/skip/todo/cancelled.
+  Post-batch root log SHA-256:
+  `c8a03bd477debe5a67fc326700742ee75011641617e4c2516960b91d9ff0a64e`.
+- This traceability update itself is not final-tree gate evidence. Exact-tree
+  manifest verification must rerun every required check, including root
+  `npm test`, after the final stable implementation HEAD is committed and the
+  manifest is frozen. Exhaustive HEAVY R1 and isolated R2 also remain pending.
 
 ## Production / deployment
 
