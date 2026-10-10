@@ -1,7 +1,7 @@
 # BabyPark integration — current state
 
-Status: RUNBOOK — NON-NORMATIVE SNAPSHOT  
-Applies-to: current repository/campaign state for `Stanislavikus/babypark-integration`  
+Status: RUNBOOK — NON-NORMATIVE SNAPSHOT
+Applies-to: current repository/campaign state for `Stanislavikus/babypark-integration`
 Supersedes: none
 
 > Snapshot prepared as part of process campaign PR #121 on 2026-10-10. It describes the state expected after successful merge of this campaign and the next intended step. It intentionally contains no future merge-commit identity. If it conflicts with canonical Git history or `docs/AI_WORKING_AGREEMENT.md`, canonical Git history and the Agreement win.
@@ -54,12 +54,14 @@ Repository process roles after this campaign:
 
 Internal checkpoints are development aids, not formal gate evidence. Every finding they produce must be tracked in the campaign PR and reach `FIXED` or `NOT APPLICABLE` before formal manifest freeze.
 
-## Mandatory pre-activation items
+## Carried-forward pre-activation operational readiness items
 
-Before customer-facing First Line production activation:
+This snapshot is not normative authority. It carries the owner's required readiness items forward so the future customer-facing First Line activation campaign cannot lose them.
 
-- provider-side protection for canonical `main` must be active and compatible with the Agreement's exact-base/result merge discipline;
-- the procedural structure validator must be installed as an actually required check, not merely advisory;
+That activation campaign must include the following checks in its own frozen manifest/traceability before operational go-live:
+
+- provider-side protection for canonical `main` is active and compatible with the Agreement's exact-base/result merge discipline;
+- the procedural structure validator is installed as an actually required check, not merely advisory;
 - all other Agreement/design activation evidence remains required.
 
-No activation may treat an advisory-only validator as equivalent to a required provider-side check.
+Once carried into the activation campaign, an unproven applicable item blocks operational go-live. If making any item normative requires a governance change or conflicts with the Agreement, HALT for an Agreement amendment rather than treating `CURRENT_STATE.md` as governance.
