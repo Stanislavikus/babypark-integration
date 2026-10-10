@@ -22,7 +22,7 @@ Documentation/templates only:
 
 - root `AGENTS.md`;
 - root `CLAUDE.md`;
-- root `CURRENT_STATE.md`;
+- existing `docs/CURRENT_STATE.md` — current campaign/navigation snapshot refreshed; older sections explicitly historical/background;
 - `docs/templates/IMPLEMENTATION_SCAN_TEMPLATE.md`;
 - `docs/templates/REVIEW_PACKET_TEMPLATE.md`;
 - `.github/pull_request_template.md`;
@@ -62,24 +62,24 @@ The final post-re-pin surface remains documentation/templates and repository-pro
 | P07 | One bounded campaign/branch/Draft PR; split oversized diff before manifest | `AGENTS.md §2` | Compare to Agreement §8; split rule is non-normative operational guidance | DONE |
 | P08 | Parallelize research/evidence/fixtures/decisions without moving active formal basis; closure/merge sequential | `AGENTS.md §2` | Static text check | DONE |
 | P09 | Do not weaken exact-tree/tests/fail-closed/R2/freshness/ownership/POST/restore/owner/CAS gates | `AGENTS.md §2` | Compare to applicable Agreement/design requirements | DONE |
-| P10 | `CURRENT_STATE.md` is campaign-boundary snapshot, written before manifest freeze; no future merge identity; no state-only commits | `AGENTS.md §4`, `CURRENT_STATE.md`, PR template | Snapshot refreshed after #119/re-pin; no future merge identity; ready before manifest freeze | DONE |
+| P10 | `docs/CURRENT_STATE.md` is campaign-boundary snapshot, written before manifest freeze; no future merge identity; no state-only commits | `AGENTS.md §4`, `docs/CURRENT_STATE.md`, PR template | Existing canonical state artifact refreshed after #119/re-pin; no future merge identity; older conflicting campaign sections explicitly historical/background; ready before manifest freeze | DONE |
 | P11 | Internal checkpoint findings are tracked to `FIXED` or `NOT APPLICABLE` before manifest freeze | `AGENTS.md §3`, PR template | PR finding-disposition check | DONE |
 | P12 | Reviewer packet carries exact basis and finite tier rule; HEAVY R2 isolation omits R1 conclusion/reasoning | reviewer template, `AGENTS.md §5` | Compare to Agreement §7.1 | DONE |
 | P13 | PR exposes campaign/risk/stable-head/manifest fields from first view | `.github/pull_request_template.md` | Static field check | DONE |
-| P14 | Carry owner-required pre-activation readiness items for provider-side `main` protection and procedural validator without creating a second normative authority | `AGENTS.md §6`, `CURRENT_STATE.md`, PR template | Future activation campaign must bind/prove them in its manifest/traceability; Agreement remains controlling | DONE |
-| P15 | Avoid turning this initial process campaign into executable/CI scope without reclassification | this file, `CURRENT_STATE.md` | Exact changed-surface check before manifest | DONE |
-| P16 | Carry H1 NF-2 into the future C6 Runtime/relay defect sweep: any production path reaching `markActionUncertain` must prove the applicable state-store/deferred topology attestation and no send/retry/reconciliation bypass | `CURRENT_STATE.md` carried-forward defect-sweep section | Future runtime campaign must disposition as `FIXED` with caller/path tests or `NOT APPLICABLE` with exact production call-graph evidence; may not be silently dropped | DONE |
-| P17 | Retire stale issue #75 as a second roadmap and keep one repository state snapshot | issue #75 pointer + `CURRENT_STATE.md` | #75 now points to Agreement/Git/`CURRENT_STATE.md` and forbids checklist duplication | DONE |
+| P14 | Carry owner-required pre-activation readiness items for provider-side `main` protection and procedural validator without creating a second normative authority | `AGENTS.md §6`, `docs/CURRENT_STATE.md`, PR template | Future activation campaign must bind/prove them in its manifest/traceability; Agreement remains controlling | DONE |
+| P15 | Avoid turning this initial process campaign into executable/CI scope without reclassification | this file, `docs/CURRENT_STATE.md` | Exact changed-surface check before manifest | DONE |
+| P16 | Carry H1 NF-2 into the future C6 Runtime/relay defect sweep: any production path reaching `markActionUncertain` must prove the applicable state-store/deferred topology attestation and no send/retry/reconciliation bypass | `docs/CURRENT_STATE.md` carried-forward defect-sweep section | Future runtime campaign must disposition as `FIXED` with caller/path tests or `NOT APPLICABLE` with exact production call-graph evidence; may not be silently dropped | DONE |
+| P17 | Retire stale issue #75 as a second roadmap and keep one repository state snapshot | issue #75 pointer + `docs/CURRENT_STATE.md` | #75 now points to Agreement/Git/`docs/CURRENT_STATE.md` and forbids checklist duplication | DONE |
 
 ## Final stable-head prerequisites before manifest freeze
 
 Before freezing the required-verification manifest:
 
-1. Convert stale umbrella issue #75 to a pointer to `CURRENT_STATE.md` + canonical Git/Agreement rather than maintaining a second roadmap.
+1. Convert stale umbrella issue #75 to a pointer to `docs/CURRENT_STATE.md` + canonical Git/Agreement rather than maintaining a second roadmap.
 2. Confirm final changed surface remains exactly documentation/templates/evidence only.
 3. Confirm no executable validator/CI/runtime/governance amendment was introduced.
 4. Confirm all P01..P17 rows are terminal DONE.
-5. Run static consistency checks across Agreement §7.1/§8/§12/§13, `AGENTS.md`, `CLAUDE.md`, `CURRENT_STATE.md`, scan/reviewer/PR templates and this traceability artifact.
+5. Run static consistency checks across Agreement §7.1/§8/§12/§13, `AGENTS.md`, `CLAUDE.md`, `docs/CURRENT_STATE.md`, scan/reviewer/PR templates and this traceability artifact.
 6. Then freeze the required-verification manifest on the stable HEAD.
 
 The executable procedural validator/CI wiring remains intentionally excluded and requires a separate bounded classification.
