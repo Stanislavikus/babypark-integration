@@ -1,9 +1,12 @@
 import { transientTurnFromExactRead } from './first-line-extraction.mjs';
 import { resolveFirstLineExactReads } from './first-line-resolution.mjs';
 import { projectOpenTurn } from './first-line-routing-planner.mjs';
+import { evaluateObjectiveConstraintLatch } from './first-line-objective-constraint-latch.mjs';
+import { applyFirstLineRoute } from './first-line-route-application.mjs';
 import { createFirstLineDecisionBasis } from './first-line-decision-authority.mjs';
 import { decideFirstLine } from './first-line-decision.mjs';
 import { renderFirstLineWebsite } from './first-line-renderer.mjs';
+import { sameFirstLineSourceEvent } from './first-line-source-integrity.mjs';
 
 /**
  * CP2: build one TRANSIENT non-authorizing candidate from an already routed
@@ -18,6 +21,7 @@ export async function buildFirstLineTransientCandidate({
 } = {}) {
   if (!store || typeof store.readRoutingSnapshot !== 'function' ||
       typeof store.getConversationStream !== 'function' ||
+      typeof store.getConversationEventBySource !== 'function' ||
       typeof streamId !== 'string' || !streamId ||
       !reader || typeof reader.readExactSourceMessage !== 'function' ||
       typeof produceExtraction !== 'function' ||
@@ -25,7 +29,7 @@ export async function buildFirstLineTransientCandidate({
     throw new TypeError('first_line_semantic_inputs_invalid');
   }
 
-  const projection = projectOpenTurn(store.readRoutingSnapshot(streamId));
+  let projection = projectOpenTurn(store.readRoutingSnapshot(streamId));
   if (projection.code === 'TOPOLOGY_UNPROVABLE') {
     return Object.freeze({ code: 'HUMAN_REQUIRED', reason: projection.reason });
   }
@@ -35,10 +39,9 @@ export async function buildFirstLineTransientCandidate({
   if (projection.code !== 'OPEN_TURN') {
     return Object.freeze({ code: 'HUMAN_REQUIRED', reason: 'UNCLASSIFIED_ROUTE' });
   }
-  if (!projection.active_episode || projection.active_episode.state !== 'active') {
-    // First-turn routing/episode creation belongs to C2 routing application;
-    // never silently create a new episode or skip the durable plan token.
-    return Object.freeze({ code: 'ROUTING_REQUIRED', reason: 'NO_ACTIVE_EPISODE' });
+  if (projection.active_episode?.state !== 'active' &&
+      projection.active_episode !== null) {
+    return Object.freeze({ code: 'HUMAN_REQUIRED', reason: 'EPISODE_STATE_UNPROVABLE' });
   }
 
   const exactReads = [];
@@ -54,6 +57,10 @@ export async function buildFirstLineTransientCandidate({
     }
     try {
       const turn = transientTurnFromExactRead(index + 1, exactRead);
+      const recorded = store.getConversationEventBySource(streamId, messageId);
+      if (!sameFirstLineSourceEvent(recorded, exactRead.event)) {
+        return Object.freeze({ code: 'HUMAN_REQUIRED', reason: 'SOURCE_TOPOLOGY_CHANGED' });
+      }
       if (turn.sourceConversationId !== projection.source_conversation_id ||
           turn.sourceMessageId !== messageId) {
         return Object.freeze({ code: 'HUMAN_REQUIRED', reason: 'EXACT_SOURCE_MISMATCH' });
@@ -85,6 +92,41 @@ export async function buildFirstLineTransientCandidate({
   const resolution = resolveFirstLineExactReads({
     extraction, exactReads, knowledgeStore, catalogService, nowUtc,
   });
+
+  if (projection.active_episode === null) {
+    // First turn: use the frozen C3 proof and the official C2 route
+    // application. The store atomically attests stream revision, routing
+    // ledger fingerprint and absence of an active episode before writing.
+    // Never use the raw episode constructor or auto-replace an active one.
+    const proof = evaluateObjectiveConstraintLatch({
+      projection, resolution, exactReads,
+    });
+    try {
+      const routed = applyFirstLineRoute({
+        store, projection, constraintProof: proof,
+      });
+      if (routed.code !== 'STANDALONE_EPISODE_STARTED' ||
+          routed.transition?.episode?.state !== 'active') {
+        return Object.freeze({ code: 'HUMAN_REQUIRED', reason: 'INITIAL_ROUTE_UNPROVABLE' });
+      }
+    } catch (error) {
+      if (error?.code === 'FIRST_LINE_ROUTING_PLAN_STALE' ||
+          error?.code === 'FIRST_LINE_STALE_WRITE') {
+        return Object.freeze({ code: 'STALE', reason: 'ROUTING_RACE' });
+      }
+      throw error;
+    }
+    projection = projectOpenTurn(store.readRoutingSnapshot(streamId));
+    if (projection.code !== 'OPEN_TURN' ||
+        projection.active_episode?.state !== 'active' ||
+        projection.open_turn.source_message_ids.length !== exactReads.length ||
+        projection.open_turn.source_message_ids.some(
+          (id, index) => id !== exactReads[index].exactRead.sourceMessageId
+        )) {
+      return Object.freeze({ code: 'STALE', reason: 'ROUTE_CHANGED' });
+    }
+  }
+
   const basis = createFirstLineDecisionBasis({
     projection, resolution, exactReads, catalogService, knowledgeStore, nowUtc,
   });
