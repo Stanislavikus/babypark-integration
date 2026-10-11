@@ -162,7 +162,7 @@ test('CP1 fails closed for missing/reclassified/changed authoritative rows', asy
   rows.set('55:101', sourceRow(101, { sender: { type: 'Contact', id: 9002 } }));
   assert.deepEqual(await relay.receive(signed(payload(101, 55, { sender: { id: 9002 } }))),
     { status: 409, outcome: 'source_topology_changed' });
-  assert.deepEqual(await relay.receive(signed(payload())), { status: 422, outcome: 'source_not_customer' });
+  assert.deepEqual(await relay.receive(signed(payload())), { status: 409, outcome: 'source_topology_changed' });
   assert.equal(reads.length, 5);
   audit(file, store => {
     const stream = store.findConversationStream({ sourceProvider: 'chatwoot', sourceConversationId: 55 });
@@ -408,4 +408,48 @@ test('B1 Q10/Q40 structured message_updated cannot be ACKed as harmless bot echo
   audit(file, store => assert.equal(store.findConversationStream({
     sourceProvider: 'chatwoot', sourceConversationId: 55,
   }), null));
+});
+
+
+test('B1 existing source reclassified as HUMAN or INTERNAL is 409 before admission 422', async t => {
+  const { file } = fixture(t), rows = new Map(), reads = [];
+  const original = sourceRow(501, {
+    message_type: 'outgoing', sender: { type: 'AgentBot', id: 7 },
+    source_id: 'synthetic-outbound-501',
+  });
+  rows.set('55:501', original);
+  const reader = makeReader(rows, reads);
+  // Simulates coordinator having already recorded the public bot reply.
+  const fromCurrent = await reader.readExactSourceMessage(55, 501);
+  audit(file, store => {
+    const stream = store.ensureConversationStream({
+      sourceProvider: 'chatwoot', sourceConversationId: 55,
+    });
+    store.ingestConversationEvent(stream.stream_id, fromCurrent.event);
+  });
+  const relay = relayFor(file, reader);
+  t.after(() => relay.close());
+  const signedEcho = payload(501, 55, {
+    message_type: 'outgoing', sender: { type: 'AgentBot', id: 7 },
+  });
+  assert.deepEqual(await relay.receive(signed(signedEcho, 'preseed-echo')),
+    { status: 200, outcome: 'duplicate_source' });
+
+  rows.set('55:501', { ...original, sender: { type: 'User', id: 42 } });
+  assert.deepEqual(await relay.receive(signed(signedEcho, 'modified-sender')),
+    { status: 409, outcome: 'source_topology_changed' });
+
+  rows.set('55:501', { ...original, private: true });
+  assert.deepEqual(await relay.receive(signed(signedEcho, 'now-private')),
+    { status: 409, outcome: 'source_topology_changed' });
+
+  audit(file, store => {
+    const stream = store.findConversationStream({
+      sourceProvider: 'chatwoot', sourceConversationId: 55,
+    });
+    assert.equal(stream.stream_revision, 1);
+    assert.equal(store.listConversationEvents(stream.stream_id)[0].event_kind,
+      'BABYPARK_PUBLIC_REPLY');
+  });
+  assert.equal(reads.length, 4);
 });
