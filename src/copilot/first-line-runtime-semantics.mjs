@@ -7,6 +7,11 @@ import { createFirstLineDecisionBasis } from './first-line-decision-authority.mj
 import { decideFirstLine } from './first-line-decision.mjs';
 import { renderFirstLineWebsite } from './first-line-renderer.mjs';
 import { sameFirstLineSourceEvent } from './first-line-source-integrity.mjs';
+import { isCertifiedFirstLineS2CoveredTextProof } from './first-line-s2-covered-text.mjs';
+import { isDeepStrictEqual } from 'node:util';
+
+const candidateInputBindings = new WeakMap();
+
 
 /**
  * CP2: build one TRANSIENT non-authorizing candidate from an already routed
@@ -152,11 +157,99 @@ export async function buildFirstLineTransientCandidate({
 
   // The caller may use this *only* inside a future freshly-authorized S1/S2
   // attempt; the response contains transient text and MUST NEVER be persisted.
-  return Object.freeze({
+  const candidate = Object.freeze({
     code: decision.decision === 'HUMAN' ? 'HUMAN_REQUIRED' : 'CANDIDATE',
     projection, resolution, decision, rendering,
     exactReads: Object.freeze(exactReads),
     turns: Object.freeze(turns),
+    nonAuthorizing: true,
+  });
+  // The certified S1 extraction is transient and not returned, serialized,
+  // persisted, hashed or exposed to consumer-provided output callbacks.
+  // Copy it before the untrusted producer can mutate its original reference.
+  if (candidate.code === 'CANDIDATE') {
+    candidateInputBindings.set(candidate, structuredClone(extraction));
+  }
+  return candidate;
+}
+
+/**
+ * Mandatory fresh-business-authority sub-proof for a future S2 coordinator.
+ * Rebuild C2/C3/C4/C5 from the ORIGINAL extracted intent, current exact
+ * Chatwoot bytes proven by S2, and NEW current Catalog/Knowledge reads.
+ * The model is never invoked again and the proof never authorizes POST.
+ */
+export function reauthorizeFirstLineCandidateFacts({
+  store, streamId, candidate, coveredProof, catalogService, knowledgeStore, nowUtc,
+} = {}) {
+  if (!candidate || candidate.code !== 'CANDIDATE' ||
+      !candidateInputBindings.has(candidate) ||
+      !isCertifiedFirstLineS2CoveredTextProof(coveredProof,
+        { candidate, store, streamId }) ||
+      typeof store?.getConversationStream !== 'function' ||
+      streamId !== candidate.projection.stream_id ||
+      coveredProof?.code !== 'COVERED_TEXT_PROVEN' ||
+      coveredProof.nonAuthorizing !== true ||
+      !Array.isArray(coveredProof.exactReads) ||
+      typeof nowUtc !== 'string' || !catalogService || !knowledgeStore) {
+    throw new TypeError('first_line_s2_facts_inputs_invalid');
+  }
+  const ids = candidate.projection.open_turn.source_message_ids;
+  if (ids.length !== coveredProof.exactReads.length ||
+      coveredProof.sourceConversationId !== candidate.projection.source_conversation_id ||
+      ids.some((id, i) => id !== coveredProof.coveredSourceIds[i] ||
+        id !== coveredProof.exactReads[i].sourceMessageId)) {
+    return Object.freeze({ code: 'HUMAN_REQUIRED', reason: 'S2_COVERAGE_MISMATCH' });
+  }
+
+  const current = store.getConversationStream(streamId);
+  if (current?.stream_revision !== candidate.projection.stream_revision ||
+      current?.last_event_seq !== candidate.projection.through_event_seq) {
+    return Object.freeze({ code: 'STALE', reason: 'S2_REVISION_CHANGED' });
+  }
+
+  let resolution;
+  let decision;
+  let rendering;
+  try {
+    resolution = resolveFirstLineExactReads({
+      extraction: candidateInputBindings.get(candidate),
+      exactReads: coveredProof.exactReads.map((exactRead, i) =>
+        Object.freeze({ turnIndex: i + 1, exactRead })),
+      catalogService, knowledgeStore, nowUtc,
+    });
+    const basis = createFirstLineDecisionBasis({
+      projection: candidate.projection,
+      resolution,
+      exactReads: coveredProof.exactReads.map((exactRead, i) =>
+        Object.freeze({ turnIndex: i + 1, exactRead })),
+      catalogService, knowledgeStore, nowUtc,
+    });
+    decision = decideFirstLine(basis);
+    rendering = renderFirstLineWebsite(decision);
+  } catch {
+    return Object.freeze({ code: 'HUMAN_REQUIRED', reason: 'S2_CURRENT_FACTS_UNPROVABLE' });
+  }
+
+  const after = store.getConversationStream(streamId);
+  if (after?.stream_revision !== candidate.projection.stream_revision ||
+      after?.last_event_seq !== candidate.projection.through_event_seq) {
+    return Object.freeze({ code: 'STALE', reason: 'S2_REVISION_CHANGED' });
+  }
+  const originalResolution = candidate.resolution;
+  const factsAgree =
+    isDeepStrictEqual(resolution.used_revision_ids, originalResolution.used_revision_ids) &&
+    isDeepStrictEqual(resolution.catalog_generation_id, originalResolution.catalog_generation_id) &&
+    isDeepStrictEqual(resolution.knowledge_resolver_contract_version,
+      originalResolution.knowledge_resolver_contract_version) &&
+    isDeepStrictEqual(resolution.resolutions, originalResolution.resolutions) &&
+    isDeepStrictEqual(decision, candidate.decision) &&
+    isDeepStrictEqual(rendering, candidate.rendering);
+  if (!factsAgree) {
+    return Object.freeze({ code: 'STALE', reason: 'S2_SEMANTIC_FACTS_CHANGED' });
+  }
+  return Object.freeze({
+    code: 'CURRENT_FACTS_PROVEN',
     nonAuthorizing: true,
   });
 }

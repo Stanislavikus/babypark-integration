@@ -2,6 +2,18 @@ import { isCertifiedOpenTurnProjection } from './first-line-routing-planner.mjs'
 import { resolutionUsesExactRead } from './first-line-resolution.mjs';
 import { sameFirstLineSourceEvent } from './first-line-source-integrity.mjs';
 
+// Identity-minted only after an actual fresh authoritative reread. A cloned
+// object with the same fields cannot certify current customer bytes.
+const certifiedCoveredProofs = new WeakMap();
+export function isCertifiedFirstLineS2CoveredTextProof(
+  value, { candidate, store, streamId } = {}
+) {
+  if (value === null || typeof value !== 'object') return false;
+  const binding = certifiedCoveredProofs.get(value);
+  return binding?.candidate === candidate &&
+    binding?.store === store && binding?.streamId === streamId;
+}
+
 /**
  * CP3 subset of C6 §29.7.2 S2. Exact-reread every S1-covered customer
  * message with fresh Chatwoot authority; check immutable in-memory C2
@@ -68,14 +80,17 @@ export async function verifyFirstLineS2CoveredText({
     if (!resolutionUsesExactRead(resolution, i + 1, fresh)) {
       return Object.freeze({ code: 'STALE', reason: 'EXACT_CUSTOMER_BYTES_CHANGED' });
     }
-    verified.push(fresh);
+    verified.push(Object.freeze({
+      ...fresh,
+      event: Object.freeze({ ...fresh.event }),
+    }));
   }
   const after = store.getConversationStream(streamId);
   if (after.stream_revision !== projection.stream_revision ||
       after.last_event_seq !== projection.through_event_seq) {
     return Object.freeze({ code: 'STALE', reason: 'REVISION_CHANGED' });
   }
-  return Object.freeze({
+  const proof = Object.freeze({
     code: 'COVERED_TEXT_PROVEN',
     sourceConversationId: projection.source_conversation_id,
     coveredSourceIds: Object.freeze([...coveredIds]),
@@ -83,4 +98,6 @@ export async function verifyFirstLineS2CoveredText({
     exactReads: Object.freeze(verified),
     nonAuthorizing: true,
   });
+  certifiedCoveredProofs.set(proof, Object.freeze({ candidate, store, streamId }));
+  return proof;
 }
