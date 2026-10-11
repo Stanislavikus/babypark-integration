@@ -1,0 +1,71 @@
+# C6 Runtime — AgentBot webhook ACK / first-turn B1: architecture fit and pre-code decision
+
+Status: PRE-CODE FIT EVIDENCE — NON-NORMATIVE, **NOT an implementation, production activation, owner approval or merge authorization**.
+Applies to: `Stanislavikus/babypark-integration`, internal webhook ACK/failure-side-effect hardening checkpoint of **existing** C6 Runtime macro-campaign PR #128 (NOT C6-B1 durable backup stage).
+Supersedes: none. Supplements the existing `docs/AI_FIRST_LINE_C6_RUNTIME_R1_FIT_20261011.md` only for this observed defect; its original owner approval cannot substitute for refreshed scope approval.
+UTC evidence: 2026-10-11T20:59:17Z.
+Canonical current main / campaign base: `f9b5b8e5320884a675af3ea8e608c1e986e8331d`; Agreement `e777fce4af8e8c3372f1f9de9ef7d00f786c2c89`; pre-stage PR #128 HEAD `e4b6f136d47f12e09491ce697bc2919f88cd180a`, tree `c734c35dd9076d25df042e748503ccae0ed96173`.
+**Bound complete refreshed alternatives scan SHA-256: `b0809635ea0f5e19514497125b17ef62b7a122e2aa559a5ba364b711ff976f50`** (`docs/AI_FIRST_LINE_C6_RUNTIME_ACK_OPTIONS_20261011.md`; normalized UTF-8/LF/final newline).
+Risk: **HEAVY** per Agreement §7.0 — HTTP ACK modifies Chatwoot bot failure/handoff behavior, signed external input and fail-closed decision semantics.
+
+## 1. Choice, applicability, exact version/license/dependencies
+
+**ONE recommendation: KEEP-EXISTING**, repair the non-deployed existing C6 Runtime signed AgentBot relay using its official Chatwoot v4.18.0 API plus existing `src/copilot/auth.mjs`, `chatwoot-client.mjs`, `first-line-runtime-ingress.mjs` and `FirstLineStateStore`. The Chatwoot deployed source is exactly `9f920b549c14491a4e587687a3eed5d21c6ccc7d`, v4.18.0; non-enterprise Chatwoot source uses MIT Expat (enterprise overlay is differently licensed and not used as authority for this feature). The existing Node built-in HMAC, HTTP and SQLite components add no license or runtime dependency. This version-specific fit does NOT imply newer upstream or production EE Captain behavior is identical. No new DB, Redis queue, webhook proxy, Chatwoot core/fork patch or new paid/free service.
+
+Checked NATIVE options first: `keep_pending_on_bot_failure` is real but changes account-wide behavior, hiding even a genuine authority failure and not providing HUMAN. AgentBot has no stock per-message-class subscription, whereas generic webhook subscriptions filter only event names and are not equivalent to agent-bot ownership. Official REST/SDK adds no transport classifier. Maintained OSS `fazer-ai/agents` has a different multi-tenant agent/ledger and its commercial/free-edition license and entire transitive deployment were not pinned as a drop-in fit; Parlant (Apache-2.0) is a conversational behavior engine, not a Chatwoot webhook ACK substitute. No proven ready free option solves this bounded issue faster/safer than applying a small correction to the **already-existing** relay. Per Agreement §3 this selection is conditional on the owner accepting the refreshed exact scan/fit, not permission to write code now.
+
+## 2. Data/connectivity and unchanged frozen invariants
+
+Webhook received from Chatwoot **AgentBot** via signed raw payload `X-Chatwoot-Signature`, timestamp and delivery ID. Strict configured account/inbox/agent-bot provenance; signed body is a **locator only**. For actions requiring authority, re-read the *exact* current Chatwoot source message over official, scoped, authenticated Chatwoot REST before classifying semantic type. Never equate a mere signed claim to proof of customer or proof of benign event when it could hide ambiguity or contrary state. Chatwoot owns the transcript; BabyPark persists only allowed v4 semantic metadata, never raw/normalized customer bodies/emails/phones/attachment URLs/content hashes. No sender identity, event shape, source row, origin, revision or Human ownership guessed. No public POST, API handoff or source ledger insertion for positively recognized ignored events. Existing durable v4 writer/transaction/lease/CAS and rollback rules remain untouched.
+
+Customer-facing dynamic facts (price, stock, policy, hours) require live authority immediately before action; nothing in this ACK hardening authorizes a public reply or new semantic decision. `pending→open` with SAME_AGENTBOT and no human assignee is NOT HUMAN. Durable HUMAN and operator-attention under frozen `AI_FIRST_LINE_DESIGN.md` §29.8.2 remain separate mandatory requirements and are not waived by this B1 fix. Bot webhook acknowledgment and end-user visible/human receipt are different acceptance layers.
+
+**No production connectivity or activation** in this stage. Exact source-backed unit/fixture tests use synthetic messages and isolated disposable `episode.sqlite`; do not call deployed Chatwoot/real channels to make the unit suite pass. Original Chatwoot P0 showed the host can run a four-container synthetic instance, but its positive signed R0 test was BLOCKED by provider execution safety; do not circumvent via different tools/manual SSH. That restriction cannot be reclassified as a pass. PoC PR #129 documents/approval are separate, and the existing rehearsal containers stay STOPPED. No production email-collect toggle or `keep_pending_on_bot_failure` toggle, no changes to production Chatwoot core.
+
+## 3. Candidate HTTP reply matrix — all success cases are proof obligations
+
+This is a **pre-code proposed classification contract**, not a claim that current code already satisfies it. The matrix is deliberately narrower than `2xx for every nonincoming event`.
+
+| Source and trust class | Required proof before reply | Desired response/disposition | Forbidden shortcut |
+| --- | --- | --- | --- |
+| Signed, exact target, **new customer incoming** | Current exact Chatwoot row `CUSTOMER_MESSAGE`, correct contact sender, immutable source, snapshot/revision rules | Existing `200 recorded/unsupported_recorded/duplicate_source` via state store, after verified append/idempotency | Do not ACK a guessed sender/source |
+| Signed, exact target, own **bot outgoing** | Current exact row `BABYPARK_PUBLIC_REPLY` with configured AgentBot sender; message ID/source aligned, no topology conflict | `2xx ignored_known_bot_echo`, **zero event append/public POST** (subject to full source-conformance tests) | `source_id` correlation alone or signed `outgoing` without authority is not enough |
+| Signed, exact target, native **Email Collect template** (or approved greeting/OOO/CSAT subtype) | Exact source row positively classified `SYSTEM_TEMPLATE` under frozen narrow content/sender/type criteria; no attachments, unknown/unsupported false | `2xx ignored_known_template`, zero semantic ledger append | Never say all template messages are safe; mixed/unknown subtype fails closed |
+| Signed, exact target, explicitly **private note** | Current authoritative row provably `private=true` / `INTERNAL`, identity and event coordinates matched and no conflicting customer context | `2xx ignored_known_private` **only if complete proof possible via existing official reader**; else HALT/revisit classification, not unconditional ACK | Current reader may return `INTERNAL` without full row identity; cannot invent missing evidence |
+| `message_updated`, widget-triggered, unknown valid signed event | No frozen proof that update is semantically inert or source stable | **NO generic successful ACK rule**; retain deny/fail-closed or HALT for separate exact update semantics | Don't silently classify all non-message_created as known harmless |
+| Invalid/missing HMAC, expired signature/replay/invalid delivery | Signature verifier failure | Existing `401`/specific verifier failure | No authentication bypass to prevent native failure |
+| Current exact Chatwoot row ABSENT/unavailable/unprovable or v4 store unavailable | Required authority cannot be re-read | Existing `503`, no guessed ledger/write | Don't map to `500` as generic retry: Chatwoot may log `payload.to_json` on 429/500 |
+| Previously accepted source changes topology / inconsistent authoritative source | Durable source history conflict or inconclusive scope/identity | Existing `409` for proven same-source drift; fail closed for unknown | No silent `2xx` ACK of contradictory event |
+| Mismatched account/inbox/bot, unclassified sender/event | No positive proof | Existing deny/fail-closed; exact reply/code requires additional Chatwoot side-effect test | Do not transform cross-tenant/bot payload to benign ignored |
+
+**BLOCKING pre-code design questions:**
+A) Existing `createFirstLineChatwootAuthorityReader().readExactSourceMessage` returns `INTERNAL` for private messages without the whole event; is that enough exact identity proof for a successful ACK? If not, defer private ACK or redesign ONLY through a separately reviewed official API projection without storing private text.
+B) `message_updated` may describe a changed already-ingested customer message; ignoring it can miss mutation/freshness invalidation. Freeze exact update semantics and tests before any generic ACK.
+C) No ACK semantic can itself guarantee native physical HUMAN; unresolved authority still needs independently proven durable attention, not automatic status flip.
+D) Re-reading the exact Chatwoot row synchronously before ACK can exceed the stock `WEBHOOK_TIMEOUT` 5 seconds and open pending; bound and test latency/failure paths without PII logging or unsafe artificial retries. Proven-fresh authority unavailable ⇒ fail closed and HUMAN, but `503` HTTP alone is not proof that Human took over.
+
+Do not assert all known-ignored events can be safely ACKed until A–D are resolved in testable code/review. If this matrix is internally contradictory with frozen C6 semantics, **HALT** and obtain owner decision rather than stealthily broadening ACCEPT.
+
+## 4. Minimum deterministic regression and focused adversarial inventory
+
+All future fixtures are synthetic, exact versioned Chatwoot schema/type shape and configured account/bot/inbox. Each test must prove response, exact authority call count, no content in SQLite or logs, stable durable revision/episode/source, and zero customer public POST:
+
+- Registered agent-bot echo (string/int outgoing), duplicate delivery, same message changed to sender/human, wrong bot identity and non-unique source_id correlation.
+- Native Website Email Collect pair `template/text` and `template/input_email` on first email-less contact; separate greeting/OOO/CSAT where actual source shape proven; mixed callbacks must not induce semantic customer event for templates.
+- Private team note with verified complete row; denial if current reader only certifies INTERNAL without identity or sender evidence.
+- Genuine incoming customer text and unsupported customer attachments still ingest exactly once; no loss of source ordering or durable v4 event kind.
+- Invalid HMAC/timestamp/delivery; signed unknown event, wrong account/inbox/conversation, forged template/sender, null/unknown sender, missing source and API outage.
+- `message_updated` editing accepted customer source, wrong/changed row topology, body mutation with no stored digest; verify no stale fresh-send authorization.
+- Chatwoot native non-2xx side effects; `503` and `401` do not by themselves constitute HUMAN takeover. No broad `500` response that copies customer body into retry logs.
+- Concurrent 40 deliveries and restart idempotency, fail-closed missing DB and absent backup, exact ephemeral store, no new write classes.
+- Future real Chatwoot integration R0 positive test only via a legitimate permitted execution method, independent approval and resource caps. **42-case historical matrix NOT a blocking prerequisite** to fixing proven B1 semantics. Seller notification P1/P2/P4, P3 durable HUMAN and P8 phone push remain independently gated.
+
+Required traceability `requirement → exact implementation path/test → fail-closed behavior → durable effect → status`; only DONE in-scope after implementation and exhaustive verified tests. This is an INTERNAL checkpoint of PR #128: previous CP1 11/11 is useful evidence but tests requiring former 422 on outgoing/private/updated events must be updated **only after** corrected behavior is explicitly authorized. Root `npm test` + any behaviorally owning suites, exact-tree clean immutable dependency inputs, change manifest SHA, HEAVY exhaustive verification+isolated confirmation and owner-controlled merge are required at final macro closure. No auto-merge.
+
+## 5. Failure isolation, stop/rollback, cost and approval
+
+Rollback if implemented later: disable/unroute pre-production BabyPark relay via existing verified deployment mechanism, restore previous exact version; no customer/public writes or Chatwoot core changes in this campaign. The current PR #128 is NOT deployed and this document authorizes no release; operational rollback of real agent-bot must be separately planned before activation. Production Website exact EE/Captain, Email Collect, source webhook public HTTPS, existing account settings, worker logging and seller notifications must be read-only verified under a separately approved production-fit gate before live traffic.
+
+Total cost of selected path: no new cloud server, subscription, Node package, background queue or DB. Expected change is bounded within the existing source reader/ingress and unit tests (code is NOT YET AUTHORIZED); compared with migrating to other OSS stacks, less operational integration burden. If the exact HMAC/current-source ignored-event proof cannot be implemented using existing official Chatwoot API, **stop** rather than inserting a proxy/new custom connector. The owner must explicitly approve the exact latest SCAN SHA plus this FIT SHA and **a bounded code hardening scope on PR #128** before ANY change to executable files. Prior PoC approval explicitly excluded PR #128 and cannot be repurposed. Merge approval is separate after complete final HEAVY closure.
+
+**Exit from this pre-code gate:** exact SHA-256 of this normalized complete fit verified against Git and scan digest bound; owner approves exact two hashes and B1 hardening while explicitly preserving all no-public-send/unknown-fail-closed/nonnormative HUMAN boundary rules. Until then: DOCUMENTATION ONLY.
