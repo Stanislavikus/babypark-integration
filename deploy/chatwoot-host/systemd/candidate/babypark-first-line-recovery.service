@@ -1,0 +1,28 @@
+# NOT INSTALLED. C6/CP4 candidate only, requires measured timing and B2 gates.
+# External operator attention and missed-heartbeat alarm are NOT implemented.
+[Unit]
+Description=BabyPark First Line post-send recovery (candidate, no public writer)
+After=local-fs.target
+RequiresMountsFor=/var/lib/babypark-integration
+
+[Service]
+Type=exec
+User=www-data
+Group=www-data
+EnvironmentFile=/etc/babypark-first-line-recovery.env
+ExecStart=/usr/bin/node /opt/babypark-integration/current/scripts/first-line-postsend-service.mjs
+Restart=on-failure
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/babypark-integration
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+LockPersonality=true
+RestrictSUIDSGID=true
+
+# Intentionally no [Install] or auto-enable path. Restart pacing, B2 backups,
+# operator alerting, systemd watchdog and measured timing MUST be gated before
+# installing/activating this unit on the future-production Chatwoot host.
