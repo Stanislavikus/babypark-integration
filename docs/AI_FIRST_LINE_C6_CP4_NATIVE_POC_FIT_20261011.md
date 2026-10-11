@@ -5,8 +5,8 @@ Applies to: `Stanislavikus/babypark-integration`, isolated Chatwoot Website Firs
 Supersedes: none.
 UTC evidence date: 2026-10-11T17:08Z.
 
-**Bound frozen §1 alternatives scan SHA-256:** `010a94f85bb441cf3422edd64df5cc3c17262f367f41923de65110f4c520bbfd`.
-File: `c6_native_chatwoot_poc_options_20261011.md`. Both files normalized as UTF-8, LF, exactly one final newline; do not edit after owner approval.
+**Bound frozen §1 alternatives scan SHA-256:** `2ec15a7ac0fd3e8cf3408b711246c225db58e6dde25dfcba0e744fbf1ea4f3ce`.
+File: `docs/AI_FIRST_LINE_C6_CP4_NATIVE_POC_OPTIONS_20261011.md`. Both files normalized as UTF-8, LF, exactly one final newline; do not edit after owner approval.
 
 ## Identity, purpose, selected option
 
@@ -14,7 +14,7 @@ RECOMMENDATION: **PoC-only** (no authorization to deploy, operate customer traff
 
 Repository: `Stanislavikus/babypark-integration`. PoC source branch must be **separate bounded branch** created against exact BASE `f9b5b8e5320884a675af3ea8e608c1e986e8331d`; live C6 PR #128 remains at HEAD `e4b6f136d47f12e09491ce697bc2919f88cd180a`, TREE `c734c35dd9076d25df042e748503ccae0ed96173`. Canonical merged working agreement blob `e777fce4af8e8c3372f1f9de9ef7d00f786c2c89`.
 
-Chosen upstream Chatwoot Community Edition source: **v4.18.0 exact Git SHA `9f920b549c14491a4e587687a3eed5d21c6ccc7d`**, upstream official production Docker Compose from that SHA. Licensing: MIT for non-enterprise code, enterprise directory separately licensed, official Community Edition $0 (see `LICENSE` pinned source, https://www.chatwoot.com/terms-of-service and https://www.chatwoot.com/pricing/self-hosted-plans). No Captain AI, enterprise or fee-only features. Existing Node C6 Runtime and SQLite remain BabyPark-owned and are not activated by this PoC. No Chatwoot fork/patch.
+Chosen upstream Chatwoot Community Edition source: **v4.18.0 exact Git SHA `9f920b549c14491a4e587687a3eed5d21c6ccc7d`**, upstream official production Docker Compose from that SHA. Licensing: MIT for non-enterprise code, enterprise directory separately licensed, official Community Edition $0 (see `LICENSE` pinned source, https://www.chatwoot.com/terms-of-service and https://www.chatwoot.com/pricing/self-hosted-plans). No Captain AI, enterprise or fee-only features. Existing Node C6 Runtime and SQLite remain BabyPark-owned and are not activated by this PoC. No Chatwoot fork/patch. Cross-branch C6 reference files from PR #128 MUST be read at pinned HEAD e4b6f136d47f12e09491ce697bc2919f88cd180a; those evidence files do not exist on this separate PoC main-based branch.
 
 Verified read-only official Docker Hub tag metadata (2026-10-11) — use **exact linux/amd64 immutable image digests**:
 
