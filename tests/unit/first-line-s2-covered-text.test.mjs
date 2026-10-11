@@ -6,6 +6,7 @@ import test from 'node:test';
 import { FirstLineStateStore } from '../../src/copilot/first-line-state-store.mjs';
 import { buildFirstLineTransientCandidate, reauthorizeFirstLineCandidateFacts } from '../../src/copilot/first-line-runtime-semantics.mjs';
 import { verifyFirstLineS2CoveredText } from '../../src/copilot/first-line-s2-covered-text.mjs';
+import { assessFirstLineS2Preflight } from '../../src/copilot/first-line-s2-preflight.mjs';
 import {
   FIRST_LINE_EXTRACTION_SCHEMA, FIRST_LINE_INTENT_SCHEMA_VERSION,
 } from '../../src/copilot/first-line-extraction.mjs';
@@ -345,5 +346,159 @@ test('S2 fresh fact provider changing stream head mid-call invalidates apparent 
     nowUtc: '2026-01-10T12:00:00.000Z',
   });
   assert.deepEqual(r, { code: 'STALE', reason: 'S2_REVISION_CHANGED' });
+  assert.equal(f.store.readRoutingSnapshot(f.streamId).live_public_action, null);
+});
+
+function preflightReader(f, audit = [], options = {}) {
+  return {
+    async readExactSourceMessage(id, messageId) {
+      audit.push('exact:' + messageId);
+      return f.reader.readExactSourceMessage(id, messageId);
+    },
+    async readAuthorizingConversationSnapshot(id) {
+      audit.push('history');
+      assert.equal(id, 55);
+      return options.snapshot ?? {
+        code: 'COMPLETE', complete: true,
+        events: [...f.rows.keys()].map(event),
+      };
+    },
+    async readCurrentConversationAuthority(id, inboxId) {
+      audit.push('owner');
+      assert.equal(id, 55);
+      assert.equal(inboxId, 99);
+      if (options.onOwner) options.onOwner();
+      return options.owner ?? {
+        code: 'SEND_ELIGIBLE', sourceConversationId: 55,
+        inboxId: 99, status: 'pending', ownerClass: 'SAME_AGENTBOT',
+      };
+    },
+  };
+}
+
+function preflightArgs(f, candidate, reader, authority = f.authority) {
+  return {
+    store: f.store, streamId: f.streamId, candidate,
+    authorityReader: reader, ...authority,
+    nowUtc: '2026-01-10T12:00:00.000Z', configuredInboxId: 99,
+  };
+}
+
+test('S2 preflight checks exact bytes then facts then whole history then latest native owner', async t => {
+  const f = setup(t, [101, 102]);
+  const candidate = await f.build();
+  const order = [];
+  const reader = preflightReader(f, order);
+  const result = await assessFirstLineS2Preflight(preflightArgs(f, candidate, reader, {
+    catalogService: {},
+    knowledgeStore: {
+      authoritySnapshot() {
+        order.push('facts');
+        return [policy()];
+      },
+    },
+  }));
+  assert.deepEqual(result, {
+    code: 'PREFLIGHT_PROVEN',
+    nonAuthorizing: true,
+    sourceConversationId: 55, streamRevision: 2,
+  });
+  assert.deepEqual(order, ['exact:101', 'exact:102', 'facts', 'history', 'owner']);
+  assert.equal(f.store.readRoutingSnapshot(f.streamId).live_public_action, null);
+});
+
+test('S2 preflight never checks owner when customer exact bytes changed', async t => {
+  const f = setup(t);
+  const candidate = await f.build();
+  f.rows.set(101, { ...f.rows.get(101), transientContent: 'В кредит?' });
+  const order = [];
+  const result = await assessFirstLineS2Preflight(
+    preflightArgs(f, candidate, preflightReader(f, order))
+  );
+  assert.equal(result.code, 'STALE');
+  assert.deepEqual(order, ['exact:101']);
+});
+
+test('S2 preflight treats newly visible and ambiguously reclassified history as unsafe', async t => {
+  const f = setup(t);
+  const candidate = await f.build();
+  const newRow = await assessFirstLineS2Preflight(preflightArgs(
+    f, candidate, preflightReader(f, [], {
+      snapshot: { code: 'COMPLETE', complete: true, events: [event(101), event(102)] },
+    }),
+  ));
+  assert.deepEqual(newRow, { code: 'STALE', reason: 'S2_HISTORY_TOPOLOGY_CHANGED' });
+
+  const reclassified = await assessFirstLineS2Preflight(preflightArgs(
+    f, candidate, preflightReader(f, [], {
+      snapshot: { code: 'COMPLETE', complete: true,
+        events: [{ ...event(101), senderId: 9002 }] },
+    }),
+  ));
+  assert.deepEqual(reclassified, {
+    code: 'HUMAN_REQUIRED', reason: 'S2_HISTORY_TOPOLOGY_UNPROVABLE',
+  });
+  assert.equal(f.store.readRoutingSnapshot(f.streamId).live_public_action, null);
+});
+
+test('S2 preflight last owner read denies wrong status/agent and revision race', async t => {
+  const f = setup(t);
+  const candidate = await f.build();
+  const denied = await assessFirstLineS2Preflight(preflightArgs(
+    f, candidate, preflightReader(f, [], {
+      owner: { code: 'SEND_DENIED', sourceConversationId: 55,
+        inboxId: 99, status: 'open', ownerClass: 'SAME_AGENTBOT' },
+    }),
+  ));
+  assert.deepEqual(denied, { code: 'HUMAN_REQUIRED', reason: 'S2_OWNER_NOT_ELIGIBLE' });
+  const raced = await assessFirstLineS2Preflight(preflightArgs(
+    f, candidate, preflightReader(f, [], {
+      onOwner: () => f.store.ingestConversationEvent(f.streamId, event(105)),
+    }),
+  ));
+  assert.deepEqual(raced, { code: 'STALE', reason: 'S2_REVISION_CHANGED' });
+});
+
+test('S2 preflight is never public send authority and rejects absent native reader', async t => {
+  const f = setup(t);
+  const candidate = await f.build();
+  const reader = preflightReader(f);
+  await assert.rejects(
+    assessFirstLineS2Preflight(preflightArgs(f, candidate, {
+      readExactSourceMessage: reader.readExactSourceMessage,
+    })),
+    { name: 'TypeError' },
+  );
+  const done = await assessFirstLineS2Preflight(preflightArgs(f, candidate, reader));
+  assert.equal(done.nonAuthorizing, true);
+  assert.equal(Object.hasOwn(done, 'sendEnabled'), false);
+  assert.equal(f.store.readRoutingSnapshot(f.streamId).live_public_action, null);
+});
+
+test('S2 preflight unreadable final current owner does not return a send proof', async t => {
+  const f = setup(t);
+  const candidate = await f.build();
+  const base = preflightReader(f);
+  const result = await assessFirstLineS2Preflight(preflightArgs(f, candidate, {
+    ...base,
+    async readCurrentConversationAuthority() {
+      throw new Error('synthetic Chatwoot offline');
+    },
+  }));
+  assert.deepEqual(result, { code: 'HUMAN_REQUIRED', reason: 'S2_OWNER_UNAVAILABLE' });
+  assert.equal(f.store.readRoutingSnapshot(f.streamId).live_public_action, null);
+});
+
+test('S2 preflight identical count but duplicated/changed event is not complete history', async t => {
+  const f = setup(t, [101, 102]);
+  const candidate = await f.build();
+  const duplicate = await assessFirstLineS2Preflight(preflightArgs(
+    f, candidate, preflightReader(f, [], {
+      snapshot: { code: 'COMPLETE', complete: true, events: [event(101), event(101)] },
+    }),
+  ));
+  assert.deepEqual(duplicate, {
+    code: 'HUMAN_REQUIRED', reason: 'S2_HISTORY_TOPOLOGY_UNPROVABLE',
+  });
   assert.equal(f.store.readRoutingSnapshot(f.streamId).live_public_action, null);
 });
