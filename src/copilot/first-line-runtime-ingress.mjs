@@ -11,26 +11,38 @@ function positive(value, max = Number.MAX_SAFE_INTEGER) {
   return Number.isSafeInteger(value) && value >= 1 && value <= max;
 }
 
-function incomingTarget(wire, target) {
+function signedTarget(wire, target) {
   if (!wire || typeof wire !== 'object' || Array.isArray(wire)) return null;
-  // Only the signed event is trusted as a trigger, never as semantic truth.
-  if (wire.event !== 'message_created') return null;
+  if (!['message_created', 'message_updated'].includes(wire.event)) return null;
   if (wire.account?.id !== target.accountId ||
       wire.inbox?.id !== target.inboxId ||
       wire.conversation?.inbox_id !== target.inboxId) return null;
   if (!positive(wire.id, CHATWOOT_MESSAGE_ID_MAX) ||
-      !positive(wire.conversation?.id)) return null;
-  if (wire.message_type !== 'incoming' && wire.message_type !== 0) return null;
-  // Chatwoot v4.18 Contact#webhook_data has id but no sender.type.
-  // The signed envelope is a locator only; the exact Chatwoot account
-  // message read must prove the sender is a contact before any ledger write.
-  if (wire.private !== false || !positive(wire.sender?.id) ||
-      (wire.sender?.type !== undefined &&
-       wire.sender?.type !== 'Contact' && wire.sender?.type !== 'contact')) return null;
+      !positive(wire.conversation?.id) || wire.private !== false) return null;
+
+  const type = wire.message_type;
+  const created = wire.event === 'message_created';
+  let expectedKind, signedSenderId = null;
+  if (created && (type === 'incoming' || type === 0) &&
+      positive(wire.sender?.id) &&
+      [undefined, 'Contact', 'contact'].includes(wire.sender?.type)) {
+    expectedKind = 'CUSTOMER_MESSAGE';
+    signedSenderId = wire.sender.id;
+  } else if ((type === 'outgoing' || type === 1) &&
+      wire.sender?.type === 'AgentBot' && wire.sender?.id === target.agentBotId) {
+    expectedKind = 'BABYPARK_PUBLIC_REPLY';
+    signedSenderId = wire.sender.id;
+  } else if ((type === 'template' || type === 3) &&
+      wire.sender == null) {
+    expectedKind = 'SYSTEM_TEMPLATE';
+  } else {
+    return null;
+  }
   return {
     conversationId: wire.conversation.id,
     sourceMessageId: wire.id,
-    signedSenderId: wire.sender.id,
+    expectedKind,
+    signedSenderId,
   };
 }
 
@@ -69,7 +81,7 @@ export function createFirstLineAgentBotRelay({
     try { payload = JSON.parse(raw.toString('utf8')); }
     catch { return { status: 400, outcome: 'json_invalid' }; }
 
-    const source = incomingTarget(payload, target);
+    const source = signedTarget(payload, target);
     if (!source) return { status: 422, outcome: 'event_not_admitted' };
 
     let current;
@@ -91,9 +103,13 @@ export function createFirstLineAgentBotRelay({
     if (!event || (current.code !== 'SUPPORTED_CUSTOMER_TEXT' &&
                     current.code !== 'PROVEN_UNSUPPORTED_OR_TOPOLOGY') ||
         event.sourceMessageId !== source.sourceMessageId ||
-        event.eventKind !== 'CUSTOMER_MESSAGE' ||
-        event.senderClass !== 'contact' ||
-        event.senderId !== source.signedSenderId) {
+        event.eventKind !== source.expectedKind ||
+        event.senderId !== source.signedSenderId ||
+        (source.expectedKind === 'CUSTOMER_MESSAGE' && event.senderClass !== 'contact') ||
+        (source.expectedKind === 'BABYPARK_PUBLIC_REPLY' &&
+          event.senderClass !== 'configured_agent_bot') ||
+        (source.expectedKind === 'SYSTEM_TEMPLATE' &&
+          (event.senderClass !== 'none' || event.senderId !== null))) {
       return { status: 422, outcome: 'source_not_customer' };
     }
 
@@ -111,7 +127,9 @@ export function createFirstLineAgentBotRelay({
       return {
         status: 200,
         outcome: accepted.inserted
-          ? (current.code === 'SUPPORTED_CUSTOMER_TEXT' ? 'recorded' : 'unsupported_recorded')
+          ? (source.expectedKind !== 'CUSTOMER_MESSAGE'
+            ? 'topology_recorded'
+            : current.code === 'SUPPORTED_CUSTOMER_TEXT' ? 'recorded' : 'unsupported_recorded')
           : 'duplicate_source',
       };
     } catch {
