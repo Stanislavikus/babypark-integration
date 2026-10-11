@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
+import { execFileSync, spawnSync } from 'node:child_process';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
@@ -92,7 +93,7 @@ test('test-only synthetic SENDING fixture is unreachable by static production/im
     '.json', '.yml', '.yaml', '.service', '.conf', '.sh', '.toml',
     '.ini', '.env', '.md']);
   const disallowed = ['legacy-sending-fixture', 'legacy-public-action-gate-fixture',
-    'first-line-coordinator-kill-child'];
+    'first-line-coordinator-kill-child', 'first-line-postsend-scheduler-child'];
   let inspected = 0;
   const scan = dir => {
     if (!fs.existsSync(dir)) return;
@@ -114,4 +115,31 @@ test('test-only synthetic SENDING fixture is unreachable by static production/im
   };
   for (const root of roots) scan(path.join(ROOT, root));
   assert.ok(inspected >= 100, 'expected entire runtime/deploy/build source inventory');
+});
+
+test('actual git-archive export-ignore excludes every synthetic send and scheduler fixture', () => {
+  const excluded = [
+    'tests/helpers/legacy-sending-fixture.mjs',
+    'tests/helpers/legacy-public-action-gate-fixture.mjs',
+    'tests/fixtures/first-line-coordinator-kill-child.mjs',
+    'tests/fixtures/first-line-postsend-scheduler-child.mjs',
+  ];
+  const attrs = execFileSync('git', [
+    'check-attr', 'export-ignore', '--', ...excluded,
+  ], { cwd: ROOT, encoding: 'utf8' });
+  for (const filename of excluded) {
+    assert.ok(attrs.includes(filename + ': export-ignore: set'), filename);
+  }
+  const tar = execFileSync('git', ['archive', '--worktree-attributes', 'HEAD'], {
+    cwd: ROOT, maxBuffer: 40 * 1024 * 1024,
+  });
+  const contents = spawnSync('tar', ['-tf', '-'], {
+    input: tar, encoding: 'utf8', maxBuffer: 10 * 1024 * 1024,
+  });
+  assert.equal(contents.status, 0, contents.stderr);
+  const names = new Set(contents.stdout.split('\n'));
+  for (const filename of excluded) {
+    assert.equal(names.has(filename), false,
+      'synthetic fixture must never enter the git-archive production artifact: ' + filename);
+  }
 });
