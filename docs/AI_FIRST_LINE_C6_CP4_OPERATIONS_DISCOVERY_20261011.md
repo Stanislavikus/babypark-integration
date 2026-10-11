@@ -8,6 +8,8 @@ Governance: canonical main f9b5b8e5320884a675af3ea8e608c1e986e8331d; agreement b
 Campaign input: Draft PR #128, HEAD 9b403ebf26844fdceca6dd5ac77b3220f885b13d; TREE c5a81720108cf04c7fe3b6c7884968e7ebdfd95f
 Recommendation: REFERENCE only; no adoption, new provider, release, runtime change, real Chatwoot write or activation authorized
 
+> **2026-10-11 scope correction:** This earlier EVIDENCE document suggests guarantees (separate seller acknowledgement, Zoho task delivery/outbox) that are **NOT normative** in AI_FIRST_LINE_DESIGN.md §29.8.2. Treat those as optional ideas, **not mandatory SF-1 blockers**. Native Chatwoot is first choice. Superseding assessment: `AI_FIRST_LINE_C6_CP4_SF1_SCOPE_CORRECTION_20261011.md`.
+
 ## Observed infrastructure, read-only
 
 - chatwoot-fra1-01: DigitalOcean 597177915, env:poc, 2 vCPU, 4 GiB RAM, 80 GiB; Chatwoot v4.18.0 exact source 9f920b549c14491a4e587687a3eed5d21c6ccc7d. Rails web/worker, PostgreSQL 16, Redis, Gateway and other BabyPark services are active.
