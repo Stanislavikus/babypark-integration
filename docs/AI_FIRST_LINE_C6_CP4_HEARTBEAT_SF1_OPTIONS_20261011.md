@@ -74,3 +74,144 @@ None of these tests has been run on live Zoho Connect, Make or external Healthch
 ## Exact action gate
 
 Before adding hosted Healthchecks or Zoho Connect operational workflow: freeze full §1 alternatives evidence with SHA-256 and architecture fit, obtain exact owner go-ahead for named service/account/board/token scope, prove provider integration only through official installation/config/API/examples/SDK/OSS connectors, do NOT write a bespoke connector if standard fit fails. Before public activation, finish CP4 SF-1, PREPARED/GATING, CLARIFY/C25, external HB liveness, real systemd isolation, measured deadline budgets, synthetic-Chatwoot POST tests and independent exhaustive R2.
+
+## 2026-10-11 authoritative Zoho Connect SF-1 narrowing — versioned provider fit
+
+**The integration is STILL NOT APPROVED / NOT IMPLEMENTED.** Verified publicly
+documented Connect Intranet APIs are /pulse/api/addTask
+(ZohoPulse.tasks.CREATE), /pulse/api/singleTaskStream
+(ZohoPulse.feedList.READ), /pulse/api/searchTasks
+(ZohoPulse.feedList.READ), /pulse/api/updateTask
+(ZohoPulse.tasks.UPDATE), /pulse/api/v2/addComment
+(ZohoPulse.feedList.CREATE), and /pulse/api/v1/myBoards
+(ZohoPulse.tasks.READ). These are *Zoho Connect* Intranet endpoints, NOT the
+distinct CommunitySpaces /community/api/* endpoints, Zoho Mail Tasks, Zoho
+Projects, or Zoho CRM. For the EU tenant the correct ServerDomain, network
+scopeID, board/section/member IDs and OAuth scopes must be read from that
+tenant's OFFICIAL metadata with explicit permission; no hardcoded .com/.eu
+substitution or assumed account access. Official create returns both a
+TASK id and a STREAM id: they are different values; updateTask uses taskId
+while singleTaskStream uses streamId. Conflating them can attribute an ack
+to the wrong task, so exact fixture proof is mandatory.
+
+Public API contract evidence:
+- https://www.zoho.com/connect/api/add-task.html (POST create; task id and
+  distinct parent stream id; no documented idempotency token; creation
+  rate limit listed as 10/min with 1-minute lock on threshold)
+- https://www.zoho.com/connect/api/get-single-task.html (GET with streamId,
+  full returned actor/comments and task metadata)
+- https://www.zoho.com/connect/api/search-tasks.html (GET keyword search,
+  board/partition filter and pagination; search is NOT a unique-key lookup)
+- https://www.zoho.com/connect/api/update-task.html (POST, one field per call;
+  status and assignee operations, no documented expected-version CAS)
+- https://www.zoho.com/connect/api/add-comment.html (comments carry
+  server-authenticated author but need exact seller-acceptance semantics)
+- https://www.zoho.com/connect/api/get-my-boards.html (board permissions,
+  members, sections, status labels)
+- https://help.zoho.com/portal/en/kb/connect/user-guide/tasks-and-boards/articles/viewing-task-history-in-zoho-connect
+  (UI task history identifies actor/time and is noneditable, but no
+  authoritative REST history endpoint was found in this bounded scan)
+
+### Outgoing trigger fit and subscription boundary
+
+Zoho Connect offers *native* outgoing webhook triggers Task_Created,
+Task_Assigned, Task_Updated, Task_Section_Changed,
+Task_Status_Changed, Task_Completed and comment changes. Official trigger
+includes triggeredBy entity, timestamp, scope and task payload. Under
+Enterprise/Ultimate network plans, outgoing hooks can be filtered to specific
+boards. The documented provider retry policy is **up to three deliveries
+30 minutes apart** for temporary failures; no exactly-once delivery, HMAC
+signature, stable event id or strict delivery ordering can be inferred.
+A stale/out-of-order webhook is merely a signal to reread official current
+task state + current semantic HUMAN owner; it is NOT itself approval, ACK,
+seller identity, or Chatwoot handoff proof.
+
+- https://help.zoho.com/portal/en/kb/connect/admin-guide/outgoing-webhooks/outgoing-webhooks-triggers/articles/triggers-in-tasks
+- https://help.zoho.com/portal/en/kb/connect/admin-guide/outgoing-webhooks/outgoing-webhooks-triggers/articles/triggers-supported-an-overview
+- https://help.zoho.com/portal/en/kb/connect/admin-guide/outgoing-webhooks/managing-outgoing-webhooks/articles/managing-outgoing-webhooks
+- https://www.zoho.com/connect/plan-comparison.html (Free/Starter no
+  outgoing hooks; Enterprise 20 hooks / 10k executions per day; Ultimate
+  100 hooks / 20k executions per day)
+- https://help.zoho.com/portal/en/kb/connect/admin-guide/outgoing-webhooks/outgoing-wehbook-apis/articles/error-codes
+  (30007 when current network plan disallows outgoing webhooks)
+
+**Commercial plan**: The owner has historically used an Enterprise TRIAL
+and intends about 10 staff. Trial capabilities are not evidence of paid
+post-trial entitlement. The separately purchased Zoho Connect network plan
+must be independently confirmed; Zoho Workplace Standard does NOT
+automatically grant Connect Enterprise webhooks. Connect native Boards
+tasks/notifications work more broadly, but native automation/webhook features
+are Enterprise/Ultimate. If the exact plan lacks hooks, prefer official
+Connect read APIs on a measured schedule or a ready approved adapter; do NOT
+silently upgrade the subscription or code a replacement.
+
+### Connected Make catalog audit (read only)
+
+On 2026-10-11 the connected Make organization/team app_find catalog was
+queried for "Zoho Connect Boards tasks" and did NOT return a native Zoho
+Connect app/module. Returned Zoho Mail, Bigin and Zoho Projects are different
+products, not valid substitutes for the owner's main-window Connect Boards.
+Make's built-in Webhooks and official HTTP modules are available, and
+Make's own docs describe HTTP as the generic path when no native app exists.
+No Make scenario, connection, webhook, OAuth credential or user task was
+created. The presence of generic HTTP is NOT proof the full authenticated EU
+OAuth/Connect retry and actor-identity flow is no-code fit.
+
+- https://help.make.com/connect-an-application
+- https://www.zoho.com/connect/api/oauth-scopes.html
+
+### Core SF-1 invariant and finite adversarial fixture matrix
+
+**Durable HUMAN is the ONLY semantic authority for no-public-AI.** A
+Connect task is operator attention, not a customer transcript, and neither
+success nor completion of an external task may terminalize HUMAN without
+the exact DESIGN 43 current Chatwoot ownership proof. Keep only
+\`{account_id, conversation_id, inbox_id, human_reason, stream_id,
+continuation_revision, created_at}\` operational metadata; never customer
+content, names, email/phone, customer-text digest or attachment URLs.
+The actor/member identity is not a customer identity. The Connect task
+title must contain only a machine-conversation ID and reason code, not a
+public Chatwoot URL or unchecked free text.
+
+| Failure / race class | Required observed result before SF-1 rollout |
+| --- | --- |
+| Two schedulers see one newly attached HUMAN | At most one monotonic operator-attention owner and one safe Connect submission attempt for that HUMAN revision; no duplicated tasks under concurrency |
+| Connect addTask accepted; HTTP response lost | State is DELIVERY_AMBIGUOUS; no blind second create POST. Official search/read can identify a uniquely matching task, but a missing search result does NOT prove no task was created; require operator reconciliation |
+| Two matching tasks appear | Ambiguous authority; no arbitrary winner, no new task, visible operations alert with duplicate identifiers |
+| Assign succeeds, notification not delivered | HUMAN stays unresolved; push/email preferences and independent escalation must be tested, not assumed; no fictional seller ACK |
+| Anonymous/other user changes task status | No acknowledgement unless actor is proven current assigned allowed HUMAN_USER via authenticated Connect identity/current read |
+| Task is marked completed by integration token | No seller ACK; an integration account cannot simulate seller acceptance |
+| Seller changes status / writes 'Взял в работу' comment | ACK only if authoritative current task + immutable actual actor/time + exact expected network/board/revision and still HUMAN; verify comment edit/delete and actor spoof edge cases |
+| Webhook repeated, missing, stale, wrong board, wrong actor, malformed payload | Never becomes completion evidence; official current read + exact allowlist required; missing signal triggers scheduled reconciliation/alarm |
+| Zoho/Make outage, 401, 429, 5xx or pagination limit | Deny ambiguous or expired status, retain HUMAN, retry only proven-idempotent read; bounded alert to both owner and Olga, no public Chatwoot write |
+| Current Chatwoot status is pending SAME_AGENTBOT | Even if Zoho task accepted, HUMAN continues; manual native operator action and exact ownership reread required |
+| Operator task closed but Chatwoot resolved/snoozed/unknown | Do NOT reopen/toggle; only DESIGN 43 terminal proof may end HUMAN |
+| Oldest unacknowledged HUMAN over measured threshold | Continuous visible age and off-host alarm independent of scheduler healthy marker; ensure acknowledged seller or verified operator fault until resolution |
+| Restart during delivery / task update | Replay from durable semantic HUMAN + bounded delivery state, never from cached customer content, and never assume a lost POST response means not delivered |
+
+**BLOCKER:** There is currently no production-vetted monotonic
+operator-attention/ACK state or proven native server-side idempotency key
+for Connect task create. Existing FirstLineStateStore keeps absorbing HUMAN
+continuation but exposes no documented operator-notification/ACK delivery
+contract. Native Connect APIs may supply part of the workflow, not a
+guaranteed durable outbox/retry-by-ack. Per Agreement §§1–3, STOP before
+implementing any new production connector/code until the ready-product
+fit, proper network plan, permissions, failure policy and owner decision
+are proven; if official/native route cannot satisfy, return a bounded
+gap instead of auto-writing bespoke code.
+
+### Minimum exact owner-scoped sandbox proof before external API writes
+
+Only AFTER separate permission for the exact existing Zoho EU network,
+synthetic/private Sales Board/section, a temporary seller account and
+cleanup, create one synthetic task containing a dummy conversation number
+and safe reason code, measure effective permissions/plan/API rates,
+read back task/stream IDs, author and actor via native exact READ;
+manually accept and confirm state; observe webhook or polling evidence,
+rate limit, duplicates, eventual search behavior, notification in-app
+and email/push, and explicit cleanup. Never use real customer IDs,
+public channel bots or Chatwoot writes for this PoC. Do not create
+external apps/accounts/webhooks without explicit owner authorization.
+
+Until this proof is performed, the finding is **EVIDENCE ONLY** rather than
+adoption/implementation/activation approval.
