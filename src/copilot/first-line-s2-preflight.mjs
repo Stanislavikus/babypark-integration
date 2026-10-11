@@ -21,6 +21,14 @@ export async function assessFirstLineS2Preflight({
     throw new TypeError('first_line_s2_preflight_invalid');
   }
 
+  // Do not advertise even a non-authorizing S2 preflight for an
+  // unresolved structured CLARIFY/C25 reply; native causal provenance
+  // and candidate/ordinal re-proof are a separate mandatory path.
+  if (candidate?.decision?.decision !== 'ANSWER' ||
+      candidate?.rendering?.content_type !== 'text') {
+    return Object.freeze({ code: 'HUMAN_REQUIRED', reason: 'S2_STRUCTURED_PROOF_PENDING' });
+  }
+
   const covered = await verifyFirstLineS2CoveredText({
     store, streamId, candidate, authorityReader,
   });
