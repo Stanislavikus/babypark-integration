@@ -1,4 +1,4 @@
-# C6 Runtime R1 — native Chatwoot/Existing BabyPark Integration Fit
+# C6 Runtime macro-campaign — native Chatwoot/Existing BabyPark Integration Fit
 
 Status: PRE-CODE FIT EVIDENCE; NO DEPLOYMENT OR IMPLEMENTATION AUTHORITY.
 Applicable only to `Stanislavikus/babypark-integration`.
@@ -6,7 +6,7 @@ UTC evidence time: 2026-10-11T05:45Z.
 BASE `f9b5b8e5320884a675af3ea8e608c1e986e8331d`.
 Governance blob `e777fce4af8e8c3372f1f9de9ef7d00f786c2c89`.
 **Bound frozen alternatives scan SHA-256:**
-`8e24754504d15a67b6737021a2e10dad9a408a9e3f088928c85e1c4029c41143`.
+`50fcf6eac964137bb3c376a200f33cc4c4975511662ffe5415276b0b67687da9`.
 Scan document: `docs/AI_FIRST_LINE_C6_RUNTIME_R1_OPTIONS_20261011.md`.
 Changing the frozen scan invalidates this fit note and any approval.
 
@@ -46,7 +46,85 @@ by BabyPark. As a managed/versioned upstream dependency, exact v4.18
 runtime source and public API wire must be reverified at deployment/upgrade.
 No claim that a newer managed Chatwoot release is compatible.
 
-## Bounded integration semantics
+## One macrocampaign, one final HEAVY gate
+
+This **single** owner-approved prospective implementation campaign is
+`C6 Runtime Website v1` on one pinned base, one feature branch and
+one Draft PR. Its internal checkpoints are:
+`CP1/R1 signed ingress/strict row receipt` →
+`CP2 transient extraction/C2/C3/C4/C5 semantic preparation` →
+`CP3 fresh S1/S2 final gate and idempotent public-send outcome` →
+`CP4 absorbing HUMAN, native read-only handoff, liveness/restart` →
+`CP5 acceptance/load/recovery boundary and exhaustive whole-tree review`.
+**No independent R2, full HEAVY closure, merge, deployment, or owner
+merge approval per internal checkpoint.** Checkpoints get focused
+regressions and complete local defect inventory, then batch fixes.
+The **only** final independent R2 is the isolated confirmation on
+the exact complete Runtime HEAD/tree/base, as required by Agreement
+§7.1; one final verified whole-campaign merge decision under §7.
+
+The previously R1-only integration semantics below describe **CP1**
+and are **not the entire macrocampaign**. Across CP2–CP4, the same
+frozen v0.8 current-authority and semantic-state invariants apply:
+- S1 can rebuild current transient extraction/C2/C3/C4/C5 but cannot
+  authorize a public action; the existing model/extraction schema may
+  propose interpretations but never factual authority.
+- S2 must re-prove the complete conversation snapshot/covered exact
+  text/structured CLARIFY/C25 causal pair, read current Chatwoot
+  Website inbox + `pending + SAME_AGENTBOT`, and atomically
+  `GATING -> SENDING` with an unchanged immutable semantic-origin
+  fence before one external Chatwoot reply POST.
+- One send attempt with recorded delivery/uncertain outcome; no
+  blind retries on unknown result or stale-backup recovery, durable
+  reconciliation and HUMAN continuation are mandatory.
+- Native Chatwoot **current-state reads** support operator-only
+  physical handoff; deployed v4.18 unsafe automated
+  `toggle_status(open)` is excluded.
+- Source of business facts remains live Catalog/Knowledge (and their
+  approved providers); message bodies/extractions are transient,
+  Chatwoot alone remains transcript owner, v4 SQLite stays the sole
+  persistent semantic action authority.
+- Native Node/systemd may run bounded workers; scale/availability and
+  missing-DB fail-closed proofs are final acceptance. No second
+  workflow engine or customer transcript database is selected.
+
+Provider and term boundaries: **no new model inference provider is
+selected by this fit.** The existing extraction schema does not itself
+establish an implemented model producer. If CP2 requires introducing
+an external model/API/SDK beyond an already-proven approved component,
+the exact candidate/license/privacy/usage-cost architecture fit must
+be refreshed and owner-approved **before that specific adoption**.
+This does not create a new Runtime PR or a separate independent
+R2 for the internal checkpoint. It is a genuine external-adoption
+gate, not a postponement of safety to deployment.
+
+## Full macro integration and failure boundary
+
+| Interface | Exact authority / proposed reuse | Unproven property requiring proof during this campaign |
+| --- | --- | --- |
+| AgentBot signed webhooks | Chatwoot v4.18 producer and existing HMAC parser | versioned actual payload fixtures, replay/source identity/unknown shape |
+| Chatwoot message/owner reads | Existing strict first-line authority reader | single S2 snapshot/1000 rows, exact source/owner/inbox proof; cannot reuse permissive legacy helpers |
+| User wording/intent | Existing C2/C3/Extraction, Catalog/Knowledge APIs | model extraction runtime producer not wired; each fact re-read fresh |
+| Rendered answer / CLARIFY | Existing genuine C4 decision and C5 renderer | precise native public reply API payload, escaping/format, no persisted customer text |
+| Durable public send | Existing `FirstLineStateStore` action row/lease/CAS + Chatwoot API | crash-after-POST, timeout and late ACK must not duplicate public send |
+| HUMAN continuation | Existing v4 absorbing owner + strict Chatwoot read-only reconciliation | operational alert/handoff to real operator without unsafe status-toggle race |
+| Scheduler / missing DB | Node 24, existing v4 open/recovery and native OS supervisor | no service auto-create; bounded retries, concurrent writers/load, fail closed |
+| Recovery/CI | B1 encrypted backup profile + distinct B2/activation gates | offhost B2 independent restore, provider-side required status/branch protection must be proven before live activation |
+
+**Cost/privacy:** no newly selected runtime dependencies, no Chatwoot core
+patch or second conversation state system. Actual token charges and model
+provider retention/data terms cannot be claimed `free` until the
+specific approved provider has been selected and documented. Provider
+SDK/model decision is expressly not baked into the current fit.
+
+**Rollback:** internal checkpoints are unactivated work in one feature
+branch, so a failed CP reverts only its committed candidate change
+without touching production. There is no customer-facing deployment
+until B2 recovery and the final complete Runtime HEAVY gate have
+passed. The production release itself needs an independently approved
+rollback/cutover runbook and owner go-live.
+
+## CP1/R1 initial-checkpoint integration semantics
 
 **Function:** one initial signed Chatwoot AgentBot event admission
 → strict actual-row classification through Chatwoot authority API
@@ -131,7 +209,8 @@ before B2 verified recovery, auto-create v4 DB, assume unknown provider
 facts, store customer body/digest or exceed scoped R1 triggers HALT
 and a renewed scan/fit before expanding.
 
-Before code, the owner must approve **both** exact immutable
+Before macro Runtime code, the owner must approve **both** exact immutable
 `fcbd8250...` scan and this fit-note SHA-256 after independent Git
-file re-read. This approval permits draft R1 non-production code and
-tests only; no merge, production first-write or customer go-live.
+file re-read. This approval permits draft **macrocampaign** implementation and synthetic
+tests across internal checkpoints only; no intermediate CP merge or HEAVY/R2,
+no production first-write, no activation or customer go-live.
