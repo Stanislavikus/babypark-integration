@@ -47,8 +47,8 @@ Recommendation: REFERENCE only; no adoption, new provider, release, runtime chan
 | Existing Node scheduler + SQLite + systemd | Already deployed systemd, existing v4 recovery store. Restart/watchdog native; no built-in external dead-man alert or operator acknowledgement | PARTIAL |
 | DigitalOcean Monitoring | Host resource metrics, free; currently installed do-agent | PARTIAL, not application heartbeat |
 | DigitalOcean Uptime | Native external URL/ICMP, official pricing 1 USD per check/month, monthly credit for one check; email/Slack | PARTIAL: pull monitor |
-| Healthchecks.io hosted | Receives completed-job heartbeat via official HTTP ping, external missing-ping alerts, Telegram/email. Hosted business/commercial terms must be independently validated | PLAUSIBLE, not approved |
-| healthchecks/healthchecks self-hosted | BSD-3-Clause, ready OSS heartbeat/check tooling but adds a separate Django/database service and must run independently of monitored host | PARTIAL/high ops |
+| Healthchecks.io hosted | Receives completed-job heartbeat and Telegram/email missed-ping alert, but official price page has Hobbyist free for hobby use and Business USD 20/month; commercial BabyPark free eligibility NOT proven | PARTIAL, not approved as free commercial solution |
+| healthchecks/healthchecks self-hosted | BSD-3-Clause commercial use allowed, maintained OSS with official Docker installation; requires its own separate web/server + Django 6 / database and off-host alert delivery | PARTIAL/high ops |
 | Better Stack Heartbeats | External heartbeat service, published free tier for personal projects; business commercial-free applicability unproven | UNPROVEN fit |
 | Custom BabyPark heartbeat monitoring service | Reimplements ready capability and adds durable system | REJECT by default |
 
@@ -68,13 +68,14 @@ No accounts, ping URLs, webhook secrets, telemetry services, paid resources or p
 Owner's long-term target: after complete development and measured capacity proof, migrate needed integration data/services to existing chatwoot-fra1-01; delete babypark-catalog-rehearsal-fra1 only after monitored stabilization. This repo is restricted to Stanislavikus/babypark-integration: no other project code, assumptions, governance or schemas can be imported.
 
 The eventual one-command operator workflow should orchestrate already-proven tools:
-1. Preflight exact source/target host identities and writable data owners per config/storage-policy.yaml. Measure combined Rails/Sidekiq, PostgreSQL, Redis, Gateway, Knowledge, Catalog and First Line peak CPU, RSS, swap, disk IO and queue lag. No invented fixed thresholds.
+1. **Dry-run first**: read-only print of pinned source/target identity, manifest, current mounts/users, required backups, missing authority, proposed writes and rollback steps. Dry-run must make no filesystem/SQLite/network/service changes and never create episode.sqlite. The latter is initialized only by a separate explicit owner-authorized operator bootstrap, not by the transfer command.
+2. Preflight exact source/target host identities and writable data owners per config/storage-policy.yaml. Measure combined Rails/Sidekiq, PostgreSQL, Redis, Gateway, Knowledge, Catalog and First Line peak CPU, RSS, swap, disk IO and queue lag. No invented fixed thresholds.
 2. Produce a content-addressed immutable release artifact; compare reviewed Git SHA/tree, file manifest and real distribution bytes. Assert synthetic test fixtures are absent from exact shipped artifact. Preserve current symlink for rollback.
-3. Quiesce explicitly approved source writers and obtain a provable no-loss semantic cut. Create owner-specific consistent backups; never cp live SQLite with WAL. For episode.sqlite reuse existing first-line:backup and first-line:restore-verify (encrypted artifact, manifest and independent scratch restore). Chatwoot stays transcript authority; no routine copying of customer text into BabyPark durable stores.
-4. Transfer to an unused target directory using proven SSH/SCP/rsync or archive, verify checksum, SQLite integrity/schema/semantic graph, permissions and backup/recovery cut. Never overwrite running target database in place.
-5. Under an explicit cutover gate atomically change release symlink/service ownership, verify health and native authority; if any check fails, restore prior release and proven state with no double writer.
-6. Monitor production-equivalent load/error/queue/oldest HUMAN metrics for an owner-approved soak period.
-7. Deleting the rehearsal Droplet is a later distinct irreversible owner-approved action, not an implicit step of a one-click cutover.
+4. Quiesce explicitly approved source writers and obtain a provable no-loss semantic cut. Create owner-specific consistent backups; never cp live SQLite with WAL. For episode.sqlite reuse existing first-line:backup and first-line:restore-verify (encrypted artifact, manifest and independent scratch restore). Chatwoot stays transcript authority; no routine copying of customer text into BabyPark durable stores.
+5. Transfer to an unused target directory using proven SSH/SCP/rsync or archive, verify checksum, SQLite integrity/schema/semantic graph, permissions and backup/recovery cut. Never overwrite running target database in place.
+6. Under an explicit cutover gate atomically change release symlink/service ownership, verify health and native authority; if any check fails, restore prior release and proven state with no double writer.
+7. Monitor production-equivalent load/error/queue/oldest HUMAN metrics for an owner-approved soak period.
+8. Before ANY real cutover, exercise rollback from scratch on a separate rehearsal target, with integrity/continuation proof, not merely write a rollback runbook. Deleting the rehearsal Droplet is a later distinct irreversible owner-approved action, NOT an implicit step of a one-click cutover, and additionally requires independent restore verification on another machine so it is never the only fallback.
 
 The one click is a single explicit invocation of a reviewed bounded plan, NOT a promise to skip staging, independent backup proof, a supervised rollback or separate deletion approval. No migration script was created in this evidence stage.
 
@@ -85,3 +86,25 @@ The one click is a single explicit invocation of a reviewed bounded plan, NOT a 
 - Exact release transport and future migration scope; independent load/backup and rollback tests.
 - Operator attention delivery/ack semantics and independent receiver (owner, Olga) without customer body or real channel side effects.
 - Complete CP4 + C25, final manifest, fresh immutable tests, HEAVY and isolated R2, explicit owner merge and later activation approval.
+
+## Native systemd supervised candidate — further evidence only
+
+The uninstalled C6 post-send service candidate is being hardened using stock
+systemd-notify (existing systemd package) and a dedicated babypark-firstline
+user with only /var/lib/babypark-first-line writable. Native Type=notify,
+NotifyAccess=all, WatchdogSec and StartLimit are a CANDIDATE, not approved
+numerical values. A successful scoped post-send SQLite sweep precedes READY
+or WATCHDOG=1. A failed sweep sends no watchdog and exits nonzero; a hung sweep
+sends nothing and requires systemd WatchdogSec to terminate the process.
+A missing episode.sqlite after activation is a fatal alarm, not a silent
+ConditionPathExists skip and never a lazy database creation. The separate
+EnvironmentFile must be root-owned 0600 and limited to DB path/sweep interval;
+backup decryption keys belong only to the backup service. User/group and the
+0600 v4 episode.sqlite must be prepared by an explicit owner operator action.
+
+Still UNPROVEN/MANDATORY before installation: measured startup/sweep and
+watchdog/restart-limit budgets; actual systemd-manager watchdog expiration;
+independent off-host missed-sweep and failed-state alert (owner and Olga);
+operator attention after durable HUMAN until acknowledgement; no green global
+liveness while PREPARED/GATING is unowned; full CLARIFY/C25 lifecycle and B2
+semantic-restore gate. No service was installed/enabled on any Droplet.
