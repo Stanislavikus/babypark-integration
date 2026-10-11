@@ -26,8 +26,12 @@ Owner-approved first-stage objectives (subject to measured revision):
 - `MAX_DATA_LOSS_MINUTES=60` (RPO); encrypted snapshot cadence **30 minutes**.
 - True **business RTO target 120 minutes** measured from detection to safe
   customer support/HUMAN availability, NOT merely SQLite restore duration.
-  B2 measures technical scratch-restore time; full business-RTO proof is a
-  distinct mandatory pre-customer-activation gate with C6 Runtime.
+  The complete **B2 technical recovery drill**, including independent key
+  retrieval and scratch verification, must also finish within the approved
+  120-minute bound to close B2 under its frozen recovery contract; that is a
+  necessary but **not sufficient** condition for the true business RTO.
+  Full business-RTO proof is a distinct mandatory pre-customer-activation
+  gate with C6 Runtime.
 - Initial generation selections: **48 half-hourly, 14 daily, 4 weekly**,
   without overwriting confirmed generations or deleting the only usable copy.
   Actual storage budget/retention headroom follows measured artifact growth.
@@ -224,7 +228,9 @@ right before any irreversible adoption.
 
 - Time one real encrypted production v4 online backup, checksum-acknowledged
   offhost transport and a **separately key-recovered**, scratch restore on
-  offhost independent of production.
+  offhost independent of production. **B2 closure requires measured technical
+  recovery within 120 minutes**, including actual custodian/key retrieval;
+  merely producing an integrity PASS without timing is insufficient.
 - Two evidence clocks: most recent received-intact (45m warning, 60m
   critical), separately most recent restore-proven (drill frequency
   explicit, no everlasting green from one historical restore).
@@ -247,6 +253,13 @@ C6 Runtime S1→S2, public POST outcome fences, HUMAN, scheduling,
 `markActionUncertain` caller sweep, stale-backup no-repeat-POST tests and
 required repository protection/structural validator remain **separate
 post-B2 HEAVY gates** before any customer-facing activation.
+C6 Runtime quality/scalability + controlled AI improvement are tracked
+separately in GitHub issue #126: real grounded dialogues, operator-reviewed
+feedback and model/prompt evaluation, load/latency/cost measurements, and
+no automatic autonomous self-training or extra customer transcript store.
+These are future Runtime quality checks, NOT new prerequisites for B2
+operational backup closure.
+
 Full final review requires exact HEAD/tree/base, required-manifest hash,
 executed tests, independent exhaustive R1+R2 as applicable, zero open
 BLOCKERs and owner-specific post-gate go-ahead. No auto-merge.
