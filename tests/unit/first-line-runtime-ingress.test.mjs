@@ -276,38 +276,103 @@ test('CP1 legitimate signed event without contact sender.type matches deployed C
   assert.equal(reads.length, 1);
 });
 
-test('own outgoing AgentBot message_created webhook never becomes a customer turn or a second reply', async t => {
+test('B1 own outgoing echo is durably recorded exactly once and mutation is denied', async t => {
   const { file } = fixture(t), rows = new Map(), reads = [];
-  rows.set('55:101', sourceRow(101));
+  rows.set('55:101', sourceRow());
+  rows.set('55:102', sourceRow(102, {
+    message_type: 'outgoing',
+    sender: { type: 'AgentBot', id: 7 },
+    content: 'SYNTHETIC_OUR_REPLY',
+    source_id: 'action-synthetic-1',
+  }));
   const relay = relayFor(file, makeReader(rows, reads));
   t.after(() => relay.close());
   assert.equal((await relay.receive(signed(payload(101)))).outcome, 'recorded');
-  const readCount = reads.length;
-  // Exact signed delivery includes the bot's own outgoing message.
-  // Regardless of whether the webhook represents it as an integer or
-  // a string, the ingress must reject it BEFORE remote reads or SQLite.
-  for (const messageType of ['outgoing', 1]) {
-    const botEcho = payload(102, 55, {
-      message_type: messageType,
-      sender: { type: 'AgentBot', id: 7 },
-      source_id: 'action-synthetic-1',
-      content: 'SYNTHETIC_OUR_REPLY',
-    });
-    for (const deliveryId of ['echo-first', 'echo-redelivery']) {
-      assert.deepEqual(await relay.receive(signed(botEcho, deliveryId)),
-        { status: 422, outcome: 'event_not_admitted' });
-    }
-  }
-  assert.equal(reads.length, readCount,
-    'no Chatwoot lookup initiated by own outgoing echo');
+  const botEcho = payload(102, 55, {
+    message_type: 'outgoing', sender: { type: 'AgentBot', id: 7 },
+  });
+  assert.deepEqual(await relay.receive(signed(botEcho, 'echo-first')),
+    { status: 200, outcome: 'topology_recorded' });
+  assert.deepEqual(await relay.receive(signed(botEcho, 'echo-repeat')),
+    { status: 200, outcome: 'duplicate_source' });
+  assert.deepEqual(await relay.receive(signed({
+    ...botEcho, event: 'message_updated',
+  }, 'echo-update')),
+    { status: 200, outcome: 'duplicate_source' });
+  rows.set('55:102', sourceRow(102, {
+    message_type: 'outgoing', sender: { type: 'AgentBot', id: 7 },
+    source_id: 'changed-synthetic-source',
+  }));
+  assert.deepEqual(await relay.receive(signed(botEcho, 'echo-mutated')),
+    { status: 409, outcome: 'source_topology_changed' });
   audit(file, store => {
     const stream = store.findConversationStream({
       sourceProvider: 'chatwoot', sourceConversationId: 55,
     });
-    assert.equal(stream.stream_revision, 1,
-      'own bot echo must not create a new semantic cycle');
-    assert.deepEqual(store.listConversationEvents(stream.stream_id)
-      .map(event => event.event_kind), ['CUSTOMER_MESSAGE']);
+    assert.equal(stream.stream_revision, 2);
+    assert.deepEqual(store.listConversationEvents(stream.stream_id).map(x => x.event_kind),
+      ['CUSTOMER_MESSAGE', 'BABYPARK_PUBLIC_REPLY']);
   });
+  assert.equal(reads.length, 5);
   assert.equal(fs.readFileSync(file).includes(Buffer.from('SYNTHETIC_OUR_REPLY')), false);
+});
+
+test('B1 native neutral template requires exact Chatwoot row and survives redelivery', async t => {
+  const { file } = fixture(t), rows = new Map(), reads = [];
+  rows.set('55:201', sourceRow(201, {
+    message_type: 'template', sender: null, content_type: 'input_email',
+    content: 'SYNTHETIC_TEMPLATE',
+  }));
+  const relay = relayFor(file, makeReader(rows, reads));
+  t.after(() => relay.close());
+  const template = payload(201, 55, { message_type: 'template', sender: null });
+  assert.deepEqual(await relay.receive(signed(template, 'template-first')),
+    { status: 200, outcome: 'topology_recorded' });
+  assert.deepEqual(await relay.receive(signed(template, 'template-repeat')),
+    { status: 200, outcome: 'duplicate_source' });
+  audit(file, store => {
+    const stream = store.findConversationStream({
+      sourceProvider: 'chatwoot', sourceConversationId: 55,
+    });
+    assert.deepEqual(store.listConversationEvents(stream.stream_id).map(x => x.event_kind),
+      ['SYSTEM_TEMPLATE']);
+  });
+  assert.equal(reads.length, 2);
+  assert.equal(fs.readFileSync(file).includes(Buffer.from('SYNTHETIC_TEMPLATE')), false);
+});
+
+test('B1 known noncustomer webhook never turns signed-only claims into authority', async t => {
+  const { file } = fixture(t), rows = new Map(), reads = [];
+  rows.set('55:300', sourceRow(300, {
+    message_type: 'outgoing', sender: { type: 'User', id: 22 },
+  }));
+  rows.set('55:301', sourceRow(301, {
+    message_type: 'template', sender: null, content_type: 'unrecognized',
+  }));
+  const relay = relayFor(file, makeReader(rows, reads));
+  t.after(() => relay.close());
+  const bot = payload(300, 55, {
+    message_type: 'outgoing', sender: { type: 'AgentBot', id: 7 },
+  });
+  assert.deepEqual(await relay.receive(signed(bot, 'claimed-bot')),
+    { status: 422, outcome: 'source_not_customer' });
+  assert.deepEqual(await relay.receive(signed(payload(301, 55, {
+    message_type: 'template', sender: null,
+  }), 'unknown-template')), { status: 422, outcome: 'source_not_customer' });
+  for (const body of [
+    payload(302, 55, { message_type: 'outgoing', sender: { type: 'AgentBot', id: 8 } }),
+    payload(302, 55, { message_type: 'outgoing', sender: { type: 'User', id: 22 } }),
+    payload(302, 55, { message_type: 'outgoing', private: true,
+      sender: { type: 'AgentBot', id: 7 } }),
+    payload(302, 55, { event: 'message_updated', message_type: 'incoming' }),
+    payload(302, 55, { event: 'unknown_event', message_type: 'outgoing',
+      sender: { type: 'AgentBot', id: 7 } }),
+  ]) {
+    assert.deepEqual(await relay.receive(signed(body, 'deny-signed-only')),
+      { status: 422, outcome: 'event_not_admitted' });
+  }
+  assert.equal(reads.length, 2);
+  audit(file, store => assert.equal(store.findConversationStream({
+    sourceProvider: 'chatwoot', sourceConversationId: 55,
+  }), null));
 });
