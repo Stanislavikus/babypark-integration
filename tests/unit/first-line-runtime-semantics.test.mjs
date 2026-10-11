@@ -5,6 +5,7 @@ import path from 'node:path';
 import test from 'node:test';
 import { FirstLineStateStore } from '../../src/copilot/first-line-state-store.mjs';
 import { buildFirstLineTransientCandidate } from '../../src/copilot/first-line-runtime-semantics.mjs';
+import { prepareTestPublicAction, testActionDescriptor } from '../helpers/first-line-action-descriptor.mjs';
 import { FIRST_LINE_EXTRACTION_SCHEMA, FIRST_LINE_INTENT_SCHEMA_VERSION } from '../../src/copilot/first-line-extraction.mjs';
 
 const NOW_MS = 2_000_000_000_000;
@@ -306,4 +307,139 @@ test('CP2 refuses attachment mutation of recorded accepted customer event', asyn
   }));
   assert.equal(r.code, 'HUMAN_REQUIRED');
   assert.equal(f.store.loadActiveEpisode(f.streamId), null);
+});
+
+test('CP2 will not run a model while earlier prepared public send owns continuation', async t => {
+  const f = fixture(t);
+  const action = prepareTestPublicAction(f.store, {
+    descriptor: testActionDescriptor(),
+    streamId: f.streamId,
+    preparedStreamRevision: 1,
+    actionType: 'ANSWER',
+    basisEventSeqs: [1],
+    deadlineAt: NOW_MS + 60_000,
+  });
+  assert.equal(action.state, 'PREPARED');
+  let readCalls = 0;
+  let modelCalls = 0;
+  const r = await buildFirstLineTransientCandidate(inputs(f, {
+    reader: { async readExactSourceMessage() { readCalls++; throw Error('should_not_read'); } },
+    produceExtraction: async () => { modelCalls++; throw Error('should_not_run'); },
+  }));
+  assert.deepEqual(r, { code: 'NO_ACTION', reason: 'PUBLIC_SEND_UNRESOLVED' });
+  assert.equal(readCalls, 0);
+  assert.equal(modelCalls, 0);
+  assert.equal(f.store.getPublicAction(action.action_id).state, 'PREPARED');
+  assert.equal(f.store.getConversationStream(f.streamId).stream_revision, 1);
+});
+
+test('CP2 does not rebuild candidate while a GATING action has an active send lease', async t => {
+  const f = fixture(t);
+  prepareTestPublicAction(f.store, {
+    descriptor: testActionDescriptor(),
+    streamId: f.streamId,
+    preparedStreamRevision: 1,
+    actionType: 'ANSWER',
+    basisEventSeqs: [1],
+    deadlineAt: NOW_MS + 60_000,
+  });
+  const claimed = f.store.claimNextPublicAction({ leaseMs: 10_000, token: 'cp2-send-lease' });
+  assert.equal(claimed.state, 'GATING');
+  let modelCalls = 0;
+  const r = await buildFirstLineTransientCandidate(inputs(f, {
+    produceExtraction: async () => { modelCalls++; throw Error('must_not_execute'); },
+  }));
+  assert.deepEqual(r, { code: 'NO_ACTION', reason: 'PUBLIC_SEND_UNRESOLVED' });
+  assert.equal(modelCalls, 0);
+  assert.equal(f.store.getPublicAction(claimed.action_id).state, 'GATING');
+});
+
+test('CP2 blocks new candidate during SENDING and UNCERTAIN no-retry window', async t => {
+  const f = fixture(t);
+  prepareTestPublicAction(f.store, {
+    descriptor: testActionDescriptor(),
+    streamId: f.streamId,
+    preparedStreamRevision: 1,
+    actionType: 'ANSWER',
+    basisEventSeqs: [1],
+    deadlineAt: NOW_MS + 60_000,
+  });
+  const claimed = f.store.claimNextPublicAction({ leaseMs: 10_000, token: 'cp2-uncertain-lease' });
+  f.store.markActionSending(claimed.action_id, 'cp2-uncertain-lease');
+  let calls = 0;
+  const opts = inputs(f, { produceExtraction: async () => { calls++; throw Error('must_not_run'); } });
+  const whileSending = await buildFirstLineTransientCandidate(opts);
+  assert.deepEqual(whileSending, { code: 'NO_ACTION', reason: 'PUBLIC_SEND_UNRESOLVED' });
+  f.store.markActionUncertain(claimed.action_id, { reason: 'synthetic_unknown_transport_result' });
+  const whileUncertain = await buildFirstLineTransientCandidate(opts);
+  assert.deepEqual(whileUncertain, { code: 'NO_ACTION', reason: 'PUBLIC_SEND_UNRESOLVED' });
+  assert.equal(calls, 0);
+  assert.equal(f.store.getPublicAction(claimed.action_id).state, 'UNCERTAIN');
+});
+
+test('CP2 multiple customer turns retain one active episode and certify both exact messages', async t => {
+  const f = fixture(t, { createEpisode: false });
+  const first = await buildFirstLineTransientCandidate(inputs(f));
+  assert.equal(first.code, 'CANDIDATE');
+  const firstEpisode = f.store.loadActiveEpisode(f.streamId);
+  f.store.ingestConversationEvent(f.streamId, {
+    sourceMessageId: 102, eventKind: 'CUSTOMER_MESSAGE',
+    messageType: 'incoming', senderClass: 'contact', senderId: 9001,
+    contentType: 'text', deleted: false, unsupported: false,
+    hasAttachments: false, sourceId: null,
+  });
+  const secondRead = {
+    ...f.exactRead,
+    sourceMessageId: 102,
+    event: { ...f.exactRead.event, sourceMessageId: 102 },
+    transientContent: 'Какие способы оплаты есть?',
+  };
+  let modelTurns = null;
+  const second = await buildFirstLineTransientCandidate(inputs(f, {
+    reader: {
+      readExactSourceMessage: async (conversationId, id) => {
+        assert.equal(conversationId, 55);
+        return id === 101 ? f.exactRead : secondRead;
+      },
+    },
+    produceExtraction: async turns => {
+      modelTurns = turns.map(turn => turn.sourceMessageId);
+      return {
+        schema: FIRST_LINE_EXTRACTION_SCHEMA,
+        intent_schema_version: FIRST_LINE_INTENT_SCHEMA_VERSION,
+        intent_hint: 'UNTRUSTED', language: 'ru', spans: [],
+      };
+    },
+  }));
+  assert.deepEqual(modelTurns, [101, 102]);
+  assert.equal(second.code, 'CANDIDATE', JSON.stringify({reason: second.reason, decision: second.decision?.reason}));
+  assert.equal(second.nonAuthorizing, true);
+  assert.equal(f.store.loadActiveEpisode(f.streamId).episode_id, firstEpisode.episode_id);
+  assert.equal(f.store.loadActiveEpisode(f.streamId).version, firstEpisode.version);
+  assert.equal(f.store.getConversationStream(f.streamId).stream_revision, 2);
+  assert.equal(f.store.readRoutingSnapshot(f.streamId).live_public_action, null);
+
+  // The next incoming turn has order-specific wording. Never let a previous
+  // valid payment candidate authorize this changed customer objective.
+  f.store.ingestConversationEvent(f.streamId, {
+    sourceMessageId: 103, eventKind: 'CUSTOMER_MESSAGE',
+    messageType: 'incoming', senderClass: 'contact', senderId: 9001,
+    contentType: 'text', deleted: false, unsupported: false,
+    hasAttachments: false, sourceId: null,
+  });
+  const thirdRead = {
+    ...f.exactRead, sourceMessageId: 103,
+    event: { ...f.exactRead.event, sourceMessageId: 103 },
+    transientContent: 'Как можно оплатить заказ?',
+  };
+  const third = await buildFirstLineTransientCandidate(inputs(f, {
+    reader: {
+      readExactSourceMessage: async (_conversationId, id) =>
+        id === 101 ? f.exactRead : id === 102 ? secondRead : thirdRead,
+    },
+  }));
+  assert.equal(third.code, 'HUMAN_REQUIRED');
+  assert.equal(third.decision.reason, 'UNSUPPORTED_CONSTRAINT');
+  assert.equal(f.store.loadActiveEpisode(f.streamId).episode_id, firstEpisode.episode_id);
+  assert.equal(f.store.readRoutingSnapshot(f.streamId).live_public_action, null);
 });
