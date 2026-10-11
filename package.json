@@ -32,7 +32,9 @@
     "identity:store-plan": "node --no-warnings scripts/identity-store-plan.mjs",
     "knowledge:serve": "node src/copilot/knowledge-control/index.mjs",
     "knowledge:backup": "node scripts/knowledge-backup.mjs",
-    "knowledge:restore-verify": "node scripts/knowledge-restore-verify.mjs"
+    "knowledge:restore-verify": "node scripts/knowledge-restore-verify.mjs",
+    "first-line:backup": "node scripts/first-line-backup.mjs",
+    "first-line:restore-verify": "node scripts/first-line-restore-verify.mjs"
   },
   "devDependencies": {
     "fast-check": "4.10.2"
