@@ -1,3 +1,4 @@
+import { decodeFirstLineCurrentConversation } from './first-line-current-conversation.mjs';
 function requireHttps(baseUrl) {
   if (!/^https:\/\//.test(baseUrl)) throw new Error('chatwoot_https_required');
 }
@@ -384,6 +385,20 @@ export function createFirstLineChatwootAuthorityReader({
     });
   }
 
+  // Frozen C6 §43 current-owner decoder shared by S2 and post-HUMAN read-only
+  // reconciliation. Never infer ownership from webhook or message id ordering.
+  async function readCurrentConversationAuthority(conversationId, configuredInboxId) {
+    const conversation = strictPositiveId(conversationId, 'conversation_id');
+    const inbox = strictPositiveId(configuredInboxId, 'configured_inbox_id');
+    const wire = await get(
+      `/api/v1/accounts/${account}/conversations/${conversation}`
+    );
+    return decodeFirstLineCurrentConversation(wire, {
+      accountId: account, conversationId: conversation, inboxId: inbox,
+      agentBotId: botId,
+    });
+  }
+
   async function readAuthorizingConversationSnapshot(conversationId) {
     const conversation = strictPositiveId(conversationId, 'conversation_id');
     const wire = await get(
@@ -408,5 +423,6 @@ export function createFirstLineChatwootAuthorityReader({
     readExactClarificationSubmission,
     readPublicRange,
     readAuthorizingConversationSnapshot,
+    readCurrentConversationAuthority,
   });
 }

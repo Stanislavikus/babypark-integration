@@ -66,6 +66,10 @@ function authority(events, { complete = true, code = 'COMPLETE', rowCount = even
       assert.equal(conversationId, 55);
       return { complete, code, rowCount, events };
     },
+    readCurrentConversationAuthority: async conversationId => ({
+      code: 'SEND_ELIGIBLE', sourceConversationId: conversationId,
+      inboxId: 99, status: 'pending', ownerClass: 'SAME_AGENTBOT',
+    }),
   };
 }
 
@@ -74,6 +78,7 @@ test('complete unchanged snapshot transitions GATING to SENDING and never perfor
   const { action } = prepareClaim(store);
 
   const result = await gatePublicActionToSending({
+    configuredInboxId: 99,
     store,
     authorityReader: authority([customer(101)]),
     actionId: action.action_id,
@@ -93,6 +98,7 @@ test('late lower source id visible in authorizing snapshot invalidates old actio
 
   const lateConstraint = customer(100);
   const result = await gatePublicActionToSending({
+    configuredInboxId: 99,
     store,
     authorityReader: authority([lateConstraint, customer(101)]),
     actionId: action.action_id,
@@ -113,6 +119,7 @@ test('exactly saturated authorizing history never transitions to SENDING', async
   const { action } = prepareClaim(store);
 
   const result = await gatePublicActionToSending({
+    configuredInboxId: 99,
     store,
     authorityReader: authority([], {
       complete: false, code: 'HISTORY_UNPROVABLE', rowCount: 1000,
@@ -131,6 +138,7 @@ test('covered source deletion or reclassification stales the action without a PO
   const { action } = prepareClaim(store);
 
   let result = await gatePublicActionToSending({
+    configuredInboxId: 99,
     store,
     authorityReader: authority([customer(101, { deleted: true })]),
     actionId: action.action_id,
@@ -153,6 +161,10 @@ test('covered source deletion or reclassification stales the action without a PO
   store2.claimNextPublicAction({ leaseMs: 10_000, token: 'relay-2' });
 
   const authority2 = {
+    readCurrentConversationAuthority: async conversationId => ({
+      code: 'SEND_ELIGIBLE', sourceConversationId: conversationId,
+      inboxId: 99, status: 'pending', ownerClass: 'SAME_AGENTBOT',
+    }),
     readAuthorizingConversationSnapshot: async conversationId => {
       assert.equal(conversationId, 56);
       return {
@@ -164,6 +176,7 @@ test('covered source deletion or reclassification stales the action without a PO
     },
   };
   result = await gatePublicActionToSending({
+    configuredInboxId: 99,
     store: store2, authorityReader: authority2, actionId: action2.action_id,
     leaseToken: 'relay-2', sourceConversationId: 56,
   });
@@ -188,6 +201,7 @@ test('new unknown public row increments revision and invalidates prepared action
   };
 
   const result = await gatePublicActionToSending({
+    configuredInboxId: 99,
     store,
     authorityReader: authority([customer(101), unknown]),
     actionId: action.action_id,
@@ -206,6 +220,10 @@ test('authorizing snapshot is bound to the action stream and cannot be redirecte
   const { action } = prepareClaim(store);
   let readConversationId = null;
   const authorityReader = {
+    readCurrentConversationAuthority: async conversationId => ({
+      code: 'SEND_ELIGIBLE', sourceConversationId: conversationId,
+      inboxId: 99, status: 'pending', ownerClass: 'SAME_AGENTBOT',
+    }),
     readAuthorizingConversationSnapshot: async conversationId => {
       readConversationId = conversationId;
       return { complete: true, code: 'COMPLETE', rowCount: 1, events: [customer(101)] };
@@ -213,6 +231,7 @@ test('authorizing snapshot is bound to the action stream and cannot be redirecte
   };
 
   const result = await gatePublicActionToSending({
+    configuredInboxId: 99,
     store,
     authorityReader,
     actionId: action.action_id,
@@ -253,6 +272,7 @@ test('episode drift stales a claimed CLARIFY action instead of leaving GATING li
   assert.equal(episode.version, 3);
 
   const result = await gatePublicActionToSending({
+    configuredInboxId: 99,
     store,
     authorityReader: authority([customer(101)]),
     actionId: action.action_id,
@@ -299,6 +319,7 @@ test('terminal HUMAN handoff closes the episode and makes the old gate permanent
 
   await assert.rejects(
     () => gatePublicActionToSending({
+    configuredInboxId: 99,
       store,
       authorityReader: authority([customer(101)]),
       actionId: action.action_id,
@@ -345,6 +366,10 @@ test('deadline expiry during final gate stales the action and never reaches SEND
   store.claimNextPublicAction({ leaseMs: 10_000, token: 'relay-deadline' });
 
   const authorityReader = {
+    readCurrentConversationAuthority: async conversationId => ({
+      code: 'SEND_ELIGIBLE', sourceConversationId: conversationId,
+      inboxId: 99, status: 'pending', ownerClass: 'SAME_AGENTBOT',
+    }),
     readAuthorizingConversationSnapshot: async () => {
       clock = NOW + 6;
       return { complete: true, code: 'COMPLETE', rowCount: 1, events: [customer(101)] };
@@ -352,6 +377,7 @@ test('deadline expiry during final gate stales the action and never reaches SEND
   };
 
   const result = await gatePublicActionToSending({
+    configuredInboxId: 99,
     store,
     authorityReader,
     actionId: action.action_id,
@@ -369,6 +395,7 @@ test('authorizing snapshot array order never rewrites prior local acceptance ord
   const { action } = prepareClaim(store);
 
   const result = await gatePublicActionToSending({
+    configuredInboxId: 99,
     store,
     authorityReader: authority([
       customer(103),
@@ -396,6 +423,7 @@ test('covered source unsupported/attachment/content metadata drift invalidates t
   changed.unsupported = true;
 
   const result = await gatePublicActionToSending({
+    configuredInboxId: 99,
     store,
     authorityReader: authority([changed]),
     actionId: action.action_id,
@@ -406,4 +434,88 @@ test('covered source unsupported/attachment/content metadata drift invalidates t
   assert.equal(result.coverage.reason, 'covered_source_reclassified');
   assert.equal(result.coverage.sourceMessageId, 101);
   assert.equal(result.action.state, 'STALE');
+});
+
+test('S2 denies every non-owned/current tuple and seals HUMAN continuation without POST', async t => {
+  const cases = [
+    ['wrong inbox', { inboxId: 98, code: 'SEND_DENIED' }],
+    ['human owner', { ownerClass: 'HUMAN_USER', code: 'SEND_DENIED' }],
+    ['other bot', { ownerClass: 'OTHER_AGENTBOT', code: 'SEND_DENIED' }],
+    ['agent was changed but synthetic says send eligible', { ownerClass: 'UNASSIGNED', code: 'SEND_ELIGIBLE' }],
+    ['now open', { status: 'open', code: 'SEND_DENIED' }],
+    ['now resolved', { status: 'resolved', code: 'SEND_DENIED' }],
+    ['unknown', { ownerClass: 'UNKNOWN', code: 'SEND_DENIED' }],
+    ['mismatched source', { sourceConversationId: 999, code: 'SEND_ELIGIBLE' }],
+  ];
+  for (const [name, patch] of cases) {
+    const store = tempStore(t);
+    const { action } = prepareClaim(store);
+    let ownerCalls = 0;
+    const authorityReader = authority([customer(101)]);
+    authorityReader.readCurrentConversationAuthority = async conversationId => {
+      ownerCalls++;
+      assert.equal(conversationId, 55);
+      return {
+        code: 'SEND_ELIGIBLE', sourceConversationId: 55, inboxId: 99,
+        status: 'pending', ownerClass: 'SAME_AGENTBOT',
+        ...patch,
+      };
+    };
+    const result = await gatePublicActionToSending({
+      configuredInboxId: 99, store, authorityReader,
+      actionId: action.action_id, leaseToken: 'relay-1',
+    });
+    assert.equal(result.code, 'HUMAN_REQUIRED', name);
+    assert.equal(ownerCalls, 1, name);
+    assert.equal(store.getContinuationOwner(action.stream_id, 1).owner_kind, 'HUMAN', name);
+    assert.equal(store.getPublicAction(action.action_id).send_started_at, null, name);
+    assert.equal(store.getPublicAction(action.action_id).state, 'GATING', name);
+    const replay = await gatePublicActionToSending({
+      configuredInboxId: 99, store, authorityReader,
+      actionId: action.action_id, leaseToken: 'relay-1',
+    });
+    assert.equal(replay.code, 'HUMAN_REQUIRED', name);
+    assert.equal(replay.continuationOwner.owner_kind, 'HUMAN', name);
+    assert.equal(store.getPublicAction(action.action_id).send_started_at, null, name);
+  }
+});
+
+test('S2 current-conversation unavailable seals HUMAN, no silent stale-owner reuse', async t => {
+  const store = tempStore(t);
+  const { action } = prepareClaim(store);
+  const authorityReader = authority([customer(101)]);
+  authorityReader.readCurrentConversationAuthority = async () => {
+    throw new Error('synthetic upstream outage');
+  };
+  const result = await gatePublicActionToSending({
+    configuredInboxId: 99, store, authorityReader,
+    actionId: action.action_id, leaseToken: 'relay-1',
+  });
+  assert.equal(result.code, 'HUMAN_REQUIRED');
+  assert.equal(result.continuationOwner.owner_kind, 'HUMAN');
+  assert.equal(result.continuationOwner.human_reason, 's2_current_owner_read_unavailable');
+  assert.equal(store.getPublicAction(action.action_id).send_started_at, null);
+});
+
+test('S2 caller cannot omit the new strict current owner authority', async t => {
+  const store = tempStore(t);
+  const { action } = prepareClaim(store);
+  await assert.rejects(
+    gatePublicActionToSending({
+      store, authorityReader: { readAuthorizingConversationSnapshot: async () => {
+        throw new Error('must never run');
+      }},
+      actionId: action.action_id, leaseToken: 'relay-1', configuredInboxId: 99,
+    }),
+    e => e.code === 'FIRST_LINE_S2_AUTHORITY_REQUIRED'
+  );
+  await assert.rejects(
+    gatePublicActionToSending({
+      store, authorityReader: authority([customer(101)]),
+      actionId: action.action_id, leaseToken: 'relay-1', configuredInboxId: 0,
+    }),
+    e => e.code === 'FIRST_LINE_S2_AUTHORITY_REQUIRED'
+  );
+  assert.equal(store.getPublicAction(action.action_id).state, 'GATING');
+  assert.equal(store.getPublicAction(action.action_id).send_started_at, null);
 });
