@@ -384,7 +384,7 @@ function preflightArgs(f, candidate, reader, authority = f.authority) {
   };
 }
 
-test('S2 preflight checks exact bytes then facts then whole history then latest native owner', async t => {
+test('S2 preflight checks complete history then exact bytes then facts then latest native owner', async t => {
   const f = setup(t, [101, 102]);
   const candidate = await f.build();
   const order = [];
@@ -403,11 +403,11 @@ test('S2 preflight checks exact bytes then facts then whole history then latest 
     nonAuthorizing: true,
     sourceConversationId: 55, streamRevision: 2,
   });
-  assert.deepEqual(order, ['exact:101', 'exact:102', 'facts', 'history', 'owner']);
+  assert.deepEqual(order, ['history', 'exact:101', 'exact:102', 'facts', 'owner']);
   assert.equal(f.store.readRoutingSnapshot(f.streamId).live_public_action, null);
 });
 
-test('S2 preflight never checks owner when customer exact bytes changed', async t => {
+test('S2 preflight never checks facts or owner when customer exact bytes changed', async t => {
   const f = setup(t);
   const candidate = await f.build();
   f.rows.set(101, { ...f.rows.get(101), transientContent: 'В кредит?' });
@@ -416,7 +416,7 @@ test('S2 preflight never checks owner when customer exact bytes changed', async 
     preflightArgs(f, candidate, preflightReader(f, order))
   );
   assert.equal(result.code, 'STALE');
-  assert.deepEqual(order, ['exact:101']);
+  assert.deepEqual(order, ['history', 'exact:101']);
 });
 
 test('S2 preflight treats newly visible and ambiguously reclassified history as unsafe', async t => {
@@ -513,4 +513,18 @@ test('S2 preflight cannot advertise structured CLARIFY as proven without C25 cau
   ));
   assert.deepEqual(result, { code: 'HUMAN_REQUIRED', reason: 'S2_STRUCTURED_PROOF_PENDING' });
   assert.equal(f.store.readRoutingSnapshot(f.streamId).live_public_action, null);
+});
+
+test('S2 history discovers newly visible customer before any covered S1 text reread', async t => {
+  const f = setup(t);
+  const candidate = await f.build();
+  const order = [];
+  const result = await assessFirstLineS2Preflight(preflightArgs(
+    f, candidate, preflightReader(f, order, {
+      snapshot: { code: 'COMPLETE', complete: true,
+        events: [event(101), event(102)] },
+    })
+  ));
+  assert.deepEqual(result, { code: 'STALE', reason: 'S2_HISTORY_TOPOLOGY_CHANGED' });
+  assert.deepEqual(order, ['history']);
 });
