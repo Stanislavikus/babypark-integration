@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { DatabaseSync } from 'node:sqlite';
+import { consumeFirstLineS2SendingProof } from './first-line-s2-preflight.mjs';
 
 const SCHEMA_VERSION = 4;
 const PREVIOUS_SCHEMA_VERSION = 3;
@@ -4686,7 +4687,9 @@ export class FirstLineStateStore {
     });
   }
 
-  markActionSending(actionId, leaseToken) {
+  commitFirstLineS2Sending({
+    actionId, leaseToken, proof, candidate, authorityReader, streamId,
+  } = {}) {
     const id = safeToken(actionId, 'action_id');
     const token = safeToken(leaseToken, 'lease_token');
     const at = this.now();
@@ -4696,6 +4699,10 @@ export class FirstLineStateStore {
       if (!action) {
         fail('FIRST_LINE_ACTION_NOT_FOUND',
           'public action not found', { action_id: id });
+      }
+      if (action.stream_id !== streamId ||
+          typeof authorityReader?.readCurrentConversationAuthority !== 'function') {
+        fail('FIRST_LINE_S2_PROOF_INVALID', 'S2 admission has wrong stream/reader');
       }
       this.#assertDeferredRelationsValid(action.stream_id);
       if (action.state !== 'GATING' || action.lease_token !== token) {
@@ -4775,6 +4782,15 @@ export class FirstLineStateStore {
       } else if (action.episode_id !== null) {
         fail('FIRST_LINE_ACTION_STALE_EPISODE',
           'bound episode is no longer active before SENDING', { action_id: id });
+      }
+      // Consume once *inside* the BEGIN IMMEDIATE transaction. If subsequent
+      // SQL rolls back, the ephemeral token remains consumed: fail closed.
+      if (!consumeFirstLineS2SendingProof(proof, {
+        candidate, store: this, streamId: action.stream_id, authorityReader,
+        actionId: id, leaseToken: token,
+      })) {
+        fail('FIRST_LINE_S2_PROOF_INVALID',
+          'one-shot action-bound S2 proof required', { action_id: id });
       }
       const changed = this.#withMutationLeaseToken(token, () =>
         this.db.prepare(`UPDATE public_actions SET state='SENDING',send_started_at=?,updated_at=?
