@@ -236,13 +236,70 @@ function buildDecisionContext(snapshot, resolutions, dependencies) {
   });
 }
 
-function attachDecisionContext(snapshot, resolutions, dependencies) {
+function attachDecisionContext(snapshot, resolutions, dependencies, actionScope = null) {
   return Object.freeze({
     ...snapshot,
     private_context: Object.freeze({
       ...(snapshot.private_context ?? {}),
       ...buildDecisionContext(snapshot, resolutions, dependencies),
+      ...(actionScope === null ? {} : { public_action_scope: actionScope }),
     }),
+  });
+}
+
+// The ordinary C4 path is the only producer of this action-scope witness.
+// It uses the exact effective C4 slots and their C2-certified source rows,
+// never an application-supplied scope or a model-produced public descriptor.
+// Continuation/structured-selection scopes require their separate C25 proof.
+function deriveFirstLinePublicActionScope(slots, resolution, projection) {
+  if (Object.keys(projection.active_episode?.stable_slots ?? {}).length !== 0) return null;
+  const seqBySource = new Map(projection.open_turn.source_message_ids.map(
+    (sourceId, index) => [sourceId, projection.open_turn.event_seqs[index]]
+  ));
+  const eventSeq = kind => {
+    const match = resolution.resolutions.find(row =>
+      row.kind === kind && row.authority?.status === 'RESOLVED');
+    const seq = seqBySource.get(match?.source_message_id);
+    return Number.isSafeInteger(seq) && seq > 0 ? seq : null;
+  };
+  const scope = {
+    product: slots.product_id == null ? null : {
+      product_id: slots.product_id, variant_id: slots.variant_id ?? null,
+    },
+    category: slots.category_id == null ? null : {
+      category_id: slots.category_id, match_mode: slots.category_match_mode,
+    },
+    brand_id: slots.brand_id ?? null,
+    store_id: slots.store_id ?? null,
+    money: slots.max_price_minor == null && slots.min_price_minor == null
+      ? null : {
+        currency: slots.currency,
+        min_price_minor: slots.min_price_minor ?? null,
+        max_price_minor: slots.max_price_minor ?? null,
+      },
+  };
+  const provenance = {};
+  for (const [key, kind] of [
+    ['product_id', 'PRODUCT'], ['variant_id', 'PRODUCT'],
+    ['category_id', 'CATEGORY'], ['category_match_mode', 'CATEGORY'],
+    ['brand_id', 'BRAND'], ['store_id', 'STORE'],
+    ['currency', 'MONEY'], ['min_price_minor', 'MONEY'],
+    ['max_price_minor', 'MONEY'],
+  ]) {
+    if (slots[key] == null) continue;
+    const seq = eventSeq(kind);
+    if (seq === null) return null;
+    if (key !== 'category_match_mode') provenance[key] = seq;
+  }
+  if (scope.category !== null && !['NODE_ONLY', 'INCLUDE_DESCENDANTS']
+    .includes(scope.category.match_mode)) return null;
+  if (scope.money !== null &&
+      (scope.money.currency !== 'UAH' ||
+       (scope.money.min_price_minor !== null && scope.money.min_price_minor < 0) ||
+       (scope.money.max_price_minor !== null && scope.money.max_price_minor < 0))) return null;
+  return Object.freeze({
+    semantic_scope: Object.freeze(scope),
+    scope_provenance: Object.freeze(provenance),
   });
 }
 
@@ -2218,9 +2275,10 @@ export function createFirstLineDecisionBasis({
   nowUtc,
 } = {}) {
   const dependencies = [];
+  let actionScope = null;
   const finish = snapshot => registerDecisionBasis(
     AUTHORITY_CAPABILITY,
-    attachDecisionContext(snapshot, [resolution], dependencies)
+    attachDecisionContext(snapshot, [resolution], dependencies, actionScope)
   );
   const persistedBudget = requireCertifiedInputs(
     projection,
@@ -2261,6 +2319,7 @@ export function createFirstLineDecisionBasis({
   if (identity.terminal) {
     return finish(identity.terminal);
   }
+  actionScope = deriveFirstLinePublicActionScope(identity.slots, resolution, projection);
 
   const families = requestFamilies(exactReads, resolution);
   if (families.length === 0) {
