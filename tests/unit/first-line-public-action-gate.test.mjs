@@ -4,7 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import { FirstLineStateStore } from '../../src/copilot/first-line-state-store.mjs';
-import { gatePublicActionToSending } from '../../src/copilot/first-line-public-action-gate.mjs';
+import { legacyGatePublicActionToSendingForTest as gatePublicActionToSending } from '../helpers/legacy-public-action-gate-fixture.mjs';
 import { prepareTestPublicAction, testActionDescriptor } from '../helpers/first-line-action-descriptor.mjs';
 
 const NOW = 2_000_000_000_000;

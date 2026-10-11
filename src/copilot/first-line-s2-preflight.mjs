@@ -8,6 +8,19 @@ import { isDeepStrictEqual } from 'node:util';
 // Positive S2 preflight is an ephemeral, identity-minted proof rather than
 // a caller-supplied boolean. No text, normalized text or content digests.
 const genuinePreflights = new WeakMap();
+const consumedPreflights = new WeakSet();
+
+// Consumed inside FirstLineStateStore's BEGIN IMMEDIATE transaction.
+export function consumeFirstLineS2SendingProof(value, {
+  candidate, store, streamId, authorityReader, actionId, leaseToken,
+} = {}) {
+  if (actionId == null || leaseToken == null ||
+      !isCertifiedFirstLineS2Preflight(value, {
+        candidate, store, streamId, authorityReader, actionId, leaseToken,
+      }) || consumedPreflights.has(value)) return false;
+  consumedPreflights.add(value);
+  return true;
+}
 
 export function isCertifiedFirstLineS2Preflight(value, {
   candidate, store, streamId, authorityReader,
