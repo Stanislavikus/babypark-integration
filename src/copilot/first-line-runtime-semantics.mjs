@@ -39,6 +39,18 @@ export async function buildFirstLineTransientCandidate({
   if (projection.code !== 'OPEN_TURN') {
     return Object.freeze({ code: 'HUMAN_REQUIRED', reason: 'UNCLASSIFIED_ROUTE' });
   }
+  // An earlier prepared/GATING/SENDING/UNCERTAIN public action still owns
+  // continuation. It must be resolved by the CP3 send/reconciliation path,
+  // not bypassed through an unrelated candidate or renewed model call.
+  if (projection.live_public_action !== null) {
+    return Object.freeze({ code: 'NO_ACTION', reason: 'PUBLIC_SEND_UNRESOLVED' });
+  }
+  // Confirmation of CLARIFY is not a generic answer turn: C25 must attest
+  // exact native structured or quote-based selection under its original
+  // causal action. Do not silently answer using a new standalone episode.
+  if (projection.confirmed_clarification_action !== null) {
+    return Object.freeze({ code: 'ROUTING_REQUIRED', reason: 'CLARIFICATION_PROOF_REQUIRED' });
+  }
   if (projection.active_episode?.state !== 'active' &&
       projection.active_episode !== null) {
     return Object.freeze({ code: 'HUMAN_REQUIRED', reason: 'EPISODE_STATE_UNPROVABLE' });
