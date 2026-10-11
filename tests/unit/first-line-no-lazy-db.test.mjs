@@ -45,7 +45,7 @@ function forbiddenV4CreationReference(source) {
   if (/\bFirstLineStateStore\s+as\s+[A-Za-z_$][\w$]*/u.test(source)) {
     return 'aliased-import-requires-review';
   }
-  if (/\b(?:const|let|var)\s+[A-Za-z_$][\w$]*\s*=\s*FirstLineStateStore\b/u.test(source)) {
+  if (/\b(?:const|let|var)\s+[A-Za-z_$][\w$]*\s*=\s*FirstLineStateStore\b(?!\s*[.\[])/u.test(source)) {
     return 'store-aliased-requires-review';
   }
   if (/\b(?:const|let|var)\s*\{[^}]*\bcreate\b[^}]*\}\s*=\s*FirstLineStateStore\b/u.test(source)) {
@@ -80,6 +80,7 @@ test('CI guard detects direct, computed and aliased automatic v4 creation', () =
     'create-destructuring-requires-review'
   );
   assert.equal(forbiddenV4CreationReference('FirstLineStateStore.open(file)'), null);
+  assert.equal(forbiddenV4CreationReference('const store = FirstLineStateStore.open(file)'), null);
   assert.equal(forbiddenV4CreationReference('CopilotStore.create(file)'), null);
 });
 
