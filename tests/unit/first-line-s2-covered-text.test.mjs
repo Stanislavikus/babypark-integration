@@ -6,7 +6,7 @@ import test from 'node:test';
 import { FirstLineStateStore } from '../../src/copilot/first-line-state-store.mjs';
 import { buildFirstLineTransientCandidate, reauthorizeFirstLineCandidateFacts } from '../../src/copilot/first-line-runtime-semantics.mjs';
 import { verifyFirstLineS2CoveredText } from '../../src/copilot/first-line-s2-covered-text.mjs';
-import { assessFirstLineS2Preflight } from '../../src/copilot/first-line-s2-preflight.mjs';
+import { assessFirstLineS2Preflight, isCertifiedFirstLineS2Preflight } from '../../src/copilot/first-line-s2-preflight.mjs';
 import {
   FIRST_LINE_EXTRACTION_SCHEMA, FIRST_LINE_INTENT_SCHEMA_VERSION,
 } from '../../src/copilot/first-line-extraction.mjs';
@@ -527,4 +527,24 @@ test('S2 history discovers newly visible customer before any covered S1 text rer
   ));
   assert.deepEqual(result, { code: 'STALE', reason: 'S2_HISTORY_TOPOLOGY_CHANGED' });
   assert.deepEqual(order, ['history']);
+});
+
+test('S2 preflight object cannot be forged, cloned, or used with a different current authority reader', async t => {
+  const f = setup(t);
+  const candidate = await f.build();
+  const source = preflightReader(f);
+  const positive = await assessFirstLineS2Preflight(preflightArgs(f, candidate, source));
+  assert.equal(positive.code, 'PREFLIGHT_PROVEN');
+  const bind = { candidate, store: f.store, streamId: f.streamId, authorityReader: source };
+  assert.equal(isCertifiedFirstLineS2Preflight(positive, bind), true);
+  assert.equal(isCertifiedFirstLineS2Preflight({ ...positive }, bind), false);
+  assert.equal(isCertifiedFirstLineS2Preflight(structuredClone(positive), bind), false);
+  assert.equal(isCertifiedFirstLineS2Preflight(positive, { ...bind, candidate: { ...candidate } }), false);
+  assert.equal(isCertifiedFirstLineS2Preflight(positive, { ...bind, authorityReader: preflightReader(f) }), false);
+  assert.equal(isCertifiedFirstLineS2Preflight(positive, { ...bind, store: {} }), false);
+  assert.equal(isCertifiedFirstLineS2Preflight(positive, { ...bind, streamId: 'another-stream' }), false);
+  assert.equal(isCertifiedFirstLineS2Preflight({
+    ...positive, code: 'PREFLIGHT_PROVEN', nonAuthorizing: true,
+  }, bind), false);
+  assert.equal(f.store.readRoutingSnapshot(f.streamId).live_public_action, null);
 });

@@ -2,6 +2,19 @@ import { verifyFirstLineS2CoveredText } from './first-line-s2-covered-text.mjs';
 import { reauthorizeFirstLineCandidateFacts } from './first-line-runtime-semantics.mjs';
 import { sameFirstLineSourceEvent } from './first-line-source-integrity.mjs';
 
+// Positive S2 preflight is an ephemeral, identity-minted proof rather than
+// a caller-supplied boolean. No text, normalized text or content digests.
+const genuinePreflights = new WeakMap();
+
+export function isCertifiedFirstLineS2Preflight(value, {
+  candidate, store, streamId, authorityReader,
+} = {}) {
+  if (value === null || typeof value !== 'object') return false;
+  const bound = genuinePreflights.get(value);
+  return bound?.candidate === candidate && bound?.store === store &&
+    bound?.streamId === streamId && bound?.authorityReader === authorityReader;
+}
+
 /**
  * CP3 one ordered, non-authorizing S2 assessment. This is deliberately not a
  * send gate: no durable action claim/CAS, public HTTP POST or status mutation.
@@ -104,10 +117,14 @@ export async function assessFirstLineS2Preflight({
     return Object.freeze({ code: 'STALE', reason: 'S2_REVISION_CHANGED' });
   }
 
-  return Object.freeze({
+  const proof = Object.freeze({
     code: 'PREFLIGHT_PROVEN',
     nonAuthorizing: true,
     sourceConversationId: conversationId,
     streamRevision: latest.stream_revision,
   });
+  genuinePreflights.set(proof, Object.freeze({
+    candidate, store, streamId, authorityReader,
+  }));
+  return proof;
 }
