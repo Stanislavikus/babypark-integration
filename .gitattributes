@@ -1,0 +1,6 @@
+# C6 runtime synthetic coordinator fixtures are testing artifacts, never
+# payloads for a git-archive-based production release.
+tests/helpers/legacy-sending-fixture.mjs export-ignore
+tests/helpers/legacy-public-action-gate-fixture.mjs export-ignore
+tests/fixtures/first-line-coordinator-kill-child.mjs export-ignore
+tests/fixtures/first-line-postsend-scheduler-child.mjs export-ignore
