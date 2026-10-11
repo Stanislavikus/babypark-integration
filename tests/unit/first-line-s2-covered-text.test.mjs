@@ -128,6 +128,9 @@ test('S2 rejects missing/deleted/reclassified current Chatwoot text and changed 
   const initial = f.rows.get(101);
   for (const changed of [
     { ...initial, code: 'ABSENT', transientContent: null },
+    // Chatwoot reclassified public incoming as private/activity; internal
+    // wire is not a source for any C6 customer-visible decision.
+    { code: 'INTERNAL', sourceConversationId: 55, sourceMessageId: 101 },
     { ...initial, event: { ...initial.event, deleted: true } },
     { ...initial, event: { ...initial.event, senderId: 9002 } },
     { ...initial, event: { ...initial.event, hasAttachments: true } },
