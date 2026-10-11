@@ -99,6 +99,26 @@ export function createFirstLineAgentBotRelay({
     if (current.code === 'ABSENT') {
       return { status: 503, outcome: 'chatwoot_source_missing' };
     }
+    // A previously accepted source always has immutable topology, including
+    // when a fresh native row is reclassified INTERNAL or as another sender.
+    // Check BEFORE the new event's admission test, otherwise edited sources
+    // accidentally fall through to ordinary 422 instead of conflict 409.
+    try {
+      const stream = store.findConversationStream({
+        sourceProvider: 'chatwoot',
+        sourceConversationId: source.conversationId,
+      });
+      if (stream) {
+        const previous = store.getConversationEventBySource(
+          stream.stream_id, source.sourceMessageId
+        );
+        if (previous && !sameFirstLineSourceEvent(previous, current.event)) {
+          return { status: 409, outcome: 'source_topology_changed' };
+        }
+      }
+    } catch {
+      return { status: 503, outcome: 'semantic_authority_unavailable' };
+    }
     const event = current.event;
     if (!event || (current.code !== 'SUPPORTED_CUSTOMER_TEXT' &&
                     current.code !== 'PROVEN_UNSUPPORTED_OR_TOPOLOGY') ||
