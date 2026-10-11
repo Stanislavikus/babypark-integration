@@ -1,4 +1,5 @@
-import { FirstLineStateError } from './first-line-state-store.mjs';
+import { assessFirstLineS2Preflight } from './first-line-s2-preflight.mjs';
+import { isGenuineFirstLineTransientCandidate } from './first-line-runtime-semantics.mjs';
 
 export class FirstLineActionGateError extends Error {
   constructor(code, message, details = {}) {
@@ -9,166 +10,59 @@ export class FirstLineActionGateError extends Error {
   }
 }
 
-function fail(code, message, details = {}) {
-  throw new FirstLineActionGateError(code, message, details);
+function fail(code, message) {
+  throw new FirstLineActionGateError(code, message);
 }
 
-function sourceMap(events) {
-  return new Map(events.map(event => [event.sourceMessageId, event]));
-}
-
-function basisEvents(store, action) {
-  const all = store.listConversationEvents(action.stream_id);
-  const bySeq = new Map(all.map(event => [event.event_seq, event]));
-  return action.basis_event_seqs.map(seq => {
-    const event = bySeq.get(seq);
-    if (!event) fail('FIRST_LINE_ACTION_BASIS_MISSING', 'action basis event is absent from ledger',
-      { action_id: action.action_id, event_seq: seq });
-    return event;
-  });
-}
-
-function basisStillValid(action, ledgerBasis, snapshotBySource) {
-  for (const event of ledgerBasis) {
-    const current = snapshotBySource.get(event.source_message_id);
-    if (!current) return { ok: false, reason: 'covered_source_missing', sourceMessageId: event.source_message_id };
-    if (current.deleted) return { ok: false, reason: 'covered_source_deleted', sourceMessageId: event.source_message_id };
-    if (current.eventKind !== event.event_kind ||
-        current.messageType !== event.message_type ||
-        current.senderClass !== event.sender_class ||
-        current.senderId !== event.sender_id ||
-        current.contentType !== event.content_type ||
-        current.unsupported !== event.unsupported ||
-        current.hasAttachments !== event.has_attachments ||
-        current.sourceId !== event.source_id) {
-      return { ok: false, reason: 'covered_source_reclassified', sourceMessageId: event.source_message_id };
-    }
-  }
-  return { ok: true };
-}
-
+// The ONLY production admission path to SENDING. No public HTTP POST happens
+// here; the coordinator owns the exactly-one attempt after this durable cut.
 export async function gatePublicActionToSending({
-  store,
-  authorityReader,
-  actionId,
-  leaseToken,
-  configuredInboxId,
-}) {
-  if (!Number.isSafeInteger(configuredInboxId) || configuredInboxId <= 0 ||
-      typeof authorityReader?.readCurrentConversationAuthority !== 'function') {
-    fail('FIRST_LINE_S2_AUTHORITY_REQUIRED',
-      'final S2 current conversation authority is mandatory');
+  store, authorityReader, actionId, leaseToken, candidate,
+  catalogService, knowledgeStore, nowUtc, configuredInboxId,
+} = {}) {
+  if (!isGenuineFirstLineTransientCandidate(candidate, {
+    store, streamId: candidate?.projection?.stream_id,
+  }) || typeof authorityReader?.readAuthorizingConversationSnapshot !== 'function' ||
+      typeof authorityReader?.readCurrentConversationAuthority !== 'function' ||
+      !Number.isSafeInteger(configuredInboxId) || configuredInboxId <= 0 ||
+      typeof actionId !== 'string' || !actionId ||
+      typeof leaseToken !== 'string' || !leaseToken) {
+    fail('FIRST_LINE_S2_AUTHORITY_REQUIRED', 'genuine S2 authority and candidate required');
   }
+  const streamId = candidate.projection.stream_id;
   const before = store.getPublicAction(actionId);
-  if (!before) fail('FIRST_LINE_ACTION_NOT_FOUND', 'public action not found', { action_id: actionId });
-  if (before.state !== 'GATING') {
-    fail('FIRST_LINE_ACTION_NOT_GATING', 'public action must be GATING before authorizing snapshot',
-      { action_id: actionId, state: before.state });
+  if (!before || before.stream_id !== streamId ||
+      before.state !== 'GATING' || before.lease_token !== leaseToken) {
+    fail('FIRST_LINE_ACTION_CLAIM_INVALID', 'one owned GATING claim required');
   }
-  if (before.lease_token !== leaseToken) {
-    fail('FIRST_LINE_ACTION_CLAIM_INVALID', 'gate caller does not own action lease', { action_id: actionId });
-  }
-
-  const boundStream = store.getConversationStream(before.stream_id);
-  if (!boundStream || boundStream.source_provider !== 'chatwoot') {
-    fail('FIRST_LINE_ACTION_SOURCE_BINDING_INVALID', 'public action stream is not bound to Chatwoot authority',
-      { action_id: actionId, stream_id: before.stream_id });
-  }
-
-  const snapshot = await authorityReader.readAuthorizingConversationSnapshot(
-    boundStream.source_conversation_id
-  );
-  if (!snapshot.complete || snapshot.code !== 'COMPLETE') {
-    return { code: 'HISTORY_UNPROVABLE', action: before, snapshotRowCount: snapshot.rowCount };
-  }
-
-  // Deterministic ingestion order for rows first discovered in this one source
-  // snapshot. This is local acceptance order only; C2c must not reinterpret
-  // Chatwoot source ids as commit chronology.
-  const ordered = [...snapshot.events].sort((a, b) => a.sourceMessageId - b.sourceMessageId);
-  let inserted = 0;
-  for (const event of ordered) {
-    const result = store.ingestConversationEvent(before.stream_id, event);
-    if (result.inserted) inserted += 1;
-  }
-
-  const current = store.getPublicAction(actionId);
-  const currentStream = store.getConversationStream(before.stream_id);
-  if (currentStream.stream_revision !== current.prepared_stream_revision) {
-    const stale = store.markActionStaleBeforeSend(actionId, { reason: 'stream_revision_changed', leaseToken });
-    return { code: 'STALE', action: stale, insertedEvents: inserted, snapshotRowCount: snapshot.rowCount };
-  }
-
-  const coverage = basisStillValid(current, basisEvents(store, current), sourceMap(snapshot.events));
-  if (!coverage.ok) {
-    const stale = store.markActionStaleBeforeSend(actionId, { reason: coverage.reason, leaseToken });
-    return {
-      code: 'STALE',
-      action: stale,
-      insertedEvents: inserted,
-      snapshotRowCount: snapshot.rowCount,
-      coverage,
-    };
-  }
-
-  // C6 §43: a separate *current* account-conversation read after the
-  // history/covered-row checks. A signed webhook or previously cached
-  // ownership projection is never permission to cross GATING -> SENDING.
-  // A different owner, inbox or status attaches absorbing durable HUMAN.
-  let ownership;
+  let result;
   try {
-    ownership = await authorityReader.readCurrentConversationAuthority(
-      boundStream.source_conversation_id, configuredInboxId
-    );
+    result = await assessFirstLineS2Preflight({
+      store, streamId, candidate, authorityReader, catalogService,
+      knowledgeStore, nowUtc, configuredInboxId, actionId, leaseToken,
+    });
   } catch {
-    // Frozen C6 §43: absence of a current owner read must not leave the
-    // claimed public send eligible for a subsequent automatic attempt.
-    const owner = store.escalatePublicActionToHuman(actionId, {
-      reason: 's2_current_owner_read_unavailable', leaseToken,
-    });
-    return {
-      code: 'HUMAN_REQUIRED', action: store.getPublicAction(actionId),
-      continuationOwner: owner,
-    };
+    result = { code: 'HUMAN_REQUIRED', reason: 'S2_PROOF_UNAVAILABLE' };
   }
-  if (!ownership || ownership.sourceConversationId !== boundStream.source_conversation_id ||
-      ownership.code !== 'SEND_ELIGIBLE' ||
-      ownership.inboxId !== configuredInboxId ||
-      ownership.status !== 'pending' ||
-      ownership.ownerClass !== 'SAME_AGENTBOT') {
-    const owner = store.escalatePublicActionToHuman(actionId, {
-      reason: 's2_ownership_not_eligible', leaseToken,
-    });
-    return {
-      code: 'HUMAN_REQUIRED', action: store.getPublicAction(actionId),
-      continuationOwner: owner,
-    };
-  }
-
-  try {
-    const sending = store.markActionSending(actionId, leaseToken);
-    return {
-      code: 'READY_TO_SEND',
-      action: sending,
-      insertedEvents: inserted,
-      snapshotRowCount: snapshot.rowCount,
-    };
-  } catch (error) {
-    if (error instanceof FirstLineStateError &&
-        (error.code === 'FIRST_LINE_ACTION_STALE_REVISION' ||
-         error.code === 'FIRST_LINE_ACTION_STALE_EPISODE' ||
-         error.code === 'FIRST_LINE_ACTION_DEADLINE_EXPIRED')) {
-      const latest = store.getPublicAction(actionId);
-      if (latest?.state === 'GATING') {
-        const reason = error.code === 'FIRST_LINE_ACTION_STALE_EPISODE'
-          ? 'episode_changed_before_sending'
-          : error.code === 'FIRST_LINE_ACTION_DEADLINE_EXPIRED'
-            ? 'deadline_expired_before_sending'
-            : 'stream_revision_changed_before_sending';
-        const stale = store.markActionStaleBeforeSend(actionId, { reason, leaseToken });
-        return { code: 'STALE', action: stale, insertedEvents: inserted, snapshotRowCount: snapshot.rowCount };
-      }
+  if (result?.code !== 'PREFLIGHT_PROVEN') {
+    // Once there is no authorizing proof, the claim is never silently retried.
+    // HUMAN is absorbing. The current native owner may itself be unknown.
+    let owner = null;
+    try {
+      owner = store.escalatePublicActionToHuman(actionId, {
+        reason: 's2_final_authorization_denied', leaseToken,
+      });
+    } catch {
+      // Escalation failures remain fail-closed; no SENDING/POST.
     }
-    throw error;
+    return Object.freeze({
+      code: 'HUMAN_REQUIRED', reason: result?.reason ?? 'S2_UNPROVABLE',
+      continuationOwner: owner,
+    });
   }
+  const action = store.commitFirstLineS2Sending({
+    store, streamId, actionId, leaseToken, candidate, authorityReader,
+    proof: result,
+  });
+  return Object.freeze({ code: 'READY_TO_SEND', action });
 }

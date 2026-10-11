@@ -66,5 +66,18 @@ test('no unreviewed public POST/direct SENDING caller appears in tracked copilot
     'src/copilot/chatwoot-client.mjs',
     'src/copilot/knowledge-control/http.mjs',
   ]);
-  assert.deepEqual(sendTransitions, ['src/copilot/first-line-public-action-gate.mjs']);
+  assert.deepEqual(sendTransitions, [],
+    'production cannot call removed unguarded markActionSending');
+  for (const full of copilot) {
+    const source = fs.readFileSync(full, 'utf8');
+    assert.equal(/tests\/helpers\/(legacy-sending-fixture|legacy-public-action-gate-fixture)/u.test(source),
+      false, 'production must never import test-only legacy SENDING fixtures');
+  }
+  const coordinatorSource = fs.readFileSync(
+    path.join(ROOT, 'src/copilot/first-line-public-send-coordinator.mjs'), 'utf8'
+  );
+  assert.equal(
+    [...coordinatorSource.matchAll(/\.postOutgoingMessage\s*\(/gu)].length, 1,
+    'one reviewed public transport call site; no hidden retry branch'
+  );
 });
