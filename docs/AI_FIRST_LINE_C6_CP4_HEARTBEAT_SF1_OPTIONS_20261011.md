@@ -8,6 +8,8 @@ Review basis: PR #128 HEAD baf64623849f102c92ca2782db76458b00c1158e, TREE 0cf4ac
 Campaign base/current main: f9b5b8e5320884a675af3ea8e608c1e986e8331d; governance blob e777fce4af8e8c3372f1f9de9ef7d00f786c2c89
 Decision: bounded ready-solution research, NO selection authorization for externally hosted systems, no production code
 
+> **2026-10-11 scope correction:** This earlier EVIDENCE document suggests guarantees (separate seller acknowledgement, Zoho task delivery/outbox) that are **NOT normative** in AI_FIRST_LINE_DESIGN.md §29.8.2. Treat those as optional ideas, **not mandatory SF-1 blockers**. Native Chatwoot is first choice. Superseding assessment: `AI_FIRST_LINE_C6_CP4_SF1_SCOPE_CORRECTION_20261011.md`.
+
 ## Frozen requirement references for candidate fitness
 
 - AI_FIRST_LINE_DESIGN.md 29.8.2: persistent HUMAN continuation stays absorbing, no AI public fallback or speculative Chatwoot status update; after measured escalation failure record bounded durable operator-attention metadata.
