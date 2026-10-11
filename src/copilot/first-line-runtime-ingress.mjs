@@ -2,6 +2,7 @@ import http from 'node:http';
 import { verifyAgentBotDelivery } from './auth.mjs';
 import { FirstLineStateStore } from './first-line-state-store.mjs';
 import { CHATWOOT_MESSAGE_ID_MAX } from './chatwoot-client.mjs';
+import { sameFirstLineSourceEvent } from './first-line-source-integrity.mjs';
 
 const MAX_BODY_BYTES = 1024 * 1024;
 const WEBHOOK_PATH = '/api/first-line/agentbot/webhook';
@@ -31,22 +32,6 @@ function incomingTarget(wire, target) {
     sourceMessageId: wire.id,
     signedSenderId: wire.sender.id,
   };
-}
-
-function rowChanged(persisted, current) {
-  const comparisons = [
-    ['source_message_id', 'sourceMessageId'],
-    ['event_kind', 'eventKind'],
-    ['message_type', 'messageType'],
-    ['sender_class', 'senderClass'],
-    ['sender_id', 'senderId'],
-    ['content_type', 'contentType'],
-    ['deleted', 'deleted'],
-    ['unsupported', 'unsupported'],
-    ['has_attachments', 'hasAttachments'],
-    ['source_id', 'sourceId'],
-  ];
-  return comparisons.some(([dbField, wireField]) => persisted[dbField] !== current[wireField]);
 }
 
 /**
@@ -119,7 +104,7 @@ export function createFirstLineAgentBotRelay({
       // If the source row was edited since its first acceptance, never
       // treat a retry as fresh permission for a different semantic turn.
       const previous = store.getConversationEventBySource(stream.stream_id, source.sourceMessageId);
-      if (previous && rowChanged(previous, event)) {
+      if (previous && !sameFirstLineSourceEvent(previous, event)) {
         return { status: 409, outcome: 'source_topology_changed' };
       }
       const accepted = store.ingestConversationEvent(stream.stream_id, event);
