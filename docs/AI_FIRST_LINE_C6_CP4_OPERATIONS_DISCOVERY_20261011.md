@@ -47,9 +47,9 @@ Recommendation: REFERENCE only; no adoption, new provider, release, runtime chan
 | Existing Node scheduler + SQLite + systemd | Already deployed systemd, existing v4 recovery store. Restart/watchdog native; no built-in external dead-man alert or operator acknowledgement | PARTIAL |
 | DigitalOcean Monitoring | Host resource metrics, free; currently installed do-agent | PARTIAL, not application heartbeat |
 | DigitalOcean Uptime | Native external URL/ICMP, official pricing 1 USD per check/month, monthly credit for one check; email/Slack | PARTIAL: pull monitor |
-| Healthchecks.io hosted | Receives completed-job heartbeat and Telegram/email missed-ping alert, but official price page has Hobbyist free for hobby use and Business USD 20/month; commercial BabyPark free eligibility NOT proven | PARTIAL, not approved as free commercial solution |
+| Healthchecks.io Hobbyist hosted | Official pricing $0 for 20 checks/100 historical pings per check; FAQ gives company-infrastructure Hobbyist example; About free-use summary is narrower, vendor confirmation before commercial entitlement; unlimited team members since 2026-02-18; native Telegram/email alerts and HTTP success pings. No deployed account, API secret or live success proof | PASS for documented external missing-ping capability and commercial zero-price published terms; NOT YET APPROVED under Agreement §3 |
 | healthchecks/healthchecks self-hosted | BSD-3-Clause commercial use allowed, maintained OSS with official Docker installation; requires its own separate web/server + Django 6 / database and off-host alert delivery | PARTIAL/high ops |
-| Better Stack Heartbeats | External heartbeat service, published free tier for personal projects; business commercial-free applicability unproven | UNPROVEN fit |
+| Better Stack Heartbeats | External heartbeat service, free tier explicitly labelled for personal projects, not independently proven free for this commercial operation | UNPROVEN commercial fit |
 | Custom BabyPark heartbeat monitoring service | Reimplements ready capability and adds durable system | REJECT by default |
 
 Evidence sources rechecked 2026-10-11:
@@ -58,10 +58,18 @@ Evidence sources rechecked 2026-10-11:
 - https://docs.digitalocean.com/products/monitoring/details/pricing/
 - https://healthchecks.io/docs/monitoring_cron_jobs/
 - https://healthchecks.io/integrations/telegram/
+- https://healthchecks.io/docs/faq/ (Hobbyist company-infrastructure example; must read alongside the About page)
+- https://healthchecks.io/about/ (free-use scope summary narrower than FAQ)
+- https://healthchecks.io/pricing/ (Hobbyist $0, 20 checks, 100 history records per check)
+- https://blog.healthchecks.io/2026/02/unlimited-team-sizes-for-all/ (unlimited team since 2026-02-18)
+- https://healthchecks.io/docs/monitoring_cron_jobs/ (period and grace, missing-ping failure)
+- https://healthchecks.io/docs/reliability_tips/ (bounded timeout and retry)
 - https://github.com/healthchecks/healthchecks
 - https://betterstack.com/pricing
 
 No accounts, ping URLs, webhook secrets, telemetry services, paid resources or production changes were created. This is not a replacement for a frozen owner-approved alternatives scan and architecture fit before implementing any selected external monitoring option.
+
+**Corrected 2026-10-11**: the earlier classification that hosted Healthchecks.io Hobbyist was not eligible for commercial company infrastructure was wrong. The service's OWN official FAQ uses company-infrastructure monitoring as a valid Hobbyist account example. The $20 Business tier is not proven mandatory for BabyPark's four proposed low-volume checks by the official FAQ, but the About page summarizes free use as hobby/open-source/nonprofit, so exact commercial-production entitlement requires vendor clarification before service adoption. Free provision and Telegram/email integrations are documented; actual notification delivery, anti-false-ping controls, operational on-call contacts and measured periods/grace remain a separate approval/PoC gate. Its 100 retained log entries are a rolling diagnostic cap, NOT a long-term audit trail. The previous three-member team limit was removed on 2026-02-18. These facts are part of reference discovery only, not external-product adoption or new production implementation.
 
 ## Future one-command reversible consolidation: owner intent, not implemented
 
@@ -70,7 +78,7 @@ Owner's long-term target: after complete development and measured capacity proof
 The eventual one-command operator workflow should orchestrate already-proven tools:
 1. **Dry-run first**: read-only print of pinned source/target identity, manifest, current mounts/users, required backups, missing authority, proposed writes and rollback steps. Dry-run must make no filesystem/SQLite/network/service changes and never create episode.sqlite. The latter is initialized only by a separate explicit owner-authorized operator bootstrap, not by the transfer command.
 2. Preflight exact source/target host identities and writable data owners per config/storage-policy.yaml. Measure combined Rails/Sidekiq, PostgreSQL, Redis, Gateway, Knowledge, Catalog and First Line peak CPU, RSS, swap, disk IO and queue lag. No invented fixed thresholds.
-2. Produce a content-addressed immutable release artifact; compare reviewed Git SHA/tree, file manifest and real distribution bytes. Assert synthetic test fixtures are absent from exact shipped artifact. Preserve current symlink for rollback.
+3. Produce a content-addressed immutable release artifact; compare reviewed Git SHA/tree, file manifest and real distribution bytes. Assert synthetic test fixtures are absent from exact shipped artifact. Preserve current symlink for rollback.
 4. Quiesce explicitly approved source writers and obtain a provable no-loss semantic cut. Create owner-specific consistent backups; never cp live SQLite with WAL. For episode.sqlite reuse existing first-line:backup and first-line:restore-verify (encrypted artifact, manifest and independent scratch restore). Chatwoot stays transcript authority; no routine copying of customer text into BabyPark durable stores.
 5. Transfer to an unused target directory using proven SSH/SCP/rsync or archive, verify checksum, SQLite integrity/schema/semantic graph, permissions and backup/recovery cut. Never overwrite running target database in place.
 6. Under an explicit cutover gate atomically change release symlink/service ownership, verify health and native authority; if any check fails, restore prior release and proven state with no double writer.
