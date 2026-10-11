@@ -36,10 +36,11 @@ export function runFirstLinePostSendRecoverySweep({ store } = {}) {
 // Failures stop scheduling and surface through onFault, never silently retry
 // a customer-visible write or report a successful handoff.
 export function createFirstLinePostSendRecoveryScheduler({
-  store, intervalMs, onFault,
+  store, intervalMs, onFault, onCompleted = () => {},
 } = {}) {
   if (!Number.isSafeInteger(intervalMs) || intervalMs <= 0 ||
       typeof onFault !== 'function' ||
+      typeof onCompleted !== 'function' ||
       typeof store?.listRecoverablePublicActions !== 'function') {
     throw new TypeError('first_line_recovery_schedule_invalid');
   }
@@ -50,7 +51,9 @@ export function createFirstLinePostSendRecoveryScheduler({
     if (disabled || running) return;
     running = true;
     try {
-      return runFirstLinePostSendRecoverySweep({ store });
+      const completed = runFirstLinePostSendRecoverySweep({ store });
+      onCompleted(completed);
+      return completed;
     } catch (error) {
       disabled = true;
       if (timer !== null) clearInterval(timer);
@@ -68,6 +71,7 @@ export function createFirstLinePostSendRecoveryScheduler({
       }
       // Synchronously perform startup recovery BEFORE scheduling later ticks.
       const initial = runFirstLinePostSendRecoverySweep({ store });
+      onCompleted(initial);
       timer = setInterval(() => { tick().catch(() => {}); }, intervalMs);
       return initial;
     },
