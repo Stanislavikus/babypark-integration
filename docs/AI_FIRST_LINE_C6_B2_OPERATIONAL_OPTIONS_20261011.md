@@ -2,7 +2,7 @@
 
 Status: CANDIDATE EVIDENCE — NON-NORMATIVE; production NOT authorized.
 Applies to: `Stanislavikus/babypark-integration` only.
-Scan date: 2026-10-11 UTC.
+Scan date: 2026-10-11 UTC. Last read-only candidate revalidation UTC: 2026-10-11T05:01:10Z.
 Exact canonical base: `f9b5b8e5320884a675af3ea8e608c1e986e8331d`.
 Base tree: `4e30cccc133d26fc75dc32d2dc987ba0f3150e40`.
 Governance blob: `e777fce4af8e8c3372f1f9de9ef7d00f786c2c89`.
@@ -138,6 +138,58 @@ merely by a name or configuration screenshot. Restic alternative has a
 specific legitimate append-only repository capability, but replacing B1's
 direct authenticated recovery artifact would increase operating complexity
 without improving semantic authorization.
+
+### 3.1 Cross-cutting requirement coverage of the selected component set
+
+The component/requirement-area matrix above compares alternatives. This
+additional matrix maps the *combined* conditional B2 selection to every
+frozen operational requirement, and explicitly does **not** turn an
+unproven item into a PASS:
+
+| Frozen area | Chosen existing/native capability | Evidence status | Closure gate |
+| --- | --- | --- | --- |
+| B2-01 sole writer / explicit first creation | FirstLineStateStore v4 `create()` + `open()` | PARTIAL (source proved, first production cut absent) | owner-approved explicit bootstrap; missing DB must fail closed |
+| B2-02 exact authority topology | existing infrastructure registry + live unit/FS inspection | PARTIAL | immediate pre-write registered hosts/processes/mounts check |
+| B2-03 consistent encrypted backup + semantic verifier | merged C6-B1 profile | PASS on synthetic Node24, NOT production proof | production source plus live B1 proof |
+| B2-04 off-host / 2-layer verification | existing SSH and B1 scratch verifier | PARTIAL | received-intact per generation and independent restore-proven drill |
+| B2-05 append-only upload / separate delete principal | stock SSH/SFTP and OS permissions | **UNPROVEN / HALT** | actual upload credential negative rename/delete/overwrite tests |
+| B2-06 independent real key recovery | owner Bitwarden Free org plus offline escrow | PARTIAL | deputy and independent offline holder decrypt a scratch artifact |
+| B2-07 offproduction liveness/freshness warning | stock scheduling + separate operator alert | **UNPROVEN / HALT** | 45m warning, 60m critical, proof from offhost/third point |
+| B2-08 overlap prevention/retention/capacity | systemd serialized jobs; separated offhost maintenance | PARTIAL | run overlap/failure drills, measure capacity and safe prune |
+| B2-09 stale restore recovery barrier | frozen C6 design/acceptance | NOT IMPLEMENTED in B2 by design | future Runtime zero-POST/HUMAN gate |
+| B2-10 host-level contingency only | existing HostPro daily VPS restore points | PARTIAL | isolated host restore test; never counted as primary RPO |
+| B2-11 avoid transcript duplication/Core patches | existing B1 data scopes; no core change | PASS for B1 source; operational scope pending | compare actual deployment path/privacy |
+| B2-12 retention/privacy/deletion tail | SQLite primary policy + Bitwarden + HostPro images | UNPROVEN legal disposition | owner/privacy authority before customer-facing activation |
+| B2-13 no lazy-create on deployed release | exact-tree Node24 Gateway synthetic start | PASS for current merged tree only | repeat for future exact release, post-activation missing file fail closed |
+| B2-14 inventory/rollback/HEAVY evidence | Agreement §7, future manifest and drill | UNPROVEN / HALT | exact pre/post inventory and approved production execution |
+
+License/version/maintenance constraints by candidate:
+- Current production Node **v24.20.0**, native SQLite API present; official
+  Node upstream and SQLite public-domain/library docs are named in §2.
+- HostPro is an existing contracted VPS service, not free external OSS;
+  provider restore policy is managed/mutable and must be freshly checked.
+- OpenSSH **8.0p1** was observed on offhost; the exact installed build,
+  sshd/SFTP allowed requests, service version, vendor updates and commercial
+  deployment restrictions on the actual B2 cut **must be rechecked**, no
+  unsupported append-only PASS is inferred from a package name.
+- systemd version and exact scheduling config are still **UNKNOWN** for B2;
+  it is Linux's native service manager, not a proven offhost monitor.
+- restic v0.19.1 (BSD-2-Clause), Litestream v0.5.17 (Apache-2.0) are
+  maintained OSS options carried forward from frozen B1 scan, but the
+  actual B2 workload requires the B1 encrypted artifact and semantic
+  proof regardless. Official restic documentation confirms independently
+  controlled prune rights for true append-only repositories.
+- Bitwarden SaaS Free Organization provides two members/two collections
+  under current terms; commercial use is permitted for the current service.
+  It does not itself prove independent custodian access, immutable licensing,
+  or independent off-host restore. Product version/support and mutable
+  pricing/terms are to be rechecked at approval boundary.
+
+**Decision condition:** `keep-existing` is a recommendation for reusing
+proven components, not an approved architecture-fit for unresolved
+operational boundaries. If native SSH/OS privileges or monitoring fail a
+required gate, HALT under §9 and recompare ready maintained OSS rather
+than writing an unapproved custom bridge.
 
 ## 4. Recommendation and architecture fit — conditional
 
