@@ -1,22 +1,23 @@
 import { gatePublicActionToSending } from './first-line-public-action-gate.mjs';
 import { isGenuineFirstLineTransientCandidate } from './first-line-runtime-semantics.mjs';
 
-// CP3 only. The supplied transport must be the verified Chatwoot AgentBot
+// CP3 only. There are deliberately NO default retry/confirmation durations:
+// release configuration must derive every value from the measured v4.18
+// environment and validate budget relationships before enabling the writer.
+// The supplied transport must be the verified Chatwoot AgentBot
 // single-attempt adapter: this coordinator NEVER retries a public POST.
 // SENDING is committed before any transport call, including process-crash cuts.
 export async function executeFirstLinePublicSendOnce({
   store, candidate, actionId, leaseToken, authorityReader,
   catalogService, knowledgeStore, nowUtc, configuredInboxId,
-  transport, maxConfirmationReads = 3, confirmationWaitMs = 75,
+  transport, maxConfirmationReads, confirmationWaitMs,
 } = {}) {
   if (!isGenuineFirstLineTransientCandidate(candidate, {
     store, streamId: candidate?.projection?.stream_id,
   }) || !transport || typeof transport.postOutgoingMessage !== 'function' ||
       typeof authorityReader?.readCorrelatedPublicReplyEvidence !== 'function' ||
       !Number.isSafeInteger(maxConfirmationReads) || maxConfirmationReads < 1 ||
-      maxConfirmationReads > 5 ||
-      !Number.isSafeInteger(confirmationWaitMs) || confirmationWaitMs < 0 ||
-      confirmationWaitMs > 1_000) {
+      !Number.isSafeInteger(confirmationWaitMs) || confirmationWaitMs < 0) {
     throw new TypeError('first_line_public_sender_invalid');
   }
   // No customer content or payload is ever durable in BabyPark's state DB.
@@ -96,6 +97,49 @@ export async function executeFirstLinePublicSendOnce({
   });
   return Object.freeze({
     code: 'HUMAN_REQUIRED', reason: 'SEND_OUTCOME_UNPROVEN',
+    continuationOwner,
+  });
+}
+
+// Restart/liveness admission is deliberately disjoint from the send path.
+// The original exact response bytes are transient and cannot be recreated
+// from a durable action descriptor alone. In their absence a restarted process
+// cannot establish the full strict Chatwoot text proof, so it MUST yield HUMAN
+// rather than infer non-delivery or issue a second public POST.
+// This is the conservative no-content branch of bounded recovery.
+export function recoverFirstLinePublicSendWithoutTransientText({
+  store, actionId,
+} = {}) {
+  if (!store || typeof store.getPublicAction !== 'function' ||
+      typeof actionId !== 'string' || !actionId) {
+    throw new TypeError('first_line_recovery_inputs_invalid');
+  }
+  const action = store.getPublicAction(actionId);
+  if (!action) throw new TypeError('first_line_recovery_action_absent');
+  if (action.state === 'CONFIRMED') {
+    return Object.freeze({ code: 'ALREADY_CONFIRMED', action });
+  }
+  if (action.state !== 'SENDING' && action.state !== 'UNCERTAIN') {
+    return Object.freeze({
+      code: 'NO_RECONCILIATION', state: action.state,
+    });
+  }
+  // This function has no caller-supplied transport or public send capability.
+  // A false HUMAN is safer than a duplicate message after an ambiguous crash.
+  if (action.state === 'SENDING') {
+    store.markActionUncertain(actionId, {
+      reason: 'restart_exact_content_unavailable',
+    });
+  }
+  const owner = store.getUnresolvedContinuationOwner(action.stream_id);
+  const continuationOwner = owner?.owner_kind === 'HUMAN'
+    ? owner
+    : store.escalatePublicActionToHuman(actionId, {
+      reason: 'restart_exact_content_unavailable',
+    });
+  return Object.freeze({
+    code: 'HUMAN_REQUIRED',
+    reason: 'RESTART_EXACT_CONTENT_UNAVAILABLE',
     continuationOwner,
   });
 }
