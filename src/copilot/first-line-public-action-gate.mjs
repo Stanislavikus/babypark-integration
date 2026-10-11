@@ -52,7 +52,13 @@ export async function gatePublicActionToSending({
   authorityReader,
   actionId,
   leaseToken,
+  configuredInboxId,
 }) {
+  if (!Number.isSafeInteger(configuredInboxId) || configuredInboxId <= 0 ||
+      typeof authorityReader?.readCurrentConversationAuthority !== 'function') {
+    fail('FIRST_LINE_S2_AUTHORITY_REQUIRED',
+      'final S2 current conversation authority is mandatory');
+  }
   const before = store.getPublicAction(actionId);
   if (!before) fail('FIRST_LINE_ACTION_NOT_FOUND', 'public action not found', { action_id: actionId });
   if (before.state !== 'GATING') {
@@ -102,6 +108,40 @@ export async function gatePublicActionToSending({
       insertedEvents: inserted,
       snapshotRowCount: snapshot.rowCount,
       coverage,
+    };
+  }
+
+  // C6 §43: a separate *current* account-conversation read after the
+  // history/covered-row checks. A signed webhook or previously cached
+  // ownership projection is never permission to cross GATING -> SENDING.
+  // A different owner, inbox or status attaches absorbing durable HUMAN.
+  let ownership;
+  try {
+    ownership = await authorityReader.readCurrentConversationAuthority(
+      boundStream.source_conversation_id, configuredInboxId
+    );
+  } catch {
+    // Frozen C6 §43: absence of a current owner read must not leave the
+    // claimed public send eligible for a subsequent automatic attempt.
+    const owner = store.escalatePublicActionToHuman(actionId, {
+      reason: 's2_current_owner_read_unavailable', leaseToken,
+    });
+    return {
+      code: 'HUMAN_REQUIRED', action: store.getPublicAction(actionId),
+      continuationOwner: owner,
+    };
+  }
+  if (!ownership || ownership.sourceConversationId !== boundStream.source_conversation_id ||
+      ownership.code !== 'SEND_ELIGIBLE' ||
+      ownership.inboxId !== configuredInboxId ||
+      ownership.status !== 'pending' ||
+      ownership.ownerClass !== 'SAME_AGENTBOT') {
+    const owner = store.escalatePublicActionToHuman(actionId, {
+      reason: 's2_ownership_not_eligible', leaseToken,
+    });
+    return {
+      code: 'HUMAN_REQUIRED', action: store.getPublicAction(actionId),
+      continuationOwner: owner,
     };
   }
 
