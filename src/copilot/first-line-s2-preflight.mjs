@@ -29,17 +29,9 @@ export async function assessFirstLineS2Preflight({
     return Object.freeze({ code: 'HUMAN_REQUIRED', reason: 'S2_STRUCTURED_PROOF_PENDING' });
   }
 
-  const covered = await verifyFirstLineS2CoveredText({
-    store, streamId, candidate, authorityReader,
-  });
-  if (covered.code !== 'COVERED_TEXT_PROVEN') return covered;
-
-  const facts = reauthorizeFirstLineCandidateFacts({
-    store, streamId, candidate, coveredProof: covered,
-    catalogService, knowledgeStore, nowUtc,
-  });
-  if (facts.code !== 'CURRENT_FACTS_PROVEN') return facts;
-
+  // Contract §29.7.2 step 1: one complete current Chatwoot history
+  // BEFORE S2-covered source byte/provenance validation. A newly visible
+  // message invalidates the entire candidate without processing old text.
   const conversationId = candidate.projection.source_conversation_id;
   let snapshot;
   try {
@@ -74,6 +66,19 @@ export async function assessFirstLineS2Preflight({
     }
     seen.add(row.sourceMessageId);
   }
+
+  // Contract §29.7.2 steps 3–6: re-prove every covered exact source after
+  // complete history has been established. Current facts are re-resolved
+  // against those exact bytes; no model calls or historical business cache.
+  const covered = await verifyFirstLineS2CoveredText({
+    store, streamId, candidate, authorityReader,
+  });
+  if (covered.code !== 'COVERED_TEXT_PROVEN') return covered;
+  const facts = reauthorizeFirstLineCandidateFacts({
+    store, streamId, candidate, coveredProof: covered,
+    catalogService, knowledgeStore, nowUtc,
+  });
+  if (facts.code !== 'CURRENT_FACTS_PROVEN') return facts;
 
   // C6 §43: current native account owner/status is the LAST full external
   // authority read, after exact customer text, business facts and history.
