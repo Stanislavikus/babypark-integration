@@ -62,6 +62,20 @@ Read-only production verification 2026-10-11:
   `9f920b549c14491a4e587687a3eed5d21c6ccc7d`; tracked worktree clean;
 - Puma/Sidekiq active, `127.0.0.1:3000/api` returned HTTP 200;
 - no `/var/lib/babypark-integration/episode.sqlite`, no First Line service.
+- read-only source-level Chatwoot v4.18 **AgentBot** header check on
+  exact deployed HEAD (2026-10-11):
+  `app/listeners/agent_bot_listener.rb` calls
+  `AgentBots::WebhookJob.perform_later(..., secret: agent_bot.secret,
+  delivery_id: SecureRandom.uuid)` for its outgoing configured bot;
+  `app/jobs/agent_bots/webhook_job.rb` forwards both to
+  `lib/webhooks/trigger.rb`; that trigger signs the raw serialized JSON
+  with `HMAC-SHA256(secret, timestamp + "." + body)`,
+  writes `X-Chatwoot-Delivery` when delivery ID is present,
+  and sets `X-Chatwoot-Timestamp` and `X-Chatwoot-Signature`
+  when secret present. **For this deployed AgentBot caller the UUID is
+  supplied**; the generic webhook trigger's delivery ID remains optional.
+  New R1 fixture tests must prove this exact producer flow; do not
+  generalize it to arbitrary Chatwoot account/API webhooks or upgrades.
 - current first-line Chatwoot strict reader
   `src/copilot/chatwoot-client.mjs` blob
   `ba632a117d0b801eceb1aa18ed7944d4dadd36c2`;
