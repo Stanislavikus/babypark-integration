@@ -81,3 +81,37 @@ test('no unreviewed public POST/direct SENDING caller appears in tracked copilot
     'one reviewed public transport call site; no hidden retry branch'
   );
 });
+
+test('test-only synthetic SENDING fixture is unreachable by static production/import/deploy paths', () => {
+  // The entire names must be absent, so this flags ESM imports, import(),
+  // CJS require(), require.resolve(), build manifest references, and
+  // unconventional loadFile wrappers alike. Textual check is conservative:
+  // dynamically computed strings require the release artifact proof separately.
+  const roots = ['src', 'scripts', 'apps', 'deploy', '.github'];
+  const code = new Set(['.mjs', '.js', '.cjs', '.ts', '.tsx', '.jsx',
+    '.json', '.yml', '.yaml', '.service', '.conf', '.sh', '.toml',
+    '.ini', '.env', '.md']);
+  const disallowed = ['legacy-sending-fixture', 'legacy-public-action-gate-fixture',
+    'first-line-coordinator-kill-child'];
+  let inspected = 0;
+  const scan = dir => {
+    if (!fs.existsSync(dir)) return;
+    for (const item of fs.readdirSync(dir, { withFileTypes: true })) {
+      if (SKIP_DIRS.has(item.name)) continue;
+      const full = path.join(dir, item.name);
+      if (item.isDirectory()) { scan(full); continue; }
+      if (!item.isFile()) continue;
+      const name = item.name;
+      if (!code.has(path.extname(name)) &&
+          !['Dockerfile', 'Makefile', 'Procfile'].includes(name)) continue;
+      const source = fs.readFileSync(full, 'utf8');
+      for (const forbidden of disallowed) {
+        assert.equal(source.includes(forbidden), false,
+          path.relative(ROOT, full) + ' references test-only fixture ' + forbidden);
+      }
+      inspected += 1;
+    }
+  };
+  for (const root of roots) scan(path.join(ROOT, root));
+  assert.ok(inspected >= 100, 'expected entire runtime/deploy/build source inventory');
+});
