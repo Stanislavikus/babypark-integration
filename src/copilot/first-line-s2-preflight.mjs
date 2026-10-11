@@ -1,6 +1,9 @@
 import { verifyFirstLineS2CoveredText } from './first-line-s2-covered-text.mjs';
 import { reauthorizeFirstLineCandidateFacts } from './first-line-runtime-semantics.mjs';
 import { sameFirstLineSourceEvent } from './first-line-source-integrity.mjs';
+import { getFirstLineDecisionPrivateContext } from './first-line-decision.mjs';
+import { isGenuineFirstLineTransientCandidate } from './first-line-runtime-semantics.mjs';
+import { isDeepStrictEqual } from 'node:util';
 
 // Positive S2 preflight is an ephemeral, identity-minted proof rather than
 // a caller-supplied boolean. No text, normalized text or content digests.
@@ -8,11 +11,13 @@ const genuinePreflights = new WeakMap();
 
 export function isCertifiedFirstLineS2Preflight(value, {
   candidate, store, streamId, authorityReader,
+  actionId = null, leaseToken = null,
 } = {}) {
   if (value === null || typeof value !== 'object') return false;
   const bound = genuinePreflights.get(value);
   return bound?.candidate === candidate && bound?.store === store &&
-    bound?.streamId === streamId && bound?.authorityReader === authorityReader;
+    bound?.streamId === streamId && bound?.authorityReader === authorityReader &&
+    bound?.actionId === actionId && bound?.leaseToken === leaseToken;
 }
 
 /**
@@ -24,6 +29,7 @@ export function isCertifiedFirstLineS2Preflight(value, {
 export async function assessFirstLineS2Preflight({
   store, streamId, candidate, authorityReader, catalogService,
   knowledgeStore, nowUtc, configuredInboxId,
+  actionId = null, leaseToken = null,
 } = {}) {
   if (!store || typeof store.getConversationStream !== 'function' ||
       typeof store.listConversationEvents !== 'function' ||
@@ -32,6 +38,45 @@ export async function assessFirstLineS2Preflight({
       typeof authorityReader.readCurrentConversationAuthority !== 'function' ||
       !Number.isSafeInteger(configuredInboxId) || configuredInboxId <= 0) {
     throw new TypeError('first_line_s2_preflight_invalid');
+  }
+
+  // An action-bound proof is never minted from caller-supplied descriptor
+  // values. Only the genuine C4 candidate and the immutable v4 action may
+  // establish the same scope, provenance, episode and lease.
+  if ((actionId === null) !== (leaseToken === null) ||
+      (actionId !== null &&
+       (!isGenuineFirstLineTransientCandidate(candidate, { store, streamId }) ||
+        typeof actionId !== 'string' || !actionId ||
+        typeof leaseToken !== 'string' || !leaseToken))) {
+    throw new TypeError('first_line_s2_action_binding_invalid');
+  }
+  const actionMatchesCandidate = action => {
+    if (!action || action.state !== 'GATING' ||
+        action.action_id !== actionId || action.stream_id !== streamId ||
+        action.lease_token !== leaseToken ||
+        action.lease_expires_at <= store.now() ||
+        action.deadline_at <= store.now() ||
+        action.continuation_owner?.owner_kind !== 'PUBLIC_ACTION' ||
+        action.continuation_owner?.terminal_outcome !== null ||
+        action.prepared_stream_revision !== candidate.projection.stream_revision ||
+        action.episode_id !== candidate.projection.active_episode?.episode_id ||
+        action.episode_version !== candidate.projection.active_episode?.version ||
+        !isDeepStrictEqual(action.basis_event_seqs,
+          candidate.projection.open_turn?.event_seqs) ||
+        !isDeepStrictEqual(action.presented_candidates, [])) return false;
+    const scope = getFirstLineDecisionPrivateContext(candidate.decision)?.public_action_scope;
+    return Boolean(scope && isDeepStrictEqual(action.scope_provenance,
+      scope.scope_provenance) &&
+      isDeepStrictEqual(action.descriptor, {
+        descriptor_version: 1,
+        reason: candidate.decision.reason,
+        template_id: candidate.decision.template_id,
+        response_locale: candidate.decision.response_locale,
+        semantic_scope: scope.semantic_scope,
+      }));
+  };
+  if (actionId !== null && !actionMatchesCandidate(store.getPublicAction(actionId))) {
+    return Object.freeze({ code: 'HUMAN_REQUIRED', reason: 'S2_ACTION_DESCRIPTOR_MISMATCH' });
   }
 
   // Do not advertise even a non-authorizing S2 preflight for an
@@ -117,6 +162,10 @@ export async function assessFirstLineS2Preflight({
     return Object.freeze({ code: 'STALE', reason: 'S2_REVISION_CHANGED' });
   }
 
+  if (actionId !== null && !actionMatchesCandidate(store.getPublicAction(actionId))) {
+    return Object.freeze({ code: 'HUMAN_REQUIRED', reason: 'S2_ACTION_CHANGED' });
+  }
+
   const proof = Object.freeze({
     code: 'PREFLIGHT_PROVEN',
     nonAuthorizing: true,
@@ -124,7 +173,7 @@ export async function assessFirstLineS2Preflight({
     streamRevision: latest.stream_revision,
   });
   genuinePreflights.set(proof, Object.freeze({
-    candidate, store, streamId, authorityReader,
+    candidate, store, streamId, authorityReader, actionId, leaseToken,
   }));
   return proof;
 }
