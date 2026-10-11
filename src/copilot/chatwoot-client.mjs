@@ -1,4 +1,5 @@
 import { decodeFirstLineCurrentConversation } from './first-line-current-conversation.mjs';
+import { isDeepStrictEqual } from 'node:util';
 function requireHttps(baseUrl) {
   if (!/^https:\/\//.test(baseUrl)) throw new Error('chatwoot_https_required');
 }
@@ -385,6 +386,66 @@ export function createFirstLineChatwootAuthorityReader({
     });
   }
 
+  // The deployed Chatwoot 4.18 message view persists source_id and inbox_id.
+  // source_id is a NON-UNIQUE database index: it is only a correlation
+  // marker, never idempotency or permission to retry a public POST.
+  // A positive reply requires one current FULL snapshot + one exact message
+  // reread with same topology/content. No customer content leaves this helper.
+  async function readCorrelatedPublicReplyEvidence({
+    conversationId, inboxId, actionId, expectedContent,
+  } = {}) {
+    const conversation = strictPositiveId(conversationId, 'conversation_id');
+    const inbox = strictPositiveId(inboxId, 'configured_inbox_id');
+    if (typeof actionId !== 'string' || actionId.length < 1 ||
+        actionId.length > 160 || wireSourceId(actionId) !== actionId ||
+        typeof expectedContent !== 'string' || expectedContent.length === 0) {
+      authorityFail('CHATWOOT_AUTHORITY_VALUE_INVALID',
+        'action id and rendered content must be supplied for exact reply proof');
+    }
+
+    const full = await readAuthorizingConversationSnapshot(conversation);
+    if (!full.complete || full.code !== 'COMPLETE') {
+      return Object.freeze({ code: 'HISTORY_UNPROVABLE' });
+    }
+    const matches = full.events.filter(e => e.sourceId === actionId);
+    if (matches.length === 0) {
+      return Object.freeze({ code: 'NO_CORRELATED_REPLY' });
+    }
+    if (matches.length !== 1) {
+      return Object.freeze({ code: 'CORRELATED_REPLY_AMBIGUOUS' });
+    }
+    const matched = matches[0];
+    if (matched.eventKind !== 'BABYPARK_PUBLIC_REPLY' ||
+        matched.senderClass !== 'configured_agent_bot' ||
+        matched.senderId !== botId ||
+        matched.messageType !== 'outgoing' ||
+        matched.contentType !== 'text' ||
+        matched.deleted !== false || matched.unsupported !== false ||
+        matched.hasAttachments !== false) {
+      return Object.freeze({ code: 'CORRELATED_REPLY_TOPOLOGY_MISMATCH' });
+    }
+
+    const exact = await readExactWireMessage(conversation, matched.sourceMessageId);
+    const wire = exact.wireMessage;
+    if (!wire) return Object.freeze({ code: 'CORRELATED_REPLY_CHANGED' });
+    const current = classifyPublicWireMessage(wire, botId);
+    if (current.disposition !== 'PUBLIC' ||
+        !isDeepStrictEqual(current.ledgerEvent, matched) ||
+        wire.conversation_id !== conversation || wire.inbox_id !== inbox ||
+        wire.source_id !== actionId ||
+        wire.private !== false || wire.content !== expectedContent) {
+      return Object.freeze({ code: 'CORRELATED_REPLY_CHANGED' });
+    }
+    return Object.freeze({
+      code: 'CORRELATED_REPLY_PROVEN',
+      nonAuthorizing: true,
+      sourceMessageId: matched.sourceMessageId,
+      sourceConversationId: conversation,
+      inboxId: inbox,
+      actionId,
+    });
+  }
+
   // Frozen C6 §43 current-owner decoder shared by S2 and post-HUMAN read-only
   // reconciliation. Never infer ownership from webhook or message id ordering.
   async function readCurrentConversationAuthority(conversationId, configuredInboxId) {
@@ -424,5 +485,6 @@ export function createFirstLineChatwootAuthorityReader({
     readPublicRange,
     readAuthorizingConversationSnapshot,
     readCurrentConversationAuthority,
+    readCorrelatedPublicReplyEvidence,
   });
 }
