@@ -257,6 +257,61 @@ upload and offhost admin accounts, **HALT** for owner risk/target decision.
 Product terms/availability/permissions and custody scope must be revalidated
 right before any irreversible adoption.
 
+## 4.1 Explicit offhost management/transport choice — not an acceptance waiver
+
+**Decision D1, owner confirmation still required:** do **not** accept the
+current shared-root administrative channel as a proven immutable-backup
+boundary. This is an observed critical residual risk, not a theoretical
+SFTP permission detail: as observed on 2026-10-11, Desktop Commander
+executes as root on `server2181`. The same management system also
+controls production. Root can remove confirmed backups regardless of
+POSIX permissions, upload-only account settings or source transport
+direction. **No option below protects already stored copies against
+an attacker who still controls backup-host root.**
+
+| Operational choice | Production compromise effect | Shared backup-root compromise effect | Added complexity | Decision |
+| --- | --- | --- | --- | --- |
+| A — explicitly accept shared root and restricted push | Confirmed generations can resist production uploader erase if real credential negative tests pass; attacker may fill pending staging | Can delete every accessible generation; unchanged | LOW | **NOT SELECTED** absent explicit owner risk acceptance and compensating independent protection |
+| B — independent break-glass root, unprivileged backup-host management/monitoring, restricted push to pending, privileged offhost seal into root-owned accepted generations | Production upload credential has no delete/rename/overwrite privilege on accepted copies; fake/unbounded pending uploads still require quotas/alarms | Privileged break-glass owner channel remains a failure domain, but not the routine shared remote management principal | MEDIUM; reuses B1, OS/OpenSSH and systemd | **PREFERRED CONDITIONAL FIRST-STAGE OPTION**, not yet approved/implemented |
+| C — backup-host initiated read-only pull from production staging, then local root-only seal; production has no backup-host credential | Eliminates prod→backup credential and unsolicited incoming writes; compromised production can still withhold/tamper future staging and hold back RPO | Exactly same root compromise risk unless routine root access is segregated | MEDIUM/HIGH; extra read-only prod endpoint/identity, backup-host polling, race and staging lifecycle | **DEFERRED ALTERNATIVE**; consider after B2 conditional fit evidence or if B uploader test/capacity fails, never silently activate |
+
+**Bounded choice:** `keep-existing` B1 + **Option B**, conditional
+on proving all of the following before any operational activation:
+1. The owner has tested an independent root emergency channel (provider
+   console/independent SSH recovery) **before** reducing existing
+   Desktop Commander rights; do not remove live root with no rollback.
+2. The regular backup-host Desktop Commander monitoring account is
+   **unprivileged**, cannot `sudo` or retrieve independent root
+   credentials, cannot delete/rename/overwrite confirmed generations
+   or modify sealer/retention service; independent offhost root identity
+   remains human-controlled and outside the shared agent channel.
+3. The uploader account cannot SSH as root, cannot execute arbitrary shell,
+   and cannot overwrite, rename or delete confirmed generations on real
+   `server2181` with its actual credential; verify OpenSSH server
+   `ForceCommand`/SFTP request restrictions and directory ownership,
+   not merely local `sftp -D` and POSIX permission proof.
+4. Sealing and retention are distinct from the uploader: received
+   incomplete generations cannot be published; an independent
+   offhost-controlled promotion must have a correct checksum and
+   generation proof. Root-owned service/sealer exact configuration
+   and rollback are part of B2 HEAVY deployment evidence.
+5. Quantify root/emergency recovery-account and provider-account
+   compromise as a separately accepted residual risk, or add a second
+   **independently administered immutable offhost** copy before claiming
+   root-compromise resistance. HostPro daily VPS backups do not
+   automatically meet RPO 60 minutes or prove independence from HostPro
+   administrative compromise.
+
+**Status:** NO selection approved for production; **NO existing root
+connection altered**; no offhost root isolation tested; no uploader account
+created; no real backups transmitted. Option B is preferred because it
+corrects the shared privileged-control failure **before** optimizing
+push vs pull and maximizes reuse of deployed capabilities.
+If independent administrative separation is unavailable, **HALT** for
+explicit owner choice A (bounded risk acceptance) or a different
+independent storage/administration topology. The owner-approved recovery
+numbers alone are not an approval of A or B.
+
 ## 5. Completed evidence — NOT a production restore gate
 
 - `chatwoot-fra1-01` reachable again via authorized Desktop Commander.
