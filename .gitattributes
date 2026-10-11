@@ -4,3 +4,4 @@ tests/helpers/legacy-sending-fixture.mjs export-ignore
 tests/helpers/legacy-public-action-gate-fixture.mjs export-ignore
 tests/fixtures/first-line-coordinator-kill-child.mjs export-ignore
 tests/fixtures/first-line-postsend-scheduler-child.mjs export-ignore
+tests/fixtures/first-line-systemd-notify-stub.mjs export-ignore
