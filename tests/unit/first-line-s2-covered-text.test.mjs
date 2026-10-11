@@ -502,3 +502,15 @@ test('S2 preflight identical count but duplicated/changed event is not complete 
   });
   assert.equal(f.store.readRoutingSnapshot(f.streamId).live_public_action, null);
 });
+
+test('S2 preflight cannot advertise structured CLARIFY as proven without C25 causality', async t => {
+  const f = setup(t);
+  const candidate = await f.build();
+  const pretender = { ...candidate, decision: { decision: 'CLARIFY' },
+    rendering: { content_type: 'input_select' } };
+  const result = await assessFirstLineS2Preflight(preflightArgs(
+    f, pretender, preflightReader(f)
+  ));
+  assert.deepEqual(result, { code: 'HUMAN_REQUIRED', reason: 'S2_STRUCTURED_PROOF_PENDING' });
+  assert.equal(f.store.readRoutingSnapshot(f.streamId).live_public_action, null);
+});
