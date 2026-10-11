@@ -113,6 +113,15 @@ export function createFirstLineAgentBotRelay({
       return { status: 422, outcome: 'source_not_customer' };
     }
 
+    // An updated native structured message can carry customer selection
+    // (Q10/Q40), not merely delivery status. This ingress has no verified
+    // clarification-submission/episode authority; never ACK it as duplicate.
+    if (payload.event === 'message_updated' &&
+        source.expectedKind !== 'CUSTOMER_MESSAGE' &&
+        event.contentType !== 'text') {
+      return { status: 422, outcome: 'structured_update_unhandled' };
+    }
+
     try {
       const stream = store.ensureConversationStream({
         sourceProvider: 'chatwoot', sourceConversationId: source.conversationId,

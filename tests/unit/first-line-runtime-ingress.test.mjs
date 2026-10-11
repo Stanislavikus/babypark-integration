@@ -376,3 +376,36 @@ test('B1 known noncustomer webhook never turns signed-only claims into authority
     sourceProvider: 'chatwoot', sourceConversationId: 55,
   }), null));
 });
+
+
+test('B1 Q10/Q40 structured message_updated cannot be ACKed as harmless bot echo', async t => {
+  const { file } = fixture(t), rows = new Map(), reads = [];
+  rows.set('55:401', sourceRow(401, {
+    message_type: 'outgoing',
+    sender: { type: 'AgentBot', id: 7 },
+    content_type: 'input_select',
+    content_attributes: { submitted_values: [{ value: 'synthetic-selection' }] },
+  }));
+  rows.set('55:402', sourceRow(402, {
+    message_type: 'template', sender: null, content_type: 'input_email',
+    content_attributes: { submitted_values: ['synthetic@example.invalid'] },
+  }));
+  const relay = relayFor(file, makeReader(rows, reads));
+  t.after(() => relay.close());
+  for (const body of [
+    payload(401, 55, {
+      event: 'message_updated', message_type: 'outgoing',
+      sender: { type: 'AgentBot', id: 7 },
+    }),
+    payload(402, 55, {
+      event: 'message_updated', message_type: 'template', sender: null,
+    }),
+  ]) {
+    assert.deepEqual(await relay.receive(signed(body, 'structured-update')),
+      { status: 422, outcome: 'structured_update_unhandled' });
+  }
+  assert.equal(reads.length, 2, 'must current-read before structured deny');
+  audit(file, store => assert.equal(store.findConversationStream({
+    sourceProvider: 'chatwoot', sourceConversationId: 55,
+  }), null));
+});
