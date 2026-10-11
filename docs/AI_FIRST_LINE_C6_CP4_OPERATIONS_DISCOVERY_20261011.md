@@ -15,7 +15,9 @@ Recommendation: REFERENCE only; no adoption, new provider, release, runtime chan
 - babypark-catalog-rehearsal-fra1: DigitalOcean 604879613, 2 vCPU, 4 GiB, labelled temporary and not-production. Its application/data were NOT inspected or changed.
 - Chatwoot host has bridge.sqlite and knowledge.sqlite under /var/lib/babypark-integration; episode.sqlite is absent from inspected paths. Chatwoot PostgreSQL database chatwoot_production exists.
 - Chatwoot .env has Meta/Facebook configuration key names. SMTP_ADDRESS, SMTP_USERNAME, SMTP_PASSWORD were checked for emptiness and found empty; this does NOT prove SMTP or other outbound integrations disabled. Secret values were never retrieved.
-- Active inboxes, live channels, website-widget mapping, contacts, conversations, AgentBot, webhook bindings, and token ownership remain UNKNOWN. Do not assert isolation or zero real channels until authorized official read-only inventory proves it.
+- **Owner-confirmed channel state (2026-10-11):** Telegram and Viber are connected and their technical function was tested, but the owner reports neither is used for staff/customer operations yet. WhatsApp, Instagram/Facebook, email and the public babypark.ua website widget have not been configured. This is owner testimony about intended/observed use, not independently verified zero incoming traffic or a channel-disconnection guarantee.
+- **Independent repository evidence:** CURRENT_STATE.md §Viber gateway documents the enabled babypark-integration-v2 systemd route and Viber/Chatwoot webhook endpoints, plus synthetic acceptance events. CURRENT_STATE.md §Website AgentBot describes an old repository-only lab and no attached bot to website inbox 2; it is a historical reference, not a fresh live inbox enumeration.
+- **Still UNKNOWN in current Chatwoot state:** precise inbox/channel IDs and current enablement, Telegram AgentBot and webhook binding, existing conversations/contact counts, live widget assignment, external token ownership and any outbound routing. The attempted database enumeration was blocked by the authorized remote tool; do not work around that restriction or assert zero traffic. A separate permitted official read-only inspection is required before changing any live Chatwoot object.
 - Current Chatwoot-host integration symlink points to /opt/babypark-integration/releases/20260924-1809c564. Actual materialized release contains tests/ but no .git; v2 gateway systemd unit has Restart=always.
 - git archive HEAD now excludes four named synthetic fixtures via export-ignore, but actual production packaging/transfer method is not verified. An rsync or cp of checkout may include them.
 
@@ -36,7 +38,7 @@ Recommendation: REFERENCE only; no adoption, new provider, release, runtime chan
 3. Durable HUMAN operator attention: frozen AI_FIRST_LINE_DESIGN section 29.8.2 requires separate durable operator-attention/operational-fault metadata. No public AI handoff preface or blind Chatwoot write. Send only conversation ID and reason to a monitored independent operator channel, retry until acknowledged, alarm on oldest unanswered HUMAN age. Neither durable notification authority nor receipt/ack are proven.
 4. Lifecycle: scheduler still only processes SENDING/UNCERTAIN, not PREPARED/GATING, C25/CLARIFY, all deadlines or complete native handoff.
 5. Release: prove actual next distribution artifact excludes fixture paths regardless of archive/rsync/cp/git clone and retains exact reviewed tree/provenance.
-6. Chatwoot integration test: requires an isolated non-production v4.18 environment, with separate Postgres/Redis/credentials and no real channels, or a distinct exact owner approval for bounded synthetic objects on current host. Current PoC host is future production destination and not automatically isolated.
+6. Chatwoot integration test: Telegram and Viber are real connected channels even if the owner has not activated them for staff. Therefore an isolated v4.18 nonproduction instance with separate Postgres/Redis/credentials and blocked external channel deliveries remains the default. Alternatively, a distinct exact owner authorization can allow specifically named synthetic Website inbox/contact/bot objects on the existing future-production host after verified channel/routing/credential isolation. A real POST into that host, even an isolated test inbox, is not approved by the current conversation. Never use live Telegram/Viber inboxes, bots, credentials or endpoints for such a test; preserve their current configuration and records.
 
 ## Native and maintained ready-solution research, not an approved selection
 
@@ -78,7 +80,7 @@ The one click is a single explicit invocation of a reviewed bounded plan, NOT a 
 
 ## Required pre-code / activation gates
 
-- Approved read-only Chatwoot inbox/channel/Web widget/AgentBot inventory; current state unknown.
+- Owner-confirmed Telegram/Viber connections must be excluded from test writes and webhook propagation; official read-only Chatwoot inbox/channel/Web widget/AgentBot/token **metadata** inventory and traffic counts remain unverified.
 - Measured CP4 lease/sweep/notification/heartbeat/timing and native/OSS fit bound to exact owner approval.
 - Exact release transport and future migration scope; independent load/backup and rollback tests.
 - Operator attention delivery/ack semantics and independent receiver (owner, Olga) without customer body or real channel side effects.
