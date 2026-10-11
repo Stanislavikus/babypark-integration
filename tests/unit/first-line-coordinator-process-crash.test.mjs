@@ -7,6 +7,7 @@ import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import test from 'node:test';
 import { FirstLineStateStore } from '../../src/copilot/first-line-state-store.mjs';
+import { DatabaseSync } from 'node:sqlite';
 import { recoverFirstLinePublicSendWithoutTransientText } from
   '../../src/copilot/first-line-public-send-coordinator.mjs';
 
@@ -81,19 +82,58 @@ for (const [mode, expectedPosts] of [
       // Cold-start the actual CP4 scheduler in a separate process.
       // Its startup sweep, rather than the test harness, performs the
       // SENDING -> UNCERTAIN -> absorbing HUMAN transition.
-      const restartedScheduler = await new Promise((resolve, reject) => {
-        const proc = spawn(process.execPath, [schedulerChild, file], {
-          stdio: ['ignore', 'pipe', 'pipe'], timeout: 20_000,
+      const race = mode === 'KILL_AFTER_HTTP_RESPONSE';
+      const workers = race ? 2 : 1;
+      const runs = Array.from({ length: workers }, () => {
+        let complete, ready;
+        const done = new Promise((resolve, reject) => {
+          complete = { resolve, reject };
         });
-        let stderr = '';
+        const readyPromise = new Promise(resolve => { ready = resolve; });
+        const proc = spawn(process.execPath,
+          [schedulerChild, file, race ? 'race' : 'single'], {
+            stdio: ['ignore', 'pipe', 'pipe', ...(race ? ['ipc'] : [])],
+            timeout: 20_000,
+          });
+        let stderr = '', stdout = '';
         proc.stderr.on('data', bytes => { stderr += bytes; });
-        proc.on('error', reject);
-        proc.on('close', (code, signal) => resolve({ code, signal, stderr }));
+        proc.stdout.on('data', bytes => { stdout += bytes; });
+        if (race) proc.on('message', message => {
+          if (message === 'ready') ready();
+        });
+        else ready();
+        proc.on('error', complete.reject);
+        proc.on('close', (code, signal) => complete.resolve({
+          code, signal, stderr, stdout,
+        }));
+        return { proc, done, ready: readyPromise };
       });
-      assert.equal(restartedScheduler.code, 0, restartedScheduler.stderr);
-      assert.equal(restartedScheduler.signal, null);
-      assert.match(restartedScheduler.stderr,
-        /^(?:\(node:\d+\) ExperimentalWarning:[^\n]*\n(?:\(Use [^\n]*\)\n)?)?$/u);
+      await Promise.all(runs.map(worker => worker.ready));
+      for (const worker of runs) if (race) worker.proc.send('start');
+      const schedulerOutcomes = await Promise.all(runs.map(worker => worker.done));
+      for (const outcome of schedulerOutcomes) {
+        assert.equal(outcome.code, 0, outcome.stderr);
+        assert.equal(outcome.signal, null);
+        assert.match(outcome.stderr,
+          /^(?:\(node:\d+\) ExperimentalWarning:[^\n]*\n(?:\(Use [^\n]*\)\n)?)?$/u);
+        assert.equal(JSON.parse(outcome.stdout.trim()).notYetEligible, 0);
+      }
+      if (race) {
+        const db = new DatabaseSync(file);
+        try {
+          const humanCuts = db.prepare(
+            'SELECT count(*) AS total FROM public_action_human_cuts WHERE action_id=?'
+          ).get(actionId);
+          assert.equal(humanCuts.total, 1,
+            'two schedulers may only persist one immutable human cut');
+          const humanOwners = db.prepare(
+            "SELECT count(*) AS total FROM continuation_owners " +
+            "WHERE stream_id=? AND owner_kind='HUMAN' AND action_id=?"
+          ).get(stream.stream_id, actionId);
+          assert.equal(humanOwners.total, 1,
+            'two schedulers cannot create two HUMAN continuations');
+        } finally { db.close(); }
+      }
       assert.equal(restarted.getPublicAction(actionId).state, 'UNCERTAIN');
       const recovered = recoverFirstLinePublicSendWithoutTransientText({
         store: restarted, actionId,
