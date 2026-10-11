@@ -191,6 +191,43 @@ operational boundaries. If native SSH/OS privileges or monitoring fail a
 required gate, HALT under §9 and recompare ready maintained OSS rather
 than writing an unapproved custom bridge.
 
+### 3.2 Independent evidence audit — local component PASS is NOT B2 closure
+
+**B2 end-to-end operational closure: 0 / 14 demonstrated.** In §3.1,
+three rows describe a *tested component property* as PASS (B2-03, B2-11,
+B2-13); none proves the entire deployed requirement. All evidence below
+is tied to the current canonical B1 tree unless marked owner-reported.
+Do not count a code inspection, an unconfigured systemd, a created vault
+item, a provider backup listing or an empty-v4 test as a completed
+operational acceptance gate.
+
+| Requirement | B2 operational status | Concrete supporting evidence | Still required |
+| --- | --- | --- | --- |
+| B2-01 | PARTIAL | v4 store source differentiates `open()` missing-file vs exclusive `create()`; production path not found | explicit first-create and no-auto-create ownership proof at cut |
+| B2-02 | PARTIAL | live 2026-10-11 prod unit/current Gateway/standard paths inspected, no v4 authority found | fresh complete topology at write boundary |
+| B2-03 | PARTIAL (component PASS) | Node v24.20.0 verified upstream binary digest; 16/16 B1 tests; synthetic CLI backup/restore schema v4 + SQLite integrity `ok` | real production source backup and semantic verify |
+| B2-04 | PARTIAL | B1 encrypted artifact/manifest and scratch CLI tested locally; SSH available | real offhost transfer receipt, independent full restore and distinct verification timestamps |
+| B2-05 | **UNPROVEN / HALT** | current offhost admin access exists; uploader-only negative tests **not run** | separate offhost principal, test deny delete/rename/overwrite |
+| B2-06 | PARTIAL | screenshot: Bitwarden `BabyPark Recovery` org/collection + owner-created key-record; Olga invited | deputy membership/consent, tested retrieval and offline secret custody |
+| B2-07 | **UNPROVEN / HALT** | alert thresholds 45m/60m agreed as proposed monitoring design; not running | independent warning/critical delivery and drill-age monitoring |
+| B2-08 | PARTIAL | proposed 48/14/4 owner-approved; last offhost `df`: 9.1GiB free | actual artifact growth budget, serialized runs, independent safe prune |
+| B2-09 | FUTURE RUNTIME DEPENDENCY (not an B2 implementation PASS) | frozen §29.8.1/C6 design and issue #124, no activated sender | end-to-end stale-cut → HUMAN/zero repeat POST before activation |
+| B2-10 | PARTIAL | owner-reported HostPro two daily restore points, official 30-day VPS backup policy | isolated provider-host restore test, no primary RPO credit |
+| B2-11 | PARTIAL (B1 code PASS) | B1 source/manifest avoids extra message bodies and Chatwoot core patch | live deployed data paths/privacy inspection |
+| B2-12 | UNPROVEN | 48/14/4 encrypted artifact retention approved; provider 30-day snapshot tail identified | data-subject/identifiers lawful basis, deletion semantics, owner policy before real traffic |
+| B2-13 | PARTIAL (current merged tree PASS) | exact v24.20.0 synthetic Gateway startup: bridge created, episode/WAL/SHM absent | repeat on real deployment artifact, test post-loss no POST |
+| B2-14 | **UNPROVEN / HALT** | draft gate and proposed pre/post inventory documented, no rollback executed | tested pre/post inventory/abort, full HEAVY reviews, owner prewrite approval |
+
+**Factual custody distinctions (2026-10-11 owner report):** Password
+manager **exists** and the backup-key item is visible in the organization;
+this does not mean the key length has been independently checked, an
+independent offline copy exists, or Olga has accepted and successfully
+retrieved it. Google and HostPro MFA were owner-reported enabled. Google
+recovery codes were owner-reported generated, but independent offline
+storage is still unknown. A backup key's offline escrow is a separate item
+from Google recovery codes. No secret material should appear in this
+document or any review output.
+
 ## 4. Recommendation and architecture fit — conditional
 
 RECOMMENDATION: **keep-existing**.
