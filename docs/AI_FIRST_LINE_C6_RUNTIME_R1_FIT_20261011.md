@@ -196,7 +196,7 @@ dependencies = **0**. Expected main operational cost = existing
 Chatwoot/Node CPU/network and exact state-store SQLite, not a second
 agent runtime or dedicated managed queue.
 
-**Bounded non-production exit criteria:** signed events accepted once,
+**CP1 focused non-production exit criteria (not whole-runtime exit):** signed events accepted once,
 forged/replayed/wrong-origin/unknown wire fail closed, high/low event
 ordering and restart correct, v4 DB missing creates no files and no
 public POST, v4 source contract fixtures, stable source identity and
@@ -206,11 +206,11 @@ verification manifest and separately explicit owner merge consent.
 **Stop conditions:** any need to modify Chatwoot core, import new
 durable queue/transcript, make public send/handoff, connect production
 before B2 verified recovery, auto-create v4 DB, assume unknown provider
-facts, store customer body/digest or exceed scoped R1 triggers HALT
+facts, store customer body/digest or exceed approved macro-campaign scope triggers HALT
 and a renewed scan/fit before expanding.
 
 Before macro Runtime code, the owner must approve **both** exact immutable
-`fcbd8250...` scan and this fit-note SHA-256 after independent Git
-file re-read. This approval permits draft **macrocampaign** implementation and synthetic
+scan SHA-256 `50fcf6eac964137bb3c376a200f33cc4c4975511662ffe5415276b0b67687da9`
+and this fit-note SHA-256 after independent Git file re-read. This approval permits draft **macrocampaign** implementation and synthetic
 tests across internal checkpoints only; no intermediate CP merge or HEAVY/R2,
 no production first-write, no activation or customer go-live.
