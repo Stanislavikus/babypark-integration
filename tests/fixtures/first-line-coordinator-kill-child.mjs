@@ -7,7 +7,7 @@ import {
 } from '../../src/copilot/first-line-extraction.mjs';
 
 const [dbFile, mode, portString] = process.argv.slice(2);
-if (!['KILL_AFTER_SENDING', 'KILL_AFTER_POST'].includes(mode)) process.exit(99);
+if (!['KILL_AFTER_SENDING', 'KILL_DURING_HTTP_RESPONSE', 'KILL_AFTER_HTTP_RESPONSE'].includes(mode)) process.exit(99);
 const NOW = 2_000_000_000_000;
 const store = FirstLineStateStore.create(dbFile, { now: () => NOW });
 const customer = {
@@ -63,7 +63,7 @@ await executeFirstLinePublicSendOnce({
   store, candidate, actionId: action.action_id, leaseToken: 'lease-1',
   authorityReader, catalogService, knowledgeStore,
   nowUtc: '2026-01-10T12:00:00.000Z', configuredInboxId: 99,
-  confirmationWaitMs: 0,
+  confirmationWaitMs: 0, maxConfirmationReads: 1,
   transport: { async postOutgoingMessage(request) {
     if (store.getPublicAction(action.action_id).state !== 'SENDING') process.exit(97);
     if (mode === 'KILL_AFTER_SENDING') {
@@ -75,9 +75,12 @@ await executeFirstLinePublicSendOnce({
       body: JSON.stringify({ sourceId: request.sourceId }),
     });
     if (!response.ok) process.exit(96);
-    // Real OS termination AFTER mock Chatwoot accepted POST, before
-    // coordinator can inspect response or commit confirmation/UNCERTAIN.
-    process.kill(process.pid, 'SIGKILL');
+    // Real OS termination AFTER HTTP 201 response but BEFORE committing
+    // confirmed/uncertain state. During-response variant is killed by the
+    // parent upon server-side receipt, while await fetch is still pending.
+    if (mode === 'KILL_AFTER_HTTP_RESPONSE') {
+      process.kill(process.pid, 'SIGKILL');
+    }
   } },
 });
 process.exit(95);

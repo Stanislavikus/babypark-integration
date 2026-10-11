@@ -275,3 +275,39 @@ test('CP1 legitimate signed event without contact sender.type matches deployed C
   assert.equal((await relay.receive(signed(wire))).outcome, 'recorded');
   assert.equal(reads.length, 1);
 });
+
+test('own outgoing AgentBot message_created webhook never becomes a customer turn or a second reply', async t => {
+  const { file } = fixture(t), rows = new Map(), reads = [];
+  rows.set('55:101', sourceRow(101));
+  const relay = relayFor(file, makeReader(rows, reads));
+  t.after(() => relay.close());
+  assert.equal((await relay.receive(signed(payload(101)))).outcome, 'recorded');
+  const readCount = reads.length;
+  // Exact signed delivery includes the bot's own outgoing message.
+  // Regardless of whether the webhook represents it as an integer or
+  // a string, the ingress must reject it BEFORE remote reads or SQLite.
+  for (const messageType of ['outgoing', 1]) {
+    const botEcho = payload(102, 55, {
+      message_type: messageType,
+      sender: { type: 'AgentBot', id: 7 },
+      source_id: 'action-synthetic-1',
+      content: 'SYNTHETIC_OUR_REPLY',
+    });
+    for (const deliveryId of ['echo-first', 'echo-redelivery']) {
+      assert.deepEqual(await relay.receive(signed(botEcho, deliveryId)),
+        { status: 422, outcome: 'event_not_admitted' });
+    }
+  }
+  assert.equal(reads.length, readCount,
+    'no Chatwoot lookup initiated by own outgoing echo');
+  audit(file, store => {
+    const stream = store.findConversationStream({
+      sourceProvider: 'chatwoot', sourceConversationId: 55,
+    });
+    assert.equal(stream.stream_revision, 1,
+      'own bot echo must not create a new semantic cycle');
+    assert.deepEqual(store.listConversationEvents(stream.stream_id)
+      .map(event => event.event_kind), ['CUSTOMER_MESSAGE']);
+  });
+  assert.equal(fs.readFileSync(file).includes(Buffer.from('SYNTHETIC_OUR_REPLY')), false);
+});

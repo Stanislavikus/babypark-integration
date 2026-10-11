@@ -243,3 +243,28 @@ test('transport timeout and delayed invisible echo never authorize repeat POST',
   await assert.rejects(() => executeFirstLinePublicSendOnce(args));
   assert.equal(posts, 1);
 });
+
+test('no measured confirmation budget is never an implicit permission to POST', async t => {
+  const f = fixture(t);
+  const candidate = await f.build();
+  const { action } = prepareFirstLinePublicActionFromCandidate({
+    store: f.store, streamId: f.streamId, candidate, deadlineAt: NOW + 60_000,
+  });
+  f.store.claimNextPublicAction({ leaseMs: 10_000, token: 'relay-1' });
+  let attempted = 0;
+  const args = {
+    store: f.store, candidate, actionId: action.action_id, leaseToken: 'relay-1',
+    authorityReader: { readCorrelatedPublicReplyEvidence() {},
+      readCurrentConversationAuthority() {} },
+    catalogService: f.catalogService, knowledgeStore: f.knowledgeStore,
+    nowUtc: '2026-01-10T12:00:00.000Z', configuredInboxId: 99,
+    transport: { async postOutgoingMessage() { attempted += 1; } },
+  };
+  await assert.rejects(() => executeFirstLinePublicSendOnce(args),
+    { name: 'TypeError' });
+  await assert.rejects(() => executeFirstLinePublicSendOnce({
+    ...args, maxConfirmationReads: 1,
+  }), { name: 'TypeError' });
+  assert.equal(attempted, 0);
+  assert.equal(f.store.getPublicAction(action.action_id).state, 'GATING');
+});
