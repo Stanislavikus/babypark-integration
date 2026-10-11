@@ -9,6 +9,50 @@ Agreement main/base: f9b5b8e5320884a675af3ea8e608c1e986e8331d; agreement blob e7
 Chatwoot exact checked host source: chatwoot-fra1-01 at /home/chatwoot/chatwoot, v4.18.0, 9f920b549c14491a4e587687a3eed5d21c6ccc7d
 Evidence method: READ-ONLY source inspection, existing repo frozen contract and official vendor docs. No Chatwoot DB/API write or live notifications.
 
+## 2026-10-11 independent Codex finding confirmed — AgentBot webhook side-effect
+
+**BLOCKER for ANY C6 AgentBot activation, not only SF-1 mention:**
+`lib/webhooks/trigger.rb` exact Chatwoot v4.18.0
+`Webhooks::Trigger#execute` -> `handle_failure` -> `handle_error` ->
+`update_conversation_status(message)` calls `conversation.open!` when a
+`message_created` / `message_updated` AgentBot webhook fails while
+conversation is pending and `account.keep_pending_on_bot_failure` is not
+truthy. This includes a *private outgoing mention* which AgentBotListener
+sends to the bot, but can ALSO arise on ordinary webhook deliveries. C6
+`src/copilot/first-line-runtime-ingress.mjs` currently returns **422** for
+authenticated non-customer/outgoing events; Chatwoot
+`lib/safe_fetch/fetcher.rb` raises HttpError on all non-2xx responses, so 422
+goes straight to handle_failure. For 429/500, AgentBots::WebhookJob retries
+(up to 3 attempts) before its own exhaustion handler calls handle_failure.
+The same unsafe outcome is possible after a network timeout or relay outage.
+
+**Confirmed native safety guard, UNKNOWN live value**:
+`app/models/account.rb` has `keep_pending_on_bot_failure` JSON setting;
+`app/models/concerns/account_settings_schema.rb` permits boolean/null.
+`spec/lib/webhooks/trigger_spec.rb` proves pending retained with true and
+opened with false for a failing webhook. But
+`app/controllers/api/v1/accounts_controller.rb#permitted_settings_attributes`
+does NOT allow this setting in stock Account API; Enterprise extension
+also does not add it. No supported dashboard/API configuration operation or
+actual value on the future-production account has yet been proven. Never
+claim "simply toggle the flag in settings"; do not write directly to the
+production account database or patch Chatwoot core to enforce it.
+
+Required isolated PoC: inspect official supported native configuration route,
+verify the exact account is configured to retain pending *before* AgentBot
+attachment, trigger synthetic 422/429/500/timeout/connection-error and
+successful delivery for both public customer webhook and private outgoing
+note, assert `status=pending` + original owner/ai_assignee after EACH outcome,
+and prove relay rejects non-customer without inserting semantic events.
+Evaluate whether transport-level 2xx "authenticated-but-ignored" is safe and
+compatible with strict fail-closed C6 ingress as a separate proposed protocol
+change, NOT as an assumed existing permission. Preserve pending on ANY
+external delivery failure independent of retry decisions. Real Chatwoot,
+Telegram and Viber have NOT been modified.
+
+This source-confirmed cross-component counterexample supersedes any previous
+claim below that native private note alone guarantees unchanged status/owner.
+
 ## Decisive frozen invariant
 
 AI_FIRST_LINE_DESIGN.md §29.8.2: durable HUMAN remains absorbing, operator attention is separate durable operational metadata; no public fallback/AI preface; lost handoff cannot be reported as terminal.

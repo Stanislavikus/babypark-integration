@@ -10,6 +10,28 @@ Deployed Chatwoot source read only: v4.18.0, 9f920b549c14491a4e587687a3eed5d21c6
 Independent user-supplied review: Pasted text(8).txt dated 2026-10-11, verified selectively against exact source
 Decision: REFERENCE ONLY. No adoption, credentials, providers, implementation, private note POST or activation authorized.
 
+## Safety addendum — do not activate AgentBot without v4.18 webhook failure guard
+
+The independent Codex source review identified a broader native Chatwoot
+v4.18.0 counterexample and our read-only recheck confirmed it:
+`lib/webhooks/trigger.rb#update_conversation_status` may `open!`
+pending on AgentBot webhook failure unless
+`account.keep_pending_on_bot_failure` is true. C6 relay returns 422 for
+non-admitted outgoing/private webhook events. Even though the private note
+itself does not reopen pending, the resulting webhook *delivery failure*
+can do so, as can a failed normal webhook. Stock Chatwoot specs verify
+guard-on/guard-off behavior. The account's current guard setting is
+UNKNOWN. A dashboard or supported Account API setting method was not
+proved; the observed Account API whitelist omits the property.
+
+Therefore this is a gating **Chatwoot delivery transport / ownership** issue
+for any future AgentBot activation, not a reason to add Zoho or a separate
+notification service. The minimal remedy is to establish and test the native
+supported guard and failure-safe webhook acceptance contract on isolated
+Chatwoot v4.18 first. No core patch, production config write, or live test
+was authorized. See detailed trace and test matrix in the native SF-1
+review's 2026-10-11 addendum.
+
 ## Normative scope: avoid inventing an enterprise ticketing system
 
 AI_FIRST_LINE_DESIGN.md §29.8.2 REQUIRES a durable single public-action or HUMAN continuation owner, and after bounded handoff/reconciliation exhaustion a durable operator-attention/operational-fault condition exposed on operations/health surface. HUMAN remains absorbing and no unsafe Chatwoot status write/public fallback is allowed. §43 permits read-only reconciliation and manual human handoff for pending + SAME_AGENTBOT on the exact deployed version. §44 separately gates a private handoff note to Slice D with at-most-once attempt; it is NOT an existing CP4 production write permission.
