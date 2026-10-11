@@ -6,7 +6,7 @@ UTC evidence time: 2026-10-11T05:45Z.
 BASE `f9b5b8e5320884a675af3ea8e608c1e986e8331d`.
 Governance blob `e777fce4af8e8c3372f1f9de9ef7d00f786c2c89`.
 **Bound frozen alternatives scan SHA-256:**
-`fcbd82507466ce20a2c7ed28a771f2022bc53876ce82be8ce00d3dcc28dde386`.
+`8e24754504d15a67b6737021a2e10dad9a408a9e3f088928c85e1c4029c41143`.
 Scan document: `docs/AI_FIRST_LINE_C6_RUNTIME_R1_OPTIONS_20261011.md`.
 Changing the frozen scan invalidates this fit note and any approval.
 
@@ -26,6 +26,16 @@ v4 FirstLineStateStore
 `d6ee78559feaec7644e5aac2d4c11729ba5fe0a8`.
 No new product/framework, runtime library, model provider, queue, parallel
 writer, transcript store, or Chatwoot core patch.
+
+**Exact deployed signed AgentBot producer:** at current Chatwoot v4.18
+commit, `app/listeners/agent_bot_listener.rb` generates a UUID
+delivery ID and passes the configured bot secret to
+`AgentBots::WebhookJob`; `lib/webhooks/trigger.rb` sends HMAC
+`timestamp.raw_body` and the three `X-Chatwoot-*` headers.
+Generic webhooks may lack a delivery ID; R1's signed AgentBot route
+is a specifically proven subtype, with synthetic versioned fixtures
+still required. No network webhook event was sent during this read-only
+source check.
 
 **Licensing / terms:** existing deployed Chatwoot instance and its
 AgentBot/API native capability; no new fee, quota or paid Captain required
