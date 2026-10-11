@@ -4,7 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import { FirstLineStateStore } from '../../src/copilot/first-line-state-store.mjs';
-import { buildFirstLineTransientCandidate } from '../../src/copilot/first-line-runtime-semantics.mjs';
+import { buildFirstLineTransientCandidate, reauthorizeFirstLineCandidateFacts } from '../../src/copilot/first-line-runtime-semantics.mjs';
 import { verifyFirstLineS2CoveredText } from '../../src/copilot/first-line-s2-covered-text.mjs';
 import {
   FIRST_LINE_EXTRACTION_SCHEMA, FIRST_LINE_INTENT_SCHEMA_VERSION,
@@ -61,6 +61,9 @@ function setup(t, ids = [101]) {
     },
   };
   let modelCalls = 0;
+  let currentPolicy = policy();
+  const catalogService = {};
+  const knowledgeStore = { authoritySnapshot: () => [currentPolicy] };
   const build = async () => buildFirstLineTransientCandidate({
     store, streamId: stream.stream_id, reader,
     produceExtraction: async () => {
@@ -71,12 +74,14 @@ function setup(t, ids = [101]) {
         intent_hint: 'UNTRUSTED', language: 'ru', spans: [],
       };
     },
-    catalogService: {}, knowledgeStore: { authoritySnapshot: () => [policy()] },
+    catalogService, knowledgeStore,
     nowUtc: '2026-01-10T12:00:00.000Z',
   });
   return {
     store, file, streamId: stream.stream_id, reader, rows, build,
     stats: () => ({ calls, modelCalls }),
+    authority: { catalogService, knowledgeStore },
+    setPolicy: nextPolicy => { currentPolicy = nextPolicy; },
   };
 }
 
@@ -202,4 +207,143 @@ test('S2 cannot be driven by a forged unsealed projection object', async t => {
     }),
     { name: 'TypeError' }
   );
+});
+
+test('S2 fresh policy reread reconfirms genuine answer, no second LLM call', async t => {
+  const f = setup(t);
+  const candidate = await f.build();
+  assert.equal(candidate.code, 'CANDIDATE');
+  const coveredProof = await verifyFirstLineS2CoveredText({
+    store: f.store, streamId: f.streamId,
+    candidate, authorityReader: f.reader,
+  });
+  assert.equal(coveredProof.code, 'COVERED_TEXT_PROVEN');
+  const result = reauthorizeFirstLineCandidateFacts({
+    store: f.store, streamId: f.streamId, candidate, coveredProof, ...f.authority,
+    nowUtc: '2026-01-10T12:00:00.000Z',
+  });
+  assert.deepEqual(result, { code: 'CURRENT_FACTS_PROVEN', nonAuthorizing: true });
+  assert.equal(f.stats().modelCalls, 1);
+  assert.equal(f.store.readRoutingSnapshot(f.streamId).live_public_action, null);
+});
+
+test('S2 detects revised policy facts even when customer message bytes are identical', async t => {
+  const f = setup(t);
+  const candidate = await f.build();
+  const coveredProof = await verifyFirstLineS2CoveredText({
+    store: f.store, streamId: f.streamId,
+    candidate, authorityReader: f.reader,
+  });
+  const changed = { ...policy(), revision_id: 'policy-2',
+    effect_value: { methods: ['BANK_TRANSFER'] } };
+  f.setPolicy(changed);
+  const result = reauthorizeFirstLineCandidateFacts({
+    store: f.store, streamId: f.streamId, candidate, coveredProof, ...f.authority,
+    nowUtc: '2026-01-10T12:00:00.000Z',
+  });
+  assert.deepEqual(result, { code: 'STALE', reason: 'S2_SEMANTIC_FACTS_CHANGED' });
+  assert.equal(f.stats().modelCalls, 1);
+});
+
+test('S2 fresh-business-provider outage does not reuse S1 factual policy', async t => {
+  const f = setup(t);
+  const candidate = await f.build();
+  const coveredProof = await verifyFirstLineS2CoveredText({
+    store: f.store, streamId: f.streamId,
+    candidate, authorityReader: f.reader,
+  });
+  const r = reauthorizeFirstLineCandidateFacts({
+    store: f.store, streamId: f.streamId, candidate, coveredProof,
+    catalogService: f.authority.catalogService,
+    knowledgeStore: { authoritySnapshot: () => { throw Error('Synthetic authority outage'); } },
+    nowUtc: '2026-01-10T12:00:00.000Z',
+  });
+  assert.deepEqual(r, { code: 'HUMAN_REQUIRED', reason: 'S2_CURRENT_FACTS_UNPROVABLE' });
+  assert.equal(f.store.readRoutingSnapshot(f.streamId).live_public_action, null);
+});
+
+test('S2 denies reconstructed/fabricated candidate even with matching visible decision object', async t => {
+  const f = setup(t);
+  const candidate = await f.build();
+  const coveredProof = await verifyFirstLineS2CoveredText({
+    store: f.store, streamId: f.streamId,
+    candidate, authorityReader: f.reader,
+  });
+  assert.throws(() => reauthorizeFirstLineCandidateFacts({
+    store: f.store, streamId: f.streamId, candidate: { ...candidate }, coveredProof, ...f.authority,
+    nowUtc: '2026-01-10T12:00:00.000Z',
+  }), { name: 'TypeError' });
+});
+
+test('S2 denies coverage mismatch and fake non-authorizing marker', async t => {
+  const f = setup(t);
+  const candidate = await f.build();
+  const coveredProof = await verifyFirstLineS2CoveredText({
+    store: f.store, streamId: f.streamId, candidate, authorityReader: f.reader,
+  });
+  assert.throws(() => reauthorizeFirstLineCandidateFacts({
+    store: f.store, streamId: f.streamId, candidate, coveredProof: { ...coveredProof, coveredSourceIds: [999] },
+    ...f.authority, nowUtc: '2026-01-10T12:00:00.000Z',
+  }), { name: 'TypeError' });
+  assert.throws(() => reauthorizeFirstLineCandidateFacts({
+    store: f.store, streamId: f.streamId, candidate, coveredProof: { ...coveredProof, code: 'NOT_PROVEN' },
+    ...f.authority, nowUtc: '2026-01-10T12:00:00.000Z',
+  }), { name: 'TypeError' });
+});
+
+test('S2 genuine proof cannot be forged by copying matching source IDs or nested event', async t => {
+  const f = setup(t);
+  const candidate = await f.build();
+  const proof = await verifyFirstLineS2CoveredText({
+    store: f.store, streamId: f.streamId,
+    candidate, authorityReader: f.reader,
+  });
+  assert.equal(Object.isFrozen(proof), true);
+  assert.equal(Object.isFrozen(proof.exactReads[0].event), true);
+  assert.throws(() => reauthorizeFirstLineCandidateFacts({
+    store: f.store, streamId: f.streamId, candidate, coveredProof: { ...proof },
+    ...f.authority, nowUtc: '2026-01-10T12:00:00.000Z',
+  }), { name: 'TypeError' });
+  assert.throws(() => reauthorizeFirstLineCandidateFacts({
+    store: f.store, streamId: f.streamId, candidate, coveredProof: structuredClone(proof),
+    ...f.authority, nowUtc: '2026-01-10T12:00:00.000Z',
+  }), { name: 'TypeError' });
+});
+
+test('S2 proof bound to candidate A cannot reauthorize separately minted candidate B', async t => {
+  const f = setup(t);
+  const a = await f.build();
+  const b = await f.build();
+  assert.equal(a.code, 'CANDIDATE');
+  assert.equal(b.code, 'CANDIDATE');
+  const proofA = await verifyFirstLineS2CoveredText({
+    store: f.store, streamId: f.streamId, candidate: a, authorityReader: f.reader,
+  });
+  assert.throws(() => reauthorizeFirstLineCandidateFacts({
+    store: f.store, streamId: f.streamId, candidate: b,
+    coveredProof: proofA, ...f.authority,
+    nowUtc: '2026-01-10T12:00:00.000Z',
+  }), { name: 'TypeError' });
+});
+
+test('S2 fresh fact provider changing stream head mid-call invalidates apparent answer', async t => {
+  const f = setup(t);
+  const candidate = await f.build();
+  const proof = await verifyFirstLineS2CoveredText({
+    store: f.store, streamId: f.streamId, candidate, authorityReader: f.reader,
+  });
+  let changes = 0;
+  const r = reauthorizeFirstLineCandidateFacts({
+    store: f.store, streamId: f.streamId, candidate, coveredProof: proof,
+    catalogService: {},
+    knowledgeStore: { authoritySnapshot: () => {
+      if (!changes++) {
+        f.store.ingestConversationEvent(f.streamId, event(105));
+      }
+      return [policy()];
+    }},
+    nowUtc: '2026-01-10T12:00:00.000Z',
+  });
+  assert.deepEqual(r, { code: 'STALE', reason: 'S2_REVISION_CHANGED' });
+  assert.equal(f.store.readRoutingSnapshot(f.streamId).live_public_action, null);
 });
