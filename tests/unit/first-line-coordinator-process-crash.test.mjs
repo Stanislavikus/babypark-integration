@@ -11,6 +11,9 @@ import { recoverFirstLinePublicSendWithoutTransientText } from
   '../../src/copilot/first-line-public-send-coordinator.mjs';
 
 const child = fileURLToPath(new URL('../fixtures/first-line-coordinator-kill-child.mjs', import.meta.url));
+const schedulerChild = fileURLToPath(
+  new URL('../fixtures/first-line-postsend-scheduler-child.mjs', import.meta.url)
+);
 const NOW = 2_000_000_000_000;
 
 for (const [mode, expectedPosts] of [
@@ -75,18 +78,29 @@ for (const [mode, expectedPosts] of [
       }), null, 'restart may never claim a second POST for SENDING');
       // Invoke the actual runtime recovery function, not manual SQL/store
       // operations inside the test, on the independently reopened DB.
+      // Cold-start the actual CP4 scheduler in a separate process.
+      // Its startup sweep, rather than the test harness, performs the
+      // SENDING -> UNCERTAIN -> absorbing HUMAN transition.
+      const restartedScheduler = await new Promise((resolve, reject) => {
+        const proc = spawn(process.execPath, [schedulerChild, file], {
+          stdio: ['ignore', 'pipe', 'pipe'], timeout: 20_000,
+        });
+        let stderr = '';
+        proc.stderr.on('data', bytes => { stderr += bytes; });
+        proc.on('error', reject);
+        proc.on('close', (code, signal) => resolve({ code, signal, stderr }));
+      });
+      assert.equal(restartedScheduler.code, 0, restartedScheduler.stderr);
+      assert.equal(restartedScheduler.signal, null);
+      assert.match(restartedScheduler.stderr,
+        /^(?:\(node:\d+\) ExperimentalWarning:[^\n]*\n(?:\(Use [^\n]*\)\n)?)?$/u);
+      assert.equal(restarted.getPublicAction(actionId).state, 'UNCERTAIN');
       const recovered = recoverFirstLinePublicSendWithoutTransientText({
         store: restarted, actionId,
       });
       assert.equal(recovered.code, 'HUMAN_REQUIRED');
       assert.equal(recovered.reason, 'RESTART_EXACT_CONTENT_UNAVAILABLE');
       assert.equal(recovered.continuationOwner.owner_kind, 'HUMAN');
-      assert.equal(restarted.getPublicAction(actionId).state, 'UNCERTAIN');
-      const repeatedRecovery = recoverFirstLinePublicSendWithoutTransientText({
-        store: restarted, actionId,
-      });
-      assert.equal(repeatedRecovery.code, 'HUMAN_REQUIRED');
-      assert.equal(repeatedRecovery.continuationOwner.owner_kind, 'HUMAN');
       assert.equal(restarted.claimNextPublicAction({
         leaseMs: 1_000, token: 'third-worker',
       }), null);
