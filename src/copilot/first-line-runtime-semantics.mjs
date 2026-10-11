@@ -11,6 +11,13 @@ import { isCertifiedFirstLineS2CoveredTextProof } from './first-line-s2-covered-
 import { isDeepStrictEqual } from 'node:util';
 
 const candidateInputBindings = new WeakMap();
+const candidateStoreBindings = new WeakMap();
+
+export function isGenuineFirstLineTransientCandidate(candidate, { store, streamId } = {}) {
+  const binding = candidateStoreBindings.get(candidate);
+  return binding?.store === store && binding?.streamId === streamId &&
+    candidateInputBindings.has(candidate);
+}
 
 
 /**
@@ -169,6 +176,7 @@ export async function buildFirstLineTransientCandidate({
   // Copy it before the untrusted producer can mutate its original reference.
   if (candidate.code === 'CANDIDATE') {
     candidateInputBindings.set(candidate, structuredClone(extraction));
+    candidateStoreBindings.set(candidate, Object.freeze({ store, streamId }));
   }
   return candidate;
 }
