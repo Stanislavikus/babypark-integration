@@ -207,7 +207,7 @@ operational acceptance gate.
 | B2-02 | PARTIAL | live 2026-10-11 prod unit/current Gateway/standard paths inspected, no v4 authority found | fresh complete topology at write boundary |
 | B2-03 | PARTIAL (component PASS) | Node v24.20.0 verified upstream binary digest; 16/16 B1 tests; synthetic CLI backup/restore schema v4 + SQLite integrity `ok` | real production source backup and semantic verify |
 | B2-04 | PARTIAL | B1 encrypted artifact/manifest and scratch CLI tested locally; SSH available | real offhost transfer receipt, independent full restore and distinct verification timestamps |
-| B2-05 | **UNPROVEN / HALT** | current offhost admin access exists; uploader-only negative tests **not run** | separate offhost principal, test deny delete/rename/overwrite |
+| B2-05 | **PARTIAL dev-only / HALT before production** | native OpenSSH SFTP dev-only synthetic upload; after separate root-owned promotion, unprivileged SFTP overwrite/delete/rename all denied; no SSH transport authentication tested | actual offhost isolated principal, host SSH authorization and real uploader credential negative tests; shared root administration risk |
 | B2-06 | PARTIAL | screenshot: Bitwarden `BabyPark Recovery` org/collection + owner-created key-record; Olga invited | deputy membership/consent, tested retrieval and offline secret custody |
 | B2-07 | **UNPROVEN / HALT** | alert thresholds 45m/60m agreed as proposed monitoring design; not running | independent warning/critical delivery and drill-age monitoring |
 | B2-08 | PARTIAL | proposed 48/14/4 owner-approved; last offhost `df`: 9.1GiB free | actual artifact growth budget, serialized runs, independent safe prune |
@@ -281,6 +281,21 @@ right before any irreversible adoption.
 - Offhost `server2181.babypark.ua` at last measurement 79GB/66GB
   used/**9.1GB free**, HostPro daily provider copies advertised 30d;
   no First Line backup root created; exact quota/retention growth unknown.
+- **Native SFTP isolation PoC on dev only:** stock OpenSSH local
+  `sftp -D /usr/lib/openssh/sftp-server` executed via `runuser -u nobody`
+  against an ephemeral synthetic incoming+confirmed tree. Unprivileged SFTP
+  uploaded a synthetic encrypted-looking file successfully to incoming;
+  a separate root-equivalent administrator moved it to a root-owned
+  confirmed directory with mode 0711/file 0600; SFTP `put` overwrite,
+  `rm` delete and `rename` against confirmed were all denied by POSIX
+  permissions. Original bytes intact; scratch removed on exit.
+  **No SSH authentication, ForceCommand/chroot, server2181 account,
+  actual uploader key, retention-admin separation, session bypass or
+  remote tamper capability was tested.** This is preliminary proof of a
+  stock no-overwrite-after-seal pattern only. Current Desktop Commander
+  on server2181 runs as root, which can bypass those file restrictions;
+  true separated privileged-management trust remains an owner/operations
+  gate, never an inferred PASS.
 - Bitwarden `BabyPark Recovery` Free Organization and
   `First Line Recovery` shared collection plus owner-created
   `first-line-backup-v1` local secret record confirmed by screenshot.
