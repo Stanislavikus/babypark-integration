@@ -93,7 +93,8 @@ test('test-only synthetic SENDING fixture is unreachable by static production/im
     '.json', '.yml', '.yaml', '.service', '.conf', '.sh', '.toml',
     '.ini', '.env', '.md']);
   const disallowed = ['legacy-sending-fixture', 'legacy-public-action-gate-fixture',
-    'first-line-coordinator-kill-child', 'first-line-postsend-scheduler-child'];
+    'first-line-coordinator-kill-child', 'first-line-postsend-scheduler-child',
+    'first-line-systemd-notify-stub'];
   let inspected = 0;
   const scan = dir => {
     if (!fs.existsSync(dir)) return;
@@ -123,6 +124,7 @@ test('actual git-archive export-ignore excludes every synthetic send and schedul
     'tests/helpers/legacy-public-action-gate-fixture.mjs',
     'tests/fixtures/first-line-coordinator-kill-child.mjs',
     'tests/fixtures/first-line-postsend-scheduler-child.mjs',
+    'tests/fixtures/first-line-systemd-notify-stub.mjs',
   ];
   const attrs = execFileSync('git', [
     'check-attr', 'export-ignore', '--', ...excluded,
