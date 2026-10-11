@@ -7,7 +7,7 @@ Supersedes: none. Updated 2026-10-11T20:03Z as PROPOSED evidence for the newly r
 ## Authority and exact boundary
 
 - New proposed scan SHA-256: `dfc285e92ab2996b33593b04a1286e446154725b3d00b01f204b9ff5bae30bfe` (previous owner approval was for older bytes, now superseded).
-- New proposed fit SHA-256: `1a3d1934be7c6d60f619b04e70199c4f217a3f09f68d86e983fa70809cbc0231` (not yet owner-approved).
+- New proposed fit SHA-256: `386d10777c1a14f7a66bdaa7a4fc37d7b7d5d9e7011c984cfb49c94c8abb578c` (not yet owner-approved).
 - Canonical main/base: `f9b5b8e5320884a675af3ea8e608c1e986e8331d`; governance blob `e777fce4af8e8c3372f1f9de9ef7d00f786c2c89`.
 - Chatwoot source `chatwoot/chatwoot` v4.18.0 exact Git `9f920b549c14491a4e587687a3eed5d21c6ccc7d`. This is version/source evidence, not cryptographic identity of every container file.
 - BabyPark relay source PR #128 `e4b6f136d47f12e09491ce697bc2919f88cd180a`, unchanged.
@@ -16,7 +16,7 @@ Supersedes: none. Updated 2026-10-11T20:03Z as PROPOSED evidence for the newly r
 
 ## Current observed coverage vs predicted stock behavior
 
-**OBSERVED (2026-10-11):** P0 PASS; 4 native containers booted within limits; Chatwoot Rails HTTP 302 inside container; PG 180 migrations and Redis ping pass; catalog healthy; one synthetic Website account/inbox/contact/conversation with initial incoming. Delayed feature flag was false. An attempt to create synthetic staff/team/rule and another event was BLOCKED by the platform's execution safety checks **before script creation**. All four PoC containers deliberately STOPPED; zero currently running. Thus 42/42 delivery cases remain **NOT TESTED**.
+**OBSERVED (2026-10-11):** P0 PASS in approved isolated scope; P1–P8 are NOT TESTED or DEFERRED (P3/P8) in the current no-egress experiment.  4 native containers booted within limits; Chatwoot Rails HTTP 302 inside container; PG 180 migrations and Redis ping pass; catalog healthy; one synthetic Website account/inbox/contact/conversation with initial incoming. Delayed feature flag was false. An attempt to create synthetic staff/team/rule and another event was BLOCKED by the platform's execution safety checks **before script creation**. All four PoC containers deliberately STOPPED; zero currently running. Thus 42/42 delivery cases remain **NOT TESTED**.
 
 **SOURCE-VERIFIED ONLY:** `app/listeners/agent_bot_listener.rb` uses `message.webhook_sendable?` and a configured AgentBot `outgoing_url` to enqueue `AgentBots::WebhookJob`. The predicate (`app/models/concerns/message_filter_helpers.rb`) allows incoming/outgoing/template; an activity-only event is not the same as an AgentBot webhook. `lib/webhooks/trigger.rb` retryable AgentBot statuses are `[429,500]` ONLY; `app/jobs/agent_bots/webhook_job.rb` retries with `wait:3.seconds, attempts:3`; after failed nonretryable/exhausted response, stock handler MAY open a still-pending conversation when the exact Message row is found and account flag is not set. Whether it actually opens must be recorded per scenario, not inferred.
 
