@@ -41,16 +41,34 @@ separate customer-execution gate.
 
 ## Bounded traceability for docs-only #131
 
-| Requirement | Contract / testable acceptance | Verification and fail-closed consequence | Durable impact | Status |
-| --- | --- | --- | --- | --- |
-| C6-AI-T01 C1/v4 timeout applicability | DESIGN §29.3, §29.8.2–3; ACCEPTANCE Q39b(1) | Review exact historic scope vs v4, explicit PRAGMA, reject unsupported inherited 5000 | None | IN PROGRESS — pending exhaustive HEAVY verification |
-| C6-AI-T02 ingress scope and one-transaction equality | DESIGN §29.8.3; Q39b(2–3) | Diff/source audit and synthetic two-process/idempotency future check; reject unbounded or stale writes | None in this docs PR | IN PROGRESS |
-| C6-AI-T03 bounded budget and external contenders | DESIGN §29.8.3; Q39b(3–4) | Formula dimensional/non-double-count audit; missing numeric authority halts ingress code; later synthetic load/backup/drill before customer execution | None | IN PROGRESS |
-| C6-AI-T04 native timeout and overload/HUMAN | DESIGN §29.8.3; Q39b(5–6) | Timestamped production readback here; native response/ownership matrix and operator-attention evidence still missing => no activation | None | IN PROGRESS |
-| C6-AI-T05 B2 journal decision | DESIGN §29.8.3; Q39b(7) | Document decision before DB create; require actual mode readback after create; missing B2 backup/restore readiness halts | None | IN PROGRESS |
-| C6-AI-T06 docs-only scope | Single Design + Acceptance + attestation evidence | Exact-tree changed-surface and diff-check; any executable/config/deployment change invalidates bounded gate | None | IN PROGRESS |
+Scope of `DONE`: contract text + acceptance vector **authored and cross-mapped
+in this docs-only PR**; no production implementation, benchmark results,
+native failure-side-effect proof, operator attention or B2 deployment is
+claimed. All operational gates remain HALT until their own proof.
 
-**HEAVY closure:** all rows require exact-tree focused evidence, independent
-adversarial zero-BLOCKER verification and independently triggered isolated
-confirmation against one pinned HEAD/TREE/BASE/GOV/manifest before owner merge.
-This attestation alone does not close any row.
+| Requirement | Exact docs artifact / acceptance | Focused document verification and fail-closed effect | Durable impact | Docs terminal |
+| --- | --- | --- | --- | --- |
+| C6-AI-T01 historic C1 vs v4 | DESIGN §29.3, §29.8.2–3; ACCEPTANCE Q39b(1) | Cross-read explicit C1 scope and mandatory v4 PRAGMA; unknown v4 number halts code-stage | NONE | DONE — docs only |
+| C6-AI-T02 measured-only isolated precursor | DESIGN §29.8.2–3; ACCEPTANCE Q39a(1–3), Q39b(6) | Bench limited to disposable v4 SQLite/mock HTTP; no real Chatwoot, data or production writes; missing origin halts code-stage | NONE | DONE — docs only |
+| C6-AI-T03 ingress scope/atomicity | DESIGN §29.8.3; Q39b(2–3) | One OS process/admission N and one owning transaction, duplicate/HUMAN in transaction; mismatch halts | NONE | DONE — docs only |
+| C6-AI-T04 non-double-count envelope | DESIGN §29.8.3; Q39b(3–4) | Confirm margin once and E across all prior callbacks; source-derived component limits or HALT | NONE | DONE — docs only |
+| C6-AI-T05 provider timeout/overload | DESIGN §29.8.3; Q39b(5–6); this attestation | Positive read-only setting; code-stage synthetic error matrix, customer-stage native effects/operator-attention proof or HALT | NONE | DONE — docs only |
+| C6-AI-T06 journal and B2 boundary | DESIGN §29.8.3; Q39b(4,7) | Decision before creation, readback after creation; RPO/backup/recovery remains blocked pending future evidence | NONE | DONE — docs only |
+| C6-AI-T07 docs-only scope | DESIGN, ACCEPTANCE and this EVIDENCE file | Exact-tree changed-path/diff validation; executable/config/server modifications invalidate this PR classification | NONE | DONE — docs only |
+
+### Explicit downstream HALTs, outside docs-PR terminal scope
+
+- No benchmark has been run or component numbers authoritatively selected.
+  A separate approval and refreshed integration-first scan are required
+  before building the isolated measurement harness or changing ingress code.
+- No overload status is chosen for live traffic; native Chatwoot
+  failure/retry semantics and durable HUMAN/attention are not verified.
+- No v4 journal mode, production `episode.sqlite`, B2 backup/restore,
+  deployed AgentBot or customer callback has been authorized or tested.
+- This docs-only PR cannot authorize #128 code changes, native PoC #129,
+  Chatwoot configuration changes, B2 implementation or release.
+
+**HEAVY closure remains pending**: authoring/cross-mapping completion
+is not ZERO BLOCKERS. Independently execute the frozen exact-HEAD
+verification manifest, complete exhaustive adversarial review and
+context-isolated confirmation, then obtain separate owner merge approval.
