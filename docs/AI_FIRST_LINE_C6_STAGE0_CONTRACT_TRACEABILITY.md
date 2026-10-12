@@ -389,8 +389,8 @@ This amendment does not:
 
 ## PR #130 later timing-gate amendment — docs-only traceability
 
-Status: EVIDENCE — NON-NORMATIVE, append-only campaign-specific traceability.
-Applies to: Draft PR #130, on exact target/main
+Status: EVIDENCE — NON-NORMATIVE, cumulative campaign-specific traceability.
+Applies to: PR #130 amendment campaign, based on exact target/main
 f9b5b8e5320884a675af3ea8e608c1e986e8331d,
 governance blob e777fce4af8e8c3372f1f9de9ef7d00f786c2c89.
 Supersedes: none; earlier Stage 0 terminal above remains historical evidence.
@@ -405,26 +405,28 @@ as already passed:
 
 | PR130 requirement / invariant | Normative artifact clause | Focused docs-only verification (not production proof) | Fail-closed behavior | Durable-state impact | Status |
 | --- | --- | --- | --- | --- | --- |
-| P130-T01 synthetic-only, nondeployed C6 authoring is not customer-runtime authorization | DESIGN §29.8.2 first timing paragraph; ACCEPTANCE Q39a (1),(2), U14 | Static check: permission limited to isolated fixtures and Q39a denies missing/synthetic deployed provenance | Missing runtime config HALTs before webhook/claim/POST | NONE: no code/schema change | DONE |
-| P130-T02 numeric authority must carry scoped measurement, FROZEN source or operator attestation; test profiles never become production authority | DESIGN §29.8.2 positive configured timing authority/operator attestation/DI-only synthetic loader; ACCEPTANCE Q39a (1)–(4),(6),(7), U14 | Reproducible check PR130-C2: verify named provenance, target, loader rejection, provider privileges prohibition and renewal on config epoch | Unsupported source/unsafe relationships HALT | NONE: no schema/content added | DONE |
-| P130-T03 admitted webhook delay uses configured worst-case bound; measurement venue is isolated equivalent or approved non-customer, provider config operator-attested | DESIGN §29.8.2 worst-case envelope + venue; ACCEPTANCE Q39a (5)–(7), Q39, U14 | Reproducible check PR130-C3: all configured REST attempts, each SQLite busy_timeout, queue/event-loop upper bound, margin, strict less-than and attestation/venue cases | No customer/provider writes; exceeded/unbounded deadline HALTs | NONE: future config gate only | DONE |
-| P130-T04 HUMAN, at-most-once and no unsafe handoff remain; docs/code merge is not deployment proof | DESIGN §29.8.2 retained liveness and disclaimer; ACCEPTANCE Q39a final conditions, Q39, U14 and §43 | Static check: HUMAN/no-repeat/no-toggle preserved, Q39a rejects elapsed-time proof | HUMAN remains absorbing, no duplicate POST/handoff | NONE: existing semantics unchanged | DONE |
+| P130-T01 fixture-only nondeployed C6 authoring is not customer-runtime authorization; runtime HALT recovers accepted streams without a second POST | DESIGN §29.8.2 first timing paragraph; ACCEPTANCE Q39a (1),(2), U14 | Static check: permission limited to isolated fixtures and Q39a denies missing/synthetic deployed provenance | Missing runtime config HALTs before webhook/claim/POST | NONE: no code/schema change | DONE |
+| P130-T02 numeric authority must carry authenticated, re-hashed scoped measurement/FROZEN source/operator record; FIXTURE_TIMING never becomes real authority | DESIGN §29.8.2 positive configured timing authority/operator attestation/DI-only synthetic loader; ACCEPTANCE Q39a (1)–(4),(6)–(12),(15), U14 | Reproducible check PR130-C2: verify named provenance, target, loader rejection, provider privileges prohibition and renewal on config epoch | Unsupported source/unsafe relationships HALT | NONE: no schema/content added | DONE |
+| P130-T03 provider HTTP-response delay uses explicit millisecond worst-case including all blocking phases and upstream queues; real non-customer measurements are separate from fake fixture values | DESIGN §29.8.2 worst-case envelope + venue; ACCEPTANCE Q39a (5)–(8),(12)–(15), Q39, U14 | Reproducible check PR130-C3: all configured REST attempts, each SQLite busy_timeout, queue/event-loop upper bound, margin, strict less-than and attestation/venue cases | No customer/provider writes; exceeded/unbounded deadline HALTs | NONE: future config gate only | DONE |
+| P130-T04 runtime-HALT preserves durable HUMAN/uncertain action provenance, at-most-once and no unsafe handoff; docs/code merge is not deployment proof | DESIGN §29.8.2 retained liveness and disclaimer; ACCEPTANCE Q39a final conditions, Q39, U14 and §43 | Static check: HUMAN/no-repeat/no-toggle preserved, Q39a rejects elapsed-time proof | HUMAN remains absorbing, no duplicate POST/handoff | NONE: existing semantics unchanged | DONE |
 | P130-T05 docs-only bounded PR with exact predecessor in both FROZEN headers and complete verification | Diff BASE..HEAD; Design/Acceptance Supersedes current exact BASE; separate Stage 0 history and traceability | Reproducible PR130-C5 checks of both headers plus git diff --name-status and git diff --check against pinned CAMPAIGN_BASE_OID | Unexpected changed source/predecessor/check => HALT | NONE | DONE |
 
 Docs-only DONE statuses attest proposed contract text and static consistency,
 not actual runtime execution. Q39a/U14 become executable tests required by
 future C6 implementation. This addendum is not a waiver of Agreement §7.1
 HEAVY two-pass ZERO BLOCKERS review, immutable verification manifest,
-pre-owner evidence bundle or final owner merge authority. The proposed
-changes are not normative until merged to canonical main.
+pre-owner evidence bundle or final owner merge authority. Before merge the proposed amendment is non-normative; after merge the
+Design/Acceptance clauses have their explicitly declared FROZEN status.
+This EVIDENCE traceability remains non-normative in either state.
 
 ### Reproducible PR #130 docs-only consistency checks (PR130-C1..C5)
 
 On the exact reviewed commit, with CAMPAIGN_BASE_OID bound to the immutable
 40-hex campaign base, execute this self-contained Python command. It invokes
 only the Python standard library, reads the frozen changed documents, and
-fails on specified missing structural markers and three explicitly enumerated
-unsafe regression phrases. It CANNOT decide general semantic consistency:
+fails on specified missing structural markers in §29.8.2 and three explicitly
+enumerated unsafe regression phrases (after whitespace normalization).
+It CANNOT decide general semantic consistency or catch all paraphrases:
 unrecognized contradictory wording can still pass this checker and MUST be
 caught by independent exhaustive whole-contract review. These probes are a
 narrow regression floor, not a proof that no contradictions exist:
@@ -441,24 +443,26 @@ narrow regression floor, not a proof that no contradictions exist:
         assert 'Supersedes: ' in content[:900] and base in content[:950]
         assert 'Amendment history:' in content[:1100]
     checks = {
-       'C1': ('synthetic timing profile','test harness','customer-data'),
-       'C2': ('**operator attestation**','Super Admin','provenance','SYNTHETIC'),
-       'C3': ('worst-case','STRICTLY LESS THAN','busy_timeout=5000','queue'),
+       'C1': ('FIXTURE_TIMING','test harness','customer-data'),
+       'C2': ('**operator attestation**','Super Admin','provenance','SYNTHETIC','unit','hashed again'),
+       'C3': ('worst-case','STRICTLY LESS THAN','busy_timeout=5000','queue','milliseconds'),
        'C4': ('§29.8.2 durable HUMAN','public-send behavior'),
     }
+    section=d.split('### 29.8.2 Liveness',1)[1].split('## 29.9 Clarification',1)[0]
+    compact=lambda value: ' '.join(value.lower().split())
     for label, needles in checks.items():
         for needle in needles:
-            assert needle.lower() in d.lower(), (label, needle)
+            assert compact(needle) in compact(section), (label, needle)
     assert '### Q39a —' in a and '### U14 —' in a
-    assert 'all (1)–(5) and (7) HALT' in a
-    assert 'WEBHOOK_TIMEOUT=5000 MUST FAIL' in a
+    assert '(1)–(5), (7), and all invalid variants of (8)–(16) HALT' in a
+    assert '5000 milliseconds' in a and 'ONE full' in a
     forbidden = (
         'Production configuration loader MAY accept SYNTHETIC provenance through an environment flag.',
         'Measured p99 may replace the configured worst-case bound.',
         'Operator attestation is optional for WEBHOOK_TIMEOUT.',
     )
     for phrase in forbidden:
-        assert phrase.lower() not in d.lower(), ('known-unsafe-clause',phrase)
+        assert compact(phrase) not in compact(section), ('known-unsafe-clause',phrase)
     for i in range(1,6):
         key='| P130-T0'+str(i)+' '
         row=next(line for line in t.splitlines() if line.startswith(key))
