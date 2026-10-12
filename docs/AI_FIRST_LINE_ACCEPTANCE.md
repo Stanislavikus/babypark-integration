@@ -1181,8 +1181,8 @@ Exercise the following distinct cases:
    Catalog/Gateway fix, or standalone C6 backup/restore, without executing
    any customer-facing C6 runtime path.
 5. At production activation, the provider callback budget or a related timing
-   relationship is unproved, including misuse of the frozen SQLite
-   historical C1 `EpisodeStore` busy_timeout=5000 as a v4 setting or
+   relationship is unproved, including misuse of the historical C1
+   `EpisodeStore` busy_timeout=5000 as a v4 setting or
    as a whole-callback bound.
 
 Expected:
@@ -1203,8 +1203,9 @@ or C6 runtime activation:
 
 1. C1 schema-v1 `EpisodeStore` uses its historical explicit 5000-ms wait,
    while the v4 `FirstLineStateStore` uses a separately evidenced,
-   explicitly configured wait when ingress timing is implemented. A v4 value chosen only from a fixture,
-   code default, or C1 history does not become timing authority.
+   explicitly configured wait when ingress timing is implemented.
+   A v4 value chosen only from a fixture, code default, or C1 history
+   does not become timing authority.
 2. One ingress OS process with admitted `N` versus two OS processes,
    exceeding `N`, unbounded body ingress, or unbounded unrelated
    event-loop work. Exercise repeated external contention episodes `E>1`,
@@ -1235,11 +1236,25 @@ or C6 runtime activation:
    and an attested provider target, plus owner approval; a bare guessed
    fixture budget fails. The full *implemented* callback is measured
    separately before customer execution, not before code exists.
+   The isolated harness MUST demonstrate target CPU/memory/storage,
+   pinned Node/SQLite and co-resident Chatwoot/Postgres/Redis/Gateway
+   load equivalence or conservative cross-host bounds. Verify its
+   predeclared run count, warm-up, tail percentile, confidence/uncertainty,
+   maxima and variance-derived safety margin; arbitrary sample counts,
+   guessed percentile/multiplier or unmatched host measurements FAIL.
+   No synthetic harness binds a publicly reachable listener or live
+   production service.
 7. Compare DELETE and WAL as candidate modes before first B2
    production DB creation, verify exact `PRAGMA journal_mode`
    afterward, and exercise backup/restore/interference on the
    **selected** mode. WAL additionally requires checkpoint/-wal/-shm
    proof if selected; evaluating it does not activate it.
+8. Before adding benchmark harness code, compare version-pinned
+   built-in Node/SQLite profiling and maintained free OSS options
+   (including relevant autocannon/tinybench/mitata capabilities) under
+   Agreement §§1–3; verify actual license and complete commercial fit.
+   A custom test-only adapter without a recorded capability gap, or a
+   new production runtime dependency, FAILS the integration-first gate.
 
 Expected: isolated measured components + derived enforceable bounds
 authorize only a separately approved **unwired ingress code stage**,
