@@ -32,6 +32,7 @@ Authority: production runtime observations; not an owner-approved timeout change
   `chatwoot-web.1`, `chatwoot-worker.1`, `postgresql@16-main`,
   `redis-server` and `babypark-integration-v2`.
   This records **topology**, not actual CPU/IO latency, contention,
+  timestamped load peaks, representative measurement windows,
   host-level performance equivalence, or authorized benchmark data.
 - At check time no C6 production `episode.sqlite` was found
   under `/var/lib/babypark-first-line`, `/opt/babypark-integration`
@@ -60,19 +61,20 @@ claimed. All operational gates remain HALT until their own proof.
 | C6-AI-T01 historic C1 vs v4 | DESIGN §29.3, §29.8.2–3; ACCEPTANCE Q39b(1) | Cross-read explicit C1 scope and mandatory v4 PRAGMA; unknown v4 number halts code-stage | NONE | DONE — docs only |
 | C6-AI-T02 measured-only isolated precursor | DESIGN §29.8.2–3; ACCEPTANCE Q39a(1–3), Q39b(6) | Bench limited to disposable v4 SQLite/mock HTTP; no real Chatwoot, data or production writes; missing origin halts code-stage | NONE | DONE — docs only |
 | C6-AI-T03 ingress scope/atomicity | DESIGN §29.8.3; Q39b(2–3) | One OS process/admission N and one owning transaction, duplicate/HUMAN in transaction; mismatch halts | NONE | DONE — docs only |
-| C6-AI-T04 non-double-count envelope | DESIGN §29.8.3; Q39b(3–4) | Confirm margin once and E across all prior callbacks; source-derived component limits or HALT | NONE | DONE — docs only |
-| C6-AI-T05 provider timeout/overload | DESIGN §29.8.3; Q39b(5–6); this attestation | Positive read-only setting; code-stage synthetic error matrix, customer-stage native effects/operator-attention proof or HALT | NONE | DONE — docs only |
+| C6-AI-T04 non-double-count envelope | DESIGN §29.8.3; Q39b(3–4) | Distinguish enforced I/R_seq/N/B_v4, measured S_exec/Q/O, competitor-bounded W_ext; surrogate two-write vs one-write; no sync timer preemption or double-count; unknown HALT | NONE | DONE — docs only |
+| C6-AI-T05 provider timeout/overload | DESIGN §29.8.3; Q39b(4–6); this attestation | Positive read-only setting; SQLITE_BUSY on busy_timeout expiry and overload fail closed; native effects/operator-attention proof required for customers or HALT | NONE | DONE — docs only |
 | C6-AI-T06 journal and B2 boundary | DESIGN §29.8.3; Q39b(4,7) | Decision before creation, readback after creation; RPO/backup/recovery remains blocked pending future evidence | NONE | DONE — docs only |
 | C6-AI-T07 docs-only scope | DESIGN, ACCEPTANCE and this EVIDENCE file | Exact-tree changed-path/diff validation; executable/config/server modifications invalidate this PR classification | NONE | DONE — docs only |
-| C6-AI-T08 target environment and sampling provenance | DESIGN §29.8.3 target-matched measurement protocol; Q39b(6) | Version-pinned Node/SQLite; CPU/IO/co-tenant equivalence or conservative calibration; justified run count, percentile, uncertainty, safety multiplier; unmatched numbers HALT | NONE | DONE — docs only |
+| C6-AI-T08 target environment and sampling provenance | DESIGN §29.8.3 target-matched measurement protocol; Q39b(6) | Require timestamped read-only target host peak/load evidence and measured CPU/IO co-tenancy, exact Node/SQLite, justified runs/percentile/uncertainty/multiplier; missing peaks HALT | NONE | DONE — docs only |
 | C6-AI-T09 integration-first bench | DESIGN §29.8.3 integration-first; Q39b(8) | Agreement §§1–3 ready-tools comparison before any harness code, complete commercial license fit; unknown license/higher-risk dependency HALT | NONE | DONE — docs only |
 
 ### Explicit downstream HALTs, outside docs-PR terminal scope
 
 - No benchmark has been run or component numbers authoritatively selected.
-  Target-matched CPU/storage/IO/colocation **measurements**, workload,
-  repetitions, tail percentile, statistical uncertainty and safety
-  multiplier are NOT approved. A separate approval and refreshed
+  Target-matched CPU/storage/IO/colocation **measurements**, including
+  observed production load peaks and their representative time window,
+  workload, repetitions, tail percentile, statistical uncertainty and
+  safety multiplier are NOT approved. A separate approval and refreshed
   integration-first scan are required before building the isolated
   measurement harness or changing ingress code.
 - No overload status is chosen for live traffic; native Chatwoot
