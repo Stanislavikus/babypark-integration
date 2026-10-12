@@ -1280,8 +1280,12 @@ never customer traffic. Only actual implemented native callback budget
 with positive margin, provider error response proof, completed HUMAN/
 operator attention and B2 recovery may authorize customer execution.
 Unknown, guessed or unbounded evidence HALTs the applicable gate.
-The §29.8.2 pre-measurement exception extends only to the explicitly
-isolated non-production benchmark and formula validator.
+The §29.8.2 pre-measurement artifact allowance permits only the offline
+formula validator and isolated non-production component benchmark; neither
+alone authorizes ingress production code. Separately, the ingress-only
+§29.8.3 measured-component/derived-limit gate may authorize one expressly
+owner-approved, unwired ingress code stage (Q39a(3)), never customer
+execution or any claiming/S2/send/reconciliation implementation.
 
 ### Q40 — structured submission arriving before local CLARIFY confirmation is not lost
 A CLARIFY public message is visible to the customer and receives a native

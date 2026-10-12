@@ -7,7 +7,7 @@ Implementation: C1/C2a/C2b/C2c/C3/C4/C5 are merged. This amendment freezes the
 remaining C6 relay/reauthorization and C25 dependent-follow-up semantics before
 production implementation. It adds no C6/C25 production code, Chatwoot write,
 deployment or activation in this stage.
-Contract amendment base: canonical main `13f7f81b7c7cdc94fd977363fc7027387e76728a` (A-prime ingress-only timing feasibility; PR #130 retained).
+Contract amendment base: canonical main `13f7f81b7c7cdc94fd977363fc7027387e76728a` (C6 A-prime ingress-only timing gate).
 Chatwoot runtime verified: package v4.18.0; deployed tracked sources and the
 current gitignored production Vite manifest/chunks/source maps were verified
 against the running target. Exact hashes/equivalence evidence is recorded in
@@ -2875,7 +2875,8 @@ An accepted event MUST use at most one owning `BEGIN IMMEDIATE`
 mutation with immutable source-topology/duplicate/deferred-parent and
 blocker-to-durable-HUMAN checks performed inside that transaction.
 `UNIQUE(source_provider,source_conversation_id)` protects stream
-cardinality but cannot replace transactional event equality (B1-R07).
+cardinality but cannot replace transactional event equality (DESIGN §29.5;
+ACCEPTANCE Q39b(3)).
 There MUST be no Chatwoot REST await inside that owning transaction.
 The callback's exact number of sequential authoritative REST reads must
 be explicitly bounded. The default 5000-ms REST timeout in the current
