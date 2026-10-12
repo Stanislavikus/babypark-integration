@@ -1167,23 +1167,28 @@ Expected:
 ### Q39a — the offline fixture exception cannot escape into runtime
 
 Exercise the following distinct cases:
-1. Pure offline C6 timing validator, synthetic fixtures and isolated harness,
-   with no customer data or Chatwoot connectivity.
+1. Pure offline C6 timing validator on synthetic fixtures, and a distinct
+   disposable benchmark harness measuring existing v4 store/SQLite primitives
+   and mocked HTTP/body/event-loop contention on synthetic data. Neither
+   modifies production code nor uses real Chatwoot/customer data.
 2. Fixture values, environment defaults, or caller-supplied fixture mode reach
    any production webhook, AI public-action or customer-facing timing path.
-3. Before measurement, a non-validator C6 change implements a timing-dependent
-   webhook ingestion, claim, dispatch or reconciliation path.
+3. A non-validator C6 change implements a timing-dependent claim,
+   dispatch or reconciliation path before measured/inherited authority;
+   or implements ingress without the separately approved §29.8.3
+   measured-component/derived-limit code-stage gate.
 4. A whole-repository release contains dormant C6 files, an unrelated
    Catalog/Gateway fix, or standalone C6 backup/restore, without executing
    any customer-facing C6 runtime path.
 5. At production activation, the provider callback budget or a related timing
    relationship is unproved, including misuse of the frozen SQLite
    historical C1 `EpisodeStore` busy_timeout=5000 as a v4 setting or
-    as a whole-callback bound.
+   as a whole-callback bound.
 
 Expected:
-- (1) is permitted for validator implementation/tests only; no production
-  authority is created.
+- (1) is permitted for the offline formula validator and isolated
+  measured-component benchmark only; neither is production runtime
+  authority or a general C6 production-code exception.
 - (2), (3) and (5) FAIL CLOSED under §29.8.2/Q39/U14; fixture values never
   authorize public POST or replace target-matched measurements/inherited facts.
 - (4) alone is not C6 timing-dependent runtime implementation/activation.
@@ -1197,8 +1202,8 @@ specified in DESIGN §29.8.3, without customer data, deployed Chatwoot writes,
 or C6 runtime activation:
 
 1. C1 schema-v1 `EpisodeStore` uses its historical explicit 5000-ms wait,
-   while v4 `FirstLineStateStore` proposes a separately evidenced
-   explicitly configured wait. A v4 value chosen only from a fixture,
+   while the v4 `FirstLineStateStore` uses a separately evidenced,
+   explicitly configured wait when ingress timing is implemented. A v4 value chosen only from a fixture,
    code default, or C1 history does not become timing authority.
 2. One ingress OS process with admitted `N` versus two OS processes,
    exceeding `N`, unbounded body ingress, or unbounded unrelated
@@ -1216,23 +1221,33 @@ or C6 runtime activation:
    `journal_mode` breaks the candidate envelope or RPO.
 5. Overflow at `N` and Chatwoot v4.18.0 native non-2xx outcomes:
    distinguish 4xx, 429, 500, 503, worker retry and native
-   `pending→open`. A claimed success/handoff or unnotified HUMAN
-   state is NEVER inferred from HTTP status. If no bounded safe
-   overload behavior is proven, deployment is blocked.
-6. Offline-only validator before numerical authority versus attempted
-   production ingress code before measured/merged-inherited values,
-   and separately successful or failed authorized isolated synthetic
-   callback trial before customer execution.
+   `pending→open`. For the code-stage, permit only a documented
+   fail-closed synthetic response matrix with real customer ingress
+   disabled. Before customer execution, prove the selected native status
+   and durable HUMAN/operational alert behavior. A claimed
+   success/handoff or unnotified HUMAN state is NEVER inferred from HTTP
+   status; otherwise activation is blocked.
+6. A formula-only validator versus a separate benchmark harness using
+   disposable v4 SQLite and mock HTTP: both must use only synthetic
+   data and be prohibited from deployed Chatwoot. For the ingress
+   code-stage require source-pinned measured component baselines,
+   explicit bounded design allocations derived from those baselines
+   and an attested provider target, plus owner approval; a bare guessed
+   fixture budget fails. The full *implemented* callback is measured
+   separately before customer execution, not before code exists.
 7. Journal selection before first B2 production DB creation, exact
    `PRAGMA journal_mode` readback afterward, and both DELETE and
    WAL restore/backup interference cases (WAL requires its own
    checkpoint/-wal/-shm proof).
 
-Expected: only a source-bound, non-overlapping complete budget with a
-positive margin and proved error/HUMAN/operator-attention semantics can
-authorize the next gate. A missing, guessed, unbounded, stale or
-unsatisfied member HALTs the corresponding implementation or activation;
-§29.8.2/Q39a offline-validation-only exception is not extended.
+Expected: isolated measured components + derived enforceable bounds
+authorize only a separately approved **unwired ingress code stage**,
+never customer traffic. Only actual implemented native callback budget
+with positive margin, provider error response proof, completed HUMAN/
+operator attention and B2 recovery may authorize customer execution.
+Unknown, guessed or unbounded evidence HALTs the applicable gate.
+The §29.8.2 pre-measurement exception extends only to the explicitly
+isolated non-production benchmark and formula validator.
 
 ### Q40 — structured submission arriving before local CLARIFY confirmation is not lost
 A CLARIFY public message is visible to the customer and receives a native
