@@ -2155,7 +2155,9 @@ wraps each public multi-query read in one deferred read transaction; private
 `#readEpisode` remains transaction-neutral so write transactions can reuse it
 without nested `BEGIN`.
 
-For historical C1 schema v1 only, every `EpisodeStore` connection MUST explicitly set SQLite `busy_timeout=5000` (see §29.4 and the C6/v4 distinction in §29.8.3).
+For historical C1 schema v1 only, every `EpisodeStore` connection MUST
+explicitly set SQLite `busy_timeout=5000` (see §29.4 and the C6/v4
+distinction in §29.8.3).
 C1 MUST NOT rely on the Node `DatabaseSync` constructor's version-dependent
 `timeout` option: a concurrent writer that has already acquired a RESERVED lock
 must wait for the reader snapshot to release before COMMIT rather than fail
@@ -2814,10 +2816,14 @@ derived from actual component-harness measurements and the positively
 attested provider timeout, with an explicit plan to verify and reject
 over-budget final code **before** any customer execution. Unmeasured
 guesses or synthetic fixture values alone are never sufficient. Other
-C6 production paths retain the measured/inherited pre-code gate. The actual target's Chatwoot webhook timeout and safe complete
-callback budget also require evidence before customer execution; the historical C1 `EpisodeStore` busy_timeout=5000 milliseconds is a
+C6 production paths retain the measured/inherited pre-code gate.
+
+The actual target's Chatwoot webhook timeout and safe complete
+callback budget also require evidence before customer execution. The
+historical C1 `EpisodeStore` busy_timeout=5000 milliseconds is a
 per-wait C1 bound, **not** a mandated v4 `FirstLineStateStore` setting
-(§29.8.3), and cannot by itself prove that callback budget. Configuration must be startup-validated so selected
+(§29.8.3), and cannot by itself prove that callback budget.
+Configuration must be startup-validated so selected
 lease/deadline/retry relationships cannot permit a POST from an expired claim
 or convert unavailable authority into false terminal success. Missing
 authority HALTs autonomous AI processing and public dispatch, not the existing
