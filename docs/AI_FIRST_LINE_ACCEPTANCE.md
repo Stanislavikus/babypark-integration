@@ -7,7 +7,7 @@ Companion: `docs/AI_FIRST_LINE_DESIGN.md`
 Historical research baseline: `e4b3989f852d5de4a868a6f72867b87cb64f8b2d`.
 Contract amendment base for this PR #130 proposal: canonical main `f9b5b8e5320884a675af3ea8e608c1e986e8331d`.
 Amendment history: Stage 0 first froze v0.8 at base `09cbf704aba2a6bab4aa1ccacf904926286c3977`; prior provenance remains historical.
-PR #130 scope: timing-gate amendment only; proposed until merged into canonical main.
+Amendment campaign: PR #130 timing-gate change; this header records its exact pre-amendment predecessor.
 
 This file is the single normative acceptance corpus for AI First Line v0.8. It
 incorporates the complete prior acceptance corpus plus the C6/C25
@@ -1200,7 +1200,9 @@ kernel backlog or the (M+1)-th callback behind M lock-blocked requests,
 busy-handler overshoot, GC, filesystem sync or REST DNS/TLS/backoff omitted
 from the alleged complete bound, and (15) missing provider deadline/retry
 semantics, absent authenticated operator record, unapproved attestation
-expiry/renewal policy or a known yet unrecorded deployment change,\nand (16) an invalidated runtime while the local episode store is locked,\ncorrupt or has an unprovable restore cut and cannot commit durable HUMAN.
+expiry/renewal policy or a known yet unrecorded deployment change,
+and (16) an invalidated runtime while the local episode store is locked,
+corrupt or has an unprovable restore cut and cannot commit durable HUMAN.
 
 Expected:
 - isolated synthetic tests of the fail-closed budget validator are allowed

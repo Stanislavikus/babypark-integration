@@ -409,7 +409,7 @@ as already passed:
 | P130-T02 numeric authority must carry authenticated, re-hashed scoped measurement/FROZEN source/operator record; FIXTURE_TIMING never becomes real authority | DESIGN §29.8.2 positive configured timing authority/operator attestation/DI-only synthetic loader; ACCEPTANCE Q39a (1)–(4),(6)–(8),(10)–(12),(15), U14 | Reproducible check PR130-C2: verify named provenance, target, loader rejection, provider privileges prohibition and renewal on config epoch | Unsupported source/unsafe relationships HALT | NONE: no schema/content added | DONE |
 | P130-T03 provider HTTP-response delay uses explicit millisecond worst-case including all blocking phases and upstream queues; real non-customer measurements are separate from fake fixture values | DESIGN §29.8.2 worst-case envelope + venue; ACCEPTANCE Q39a (5),(6),(8),(13)–(15), Q39, U14 | Reproducible check PR130-C3: all configured REST attempts, each SQLite busy_timeout, queue/event-loop upper bound, margin, strict less-than and attestation/venue cases | No customer/provider writes; exceeded/unbounded deadline HALTs | NONE: future config gate only | DONE |
 | P130-T04 runtime-HALT preserves durable HUMAN/uncertain action provenance, at-most-once and no unsafe handoff; docs/code merge is not deployment proof | DESIGN §29.8.2 retained liveness and disclaimer; ACCEPTANCE Q39a (9),(16) and final conditions, Q39, U14 and §43 | Static check: HUMAN/no-repeat/no-toggle preserved, Q39a rejects elapsed-time proof | HUMAN remains absorbing, no duplicate POST/handoff | NONE: existing semantics unchanged | DONE |
-| P130-T05 docs-only bounded PR with exact predecessor in both FROZEN headers and complete verification | Diff BASE..HEAD; Design/Acceptance Supersedes current exact BASE; separate Stage 0 history and traceability | Reproducible PR130-C5 checks of both headers plus git diff --name-status and git diff --check against pinned CAMPAIGN_BASE_OID | Unexpected changed source/predecessor/check => HALT | NONE | DONE |
+| P130-T05 docs-only bounded PR with exact predecessor in both FROZEN headers and complete verification | Diff BASE..HEAD; Design/Acceptance Supersedes current exact BASE; separate Stage 0 history and traceability; RUNBOOK docs/AI_FIRST_LINE_C6_PR130_VERIFICATION_RUNBOOK.md | Reproducible PR130-C5 checks of both headers plus git diff --name-status and git diff --check against pinned CAMPAIGN_BASE_OID | Unexpected changed source/predecessor/check => HALT | NONE | DONE |
 
 Docs-only DONE statuses attest proposed contract text and static consistency,
 not actual runtime execution. Q39a/U14 become executable tests required by
@@ -472,7 +472,8 @@ narrow regression floor, not a proof that no contradictions exist:
     assert paths=={
         'docs/AI_FIRST_LINE_DESIGN.md',
         'docs/AI_FIRST_LINE_ACCEPTANCE.md',
-        'docs/AI_FIRST_LINE_C6_STAGE0_CONTRACT_TRACEABILITY.md'}
+        'docs/AI_FIRST_LINE_C6_STAGE0_CONTRACT_TRACEABILITY.md',
+        'docs/AI_FIRST_LINE_C6_PR130_VERIFICATION_RUNBOOK.md'}
     print('PR130-C1..C5 PASS')
     PY
 
