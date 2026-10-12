@@ -2155,7 +2155,7 @@ wraps each public multi-query read in one deferred read transaction; private
 `#readEpisode` remains transaction-neutral so write transactions can reuse it
 without nested `BEGIN`.
 
-Every EpisodeStore connection MUST explicitly set SQLite `busy_timeout=5000`.
+For historical C1 schema v1 only, every `EpisodeStore` connection MUST explicitly set SQLite `busy_timeout=5000` (see §29.4 and the C6/v4 distinction in §29.8.3).
 C1 MUST NOT rely on the Node `DatabaseSync` constructor's version-dependent
 `timeout` option: a concurrent writer that has already acquired a RESERVED lock
 must wait for the reader snapshot to release before COMMIT rather than fail
@@ -2800,9 +2800,9 @@ lease, authority/read timeout, producer timeout, deadline, pre-SENDING
 read-retry budget, UNCERTAIN reconciliation window and HUMAN handoff/escalation
 window must be measured or inherited from merged authority per AI Working
 Agreement §8. The actual target's Chatwoot webhook timeout and safe complete
-callback budget also require evidence before customer execution; the frozen
-EpisodeStore busy_timeout=5000 milliseconds is a per-wait bound, not proof
-of that budget. Configuration must be startup-validated so selected
+callback budget also require evidence before customer execution; the historical C1 `EpisodeStore` busy_timeout=5000 milliseconds is a
+per-wait C1 bound, **not** a mandated v4 `FirstLineStateStore` setting
+(§29.8.3), and cannot by itself prove that callback budget. Configuration must be startup-validated so selected
 lease/deadline/retry relationships cannot permit a POST from an expired claim
 or convert unavailable authority into false terminal success. Missing
 authority HALTs autonomous AI processing and public dispatch, not the existing
@@ -2814,98 +2814,112 @@ execute these customer-facing paths do not constitute C6 runtime activation.
 No registry/attestation mechanism, numerical threshold or production
 deployment is selected by this docs-only exception.
 
-### 29.8.3 C6 ingress-only timing feasibility (proposed A-prime gate)
+### 29.8.3 C6 ingress-only timing feasibility
 
-This narrow amendment concerns **only** the synchronous Chatwoot AgentBot
-webhook ingress/ACK path. It does not authorize claiming, S2, public POST,
-UNCERTAIN reconciliation, HUMAN escalation scheduling, production C6 runtime,
-or a Chatwoot configuration change. Their independent measured/inherited
-timing authorities remain required by §29.8.2 before their implementation.
-The former §29.3 `EpisodeStore` / schema-v1 `busy_timeout=5000` rule is
-**historical C1 evidence**, not a numerical mandate for schema-v4
-`FirstLineStateStore`. The reference to `EpisodeStore` in §29.8.2 retains
-that historical meaning. Every v4 writer MUST still set `busy_timeout`
-explicitly per Agreement §5; a different, including smaller, ingress
-connection wait budget is eligible only with an independently justified,
-measured or already merged-inherited value, transaction/CAS correctness,
-and fail-closed proof. The existing v4 value of 5000 ms is implementation
-evidence, not proof that it fits a Chatwoot callback.
+**Scope and authority.** This clause governs only Chatwoot AgentBot
+webhook ingress/ACK feasibility, not claiming, S2, public sends, UNCERTAIN
+reconciliation, HUMAN scheduling or customer execution. All other
+timing-dependent paths retain the independent §29.8.2 gate. This clause
+freezes ingress design constraints and proof sequence; it does not select
+unmeasured numerical values or authorize any production-code change.
 
-The **initial target** is the existing Chatwoot v4.18.0 `WEBHOOK_TIMEOUT=5`
-seconds, read-only verified on 2026-10-12 from the actual production Rails
-`GlobalConfig` (upstream git `9f920b549c14491a4e587687a3eed5d21c6ccc7d`).
-It is a target, **not** a proven safe complete callback time, a permanent
-provider guarantee or authorization to alter Chatwoot. First attempt to fit
-inside 5 seconds; increasing the installation-wide value is a separate
-explicitly approved fallback after budget failure and impact/rollback review.
-Chatwoot sets network `open_timeout` and `read_timeout` separately;
-their individual 5-second values do not prove a 5-second end-to-end callback.
+**C1/v4 concurrency.** The historical §29.3 C1 `EpisodeStore` schema-v1
+`busy_timeout=5000` requirement does not mandate that numeric value for
+v4 `FirstLineStateStore`. Every v4 writable connection MUST still set
+an explicit, evidence-bound `busy_timeout` under Agreement §5. A smaller
+ingress-specific wait is permitted as a candidate only when measured or
+inherited from an already merged normative bound, and when SQLite
+transaction, source equality, lease/CAS, and fail-closed guarantees remain
+intact. The existing v4 source constant of 5000 ms is evidence, not a
+pre-approved ingress timing budget.
 
-The bounded deployment candidate is **one ingress OS process / Node event
-loop**, at most a positively configured finite `N` admitted callbacks and
-bounded body admission; rejected/excess callbacks cannot be silently ACKed
-or represented as HUMAN. Current #128 ingress has one exact REST GET,
-three read transactions and two `BEGIN IMMEDIATE` writes. The proposed
-minimal correction has at most one owning mutation transaction for each
-admitted event, with all source-topology, duplicate/deferred-parent,
-immutable-cut and blocker-to-HUMAN checks repeated **inside** it; no REST
-await inside this transaction. `UNIQUE(source_provider,source_conversation_id)`
-alone is not a replacement for in-transaction semantic equality (B1-R07).
-Routing/S2/send use injected stores in source, but their actual OS-process
-placement is not proven and is **not** licensed by this ingress-only scope.
-The candidate post-send recovery service would be a separate process/SQLite
-connection; B2 backup would use a separate read-only source connection.
-Any additional writers, processes or event-loop tasks invalidate this budget
-until their effects are explicitly bounded and reviewed.
+**Target.** Attempt to retain the production Chatwoot v4.18.0
+`WEBHOOK_TIMEOUT=5 s`, recorded by read-only Rails `GlobalConfig`
+attestation in `docs/AI_FIRST_LINE_C6_INGRESS_RUNTIME_ATTESTATION_20261013.md`.
+That observation is neither a permanent deployment assertion nor proof of
+five seconds of usable end-to-end callback time: Chatwoot separately sets
+network open/read timeouts. Increasing the installation-wide value MUST
+require a failed evidenced five-second fit plus separate owner approval,
+scope/Sidekiq review and recorded rollback; this clause does not change it.
 
-For an admitted callback, define a conservative **testable envelope**:
+**Ingress topology and invariants.** The target permits exactly one
+ingress OS process / Node event loop, at most a positively configured
+finite concurrent admission limit `N` and bounded body admission.
+An accepted event MUST use at most one owning `BEGIN IMMEDIATE`
+mutation with immutable source-topology/duplicate/deferred-parent and
+blocker-to-durable-HUMAN checks performed inside that transaction.
+`UNIQUE(source_provider,source_conversation_id)` protects stream
+cardinality but cannot replace transactional event equality (B1-R07).
+There MUST be no Chatwoot REST await inside that owning transaction.
+The callback's exact number of sequential authoritative REST reads must
+be explicitly bounded. The default 5000-ms REST timeout in the current
+reader is NOT admissible unchanged for a strict five-second budget with
+positive margin and other nonzero work. A materially different process,
+store writer or event-loop topology invalidates this feasibility basis.
 
-`I + R_seq + N*S_exec + E*min(B_v4,W_ext) + Q + O + M < 5000 ms`
+**Budget model.** Each admitted callback MUST satisfy a bound in the
+chosen deployment/harness configuration:
 
-Here `I` bounds body ingress; `R_seq` sums sequential authoritative REST
-attempt budgets (overlapped REST deliveries do not multiply this term);
-`S_exec` bounds one delivery's synchronous SQL/COMMIT and CPU execution
-**excluding** external lock waiting; `B_v4` is the selected explicit
-SQLite busy wait; `W_ext` bounds one incompatible external lock-holding
-episode; `E` bounds how many such episodes one callback may encounter;
-`Q` bounds unrelated event-loop/queue delay; `O` bounds HTTP response
-completion; and `M>0` is a sourced response margin. `N` multiplies
-synchronous work on the **same** event loop; external lock waiting is
-added separately, never automatically multiplied by `N`. Using `E=1`
-is allowed only if schedule/locking proof prevents repeated external
-conflicts; otherwise `E` must include them. The safe design envelope
-is `T_safe_callback=5000 ms-M`, **not** the provider's assured deadline.
-All numerical members require measured or merged-inherited evidence
-**before timing-dependent ingress production implementation**; this
-paragraph freezes the formula and topology hypothesis, not unverified
-numeric values or a passing feasibility verdict.
+`I + R_seq + N*S_exec + E*min(B_v4,W_ext) + Q + O < T_safe`
 
-The competing post-send sweep MUST have a finite batch/row bound,
-a bounded transaction-hold budget, and a failure/restart policy preserving
-durable HUMAN and at-most-once send. B2 online backup MUST declare its
-page-step `rate`, overall job deadline, writer-interference/restart
-behavior and completed **offsite** snapshot age; a backup job that makes no
-progress is not RPO-60 evidence. Both are separate scoped implementation
-and recovery gates; this paragraph does not authorize changing either.
-For the first production v4 `episode.sqlite` creation, **evaluate SQLite
-DELETE first**, then WAL only if bounded contention and B2 backup/restore
-evidence justify it. The journal decision MUST precede B2 first creation; the exact
-`PRAGMA journal_mode` readback MUST occur immediately **after** database
-creation and gate its first use and B2 rehearsal; no mode is selected
-or changed by this amendment. WAL additionally requires independent
-checkpoint/`-wal`/`-shm` recovery validation.
+`T_safe = T_webhook - M`, `M > 0` with independent provenance,
+initial `T_webhook = 5000 ms`. The margin is subtracted **once**.
 
-**Stop** ingress implementation if any required number/competitor, mode
-selection, ownership, or acceptance condition lacks authority; stop
-customer execution if the target native callback fails a separately
-authorized isolated synthetic latency/overload/lock/backup test with
-positive response margin, or if HTTP timeout/non-2xx could leave a
-`pending→open` conversation without durable HUMAN plus operator-attention
-recovery. Timeout is not by itself proof of physical handoff, and S2
-safety checks do not close the operator-liveness obligation. The only
-unblocked pre-measurement code remains the offline synthetic validator
-expressly permitted above. No code, release, database, service, Chatwoot
-setting, or new operational object is created by this docs-only amendment.
+- `I`: bounded webhook body ingress/validation time.
+- `R_seq`: sum of sequential exact REST-read/attempt time budgets;
+  asynchronous REST calls from independent deliveries may overlap.
+- `S_exec`: maximum synchronous SQLite execution/COMMIT and local
+  callback CPU per delivery, excluding waits on external locks.
+- `N`: maximum admitted callbacks that can queue synchronous work
+  on the same event loop; do not blindly multiply asynchronous REST.
+- `B_v4`: explicit per-wait SQLite busy limit for ingress.
+- `W_ext`: maximum duration of one conflicting external lock hold.
+- `E`: maximum external contention episodes on this callback path;
+  `E=1` is permitted only if locking/scheduling proof excludes repeats.
+- `Q`: other event-loop/queue delay not already counted in `N*S_exec`.
+- `O`: response completion overhead including return to Chatwoot.
+  Each term needs a non-overlapping definition and bounded evidence.
+
+**Competitors and journal decision.** A post-send recovery service would
+be a separate writer/process and MUST limit scan batch, read duration and
+write lock hold before it can coexist with ingress. B2 backup would use
+a separate read-only connection and MUST set a documented page-step
+`rate`, overall deadline, bounded writer-interference/restart policy,
+and maximum completed offsite snapshot age; endlessly restarted
+`sqlite.backup()` does not demonstrate RPO 60 minutes. Before B2
+creates the first production v4 `episode.sqlite`, evaluate SQLite
+DELETE first against measured bounded contention and B2 restore checks;
+use WAL only if its benefits and checkpoint/-wal/-shm recovery semantics
+are independently proven. Select the mode *before* DB creation, verify
+actual `PRAGMA journal_mode` immediately *after* creation and before
+any runtime use or B2 rehearsal. This clause selects neither mode.
+
+**Admission overload and provider effects.** A callback beyond `N`
+MUST NOT be falsely ACKed or assumed HUMAN. Before any ingress
+implementation, the selected bounded overload response/status MUST
+have version-pinned native Chatwoot failure/retry/ownership evidence and
+a durable HUMAN/operator-attention recovery design. A 4xx/5xx,
+including a retryable 429/500, is not proof of safe notification or
+operator ownership. If no fail-closed overload response can preserve
+the semantic/HUMAN obligations, the ingress rollout HALTs; weakening
+HMAC, exact source proof or no-retry is prohibited.
+
+**Two independent evidence gates.** Before implementing or editing
+timing-dependent ingress production code, freeze the topology and
+numerical input/limit budget by measurement (including the expressly
+permitted *offline-only synthetic validator*) or by existing merged
+normative authority, with provenance. A design target, fixture, test
+flag or this formula alone is NOT inherited measured authority.
+The offline validator can be built/tested under §29.8.2 before
+those measurements; it cannot ingest customer data or reach Chatwoot.
+Before any *customer execution*, also verify the actual target
+Chatwoot timeout, selected journal mode, the full callback's positive
+margin with separately authorized native-shaped synthetic
+REST/SQLite/backup/overload and concurrency trials, and durable HUMAN
+plus operator attention on timeout/non-2xx. Failed, unknown, changed
+or missing evidence HALTs the applicable gate. No setup, public POST,
+config mutation, DB initialization or service activation is authorized
+by this docs-only amendment.
 
 ## 29.9 Clarification and semantic provenance under v0.8
 
