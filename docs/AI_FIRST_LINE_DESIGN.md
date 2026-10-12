@@ -2866,7 +2866,7 @@ The operator attestation includes the provider-native raw value, native
 unit and readback representation, effective value and its unit, the verified
 provider interpretation (whole callback deadline versus connect/read phase),
 and the current provider post-timeout/retry behavior with pinned
-source/version or authenticated administrator evidence. Every component is
+source/version or authenticated administrator evidence. Every duration operand is
 converted to a canonical nonnegative safe integer of **milliseconds**
 before comparing to other durations; unitless, ambiguous, nonpositive,
 overflowing, incompatible or contradictory values HALT. For example an
