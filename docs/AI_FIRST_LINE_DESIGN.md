@@ -2891,11 +2891,18 @@ chosen deployment/harness configuration:
 `T_safe = T_webhook - M`, `M > 0` with independent provenance,
 initial `T_webhook = 5000 ms`. The margin is subtracted **once**.
 
-- `I`: bounded webhook body ingress/validation time.
+- `I`: ingress receipt and **this** callback's body parse/HMAC
+  validation; enforce the accepted byte/body cap, and measure its
+  non-interruptible CPU cost. Other callbacks' validation CPU belongs
+  to `Q`, never also to `S_exec`.
 - `R_seq`: sum of sequential exact REST-read/attempt time budgets;
   asynchronous REST calls from independent deliveries may overlap.
-- `S_exec`: maximum synchronous SQLite execution/COMMIT and local
-  callback CPU per delivery, excluding waits on external locks.
+- `S_exec`: measured synchronous SQLite execution/COMMIT and
+  post-admission semantic CPU per delivery, **excluding** body/HMAC
+  validation in `I` and incompatible external-lock waiting. Existing
+  v4 store operations are a **surrogate** for the future single
+  owning-transaction ingress path; they cannot prove its final
+  `S_exec` or replace full callback measurement before activation.
 - `N`: maximum admitted callbacks that can queue synchronous work
   on the same event loop; do not blindly multiply asynchronous REST.
 - `B_v4`: explicit per-wait SQLite busy limit for ingress.
@@ -2904,9 +2911,29 @@ initial `T_webhook = 5000 ms`. The margin is subtracted **once**.
   **across all accepted callbacks ahead of this response on the same
   event loop**, including this callback. `E=1` requires a proof
   excluding further external conflicts for every intervening callback.
-- `Q`: other event-loop/queue delay not already counted in `N*S_exec`.
-- `O`: response completion overhead including return to Chatwoot.
-  Each term needs a non-overlapping definition and bounded evidence.
+- `Q`: measured event-loop/queue delay including other callbacks'
+  body/HMAC validation and unrelated co-tenant execution, excluding
+  work already charged to `I` or `N*S_exec`.
+- `O`: measured response completion overhead including return to
+  Chatwoot; the remote network/worker tail is verified separately
+  before customer execution. Each term needs a non-overlapping
+  definition and bounded evidence.
+
+**Control classification.** `I` body-size admission, `N`
+concurrency admission, `R_seq` configured per-attempt read deadlines,
+and `B_v4` explicit per-wait SQLite busy limit have **enforced
+controls**; the CPU portion of `I` and the actual timer delivery lag
+must still be measured, since a synchronous SQLite wait may delay
+Node timers. `S_exec`, `Q` and `O` are **verified by measurement**,
+not forcibly interrupted by JavaScript timers. `W_ext` is
+**bounded by external competitors** through finite post-send lock
+holds and tested backup/scheduling interference. `E` is bounded
+by verified competing-job/admission topology and measured interference;
+`M` is a sourced positive safety margin. A timed-out SQLite
+`busy_timeout` is a **SQLITE_BUSY failure**, not a successful
+callback at `min(B_v4,W_ext)`; a synchronous `node:sqlite`
+operation cannot be preempted mid-lock-wait by an event-loop timer.
+No claimed runtime-enforced limit may rely on such preemption.
 
 **Competitors and journal decision.** A post-send recovery service would
 be a separate writer/process and MUST limit scan batch, read duration and
@@ -2922,8 +2949,9 @@ are independently proven. Select the mode *before* DB creation, verify
 actual `PRAGMA journal_mode` immediately *after* creation and before
 any runtime use or B2 rehearsal. This clause selects neither mode.
 
-**Admission overload and provider effects.** A callback beyond `N`
-MUST NOT be falsely ACKed or assumed HUMAN. For the *code stage*,
+**Admission overload and provider effects.** A callback beyond `N`,
+a `SQLITE_BUSY` on expiry of `B_v4`, or an otherwise exhausted
+component budget MUST NOT be falsely ACKed or assumed HUMAN. For the *code stage*,
 freeze the candidate bounded overload/error-state matrix, test on
 synthetic native-shaped fixtures, and require fail-closed behavior and
 a disabled/no-customer startup mode until real provider consequences
@@ -2947,7 +2975,13 @@ derived **design allocation** for `I,R_seq,N,S_exec,E,B_v4,W_ext,Q,O,M`.
 exact Node executable and bundled SQLite versions, CPU architecture /
 vCPU class, memory/swap, filesystem and storage latency/throughput,
 as well as co-resident Chatwoot Web/Worker, PostgreSQL, Redis and
-Gateway load/scheduling. Use an isolated non-production environment
+Gateway load/scheduling. The competing-load envelope (including
+observed peaks, not just idle or mean utilization) MUST come from
+recorded, timestamped, read-only production host/service CPU, memory,
+I/O and scheduling observations over a justified representative
+window; never from invented synthetic peak values. If peak evidence
+is unavailable, explicitly HALT the target-matched budget until a
+safe read-only observation window establishes it. Use an isolated non-production environment
 demonstrably equivalent to the intended host under that competing
 load, or a recorded **conservative** cross-host calibration that
 bounds every material difference. Merely using the same Node version
@@ -2983,9 +3017,12 @@ code; record versions, complete applicable licenses, capabilities
 and reproducible fit. Only genuine uncovered gaps can justify
 limited **test-only** glue after the stage's separate approval.
 No extra production runtime dependency or Chatwoot core patch is
-authorized here. New ingress code MUST enforce measured-derived
-limits or refuse
-startup/admission and remain unwired for customer execution.
+authorized here. New ingress code MUST enforce the **enforceable**
+controls classified above; it MUST refuse startup/admission where a
+control or measured/competitor-derived bound is absent or
+unproven, and remain unwired for customer execution. Measured-only
+`S_exec`/`Q`/`O` or competitor-bound `W_ext` are NOT claimed
+preemptible or hard-enforced by the ingress runtime.
 A non-production synthetic benchmark is not an end-to-end measurement.
 The full callback may be measured only after code exists, and is not
 required as a pre-code measurement. Before *customer execution*,
