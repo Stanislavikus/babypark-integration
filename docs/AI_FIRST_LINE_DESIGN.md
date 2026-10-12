@@ -2889,8 +2889,9 @@ progress is not RPO-60 evidence. Both are separate scoped implementation
 and recovery gates; this paragraph does not authorize changing either.
 For the first production v4 `episode.sqlite` creation, **evaluate SQLite
 DELETE first**, then WAL only if bounded contention and B2 backup/restore
-evidence justify it. The journal decision and exact `PRAGMA journal_mode`
-readback MUST precede and gate B2 first creation; no mode is selected
+evidence justify it. The journal decision MUST precede B2 first creation; the exact
+`PRAGMA journal_mode` readback MUST occur immediately **after** database
+creation and gate its first use and B2 rehearsal; no mode is selected
 or changed by this amendment. WAL additionally requires independent
 checkpoint/`-wal`/`-shm` recovery validation.
 
