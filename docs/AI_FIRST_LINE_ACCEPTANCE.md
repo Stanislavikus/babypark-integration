@@ -1235,10 +1235,11 @@ or C6 runtime activation:
    and an attested provider target, plus owner approval; a bare guessed
    fixture budget fails. The full *implemented* callback is measured
    separately before customer execution, not before code exists.
-7. Journal selection before first B2 production DB creation, exact
-   `PRAGMA journal_mode` readback afterward, and both DELETE and
-   WAL restore/backup interference cases (WAL requires its own
-   checkpoint/-wal/-shm proof).
+7. Compare DELETE and WAL as candidate modes before first B2
+   production DB creation, verify exact `PRAGMA journal_mode`
+   afterward, and exercise backup/restore/interference on the
+   **selected** mode. WAL additionally requires checkpoint/-wal/-shm
+   proof if selected; evaluating it does not activate it.
 
 Expected: isolated measured components + derived enforceable bounds
 authorize only a separately approved **unwired ingress code stage**,
