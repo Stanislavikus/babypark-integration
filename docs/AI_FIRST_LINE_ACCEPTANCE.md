@@ -2,10 +2,10 @@
 
 Status: FROZEN — C6/C25 pre-implementation safety acceptance + prior v0.7/C5 acceptance
 Applies to: BabyPark AI First Line Website v1 / Slice C acceptance contract.
-Supersedes: `docs/AI_FIRST_LINE_ACCEPTANCE.md` at canonical main `09cbf704aba2a6bab4aa1ccacf904926286c3977`.
+Supersedes: `docs/AI_FIRST_LINE_ACCEPTANCE.md` at canonical main `f9b5b8e5320884a675af3ea8e608c1e986e8331d`.
 Companion: `docs/AI_FIRST_LINE_DESIGN.md`
 Historical research baseline: `e4b3989f852d5de4a868a6f72867b87cb64f8b2d`.
-Contract amendment base: canonical main `09cbf704aba2a6bab4aa1ccacf904926286c3977`.
+Contract amendment base: canonical main `f9b5b8e5320884a675af3ea8e608c1e986e8331d` (PR #130 timing exception).
 
 This file is the single normative acceptance corpus for AI First Line v0.8. It
 incorporates the complete prior acceptance corpus plus the C6/C25
@@ -1163,6 +1163,31 @@ Expected:
   escalation remains live;
 - changing measured/frozen timing authority is a reviewed configuration/contract
   event, not an ad-hoc code constant.
+
+### Q39a — the offline fixture exception cannot escape into runtime
+
+Exercise the following distinct cases:
+1. Pure offline C6 timing validator, synthetic fixtures and isolated harness,
+   with no customer data or Chatwoot connectivity.
+2. Fixture values, environment defaults, or caller-supplied fixture mode reach
+   any production webhook, AI public-action or customer-facing timing path.
+3. Before measurement, a non-validator C6 change implements a timing-dependent
+   webhook ingestion, claim, dispatch or reconciliation path.
+4. A whole-repository release contains dormant C6 files, an unrelated
+   Catalog/Gateway fix, or standalone C6 backup/restore, without executing
+   any customer-facing C6 runtime path.
+5. At production activation, the provider callback budget or a related timing
+   relationship is unproved, including misuse of the frozen SQLite
+   busy_timeout=5000 as a whole-callback bound.
+
+Expected:
+- (1) is permitted for validator implementation/tests only; no production
+  authority is created.
+- (2), (3) and (5) FAIL CLOSED under §29.8.2/Q39/U14; fixture values never
+  authorize public POST or replace target-matched measurements/inherited facts.
+- (4) alone is not C6 timing-dependent runtime implementation/activation.
+- Earlier §29.8.2, Q37/Q39 and §43 durable HUMAN, liveness and no-retry
+  obligations remain unchanged; this exception cannot bypass them.
 
 ### Q40 — structured submission arriving before local CLARIFY confirmation is not lost
 A CLARIFY public message is visible to the customer and receives a native

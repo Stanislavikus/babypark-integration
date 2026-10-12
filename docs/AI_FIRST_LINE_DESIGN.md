@@ -2,12 +2,12 @@
 
 Status: FROZEN — C6/C25 pre-implementation safety contract + prior v0.7/C5 contract
 Applies to: BabyPark AI First Line Website v1 / Slice C normative design.
-Supersedes: `docs/AI_FIRST_LINE_DESIGN.md` at canonical main `09cbf704aba2a6bab4aa1ccacf904926286c3977`.
+Supersedes: `docs/AI_FIRST_LINE_DESIGN.md` at canonical main `f9b5b8e5320884a675af3ea8e608c1e986e8331d`.
 Implementation: C1/C2a/C2b/C2c/C3/C4/C5 are merged. This amendment freezes the
 remaining C6 relay/reauthorization and C25 dependent-follow-up semantics before
 production implementation. It adds no C6/C25 production code, Chatwoot write,
 deployment or activation in this stage.
-Contract amendment base: canonical main `09cbf704aba2a6bab4aa1ccacf904926286c3977`.
+Contract amendment base: canonical main `f9b5b8e5320884a675af3ea8e608c1e986e8331d` (PR #130 timing exception).
 Chatwoot runtime verified: package v4.18.0; deployed tracked sources and the
 current gitignored production Vite manifest/chunks/source maps were verified
 against the running target. Exact hashes/equivalence evidence is recorded in
@@ -2784,14 +2784,35 @@ The operator-attention condition is operational metadata, not a new semantic
 decision class or customer transcript. Its delivery/monitoring implementation is
 selected only in the later Agreement §§1–§3 implementation-options stage.
 
-Numeric timing values are not frozen by this amendment. Before C6 production
-implementation/activation, every lease, authority/read timeout, producer timeout,
-deadline, pre-SENDING read-retry budget, UNCERTAIN reconciliation window and
-HUMAN handoff/escalation window must be measured or inherited from merged
-authority per AI Working Agreement §8. Configuration must be startup-validated
-so the selected lease/deadline/retry relationships cannot permit a POST from an
-expired claim or convert unavailable authority into false terminal success. No
-numeric constant is chosen merely because it sounds reasonable.
+Numeric timing values are not frozen by this amendment. The sole
+pre-measurement exception is a pure offline C6 timing/budget validator tested
+with explicitly synthetic fixtures in an isolated, non-customer harness.
+This permits implementation and tests of that validator only: no production
+connection, customer-data processing or Chatwoot public POST. A fixture flag,
+caller input, environment default or synthetic value never establishes
+production timing authority. The exception does not permit other C6 runtime
+implementation before measurement.
+
+Except for that offline validator, BEFORE C6 production implementation or
+activation of timing-dependent customer-facing paths (webhook ingestion,
+claiming work, AI/public dispatch or send/handoff reconciliation), every
+lease, authority/read timeout, producer timeout, deadline, pre-SENDING
+read-retry budget, UNCERTAIN reconciliation window and HUMAN handoff/escalation
+window must be measured or inherited from merged authority per AI Working
+Agreement §8. The actual target's Chatwoot webhook timeout and safe complete
+callback budget also require evidence before customer execution; the frozen
+EpisodeStore busy_timeout=5000 milliseconds is a per-wait bound, not proof
+of that budget. Configuration must be startup-validated so selected
+lease/deadline/retry relationships cannot permit a POST from an expired claim
+or convert unavailable authority into false terminal success. Missing
+authority HALTs autonomous AI processing and public dispatch, not the existing
+durable HUMAN/operator recovery obligations in this §29.8.2 and §43.
+
+Unwired source merely present in a whole-repository release, unrelated
+Catalog/Gateway releases, and standalone C6 backup/restore that does not
+execute these customer-facing paths do not constitute C6 runtime activation.
+No registry/attestation mechanism, numerical threshold or production
+deployment is selected by this docs-only exception.
 
 ## 29.9 Clarification and semantic provenance under v0.8
 

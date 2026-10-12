@@ -4,7 +4,7 @@ Status: EVIDENCE — NON-NORMATIVE
 
 Applies to: docs-only C6/C25 Stage 0 contract amendment on `feat/c6-stage0-contract`.
 
-Supersedes: none.
+Supersedes: this same EVIDENCE file at canonical main `f9b5b8e5320884a675af3ea8e608c1e986e8331d` (earlier Stage 0 evidence retained unchanged).
 
 ## Exact campaign basis
 
@@ -384,3 +384,55 @@ This amendment does not:
 - patch/fork Chatwoot;
 - authorize any later production code without a fresh implementation-options
   gate and explicit owner approval where Agreement requires it.
+
+## PR #130 — narrow offline-validator traceability
+
+Status: EVIDENCE — NON-NORMATIVE
+Applies to: docs-only PR #130 timing exception, BASE `f9b5b8e5320884a675af3ea8e608c1e986e8331d`.
+PRODUCTION IMPLEMENTATION: NONE. Risk: HEAVY. No Chatwoot writes/activation.
+Existing §29.8.2, Q37/Q39/U14 and §43 remain authoritative.
+
+| Requirement | Artifact | Focused verification | Fail-closed behavior | Durable-state impact | Status |
+| --- | --- | --- | --- | --- | --- |
+| P130-T01: isolated synthetic validator only | DESIGN §29.8.2 first timing paragraph; ACCEPTANCE Q39a(1–3) | Structural checker; exhaustive semantic review of offline/runtime boundary | No fixture or caller flag authorizes runtime | NONE | DONE |
+| P130-T02: live timing gate stays binding without blocking unrelated releases/recovery | DESIGN §29.8.2 remaining timing paragraphs; ACCEPTANCE Q39a(4–5), Q39/U14 | Checker; release/backup vs runtime-path adversarial vectors | Unknown timing denies AI dispatch, never durable HUMAN recovery | NONE | DONE |
+| P130-T03: documentation/proof scope | DESIGN/ACCEPTANCE FROZEN headers; this EVIDENCE addendum; PR #130 RUNBOOK | Exact-base diff/check, root `npm test` (tests/unit/first-line-decision.test.mjs reads Design), negative probes, HEAVY review | Missing required verification HALTs merge | NONE | DONE |
+
+### Narrow structural regression (not a semantic proof)
+
+With `CAMPAIGN_BASE_OID` bound to the exact manifest base, run in the
+manifest's fresh immutable environment:
+
+    python3 - <<'PY'
+    import os, re, subprocess
+    from pathlib import Path
+    base = os.environ['CAMPAIGN_BASE_OID']
+    assert re.fullmatch(r'[0-9a-f]{40}', base)
+    subprocess.check_call(['git','cat-file','-e',base+'^{commit}'])
+    d = Path('docs/AI_FIRST_LINE_DESIGN.md').read_text()
+    a = Path('docs/AI_FIRST_LINE_ACCEPTANCE.md').read_text()
+    x = d.split('Numeric timing values are not frozen by this amendment.',1)[1].split('## 29.9',1)[0]
+    for phrase in ('sole', 'offline C6 timing/budget validator',
+                   'synthetic fixtures', 'BEFORE C6 production implementation',
+                   'busy_timeout=5000', 'HUMAN/operator recovery',
+                   'Unwired source merely present'):
+        assert phrase.lower() in x.lower(), ('missing',phrase)
+    assert '### Q39a —' in a
+    for phrase in ('A fixture flag may authorize production public POST.',
+                   'Production timing measurements are optional for activation.',
+                   'An unknown send outcome may be retried after timeout.'):
+        assert phrase.lower() not in x.lower(), ('known-unsafe-clause',phrase)
+    names = set(subprocess.check_output(
+        ['git','diff','--name-only',base+'..HEAD'],text=True).splitlines())
+    assert names == {
+        'docs/AI_FIRST_LINE_DESIGN.md',
+        'docs/AI_FIRST_LINE_ACCEPTANCE.md',
+        'docs/AI_FIRST_LINE_C6_STAGE0_CONTRACT_TRACEABILITY.md',
+        'docs/AI_FIRST_LINE_C6_PR130_VERIFICATION_RUNBOOK.md'}
+    print('PR130-NARROW-PASS')
+    PY
+
+Three separate in-memory negative probes must insert each forbidden phrase
+into the timing clause and receive `known-unsafe-clause`; sources stay
+unchanged. The semantic review independently challenges paraphrases,
+release boundaries, retained implementation gate and safe HUMAN recovery.
