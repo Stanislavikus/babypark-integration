@@ -2795,7 +2795,8 @@ HTTP/body/event-loop/commit/lock contention, with mock external authority.
 The second is for independently measured **component feasibility** where
 the real ingress callback does not yet exist. Both may use test-only code,
 temporary synthetic SQLite and version-pinned Node/SQLite tools, but neither
-may create/change a production entrypoint, invoke deployed Chatwoot, process
+may create/change a production entrypoint, bind a publicly reachable
+port/listener, invoke deployed Chatwoot, process
 customer data, use real credentials, send public messages, modify production
 configuration, or persist customer material. Any fixture value, proposed
 budget or simulation MUST remain non-authorizing until a separate
@@ -2941,11 +2942,49 @@ implementation, freeze the one-process topology, independent
 synthetic **component benchmarks** of the existing v4 store, SQLite
 lock waits, mock HTTP/body/queue and response model, and an explicit
 derived **design allocation** for `I,R_seq,N,S_exec,E,B_v4,W_ext,Q,O,M`.
+
+**Target-matched measurement protocol.** Benchmark results MUST bind
+exact Node executable and bundled SQLite versions, CPU architecture /
+vCPU class, memory/swap, filesystem and storage latency/throughput,
+as well as co-resident Chatwoot Web/Worker, PostgreSQL, Redis and
+Gateway load/scheduling. Use an isolated non-production environment
+demonstrably equivalent to the intended host under that competing
+load, or a recorded **conservative** cross-host calibration that
+bounds every material difference. Merely using the same Node version
+on a faster or otherwise unmatched machine is insufficient. No
+benchmark may run against production databases, live Chatwoot
+endpoints, production keys or customer messages. Unmatched or
+unbounded shared CPU/disk/lock contention HALTs the code-stage
+budget; it cannot be silently represented as zero.
+
+Before the first run, freeze a reproducible measurement plan stating
+workload and database sizes, concurrency and conflicting-writer
+profiles; independent run count, warm-up, measured percentile(s),
+tail uncertainty/confidence rule, and safety multiplier/margin.
+Justify each numeric choice by a cited reliability objective,
+statistical sample-size argument, existing normative bound or
+measured target variance/calibration—not intuition. Include raw
+non-customer timing distributions and observed maxima; a percentile
+alone cannot prove a hard bound. Calculate each selected enforceable
+limit from the measured baseline, uncertainty, calibrated target
+difference and positive remaining callback budget, recording the
+derivation and rejection criteria before ingress code is modified.
 Measure existing primitives on exact pinned runtime/SQLite, state
-measured versus surrogate versus enforced upper limits separately,
-and derive numeric caps from real baseline evidence and the
-attested five-second budget, **not** from preference or arbitrary
-fixture numbers. New code MUST enforce applicable limits or refuse
+measured versus surrogate versus enforced upper limits separately.
+Numbers not supported by that evidence remain unresolved; neither
+a tool default nor a fixture becomes production authority.
+
+**Integration-first prerequisite.** Before implementing even the
+disposable benchmark harness, execute Agreement §§1–3 native/free-OSS
+scan. Prefer Node/SQLite built-in profiling and maintained existing
+commercially usable benchmark tools/adapters (for example,
+`autocannon`, `tinybench`, `mitata`) over new custom measurement
+code; record versions, complete applicable licenses, capabilities
+and reproducible fit. Only genuine uncovered gaps can justify
+limited **test-only** glue after the stage's separate approval.
+No extra production runtime dependency or Chatwoot core patch is
+authorized here. New ingress code MUST enforce measured-derived
+limits or refuse
 startup/admission and remain unwired for customer execution.
 A non-production synthetic benchmark is not an end-to-end measurement.
 The full callback may be measured only after code exists, and is not
