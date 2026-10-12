@@ -2784,22 +2784,37 @@ The operator-attention condition is operational metadata, not a new semantic
 decision class or customer transcript. Its delivery/monitoring implementation is
 selected only in the later Agreement §§1–§3 implementation-options stage.
 
-Numeric timing values are not frozen by this amendment. The sole
-pre-measurement exception is a pure offline C6 timing/budget validator tested
-with explicitly synthetic fixtures in an isolated, non-customer harness.
-This permits implementation and tests of that validator only: no production
-connection, customer-data processing or Chatwoot public POST. A fixture flag,
-caller input, environment default or synthetic value never establishes
-production timing authority. The exception does not permit other C6 runtime
-implementation before measurement.
+Numeric timing values are not frozen by this amendment. Two narrow
+pre-measurement, **non-customer, non-production** artifacts are permitted:
+(1) a pure offline C6 timing/budget formula validator using synthetic fixtures;
+(2) a disposable isolated measurement harness exercising the existing
+FirstLineStateStore v4/schema/SQLite primitives and bounded synthetic
+HTTP/body/event-loop/commit/lock contention, with mock external authority.
+The second is for independently measured **component feasibility** where
+the real ingress callback does not yet exist. Both may use test-only code,
+temporary synthetic SQLite and version-pinned Node/SQLite tools, but neither
+may create/change a production entrypoint, invoke deployed Chatwoot, process
+customer data, use real credentials, send public messages, modify production
+configuration, or persist customer material. Any fixture value, proposed
+budget or simulation MUST remain non-authorizing until a separate
+reviewed ingress configuration derives enforceable bounds from measured
+components, verified provider configuration and §29.8.3. Neither artifact
+waives fail-closed ingress or HUMAN requirements.
 
-Except for that offline validator, BEFORE C6 production implementation or
-activation of timing-dependent customer-facing paths (webhook ingestion,
+Except for those non-production artifacts and the narrow §29.8.3
+**ingress-only staged feasibility rule**, BEFORE production implementation
+or activation of timing-dependent customer-facing paths (webhook ingestion,
 claiming work, AI/public dispatch or send/handoff reconciliation), every
-lease, authority/read timeout, producer timeout, deadline, pre-SENDING
-read-retry budget, UNCERTAIN reconciliation window and HUMAN handoff/escalation
-window must be measured or inherited from merged authority per AI Working
-Agreement §8. The actual target's Chatwoot webhook timeout and safe complete
+applicable lease, authority/read timeout, producer timeout, deadline,
+pre-SENDING read-retry budget, UNCERTAIN reconciliation window and HUMAN
+handoff/escalation window must be measured or inherited from merged
+authority per AI Working Agreement §8. For the *unimplemented ingress*
+work alone, the code-stage gate may use bounded design allocations
+derived from actual component-harness measurements and the positively
+attested provider timeout, with an explicit plan to verify and reject
+over-budget final code **before** any customer execution. Unmeasured
+guesses or synthetic fixture values alone are never sufficient. Other
+C6 production paths retain the measured/inherited pre-code gate. The actual target's Chatwoot webhook timeout and safe complete
 callback budget also require evidence before customer execution; the historical C1 `EpisodeStore` busy_timeout=5000 milliseconds is a
 per-wait C1 bound, **not** a mandated v4 `FirstLineStateStore` setting
 (§29.8.3), and cannot by itself prove that callback budget. Configuration must be startup-validated so selected
@@ -2820,8 +2835,12 @@ deployment is selected by this docs-only exception.
 webhook ingress/ACK feasibility, not claiming, S2, public sends, UNCERTAIN
 reconciliation, HUMAN scheduling or customer execution. All other
 timing-dependent paths retain the independent §29.8.2 gate. This clause
-freezes ingress design constraints and proof sequence; it does not select
-unmeasured numerical values or authorize any production-code change.
+defines the staged proof sequence: measured isolated components and
+derived enforceable design caps before ingress production code; full
+callback verification before customer execution. It does not itself
+authorize production-code edits, approve unmeasured values or activate
+C6. Separate owner approval of a measured ingress code-stage Fit is
+still required.
 
 **C1/v4 concurrency.** The historical §29.3 C1 `EpisodeStore` schema-v1
 `busy_timeout=5000` requirement does not mandate that numeric value for
@@ -2874,8 +2893,10 @@ initial `T_webhook = 5000 ms`. The margin is subtracted **once**.
   on the same event loop; do not blindly multiply asynchronous REST.
 - `B_v4`: explicit per-wait SQLite busy limit for ingress.
 - `W_ext`: maximum duration of one conflicting external lock hold.
-- `E`: maximum external contention episodes on this callback path;
-  `E=1` is permitted only if locking/scheduling proof excludes repeats.
+- `E`: maximum incompatible external lock-wait episodes accumulated
+  **across all accepted callbacks ahead of this response on the same
+  event loop**, including this callback. `E=1` requires a proof
+  excluding further external conflicts for every intervening callback.
 - `Q`: other event-loop/queue delay not already counted in `N*S_exec`.
 - `O`: response completion overhead including return to Chatwoot.
   Each term needs a non-overlapping definition and bounded evidence.
@@ -2895,31 +2916,42 @@ actual `PRAGMA journal_mode` immediately *after* creation and before
 any runtime use or B2 rehearsal. This clause selects neither mode.
 
 **Admission overload and provider effects.** A callback beyond `N`
-MUST NOT be falsely ACKed or assumed HUMAN. Before any ingress
-implementation, the selected bounded overload response/status MUST
-have version-pinned native Chatwoot failure/retry/ownership evidence and
-a durable HUMAN/operator-attention recovery design. A 4xx/5xx,
-including a retryable 429/500, is not proof of safe notification or
-operator ownership. If no fail-closed overload response can preserve
-the semantic/HUMAN obligations, the ingress rollout HALTs; weakening
-HMAC, exact source proof or no-retry is prohibited.
+MUST NOT be falsely ACKed or assumed HUMAN. For the *code stage*,
+freeze the candidate bounded overload/error-state matrix, test on
+synthetic native-shaped fixtures, and require fail-closed behavior and
+a disabled/no-customer startup mode until real provider consequences
+have been established. This permits isolated code development without
+claiming a specific HTTP code is safe for customers. **Before customer
+execution**, the selected overload status MUST have version-pinned,
+authorized native Chatwoot failure/retry/ownership evidence plus a
+working durable HUMAN/operator-attention recovery mechanism. A 4xx/5xx,
+including a retryable 429/500, is not proof of notification or human
+ownership. If no fail-closed overload response preserves those
+obligations, activation HALTs; never weaken HMAC, exact source proof
+or no-retry.
 
-**Two independent evidence gates.** Before implementing or editing
-timing-dependent ingress production code, freeze the topology and
-numerical input/limit budget by measurement (including the expressly
-permitted *offline-only synthetic validator*) or by existing merged
-normative authority, with provenance. A design target, fixture, test
-flag or this formula alone is NOT inherited measured authority.
-The offline validator can be built/tested under §29.8.2 before
-those measurements; it cannot ingest customer data or reach Chatwoot.
-Before any *customer execution*, also verify the actual target
-Chatwoot timeout, selected journal mode, the full callback's positive
-margin with separately authorized native-shaped synthetic
-REST/SQLite/backup/overload and concurrency trials, and durable HUMAN
-plus operator attention on timeout/non-2xx. Failed, unknown, changed
-or missing evidence HALTs the applicable gate. No setup, public POST,
-config mutation, DB initialization or service activation is authorized
-by this docs-only amendment.
+**Two distinct evidence gates.** For ingress-only production-code
+implementation, freeze the one-process topology, independent
+synthetic **component benchmarks** of the existing v4 store, SQLite
+lock waits, mock HTTP/body/queue and response model, and an explicit
+derived **design allocation** for `I,R_seq,N,S_exec,E,B_v4,W_ext,Q,O,M`.
+Measure existing primitives on exact pinned runtime/SQLite, state
+measured versus surrogate versus enforced upper limits separately,
+and derive numeric caps from real baseline evidence and the
+attested five-second budget, **not** from preference or arbitrary
+fixture numbers. New code MUST enforce applicable limits or refuse
+startup/admission and remain unwired for customer execution.
+A non-production synthetic benchmark is not an end-to-end measurement.
+The full callback may be measured only after code exists, and is not
+required as a pre-code measurement. Before *customer execution*,
+recheck the real target timeout and chosen journal mode; run the exact
+implemented callback under bounded synthetic load, overlapping REST,
+lock/backup/recovery, repeated contention and overload, with positive
+response margin; and prove native timeout/non-2xx effects, durable
+HUMAN plus operational attention and B2 recovery. If either gate is
+unprovable, HALT that stage. No real Chatwoot connection, customer
+data, deployment, public POST, config mutation or first production
+DB creation is authorized by this docs-only amendment.
 
 ## 29.9 Clarification and semantic provenance under v0.8
 
