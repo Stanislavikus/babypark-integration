@@ -5,9 +5,7 @@ Applies to: BabyPark AI First Line Website v1 / Slice C acceptance contract.
 Supersedes: `docs/AI_FIRST_LINE_ACCEPTANCE.md` at canonical main `f9b5b8e5320884a675af3ea8e608c1e986e8331d`.
 Companion: `docs/AI_FIRST_LINE_DESIGN.md`
 Historical research baseline: `e4b3989f852d5de4a868a6f72867b87cb64f8b2d`.
-Contract amendment base for this PR #130 proposal: canonical main `f9b5b8e5320884a675af3ea8e608c1e986e8331d`.
-Amendment history: Stage 0 first froze v0.8 at base `09cbf704aba2a6bab4aa1ccacf904926286c3977`; prior provenance remains historical.
-Amendment campaign: PR #130 timing-gate change; this header records its exact pre-amendment predecessor.
+Contract amendment base: canonical main `f9b5b8e5320884a675af3ea8e608c1e986e8331d` (PR #130 timing exception).
 
 This file is the single normative acceptance corpus for AI First Line v0.8. It
 incorporates the complete prior acceptance corpus plus the C6/C25
@@ -1166,47 +1164,30 @@ Expected:
 - changing measured/frozen timing authority is a reviewed configuration/contract
   event, not an ad-hoc code constant.
 
-### Q39a — nondeployed timing fixtures do not authorize production
+### Q39a — the offline fixture exception cannot escape into runtime
 
-Exercise these distinct cases:
-1. Before any target measurement, an isolated non-customer harness tests a
-   pure fail-closed C6 timing/budget validator using explicitly synthetic
-   fixture values, with no production Chatwoot connection or public POST.
-2. The same fixture or an invented environment/default value is supplied
-   to a production connection, customer-data/real-customer shadow mode,
-   runtime activation or public-action dispatch path.
-3. A deployment has missing, stale, mismatched or insufficient actual
-   timing/deadline evidence (even if a proposed relationship looks safe);
-   separately, even with valid target evidence, a proposed relationship
-   would permit an expired claim, duplicate/uncertain POST or false handoff
-   completion.
-4. A target-matched, measured/inherited configuration has verified
-   lease/deadline/retry relationships and a provably safe complete
-   provider callback-time budget before deployment/customer execution.
-5. Configuration evidence becomes invalid after an action is already
-   accepted, including PREPARED/GATING/SENDING/UNCERTAIN, a restart and
-   already-accepted deferred work.
-6. A frozen EpisodeStore 5000 ms per-lock wait is mistakenly treated as
-   proof of the complete webhook response deadline.
+Exercise the following distinct cases:
+1. Pure offline C6 timing validator, synthetic fixtures and isolated harness,
+   with no customer data or Chatwoot connectivity.
+2. Fixture values, environment defaults, or caller-supplied fixture mode reach
+   any production webhook, AI public-action or customer-facing timing path.
+3. Before measurement, a non-validator C6 change implements a timing-dependent
+   webhook ingestion, claim, dispatch or reconciliation path.
+4. A whole-repository release contains dormant C6 files, an unrelated
+   Catalog/Gateway fix, or standalone C6 backup/restore, without executing
+   any customer-facing C6 runtime path.
+5. At production activation, the provider callback budget or a related timing
+   relationship is unproved, including misuse of the frozen SQLite
+   busy_timeout=5000 as a whole-callback bound.
 
 Expected:
-- (1) MAY implement/test without first measuring target runtime timing; it
-  establishes no production authority or production-implementation option.
-- (2), (3) and (6) FAIL CLOSED: no new customer admission, autonomous
-  dispatch or Chatwoot public POST based on fixture/guessed/unknown timing.
-- (4) may proceed only subject to all other frozen admission, evidence,
-  implementation-options, safety and activation gates; passing this vector
-  alone is not deployment authorization.
-- (5) keeps previously accepted semantic work under existing §29.8.2,
-  Q37/Q39, §43 and at-most-once recovery rules: invalid timing admission
-  prevents PREPARED/GATING from crossing GATING→SENDING or making any POST,
-  including across restart; their durable HUMAN continuation owns recovery
-  by the persisted deadline. SENDING/UNCERTAIN must reconcile safely without
-  repeating any unknown-outcome POST or handoff. Newly arriving turns have
-  no autonomous dispatch and require fail-closed HUMAN/operator attention.
-  No invalid timing proof authorizes physical-success claims.
-- The already frozen EpisodeStore busy_timeout=5000 milliseconds is unchanged;
-  it does not establish a provider webhook deadline or whole-callback budget.
+- (1) is permitted for validator implementation/tests only; no production
+  authority is created.
+- (2), (3) and (5) FAIL CLOSED under §29.8.2/Q39/U14; fixture values never
+  authorize public POST or replace target-matched measurements/inherited facts.
+- (4) alone is not C6 timing-dependent runtime implementation/activation.
+- Earlier §29.8.2, Q37/Q39 and §43 durable HUMAN, liveness and no-retry
+  obligations remain unchanged; this exception cannot bypass them.
 
 ### Q40 — structured submission arriving before local CLARIFY confirmation is not lost
 A CLARIFY public message is visible to the customer and receives a native
@@ -2472,8 +2453,7 @@ Expected:
 - predecessor variant_id, old price/label/render bytes are never inherited.
 
 ### U14 — timing authority is measured/configured, not guessed
-Apply Q39a's distinct synthetic-code vs evidence-bound runtime gates while
-providing one evidence-bound configuration and parameterizing invalid relationships
+Provide one evidence-bound configuration and parameterize invalid relationships
 between lease, pre-SENDING external-call budgets, POST timeout, action/turn
 deadline, read retry budget, UNCERTAIN reconciliation window and HUMAN
 handoff/escalation window.
