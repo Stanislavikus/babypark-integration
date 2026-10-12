@@ -2,10 +2,10 @@
 
 Status: FROZEN — C6/C25 pre-implementation safety acceptance + prior v0.7/C5 acceptance
 Applies to: BabyPark AI First Line Website v1 / Slice C acceptance contract.
-Supersedes: `docs/AI_FIRST_LINE_ACCEPTANCE.md` at canonical main `f9b5b8e5320884a675af3ea8e608c1e986e8331d`.
+Supersedes: `docs/AI_FIRST_LINE_ACCEPTANCE.md` at canonical main `13f7f81b7c7cdc94fd977363fc7027387e76728a`.
 Companion: `docs/AI_FIRST_LINE_DESIGN.md`
 Historical research baseline: `e4b3989f852d5de4a868a6f72867b87cb64f8b2d`.
-Contract amendment base: canonical main `f9b5b8e5320884a675af3ea8e608c1e986e8331d` (PR #130 timing exception).
+Contract amendment base: canonical main `13f7f81b7c7cdc94fd977363fc7027387e76728a` (C6 ingress-only A-prime timing gate).
 
 This file is the single normative acceptance corpus for AI First Line v0.8. It
 incorporates the complete prior acceptance corpus plus the C6/C25
@@ -1178,7 +1178,8 @@ Exercise the following distinct cases:
    any customer-facing C6 runtime path.
 5. At production activation, the provider callback budget or a related timing
    relationship is unproved, including misuse of the frozen SQLite
-   busy_timeout=5000 as a whole-callback bound.
+   historical C1 `EpisodeStore` busy_timeout=5000 as a v4 setting or
+    as a whole-callback bound.
 
 Expected:
 - (1) is permitted for validator implementation/tests only; no production
@@ -1188,6 +1189,50 @@ Expected:
 - (4) alone is not C6 timing-dependent runtime implementation/activation.
 - Earlier §29.8.2, Q37/Q39 and §43 durable HUMAN, liveness and no-retry
   obligations remain unchanged; this exception cannot bypass them.
+
+### Q39b — ingress-only callback feasibility and C1/v4 applicability
+
+Exercise a synthetic-only matrix on the exact topology and bound provenance
+specified in DESIGN §29.8.3, without customer data, deployed Chatwoot writes,
+or C6 runtime activation:
+
+1. C1 schema-v1 `EpisodeStore` uses its historical explicit 5000-ms wait,
+   while v4 `FirstLineStateStore` proposes a separately evidenced
+   explicitly configured wait. A v4 value chosen only from a fixture,
+   code default, or C1 history does not become timing authority.
+2. One ingress OS process with admitted `N` versus two OS processes,
+   exceeding `N`, unbounded body ingress, or unbounded unrelated
+   event-loop work. Exercise repeated external contention episodes `E>1`,
+   not only a single contested SQLite write.
+3. One owning atomic ingest transaction repeats source/deferred-parent
+   equality and HUMAN cuts; a pre-transaction duplicate read alone is
+   insufficient. Delayed REST/SQL/COMMIT in the same event loop must
+   respect `I+R_seq+N*S_exec+E*min(B_v4,W_ext)+Q+O < T_webhook-M`.
+   The 5000-ms default authority-read timeout is rejected for a
+   5000-ms webhook target whenever additional work/margin is nonzero.
+4. The admitted workload stays strictly within the evidenced callback
+   envelope; a competing post-send batch, backup read-lock/restart,
+   repeated writer activity, blocked `busy_timeout`, or unknown
+   `journal_mode` breaks the candidate envelope or RPO.
+5. Overflow at `N` and Chatwoot v4.18.0 native non-2xx outcomes:
+   distinguish 4xx, 429, 500, 503, worker retry and native
+   `pending→open`. A claimed success/handoff or unnotified HUMAN
+   state is NEVER inferred from HTTP status. If no bounded safe
+   overload behavior is proven, deployment is blocked.
+6. Offline-only validator before numerical authority versus attempted
+   production ingress code before measured/merged-inherited values,
+   and separately successful or failed authorized isolated synthetic
+   callback trial before customer execution.
+7. Journal selection before first B2 production DB creation, exact
+   `PRAGMA journal_mode` readback afterward, and both DELETE and
+   WAL restore/backup interference cases (WAL requires its own
+   checkpoint/-wal/-shm proof).
+
+Expected: only a source-bound, non-overlapping complete budget with a
+positive margin and proved error/HUMAN/operator-attention semantics can
+authorize the next gate. A missing, guessed, unbounded, stale or
+unsatisfied member HALTs the corresponding implementation or activation;
+§29.8.2/Q39a offline-validation-only exception is not extended.
 
 ### Q40 — structured submission arriving before local CLARIFY confirmation is not lost
 A CLARIFY public message is visible to the customer and receives a native
