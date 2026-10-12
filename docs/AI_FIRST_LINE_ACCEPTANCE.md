@@ -1207,19 +1207,34 @@ or C6 runtime activation:
    A v4 value chosen only from a fixture, code default, or C1 history
    does not become timing authority.
 2. One ingress OS process with admitted `N` versus two OS processes,
-   exceeding `N`, unbounded body ingress, or unbounded unrelated
-   event-loop work. Exercise repeated external contention episodes `E>1`,
+   overlapping ingress restarts, exceeding `N`, unbounded body
+   ingress, or unbounded unrelated event-loop work. Exercise repeated external contention episodes `E>1`,
    not only a single contested SQLite write.
 3. One owning atomic ingest transaction repeats source/deferred-parent
    equality and HUMAN cuts; a pre-transaction duplicate read alone is
-   insufficient. Delayed REST/SQL/COMMIT in the same event loop must
-   respect `I+R_seq+N*S_exec+E*min(B_v4,W_ext)+Q+O < T_webhook-M`.
+   insufficient. Existing store's two-transaction ingestion is a
+   **surrogate measurement**, not measured proof for the future single
+   transaction. The final path MUST be remeasured before activation.
+   Delayed REST/SQL/COMMIT in the same event loop must respect
+   `I+R_seq+N*S_exec+E*min(B_v4,W_ext)+Q+O < T_webhook-M`.
+   Classify `I` byte cap, `R_seq` read deadline, `N` admission,
+   `B_v4` SQLite wait as **enforced controls**, while measuring the
+   non-preemptible `I` CPU and timer-lag; classify `S_exec,Q,O`
+   as **measured**, `W_ext` as **competitor-bounded**, and `E` as
+   bounded by admitted work and repeated external contention. Avoid
+   double-counting adjacent callback HMAC/validation CPU in `I`,
+   `S_exec` and `Q`. Do not pretend an event-loop timer interrupts
+   synchronous SQLite.
    The 5000-ms default authority-read timeout is rejected for a
    5000-ms webhook target whenever additional work/margin is nonzero.
 4. The admitted workload stays strictly within the evidenced callback
    envelope; a competing post-send batch, backup read-lock/restart,
    repeated writer activity, blocked `busy_timeout`, or unknown
-   `journal_mode` breaks the candidate envelope or RPO.
+   `journal_mode` breaks the candidate envelope or RPO. Exercise
+   expiry of `B_v4` as a **SQLITE_BUSY error** leading to a native
+   non-2xx/timeout outcome, NOT as a successful delayed callback.
+   Require its HUMAN and operator-attention recovery proof before
+   customer execution.
 5. Overflow at `N` and Chatwoot v4.18.0 native non-2xx outcomes:
    distinguish 4xx, 429, 500, 503, worker retry and native
    `pending→open`. For the code-stage, permit only a documented
@@ -1238,7 +1253,10 @@ or C6 runtime activation:
    separately before customer execution, not before code exists.
    The isolated harness MUST demonstrate target CPU/memory/storage,
    pinned Node/SQLite and co-resident Chatwoot/Postgres/Redis/Gateway
-   load equivalence or conservative cross-host bounds. Verify its
+   load equivalence or conservative cross-host bounds. The load model
+   MUST cite timestamped **read-only target observations**, including
+   representative peaks, actual CPU/IO contention and observation
+   window; missing peak evidence is a HALT, not zero load. Verify its
    predeclared run count, warm-up, tail percentile, confidence/uncertainty,
    maxima and variance-derived safety margin; arbitrary sample counts,
    guessed percentile/multiplier or unmatched host measurements FAIL.
