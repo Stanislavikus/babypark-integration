@@ -2790,10 +2790,29 @@ and verify fail-closed timeout/budget validation against explicitly synthetic
 fixture values, even before target-environment measurements are available.
 This narrow pre-production implementation permission does not establish
 runtime readiness and cannot be used to waive any other frozen invariant.
-No executable C6 runtime may silently substitute numeric defaults for a
-missing, unmeasured or otherwise unproved deployment configuration; without
-positive configured authority, startup/admission must HALT before any
-customer-data path, webhook acceptance or customer-facing action.
+No C6 runtime may silently substitute an **unproven** numeric deployment
+default for a missing, unmeasured or otherwise unproved timing value. A value
+expressly frozen by applicable merged authority remains mandatory: in
+particular the EpisodeStore SQLite busy_timeout=5000 rule in this Design
+is NOT relaxed
+or replaced by this amendment. That frozen lock-wait value does not, by itself,
+prove that the complete webhook callback fits the external timeout.
+
+**Positive configured timing authority** is a complete provenance record
+for every relevant runtime value: either (a) an exact immutable measurement
+record identity/digest and its measured component/version, environment,
+configuration, concurrency/load profile and recorded value; or (b) a cited
+applicable merged frozen authority with exact revision/blob and the value
+actually prescribed. Each record must be bound to the intended target tuple
+(account/installation, Chatwoot/runtime version, operating topology and
+configuration) and checked for applicability, age/drift where relevant, and
+positive safe relationships at startup. Missing provenance, a tuple mismatch,
+unsupported status or contradictory current configuration HALTs before any
+customer-data path, webhook acceptance, ownership claim or public POST.
+A numeric literal or environment variable alone is NOT evidence of provenance.
+Synthetic values may be injected only by a demonstrably isolated nonproduction
+test harness; no runtime flag or caller input may promote fixture authority
+into deployed execution.
 
 **Before any production-environment C6 execution involving real customer data,
 production Chatwoot connectivity, real-customer shadow mode or activation**,
@@ -2803,8 +2822,19 @@ window must be measured for that bounded runtime or inherited from an
 applicable merged authority per AI Working Agreement §8. The actual installation-
 wide Chatwoot WEBHOOK_TIMEOUT and cumulative REST, synchronous SQLite lock,
 admission queue/event-loop and response-margin budgets must likewise be proved
-on the target configuration where they govern a webhook ACK. Configuration
-must be startup-validated so selected lease/deadline/retry relationships
+on the target configuration where they govern a webhook ACK. A permissible
+measurement venue is (a) an isolated target-equivalent environment with the
+actual candidate source/build/runtime, DB/lock and worker topology and
+verified-equivalent settings, containing synthetic data only, or (b) a
+separately owner-approved bounded target measurement without customer data,
+customer webhook acceptance, or public provider writes. Any production
+connectivity/read or provider operation beyond that permission requires its
+own Agreement §§1–3 authorization; measurement is not customer-runtime
+activation. Target-equivalent measurements do not magically prove the live
+installation's current WEBHOOK_TIMEOUT: that configuration must also be
+independently bound and checked against its target source, or HALT.
+Configuration must be startup-validated so selected lease/deadline/retry
+relationships
 cannot permit a POST from an expired claim or convert unavailable authority
 into false terminal success. No numeric constant is chosen merely because
 it sounds reasonable. Synthetic/isolated tests or a pre-production code merge
@@ -2816,7 +2846,10 @@ exist for non-activated pre-production code authoring/review**. It does not
 authorize any real Chatwoot operation, relax startup validation, downgrade
 §29.8.2 durable HUMAN liveness, replace Q39 positive/negative configuration
 tests, permit an automated handoff/status toggle or expand the permitted
-public-send behavior.
+public-send behavior. This amendment is reviewed on canonical main
+f9b5b8e5320884a675af3ea8e608c1e986e8331d and adds acceptance
+vector Q39a; earlier historical header bases remain provenance, not the
+target/base for this amendment.
 
 ## 29.9 Clarification and semantic provenance under v0.8
 

@@ -1164,6 +1164,42 @@ Expected:
 - changing measured/frozen timing authority is a reviewed configuration/contract
   event, not an ad-hoc code constant.
 
+### Q39a — synthetic pre-production timing evidence is not live runtime authority
+
+Exercise the C6 timing config with an explicit test-only synthetic fixture in
+a demonstrably isolated, nondeployed harness. Separately attempt to construct
+or start the customer-data/webhook path with (1) no timing provenance,
+(2) a fixture-only config outside that harness, (3) a measurement record for a
+different target Chatwoot/runtime/configuration tuple, (4) a stale/missing
+measurement digest or unsupported authority, (5) a superficially plausible
+set of timing numbers whose cumulative REST + synchronous SQLite lock +
+queue/event-loop + response-margin budget cannot fit the externally proved
+WEBHOOK_TIMEOUT, and (6) one positively bound applicable measured/inherited
+configuration satisfying all required timing relationships.
+
+Expected:
+- isolated synthetic tests of the fail-closed budget validator are allowed
+  before target deployment measurements; they never turn the synthetic profile
+  into a production authority or authorize Chatwoot connectivity;
+- all (1)–(5) HALT before customer webhook acceptance, claiming work or public
+  POST, with no invented positive owner/terminal proof;
+- (6) may pass configuration validation only with explicit provenance:
+  immutable measured-record id/digest or exact merged frozen authority,
+  target tuple and configured values that match current verified scope;
+- runtime cannot enable synthetic test-only authority through a production
+  flag, ordinary environment variable or untrusted caller input;
+- the merged EpisodeStore busy_timeout=5000 remains mandatory; passing one
+  frozen SQLite setting never implies that a default 5000 ms provider timeout
+  has space for REST reads and response margin;
+- an isolated target-equivalent measurement uses matching source, worker,
+  lock and configuration topology and synthetic data; a separately permitted
+  bounded target measurement remains non-customer and is never blanket
+  permission for production reads/provider writes;
+- a pre-activation code merge is not deployment evidence; later real
+  configuration drift invalidates readiness and startup must fail closed;
+- elapsed time alone never proves a handoff attempt did not commit, never
+  permits repeat POST or unsafe automated ownership/status toggle.
+
 ### Q40 — structured submission arriving before local CLARIFY confirmation is not lost
 A CLARIFY public message is visible to the customer and receives a native
 `message_updated` submission while BabyPark still holds the action as SENDING
@@ -2428,7 +2464,8 @@ Expected:
 - predecessor variant_id, old price/label/render bytes are never inherited.
 
 ### U14 — timing authority is measured/configured, not guessed
-Provide one evidence-bound configuration and parameterize invalid relationships
+Apply Q39a's distinct synthetic-code vs evidence-bound runtime gates while
+providing one evidence-bound configuration and parameterizing invalid relationships
 between lease, pre-SENDING external-call budgets, POST timeout, action/turn
 deadline, read retry budget, UNCERTAIN reconciliation window and HUMAN
 handoff/escalation window.

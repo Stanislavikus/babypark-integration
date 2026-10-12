@@ -3,6 +3,8 @@
 Status: EVIDENCE — NON-NORMATIVE
 
 Applies to: docs-only C6/C25 Stage 0 contract amendment on `feat/c6-stage0-contract`.
+PR #130 addendum applies only to the separate docs-only C6 §29.8.2 timing-gate
+amendment; it does NOT retroactively reclassify earlier Stage 0 gate evidence.
 
 Supersedes: none.
 
@@ -384,3 +386,34 @@ This amendment does not:
 - patch/fork Chatwoot;
 - authorize any later production code without a fresh implementation-options
   gate and explicit owner approval where Agreement requires it.
+
+## PR #130 later timing-gate amendment — docs-only traceability
+
+Status: EVIDENCE — NON-NORMATIVE, append-only campaign-specific traceability.
+Applies to: Draft PR #130, on exact target/main
+f9b5b8e5320884a675af3ea8e608c1e986e8331d,
+governance blob e777fce4af8e8c3372f1f9de9ef7d00f786c2c89.
+Supersedes: none; earlier Stage 0 terminal above remains historical evidence.
+Risk tier: HEAVY — proposed amendment changes normative timing gate placement.
+Production implementation: NONE. Production deployment/Chatwoot operation: NONE.
+
+The earlier Stage 0 row on timing originally described the frozen
+timing-before-implementation/activation policy. PR #130 does not claim that
+row alone covers its changed gate. This separate exact artifact-level
+mapping does not treat future runtime tests or provider measurements
+as already passed:
+
+| PR130 requirement / invariant | Normative artifact clause | Focused docs-only verification (not production proof) | Fail-closed behavior | Durable-state impact | Status |
+| --- | --- | --- | --- | --- | --- |
+| P130-T01 synthetic-only, nondeployed C6 authoring is not customer-runtime authorization | DESIGN §29.8.2 first timing paragraph; ACCEPTANCE Q39a (1),(2), U14 | Static check: permission limited to isolated fixtures and Q39a denies missing/synthetic deployed provenance | Missing runtime config HALTs before webhook/claim/POST | NONE: no code/schema change | DONE |
+| P130-T02 numeric authority must carry scoped measurement or exact inherited contract, not plausible literal or TEST_MODE bypass | DESIGN §29.8.2 positive configured timing authority; ACCEPTANCE Q39a (3),(4),(6), U14 | Static check: record provenance, target tuple, mismatch/drift denial and frozen busy_timeout=5000 | Unsupported source/unsafe relationships HALT | NONE: no schema/content added | DONE |
+| P130-T03 measurement venue must be isolated target-equivalent or separately approved non-customer target; live config separately attested | DESIGN §29.8.2 measurement venue; ACCEPTANCE Q39a (5),(6), Q39, U14 | Static check: venue limits, real provider timeout proof and cumulative lock/REST/queue margin | No customer/provider writes; exceeded budget HALTs | NONE: future config gate only | DONE |
+| P130-T04 HUMAN, at-most-once and no unsafe handoff remain; docs/code merge is not deployment proof | DESIGN §29.8.2 retained liveness and disclaimer; ACCEPTANCE Q39a final conditions, Q39, U14 and §43 | Static check: HUMAN/no-repeat/no-toggle preserved, Q39a rejects elapsed-time proof | HUMAN remains absorbing, no duplicate POST/handoff | NONE: existing semantics unchanged | DONE |
+| P130-T05 docs-only bounded PR, retained historical authority and required checks | Exact changed paths; DESIGN and ACCEPTANCE in-place frozen docs; this EVIDENCE addendum | git diff --name-status BASE..HEAD, git diff --check BASE..HEAD and deterministic static semantic assertion | Unexpected executable change => HALT | NONE | DONE |
+
+Docs-only DONE statuses attest proposed contract text and static consistency,
+not actual runtime execution. Q39a/U14 become executable tests required by
+future C6 implementation. This addendum is not a waiver of Agreement §7.1
+HEAVY two-pass ZERO BLOCKERS review, immutable verification manifest,
+pre-owner evidence bundle or final owner merge authority. The proposed
+changes are not normative until merged to canonical main.
