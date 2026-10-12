@@ -6,7 +6,7 @@ Applies to: docs-only C6/C25 Stage 0 contract amendment on `feat/c6-stage0-contr
 PR #130 addendum applies only to the separate docs-only C6 §29.8.2 timing-gate
 amendment; it does NOT retroactively reclassify earlier Stage 0 gate evidence.
 
-Supersedes: none.
+Supersedes: the previous EVIDENCE version of this same file at canonical main f9b5b8e5320884a675af3ea8e608c1e986e8331d; original Stage 0 history retained below.
 
 ## Exact campaign basis
 
@@ -406,10 +406,10 @@ as already passed:
 | PR130 requirement / invariant | Normative artifact clause | Focused docs-only verification (not production proof) | Fail-closed behavior | Durable-state impact | Status |
 | --- | --- | --- | --- | --- | --- |
 | P130-T01 synthetic-only, nondeployed C6 authoring is not customer-runtime authorization | DESIGN §29.8.2 first timing paragraph; ACCEPTANCE Q39a (1),(2), U14 | Static check: permission limited to isolated fixtures and Q39a denies missing/synthetic deployed provenance | Missing runtime config HALTs before webhook/claim/POST | NONE: no code/schema change | DONE |
-| P130-T02 numeric authority must carry scoped measurement or exact inherited contract, not plausible literal or TEST_MODE bypass | DESIGN §29.8.2 positive configured timing authority; ACCEPTANCE Q39a (3),(4),(6), U14 | Static check: record provenance, target tuple, mismatch/drift denial and frozen busy_timeout=5000 | Unsupported source/unsafe relationships HALT | NONE: no schema/content added | DONE |
-| P130-T03 measurement venue must be isolated target-equivalent or separately approved non-customer target; live config separately attested | DESIGN §29.8.2 measurement venue; ACCEPTANCE Q39a (5),(6), Q39, U14 | Static check: venue limits, real provider timeout proof and cumulative lock/REST/queue margin | No customer/provider writes; exceeded budget HALTs | NONE: future config gate only | DONE |
+| P130-T02 numeric authority must carry scoped measurement, FROZEN source or operator attestation; test profiles never become production authority | DESIGN §29.8.2 positive configured timing authority/operator attestation/DI-only synthetic loader; ACCEPTANCE Q39a (1)–(4),(6),(7), U14 | Reproducible check PR130-C2: verify named provenance, target, loader rejection, provider privileges prohibition and renewal on config epoch | Unsupported source/unsafe relationships HALT | NONE: no schema/content added | DONE |
+| P130-T03 admitted webhook delay uses configured worst-case bound; measurement venue is isolated equivalent or approved non-customer, provider config operator-attested | DESIGN §29.8.2 worst-case envelope + venue; ACCEPTANCE Q39a (5)–(7), Q39, U14 | Reproducible check PR130-C3: all configured REST attempts, each SQLite busy_timeout, queue/event-loop upper bound, margin, strict less-than and attestation/venue cases | No customer/provider writes; exceeded/unbounded deadline HALTs | NONE: future config gate only | DONE |
 | P130-T04 HUMAN, at-most-once and no unsafe handoff remain; docs/code merge is not deployment proof | DESIGN §29.8.2 retained liveness and disclaimer; ACCEPTANCE Q39a final conditions, Q39, U14 and §43 | Static check: HUMAN/no-repeat/no-toggle preserved, Q39a rejects elapsed-time proof | HUMAN remains absorbing, no duplicate POST/handoff | NONE: existing semantics unchanged | DONE |
-| P130-T05 docs-only bounded PR, retained historical authority and required checks | Exact changed paths; DESIGN and ACCEPTANCE in-place frozen docs; this EVIDENCE addendum | git diff --name-status BASE..HEAD, git diff --check BASE..HEAD and deterministic static semantic assertion | Unexpected executable change => HALT | NONE | DONE |
+| P130-T05 docs-only bounded PR with exact predecessor in both FROZEN headers and complete verification | Diff BASE..HEAD; Design/Acceptance Supersedes current exact BASE; separate Stage 0 history and traceability | Reproducible PR130-C5 checks of both headers plus git diff --name-status and git diff --check against pinned CAMPAIGN_BASE_OID | Unexpected changed source/predecessor/check => HALT | NONE | DONE |
 
 Docs-only DONE statuses attest proposed contract text and static consistency,
 not actual runtime execution. Q39a/U14 become executable tests required by
@@ -417,3 +417,51 @@ future C6 implementation. This addendum is not a waiver of Agreement §7.1
 HEAVY two-pass ZERO BLOCKERS review, immutable verification manifest,
 pre-owner evidence bundle or final owner merge authority. The proposed
 changes are not normative until merged to canonical main.
+
+### Reproducible PR #130 docs-only consistency checks (PR130-C1..C5)
+
+On the exact reviewed commit, with CAMPAIGN_BASE_OID bound to the immutable
+40-hex campaign base, execute this self-contained Python command. It invokes
+only the Python standard library, reads the frozen changed documents, and
+fails by assertion on any missing/contradictory clause. It is a docs-only
+contract check, not a runtime exercise or substitute for the exhaustive review:
+
+    python3 - <<'PY'
+    from pathlib import Path
+    import os, subprocess
+    base = os.environ['CAMPAIGN_BASE_OID']
+    assert len(base) == 40 and all(c in '0123456789abcdef' for c in base)
+    d = Path('docs/AI_FIRST_LINE_DESIGN.md').read_text()
+    a = Path('docs/AI_FIRST_LINE_ACCEPTANCE.md').read_text()
+    t = Path('docs/AI_FIRST_LINE_C6_STAGE0_CONTRACT_TRACEABILITY.md').read_text()
+    for name, content in [('DESIGN',d),('ACCEPTANCE',a)]:
+        assert 'Supersedes: ' in content[:900] and base in content[:950]
+        assert 'Amendment history:' in content[:1100]
+    checks = {
+       'C1': ('synthetic timing profile','test harness','customer-data'),
+       'C2': ('**operator attestation**','Super Admin','provenance','SYNTHETIC'),
+       'C3': ('worst-case','STRICTLY LESS THAN','busy_timeout=5000','queue'),
+       'C4': ('§29.8.2 durable HUMAN','public-send behavior'),
+    }
+    for label, needles in checks.items():
+        for needle in needles:
+            assert needle.lower() in d.lower(), (label, needle)
+    assert '### Q39a —' in a and '### U14 —' in a
+    assert 'all (1)–(5) and (7) HALT' in a
+    assert 'WEBHOOK_TIMEOUT=5000 MUST FAIL' in a
+    for i in range(1,6):
+        key='| P130-T0'+str(i)+' '
+        row=next(line for line in t.splitlines() if line.startswith(key))
+        assert row.endswith(' | DONE |')
+    paths=set(subprocess.check_output(
+        ['git','diff','--name-only',base+'..HEAD'],text=True).splitlines())
+    assert paths=={
+        'docs/AI_FIRST_LINE_DESIGN.md',
+        'docs/AI_FIRST_LINE_ACCEPTANCE.md',
+        'docs/AI_FIRST_LINE_C6_STAGE0_CONTRACT_TRACEABILITY.md'}
+    print('PR130-C1..C5 PASS')
+    PY
+
+The required-verification manifest binds this exact command's normalized
+bytes/digest plus its stdout/exit identity. Running a convenient different
+script or relying on an unpublished prior assertion does not satisfy C1..C5.

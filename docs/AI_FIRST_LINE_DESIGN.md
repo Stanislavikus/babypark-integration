@@ -2,12 +2,14 @@
 
 Status: FROZEN — C6/C25 pre-implementation safety contract + prior v0.7/C5 contract
 Applies to: BabyPark AI First Line Website v1 / Slice C normative design.
-Supersedes: `docs/AI_FIRST_LINE_DESIGN.md` at canonical main `09cbf704aba2a6bab4aa1ccacf904926286c3977`.
+Supersedes: `docs/AI_FIRST_LINE_DESIGN.md` at canonical main `f9b5b8e5320884a675af3ea8e608c1e986e8331d`.
 Implementation: C1/C2a/C2b/C2c/C3/C4/C5 are merged. This amendment freezes the
 remaining C6 relay/reauthorization and C25 dependent-follow-up semantics before
 production implementation. It adds no C6/C25 production code, Chatwoot write,
 deployment or activation in this stage.
-Contract amendment base: canonical main `09cbf704aba2a6bab4aa1ccacf904926286c3977`.
+Contract amendment base for this PR #130 proposal: canonical main `f9b5b8e5320884a675af3ea8e608c1e986e8331d`.
+Amendment history: Stage 0 first froze v0.8 at base `09cbf704aba2a6bab4aa1ccacf904926286c3977`; prior provenance remains historical.
+PR #130 scope: timing-gate amendment only; proposed until merged into canonical main.
 Chatwoot runtime verified: package v4.18.0; deployed tracked sources and the
 current gitignored production Vite manifest/chunks/source maps were verified
 against the running target. Exact hashes/equivalence evidence is recorded in
@@ -2798,21 +2800,41 @@ is NOT relaxed
 or replaced by this amendment. That frozen lock-wait value does not, by itself,
 prove that the complete webhook callback fits the external timeout.
 
-**Positive configured timing authority** is a complete provenance record
-for every relevant runtime value: either (a) an exact immutable measurement
-record identity/digest and its measured component/version, environment,
-configuration, concurrency/load profile and recorded value; or (b) a cited
-applicable merged frozen authority with exact revision/blob and the value
-actually prescribed. Each record must be bound to the intended target tuple
-(account/installation, Chatwoot/runtime version, operating topology and
-configuration) and checked for applicability, age/drift where relevant, and
-positive safe relationships at startup. Missing provenance, a tuple mismatch,
-unsupported status or contradictory current configuration HALTs before any
-customer-data path, webhook acceptance, ownership claim or public POST.
-A numeric literal or environment variable alone is NOT evidence of provenance.
-Synthetic values may be injected only by a demonstrably isolated nonproduction
-test harness; no runtime flag or caller input may promote fixture authority
-into deployed execution.
+**Positive configured timing authority** requires evidence for every
+relevant runtime value: (a) a content-addressed measurement record with
+component/version, target environment, configuration, bounded load profile,
+operator or measuring agent, UTC time and exact value; or (b) an applicable
+merged FROZEN source with its revision/blob and the value it mandates.
+The evidence must match the target installation/account, Chatwoot/build
+version, relay/runtime version, worker and local-DB topology and settings.
+Missing/mismatched/stale evidence, unsafe arithmetic or an unrecorded
+deployment change HALTs customer-data acceptance and all dispatch/POST.
+A numeric literal or environment variable alone is not evidence.
+
+For the installation-wide provider WEBHOOK_TIMEOUT and inaccessible provider
+worker/App Config settings, the authority is a bounded **operator attestation**:
+an authorized administrator records the effective value, source and exact
+readback method (Chatwoot Super Admin App Configs or the authoritative runtime
+configuration), target installation/build/configuration tuple, operator, UTC
+time, and immutable record identity/digest in the controlled deployment
+registry/runbook per Agreement §2.0a. The independently versioned deployment
+configuration references that attestation, not a bare numeric claim. The
+BabyPark relay MUST NOT acquire Chatwoot Super Admin access or Chatwoot DB
+credentials to inspect this setting. At startup the relay validates the
+attestation's integrity, required fields, target applicability and known
+configuration epoch; **it cannot claim to have live-read the provider value**.
+Chatwoot upgrade, rebuild, worker/topology change or App Config change MUST
+invalidate the old attestation and require renewed administrator attestation
+before any further customer-data/runtime admission. Undetectable out-of-band
+changes are an operational risk requiring controlled change management and
+periodic re-attestation; an attestation is not a continuous provider drift
+oracle.
+
+A synthetic timing profile is allowed only through direct dependency injection
+into the isolated non-deployed validation/test harness. The production
+configuration loader rejects SYNTHETIC provenance **unconditionally**, without
+an environment flag, feature switch or caller-supplied escape hatch.
+The production loader is not exposed to this test-only injection path.
 
 **Before any production-environment C6 execution involving real customer data,
 production Chatwoot connectivity, real-customer shadow mode or activation**,
@@ -2820,9 +2842,29 @@ every lease, authority/read timeout, producer timeout, deadline, pre-SENDING
 read-retry budget, UNCERTAIN reconciliation window and HUMAN handoff/escalation
 window must be measured for that bounded runtime or inherited from an
 applicable merged authority per AI Working Agreement §8. The actual installation-
-wide Chatwoot WEBHOOK_TIMEOUT and cumulative REST, synchronous SQLite lock,
-admission queue/event-loop and response-margin budgets must likewise be proved
-on the target configuration where they govern a webhook ACK. A permissible
+wide Chatwoot WEBHOOK_TIMEOUT and the complete **configured worst-case bound**
+for synchronous webhook processing must also be proved. The envelope is:
+all sequential scoped REST operations (per-operation configured timeout
+multiplied by maximum attempts), plus ALL possible blocking SQLite lock
+acquisitions (each bounded by its configured busy_timeout, multiplied by its
+maximum possible count), plus worst-case CPU/event-loop scheduling and bounded
+admission queue delay, plus a positive measured/inherited safety margin.
+Admission concurrency and queue capacity MUST be finite and enforced; when
+work can be queued behind other in-flight callbacks, the bound includes the
+maximum number and cumulative blocking work of those preceding callbacks
+(or a stronger proved scheduling/admission bound). Each operand must have a
+positively configured upper limit and relevant immutable evidence. Require
+the SUM of these **upper bounds**, not measured p50/p99 averages, to be
+STRICTLY LESS THAN the attested effective provider WEBHOOK_TIMEOUT.
+Measured runs support the safety margin and topology assumptions only;
+they never replace a configured lock/REST/queue worst-case. A synchronous
+SQLite wait may block the whole Node event loop. A timed-out JavaScript
+Promise is not proof that synchronous SQLite work was interrupted.
+The frozen EpisodeStore busy_timeout=5000 remains unchanged, so a default
+five-second provider WEBHOOK_TIMEOUT cannot pass even one fully contended
+SQLite acquisition plus positive REST/margin. If that inequality cannot be
+proven, HALT; any installation-wide timeout change needs separate owner
+approval, and no new lease bypass, fast ACK or implicit core patch is allowed. A permissible
 measurement venue is (a) an isolated target-equivalent environment with the
 actual candidate source/build/runtime, DB/lock and worker topology and
 verified-equivalent settings, containing synthetic data only, or (b) a
@@ -2830,9 +2872,12 @@ separately owner-approved bounded target measurement without customer data,
 customer webhook acceptance, or public provider writes. Any production
 connectivity/read or provider operation beyond that permission requires its
 own Agreement §§1–3 authorization; measurement is not customer-runtime
-activation. Target-equivalent measurements do not magically prove the live
-installation's current WEBHOOK_TIMEOUT: that configuration must also be
-independently bound and checked against its target source, or HALT.
+activation. Target-equivalent measurements do not prove the live installation's
+current WEBHOOK_TIMEOUT: that value requires the independent authorized
+operator attestation above; missing/expired/wrong-target attestation HALTs.
+Equivalent worker topology is evidenced by exact worker count/process
+model, concurrency, local DB/filesystem and queue bounds for both environments,
+not asserted because the software versions match.
 Configuration must be startup-validated so selected lease/deadline/retry
 relationships
 cannot permit a POST from an expired claim or convert unavailable authority
@@ -2846,10 +2891,9 @@ exist for non-activated pre-production code authoring/review**. It does not
 authorize any real Chatwoot operation, relax startup validation, downgrade
 §29.8.2 durable HUMAN liveness, replace Q39 positive/negative configuration
 tests, permit an automated handoff/status toggle or expand the permitted
-public-send behavior. This amendment is reviewed on canonical main
-f9b5b8e5320884a675af3ea8e608c1e986e8331d and adds acceptance
-vector Q39a; earlier historical header bases remain provenance, not the
-target/base for this amendment.
+public-send behavior. The current proposal adds acceptance vector Q39a;
+the amendment's exact base and historical provenance are recorded in the
+document header and in its separate campaign traceability evidence.
 
 ## 29.9 Clarification and semantic provenance under v0.8
 

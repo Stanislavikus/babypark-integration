@@ -2,10 +2,12 @@
 
 Status: FROZEN — C6/C25 pre-implementation safety acceptance + prior v0.7/C5 acceptance
 Applies to: BabyPark AI First Line Website v1 / Slice C acceptance contract.
-Supersedes: `docs/AI_FIRST_LINE_ACCEPTANCE.md` at canonical main `09cbf704aba2a6bab4aa1ccacf904926286c3977`.
+Supersedes: `docs/AI_FIRST_LINE_ACCEPTANCE.md` at canonical main `f9b5b8e5320884a675af3ea8e608c1e986e8331d`.
 Companion: `docs/AI_FIRST_LINE_DESIGN.md`
 Historical research baseline: `e4b3989f852d5de4a868a6f72867b87cb64f8b2d`.
-Contract amendment base: canonical main `09cbf704aba2a6bab4aa1ccacf904926286c3977`.
+Contract amendment base for this PR #130 proposal: canonical main `f9b5b8e5320884a675af3ea8e608c1e986e8331d`.
+Amendment history: Stage 0 first froze v0.8 at base `09cbf704aba2a6bab4aa1ccacf904926286c3977`; prior provenance remains historical.
+PR #130 scope: timing-gate amendment only; proposed until merged into canonical main.
 
 This file is the single normative acceptance corpus for AI First Line v0.8. It
 incorporates the complete prior acceptance corpus plus the C6/C25
@@ -1175,24 +1177,43 @@ measurement digest or unsupported authority, (5) a superficially plausible
 set of timing numbers whose cumulative REST + synchronous SQLite lock +
 queue/event-loop + response-margin budget cannot fit the externally proved
 WEBHOOK_TIMEOUT, and (6) one positively bound applicable measured/inherited
-configuration satisfying all required timing relationships.
+configuration satisfying all required timing relationships, and (7) a provider
+timeout/operator attestation that is absent, mismatched to the target,
+missing an immutable identity, invalidated by a newer known Chatwoot upgrade,
+or older than a documented App Config/worker change.
 
 Expected:
 - isolated synthetic tests of the fail-closed budget validator are allowed
   before target deployment measurements; they never turn the synthetic profile
   into a production authority or authorize Chatwoot connectivity;
-- all (1)–(5) HALT before customer webhook acceptance, claiming work or public
-  POST, with no invented positive owner/terminal proof;
+- all (1)–(5) and (7) HALT before customer webhook acceptance, claiming
+  work or public POST, with no invented positive owner/terminal proof;
 - (6) may pass configuration validation only with explicit provenance:
   immutable measured-record id/digest or exact merged frozen authority,
   target tuple and configured values that match current verified scope;
-- runtime cannot enable synthetic test-only authority through a production
-  flag, ordinary environment variable or untrusted caller input;
-- the merged EpisodeStore busy_timeout=5000 remains mandatory; passing one
-  frozen SQLite setting never implies that a default 5000 ms provider timeout
-  has space for REST reads and response margin;
-- an isolated target-equivalent measurement uses matching source, worker,
-  lock and configuration topology and synthetic data; a separately permitted
+- the production configuration loader rejects SYNTHETIC provenance regardless
+  of flags, environment variables or caller inputs; only a separate isolated
+  test harness injects synthetic fixture values directly into its validator;
+- provider-side WEBHOOK_TIMEOUT is evidenced by an authorized operator
+  attestation (effective value, source/readback method, target tuple,
+  operator, UTC timestamp, immutable record ID/digest), registered through
+  controlled deployment configuration; the relay has neither Super Admin
+  nor Chatwoot DB credentials and cannot claim live provider readback;
+- a Chatwoot upgrade, App Config change or worker/topology change invalidates
+  the attestation; missing, invalid or stale attestation HALTs under (7);
+- the deterministic ACK upper-bound sum counts each possible scoped REST
+  read attempt, each blocking SQLite busy_timeout=5000 acquisition,
+  bounded queue/event-loop work and positive margin. Configure the maximal
+  number of in-flight and preceding queued callbacks; if an operand is
+  unbounded/missing or the sum is not STRICTLY below proven WEBHOOK_TIMEOUT,
+  HALT even when the measured p99 happened to be low;
+- the merged EpisodeStore busy_timeout=5000 remains mandatory; with one
+  possible full lock wait and a positive REST/read/margin, a provider
+  WEBHOOK_TIMEOUT=5000 MUST FAIL, regardless of a fast measured p99;
+  increasing the provider setting cannot be assumed or performed by AI;
+- an isolated target-equivalent measurement records exact build, worker
+  count, concurrency, SQLite topology, queue bounds and configuration;
+  it uses only synthetic data; a separately permitted
   bounded target measurement remains non-customer and is never blanket
   permission for production reads/provider writes;
 - a pre-activation code merge is not deployment evidence; later real
