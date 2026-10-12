@@ -423,8 +423,11 @@ changes are not normative until merged to canonical main.
 On the exact reviewed commit, with CAMPAIGN_BASE_OID bound to the immutable
 40-hex campaign base, execute this self-contained Python command. It invokes
 only the Python standard library, reads the frozen changed documents, and
-fails by assertion on any missing/contradictory clause. It is a docs-only
-contract check, not a runtime exercise or substitute for the exhaustive review:
+fails on specified missing structural markers and three explicitly enumerated
+unsafe regression phrases. It CANNOT decide general semantic consistency:
+unrecognized contradictory wording can still pass this checker and MUST be
+caught by independent exhaustive whole-contract review. These probes are a
+narrow regression floor, not a proof that no contradictions exist:
 
     python3 - <<'PY'
     from pathlib import Path
@@ -449,6 +452,13 @@ contract check, not a runtime exercise or substitute for the exhaustive review:
     assert '### Q39a —' in a and '### U14 —' in a
     assert 'all (1)–(5) and (7) HALT' in a
     assert 'WEBHOOK_TIMEOUT=5000 MUST FAIL' in a
+    forbidden = (
+        'Production configuration loader MAY accept SYNTHETIC provenance through an environment flag.',
+        'Measured p99 may replace the configured worst-case bound.',
+        'Operator attestation is optional for WEBHOOK_TIMEOUT.',
+    )
+    for phrase in forbidden:
+        assert phrase.lower() not in d.lower(), ('known-unsafe-clause',phrase)
     for i in range(1,6):
         key='| P130-T0'+str(i)+' '
         row=next(line for line in t.splitlines() if line.startswith(key))
@@ -463,5 +473,10 @@ contract check, not a runtime exercise or substitute for the exhaustive review:
     PY
 
 The required-verification manifest binds this exact command's normalized
-bytes/digest plus its stdout/exit identity. Running a convenient different
-script or relying on an unpublished prior assertion does not satisfy C1..C5.
+bytes/digest plus its stdout/exit identity. Test its detection of the three
+enumerated forbidden phrases using independent IN-MEMORY negative mutations:
+each MUST cause AssertionError, without modifying source files. Passing the
+clean check and these three mutation probes does NOT prove arbitrary
+contradictory text is absent; a separate exhaustive contract review remains
+mandatory. Running a convenient different script or relying on an unpublished
+prior assertion does not satisfy C1..C5.
