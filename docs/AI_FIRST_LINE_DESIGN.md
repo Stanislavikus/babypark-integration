@@ -2,12 +2,12 @@
 
 Status: FROZEN — C6/C25 pre-implementation safety contract + prior v0.7/C5 contract
 Applies to: BabyPark AI First Line Website v1 / Slice C normative design.
-Supersedes: `docs/AI_FIRST_LINE_DESIGN.md` at canonical main `f9b5b8e5320884a675af3ea8e608c1e986e8331d`.
+Supersedes: `docs/AI_FIRST_LINE_DESIGN.md` at canonical main `13f7f81b7c7cdc94fd977363fc7027387e76728a`.
 Implementation: C1/C2a/C2b/C2c/C3/C4/C5 are merged. This amendment freezes the
 remaining C6 relay/reauthorization and C25 dependent-follow-up semantics before
 production implementation. It adds no C6/C25 production code, Chatwoot write,
 deployment or activation in this stage.
-Contract amendment base: canonical main `f9b5b8e5320884a675af3ea8e608c1e986e8331d` (PR #130 timing exception).
+Contract amendment base: canonical main `13f7f81b7c7cdc94fd977363fc7027387e76728a` (A-prime ingress-only timing feasibility; PR #130 retained).
 Chatwoot runtime verified: package v4.18.0; deployed tracked sources and the
 current gitignored production Vite manifest/chunks/source maps were verified
 against the running target. Exact hashes/equivalence evidence is recorded in
@@ -2813,6 +2813,98 @@ Catalog/Gateway releases, and standalone C6 backup/restore that does not
 execute these customer-facing paths do not constitute C6 runtime activation.
 No registry/attestation mechanism, numerical threshold or production
 deployment is selected by this docs-only exception.
+
+### 29.8.3 C6 ingress-only timing feasibility (proposed A-prime gate)
+
+This narrow amendment concerns **only** the synchronous Chatwoot AgentBot
+webhook ingress/ACK path. It does not authorize claiming, S2, public POST,
+UNCERTAIN reconciliation, HUMAN escalation scheduling, production C6 runtime,
+or a Chatwoot configuration change. Their independent measured/inherited
+timing authorities remain required by §29.8.2 before their implementation.
+The former §29.3 `EpisodeStore` / schema-v1 `busy_timeout=5000` rule is
+**historical C1 evidence**, not a numerical mandate for schema-v4
+`FirstLineStateStore`. The reference to `EpisodeStore` in §29.8.2 retains
+that historical meaning. Every v4 writer MUST still set `busy_timeout`
+explicitly per Agreement §5; a different, including smaller, ingress
+connection wait budget is eligible only with an independently justified,
+measured or already merged-inherited value, transaction/CAS correctness,
+and fail-closed proof. The existing v4 value of 5000 ms is implementation
+evidence, not proof that it fits a Chatwoot callback.
+
+The **initial target** is the existing Chatwoot v4.18.0 `WEBHOOK_TIMEOUT=5`
+seconds, read-only verified on 2026-10-12 from the actual production Rails
+`GlobalConfig` (upstream git `9f920b549c14491a4e587687a3eed5d21c6ccc7d`).
+It is a target, **not** a proven safe complete callback time, a permanent
+provider guarantee or authorization to alter Chatwoot. First attempt to fit
+inside 5 seconds; increasing the installation-wide value is a separate
+explicitly approved fallback after budget failure and impact/rollback review.
+Chatwoot sets network `open_timeout` and `read_timeout` separately;
+their individual 5-second values do not prove a 5-second end-to-end callback.
+
+The bounded deployment candidate is **one ingress OS process / Node event
+loop**, at most a positively configured finite `N` admitted callbacks and
+bounded body admission; rejected/excess callbacks cannot be silently ACKed
+or represented as HUMAN. Current #128 ingress has one exact REST GET,
+three read transactions and two `BEGIN IMMEDIATE` writes. The proposed
+minimal correction has at most one owning mutation transaction for each
+admitted event, with all source-topology, duplicate/deferred-parent,
+immutable-cut and blocker-to-HUMAN checks repeated **inside** it; no REST
+await inside this transaction. `UNIQUE(source_provider,source_conversation_id)`
+alone is not a replacement for in-transaction semantic equality (B1-R07).
+Routing/S2/send use injected stores in source, but their actual OS-process
+placement is not proven and is **not** licensed by this ingress-only scope.
+The candidate post-send recovery service would be a separate process/SQLite
+connection; B2 backup would use a separate read-only source connection.
+Any additional writers, processes or event-loop tasks invalidate this budget
+until their effects are explicitly bounded and reviewed.
+
+For an admitted callback, define a conservative **testable envelope**:
+
+`I + R_seq + N*S_exec + E*min(B_v4,W_ext) + Q + O + M < 5000 ms`
+
+Here `I` bounds body ingress; `R_seq` sums sequential authoritative REST
+attempt budgets (overlapped REST deliveries do not multiply this term);
+`S_exec` bounds one delivery's synchronous SQL/COMMIT and CPU execution
+**excluding** external lock waiting; `B_v4` is the selected explicit
+SQLite busy wait; `W_ext` bounds one incompatible external lock-holding
+episode; `E` bounds how many such episodes one callback may encounter;
+`Q` bounds unrelated event-loop/queue delay; `O` bounds HTTP response
+completion; and `M>0` is a sourced response margin. `N` multiplies
+synchronous work on the **same** event loop; external lock waiting is
+added separately, never automatically multiplied by `N`. Using `E=1`
+is allowed only if schedule/locking proof prevents repeated external
+conflicts; otherwise `E` must include them. The safe design envelope
+is `T_safe_callback=5000 ms-M`, **not** the provider's assured deadline.
+All numerical members require measured or merged-inherited evidence
+**before timing-dependent ingress production implementation**; this
+paragraph freezes the formula and topology hypothesis, not unverified
+numeric values or a passing feasibility verdict.
+
+The competing post-send sweep MUST have a finite batch/row bound,
+a bounded transaction-hold budget, and a failure/restart policy preserving
+durable HUMAN and at-most-once send. B2 online backup MUST declare its
+page-step `rate`, overall job deadline, writer-interference/restart
+behavior and completed **offsite** snapshot age; a backup job that makes no
+progress is not RPO-60 evidence. Both are separate scoped implementation
+and recovery gates; this paragraph does not authorize changing either.
+For the first production v4 `episode.sqlite` creation, **evaluate SQLite
+DELETE first**, then WAL only if bounded contention and B2 backup/restore
+evidence justify it. The journal decision and exact `PRAGMA journal_mode`
+readback MUST precede and gate B2 first creation; no mode is selected
+or changed by this amendment. WAL additionally requires independent
+checkpoint/`-wal`/`-shm` recovery validation.
+
+**Stop** ingress implementation if any required number/competitor, mode
+selection, ownership, or acceptance condition lacks authority; stop
+customer execution if the target native callback fails a separately
+authorized isolated synthetic latency/overload/lock/backup test with
+positive response margin, or if HTTP timeout/non-2xx could leave a
+`pending→open` conversation without durable HUMAN plus operator-attention
+recovery. Timeout is not by itself proof of physical handoff, and S2
+safety checks do not close the operator-liveness obligation. The only
+unblocked pre-measurement code remains the offline synthetic validator
+expressly permitted above. No code, release, database, service, Chatwoot
+setting, or new operational object is created by this docs-only amendment.
 
 ## 29.9 Clarification and semantic provenance under v0.8
 
