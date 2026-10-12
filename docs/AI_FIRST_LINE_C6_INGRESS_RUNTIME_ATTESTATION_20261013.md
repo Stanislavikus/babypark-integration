@@ -24,6 +24,15 @@ Authority: production runtime observations; not an owner-approved timeout change
 - `systemctl is-active chatwoot-web.1.service chatwoot-worker.1.service`:
   `active`, `active`; dedicated First Line service not installed.
 - Host `/usr/bin/node`: `v24.20.0`.
+- Additional read-only host topology check on 2026-10-13 UTC:
+  `lscpu` reports 2 vCPU (`DO-Premium-AMD`, KVM);
+  `free -h` reports 3.8 GiB physical RAM and 2 GiB swap;
+  `df -T /home/chatwoot /var/lib` reports both on
+  local `/dev/vda1` ext4. Active systemd units include
+  `chatwoot-web.1`, `chatwoot-worker.1`, `postgresql@16-main`,
+  `redis-server` and `babypark-integration-v2`.
+  This records **topology**, not actual CPU/IO latency, contention,
+  host-level performance equivalence, or authorized benchmark data.
 - At check time no C6 production `episode.sqlite` was found
   under `/var/lib/babypark-first-line`, `/opt/babypark-integration`
   or `/home/chatwoot` at the checked depth. **Not** evidence that
@@ -55,12 +64,17 @@ claimed. All operational gates remain HALT until their own proof.
 | C6-AI-T05 provider timeout/overload | DESIGN §29.8.3; Q39b(5–6); this attestation | Positive read-only setting; code-stage synthetic error matrix, customer-stage native effects/operator-attention proof or HALT | NONE | DONE — docs only |
 | C6-AI-T06 journal and B2 boundary | DESIGN §29.8.3; Q39b(4,7) | Decision before creation, readback after creation; RPO/backup/recovery remains blocked pending future evidence | NONE | DONE — docs only |
 | C6-AI-T07 docs-only scope | DESIGN, ACCEPTANCE and this EVIDENCE file | Exact-tree changed-path/diff validation; executable/config/server modifications invalidate this PR classification | NONE | DONE — docs only |
+| C6-AI-T08 target environment and sampling provenance | DESIGN §29.8.3 target-matched measurement protocol; Q39b(6) | Version-pinned Node/SQLite; CPU/IO/co-tenant equivalence or conservative calibration; justified run count, percentile, uncertainty, safety multiplier; unmatched numbers HALT | NONE | DONE — docs only |
+| C6-AI-T09 integration-first bench | DESIGN §29.8.3 integration-first; Q39b(8) | Agreement §§1–3 ready-tools comparison before any harness code, complete commercial license fit; unknown license/higher-risk dependency HALT | NONE | DONE — docs only |
 
 ### Explicit downstream HALTs, outside docs-PR terminal scope
 
 - No benchmark has been run or component numbers authoritatively selected.
-  A separate approval and refreshed integration-first scan are required
-  before building the isolated measurement harness or changing ingress code.
+  Target-matched CPU/storage/IO/colocation **measurements**, workload,
+  repetitions, tail percentile, statistical uncertainty and safety
+  multiplier are NOT approved. A separate approval and refreshed
+  integration-first scan are required before building the isolated
+  measurement harness or changing ingress code.
 - No overload status is chosen for live traffic; native Chatwoot
   failure/retry semantics and durable HUMAN/attention are not verified.
 - No v4 journal mode, production `episode.sqlite`, B2 backup/restore,
