@@ -393,14 +393,18 @@ Status: EVIDENCE — NON-NORMATIVE
 Applies to: PR #130 docs-only amendment at canonical main
 f9b5b8e5320884a675af3ea8e608c1e986e8331d;
 governance blob e777fce4af8e8c3372f1f9de9ef7d00f786c2c89.
-Supersedes: none; earlier Stage 0 evidence above remains historical.
+Addendum lineage: the file-level Supersedes declaration above remains the
+single document supersession authority; earlier Stage 0 material is preserved
+as historical evidence within this same file.
 Risk tier: HEAVY — normative timing-gate placement changes.
 PRODUCTION IMPLEMENTATION: NONE. Production activation/Chatwoot writes: NONE.
 
 Existing §29.8.2/Q39 liveness, measured-configuration, unknown-outcome,
-safe HUMAN rules remain authoritative. PR #130 only permits isolated,
-nondeployed timing validator tests with explicit fixtures; it does NOT
-select a production option, registry, transport or activation authority.
+safe HUMAN rules remain authoritative. PR #130 only permits a pure offline
+timing/budget validator with isolated, nondeployed synthetic fixture tests;
+it does NOT authorize broader C6 runtime development by this exception,
+a dormant-code production release, or select a production option, registry,
+transport or activation authority.
 
 | Requirement / invariant | Exact proposed contract artifact | Focused verification | Fail-closed behavior | Durable-state impact | Status |
 | --- | --- | --- | --- | --- | --- |
@@ -408,7 +412,7 @@ select a production option, registry, transport or activation authority.
 | P130-T02: deployment values evidence-bound, not invented | DESIGN §29.8.2 second paragraph; ACCEPTANCE Q39/Q39a(2)–(4),(6), U14 | Check actual measured/inherited authority, provider response bound, preserved SQLite wait | Unknown timing denies new admission/POST | NONE | DONE |
 | P130-T03: liveness and no-repeat survive timing-admission HALT | DESIGN §29.8.2 third paragraph; ACCEPTANCE Q37/Q39a(5), §43 | Check existing accepted-state durable HUMAN, no duplicate or false handoff | No new send, no false recovery success | NONE | DONE |
 | P130-T04: activation mechanisms remain unselected future decisions | DESIGN §29.8.2 activation boundary, Q39; future activation questions below | Check no selected registry/capability/deployment implementation | Unknown provider/time proof => activation HALT | NONE | DONE |
-| P130-T05: docs-only exact-base scope, focused and full review | Design/Acceptance FROZEN headers, this EVIDENCE addendum, PR #130 RUNBOOK | Exact base-scoped diff/check, finite checker, exhaustive HEAVY | Changed executable/predecessor or unproved gate => HALT | NONE | DONE |
+| P130-T05: docs-only exact-base scope, focused and full review | Design/Acceptance FROZEN headers, this EVIDENCE addendum, PR #130 RUNBOOK | Exact base-scoped diff/check, finite checker, root npm test (Design is read by a maintained unit test), exhaustive HEAVY | Changed executable/predecessor, missing behavioral suite or unproved gate => HALT | NONE | DONE |
 
 ### Future activation questions (not solved or selected by PR #130)
 
@@ -426,9 +430,11 @@ and measurement stage, not an added deployed design or a waiver:
   HUMAN recovery for accepted work, with no new public POST after a HALT.
 
 Existing merged frozen requirements and Agreement remain binding. No fixture
-is activation proof. The questions above are NOT in-scope production code
-for this docs-only campaign. Traceability statuses DONE refer only to the
-exact documentation artifacts and focused verification, not execution of
+is activation proof. The questions above are NOT in-scope production code for this docs-only
+campaign. Future activation-vector execution is DEFERRED by the frozen
+non-goal in Design §29.8.2; this is not a claim of passing those vectors.
+Traceability statuses DONE refer only to the documentation artifact mapping,
+not to completion of the separate manifest-bound verification/review gate,
 future runtime tests or authorization to merge.
 
 ### Reproducible PR #130 narrow docs-only consistency check

@@ -15,7 +15,7 @@ Preflight host was independently verified against live DigitalOcean droplet inve
 1. Authenticate the canonical repository Stanislavikus/babypark-integration and list docs fresh. Independently prove current-main Agreement, campaign HEAD, TREE, BASE, merge-base and changed Git blobs against the exact frozen manifest. Mismatch => HALT. Never re-pin the campaign automatically.
 2. In a preparation step only, obtain a maintained official base Docker image by verified registry digest and build toolchain image with official package manager Git/Python. Preparation MAY use network, but review execution MUST NOT. Record the base image digest, complete Dockerfile SHA-256, tool versions/architecture, exact built tool image ID and provenance of actually loaded dependencies. A tag is not an immutable authority.
 3. Materialize a new exact HEAD Git checkout in a fresh build context, including the .git object database and exact BASE commit. Assert detached HEAD, tree, merge-base, changed blobs and empty index/worktree. Exclude ignored dependencies, custom wrappers, caches, secrets, customer content and generated outputs. NEVER bind mount this mutable host checkout into a verification container.
-4. Use a Dockerfile FROM the checked local toolchain image tag only after proving that the tag currently resolves to the expected immutable image ID. COPY the entire exact Git checkout into /review inside the resulting source image, including .git. Set WORKDIR /review, USER 65534:65534, HOME=/scratch, PYTHONDONTWRITEBYTECODE=1 and GIT_OPTIONAL_LOCKS=0; scope safe.directory to /review for Git ownership. Independently record the FINAL built source image sha256 ID, then run only by that ID, never by a movable tag. This produces an object-addressed image containing both executable layer and exact source tree.
+4. Use a Dockerfile FROM the exact content-addressed toolchain image ID rather than a mutable local tag; prove the actually loaded image ID. COPY the entire exact Git checkout into /review inside the resulting source image, including .git. Set WORKDIR /review, USER 65534:65534, HOME=/scratch, PYTHONDONTWRITEBYTECODE=1 and GIT_OPTIONAL_LOCKS=0; scope safe.directory to /review for Git ownership. Independently record the FINAL built source image sha256 ID, then run only by that ID, never by a movable tag. This produces an object-addressed image containing both executable layer and exact source tree.
 
 ## Canonical authority and effective Docker provenance (EH1–EH3)
 
@@ -49,7 +49,19 @@ cannot be proven, HALT even when the command returned 0.
 
 Each required command runs in a SEPARATE newly created disposable container based on that exact final source image SHA-256 ID, with no host source bind mounts or inherited cache:
 
-    docker run --rm --network none --read-only --cap-drop ALL       --security-opt no-new-privileges --user 65534:65534       --pids-limit 40 --memory 256m       --tmpfs /scratch:rw,noexec,nosuid,nodev,size=16m,mode=1777       --workdir /review PINNED_SOURCE_IMAGE_ID sh -ec 'ONE_REQUIRED_CHECK'
+    VERIFY_CONTAINER=bp-pr130-check-UNIQUE-ID
+    docker create --name "$VERIFY_CONTAINER" --network none --read-only \
+      --cap-drop ALL --security-opt no-new-privileges --user 65534:65534 \
+      --pids-limit 40 --memory 256m \
+      --tmpfs /scratch:rw,noexec,nosuid,nodev,size=16m,mode=1777 \
+      --workdir /review PINNED_SOURCE_IMAGE_ID sh -ec 'ONE_REQUIRED_CHECK'
+    docker inspect "$VERIFY_CONTAINER"  # capture created-state effective config
+    docker start "$VERIFY_CONTAINER"
+    docker inspect "$VERIFY_CONTAINER"  # capture running-state effective config
+    docker wait "$VERIFY_CONTAINER"     # record exact exit code
+    docker logs "$VERIFY_CONTAINER"     # capture complete stdout/stderr
+    docker inspect "$VERIFY_CONTAINER"  # capture finished state before removal
+    docker rm "$VERIFY_CONTAINER"       # only after evidence is persisted
 
 These resource values are preflight caps, not authoritative customer-facing timing thresholds. Network is OFF during verification; never mount Docker socket, production secrets or writable host source. Root filesystem/executable image is readonly for the full command lifetime. The distinct empty writable scratch tmpfs belongs only to that one run and is discarded by --rm.
 

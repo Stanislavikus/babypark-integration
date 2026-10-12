@@ -1176,8 +1176,10 @@ Exercise these distinct cases:
    to a production connection, customer-data/real-customer shadow mode,
    runtime activation or public-action dispatch path.
 3. A deployment has missing, stale, mismatched or insufficient actual
-   timing/deadline evidence; the proposed relationship would permit an
-   expired claim, duplicate/uncertain POST or false handoff completion.
+   timing/deadline evidence (even if a proposed relationship looks safe);
+   separately, even with valid target evidence, a proposed relationship
+   would permit an expired claim, duplicate/uncertain POST or false handoff
+   completion.
 4. A target-matched, measured/inherited configuration has verified
    lease/deadline/retry relationships and a provably safe complete
    provider callback-time budget before deployment/customer execution.
@@ -1196,9 +1198,13 @@ Expected:
   implementation-options, safety and activation gates; passing this vector
   alone is not deployment authorization.
 - (5) keeps previously accepted semantic work under existing §29.8.2,
-  Q37/Q39, §43 and at-most-once recovery rules: local durable HUMAN/fault
-  recovery is not cancelled by invalid timing admission; no additional POST,
-  repeated unknown-outcome handoff or false durable/physical-success claim.
+  Q37/Q39, §43 and at-most-once recovery rules: invalid timing admission
+  prevents PREPARED/GATING from crossing GATING→SENDING or making any POST,
+  including across restart; their durable HUMAN continuation owns recovery
+  by the persisted deadline. SENDING/UNCERTAIN must reconcile safely without
+  repeating any unknown-outcome POST or handoff. Newly arriving turns have
+  no autonomous dispatch and require fail-closed HUMAN/operator attention.
+  No invalid timing proof authorizes physical-success claims.
 - The already frozen EpisodeStore busy_timeout=5000 milliseconds is unchanged;
   it does not establish a provider webhook deadline or whole-callback budget.
 

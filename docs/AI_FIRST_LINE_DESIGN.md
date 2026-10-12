@@ -2786,36 +2786,54 @@ The operator-attention condition is operational metadata, not a new semantic
 decision class or customer transcript. Its delivery/monitoring implementation is
 selected only in the later Agreement §§1–§3 implementation-options stage.
 
-Numeric timing values are not frozen by this amendment. A C6 code
-change which is NOT deployed, connected to production Chatwoot, or activated
-MAY implement and test fail-closed timing/budget validation with explicitly
-synthetic timing fixtures in a non-customer, isolated test harness BEFORE
-target-environment timing measurements. This is permission for nondeployed
-implementation and testing only: it does NOT authorize customer-data
+Numeric timing values are not frozen by this amendment. A C6 code change limited to a pure, offline timing/budget validator which is
+NOT shipped in any production release (including dormant/unwired code),
+connected to production Chatwoot, or activated MAY implement and test
+fail-closed timing/budget validation with explicitly synthetic timing fixtures
+in a non-customer, isolated test harness BEFORE target-environment timing
+measurements. This narrow permission does not authorize broader C6 runtime
+implementation under this exception. It does NOT authorize customer-data
 processing, real-customer shadow mode, production connectivity, autonomous
 public dispatch, or a Chatwoot public POST. Fixture values are never valid
-production timing authority and must not silently become deployed defaults.
+production timing authority and must not become deployed defaults.
 
-Before C6 production deployment/activation, any production Chatwoot connection
-or any execution involving real customer data, every lease, authority/read
-timeout, producer timeout, deadline, pre-SENDING read-retry budget, UNCERTAIN
-reconciliation window and HUMAN handoff/escalation window must be measured or
-inherited from merged authority per AI Working Agreement §8. The applicable
-provider webhook response deadline and a safe complete callback-time budget
-must be independently established for the actual target; absent or unknown
-proof HALTs new customer work and new public dispatch. The already-FROZEN
-EpisodeStore SQLite busy_timeout=5000 milliseconds remains unchanged: this
-is a per-wait bound, not proof that the whole provider callback meets its
-response deadline. Configuration must be startup-validated so chosen
-lease/deadline/retry relationships cannot authorize a POST from an expired
-claim or turn unavailable authority into false terminal success. No numeric
-constant is selected merely because it appears reasonable.
+Before C6 production deployment (including dormant code in a production
+release), activation, any production Chatwoot connection or any execution
+involving real customer data, every lease, authority/read timeout, producer
+timeout, deadline, pre-SENDING read-retry budget, UNCERTAIN reconciliation
+window and HUMAN handoff/escalation window must be measured or inherited
+from merged authority per AI Working Agreement §8. Independently verify the
+actual target provider/build/topology, webhook deadline, its units and
+whole-response versus phase semantics, and provider retry behavior. Prove a
+conservative worst-case complete callback budget including possible SQLite
+lock waits, REST, queues, CPU/GC/fsync and a strictly positive evidence-derived
+margin; p99 alone is insufficient. Timing authority must be authenticated,
+target-scoped and stale-checked; the mechanism is a separate Agreement
+§§1–3 implementation/owner decision, NOT selected by this amendment.
+Absent or unknown proof HALTs new customer work and new public dispatch.
+The already-FROZEN EpisodeStore SQLite busy_timeout=5000 milliseconds
+remains unchanged: this is a per-wait bound, not proof that the whole
+provider callback meets its response deadline. Configuration must be
+startup-validated so chosen lease/deadline/retry relationships cannot
+permit a POST from an expired claim or turn unavailable authority into
+false terminal success. No numeric constant is selected merely because
+it appears reasonable.
 
 A timing-admission HALT is not permission to erase or orphan previously
 accepted work. The existing §29.8.2 semantic-liveness, durable HUMAN/fault,
 uncertain-outcome, no-repeat and §43 safe-reconciliation obligations continue
-to apply. No additional public POST or fictitious physical handoff is
-authorized by a timeout or by this test-only permission.
+to apply. If timing evidence becomes invalid before the final authorized
+GATING→SENDING transition, PREPARED and GATING actions (including after
+restart) perform zero public POST and cannot transition to SENDING; durable
+HUMAN continuation must own recovery by the persisted action/turn deadline.
+Already SENDING or UNCERTAIN actions retain bounded exact-outcome
+reconciliation without retry of an unknown POST; timeout alone proves
+neither send success nor physical handoff. New customer turns while admission
+is HALTed receive no autonomous public action and require HUMAN/operator
+attention through the existing durable and fail-closed ownership path;
+unavailable durable authority cannot be bypassed. No additional public POST
+or fictitious physical handoff is authorized by a timeout or by this test-only
+permission.
 
 ## 29.9 Clarification and semantic provenance under v0.8
 
