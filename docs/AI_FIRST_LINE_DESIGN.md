@@ -2784,14 +2784,39 @@ The operator-attention condition is operational metadata, not a new semantic
 decision class or customer transcript. Its delivery/monitoring implementation is
 selected only in the later Agreement §§1–§3 implementation-options stage.
 
-Numeric timing values are not frozen by this amendment. Before C6 production
-implementation/activation, every lease, authority/read timeout, producer timeout,
-deadline, pre-SENDING read-retry budget, UNCERTAIN reconciliation window and
-HUMAN handoff/escalation window must be measured or inherited from merged
-authority per AI Working Agreement §8. Configuration must be startup-validated
-so the selected lease/deadline/retry relationships cannot permit a POST from an
-expired claim or convert unavailable authority into false terminal success. No
-numeric constant is chosen merely because it sounds reasonable.
+Numeric timing values are not frozen by this amendment. A C6 code change
+that is **not deployed, connected to production, or activated** may implement
+and verify fail-closed timeout/budget validation against explicitly synthetic
+fixture values, even before target-environment measurements are available.
+This narrow pre-production implementation permission does not establish
+runtime readiness and cannot be used to waive any other frozen invariant.
+No executable C6 runtime may silently substitute numeric defaults for a
+missing, unmeasured or otherwise unproved deployment configuration; without
+positive configured authority, startup/admission must HALT before any
+customer-data path, webhook acceptance or customer-facing action.
+
+**Before any production-environment C6 execution involving real customer data,
+production Chatwoot connectivity, real-customer shadow mode or activation**,
+every lease, authority/read timeout, producer timeout, deadline, pre-SENDING
+read-retry budget, UNCERTAIN reconciliation window and HUMAN handoff/escalation
+window must be measured for that bounded runtime or inherited from an
+applicable merged authority per AI Working Agreement §8. The actual installation-
+wide Chatwoot WEBHOOK_TIMEOUT and cumulative REST, synchronous SQLite lock,
+admission queue/event-loop and response-margin budgets must likewise be proved
+on the target configuration where they govern a webhook ACK. Configuration
+must be startup-validated so selected lease/deadline/retry relationships
+cannot permit a POST from an expired claim or convert unavailable authority
+into false terminal success. No numeric constant is chosen merely because
+it sounds reasonable. Synthetic/isolated tests or a pre-production code merge
+are not substitutes for measured deployment evidence; if the required
+measurements or source are unavailable, production activation HALTs.
+
+This amendment changes only **when target-environment numeric evidence must
+exist for non-activated pre-production code authoring/review**. It does not
+authorize any real Chatwoot operation, relax startup validation, downgrade
+§29.8.2 durable HUMAN liveness, replace Q39 positive/negative configuration
+tests, permit an automated handoff/status toggle or expand the permitted
+public-send behavior.
 
 ## 29.9 Clarification and semantic provenance under v0.8
 
