@@ -17,6 +17,34 @@ Preflight host was independently verified against live DigitalOcean droplet inve
 3. Materialize a new exact HEAD Git checkout in a fresh build context, including the .git object database and exact BASE commit. Assert detached HEAD, tree, merge-base, changed blobs and empty index/worktree. Exclude ignored dependencies, custom wrappers, caches, secrets, customer content and generated outputs. NEVER bind mount this mutable host checkout into a verification container.
 4. Use a Dockerfile FROM the checked local toolchain image tag only after proving that the tag currently resolves to the expected immutable image ID. COPY the entire exact Git checkout into /review inside the resulting source image, including .git. Set WORKDIR /review, USER 65534:65534, HOME=/scratch, PYTHONDONTWRITEBYTECODE=1 and GIT_OPTIONAL_LOCKS=0; scope safe.directory to /review for Git ownership. Independently record the FINAL built source image sha256 ID, then run only by that ID, never by a movable tag. This produces an object-addressed image containing both executable layer and exact source tree.
 
+## Canonical authority and effective Docker provenance (EH1–EH3)
+
+A network-isolated reviewer cannot authenticate a local ref named origin/main.
+Immediately BEFORE and AFTER every required check, the trusted DEV runner
+MUST independently obtain the canonical GitHub repository's current
+refs/heads/main and refs/pull/130/head through authenticated HTTPS, plus the
+current-main Agreement blob identity using a canonical GitHub API/connector.
+Record precise repository URL, UTC timestamp, resulting refs and blob, and
+SHA-256 of the fetched control-plane evidence. Match the pinned manifest
+HEAD/TREE/BASE/governance; if control-plane data cannot be authenticated,
+is unavailable or has drifted, HALT. Do not silently re-pin the campaign.
+
+During EACH disposable check (before the container is deleted), retain
+actual container docker inspect and exact docker image inspect, docker
+version (client AND server), effective ReadonlyRootfs, NetworkMode, user,
+entrypoint, capabilities and mounts with their RW flags. Record exit/wait
+status, removal, source+toolchain image digests, full executable and runner
+dependency provenance and relevant immutable host tool/daemon versions;
+bind evidence with SHA-256. A requested command-line --read-only flag does
+not itself prove that no writable executable source was mounted. Prefer a
+named create/start/wait/inspect/logs/remove lifecycle to capture effective
+settings before deleting the container. Run each mandatory check in a
+NEW container with its own empty scratch and proven source/toolchain layer.
+Do not expose Docker socket or host admin privileges to a review model.
+A narrow runner must accept only enumerated immutable check IDs, not
+arbitrary Docker commands. If executable provenance/lifetime immutability
+cannot be proven, HALT even when the command returned 0.
+
 ## Per required check
 
 Each required command runs in a SEPARATE newly created disposable container based on that exact final source image SHA-256 ID, with no host source bind mounts or inherited cache:

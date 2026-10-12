@@ -387,101 +387,102 @@ This amendment does not:
 - authorize any later production code without a fresh implementation-options
   gate and explicit owner approval where Agreement requires it.
 
-## PR #130 later timing-gate amendment — docs-only traceability
+## PR #130 narrow timing-fixture amendment — docs-only traceability
 
-Status: EVIDENCE — NON-NORMATIVE, cumulative campaign-specific traceability.
-Applies to: PR #130 amendment campaign, based on exact target/main
-f9b5b8e5320884a675af3ea8e608c1e986e8331d,
+Status: EVIDENCE — NON-NORMATIVE
+Applies to: PR #130 docs-only amendment at canonical main
+f9b5b8e5320884a675af3ea8e608c1e986e8331d;
 governance blob e777fce4af8e8c3372f1f9de9ef7d00f786c2c89.
-Supersedes: none; earlier Stage 0 terminal above remains historical evidence.
-Risk tier: HEAVY — proposed amendment changes normative timing gate placement.
-Production implementation: NONE. Production deployment/Chatwoot operation: NONE.
+Supersedes: none; earlier Stage 0 evidence above remains historical.
+Risk tier: HEAVY — normative timing-gate placement changes.
+PRODUCTION IMPLEMENTATION: NONE. Production activation/Chatwoot writes: NONE.
 
-The earlier Stage 0 row on timing originally described the frozen
-timing-before-implementation/activation policy. PR #130 does not claim that
-row alone covers its changed gate. This separate exact artifact-level
-mapping does not treat future runtime tests or provider measurements
-as already passed:
+Existing §29.8.2/Q39 liveness, measured-configuration, unknown-outcome,
+safe HUMAN rules remain authoritative. PR #130 only permits isolated,
+nondeployed timing validator tests with explicit fixtures; it does NOT
+select a production option, registry, transport or activation authority.
 
-| PR130 requirement / invariant | Normative artifact clause | Focused docs-only verification (not production proof) | Fail-closed behavior | Durable-state impact | Status |
+| Requirement / invariant | Exact proposed contract artifact | Focused verification | Fail-closed behavior | Durable-state impact | Status |
 | --- | --- | --- | --- | --- | --- |
-| P130-T01 fixture-only nondeployed C6 authoring is not customer-runtime authorization; runtime HALT recovers accepted streams without a second POST | DESIGN §29.8.2 first timing paragraph; ACCEPTANCE Q39a (1),(2),(9),(16), U14 | Static check: permission limited to isolated fixtures and Q39a denies missing/synthetic deployed provenance | Missing runtime config HALTs before webhook/claim/POST | NONE: no code/schema change | DONE |
-| P130-T02 numeric authority must carry authenticated, re-hashed scoped measurement/FROZEN source/operator record; FIXTURE_TIMING never becomes real authority | DESIGN §29.8.2 positive configured timing authority/operator attestation/DI-only synthetic loader; ACCEPTANCE Q39a (1)–(4),(6)–(8),(10)–(12),(15), U14 | Reproducible check PR130-C2: verify named provenance, target, loader rejection, provider privileges prohibition and renewal on config epoch | Unsupported source/unsafe relationships HALT | NONE: no schema/content added | DONE |
-| P130-T03 provider HTTP-response delay uses explicit millisecond worst-case including all blocking phases and upstream queues; real non-customer measurements are separate from fake fixture values | DESIGN §29.8.2 worst-case envelope + venue; ACCEPTANCE Q39a (5),(6),(8),(13)–(15), Q39, U14 | Reproducible check PR130-C3: all configured REST attempts, each SQLite busy_timeout, queue/event-loop upper bound, margin, strict less-than and attestation/venue cases | No customer/provider writes; exceeded/unbounded deadline HALTs | NONE: future config gate only | DONE |
-| P130-T04 runtime-HALT preserves durable HUMAN/uncertain action provenance, at-most-once and no unsafe handoff; docs/code merge is not deployment proof | DESIGN §29.8.2 retained liveness and disclaimer; ACCEPTANCE Q39a (9),(16) and final conditions, Q39, U14 and §43 | Static check: HUMAN/no-repeat/no-toggle preserved, Q39a rejects elapsed-time proof | HUMAN remains absorbing, no duplicate POST/handoff | NONE: existing semantics unchanged | DONE |
-| P130-T05 docs-only bounded PR with exact predecessor in both FROZEN headers and complete verification | Diff BASE..HEAD; Design/Acceptance Supersedes current exact BASE; separate Stage 0 history and traceability; RUNBOOK docs/AI_FIRST_LINE_C6_PR130_VERIFICATION_RUNBOOK.md | Reproducible PR130-C5 checks of both headers plus git diff --name-status and git diff --check against pinned CAMPAIGN_BASE_OID | Unexpected changed source/predecessor/check => HALT | NONE | DONE |
+| P130-T01: only isolated synthetic fixtures before measurement | DESIGN §29.8.2 first timing paragraph; ACCEPTANCE Q39a(1) | Check test-only permission, isolation and no customer/provider connection | Fixture cannot authorize new customer work | NONE | DONE |
+| P130-T02: deployment values evidence-bound, not invented | DESIGN §29.8.2 second paragraph; ACCEPTANCE Q39/Q39a(2)–(4),(6), U14 | Check actual measured/inherited authority, provider response bound, preserved SQLite wait | Unknown timing denies new admission/POST | NONE | DONE |
+| P130-T03: liveness and no-repeat survive timing-admission HALT | DESIGN §29.8.2 third paragraph; ACCEPTANCE Q37/Q39a(5), §43 | Check existing accepted-state durable HUMAN, no duplicate or false handoff | No new send, no false recovery success | NONE | DONE |
+| P130-T04: activation mechanisms remain unselected future decisions | DESIGN §29.8.2 activation boundary, Q39; future activation questions below | Check no selected registry/capability/deployment implementation | Unknown provider/time proof => activation HALT | NONE | DONE |
+| P130-T05: docs-only exact-base scope, focused and full review | Design/Acceptance FROZEN headers, this EVIDENCE addendum, PR #130 RUNBOOK | Exact base-scoped diff/check, finite checker, exhaustive HEAVY | Changed executable/predecessor or unproved gate => HALT | NONE | DONE |
 
-Docs-only DONE statuses attest proposed contract text and static consistency,
-not actual runtime execution. Q39a/U14 become executable tests required by
-future C6 implementation. This addendum is not a waiver of Agreement §7.1
-HEAVY two-pass ZERO BLOCKERS review, immutable verification manifest,
-pre-owner evidence bundle or final owner merge authority. Before merge the proposed amendment is non-normative; after merge the
-Design/Acceptance clauses have their explicitly declared FROZEN status.
-This EVIDENCE traceability remains non-normative in either state.
+### Future activation questions (not solved or selected by PR #130)
 
-### Reproducible PR #130 docs-only consistency checks (PR130-C1..C5)
+These are input requirements for the separately approved runtime activation
+and measurement stage, not an added deployed design or a waiver:
+- verify installed provider/build/topology, actual WEBHOOK_TIMEOUT and native
+  units, whole HTTP response versus phase deadline, and retry behavior;
+- derive a conservative complete worst-case callback bound, including all
+  possible SQLite lock waits/overshoot, REST, queues, CPU/GC/fsync, and a
+  strictly positive evidence-derived margin; p99 is not a full upper bound;
+- authenticate and scope configuration evidence, validate changing/stale
+  facts, and choose any registry/attestation/capability design only AFTER a
+  separately bounded Agreement §§1–3 alternatives and owner decision;
+- test fail-closed startup on unknown/invalid authority and durable local
+  HUMAN recovery for accepted work, with no new public POST after a HALT.
 
-On the exact reviewed commit, with CAMPAIGN_BASE_OID bound to the immutable
-40-hex campaign base, execute this self-contained Python command. It invokes
-only the Python standard library, reads the frozen changed documents, and
-fails on specified missing structural markers in §29.8.2 and three explicitly
-enumerated unsafe regression phrases (after whitespace normalization).
-It CANNOT decide general semantic consistency or catch all paraphrases:
-unrecognized contradictory wording can still pass this checker and MUST be
-caught by independent exhaustive whole-contract review. These probes are a
-narrow regression floor, not a proof that no contradictions exist:
+Existing merged frozen requirements and Agreement remain binding. No fixture
+is activation proof. The questions above are NOT in-scope production code
+for this docs-only campaign. Traceability statuses DONE refer only to the
+exact documentation artifacts and focused verification, not execution of
+future runtime tests or authorization to merge.
+
+### Reproducible PR #130 narrow docs-only consistency check
+
+Run this standard-library script from the exact immutable HEAD with the
+manifest's exact CAMPAIGN_BASE_OID. It covers finite structural regressions,
+not semantic contradictions. Each required execution uses a fresh immutable
+container; exhaustive independent review still applies.
 
     python3 - <<'PY'
     from pathlib import Path
-    import os, subprocess
+    import os
+    import re
+    import subprocess
     base = os.environ['CAMPAIGN_BASE_OID']
-    assert len(base) == 40 and all(c in '0123456789abcdef' for c in base)
+    assert re.fullmatch(r'[0-9a-f]{40}', base)
+    subprocess.check_call(['git', 'cat-file', '-e', base+'^{commit}'])
     d = Path('docs/AI_FIRST_LINE_DESIGN.md').read_text()
     a = Path('docs/AI_FIRST_LINE_ACCEPTANCE.md').read_text()
     t = Path('docs/AI_FIRST_LINE_C6_STAGE0_CONTRACT_TRACEABILITY.md').read_text()
-    for name, content in [('DESIGN',d),('ACCEPTANCE',a)]:
-        assert 'Supersedes: ' in content[:900] and base in content[:950]
-        assert 'Amendment history:' in content[:1100]
-    checks = {
-       'C1': ('FIXTURE_TIMING','test harness','customer-data'),
-       'C2': ('**operator attestation**','Super Admin','provenance','SYNTHETIC','unit','hashed again'),
-       'C3': ('worst-case','STRICTLY LESS THAN','busy_timeout=5000','queue','milliseconds'),
-       'C4': ('§29.8.2 durable HUMAN','public-send behavior'),
-    }
-    section=d.split('### 29.8.2 Liveness',1)[1].split('## 29.9 Clarification',1)[0]
-    compact=lambda value: ' '.join(value.lower().split())
-    for label, needles in checks.items():
-        for needle in needles:
-            assert compact(needle) in compact(section), (label, needle)
-    assert '### Q39a —' in a and '### U14 —' in a
-    assert '(1)–(5), (7), and all invalid variants of (8)–(16) HALT' in a
-    assert '5000 milliseconds' in a and 'ONE full' in a
+    section = d.split('Numeric timing values are not frozen by this amendment.', 1)[1].split('## 29.9', 1)[0]
+    def compact(x):
+        return ' '.join(x.lower().split())
+    for fragment in ('MAY implement and test fail-closed timing/budget validation',
+                     'synthetic timing fixtures', 'BEFORE target-environment',
+                     'Fixture values are never valid', 'Before C6 production',
+                     'busy_timeout=5000', 'A timing-admission HALT',
+                     'No additional public POST'):
+        assert compact(fragment) in compact(section), ('missing', fragment)
+    for fragment in ('### Q39a —', '### Q40 —',
+                     'The already frozen EpisodeStore busy_timeout=5000'):
+        assert fragment in a, ('acceptance missing', fragment)
     forbidden = (
-        'Production configuration loader MAY accept SYNTHETIC provenance through an environment flag.',
-        'Measured p99 may replace the configured worst-case bound.',
-        'Operator attestation is optional for WEBHOOK_TIMEOUT.',
+        'A fixture flag may authorize production public POST.',
+        'Production timing measurements are optional for activation.',
+        'An unknown send outcome may be retried after timeout.',
     )
     for phrase in forbidden:
-        assert compact(phrase) not in compact(section), ('known-unsafe-clause',phrase)
-    for i in range(1,6):
-        key='| P130-T0'+str(i)+' '
-        row=next(line for line in t.splitlines() if line.startswith(key))
+        assert compact(phrase) not in compact(section), ('known-unsafe-clause', phrase)
+    for i in range(1, 6):
+        row = next(x for x in t.splitlines() if x.startswith('| P130-T0'+str(i)+':'))
         assert row.endswith(' | DONE |')
-    paths=set(subprocess.check_output(
-        ['git','diff','--name-only',base+'..HEAD'],text=True).splitlines())
-    assert paths=={
+    changed = set(subprocess.check_output(
+        ['git', 'diff', '--name-only', base+'..HEAD'], text=True).splitlines())
+    assert changed == {
         'docs/AI_FIRST_LINE_DESIGN.md',
         'docs/AI_FIRST_LINE_ACCEPTANCE.md',
         'docs/AI_FIRST_LINE_C6_STAGE0_CONTRACT_TRACEABILITY.md',
-        'docs/AI_FIRST_LINE_C6_PR130_VERIFICATION_RUNBOOK.md'}
-    print('PR130-C1..C5 PASS')
+        'docs/AI_FIRST_LINE_C6_PR130_VERIFICATION_RUNBOOK.md',
+    }, changed
+    print('PR130-NARROW-C1..C5 PASS')
     PY
 
-The required-verification manifest binds this exact command's normalized
-bytes/digest plus its stdout/exit identity. Test its detection of the three
-enumerated forbidden phrases using independent IN-MEMORY negative mutations:
-each MUST cause AssertionError, without modifying source files. Passing the
-clean check and these three mutation probes does NOT prove arbitrary
-contradictory text is absent; a separate exhaustive contract review remains
-mandatory. Running a convenient different script or relying on an unpublished
-prior assertion does not satisfy C1..C5.
+For each forbidden phrase, a separate fresh check MUST inject that phrase
+into the timing section in memory and assert the named known-unsafe-clause
+failure. The source file MUST remain unchanged. Static PASS is not exhaustive
+contract safety proof.

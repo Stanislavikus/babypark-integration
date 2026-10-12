@@ -2786,213 +2786,36 @@ The operator-attention condition is operational metadata, not a new semantic
 decision class or customer transcript. Its delivery/monitoring implementation is
 selected only in the later Agreement §§1–§3 implementation-options stage.
 
-Numeric timing values are not frozen by this amendment. A C6 code change
-that is **not deployed, connected to production, or activated** may implement
-and verify fail-closed timeout/budget validation against explicitly synthetic
-fixture values, even before target-environment measurements are available.
-This narrow pre-production implementation permission does not establish
-runtime readiness and cannot be used to waive any other frozen invariant.
-No C6 runtime may silently substitute an **unproven** numeric deployment
-default for a missing, unmeasured or otherwise unproved timing value. A value
-expressly frozen by applicable merged authority remains mandatory: in
-particular the EpisodeStore SQLite busy_timeout=5000 rule in this Design
-is NOT relaxed or replaced by this amendment. That frozen lock-wait value does not, by itself,
-prove that the complete webhook callback fits the external timeout.
+Numeric timing values are not frozen by this amendment. A C6 code
+change which is NOT deployed, connected to production Chatwoot, or activated
+MAY implement and test fail-closed timing/budget validation with explicitly
+synthetic timing fixtures in a non-customer, isolated test harness BEFORE
+target-environment timing measurements. This is permission for nondeployed
+implementation and testing only: it does NOT authorize customer-data
+processing, real-customer shadow mode, production connectivity, autonomous
+public dispatch, or a Chatwoot public POST. Fixture values are never valid
+production timing authority and must not silently become deployed defaults.
 
-**Positive configured timing authority** requires evidence for every
-relevant runtime value: (a) a content-addressed measurement record with
-component/version, target environment, configuration, bounded load profile,
-operator or measuring agent, UTC time and exact value; or (b) an applicable
-merged FROZEN source with its revision/blob and the value it mandates.
-The evidence must match the target installation/account, Chatwoot/build
-version, relay/runtime version, worker and local-DB topology and settings.
-Missing/mismatched/stale evidence, unsafe arithmetic or an unrecorded
-deployment change HALTs **new** customer-data acceptance and any **new**
-dispatch/public POST. A numeric literal or environment variable alone is
-not evidence. This STOP is an admission and authorization fence, not a
-destructive reset of previously accepted durable semantic state.
+Before C6 production deployment/activation, any production Chatwoot connection
+or any execution involving real customer data, every lease, authority/read
+timeout, producer timeout, deadline, pre-SENDING read-retry budget, UNCERTAIN
+reconciliation window and HUMAN handoff/escalation window must be measured or
+inherited from merged authority per AI Working Agreement §8. The applicable
+provider webhook response deadline and a safe complete callback-time budget
+must be independently established for the actual target; absent or unknown
+proof HALTs new customer work and new public dispatch. The already-FROZEN
+EpisodeStore SQLite busy_timeout=5000 milliseconds remains unchanged: this
+is a per-wait bound, not proof that the whole provider callback meets its
+response deadline. Configuration must be startup-validated so chosen
+lease/deadline/retry relationships cannot authorize a POST from an expired
+claim or turn unavailable authority into false terminal success. No numeric
+constant is selected merely because it appears reasonable.
 
-On configuration invalidation AFTER some work was accepted, the local
-continuation/recovery reconciler remains operational under §29.8/§43:
-it monotonically attaches durable HUMAN continuation to each affected
-accepted stream/action where a new autonomous send is not provably safe,
-keeps the original immutable semantic origin, committed CLARIFY budget and
-existing event/deferred provenance, and creates the required operator
-attention/fault marker. This is a local episode.sqlite transition and
-MUST NOT require a Chatwoot write or newly accepted customer transcript.
-Existing PREPARED/GATING work must not advance to SENDING; any action
-already SENDING/UNCERTAIN might already have posted exactly once, so a
-runtime HALT cannot truthfully promise zero *historical/in-flight* POSTs.
-It forbids any **additional** POST, preserves uncertainty, allows only
-positive read-only reconciliation when permitted by independent authority,
-and never retries or rewrites a possibly sent action. If even the local
-durable HUMAN/fault write cannot be proved due to store corruption/lock/
-restore uncertainty, the system remains HALTed with urgent operator
-attention and no claim that durable recovery succeeded. New unaccepted
-Chatwoot messages remain Chatwoot's transcript authority; admission
-stays closed until provenance and safe recovery barriers are re-proved.
-The configured §29.8.2 liveness deadline is not disabled by a HALT.
-
-For the installation-wide provider WEBHOOK_TIMEOUT and inaccessible provider
-worker/App Config settings, the authority is a bounded **operator attestation**:
-an authorized administrator records the effective value, source and exact
-readback method (Chatwoot Super Admin App Configs or the authoritative runtime
-configuration), target installation/build/configuration tuple, operator, UTC
-time, and immutable record identity/digest in the controlled deployment
-registry/runbook per Agreement §2.0a. The independently versioned deployment
-configuration references that attestation, not a bare numeric claim. The
-BabyPark relay MUST NOT acquire Chatwoot Super Admin access or Chatwoot DB
-credentials to inspect this setting. At startup the relay validates the
-attestation's integrity, required fields, target applicability and known
-configuration epoch; **it cannot claim to have live-read the provider value**.
-Chatwoot upgrade, rebuild, worker/topology change or App Config change MUST
-invalidate the old attestation and require renewed administrator attestation
-before any further customer-data/runtime admission. Undetectable out-of-band
-changes are an operational risk requiring controlled change management and
-periodic re-attestation; an attestation is not a continuous provider drift
-oracle. Each attestation is bound to the administrator's authenticated
-change/approval event, not merely an operator name typed into a file.
-The attestation's controlled source record MUST be independently retrieved
-from the trusted operator-controlled registry, canonically serialized,
-hashed again from the actual bytes and checked against the pinned,
-authenticated deployment reference. A caller-supplied digest, a self-labeled
-MEASURED profile, or matching untrusted hashes never establish authenticity.
-The exact protected storage/read location and ACL are chosen and registered
-in the later separately owner-approved deployment slice under Agreement
-§2.0a; if unavailable, production runtime HALTs. Secrets and customer
-content are not stored in the attestation or repository.
-
-The operator attestation includes the provider-native raw value, native
-unit and readback representation, effective value and its unit, the verified
-provider interpretation (whole callback deadline versus connect/read phase),
-and the current provider post-timeout/retry behavior with pinned
-source/version or authenticated administrator evidence. Every duration operand is
-converted to a canonical nonnegative safe integer of **milliseconds**
-before comparing to other durations; unitless, ambiguous, nonpositive,
-overflowing, incompatible or contradictory values HALT. For example an
-attested 5 seconds becomes 5000 milliseconds; an unqualified 5 or 5000
-has NO authority. The native unit is verified against the exact installed
-Chatwoot build/config rather than assumed from an environment variable.
-An effective timeout without a proved response-deadline semantics cannot
-authorize public runtime admission.
-
-The operator-approved maximum attestation age/renewal interval and required
-change epochs must be explicit evidence-bound deployment policy, never an
-invented constant. A stale record HALTs, including after a known provider
-upgrade, App Config update or topology change. A separately reviewed
-least-privilege version/readback tripwire may be used when genuinely
-available, but is never assumed to exist and cannot substitute for
-authenticated operator attestation. No Super Admin or Chatwoot DB privilege
-may be added to the BabyPark relay to implement these checks.
-
-Provenance kinds have disjoint meanings. FIXTURE_TIMING is an invented
-duration/profile for unit tests: NEVER runtime authority, even if it contains
-a plausible number, unit, tuple or digest. MEASURED_NON_CUSTOMER is an actual
-bounded timing observation taken using non-customer fixture traffic in a
-verified target-equivalent environment; it is not an invented duration, and
-may support deployment authority ONLY after the full measurement, tuple,
-upper-bound and authenticated provenance checks above. The legacy ambiguous
-SYNTHETIC tag is DENIED for production admission; it cannot be relabeled as
-MEASURED_NON_CUSTOMER by a caller.
-
-Only a nondeployed, network-isolated test harness may directly inject
-FIXTURE_TIMING values into the *pure budget validator*, not the production
-admission or Chatwoot webhook entry point. All production entry points
-(webhook receiver, scheduled sweeper, CLI/restart workers, direct library
-calls and future adapters) must first obtain an opaque, non-caller-mintable
-runtime-admission capability from the production configuration gate.
-The gate alone validates the authenticated registry bytes and produces that
-capability; the pure test validator cannot issue one. Production loaders and
-public dispatch interfaces unconditionally reject FIXTURE_TIMING/SYNTHETIC
-and cannot be bypassed by environment, feature flags, constructors, object
-spreads, direct imports or caller-supplied type tags. Test-only fixture
-factories/entrypoints must not ship or be reachable in production bundles.
-If source import graph, deployment packaging and every entry point cannot
-prove this separation, HALT rather than treat a boolean test-mode flag as
-isolation.
-
-**Before any production-environment C6 execution involving real customer data,
-production Chatwoot connectivity, real-customer shadow mode or activation**,
-every lease, authority/read timeout, producer timeout, deadline, pre-SENDING
-read-retry budget, UNCERTAIN reconciliation window and HUMAN handoff/escalation
-window must be measured for that bounded runtime or inherited from an
-applicable merged authority per AI Working Agreement §8. The actual installation-
-wide Chatwoot WEBHOOK_TIMEOUT and the complete **configured worst-case bound**
-for synchronous webhook processing must also be proved. The envelope is:
-all sequential scoped REST operations (the FULL end-to-end wall-clock
-timeout from DNS/connect/TLS through response-body completion, multiplied by
-maximum attempts, INCLUDING backoff/delays and downstream JSON parsing),
-plus ALL potential sequential SQLite busy waits (count every blocking
-acquisition/upgrade/commit phase, not just BEGIN IMMEDIATE or one per
-transaction; include busy-handler overshoot and filesystem I/O/fsync),
-plus bounded CPU, garbage collection and Node event-loop scheduling work,
-plus complete bounded admission/transport queue delay, plus a strictly
-positive, evidence-derived safety margin. The nominal SQLite
-busy_timeout=5000 is in milliseconds and is a per-wait bound, NOT a
-whole-transaction budget. A transaction with independently blocking
-BEGIN/upgrade and COMMIT/EXCLUSIVE phases must account for each possible
-full wait; if the runtime/transaction mode cannot prove the maximum
-phases, count or overshoot, the term is UNBOUNDED and HALT.
-The webhook-response deadline starts when the provider begins the
-delivery attempt and ends ONLY when the provider receives the qualifying
-HTTP response. Account for any proven transport/proxy/kernel backlog,
-keep-alive and application admission queue, not merely the time after
-Node invokes receive(). Admission concurrency, max connections, backlog
-and in-flight/queued capacity MUST be finite and actually enforced on the
-measured deployment topology; account for the worst permitted predecessors'
-cumulative synchronous blocking, or a demonstrably stronger admission
-bound. Any uncontrolled kernel/proxy backlog, CPU/GC pause, lock overshoot,
-I/O, DNS/TLS retry or provider deadline/start boundary is an UNKNOWN
-operand and makes runtime admission HALT. A JavaScript timer is not
-preemption or a proof of a synchronous SQLite/GC/CPU wall-clock bound.
-Each operand must have a verified enforceable bound and provenance; a
-measured p99 or arbitrary guess cannot satisfy the proof. Require
-the SUM of these **upper bounds**, not measured p50/p99 averages, to be
-STRICTLY LESS THAN the attested effective provider WEBHOOK_TIMEOUT.
-Measured runs support the safety margin and topology assumptions only;
-they never replace a configured lock/REST/queue worst-case. A synchronous
-SQLite wait may block the whole Node event loop. A timed-out JavaScript
-Promise is not proof that synchronous SQLite work was interrupted.
-The frozen EpisodeStore busy_timeout=5000 remains unchanged, so a default
-five-second provider WEBHOOK_TIMEOUT cannot pass even one fully contended
-SQLite acquisition plus positive REST/margin. If that inequality cannot be
-proven, HALT; any installation-wide timeout change needs separate owner
-approval, and no new lease bypass, speculative early HTTP 2xx response or implicit core
-patch is allowed. Any change to installation-wide provider timeout is a
-separate owner-approved operational decision affecting other Chatwoot
-webhook consumers; it is never implied by this amendment. A permissible
-measurement venue is (a) an isolated target-equivalent environment with the
-actual candidate source/build/runtime, DB/lock and worker topology and
-verified-equivalent settings, containing synthetic data only, or (b) a
-separately owner-approved bounded target measurement without customer data,
-customer webhook acceptance, or public provider writes. Any production
-connectivity/read or provider operation beyond that permission requires its
-own Agreement §§1–3 authorization; measurement is not customer-runtime
-activation. Target-equivalent measurements do not prove the live installation's
-current WEBHOOK_TIMEOUT: that value requires the independent authorized
-operator attestation above; missing/expired/wrong-target attestation HALTs.
-Equivalent worker topology is evidenced by exact worker count/process
-model, concurrency, local DB/filesystem and queue bounds for both environments,
-not asserted because the software versions match.
-Configuration must be startup-validated so selected lease/deadline/retry
-relationships
-cannot permit a POST from an expired claim or convert unavailable authority
-into false terminal success. No numeric constant is chosen merely because
-it sounds reasonable. Synthetic/isolated tests or a pre-production code merge
-are not substitutes for measured deployment evidence; if the required
-measurements or source are unavailable, production activation HALTs.
-
-This amendment changes only **when target-environment numeric evidence must
-exist for non-activated pre-production code authoring/review**.
-Here webhook-response/deadline refers strictly to a provider HTTP response;
-NON_ACTIONABLE_ACK remains the distinct durable semantic ACK origin under
-§29.2, and no webhook HTTP response alone constitutes semantic ACK. It does not
-authorize any real Chatwoot operation, relax startup validation, downgrade
-§29.8.2 durable HUMAN liveness, replace Q39 positive/negative configuration
-tests, permit an automated handoff/status toggle or expand the permitted
-public-send behavior. This timing amendment adds acceptance vector Q39a;
-the amendment's exact base and historical provenance are recorded in the
-document header and in its separate campaign traceability evidence.
+A timing-admission HALT is not permission to erase or orphan previously
+accepted work. The existing §29.8.2 semantic-liveness, durable HUMAN/fault,
+uncertain-outcome, no-repeat and §43 safe-reconciliation obligations continue
+to apply. No additional public POST or fictitious physical handoff is
+authorized by a timeout or by this test-only permission.
 
 ## 29.9 Clarification and semantic provenance under v0.8
 

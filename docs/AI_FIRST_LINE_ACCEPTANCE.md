@@ -1166,108 +1166,41 @@ Expected:
 - changing measured/frozen timing authority is a reviewed configuration/contract
   event, not an ad-hoc code constant.
 
-### Q39a — fixture-only timing values are not live runtime authority
+### Q39a — nondeployed timing fixtures do not authorize production
 
-Exercise the C6 pure budget validator with an explicit FIXTURE_TIMING
-profile only inside a nondeployed, network-isolated harness. Separately
-exercise a real MEASURED_NON_CUSTOMER record from a verified target-
-equivalent environment; non-customer test DATA do not make its measured
-timing VALUE fabricated. Separately attempt to construct
-or start the customer-data/webhook path with (1) no timing provenance,
-(2) a fixture-only config outside that harness, (3) a measurement record for a
-different target Chatwoot/runtime/configuration tuple, (4) a stale/missing
-measurement digest or unsupported authority, (5) a superficially plausible
-set of timing numbers whose cumulative REST + synchronous SQLite lock +
-queue/event-loop + response-margin budget cannot fit the externally proved
-WEBHOOK_TIMEOUT, and (6) one positively bound applicable measured/inherited
-configuration satisfying all required timing relationships, and (7) a provider
-timeout/operator attestation that is absent, mismatched to the target,
-missing an immutable identity, invalidated by a newer known Chatwoot upgrade,
-or older than a documented App Config/worker change,
-(8) provider native value 5 seconds or 5000 milliseconds alongside
-unitless 5/5000, swapped seconds/milliseconds, contradictory or overflow
-unit conversions, (9) live attestation invalidation during PREPARED,
-GATING, SENDING, UNCERTAIN and after acceptance of a further customer
-message, (10) forged or modified attestation bytes with a copied, wrong,
-missing or caller-supplied digest or unauthenticated operator event,
-(11) a fixture-based direct entrypoint/CLI/worker bypass using env flag,
-constructor default, caller tag or direct import instead of the private
-production admission capability, (12) FIXTURE_TIMING fraudulently relabeled
-as MEASURED_NON_CUSTOMER versus a truly measured verified non-customer
-profile, (13) bounded Node admission with an unbounded upstream proxy/
-kernel backlog or the (M+1)-th callback behind M lock-blocked requests,
-(14) one transaction with two possibly blocking SQLite phases, nonzero
-busy-handler overshoot, GC, filesystem sync or REST DNS/TLS/backoff omitted
-from the alleged complete bound, and (15) missing provider deadline/retry
-semantics, absent authenticated operator record, unapproved attestation
-expiry/renewal policy or a known yet unrecorded deployment change,
-and (16) an invalidated runtime while the local episode store is locked,
-corrupt or has an unprovable restore cut and cannot commit durable HUMAN.
+Exercise these distinct cases:
+1. Before any target measurement, an isolated non-customer harness tests a
+   pure fail-closed C6 timing/budget validator using explicitly synthetic
+   fixture values, with no production Chatwoot connection or public POST.
+2. The same fixture or an invented environment/default value is supplied
+   to a production connection, customer-data/real-customer shadow mode,
+   runtime activation or public-action dispatch path.
+3. A deployment has missing, stale, mismatched or insufficient actual
+   timing/deadline evidence; the proposed relationship would permit an
+   expired claim, duplicate/uncertain POST or false handoff completion.
+4. A target-matched, measured/inherited configuration has verified
+   lease/deadline/retry relationships and a provably safe complete
+   provider callback-time budget before deployment/customer execution.
+5. Configuration evidence becomes invalid after an action is already
+   accepted, including PREPARED/GATING/SENDING/UNCERTAIN, a restart and
+   already-accepted deferred work.
+6. A frozen EpisodeStore 5000 ms per-lock wait is mistakenly treated as
+   proof of the complete webhook response deadline.
 
 Expected:
-- isolated synthetic tests of the fail-closed budget validator are allowed
-  before target deployment measurements; they never turn the synthetic profile
-  into a production authority or authorize Chatwoot connectivity;
-- (1)–(5), (7), and all invalid variants of (8)–(16) HALT before
-  admitting new customer work, claiming it or authorizing a NEW public POST,
-  without inventing successful physical handoff or terminal proof;
-- for (9) already-accepted streams, monotonic durable HUMAN/fault recovery
-  continues locally; PREPARED/GATING cannot newly dispatch, and SENDING/
-  UNCERTAIN preserves its maybe-sent outcome with zero ADDITIONAL POSTs.
-  Do not falsely assert that a historical/in-flight public POST is undone;
-  failed local durable recovery remains HALT/operator attention and no
-  fictitious success; unaccepted messages remain only in Chatwoot;
-- (6) may pass configuration validation only with explicit provenance:
-  immutable measured-record id/digest or exact merged frozen authority,
-  target tuple and configured values that match current verified scope;
-- FIXTURE_TIMING and legacy SYNTHETIC are rejected by every production
-  admission path regardless of flags, env variables, direct-import
-  constructor calls or caller tags; only a separate isolated test harness
-  injects fixture duration values into the pure non-admitting validator.
-  A protected opaque runtime admission capability from the production
-  gate is mandatory for all real dispatch/ingress entrypoints, not minted
-  from test fixtures; check production package/import-graph exclusions;
-- the independently authenticated trusted registry record bytes are
-  re-hashed/canonicalized and matched to the approved immutable digest;
-  arbitrary digest strings, spoofed operator names or self-labeled
-  measured values provide no production authority;
-- a genuine MEASURED_NON_CUSTOMER value may support evidence ONLY when
-  actual measurement, tuple, topology, signed-off source and cumulative
-  bound are proved. It must be distinguished from invented FIXTURE_TIMING;
-- provider-side WEBHOOK_TIMEOUT requires an authenticated-operator
-  attestation with provider raw value, native unit/readback format,
-  effective integer milliseconds, verified provider timeout/deadline/retry
-  semantics, source/target/version/topology/epoch, operator UTC identity
-  and immutable re-hashed record. The relay has neither Super Admin nor
-  Chatwoot DB credentials and cannot claim live provider readback;
-- source '5s' with proven native semantics converts to 5000 milliseconds,
-  and proven '5000ms' agrees; bare '5'/'5000', wrong native unit, missing
-  semantic deadline type and contradictory representations HALT;
-- a Chatwoot upgrade, App Config change or worker/topology change invalidates
-  the attestation; missing, invalid or stale attestation HALTs under (7);
-- the webhook-response upper bound accounts for every full REST attempt
-  (including connect/TLS/DNS/backoff/body), all separately possible SQLite
-  acquisition/commit lock waits and overrun, filesystem I/O/fsync, CPU/GC,
-  queue/proxy/kernel predecessor delay and strictly positive margin.
-  Missing or unbounded operand, unenforced queue cap or provider starting
-  deadline semantics HALTs despite low measured p99. A second lock phase
-  may not be silently priced as zero; the (M+1)-th overload callback must
-  be rejected/fail-closed without pretending to meet the provider deadline;
-- Q39a is not guessing a new threshold: the FROZEN EpisodeStore SQLite
-  busy_timeout=5000 is 5000 milliseconds. With a provider-response
-  deadline independently attested as 5000 milliseconds, even ONE full
-  possible lock wait and any positive overhead/margin MUST FAIL; increasing
-  the installation-wide provider setting needs the owner's separate
-  explicit operational authorization;
-- an isolated target-equivalent measurement records exact build, worker
-  count, concurrency, SQLite topology, queue bounds and configuration;
-  it uses only synthetic data; a separately permitted
-  bounded target measurement remains non-customer and is never blanket
-  permission for production reads/provider writes;
-- a pre-activation code merge is not deployment evidence; later real
-  configuration drift invalidates readiness and startup must fail closed;
-- elapsed time alone never proves a handoff attempt did not commit, never
-  permits repeat POST or unsafe automated ownership/status toggle.
+- (1) MAY implement/test without first measuring target runtime timing; it
+  establishes no production authority or production-implementation option.
+- (2), (3) and (6) FAIL CLOSED: no new customer admission, autonomous
+  dispatch or Chatwoot public POST based on fixture/guessed/unknown timing.
+- (4) may proceed only subject to all other frozen admission, evidence,
+  implementation-options, safety and activation gates; passing this vector
+  alone is not deployment authorization.
+- (5) keeps previously accepted semantic work under existing §29.8.2,
+  Q37/Q39, §43 and at-most-once recovery rules: local durable HUMAN/fault
+  recovery is not cancelled by invalid timing admission; no additional POST,
+  repeated unknown-outcome handoff or false durable/physical-success claim.
+- The already frozen EpisodeStore busy_timeout=5000 milliseconds is unchanged;
+  it does not establish a provider webhook deadline or whole-callback budget.
 
 ### Q40 — structured submission arriving before local CLARIFY confirmation is not lost
 A CLARIFY public message is visible to the customer and receives a native
