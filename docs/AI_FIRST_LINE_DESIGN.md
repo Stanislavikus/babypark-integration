@@ -2879,10 +2879,11 @@ require a failed evidenced five-second fit plus separate owner approval,
 scope/Sidekiq review and recorded rollback; this clause does not change it.
 
 **Ingress topology and invariants.** The target permits exactly one
-ingress OS process / Node event loop **including rolling restarts**;
-any transient dual-process overlap invalidates this topology and must
-be prevented or re-reviewed, at most a positively configured
-finite concurrent admission limit `N` and bounded body admission.
+ingress OS process / Node event loop at any moment (including during
+rolling restarts), at most a positively configured finite concurrent
+admission limit `N` and bounded body admission. Any transient
+dual-process overlap invalidates this topology and MUST be prevented
+or separately reviewed before customer execution.
 An accepted event MUST use at most one owning `BEGIN IMMEDIATE`
 mutation with immutable source-topology/duplicate/deferred-parent and
 blocker-to-durable-HUMAN checks performed inside that transaction.
