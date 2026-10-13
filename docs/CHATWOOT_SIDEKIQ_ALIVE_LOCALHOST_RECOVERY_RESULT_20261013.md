@@ -1,0 +1,36 @@
+# Chatwoot Worker SidekiqAlive — owner-authorized localhost-bind recovery result
+
+Status: EVIDENCE — NON-NORMATIVE. Live production configuration recovery successfully observed, with two-window CPU stdout evidence **UNAVAILABLE**; **final validation PARTIAL**, no rollback triggered.
+Applies to: `chatwoot-fra1-01` and `chatwoot-worker.1.service` only, separate ops PR #133 (Draft). Not C6 PR #128.
+Supersedes: pre-change operational state for SidekiqAlive host bind; original EOF bug remains.
+Original production-authorization basis: PR #133 exact HEAD `897a9e25fa1e743fc502c39adbcd11f500ff151d`, TREE `86711ea0ec0a9d6e068cf3b0a1ca76da81d0664d`, BASE/main `0dfb9b0a1cfe23d455fd436ae9abeac626d0d729`, Agreement blob `e777fce4af8e8c3372f1f9de9ef7d00f786c2c89`. Frozen Scan SHA-256 `0d3cc934f2fe93b0a5ace8fce7391c98ee525f1787ad79c0707262791cef7271`, Fit SHA-256 `2614bfcd7a6896d74e5666ec208b1951d54c291eaac5f2b1de6e5c16ef67e3c7`. Explicit owner-approved change and rollback at user message `2026-10-13T23:47:47Z`, 20-minute owner-attended window; not a Git merge approval.
+
+## Exact observed timeline / authorized actions (UTC)
+
+- `23:48:57`: final separate read-only preflight PASS, Worker active/running with previous MainPID `3766783`, unit path unchanged, no drop-in directory or file existed, `KillMode=mixed`, `TimeoutStopUSec=30s`, `Restart=always`; Sidekiq Redis metadata-only (no payload) showed one process, Busy **0**, ten queues with Enqueued **0**, Scheduled **1**, Retry **0**, Dead **5**. The owner independently supplied Sidekiq Busy/Queues/Retries/Scheduled UI screenshots with these counts, prior to preflight.
+- `23:50:13`: verified the same preflight again; created exactly one stock systemd drop-in `/etc/systemd/system/chatwoot-worker.1.service.d/sidekiq-alive.conf`, owner `root:root`, mode `0644`, content:
+```ini
+[Service]
+Environment="SIDEKIQ_ALIVE_HOST=127.0.0.1"
+```
+  UTF-8 LF final newline, SHA-256 of installed file **`69becc62635049942798214e713f21ed344b36022b508f0be5b2c7a341e00177`**.
+- `23:50:14`: `systemctl daemon-reload` PASS; issued exactly one planned `systemctl restart chatwoot-worker.1.service` under the approved 30-second graceful-stop envelope. No other service was restarted; no changes to .env/main unit, nginx, Redis, customer data, AI or firewall.
+- **Output recovery caveat:** Desktop Commander returned `No session found for PID 1521716` when attempting to retrieve the controlling process's post-restart output, although a read-only process check at `23:50:44` showed it still running and by `23:51:07` the original controller had exited. Thus **the actual terminal stdout showing its local GET, two 12s CPU windows, queue checks and final result code cannot be attested**, even though the controller script was constructed to run those steps and roll back on failures. Do NOT manufacture the missing values or infer a formal exact two-window PASS.
+- `23:50:44`: independent read-only recovery inspection: Worker **active/running**, NEW MainPID `1521867`, drop-in exact file digest/mode match, only `127.0.0.1:7433` listening, previous main PID `3766783` and healthcheck child PID `3767076` no longer present. No rollback or additional restart observed.
+- `23:51:54`: independent read-only snapshot: Worker active/running, one Sidekiq process with Busy **0**, Enqueued **0**, Scheduled **1**, Retry **0**, one exact `127.0.0.1:7433` listener. New child healthcheck was **83 seconds old and accumulated 0.004 seconds of thread CPU** (effectively idle); the new worker main was **97 seconds old with 12.737 seconds of total thread CPU** (13.13% of one logical core lifetime average, including startup). These are **lifetime counters, not substitutes for two separately logged 12s windows**. A particular standalone Redis key existence check returned 0, but this key is not validated as the handler's complete liveness-authority key and **MUST NOT** override the actual HTTP health result.
+- `23:52:17`: separately verified **bounded HTTP GET to `http://127.0.0.1:7433/`** (no proxy, no credentials, no body retained) returned **HTTP 200**, transport rc 0, using the only allowed loopback endpoint. No malformed EOF test, no external healthcheck client traffic.
+- `23:52:53`: status-only HTTPS GET to `https://chat.babypark.ua/` returned **HTTP 200**, and `https://ai.babypark.ua/` returned **HTTP 302** (normal auth redirect), both rc 0. No auth cookie or customer content accessed. The owner previously also confirmed browser reachability after DigitalOcean Cloud Firewall creation.
+
+## Outcome and limitations
+
+**Operational recovery evidence: PASS** for active Worker, exact new localhost-only listener, dead old child, HTTP 200 healthcheck, zero Busy/Enqueued/Retry, and both HTTPS sites reachable. The original hot child thread consuming one full logical core is GONE and replacement child lifetime CPU is negligible. **Formal 2 × 12s CPU verification: INCOMPLETE** due Desktop Commander output session loss; no fabricated interval figures or asserted completion. Owner would need to explicitly authorize repeat **two read-only 12-second CPU windows** to close this last evidence gap. Until then mark total campaign acceptance **PARTIAL**, not zero-blocker final evidence. There is no reason to roll back solely for absent CPU-output evidence while the currently observed runtime remains healthy; rollback remains reserved for actual service/health/queue/bind failures. This judgment does not expand authority for more production actions.
+
+The stock `sidekiq_alive 2.5.0` GServer HTTP request parser retains its premature-EOF loop defect and localhost binding only reduces external exposure. DigitalOcean Cloud Firewall remains attached as confirmed by user; inbound TCP 22/80/443 only, no public 7433/3000 allowlist, but no cloud-side API rule attestation or external probe was made. No sidekiq_alive/Puma/gem code changed. An external 7433 consumer was not configured by owner; a third-party probe identity remains unknown. HOST OS firewall and Rails 3000 listener hardening remain separate future change requests.
+
+## Production object / rollback identity
+
+Object: `/etc/systemd/system/chatwoot-worker.1.service.d/sidekiq-alive.conf` (owned by root, 0644), containing only the approved native `SIDEKIQ_ALIVE_HOST=127.0.0.1` setting; same SHA-256 above. Parent drop-in directory was created solely for this file. Main unit `/etc/systemd/system/chatwoot-worker.1.service` unchanged. Separate Cloud Firewall object `babypark-chatwoot-firewall` was created by the owner before this window, not by this campaign.
+
+**Rollback — only on explicit runtime failure and applicable owner authority:** verify exact file identity/content/digest/ownership, remove only this campaign-owned drop-in, remove its parent directory only if empty and created by campaign, `systemctl daemon-reload`, one controlled `systemctl restart chatwoot-worker.1.service` and recheck Worker, queues, 7433 listener/health and HTTPS. Preserve the Cloud Firewall because default GServer public bind would otherwise return. Never delete any other files, never read application secrets, never touch client data. Rollback was **NOT executed** in the observed successful recovery.
+
+These notes do not authorize merge or continuation of C6, and no customer-facing AI action was activated.

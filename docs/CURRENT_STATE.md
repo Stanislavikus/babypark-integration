@@ -3,9 +3,15 @@
 Status: EVIDENCE — operational/current-state record; not normative contract authority.
 Applies to: repository-wide operational and campaign state tracking.
 Supersedes: `docs/CURRENT_STATE.md` at canonical main `a45a8644e05df2584a2b75f2a3b47446811ae984`.
-Last updated: 2026-10-10
+Last updated: 2026-10-14
 Owner: BabyPark
 Source of truth for operational facts: production runtime + verified repository evidence.
+
+## Operational exception — Chatwoot Worker healthcheck recovery (2026-10-13 UTC)
+
+Owner-authorized separate ops PR #133 (Draft, not merged) added stock `SIDEKIQ_ALIVE_HOST=127.0.0.1` via a dedicated systemd drop-in for `chatwoot-worker.1.service` and carried out ONE controlled Worker restart. Runtime checks: Worker active/running with new MainPID `1521867`; old worker/health child gone; listener exclusively `127.0.0.1:7433`; bounded localhost HTTP GET **200**; Redis Sidekiq metadata one process, Busy **0**, Enqueued **0**, Scheduled **1**, Retry **0**; `chat.babypark.ua` HTTPS **200**, `ai.babypark.ua` HTTPS **302** auth redirect. The replacement GServer child accrued just 0.004 CPU seconds over 83 seconds at read-only snapshot. Existing DigitalOcean Cloud Firewall left intact. No .env, main unit, Chatwoot code/gems, AI runtime or customer data changed.
+
+**Acceptance limitation:** two planned 12-second CPU window outputs were lost when the Desktop Commander process session became unavailable; independently measured lifetime CPU supports immediate recovery but the two-window test is **UNATTESTED**. This is operationally healthy with formal verification PARTIAL; explicit new owner authorization is required before any replacement two-window CPU sample. The original EOF bug remains in stock GServer; localhost binding and the Cloud Firewall reduce external reachability but do not repair its parser. Full timeline/digest/rollback details: `docs/CHATWOOT_SIDEKIQ_ALIVE_LOCALHOST_RECOVERY_RESULT_20261013.md` and the object registry. PR #133 remains Draft and C6 implementation PR #128 is separate.
 
 ## Current campaign/navigation snapshot (2026-10-10)
 

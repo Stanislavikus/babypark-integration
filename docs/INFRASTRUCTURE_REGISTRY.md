@@ -59,6 +59,16 @@ Do not repoint or reuse this hostname for Knowledge Authority.
 
 ## Integration host: `chatwoot-fra1-01`
 
+## Chatwoot Worker — SidekiqAlive isolated systemd drop-in (2026-10-13, production)
+
+Purpose: bind the existing SidekiqAlive v2.5.0 GServer healthcheck to localhost only; relieve historical stuck child by one owner-approved Worker restart, without any Chatwoot core edits or new runtime packages.
+
+Object: `/etc/systemd/system/chatwoot-worker.1.service.d/sidekiq-alive.conf`, `root:root`, mode `0644`; config key `SIDEKIQ_ALIVE_HOST=127.0.0.1`; exact file SHA-256 `69becc62635049942798214e713f21ed344b36022b508f0be5b2c7a341e00177`. Main systemd unit unchanged: `/etc/systemd/system/chatwoot-worker.1.service`. No credentials or service-environment values stored in this registry.
+
+Current verified listener: `127.0.0.1:7433`; Worker `chatwoot-worker.1.service` active after a single approved restart, health GET loopback HTTP 200, initial Busy/Enqueued/Retry = 0. DigitalOcean Cloud Firewall (owner-created) `babypark-chatwoot-firewall` remains separate defense with inbound 22/80/443 and no 7433/3000 allow. Public reachability was not externally tested. The local-side EOF parser defect is NOT patched.
+
+Rollback identity: remove ONLY this exact-digest campaign-created file, remove its parent directory only if empty, systemctl daemon-reload, controlled Worker restart, and verify health/queues/HTTPS while keeping DO Firewall. The rollback was not needed during 2026-10-13 recovery. Exact approved scope, times, telemetry caveat and owner go-ahead are documented in `docs/CHATWOOT_SIDEKIQ_ALIVE_LOCALHOST_RECOVERY_RESULT_20261013.md` under Draft PR #133. No auto-merge. Further host firewall / Rails port-3000 binding hardening is a SEPARATE task.
+
 Current public/origin IPv4 used by `ai.babypark.ua`: `161.35.78.167`.
 
 ### Nginx — BabyPark AI
