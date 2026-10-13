@@ -1,0 +1,34 @@
+# SidekiqAlive namespace feasibility — read-only precheck and pending command
+
+Status: EVIDENCE — NON-NORMATIVE; no namespace trial run.
+Applies to: isolated OPS PoC proposed in Draft PR #133 for `chatwoot-fra1-01`; **not** C6 PR #128.
+Supersedes: none.
+UTC observation date: 2026-10-13. Source authority: `Stanislavikus/babypark-integration`, `main` `0dfb9b0a1cfe23d455fd436ae9abeac626d0d729`, Agreement blob `e777fce4af8e8c3372f1f9de9ef7d00f786c2c89`. The planned network namespace check is **NOT EXECUTED** and owner has not yet personally approved its exact bounded action; text quoted from an independent reviewer is not a separately authenticated go-ahead.
+
+## Earlier access and precise scope disclosure
+**ALL prior host-side read-only diagnostic commands in this campaign invoked through the connected Desktop Commander session were executed with effective UID=0/root**, despite earlier conversational descriptions that referred to "without root". They read restricted command-defined `/proc`, `/sys/fs/cgroup`, systemd numeric properties, static installed Ruby gem files, `Gemfile.lock`, Ruby/gem executable metadata and static Git evidence. We did not intentionally request `.env`, secrets, application or customer logs, customer messages, Redis/Postgres contents, job payloads, or process command lines; **root access nonetheless had the technical ability to read them**. No source-state changes, production service writes, package installation, signals, restarts or Chatwoot core patches were carried out. This is a retrospective scope disclosure based on observed tool calls, not an independently retained full audit log or a claim about connector retention. Future production access should use an explicitly provisioned least-privilege account; avoid blanket journal access because logs can contain customer data.
+
+## Preparation checks actually performed (read-only)
+Connected Desktop Commander agent remains root, as shown by `id -u` and `id -un`. Read-only commands used for this preflight: `getent passwd 65534` with fields limited to account name/numeric UID/GID (no password hashes or account secret); `test -x` against fixed `/usr/bin/setpriv`, `/usr/bin/unshare`, `/usr/bin/timeout`, `/usr/bin/env`, `/usr/bin/true`; and `setpriv --help`, `unshare --help` filtered for specific documented argument names. Earlier bounded read-only capability preflight also checked namespace sysctl integers, executable presence, `CapEff` numeric flags, availability of cgroup v2 and gross `MemAvailable`; **no namespace creation** was attempted.
+Findings: host has `nobody` account UID=65534/GID=65534, all five named executables exist, setpriv supports `--reuid`, `--regid`, `--clear-groups`, `--bounding-set`, `--no-new-privs`; unshare supports `--user`, `--map-root-user`, `--net`, `--fork`. The kernel flag `unprivileged_userns_clone=1` and namespace counts >0 indicate availability but **do not prove** that user 65534 can create a namespace. No feasibility result code exists yet.
+
+## Exactly proposed, NOT EXECUTED, one-shot namespace feasibility check
+A root-owned Desktop Commander launcher would execute a command whose **namespace-creating process itself** is already downgraded to UID/GID=65534, has no supplementary groups or host capability bounding set, has no inherited environment, and has no new-privileges escalation. The launcher remains a root-capable agent; the test does **not** establish that Desktop Commander as a whole is non-root.
+
+```bash
+/usr/bin/timeout --signal=TERM --kill-after=1s 5s \
+  /usr/bin/env -i PATH=/usr/bin:/bin LC_ALL=C \
+  /usr/bin/setpriv --reuid=65534 --regid=65534 --clear-groups \
+    --bounding-set=-all --no-new-privs \
+    /usr/bin/unshare --user --map-root-user --net --fork /usr/bin/true
+```
+
+Expected evidence to retain: UTC start/end instants, **numeric exit code only** plus sanitized fixed enum PASS (exit 0), FAIL (unshare/permission error) or TIMEOUT (exit 124/137). No Ruby, installed gems, app config, files, HTTP/socket/listener, working Sidekiq healthcheck, Redis/Postgres, process args/environment or application logs will be examined. `unshare` necessarily creates **ephemeral kernel namespace/uid mappings**; it makes no intentional persistent disk writes. **Do not run this command without specific new owner approval** naming user 65534, root parent launcher disclosure and this scope. No second attempt, alternative privileges, `sudo unshare` as root or silent fallback if it fails. If command exits nonzero, report and HALT the Chatwoot-host PoC; explore the existing rehearsal host as a separately authorized campaign.
+
+## Memory and stopping semantics for any later Ruby/Puma experiment
+The namespace check has no Ruby/Puma payload and lasts at most 5 seconds; it is not the GServer/Puma test. Any subsequent PoC must have an independently approved exact command and source/host pin. The old Fit's `ulimit -v 512MiB`/RLIMIT_AS bounds **virtual address space, not physical RSS or aggregate descendants**; Puma/Ruby thread stacks can reserve virtual address space and fail to start under this cap. Such a startup failure is **INCONCLUSIVE**, never evidence of absence of EOF spin or success/failure of Puma. For meaningful physical RAM protection prefer a truly isolated bounded memory cgroup, but creating/modifying it is privileged and requires **separate owner approval** after verifying subtree safety; otherwise use existing rehearsal server, and HALT instead of widening privileges or RAM limits. Per-process CPU time and outer wall deadline remain separate; on the full PoC record exact UTC start/end of both synthetic windows, aborts included. No live Web latency measurements have been authorized or collected.
+
+## Suggested durable operational access model (PROPOSAL, not installed)
+Provision a separate narrowly scoped unprivileged service account for host diagnostics: no `sudo`/root, no membership in `docker`, `adm`, `systemd-journal`, `root` or groups granting secret/log access by default; only required procfs/cgroup aggregate counters and explicitly allowlisted read-only `systemctl show` properties of agreed Chatwoot units. Do **not** grant `journalctl` globally, since customer content/credentials may occur in logs. If additional privileged evidence is truly needed, use a reviewed single-purpose root wrapper that emits sanitized fixed-field counters, not a general-purpose root shell. Desktop Commander itself must run as that account or enforce an audited immutable allowlist; simply using `setpriv` for one child does not remove the standing root-capable agent access. Account creation, access policy, Desktop Commander reinstallation or unit changes are not authorized by this document.
+
+Next action: obtain explicit owner approval for the one-shot non-root namespace check and bind to the current approved scan/fit digests; **no GServer/Puma test or production change until separate approval**.
