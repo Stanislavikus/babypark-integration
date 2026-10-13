@@ -2,10 +2,10 @@
 
 Status: FROZEN — C6/C25 pre-implementation safety acceptance + prior v0.7/C5 acceptance
 Applies to: BabyPark AI First Line Website v1 / Slice C acceptance contract.
-Supersedes: `docs/AI_FIRST_LINE_ACCEPTANCE.md` at canonical main `f9b5b8e5320884a675af3ea8e608c1e986e8331d`.
+Supersedes: `docs/AI_FIRST_LINE_ACCEPTANCE.md` at canonical main `13f7f81b7c7cdc94fd977363fc7027387e76728a`.
 Companion: `docs/AI_FIRST_LINE_DESIGN.md`
 Historical research baseline: `e4b3989f852d5de4a868a6f72867b87cb64f8b2d`.
-Contract amendment base: canonical main `f9b5b8e5320884a675af3ea8e608c1e986e8331d` (PR #130 timing exception).
+Contract amendment base: canonical main `13f7f81b7c7cdc94fd977363fc7027387e76728a` (C6 ingress-only A-prime timing gate).
 
 This file is the single normative acceptance corpus for AI First Line v0.8. It
 incorporates the complete prior acceptance corpus plus the C6/C25
@@ -828,8 +828,10 @@ Expected:
 - `getEpisode` never combines version/budget/requested-slot metadata from one
   commit with candidates or slots from another;
 - the writer may complete only after the reader releases its snapshot;
-- every EpisodeStore connection reports `PRAGMA busy_timeout = 5000`, independent
-  of Node runtime support for any `DatabaseSync` constructor timeout option;
+- every historical C1 schema-v1 `EpisodeStore` connection reports
+  `PRAGMA busy_timeout = 5000`, independent of Node runtime support for
+  any `DatabaseSync` constructor timeout option. This Q16 C1 assertion
+  does not select a v4 FirstLineStateStore ingress wait (§29.8.3);
 - write transactions continue to use private transaction-neutral
   `#readEpisode` without nested transactions.
 
@@ -1167,27 +1169,134 @@ Expected:
 ### Q39a — the offline fixture exception cannot escape into runtime
 
 Exercise the following distinct cases:
-1. Pure offline C6 timing validator, synthetic fixtures and isolated harness,
-   with no customer data or Chatwoot connectivity.
+1. Pure offline C6 timing validator on synthetic fixtures, and a distinct
+   disposable benchmark harness measuring existing v4 store/SQLite primitives
+   and mocked HTTP/body/event-loop contention on synthetic data. Neither
+   modifies production code nor uses real Chatwoot/customer data.
 2. Fixture values, environment defaults, or caller-supplied fixture mode reach
    any production webhook, AI public-action or customer-facing timing path.
-3. Before measurement, a non-validator C6 change implements a timing-dependent
-   webhook ingestion, claim, dispatch or reconciliation path.
+3. A non-validator C6 change implements a timing-dependent claim,
+   dispatch or reconciliation path before measured/inherited authority;
+   or implements ingress without the separately approved §29.8.3
+   measured-component/derived-limit code-stage gate.
 4. A whole-repository release contains dormant C6 files, an unrelated
    Catalog/Gateway fix, or standalone C6 backup/restore, without executing
    any customer-facing C6 runtime path.
 5. At production activation, the provider callback budget or a related timing
-   relationship is unproved, including misuse of the frozen SQLite
-   busy_timeout=5000 as a whole-callback bound.
+   relationship is unproved, including misuse of the historical C1
+   `EpisodeStore` busy_timeout=5000 as a v4 setting or
+   as a whole-callback bound.
 
 Expected:
-- (1) is permitted for validator implementation/tests only; no production
-  authority is created.
-- (2), (3) and (5) FAIL CLOSED under §29.8.2/Q39/U14; fixture values never
-  authorize public POST or replace target-matched measurements/inherited facts.
+- (1) requires a separately owner-approved non-production stage and
+  the Agreement §§1–3 native/free-OSS scan before benchmark harness
+  code; neither artifact is production timing authority nor a
+  general C6 production-code exception.
+- (2), (3) and (5) FAIL CLOSED under §29.8.2/Q39/U14; fixture flags,
+  caller input, environment defaults and synthetic values NEVER authorize
+  production timing authority or public POST, or replace target-matched
+  measurements/inherited facts.
 - (4) alone is not C6 timing-dependent runtime implementation/activation.
 - Earlier §29.8.2, Q37/Q39 and §43 durable HUMAN, liveness and no-retry
   obligations remain unchanged; this exception cannot bypass them.
+
+### Q39b — ingress-only callback feasibility and C1/v4 applicability
+
+Exercise a synthetic-only matrix on the exact topology and bound provenance
+specified in DESIGN §29.8.3, without customer data, deployed Chatwoot writes
+or C6 runtime activation:
+
+1. Historical C1 schema-v1 `EpisodeStore` retains its explicit 5000-ms
+   wait; merged non-ingress v4 connections retain their 5000-ms constant.
+   Proposed ingress `B_v4` is a separately evidenced, explicitly
+   configured and read-back timeout. A fixture, code default or C1
+   history cannot become ingress timing authority.
+2. One ingress OS process with bounded active `N` versus dual-process
+   restart overlap, late callback replenishment and repeated REST
+   resumptions. Enumerate **all** same-event-loop synchronous CPU and
+   SQLite work, regardless of arrival order. Account for deferred
+   SHARED, BEGIN, each statement/cache-spill lock attempt and DELETE
+   COMMIT, including non-ingress and recovery connections. A read-only
+   competing connection can delay COMMIT even without writing.
+   Compare cache-spill-disabled and bounded dirty-page cases; an
+   unbounded silent statement-level wait HALTs the code-stage.
+   Exercise repeated short competitor holds with zero and nonzero
+   gaps (SQLite polls may miss either), and measured overshoot.
+3. One owning atomic ingest transaction repeats exact
+   `(source_provider,source_conversation_id,source_message_id)`
+   `ALREADY_KNOWN` lookup inside the transaction (DESIGN §29.5),
+   persists immutable deferred-parent metadata and HUMAN cuts
+   atomically, with no await/async yield. Future transaction helpers
+   reject thenable callbacks; pretransaction duplicate read alone
+   is insufficient. Existing two-transaction path is a surrogate,
+   not implemented owning-transaction proof.
+   Verify `I+R_seq+C_sync+SUM(j=1..K,B_wait[j])+Q+O < T_webhook-M`.
+   `N` does NOT bound cumulative synchronous segments after callback
+   replenishment or several REST await/resume points; require finite
+   cumulative work/queue/rate controls and a conservative `C_sync`.
+   For each `j` read back **owning connection's** effective
+   `PRAGMA busy_timeout` (`B_site[j]`). A co-resident 5000-ms wait
+   is not charged at a smaller ingress `B_v4`. Unknown/mismatched
+   connection readback rejects startup/fit unless isolation is proven.
+   Charge full `B_site[j]` plus evidenced overshoot absent stronger
+   enforced completion; sampled percentiles, individual lock holds
+   and short free gaps are not hard bounds. Validation/HMAC is
+   charged once; JS timers do not preempt synchronous SQLite.
+   Reject default 5000-ms authoritative REST reads against strict
+   5000-ms Chatwoot target with positive margin/other work.
+4. Exercise beyond-`N` admission, blocked SQLite, backup/recovery,
+   repeated writer contention, unknown journal mode, and expiry
+   of per-site waits. `SQLITE_BUSY` means failure, never ACK.
+   For code-stage startup, reject unverified `B_site`, absent
+   cumulative work bounds/body deadline, unsourced margin or
+   candidate envelope violating `T_safe`. Before customers prove
+   durable HUMAN plus operational attention; HTTP status alone
+   cannot prove either.
+5. Chatwoot v4.18.0 native response matrix: 4xx, 429, 500, 503,
+   timeout, worker retry, pending-to-open and ownership changes.
+   Distinguish attested `WEBHOOK_TIMEOUT=5` from unverified
+   HTTP open/read per-attempt/aggregate timers. Synthetic-only
+   fail-closed outcomes are permissible for unwired code-stage;
+   actual error effects, durable HUMAN and operator attention
+   MUST be proven before customer execution.
+6. Distinct offline formula validator and isolated disposable
+   v4/SQLite/mock-HTTP benchmark with synthetic data and no
+   production connections. Require separately approved test stage
+   and Agreement §§1–3 native/free-OSS comparison *before*
+   constructing the harness. Code-stage Fit requires provider-target
+   provenance, target-matched measured components, per-site
+   timeouts, conservative cumulative allocations and separate owner
+   approval. Full implemented callback measurement happens
+   before customer execution, not before its code exists.
+   Reproduce target Node/SQLite/CPU/memory/disk and co-resident
+   Web/Worker/Postgres/Redis/Gateway loads, observed timestamped
+   peaks and predeclared runs/warmup/percentile/uncertainty/margin.
+   Missing peak/variance or unmatched environment HALTs.
+   Exercise slow/partial-body admission, rejected over-`N` floods,
+   high-timeout non-ingress SQLite, cache spill and repeated
+   REST-resume/replenishment waves; if work is unbounded HALT.
+   Never bind a public listener or live Chatwoot/customer data.
+   Read-only production peak telemetry requires separate scoped
+   owner approval, allowlisted commands and provenance.
+7. RPO remains separately owner-approved. Evaluate DELETE versus
+   WAL before first B2 production DB creation, verify actual
+   `PRAGMA journal_mode` after creation, and prove backups/restore
+   with selected mode and WAL checkpoint/sidecars if selected.
+   Endless restart cannot demonstrate RPO compliance.
+8. Before harness code, compare version-pinned Node/SQLite built-ins
+   and maintained commercially usable free OSS profiling options
+   (including autocannon/tinybench/mitata) under Agreement §§1–3.
+   No custom test glue without documented gap/approval, extra
+   production runtime dependency or Chatwoot core patch.
+
+Expected: An evidenced synthetic component Fit plus separately
+owner-approved **unwired ingress-only code-stage** may be authorized,
+not customer traffic. Both non-production artifacts are non-authorizing
+for customer execution. Only a fully measured implemented native
+callback budget with positive margin, provider error/HUMAN attention
+and B2 recovery proof may authorize customers. No claim, S2,
+public send or reconciliation pre-code timing relaxation is created.
+Unknown, guessed or unbounded evidence HALTs.
 
 ### Q40 — structured submission arriving before local CLARIFY confirmation is not lost
 A CLARIFY public message is visible to the customer and receives a native
