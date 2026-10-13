@@ -42,10 +42,15 @@ Authority: production runtime observations; not an owner-approved timeout change
   services were modified during attestation. No message content or
   secret was collected.
 
-**Limitations:** These are timestamped, non-secret observation values.
-They are not signed provider attestations, permanent deployment
-configuration, measured end-to-end callback latency, guaranteed
-native error-side-effect semantics, WAL/DELETE mode of the future DB,
+**Limitations:** These are described timestamped, non-secret observations,
+not an independently reproducible raw-output attestation. Original
+command/output digests, operator identity and scoped authorization
+are not recorded here. Nominal Rails reads may have incidental cache
+effects; no zero-side-effect guarantee is claimed. Before the provider
+timeout is used for code-stage authority, obtain a separately approved,
+version-pinned non-secret command/output provenance record. These
+observations are not permanent deployment configuration, measured
+callback latency, guaranteed native error effects, journal choice
 or authorization for future production actions. Recheck at the
 separate customer-execution gate.
 
@@ -59,9 +64,9 @@ claimed. All operational gates remain HALT until their own proof.
 | Requirement | Exact docs artifact / acceptance | Focused document verification and fail-closed effect | Durable impact | Docs terminal |
 | --- | --- | --- | --- | --- |
 | C6-AI-T01 historic C1 vs v4 | DESIGN §29.3, §29.4, §29.8.2–3; ACCEPTANCE Q16, Q39b(1) | Preserve historical C1 Q16 5000 and existing v4 non-ingress 5000; proposed ingress MUST derive explicit wait separately or HALT | NONE | DONE — docs only |
-| C6-AI-T02 measured-only isolated precursor | DESIGN §29.8.2–3; ACCEPTANCE Q39a(1–5), Q39b(6) | Bench limited to disposable v4 SQLite/mock HTTP; fixture/env/caller never grants runtime; Q39a(5) unknown provider budget HALTs; missing origin halts code-stage | NONE | DONE — docs only |
+| C6-AI-T02 measured-only isolated precursor | DESIGN §29.8.2–3; ACCEPTANCE Q39a(1–5), Q39b(6,8) | Separately approved offline harness, Agreement §§1–3 scan; fixtures/env/caller do not authorize runtime; missing provider/benchmark authority HALTs | NONE | DONE — docs only |
 | C6-AI-T03 ingress scope/atomicity | DESIGN §29.5, §29.8.3; ACCEPTANCE Q39b(2–3) | Unique source-key in owning no-await transaction; future async/thenable body rejected; immutable deferred-parent + HUMAN cut; second process/restart overlap/stale duplicate HALTs | NONE | DONE — docs only |
-| C6-AI-T04 non-double-count envelope | DESIGN §29.8.3; ACCEPTANCE Q39b(2–4) | K counts all possibly blocked same-event-loop SQLite sites regardless arrival, including BEGIN/COMMIT/non-ingress. Charge full B_v4 per site + evidenced scheduler/poll overshoot absent enforced completion bound; nonzero short-gap regressions, no double-count/timer preemption; unknown HALT | NONE | DONE — docs only |
+| C6-AI-T04 non-double-count envelope | DESIGN §29.8.3; ACCEPTANCE Q39b(2–4,6) | C_sync bounds replenished/resumed/co-resident CPU; K counts BEGIN, COMMIT, SHARED and cache-spill sites; B_wait uses the owning connection's B_site plus evidenced overshoot; body/reject storms measured, no double-charge or timer preemption; unknown HALT | NONE | DONE — docs only |
 | C6-AI-T05 provider timeout/overload | DESIGN §29.8.3; Q39b(4–6); this attestation | Positive read-only setting; SQLITE_BUSY on busy_timeout expiry and overload fail closed; native effects/operator-attention proof required for customers or HALT | NONE | DONE — docs only |
 | C6-AI-T06 journal and B2 boundary | DESIGN §29.8.3; Q39b(4,7) | Decision before creation, readback after creation; RPO/backup/recovery remains blocked pending future evidence | NONE | DONE — docs only |
 | C6-AI-T07 docs-only scope | DESIGN, ACCEPTANCE and this EVIDENCE file | Exact-tree changed-path/diff validation; executable/config/server modifications invalidate this PR classification | NONE | DONE — docs only |

@@ -2883,7 +2883,9 @@ scope/Sidekiq review and recorded rollback; this clause does not change it.
 **Ingress topology and invariants.** The target permits exactly one
 ingress OS process / Node event loop **at most**, including during
 rolling restarts, with a positively configured finite concurrent
-admission limit `N` and bounded body admission. Any transient
+admission limit `N`, enforced body-byte and body-receipt deadlines,
+and a bounded rejected/slow-body resource envelope. A concurrency
+limit alone does not bound callback turnover or rejection storms. Any transient
 dual-process overlap invalidates this topology and MUST be prevented
 or separately reviewed before customer execution.
 An accepted event MUST use at most one owning `BEGIN IMMEDIATE`
@@ -2909,85 +2911,94 @@ reader is NOT admissible unchanged for a strict five-second budget with
 positive margin and other nonzero work. A materially different process,
 store writer or event-loop topology invalidates this feasibility basis.
 
-**Budget model.** Each admitted callback MUST satisfy a bound in the
-chosen deployment/harness configuration:
+**Budget model.** Each admitted callback MUST satisfy a conservative
+target-matched allocation in the chosen deployment/harness configuration:
 
-`I + R_seq + N*S_exec + SUM(j=1..K, B_wait[j]) + Q + O < T_safe`
+`I + R_seq + C_sync + SUM(j=1..K, B_wait[j]) + Q + O < T_safe`
 
 `T_safe = T_webhook - M`, `M > 0` with independent provenance,
 initial `T_webhook = 5000 ms`. The margin is subtracted **once**.
 
-- `I`: ingress receipt and **this** callback's body parse/HMAC
-  validation; enforce the accepted byte/body cap, and measure its
-  non-interruptible CPU cost. Other callbacks' validation CPU belongs
-  to `Q`, never also to `S_exec`.
-- `R_seq`: sum of sequential exact REST-read/attempt time budgets;
-  asynchronous REST calls from independent deliveries may overlap.
-- `S_exec`: measured synchronous SQLite execution/COMMIT and
-  post-admission semantic CPU per delivery, **excluding** body/HMAC
-  validation in `I` and incompatible external-lock waiting. Existing
-  v4 store operations are a **surrogate** for the future single
-  owning-transaction ingress path; they cannot prove its final
-  `S_exec` or replace full callback measurement before activation.
-- `N`: maximum admitted callbacks that can queue synchronous work
-  on the same event loop; do not blindly multiply asynchronous REST.
-- `B_v4`: explicitly configured SQLite busy timeout for ingress,
-  applied separately to every blocking lock-acquisition point.
-- `K`: conservatively bounded total number of **potentially blocked SQLite
-  acquisitions** across **all work capable of running and delaying
-  this callback's response on the same event loop**, irrespective
-  of arrival order (including later-admitted callbacks, other
-  synchronous co-resident SQLite consumers and recovery/maintenance
-  work). The bound MUST cover every possible synchronous lock-wait
-  site or HALT; admission limit `N` alone does not bound unrelated
-  SQLite work. Distinct acquisition sites count separately: `BEGIN IMMEDIATE` and,
-  for DELETE journal mode with competing readers, `COMMIT` may each
-  wait in one owning transaction. Repeated competing lock reacquisitions
-  at one blocked site are NOT assumed to create new independent episodes.
-- `B_wait[j]`: conservative **wall-clock** waiting allocation
-  for blocked acquisition `j`. Unless a stronger bound is proven by
-  a version-pinned, target-matched **enforced lock-acquisition completion
-  guarantee**, charge the **full configured `B_v4`** for **every**
-  possibly blocked site, PLUS separately evidenced upper allowance for
-  SQLite busy-handler polling, scheduling stalls and other overshoot.
-  Merely observing a short external lock hold, a lock-free interval,
-  or any gap shorter than the active poll cadence is **not** a
-  completion guarantee: repeated reacquisitions can cause SQLite to
-  miss available gaps and exhaust the entire wait. Poll intervals,
-  wall-clock stalls and repeated short lock holds MUST be challenged
-  at the exact runtime; a test percentile or local dev result is not
-  a proven hard upper bound. If a conservative wall-clock allocation
-  cannot be justified for **all** potential lock sites, HALT the
-  proposed ingress code-stage, not just customer activation.
-  `W_ext`, `min(B_v4,W_ext)` and a guessed/assumed poll-free gap
-  MUST NOT be substituted for this allocation. No JavaScript timer
-  preempts a synchronous `node:sqlite` call.
-- `Q`: measured event-loop/queue delay including other callbacks'
-  body/HMAC validation and unrelated co-tenant execution, excluding
-  work already charged to `I` or `N*S_exec`.
-- `O`: measured response completion overhead including return to
-  Chatwoot; the remote network/worker tail is verified separately
-  before customer execution. Each term needs a non-overlapping
-  definition and bounded evidence.
+- `I`: this callback's bounded body receipt, byte-cap enforcement,
+  parsing and HMAC verification. Enforce both byte and body-read
+  deadlines and measure non-preemptible CPU and event-loop timer lag.
+  Other callbacks' parsing/validation and rejected/slow-body CPU
+  are accounted in `Q`, never also in `C_sync`.
+- `R_seq`: bounded sequential exact authoritative REST read/attempt
+  time for this callback, including verified timer delivery lag.
+  Independent callbacks may overlap asynchronously, then resume work.
+- `N`: the enforced cap on **simultaneously admitted** callbacks.
+  `N` is not a bound on cumulative callback arrivals or on repeated
+  synchronous resumptions after sequential REST awaits.
+- `C_sync`: evidenced conservative total **non-lock-wait** synchronous
+  SQLite execution and semantic CPU of **all** same-event-loop work
+  able to delay this response, regardless of arrival order. Count
+  distinct resume points, later-admitted/replenished callbacks and
+  co-resident non-ingress activity. Derive a finite bound from explicit
+  total-admission/rate/queue limits and measured per-segment work;
+  multiplying a single callback's cost by `N` is NOT enough without
+  proof excluding replenishment and further REST resumes. Unbounded
+  synchronous work or unknown cumulative count HALTs the code-stage.
+  Existing v4 two-transaction ingest operations are a surrogate,
+  not final proof for the future one-transaction path.
+- `B_v4`: evidence-bound explicit `PRAGMA busy_timeout` of the
+  proposed ingress connection only; not a global SQLite setting.
+- `B_site[j]`: verified effective `PRAGMA busy_timeout` of the
+  **connection owning** potentially blocked acquisition `j`.
+  Inventory all SQLite connections with synchronous work on this
+  event loop, including merged non-ingress v4 connections retaining
+  their existing 5000-ms constant. Verify each PRAGMA read-back
+  at startup; mismatch, missing provenance, or an unknown connection
+  HALTs unless its exclusion from the event loop is proven.
+- `K`: bounded count of **potentially blocked SQLite acquisitions**
+  across all work capable of delaying this response, including
+  later-admitted requests and co-resident non-ingress/recovery jobs.
+  Count `BEGIN IMMEDIATE`, DELETE-mode `COMMIT` reader waits,
+  deferred-read SHARED acquisitions, and every statement-level lock
+  attempt, including silently retried cache-spill EXCLUSIVE attempts.
+  An owning transaction may incur more than two waits. Either prove
+  `PRAGMA cache_spill=OFF` for the applicable connection/workload
+  with read-back or conservatively bound dirty-page/statement-level
+  attempts; neither is selected by this docs-only change. Unknown
+  repeatability/site count HALTs. Repeated external lock reacquisitions
+  within one blocked SQLite call consume that site's allowance.
+- `B_wait[j]`: conservative **wall-clock** allocation for each site
+  using its own `B_site[j]`, NEVER `B_v4` for a different connection.
+  Unless a version-pinned target-matched enforceable completion
+  guarantee supports a shorter bound, charge the entire applicable
+  `B_site[j]` PLUS evidenced polling/scheduling/stall overshoot.
+  A short external lock hold or observed free interval is not an
+  enforceable completion guarantee: SQLite polling may miss nonzero
+  lock-free gaps. A measured percentile, sample maximum or idle-host
+  result is *statistical* evidence, not a deterministic bound.
+  Explicitly declare the conservative calibrated operating envelope,
+  predeclared uncertainty/confidence and a failure/retest criterion.
+  If the required overshoot/scheduling allocation cannot be
+  substantiated for the **code stage**, HALT; never guess a hard
+  wall-clock bound or assume JS timers preempt synchronous SQLite.
+- `Q`: other event-loop/queue delay, including rejected or over-`N`
+  delivery storms, other callbacks' body/HMAC CPU, slow-body
+  resource occupancy and unrelated co-tenant CPU, excluding work
+  already charged to `I`, `C_sync` or SQLite waits.
+- `O`: measured response-completion overhead to Chatwoot. Remote
+  network/worker tails and native failure effects are separately
+  verified before customer execution.
 
-**Control classification.** `I` body-size admission, `N`
-concurrency admission, `R_seq` configured per-attempt read deadlines,
-and `B_v4` explicit per-wait SQLite busy limit have **enforced
-controls**; the CPU portion of `I` and the actual timer delivery lag
-must still be measured, since a synchronous SQLite wait may delay
-Node timers. `S_exec`, `Q` and `O` are **verified by measurement**,
-not forcibly interrupted by JavaScript timers. `K` is bounded by
-admitted callback topology and actual blocked lock-acquisition sites;
-`B_wait[j]` conservatively charges full `B_v4` for every potentially
-blocked acquisition, plus separately justified polling/scheduler
-overshoot, unless an enforceable stronger completion bound is proven.
-Any unbounded co-resident synchronous SQLite work or scheduling stall
-HALTs ingress feasibility rather than being treated as zero. `M` is a sourced positive
-safety margin. A timed-out SQLite `busy_timeout` is a
-**SQLITE_BUSY failure**, not successful callback completion at an
-individual competitor's `W_ext`; a synchronous `node:sqlite`
-operation cannot be preempted mid-lock-wait by an event-loop timer.
-No claimed runtime-enforced limit may rely on such preemption.
+**Control classification and failure rule.** Enforce the byte/body
+admission deadline, finite concurrent `N`, bounded total work
+admission/replenishment, `R_seq` configured request timeouts and
+connection-specific SQLite busy timeouts. `C_sync`, `Q`, `O`
+and overshoot are measured/calibrated allocations, not claimed
+interruptible. A statistical tail-SLO and safety margin do NOT prove
+a hard wall-clock deadline. If target-matched workload, necessary
+bounds or a real connection PRAGMA read-back is unproven, the
+candidate ingress code-stage HALTs. Expiry of any SQLite busy wait
+is `SQLITE_BUSY` or another recorded fail-closed outcome, not a
+success/handoff/ACK. No `await` or asynchronous yield is allowed
+inside the owning transaction; future ingress MUST reject
+async/thenable transaction bodies and test this. No public send,
+S2, reconciliation or customer activation is authorized by a
+passing component fit.
 
 **Competitors and journal decision.** A post-send recovery service would
 be a separate writer/process and MUST limit scan batch, read duration and
@@ -3025,7 +3036,9 @@ or no-retry.
 implementation, freeze the one-process topology, independent
 synthetic **component benchmarks** of the existing v4 store, SQLite
 lock waits, mock HTTP/body/queue and response model, and an explicit
-derived **design allocation** for `I,R_seq,N,S_exec,K,B_v4,B_wait,Q,O,M`.
+derived **design allocation** for
+`I,R_seq,N,C_sync,K,B_v4,B_site[j],B_wait[j],Q,O,M` with verified
+per-connection PRAGMA readbacks and finite cumulative work.
 
 **Target-matched measurement protocol.** A separate owner-approved,
 read-only production host/service telemetry collection stage is required
@@ -3086,10 +3099,14 @@ No extra production runtime dependency or Chatwoot core patch is
 authorized here. New ingress code MUST enforce the **enforceable**
 controls classified above; it MUST refuse startup/admission where a
 control or measured/competitor-derived bound is absent or
-unproven, and remain unwired for customer execution. Measured-only
-`S_exec`/`Q`/`O` or competitor-bound `W_ext` are NOT claimed
-preemptible or hard-enforced by the ingress runtime.
+unproven, and remain unwired for customer execution. Measured-only `C_sync`/`Q`/`O` and calibrated SQLite overshoot
+are NOT claimed preemptible or hard-enforced by ingress.
 A non-production synthetic benchmark is not an end-to-end measurement.
+Its matrix MUST exercise a high-timeout co-resident non-ingress SQLite
+connection with lower-timeout ingress, cache-spill per-statement waits,
+multiple REST resume waves, replenishment of active callbacks,
+slow-body deadlines and over-`N` rejection storms. Do not infer
+`C_sync` or `K` from the initial `N` alone.
 The full callback may be measured only after code exists, and is not
 required as a pre-code measurement. Before *customer execution*,
 recheck the real target timeout and chosen journal mode; run the exact
