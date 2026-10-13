@@ -2942,7 +2942,9 @@ write lock hold before it can coexist with ingress. B2 backup would use
 a separate read-only connection and MUST set a documented page-step
 `rate`, overall deadline, bounded writer-interference/restart policy,
 and maximum completed offsite snapshot age; endlessly restarted
-`sqlite.backup()` does not demonstrate RPO 60 minutes. Before B2
+`sqlite.backup()` does not demonstrate compliance with the
+owner-approved maximum data-loss window (RPO); until that value and
+completed offsite snapshot age are evidenced, B2 remains HALT. Before B2
 creates the first production v4 `episode.sqlite`, evaluate SQLite
 DELETE first against measured bounded contention and B2 restore checks;
 use WAL only if its benefits and checkpoint/-wal/-shm recovery semantics

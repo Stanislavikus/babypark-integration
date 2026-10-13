@@ -1262,8 +1262,11 @@ or C6 runtime activation:
    guessed percentile/multiplier or unmatched host measurements FAIL.
    No synthetic harness binds a publicly reachable listener or live
    production service.
-7. Compare DELETE and WAL as candidate modes before first B2
-   production DB creation, verify exact `PRAGMA journal_mode`
+7. RPO remains the separately owner-approved maximum data-loss
+   window, not an invented numeric constant. A repeatedly restarted
+   backup without evidenced completed offsite snapshots cannot
+   satisfy that window. Compare DELETE and WAL before first B2
+   production DB creation; verify exact `PRAGMA journal_mode`
    afterward, and exercise backup/restore/interference on the
    **selected** mode. WAL additionally requires checkpoint/-wal/-shm
    proof if selected; evaluating it does not activate it.
