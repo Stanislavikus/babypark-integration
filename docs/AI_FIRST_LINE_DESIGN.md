@@ -2799,10 +2799,12 @@ temporary synthetic SQLite and version-pinned Node/SQLite tools, but neither
 may create/change a production entrypoint, bind a publicly reachable
 port/listener, invoke deployed Chatwoot, process
 customer data, use real credentials, send public messages, modify production
-configuration, or persist customer material. Any fixture value, proposed
-budget or simulation MUST remain non-authorizing until a separate
-reviewed ingress configuration derives enforceable bounds from measured
-components, verified provider configuration and §29.8.3. Before any
+configuration, or persist customer material. A fixture flag, caller input,
+environment default, synthetic value or simulated success NEVER establishes
+production timing authority or authorizes public POST. Separately reviewed,
+target-matched measured components and verified provider configuration may
+support a proposed bounded ingress code-stage allocation under §29.8.3;
+the synthetic fixture itself does not become such authority. Before any
 benchmark harness is constructed, a separately approved non-production
 stage MUST complete Agreement §§1–3 native/free-OSS scan; the allowance
 in this paragraph is **not** permission to bypass that approval or scan.
@@ -2879,8 +2881,8 @@ require a failed evidenced five-second fit plus separate owner approval,
 scope/Sidekiq review and recorded rollback; this clause does not change it.
 
 **Ingress topology and invariants.** The target permits exactly one
-ingress OS process / Node event loop at any moment (including during
-rolling restarts), at most a positively configured finite concurrent
+ingress OS process / Node event loop **at most**, including during
+rolling restarts, with a positively configured finite concurrent
 admission limit `N` and bounded body admission. Any transient
 dual-process overlap invalidates this topology and MUST be prevented
 or separately reviewed before customer execution.
@@ -2903,7 +2905,7 @@ store writer or event-loop topology invalidates this feasibility basis.
 **Budget model.** Each admitted callback MUST satisfy a bound in the
 chosen deployment/harness configuration:
 
-`I + R_seq + N*S_exec + E*min(B_v4,W_ext) + Q + O < T_safe`
+`I + R_seq + N*S_exec + SUM(j=1..K, B_wait[j]) + Q + O < T_safe`
 
 `T_safe = T_webhook - M`, `M > 0` with independent provenance,
 initial `T_webhook = 5000 ms`. The margin is subtracted **once**.
@@ -2922,12 +2924,26 @@ initial `T_webhook = 5000 ms`. The margin is subtracted **once**.
   `S_exec` or replace full callback measurement before activation.
 - `N`: maximum admitted callbacks that can queue synchronous work
   on the same event loop; do not blindly multiply asynchronous REST.
-- `B_v4`: explicit per-wait SQLite busy limit for ingress.
-- `W_ext`: maximum duration of one conflicting external lock hold.
-- `E`: maximum incompatible external lock-wait episodes accumulated
-  **across all accepted callbacks ahead of this response on the same
-  event loop**, including this callback. `E=1` requires a proof
-  excluding further external conflicts for every intervening callback.
+- `B_v4`: explicitly configured SQLite busy timeout for ingress,
+  applied separately to every blocking lock-acquisition point.
+- `K`: conservatively bounded total number of **blocked SQLite
+  acquisitions** encountered across all admitted callbacks whose
+  synchronous work can delay this response on the same event loop.
+  Distinct acquisition sites count separately: `BEGIN IMMEDIATE` and,
+  for DELETE journal mode with competing readers, `COMMIT` may each
+  wait in one owning transaction. Repeated competing lock reacquisitions
+  at one blocked site are NOT assumed to create new independent episodes.
+- `B_wait[j]`: evidenced conservative elapsed upper allocation for
+  blocked acquisition `j`, including continuous lock unavailability
+  from chained short holds, the full applicable `B_v4` wait where
+  no shorter contiguous lock-free opportunity is proven, and measured
+  SQLite busy-handler/scheduler **overshoot**. One competitor's maximum
+  individual lock hold (`W_ext`) is **not** a valid upper bound if
+  competitors can re-acquire the lock without an evidenced usable gap.
+  If the actual waiting-time upper allocation cannot be substantiated,
+  the ingress code-stage budget is HALT; do not substitute
+  `min(B_v4,W_ext)` or a guessed overshoot. No such allocation
+  makes synchronous `node:sqlite` preemptible.
 - `Q`: measured event-loop/queue delay including other callbacks'
   body/HMAC validation and unrelated co-tenant execution, excluding
   work already charged to `I` or `N*S_exec`.
@@ -2946,9 +2962,12 @@ not forcibly interrupted by JavaScript timers. `W_ext` is
 **bounded by external competitors** through finite post-send lock
 holds and tested backup/scheduling interference. `E` is bounded
 by verified competing-job/admission topology and measured interference;
-`M` is a sourced positive safety margin. A timed-out SQLite
-`busy_timeout` is a **SQLITE_BUSY failure**, not a successful
-callback at `min(B_v4,W_ext)`; a synchronous `node:sqlite`
+`K` is bounded by admitted callbacks and their actual lock-acquisition
+sites; every `B_wait[j]` requires evidence of continuously competing
+lock availability and busy-handler overshoot. `M` is a sourced positive
+safety margin. A timed-out SQLite `busy_timeout` is a
+**SQLITE_BUSY failure**, not successful callback completion at an
+individual competitor's `W_ext`; a synchronous `node:sqlite`
 operation cannot be preempted mid-lock-wait by an event-loop timer.
 No claimed runtime-enforced limit may rely on such preemption.
 
@@ -2988,7 +3007,7 @@ or no-retry.
 implementation, freeze the one-process topology, independent
 synthetic **component benchmarks** of the existing v4 store, SQLite
 lock waits, mock HTTP/body/queue and response model, and an explicit
-derived **design allocation** for `I,R_seq,N,S_exec,E,B_v4,W_ext,Q,O,M`.
+derived **design allocation** for `I,R_seq,N,S_exec,K,B_v4,B_wait,Q,O,M`.
 
 **Target-matched measurement protocol.** A separate owner-approved,
 read-only production host/service telemetry collection stage is required

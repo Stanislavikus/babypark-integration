@@ -828,8 +828,10 @@ Expected:
 - `getEpisode` never combines version/budget/requested-slot metadata from one
   commit with candidates or slots from another;
 - the writer may complete only after the reader releases its snapshot;
-- every EpisodeStore connection reports `PRAGMA busy_timeout = 5000`, independent
-  of Node runtime support for any `DatabaseSync` constructor timeout option;
+- every historical C1 schema-v1 `EpisodeStore` connection reports
+  `PRAGMA busy_timeout = 5000`, independent of Node runtime support for
+  any `DatabaseSync` constructor timeout option. This Q16 C1 assertion
+  does not select a v4 FirstLineStateStore ingress wait (§29.8.3);
 - write transactions continue to use private transaction-neutral
   `#readEpisode` without nested transactions.
 
@@ -1189,8 +1191,10 @@ Expected:
 - (1) is permitted for the offline formula validator and isolated
   measured-component benchmark only; neither is production runtime
   authority or a general C6 production-code exception.
-- (2), (3) and (5) FAIL CLOSED under §29.8.2/Q39/U14; fixture values never
-  authorize public POST or replace target-matched measurements/inherited facts.
+- (2), (3) and (5) FAIL CLOSED under §29.8.2/Q39/U14; fixture flags,
+  caller input, environment defaults and synthetic values NEVER authorize
+  production timing authority or public POST, or replace target-matched
+  measurements/inherited facts.
 - (4) alone is not C6 timing-dependent runtime implementation/activation.
 - Earlier §29.8.2, Q37/Q39 and §43 durable HUMAN, liveness and no-retry
   obligations remain unchanged; this exception cannot bypass them.
@@ -1209,8 +1213,14 @@ or C6 runtime activation:
    does not become timing authority.
 2. One ingress OS process with admitted `N` versus two OS processes,
    transient dual-process rolling restart, exceeding `N`, unbounded body
-   ingress, or unbounded unrelated event-loop work. Exercise repeated external contention episodes `E>1`,
-   not only a single contested SQLite write.
+   ingress, or unbounded unrelated event-loop work. Count `K` across
+   blocked acquisition sites of all admitted callbacks ahead, including
+   `BEGIN IMMEDIATE` and DELETE-mode `COMMIT` waiting on readers.
+   Exercise repeated short competitor lock holds with **no usable
+   lock-free gap**: a single blocked acquisition can wait nearly its
+   full `B_v4` despite each individual lock hold being much shorter.
+   The fitted `B_wait[j]` must include measured busy-handler overshoot
+   and fail closed if no conservative upper allocation is proven.
 3. One owning atomic ingest transaction uses the exact unique
    `(source_provider,source_conversation_id,source_message_id)`
    `ALREADY_KNOWN` source-key lookup **inside** the transaction
@@ -1220,12 +1230,15 @@ or C6 runtime activation:
    **surrogate measurement**, not measured proof for the future single
    transaction. The final path MUST be remeasured before activation.
    Delayed REST/SQL/COMMIT in the same event loop must respect
-   `I+R_seq+N*S_exec+E*min(B_v4,W_ext)+Q+O < T_webhook-M`.
+   `I+R_seq+N*S_exec+SUM(j=1..K,B_wait[j])+Q+O < T_webhook-M`.
    Classify `I` byte cap, `R_seq` read deadline, `N` admission,
    `B_v4` SQLite wait as **enforced controls**, while measuring the
    non-preemptible `I` CPU and timer-lag; classify `S_exec,Q,O`
-   as **measured**, `W_ext` as **competitor-bounded**, and `E` as
-   bounded by admitted work and repeated external contention. Avoid
+   as **measured**; `K` is bounded by blocked BEGIN/COMMIT sites
+   across admitted work, and `B_wait[j]` by evidenced contiguous
+   lock availability, the configured wait and measured overshoot.
+   An individual competitor hold is not an upper bound for
+   repeatedly re-acquired contention. Avoid
    double-counting adjacent callback HMAC/validation CPU in `I`,
    `S_exec` and `Q`. Do not pretend an event-loop timer interrupts
    synchronous SQLite.
