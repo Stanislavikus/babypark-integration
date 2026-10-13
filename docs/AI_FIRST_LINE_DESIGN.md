@@ -2156,8 +2156,9 @@ wraps each public multi-query read in one deferred read transaction; private
 without nested `BEGIN`.
 
 For historical C1 schema v1 only, every `EpisodeStore` connection MUST
-explicitly set SQLite `busy_timeout=5000` (see §29.4 and the C6/v4
-distinction in §29.8.3).
+explicitly set SQLite `busy_timeout=5000`. This restates the existing
+C1 rule and does not retroactively modify the historic C1 contract
+(§29.4); v4 ingress applicability is addressed separately in §29.8.3.
 C1 MUST NOT rely on the Node `DatabaseSync` constructor's version-dependent
 `timeout` option: a concurrent writer that has already acquired a RESERVED lock
 must wait for the reader snapshot to release before COMMIT rather than fail
@@ -2801,8 +2802,11 @@ customer data, use real credentials, send public messages, modify production
 configuration, or persist customer material. Any fixture value, proposed
 budget or simulation MUST remain non-authorizing until a separate
 reviewed ingress configuration derives enforceable bounds from measured
-components, verified provider configuration and §29.8.3. Neither artifact
-waives fail-closed ingress or HUMAN requirements.
+components, verified provider configuration and §29.8.3. Before any
+benchmark harness is constructed, a separately approved non-production
+stage MUST complete Agreement §§1–3 native/free-OSS scan; the allowance
+in this paragraph is **not** permission to bypass that approval or scan.
+Neither artifact waives fail-closed ingress or HUMAN requirements.
 
 Except for those non-production artifacts and the narrow §29.8.3
 **ingress-only staged feasibility rule**, BEFORE production implementation
@@ -2811,7 +2815,7 @@ claiming work, AI/public dispatch or send/handoff reconciliation), every
 applicable lease, authority/read timeout, producer timeout, deadline,
 pre-SENDING read-retry budget, UNCERTAIN reconciliation window and HUMAN
 handoff/escalation window must be measured or inherited from merged
-authority per AI Working Agreement §8. For the *unimplemented ingress*
+authority per AI Working Agreement §8. For the *not-yet-approved ingress*
 work alone, the code-stage gate may use bounded design allocations
 derived from actual component-harness measurements and the positively
 attested provider timeout, with an explicit plan to verify and reject
@@ -2851,32 +2855,43 @@ still required.
 
 **C1/v4 concurrency.** The historical §29.3 C1 `EpisodeStore` schema-v1
 `busy_timeout=5000` requirement does not mandate that numeric value for
-v4 `FirstLineStateStore`. Every v4 writable connection MUST still set
-an explicit, evidence-bound `busy_timeout` under Agreement §5. A smaller
-ingress-specific wait is permitted as a candidate only when measured or
-inherited from an already merged normative bound, and when SQLite
-transaction, source equality, lease/CAS, and fail-closed guarantees remain
-intact. The existing v4 source constant of 5000 ms is evidence, not a
-pre-approved ingress timing budget.
+v4 `FirstLineStateStore`. For the **proposed timing-dependent ingress
+code stage only**, the writable v4 connection MUST set an explicit,
+evidence-bound `busy_timeout` under Agreement §5. The existing v4
+`FirstLineStateStore` uses a fixed 5000-ms constant in merged code;
+this amendment does not retroactively require measurement or modify
+non-ingress paths before their own approved stage. A smaller ingress
+wait is a candidate only if measured/inherited and all transaction,
+unique source-key, lease/CAS and fail-closed guarantees remain intact.
+The existing 5000-ms constant is evidence, **not** approved ingress
+timing authority.
 
 **Target.** Attempt to retain the production Chatwoot v4.18.0
 `WEBHOOK_TIMEOUT=5 s`, recorded by read-only Rails `GlobalConfig`
 attestation in `docs/AI_FIRST_LINE_C6_INGRESS_RUNTIME_ATTESTATION_20261013.md`.
 That observation is neither a permanent deployment assertion nor proof of
-five seconds of usable end-to-end callback time: Chatwoot separately sets
-network open/read timeouts. Increasing the installation-wide value MUST
+five seconds of usable end-to-end callback time. Possible distinct
+Chatwoot HTTP connection/open/read timeout settings, their actual values,
+per-attempt versus aggregate semantics and the upstream call path are
+**unattested** here and require source-pinned read-only verification
+before being used in a callback budget. Increasing the installation-wide value MUST
 require a failed evidenced five-second fit plus separate owner approval,
 scope/Sidekiq review and recorded rollback; this clause does not change it.
 
 **Ingress topology and invariants.** The target permits exactly one
-ingress OS process / Node event loop, at most a positively configured
+ingress OS process / Node event loop **including rolling restarts**;
+any transient dual-process overlap invalidates this topology and must
+be prevented or re-reviewed, at most a positively configured
 finite concurrent admission limit `N` and bounded body admission.
 An accepted event MUST use at most one owning `BEGIN IMMEDIATE`
 mutation with immutable source-topology/duplicate/deferred-parent and
 blocker-to-durable-HUMAN checks performed inside that transaction.
 `UNIQUE(source_provider,source_conversation_id)` protects stream
-cardinality but cannot replace transactional event equality (DESIGN §29.5;
-ACCEPTANCE Q39b(3)).
+cardinality but cannot replace the exact unique
+`(source_provider,source_conversation_id,source_message_id)` source-key
+`ALREADY_KNOWN` lookup performed **inside** the owning transaction;
+new customer events must also atomically retain their deferred-parent
+relationship (DESIGN §29.5; ACCEPTANCE Q39b(3)).
 There MUST be no Chatwoot REST await inside that owning transaction.
 The callback's exact number of sequential authoritative REST reads must
 be explicitly bounded. The default 5000-ms REST timeout in the current
@@ -2974,7 +2989,14 @@ synthetic **component benchmarks** of the existing v4 store, SQLite
 lock waits, mock HTTP/body/queue and response model, and an explicit
 derived **design allocation** for `I,R_seq,N,S_exec,E,B_v4,W_ext,Q,O,M`.
 
-**Target-matched measurement protocol.** Benchmark results MUST bind
+**Target-matched measurement protocol.** A separate owner-approved,
+read-only production host/service telemetry collection stage is required
+before collecting load profiles. Its bounded command/metric allowlist,
+time window, non-secret/no-customer-content output, authorization and
+retention MUST be recorded; this docs-only amendment authorizes no
+production observation, real Chatwoot API call or configuration change.
+If such evidence is unavailable, target-matched budgeting HALTs.
+Benchmark results MUST bind
 exact Node executable and bundled SQLite versions, CPU architecture /
 vCPU class, memory/swap, filesystem and storage latency/throughput,
 as well as co-resident Chatwoot Web/Worker, PostgreSQL, Redis and

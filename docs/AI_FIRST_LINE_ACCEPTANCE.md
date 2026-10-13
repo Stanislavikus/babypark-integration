@@ -1201,18 +1201,22 @@ Exercise a synthetic-only matrix on the exact topology and bound provenance
 specified in DESIGN §29.8.3, without customer data, deployed Chatwoot writes,
 or C6 runtime activation:
 
-1. C1 schema-v1 `EpisodeStore` uses its historical explicit 5000-ms wait,
-   while the v4 `FirstLineStateStore` uses a separately evidenced,
-   explicitly configured wait when ingress timing is implemented.
+1. C1 schema-v1 `EpisodeStore` retains its historical explicit 5000-ms
+   wait. The currently merged v4 non-ingress store retains its existing
+   constant pending a separately approved stage; the proposed ingress
+   must use a separately evidenced, explicitly configured wait.
    A v4 value chosen only from a fixture, code default, or C1 history
    does not become timing authority.
 2. One ingress OS process with admitted `N` versus two OS processes,
-   overlapping ingress restarts, exceeding `N`, unbounded body
+   transient dual-process rolling restart, exceeding `N`, unbounded body
    ingress, or unbounded unrelated event-loop work. Exercise repeated external contention episodes `E>1`,
    not only a single contested SQLite write.
-3. One owning atomic ingest transaction repeats source/deferred-parent
-   equality and HUMAN cuts; a pre-transaction duplicate read alone is
-   insufficient. Existing store's two-transaction ingestion is a
+3. One owning atomic ingest transaction uses the exact unique
+   `(source_provider,source_conversation_id,source_message_id)`
+   `ALREADY_KNOWN` source-key lookup **inside** the transaction
+   (DESIGN §29.5), atomically persists a new customer event and its
+   required immutable deferred-parent relation, and checks HUMAN cuts.
+   A pre-transaction duplicate read alone is insufficient. Existing store's two-transaction ingestion is a
    **surrogate measurement**, not measured proof for the future single
    transaction. The final path MUST be remeasured before activation.
    Delayed REST/SQL/COMMIT in the same event loop must respect
@@ -1235,7 +1239,10 @@ or C6 runtime activation:
    non-2xx/timeout outcome, NOT as a successful delayed callback.
    Require its HUMAN and operator-attention recovery proof before
    customer execution.
-5. Overflow at `N` and Chatwoot v4.18.0 native non-2xx outcomes:
+5. Distinguish the attested `WEBHOOK_TIMEOUT=5` from unverified
+   native HTTP open/read per-attempt and aggregate semantics; no guessed
+   provider network timer enters the budget. Overflow at `N` and
+   Chatwoot v4.18.0 native non-2xx outcomes:
    distinguish 4xx, 429, 500, 503, worker retry and native
    `pending→open`. For the code-stage, permit only a documented
    fail-closed synthetic response matrix with real customer ingress
@@ -1261,7 +1268,10 @@ or C6 runtime activation:
    maxima and variance-derived safety margin; arbitrary sample counts,
    guessed percentile/multiplier or unmatched host measurements FAIL.
    No synthetic harness binds a publicly reachable listener or live
-   production service.
+   production service. A production load observation requires its own
+   explicit scoped owner approval, read-only allowlisted metrics/commands
+   and non-customer-data evidence; without approval and observed peaks,
+   target-matched budget is HALT.
 7. RPO remains the separately owner-approved maximum data-loss
    window, not an invented numeric constant. A repeatedly restarted
    backup without evidenced completed offsite snapshots cannot

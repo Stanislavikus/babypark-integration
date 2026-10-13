@@ -58,19 +58,21 @@ claimed. All operational gates remain HALT until their own proof.
 
 | Requirement | Exact docs artifact / acceptance | Focused document verification and fail-closed effect | Durable impact | Docs terminal |
 | --- | --- | --- | --- | --- |
-| C6-AI-T01 historic C1 vs v4 | DESIGN §29.3, §29.8.2–3; ACCEPTANCE Q39b(1) | Cross-read explicit C1 scope and mandatory v4 PRAGMA; unknown v4 number halts code-stage | NONE | DONE — docs only |
+| C6-AI-T01 historic C1 vs v4 | DESIGN §29.3, §29.4, §29.8.2–3; ACCEPTANCE Q39b(1) | Preserve C1 5000 and existing v4 non-ingress 5000; proposed ingress MUST derive explicit wait separately or HALT | NONE | DONE — docs only |
 | C6-AI-T02 measured-only isolated precursor | DESIGN §29.8.2–3; ACCEPTANCE Q39a(1–3), Q39b(6) | Bench limited to disposable v4 SQLite/mock HTTP; no real Chatwoot, data or production writes; missing origin halts code-stage | NONE | DONE — docs only |
-| C6-AI-T03 ingress scope/atomicity | DESIGN §29.8.3; Q39b(2–3) | One OS process/admission N and one owning transaction, duplicate/HUMAN in transaction; mismatch halts | NONE | DONE — docs only |
+| C6-AI-T03 ingress scope/atomicity | DESIGN §29.5, §29.8.3; ACCEPTANCE Q39b(2–3) | Unique source-key `ALREADY_KNOWN` read inside the owning transaction, immutable deferred-parent + HUMAN cut; second process, restart overlap or stale duplicate HALTs | NONE | DONE — docs only |
 | C6-AI-T04 non-double-count envelope | DESIGN §29.8.3; Q39b(3–4) | Distinguish enforced I/R_seq/N/B_v4, measured S_exec/Q/O, competitor-bounded W_ext; surrogate two-write vs one-write; no sync timer preemption or double-count; unknown HALT | NONE | DONE — docs only |
 | C6-AI-T05 provider timeout/overload | DESIGN §29.8.3; Q39b(4–6); this attestation | Positive read-only setting; SQLITE_BUSY on busy_timeout expiry and overload fail closed; native effects/operator-attention proof required for customers or HALT | NONE | DONE — docs only |
 | C6-AI-T06 journal and B2 boundary | DESIGN §29.8.3; Q39b(4,7) | Decision before creation, readback after creation; RPO/backup/recovery remains blocked pending future evidence | NONE | DONE — docs only |
 | C6-AI-T07 docs-only scope | DESIGN, ACCEPTANCE and this EVIDENCE file | Exact-tree changed-path/diff validation; executable/config/server modifications invalidate this PR classification | NONE | DONE — docs only |
-| C6-AI-T08 target environment and sampling provenance | DESIGN §29.8.3 target-matched measurement protocol; Q39b(6) | Require timestamped read-only target host peak/load evidence and measured CPU/IO co-tenancy, exact Node/SQLite, justified runs/percentile/uncertainty/multiplier; missing peaks HALT | NONE | DONE — docs only |
+| C6-AI-T08 target environment and sampling provenance | DESIGN §29.8.3 target-matched measurement protocol; Q39b(6) | Target observations require separate owner approval, bounded safe read-only metrics, timestamped peak/IO evidence, exact Node/SQLite, justified sample/uncertainty; missing authority or peaks HALT | NONE | DONE — docs only |
 | C6-AI-T09 integration-first bench | DESIGN §29.8.3 integration-first; Q39b(8) | Agreement §§1–3 ready-tools comparison before any harness code, complete commercial license fit; unknown license/higher-risk dependency HALT | NONE | DONE — docs only |
 
 ### Explicit downstream HALTs, outside docs-PR terminal scope
 
 - No benchmark has been run or component numbers authoritatively selected.
+  No new production host load/peak observation is authorized by this PR;
+  its future read-only collection must receive separate scoped owner approval.
   Target-matched CPU/storage/IO/colocation **measurements**, including
   observed production load peaks and their representative time window,
   workload, repetitions, tail percentile, statistical uncertainty and
