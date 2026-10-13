@@ -2958,13 +2958,11 @@ and `B_v4` explicit per-wait SQLite busy limit have **enforced
 controls**; the CPU portion of `I` and the actual timer delivery lag
 must still be measured, since a synchronous SQLite wait may delay
 Node timers. `S_exec`, `Q` and `O` are **verified by measurement**,
-not forcibly interrupted by JavaScript timers. `W_ext` is
-**bounded by external competitors** through finite post-send lock
-holds and tested backup/scheduling interference. `E` is bounded
-by verified competing-job/admission topology and measured interference;
-`K` is bounded by admitted callbacks and their actual lock-acquisition
-sites; every `B_wait[j]` requires evidence of continuously competing
-lock availability and busy-handler overshoot. `M` is a sourced positive
+not forcibly interrupted by JavaScript timers. `K` is bounded by
+admitted callback topology and actual blocked lock-acquisition sites;
+`B_wait[j]` is conservatively allocated from evidenced competitor
+contiguous-lock availability, measured SQLite busy-handler overshoot
+and the selected `B_v4`, including backup/post-send interference. `M` is a sourced positive
 safety margin. A timed-out SQLite `busy_timeout` is a
 **SQLITE_BUSY failure**, not successful callback completion at an
 individual competitor's `W_ext`; a synchronous `node:sqlite`
