@@ -1214,17 +1214,24 @@ or C6 runtime activation:
 2. One ingress OS process with admitted `N` versus two OS processes,
    transient dual-process rolling restart, exceeding `N`, unbounded body
    ingress, or unbounded unrelated event-loop work. Count `K` across
-   blocked acquisition sites of all admitted callbacks ahead, including
-   `BEGIN IMMEDIATE` and DELETE-mode `COMMIT` waiting on readers.
-   Exercise repeated short competitor lock holds with **no usable
-   lock-free gap**: a single blocked acquisition can wait nearly its
-   full `B_v4` despite each individual lock hold being much shorter.
-   The fitted `B_wait[j]` must include measured busy-handler overshoot
-   and fail closed if no conservative upper allocation is proven.
+   all potentially blocking synchronous SQLite sites **on the same
+   event loop**, including later-admitted callbacks and non-ingress
+   co-resident store calls, plus `BEGIN IMMEDIATE` and DELETE-mode
+   `COMMIT` waiting on readers. Exercise both zero-gap and **nonzero
+   short-gap** repeated competitor holds: SQLite busy polling may miss
+   each short gap and consume full `B_v4` even if a gap exists.
+   Unless a target-matched enforced lock-acquisition completion
+   guarantee exists, charge full `B_v4` at each possible blocked
+   site PLUS evidenced polling/scheduler overshoot. A finite
+   competitor hold or sampled percentile does not prove a wall-clock
+   upper bound. Unknown K, wait, scheduler stall or co-resident work
+   HALTs the ingress code-stage.
 3. One owning atomic ingest transaction uses the exact unique
    `(source_provider,source_conversation_id,source_message_id)`
    `ALREADY_KNOWN` source-key lookup **inside** the transaction
-   (DESIGN §29.5), atomically persists a new customer event and its
+   (DESIGN §29.5), executes with **no await or asynchronous yield**,
+   rejects any future async/thenable transaction body, and atomically
+   persists a new customer event and its
    required immutable deferred-parent relation, and checks HUMAN cuts.
    A pre-transaction duplicate read alone is insufficient. Existing store's two-transaction ingestion is a
    **surrogate measurement**, not measured proof for the future single
@@ -1234,11 +1241,12 @@ or C6 runtime activation:
    Classify `I` byte cap, `R_seq` read deadline, `N` admission,
    `B_v4` SQLite wait as **enforced controls**, while measuring the
    non-preemptible `I` CPU and timer-lag; classify `S_exec,Q,O`
-   as **measured**; `K` is bounded by blocked BEGIN/COMMIT sites
-   across admitted work, and `B_wait[j]` by evidenced contiguous
-   lock availability, the configured wait and measured overshoot.
-   An individual competitor hold is not an upper bound for
-   repeatedly re-acquired contention. Avoid
+   as **measured**; `K` includes every potentially blocked SQLite
+   site of **all** same-event-loop synchronous work, independent of
+   arrival order. `B_wait[j]` conservatively charges full `B_v4`
+   plus a proven overshoot allocation absent a stronger enforced
+   completion guarantee. An individual competitor hold or observed
+   lock-free gap cannot bound repeated reacquisition/polling. Avoid
    double-counting adjacent callback HMAC/validation CPU in `I`,
    `S_exec` and `Q`. Do not pretend an event-loop timer interrupts
    synchronous SQLite.

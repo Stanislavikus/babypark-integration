@@ -2895,7 +2895,14 @@ cardinality but cannot replace the exact unique
 `ALREADY_KNOWN` lookup performed **inside** the owning transaction;
 new customer events must also atomically retain their deferred-parent
 relationship (DESIGN §29.5; ACCEPTANCE Q39b(3)).
-There MUST be no Chatwoot REST await inside that owning transaction.
+The owning transaction and every synchronous store transaction it
+  relies on MUST execute without **any asynchronous yield/await**,
+  including non-Chatwoot I/O or promises; a single yield can deadlock
+  the event loop while a second callback blocks in synchronous SQLite.
+  Future ingress implementation MUST reject async/thenable transaction
+  bodies and prove this property with a synthetic regression. This
+  docs-only clause does not claim the merged store already has such a
+  guard.
 The callback's exact number of sequential authoritative REST reads must
 be explicitly bounded. The default 5000-ms REST timeout in the current
 reader is NOT admissible unchanged for a strict five-second budget with
@@ -2926,24 +2933,35 @@ initial `T_webhook = 5000 ms`. The margin is subtracted **once**.
   on the same event loop; do not blindly multiply asynchronous REST.
 - `B_v4`: explicitly configured SQLite busy timeout for ingress,
   applied separately to every blocking lock-acquisition point.
-- `K`: conservatively bounded total number of **blocked SQLite
-  acquisitions** encountered across all admitted callbacks whose
-  synchronous work can delay this response on the same event loop.
-  Distinct acquisition sites count separately: `BEGIN IMMEDIATE` and,
+- `K`: conservatively bounded total number of **potentially blocked SQLite
+  acquisitions** across **all work capable of running and delaying
+  this callback's response on the same event loop**, irrespective
+  of arrival order (including later-admitted callbacks, other
+  synchronous co-resident SQLite consumers and recovery/maintenance
+  work). The bound MUST cover every possible synchronous lock-wait
+  site or HALT; admission limit `N` alone does not bound unrelated
+  SQLite work. Distinct acquisition sites count separately: `BEGIN IMMEDIATE` and,
   for DELETE journal mode with competing readers, `COMMIT` may each
   wait in one owning transaction. Repeated competing lock reacquisitions
   at one blocked site are NOT assumed to create new independent episodes.
-- `B_wait[j]`: evidenced conservative elapsed upper allocation for
-  blocked acquisition `j`, including continuous lock unavailability
-  from chained short holds, the full applicable `B_v4` wait where
-  no shorter contiguous lock-free opportunity is proven, and measured
-  SQLite busy-handler/scheduler **overshoot**. One competitor's maximum
-  individual lock hold (`W_ext`) is **not** a valid upper bound if
-  competitors can re-acquire the lock without an evidenced usable gap.
-  If the actual waiting-time upper allocation cannot be substantiated,
-  the ingress code-stage budget is HALT; do not substitute
-  `min(B_v4,W_ext)` or a guessed overshoot. No such allocation
-  makes synchronous `node:sqlite` preemptible.
+- `B_wait[j]`: conservative **wall-clock** waiting allocation
+  for blocked acquisition `j`. Unless a stronger bound is proven by
+  a version-pinned, target-matched **enforced lock-acquisition completion
+  guarantee**, charge the **full configured `B_v4`** for **every**
+  possibly blocked site, PLUS separately evidenced upper allowance for
+  SQLite busy-handler polling, scheduling stalls and other overshoot.
+  Merely observing a short external lock hold, a lock-free interval,
+  or any gap shorter than the active poll cadence is **not** a
+  completion guarantee: repeated reacquisitions can cause SQLite to
+  miss available gaps and exhaust the entire wait. Poll intervals,
+  wall-clock stalls and repeated short lock holds MUST be challenged
+  at the exact runtime; a test percentile or local dev result is not
+  a proven hard upper bound. If a conservative wall-clock allocation
+  cannot be justified for **all** potential lock sites, HALT the
+  proposed ingress code-stage, not just customer activation.
+  `W_ext`, `min(B_v4,W_ext)` and a guessed/assumed poll-free gap
+  MUST NOT be substituted for this allocation. No JavaScript timer
+  preempts a synchronous `node:sqlite` call.
 - `Q`: measured event-loop/queue delay including other callbacks'
   body/HMAC validation and unrelated co-tenant execution, excluding
   work already charged to `I` or `N*S_exec`.
@@ -2960,9 +2978,11 @@ must still be measured, since a synchronous SQLite wait may delay
 Node timers. `S_exec`, `Q` and `O` are **verified by measurement**,
 not forcibly interrupted by JavaScript timers. `K` is bounded by
 admitted callback topology and actual blocked lock-acquisition sites;
-`B_wait[j]` is conservatively allocated from evidenced competitor
-contiguous-lock availability, measured SQLite busy-handler overshoot
-and the selected `B_v4`, including backup/post-send interference. `M` is a sourced positive
+`B_wait[j]` conservatively charges full `B_v4` for every potentially
+blocked acquisition, plus separately justified polling/scheduler
+overshoot, unless an enforceable stronger completion bound is proven.
+Any unbounded co-resident synchronous SQLite work or scheduling stall
+HALTs ingress feasibility rather than being treated as zero. `M` is a sourced positive
 safety margin. A timed-out SQLite `busy_timeout` is a
 **SQLITE_BUSY failure**, not successful callback completion at an
 individual competitor's `W_ext`; a synchronous `node:sqlite`
@@ -3038,9 +3058,12 @@ Before the first run, freeze a reproducible measurement plan stating
 workload and database sizes, concurrency and conflicting-writer
 profiles; independent run count, warm-up, measured percentile(s),
 tail uncertainty/confidence rule, and safety multiplier/margin.
-Justify each numeric choice by a cited reliability objective,
-statistical sample-size argument, existing normative bound or
-measured target variance/calibration—not intuition. Include raw
+Justify each numeric choice by an existing owner-approved and
+source-cited reliability objective **if one is actually frozen**,
+or by a defensible statistical sample-size argument, an existing
+normative bound, or measured target variance/calibration—not intuition.
+No currently unfrozen reliability objective or sample size is presumed
+to exist; missing evidence HALTs the proposed stage. Include raw
 non-customer timing distributions and observed maxima; a percentile
 alone cannot prove a hard bound. Calculate each selected enforceable
 limit from the measured baseline, uncertainty, calibrated target
