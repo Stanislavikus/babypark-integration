@@ -1,0 +1,77 @@
+# C6 Stage B Phase A — synthetic PoC fixture review manifest (2026-10-14)
+
+Status: EVIDENCE — NON-NORMATIVE; SOURCE-ONLY, NOT EXECUTED, NOT APPROVED TO RUN.
+Applies to: C6 PR #128 ingress-only Stage B Phase A PoC preparation; no Phase B implementation or production behavior.
+Supersedes: none. The PoC branch is separate from frozen #128, #134 and merged Design.
+
+Owner authorization 2026-10-14T07:34:57Z: WRITE FIXTURE ONLY, in separate PoC branch, bound to Scan SHA-256 5f43c0cda1b23c3003e92cfbae8d33ea88ef213929eeed0aa0323c8cad047c6d and Fit SHA-256 9d8ba74c3c998c66fbabc6adc89599cf152ee20f0683cbbf17d2ead6cae25427, #134 HEAD fed367a7902e8c4c962e9a6bcd4f0ec16b401cf0. Never interpret this as permission to run the tests, inspect hosts, install anything or merge.
+Source base: Stanislavikus/babypark-integration ONLY; PR #128 HEAD 565d8de08fbd8e85598e554cb91e59dfa4f8c1a4 / TREE 93b902754a56209a78b7765af1eab188b4d45bc0 / BASE(main) 0dfb9b0a1cfe23d455fd436ae9abeac626d0d729 / GOV blob e777fce4af8e8c3372f1f9de9ef7d00f786c2c89.
+
+## 1. Immutable prepared source (Git blobs and UTF-8/LF/final-LF SHA-256)
+
+- tests/fixtures/c6-stage-b-phase-a.mjs — blob c927286e845a4564e9078f9c988c2d2e19a2ba0d, SHA-256 211792fc7dbf070b7f289d3791cfa139c028200a62b780879f3407fabddf7d99.
+- tests/fixtures/c6-stage-b-phase-a-holder.mjs — blob 31f148df079f7100b02bcddc1370aafef53f77e6, SHA-256 b66f02de1dafc6f00fc5a22044e943a0336cc2354ff056e26e5882814fa8572a.
+- This manifest itself is evidence only. Its blob/digest and the PoC HEAD/TREE/BASE are reported after creation, not asserted by a self-referential file.
+
+Scope: Native Node v24.20.0 and bundled SQLite 3.53.4; existing node:test, node:sqlite, node:perf_hooks, V1/V2 v4 store fixture patterns; no new runtime dependency or custom production code. Exactly nine Phase A SB groups. Isolated SQLite files, separate IPC-only lock-holder process, Unix-domain HTTP only, synthetic HMAC secret, invented metadata and no real Chatwoot/production network calls. All writable files belong under a newly created private scratch path. Group processes are spawned as their own process groups and have independently bounded timeouts. The harness verifies nonroot uid/gid 65534, 0700 scratch ownership, absence of IPv4/IPv6 external routes and exact Node/SQLite versions before admitting any group.
+
+Evidence limitation: SB-01 verifies existing v4 semantics and a separate surrogate thenable guard/rollback, not the future one-transaction ingress. SB-02/03/04 record observable SQLite call time, errors and per-INSERT timings; internal SQLite retry/poll/EXCLUSIVE site identities are not proved just from observations. SB-10 tests pending-connect cancellation through a stub and local UDS no-header/body-stall/truncation, not the live Chatwoot REST boundary. A fast mocked GET is NOT native R_seq and finite synthetic samples are NOT hard production bounds. Future atomic ingress implementation, provider retry/HUMAN, whole C6 ING-1…ING-6 and B2 are still HALT.
+
+## 2. Review-only time/priority plan
+
+The following planning ranges are UNMEASURED estimates based on finite loop counts and fixture timer durations, not observed test-host performance, and must be reviewed before executable approval. Hard group caps and the 210s pre/post/cleanup reserve are exactly those in the approved Fit; no silent shortening, sampling reduction or skipped mandatory group.
+
+| Priority | ID | Fixed source work | Unmeasured planning range | Hard group limit |
+|---:|---|---|---:|---:|
+| 1 | SB-00 | Two disposable DELETE DBs + readbacks | 1–5 s | 30 s |
+| 2 | SB-01 | 90 existing v4 surrogate/duplicate/HUMAN + one thenable rollback case | 5–40 s | 120 s |
+| 3 | SB-11 | Seven synthetic E_test=100ms guard branches + blocked SQLite counterexample | 1–10 s | 60 s |
+| 4 | SB-10 | 5 hang/error classes ×10, 4 mock latency cells ×90, N=1/4 ×40 batches | 15–60 s | 120 s |
+| 5 | SB-02 | 4 gaps ×3 busy timeout ×3 holds ×10 = 360 lock trials | 40–140 s | 180 s |
+| 6 | SB-03 | 2 spill modes ×3 reader holds ×10 = 60 reader/COMMIT trials | 5–40 s | 120 s |
+| 7 | SB-04 | 2 caches ×2 spill modes ×(90 one-row +90 eight-row +10 128-row) = 760 trials | 45–150 s | 180 s |
+| 8 | SB-08 | 10 high-timeout second-connection cases versus external holder | 2–20 s | 90 s |
+| 9 | SB-09 | Body lengths 0/1/1MiB/1MiB+1, HMAC/slow/incomplete and 90 ordinary cases | 5–40 s | 90 s |
+| | TOTAL | Group caps 990 s + reserve 210 s | Not validated against a host | 1200 s / 20 min |
+
+Both local client and server operate on Unix-domain sockets. A lock-holder child executes read or write transaction holds of 0, 10 or 50 ms and inter-hold gaps of 0, 1, 5 or 20 ms, including repeated write acquisitions. The parent synchronously measures its own actual SQLite calls while the independent child can release its lock. No JS timer is claimed to interrupt a synchronous blocked DatabaseSync call. All future runtime thresholds are UNKNOWN regardless of simulated E_test=100ms, synthetic busy values or measured mock latencies.
+
+## 3. Proposed future commands — NOT EXECUTABLE AUTHORITY
+
+Host must first be positively proven to be babypark-catalog-rehearsal-fra1, NOT chatwoot-fra1-01. The approved exact PoC HEAD must be materialized into a root-owned, read-only fresh checkout at /opt/babypark-rehearsal/c6-stage-b-phase-a-ro/; this path is only a proposal and is NOT established as existing. Before ANY run, independently check its exact Git HEAD/TREE, the SHA-256 values above, owner-approved immutable Node binary hash 89af8424dd53e560b1933f87ba650d8bf57c83ca5a04600eefb31f416aabbae7, actual permissions, absence of inherited executable outputs, available memory ≥1.5 GiB, free scratch disk ≥1 GiB and catalog service health. No real production DB may be mounted.
+
+Proposed one-time test-host namespace capability probe (future approval required); record UTC, exit code and sanitized stdout/stderr (including failures), then independently verify uid/gid and empty external route table:
+
+~~~sh
+/usr/bin/timeout --signal=TERM --kill-after=1s 6s \
+  /usr/bin/unshare --net --fork -- \
+  /usr/bin/setpriv --reuid=65534 --regid=65534 --clear-groups --no-new-privs -- \
+  /usr/bin/id -u
+~~~
+
+The above probe alone does NOT verify network routes; the approved operator must also capture /proc/net/route, /proc/net/ipv6_route and actual post-drop identity using a bounded, non-secret read-only command before any fixture. No fallback to host network, running as root, enabling user namespace or replacing failed tools is allowed.
+
+Proposed command shape for Phase A, ONLY after distinct exact owner go-ahead and independently provisioned immutable checkout. Its shell scratch is newly created under /tmp after privilege drop; root only creates network namespace. Standard-output collection and redacted stderr/exit reporting need a separate approved evidence location before launch.
+
+~~~sh
+/usr/bin/timeout --signal=TERM --kill-after=5s 1200s \
+  /usr/bin/unshare --net --fork -- \
+  /usr/bin/setpriv --reuid=65534 --regid=65534 --clear-groups --no-new-privs -- \
+  /bin/sh -ceu '
+    umask 077
+    scratch=$(/usr/bin/mktemp -d /tmp/bp-c6-sb-a-XXXXXXXX)
+    trap "/usr/bin/rm -rf -- \"\$scratch\"" EXIT
+    /usr/bin/nice -n 10 \
+      /opt/babypark-rehearsal/runtime/node-v24.20.0/bin/node --no-warnings \
+      /opt/babypark-rehearsal/c6-stage-b-phase-a-ro/tests/fixtures/c6-stage-b-phase-a.mjs \
+      --phase=A --scratch="$scratch"
+  '
+~~~
+
+NOT YET RUNNABLE: source checkout must be pinned to the PoC HEAD emitted after this authoring stage and rechecked by the reviewer. Group runner has a 1200s aggregate allowance plus per-group timers; outer timeout is an independent stop. SIGTERM/SIGKILL may target only the newly spawned campaign process group, not any live host process. At preflight, teardown or executable checksum ambiguity: HALT, do not rerun or disable network restrictions. Capture raw synthetic JSON and its digest only after separately authorized execution. No B2/WAL Phase B code or run is authorized by this plan.
+
+## 4. Independent review checklist and HALT
+
+Review the exact two full source files and this manifest on one new PoC HEAD/tree/base, not merely the D1–D10 summary. Verify: the namespace is made BEFORE setpriv, no external TCP, UID/route refusal, no customer/secrets, scratch and fixture cleanup, parent/holder timers and process-group shutdown on timeout, negative no-header/body cases, no ignored Promise/thenable in test-only guard, no real Chatwoot request, no frozen main/PR128/PR134 changes, exact trial counts, per-group budgets, raw/sanitized evidence, and appropriate classification of every partial/unproven scenario. Any unexpected process, endpoint, fail-open result, stale ref, timeout, missing proven isolation, wrong journal/PRAGMA, incomplete data, unauthorized fixture execution, or evidence that the 20min cap cannot contain a mandatory grid => HALT and batch-report the independent root causes; do not weaken the gates or auto-retry.
+
+No tests have been executed. No server commands, package installations, C6 production code changes, public actions, or Git merge are authorized. This is a proposed review basis, NOT Stage B measurement PASS or permission to execute.
