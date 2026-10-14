@@ -17,6 +17,7 @@ C6_UNIT=bp-c6-poc-c6
 DEADLINE_UNIT=bp-c6-poc-deadline
 GUARD_UNIT=bp-c6-poc-memory-guard
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+EXPECTED_SOURCE_ROOT=/run/bp-c6-poc/source
 NODE=/opt/babypark-rehearsal/runtime/node-v24.20.0/bin/node
 STOP_SCRIPT="$REPO_ROOT/scripts/c6-pref-deadman.sh"
 EXPECTED_BRANCH_BASE=565d8de08fbd8e85598e554cb91e59dfa4f8c1a4
@@ -32,6 +33,12 @@ cat_status() {
 mem_kib() { awk '/^MemAvailable:/ { print $2; exit }' /proc/meminfo; }
 verify_source() {
   local head base
+  [[ "$REPO_ROOT" == "$EXPECTED_SOURCE_ROOT" ]] || failure SOURCE_NOT_IN_BOUNDED_RUN_TREE
+  [[ "$(stat -c '%U:%a' "$REPO_ROOT")" == 'root:755' ]] || failure SOURCE_ROOT_NOT_IMMUTABLE_READABLE
+  [[ -r "$REPO_ROOT/scripts/c6-pref-runner.mjs" ]] || failure SCRIPT_NOT_READABLE
+  if runuser -u bpclaude -- test -w "$REPO_ROOT/scripts/c6-pref-runner.mjs"; then
+    failure SOURCE_WRITABLE_BY_C6
+  fi
   [[ -n "${BP_C6_POC_TEST_HEAD:-}" && "${BP_C6_POC_TEST_HEAD}" =~ ^[0-9a-f]{40}$ ]] || failure TEST_HEAD_REQUIRED
   head="$(git -c "safe.directory=$REPO_ROOT" -C "$REPO_ROOT" rev-parse HEAD)"
   [[ "$head" == "$BP_C6_POC_TEST_HEAD" ]] || failure UNPINNED_RUNNER_HEAD
@@ -187,7 +194,7 @@ launch() {
   [[ "$side_id" =~ ^[a-f0-9]{64}$ && "$side_pid" =~ ^[0-9]+$ && "$side_pid" -gt 1 ]] || failure SIDEKIQ_NOT_RUNNING
   netns="$(readlink "/proc/$side_pid/ns/net")"; hostns="$(readlink /proc/1/ns/net)"
   [[ "$netns" != "$hostns" ]] || failure HOST_NETNS_LEAK
-  [[ "$REPO_ROOT" == /var/tmp/bp-c6poc-20261011/* ]] || failure CODE_OUTSIDE_APPROVED_ISOLATED_TREE
+  [[ "$REPO_ROOT" == "$EXPECTED_SOURCE_ROOT" ]] || failure CODE_OUTSIDE_EPHEMERAL_SOURCE_TREE
   resolv="$(timeout 8s docker inspect --format '{{.ResolvConfPath}}' bp-c6poc-sidekiq-1)"
   [[ "$resolv" == "/var/lib/docker/containers/$side_id/resolv.conf" && -f "$resolv" ]] || failure SIDEKIQ_DNS_MOUNT_NOT_PROVEN
   rails_ip="$(timeout 8s docker inspect --format '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' bp-c6poc-rails-1)"
@@ -211,7 +218,6 @@ launch() {
     -p "Environment=BP_C6_POC_SCRATCH_ROOT=$SCRATCH_MOUNT" \
     -p "NetworkNamespacePath=/proc/$side_pid/ns/net" \
     -p "BindReadOnlyPaths=$resolv:/etc/resolv.conf" \
-    -p "BindReadOnlyPaths=$REPO_ROOT:$SOURCE_MOUNT" \
     -p "BindPaths=$SCRATCH:$SCRATCH_MOUNT" \
     -p MemoryMax=128M -p MemorySwapMax=0 -p CPUQuota=20% -p TasksMax=32 \
     -p RuntimeMaxSec=10800 -p TimeoutStopSec=10s -p Restart=no \
