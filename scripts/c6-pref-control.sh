@@ -6,6 +6,7 @@ PROJECT=bp-c6poc
 SCRATCH=/var/tmp/bp-c6poc-20261011/c6-synthetic
 BASELINE="$SCRATCH/catalog-baseline.tsv"
 DEADLINE_FILE="$SCRATCH/deadline-utc-epoch"
+SIDEKIQ_IDENTITY="$SCRATCH/sidekiq-identity.tsv"
 CATALOG_UNIT=babypark-catalog-rehearsal.service
 C6_UNIT=bp-c6-poc-c6
 DEADLINE_UNIT=bp-c6-poc-deadline
@@ -84,13 +85,50 @@ arm() {
 guard() {
   [[ -f "$DEADLINE_FILE" ]] || failure DEADLINE_FILE_MISSING
   local now="$(date -u +%s)"
+  local side_changed=no side_pid side_id side_ns actual_pid actual_id actual_ns
+  if [[ -f "$SIDEKIQ_IDENTITY" ]]; then
+    IFS='|' read -r side_pid side_id side_ns < "$SIDEKIQ_IDENTITY"
+    actual_pid="$(timeout 8s docker inspect --format '{{.State.Pid}}' bp-c6poc-sidekiq-1 2>/dev/null)" || actual_pid=INVALID
+    actual_id="$(timeout 8s docker inspect --format '{{.Id}}' bp-c6poc-sidekiq-1 2>/dev/null)" || actual_id=INVALID
+    actual_ns="$(readlink "/proc/$actual_pid/ns/net" 2>/dev/null)" || actual_ns=INVALID
+    if [[ "$side_pid" != "$actual_pid" || "$side_id" != "$actual_id" || "$side_ns" != "$actual_ns" ]]; then
+      side_changed=yes
+    fi
+  elif systemctl is-active --quiet "$C6_UNIT.service"; then
+    side_changed=yes
+  fi
   if [[ "$now" -ge "$(cat "$DEADLINE_FILE")" ]] ||
-     [[ "$(mem_kib)" -lt 1048576 ]] || ! cat_status; then
+     [[ "$(mem_kib)" -lt 1048576 ]] || ! cat_status || [[ "$side_changed" == yes ]]; then
     printf 'POC_GUARD_TRIGGERED\n' >&2
     /usr/bin/bash "$STOP_SCRIPT" stop || failure DEADMAN_FAILED_FROM_GUARD
     return 70
   fi
   printf 'POC_GUARD_OK\n'
+}
+database_provenance() {
+  # Only the already-approved isolated Postgres may be running for this gate.
+  verify_source; inspect
+  [[ -f "$DEADLINE_FILE" && "$(date -u +%s)" -lt "$(cat "$DEADLINE_FILE")" ]] || failure POC_NOT_ARMED
+  for name in bp-c6poc-sidekiq-1 bp-c6poc-rails-1 bp-c6poc-redis-1; do
+    [[ "$(timeout 8s docker inspect --format '{{.State.Running}}' "$name")" == false ]] || failure "EARLY_SERVICE_STARTED:$name"
+  done
+  [[ "$(timeout 8s docker inspect --format '{{.State.Running}}' bp-c6poc-postgres-1)" == true ]] || failure POC_POSTGRES_NOT_RUNNING
+  local provenance volume_created
+  volume_created="$(timeout 8s docker volume inspect bp-c6poc_postgres_data --format '{{.CreatedAt}}')"
+  [[ "$volume_created" == 2026-10-11* ]] || failure POC_VOLUME_ORIGIN_UNPROVABLE
+  # PostgreSQL is the isolated container's DB, not the host/production cluster.
+  # This prints aggregate counts only; never customer/email/message bodies.
+  if ! provenance="$(timeout --kill-after=3s 20s docker exec -i bp-c6poc-postgres-1 /bin/sh -c     'psql -XAt -U "${POSTGRES_USER:-postgres}" -d "${POSTGRES_DB:-postgres}" -c "SELECT (SELECT count(*) FROM contacts), (SELECT count(*) FROM conversations), (SELECT count(*) FROM messages);"')"; then
+    failure POC_DATABASE_COUNTS_UNAVAILABLE
+  fi
+  [[ "$provenance" =~ ^[0-9]+\|[0-9]+\|[0-9]+$ ]] || failure POC_DATABASE_COUNTS_MALFORMED
+  printf 'POC_DB_COUNTS_AGGREGATE=%s\nVOLUME_CREATED=%s\n' "$provenance" "$volume_created"
+  if [[ "$provenance" != '0|0|0' ]]; then
+    printf 'POC_DB_NONEMPTY_REQUIRES_PROVEN_SYNTHETIC_ORIGIN_BEFORE_NEXT_STAGE\n' >&2
+    return 72
+  fi
+  cat_status || failure CATALOG_CHANGED
+  printf 'POC_DB_EMPTY_PASSED\n'
 }
 launch() {
   [[ "$(id -u)" -eq 0 ]] || failure ROOT_REQUIRED_FOR_TRANSIENT_SYSTEMD
@@ -105,6 +143,7 @@ launch() {
   [[ "$side_id" =~ ^[a-f0-9]{64}$ && "$side_pid" =~ ^[0-9]+$ && "$side_pid" -gt 1 ]] || failure SIDEKIQ_NOT_RUNNING
   netns="$(readlink "/proc/$side_pid/ns/net")"; hostns="$(readlink /proc/1/ns/net)"
   [[ "$netns" != "$hostns" ]] || failure HOST_NETNS_LEAK
+  [[ "$REPO_ROOT" == /var/tmp/bp-c6poc-20261011/* ]] || failure CODE_OUTSIDE_APPROVED_ISOLATED_TREE
   resolv="$(timeout 8s docker inspect --format '{{.ResolvConfPath}}' bp-c6poc-sidekiq-1)"
   [[ "$resolv" == "/var/lib/docker/containers/$side_id/resolv.conf" && -f "$resolv" ]] || failure SIDEKIQ_DNS_MOUNT_NOT_PROVEN
   rails_ip="$(timeout 8s docker inspect --format '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' bp-c6poc-rails-1)"
@@ -114,10 +153,13 @@ launch() {
   local envfile="$SCRATCH/c6-synthetic.env"
   [[ -f "$envfile" && "$(stat -c %a "$envfile")" == 600 ]] || failure SYNTHETIC_AUTH_ENV_NOT_PREPARED
   [[ "$(stat -c %U "$SCRATCH")" == bpclaude ]] || failure SCRATCH_NOT_OWNED_BY_UNPRIVILEGED_USER
+  printf '%s|%s|%s\n' "$side_pid" "$side_id" "$netns" > "$SIDEKIQ_IDENTITY"
+  chmod 600 "$SIDEKIQ_IDENTITY"
   systemd-run --unit="$C6_UNIT" --collect --service-type=simple \
     -p User=bpclaude -p WorkingDirectory="$REPO_ROOT" \
     -p "EnvironmentFile=$envfile" \
     -p "Environment=BP_C6_POC_SIDEKIQ_NETNS=$netns" \
+    -p "Environment=BP_C6_POC_HOST_NETNS=$hostns" \
     -p "Environment=BP_C6_POC_SIDEKIQ_HOST_PID=$side_pid" \
     -p "Environment=BP_C6_POC_RAILS_IP=$rails_ip" \
     -p "NetworkNamespacePath=/proc/$side_pid/ns/net" \
@@ -133,8 +175,9 @@ launch() {
 case "${1:-}" in
   inspect) inspect ;;
   arm) arm ;;
+  database-provenance) database_provenance ;;
   guard) guard ;;
   launch) launch ;;
   stop) /usr/bin/bash "$STOP_SCRIPT" stop ;;
-  *) printf 'usage: c6-pref-control.sh inspect|arm|guard|launch|stop\n' >&2; exit 64 ;;
+  *) printf 'usage: c6-pref-control.sh inspect|arm|database-provenance|guard|launch|stop\n' >&2; exit 64 ;;
 esac
