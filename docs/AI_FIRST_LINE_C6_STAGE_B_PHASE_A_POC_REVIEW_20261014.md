@@ -9,7 +9,7 @@ Source base: Stanislavikus/babypark-integration ONLY; PR #128 HEAD 565d8de08fbd8
 
 ## 1. Immutable prepared source (Git blobs and UTF-8/LF/final-LF SHA-256)
 
-- tests/fixtures/c6-stage-b-phase-a.mjs — SHA-256 6d4f62ebbead2b09221f7a94dd307cdf1f900afeb28d9c9972d80e1236801c76; Git blob recorded in PR checkpoint after this batch commit.
+- tests/fixtures/c6-stage-b-phase-a.mjs — SHA-256 9a13d6abbfa8195ee2aedc383f2f3ef9f399e057a8a03d77604026eed5bc5366; Git blob recorded in PR checkpoint after this batch commit.
 - tests/fixtures/c6-stage-b-phase-a-holder.mjs — blob 31f148df079f7100b02bcddc1370aafef53f77e6, SHA-256 b66f02de1dafc6f00fc5a22044e943a0336cc2354ff056e26e5882814fa8572a.
 - This manifest itself is evidence only. Its blob/digest and the PoC HEAD/TREE/BASE are reported after creation, not asserted by a self-referential file.
 
