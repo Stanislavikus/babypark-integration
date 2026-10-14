@@ -50,7 +50,7 @@ Swap:           2047           0        2047
 DISK=Filesystem     1M-blocks   Used Available Use% Mounted on
 /dev/vda1         88204M 16892M    71297M  20% /
 /dev/vda1         88204M 16892M    71297M  20% /
-/dev/vda1         88204M 16892M    71297M  20%  /
+/dev/vda1         88204M 16892M    71297M  20% /
 COMMANDS=/bin/bash PRESENT
 /bin/sh PRESENT
 /usr/bin/git PRESENT
