@@ -5,7 +5,7 @@ set -euo pipefail
 [[ "${1:-}" == stop ]] || { echo 'usage: c6-pref-deadman.sh stop' >&2; exit 64; }
 PROJECT=bp-c6poc
 C6_UNIT=bp-c6-poc-c6.service
-BASELINE=/var/tmp/bp-c6poc-20261011/c6-synthetic/catalog-baseline.tsv
+BASELINE=/var/tmp/bp-c6poc-20261011/c6-control/catalog-baseline.tsv
 EXPECTED=(bp-c6poc-sidekiq-1 bp-c6poc-rails-1 bp-c6poc-redis-1 bp-c6poc-postgres-1)
 error=0
 fail() { printf '%s\n' "$*" >&2; error=1; }

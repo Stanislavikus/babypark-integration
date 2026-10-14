@@ -21,7 +21,11 @@ import { createFirstLineChatwootAuthorityReader } from '../src/copilot/chatwoot-
 import { createFirstLineAgentBotRelay, createFirstLineAgentBotServer } from '../src/copilot/first-line-runtime-ingress.mjs';
 
 const PINNED_SOURCE_HEAD = '565d8de08fbd8e85598e554cb91e59dfa4f8c1a4';
-const SCRATCH_ROOT = '/var/tmp/bp-c6poc-20261011/c6-synthetic';
+// A host-root-only PoC directory is bind-mounted into the unprivileged unit.
+const SCRATCH_ROOT = process.env.BP_C6_POC_SCRATCH_ROOT || '/var/tmp/bp-c6poc-20261011/c6-synthetic';
+if (!['/var/tmp/bp-c6poc-20261011/c6-synthetic','/run/bp-c6-poc/scratch'].includes(SCRATCH_ROOT)) {
+  throw new Error('POC_SCRATCH_ROOT_OUTSIDE_FROZEN_SCOPE');
+}
 const NOW = 2_000_000_000_000;
 const SENTINEL = 'SYNTHETIC-NO-CUSTOMER-CONTENT';
 const TARGET = Object.freeze({ accountId: 11, inboxId: 99, agentBotId: 7 });
@@ -207,6 +211,8 @@ async function nativePreflight(env) {
   assert.notEqual(ns, env.BP_C6_POC_HOST_NETNS, 'HOST_NAMESPACE_FORBIDDEN');
   const pid = Number(env.BP_C6_POC_SIDEKIQ_HOST_PID);
   assert.ok(Number.isSafeInteger(pid) && pid > 1, 'SIDEKIQ_HOST_PID_REQUIRED');
+  assert.equal(SCRATCH_ROOT, '/run/bp-c6-poc/scratch', 'UNPRIVILEGED_BIND_SCRATCH_REQUIRED');
+  assert.equal(REPO_ROOT, '/run/bp-c6-poc/source', 'UNPRIVILEGED_BIND_SOURCE_REQUIRED');
   // Root-owned, independent periodic guard monitors Sidekiq PID + netns.
   // Reading this proc link here would fail with EACCES for Sidekiq UID root.
   assert.ok(fs.existsSync(file), 'SYNTHETIC_DB_MISSING_BOOTSTRAP_EXPLICITLY');
@@ -251,8 +257,9 @@ async function serve() {
   const watchdog = setInterval(() => {
     try {
       assert.equal(fs.readlinkSync('/proc/self/ns/net'), ns);
-      // Sidekiq lifecycle is checked independently by the root-owned timer.
-      assert.match(env.BP_C6_POC_SIDEKIQ_HOST_PID || '', /^[0-9]+$/);
+      // Sidekiq PID/namespace lifecycle is verified by the independent root guard.
+      // A stale root identity causes the guard to stop the receiver.
+      assert.notEqual(fs.readlinkSync('/proc/self/ns/net'), env.BP_C6_POC_HOST_NETNS);
     } catch { output('sidekiq_namespace_changed'); close(); process.exitCode = 20; }
   }, 1000);
   const deadline = setTimeout(() => { output('poc_ttl_expired'); close(); process.exitCode = 21; }, 3 * 60 * 60 * 1000);
