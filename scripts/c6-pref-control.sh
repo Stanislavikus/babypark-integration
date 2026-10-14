@@ -41,6 +41,7 @@ verify_source() {
   [[ "$(sha256sum "$STOP_SCRIPT" | awk '{print $1}')" == "${BP_C6_POC_DEADMAN_SHA256:-UNSET}" ]] || failure DEADMAN_HASH_MISMATCH
   [[ "$(sha256sum "$REPO_ROOT/scripts/c6-pref-runner.mjs" | awk '{print $1}')" == "${BP_C6_POC_RUNNER_SHA256:-UNSET}" ]] || failure RUNNER_HASH_MISMATCH
   [[ "$(sha256sum "$REPO_ROOT/scripts/c6-pref-control.sh" | awk '{print $1}')" == "${BP_C6_POC_CONTROL_SHA256:-UNSET}" ]] || failure CONTROL_HASH_MISMATCH
+  [[ "$(sha256sum "$REPO_ROOT/scripts/c6-pref-native-fixture.rb" | awk '{print $1}')" == "${BP_C6_POC_FIXTURE_SHA256:-UNSET}" ]] || failure FIXTURE_HASH_MISMATCH
   [[ -x "$NODE" && "$("$NODE" --version)" == v24.20.0 ]] || failure NODE24_NOT_PINNED
 }
 inspect() {
@@ -137,16 +138,40 @@ database_provenance() {
   fi
   [[ "$provenance" =~ ^[0-9]+\|[0-9]+\|[0-9]+$ ]] || failure POC_DATABASE_COUNTS_MALFORMED
   printf 'POC_DB_COUNTS_AGGREGATE=%s\nVOLUME_CREATED=%s\n' "$provenance" "$volume_created"
-  # Never mistake a 2026-10-11 volume creation time for positive synthetic provenance.
-  # A nonempty DB requires separately verified frozen evidence; no arbitrary
-  # owner-supplied Boolean or clean/reset bypass of unknown rows.
+  # The original standalone PoC left a few TEST rows. Accept them only if
+  # every row is within the independently recorded, strictly finite P0 fixture
+  # IDs. No interpretation of arbitrary names or customer text is permitted.
+  local proof_label=EMPTY_ORIGINAL_POC
   if [[ "$provenance" != '0|0|0' ]]; then
-    printf 'POC_DB_NONEMPTY_REQUIRES_INDEPENDENT_FIXTURE_PROOF\n' >&2
-    return 72
+    [[ "$(sha256sum "$ROOT/evidence/fixture-native.log" | awk '{print $1}')" == \
+      'db8c9fd8dd2b2e8c61d4900235473e36f43b3da4078b3d75ba4ad14734b2a564' ]] || failure ORIGINAL_FIXTURE_EVIDENCE_CHANGED
+    [[ "$(sha256sum "$ROOT/evidence/r0-s0-trigger.log" | awk '{print $1}')" == \
+      '1ec058a4ed481323dea3bec5a53244f6cc11febf49d7fb57c2f4c743e1ba75b5' ]] || failure S0_EVENT_EVIDENCE_CHANGED
+    [[ "$volume_created" == 2026-10-11T18:54:45Z ]] || failure ORIGINAL_POC_VOLUME_IDENTITY_CHANGED
+    # Counts alone do NOT authorize a copied DB. Positively prove every
+    # account/inbox/contact/conversation/message belongs to only the original
+    # synthetic account=1, inbox=1, conv<=2, msg<=4; all objects are recent.
+    local closed_shape
+    if ! closed_shape="$(timeout --kill-after=3s 20s docker exec -i bp-c6poc-postgres-1 /bin/sh -c \
+      'psql -XAt -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "SELECT
+       (SELECT COUNT(*) FROM accounts WHERE id<>1),
+       (SELECT COUNT(*) FROM inboxes WHERE id<>1 OR account_id<>1),
+       (SELECT COUNT(*) FROM contacts WHERE account_id<>1 OR id>2),
+       (SELECT COUNT(*) FROM conversations WHERE account_id<>1 OR inbox_id<>1 OR id>2),
+       (SELECT COUNT(*) FROM messages WHERE account_id<>1 OR inbox_id<>1 OR id>4),
+       (SELECT COUNT(*) FROM agent_bots WHERE account_id<>1 OR id>1),
+       (SELECT COUNT(*) FROM accounts),
+       (SELECT COUNT(*) FROM inboxes),
+       (SELECT COUNT(*) FROM conversations),
+       (SELECT COUNT(*) FROM messages);"')"; then
+      failure POC_METADATA_SHAPE_READ_FAILED
+    fi
+    [[ "$closed_shape" =~ ^0\|0\|0\|0\|0\|0\|1\|1\|[12]\|[1-4]$ ]] || failure FOREIGN_OR_UNPROVEN_CHATWOOT_ROWS
+    proof_label=PINNED_ORIGINAL_POC_FIXTURE_ONLY
   fi
   cat_status || failure CATALOG_CHANGED
   [[ ! -e "$PROVENANCE_MARKER" ]] || failure PROVENANCE_MARKER_ALREADY_EXISTS
-  ( umask 077; printf '%s|%s\n' "$provenance" "$volume_created" > "$PROVENANCE_MARKER" )
+  ( umask 077; printf '%s|%s|%s\n' "$provenance" "$volume_created" "$proof_label" > "$PROVENANCE_MARKER" )
   printf 'POC_DB_EMPTY_PROVENANCE_RECORDED\n'
 }
 launch() {
@@ -247,6 +272,54 @@ prepare_auth() {
   chmod 600 "$dest"; chown bpclaude:bpclaude "$dest"
   printf 'SYNTHETIC_NATIVE_FIXTURE_ENV_PREPARED\n'
 }
+
+prepare_native() {
+  [[ "$(id -u)" -eq 0 ]] || failure ROOT_REQUIRED
+  verify_source; inspect; cat_status || failure CATALOG_CHANGED
+  [[ -f "$PROVENANCE_MARKER" && -f "$SCRATCH/episode.sqlite" ]] || failure POC_DATABASE_ORIGIN_UNPROVEN
+  [[ ! -f "$SCRATCH/c6-synthetic.env" ]] || failure NATIVE_ALREADY_PROVISIONED
+  [[ -f "$DEADLINE_FILE" && "$(date -u +%s)" -lt "$(cat "$DEADLINE_FILE")" ]] || failure WINDOW_EXPIRED
+  local name
+  for name in bp-c6poc-rails-1 bp-c6poc-sidekiq-1 bp-c6poc-postgres-1 bp-c6poc-redis-1; do
+    [[ "$(timeout 8s docker inspect --format '{{.State.Running}}' "$name")" == true ]] || failure "NATIVE_DEPENDENCY_NOT_RUNNING:$name"
+  done
+  local result line account inbox bot token hmac
+  if ! result="$(timeout --kill-after=3s 55s docker exec -i -e BP_C6_POC_FIXTURE_GATE=isolated-synthetic-only \
+    -e BP_C6_POC_FIXTURE_MODE=setup bp-c6poc-rails-1 \
+    /bin/sh -c 'cd /app && bundle exec rails runner -' \
+    < "$REPO_ROOT/scripts/c6-pref-native-fixture.rb" 2>/dev/null)"; then
+    failure NATIVE_FIXTURE_CREATION_FAILED_NO_AUTORETRY
+  fi
+  line="$(printf '%s\n' "$result" | grep '^BP_C6_POC_RESULT=' | tail -n 1)" || failure NATIVE_CREDENTIAL_RESULT_MISSING
+  IFS='|' read -r account inbox bot token hmac <<< "$(printf '%s' "$line" | sed 's/^BP_C6_POC_RESULT=//')"
+  [[ "$account" =~ ^[0-9]{1,9}$ && "$inbox" =~ ^[0-9]{1,9}$ && "$bot" =~ ^[0-9]{1,9}$ ]] || failure NATIVE_IDS_INVALID
+  [[ "$token" =~ ^[A-Za-z0-9_-]{16,128}$ && "$hmac" =~ ^[a-f0-9]{64}$ ]] || failure NATIVE_CREDENTIALS_INVALID
+  BP_C6_POC_ACCOUNT_ID="$account" BP_C6_POC_INBOX_ID="$inbox" BP_C6_POC_BOT_ID="$bot" \
+    BP_C6_POC_READ_TOKEN="$token" BP_C6_POC_HMAC_SECRET="$hmac" prepare_auth
+  printf 'C6_NATIVE_FIXTURE_PREPARED account=%s inbox=%s bot=%s; SECRETS_REDACTED\n' "$account" "$inbox" "$bot"
+}
+native_case() {
+  [[ "$(id -u)" -eq 0 ]] || failure ROOT_REQUIRED
+  verify_source; inspect; cat_status || failure CATALOG_CHANGED
+  [[ -f "$PROVENANCE_MARKER" && -f "$SCRATCH/c6-synthetic.env" ]] || failure NATIVE_TEST_INPUTS_MISSING
+  systemctl is-active --quiet "$C6_UNIT.service" || failure C6_NOT_RUNNING
+  [[ $# -eq 2 ]] || failure MISSING_NATIVE_EVENT_KIND
+  local mode="$2" result
+  case "$mode" in incoming|bot-echo|template) ;; *) failure UNAPPROVED_SYNTHETIC_EVENT_KIND ;; esac
+  local BP_C6_POC_ACCOUNT_ID BP_C6_POC_INBOX_ID BP_C6_POC_BOT_ID
+  BP_C6_POC_ACCOUNT_ID="$(sed -n 's/^BP_C6_POC_ACCOUNT_ID=//p' "$SCRATCH/c6-synthetic.env")"
+  BP_C6_POC_INBOX_ID="$(sed -n 's/^BP_C6_POC_INBOX_ID=//p' "$SCRATCH/c6-synthetic.env")"
+  BP_C6_POC_BOT_ID="$(sed -n 's/^BP_C6_POC_BOT_ID=//p' "$SCRATCH/c6-synthetic.env")"
+  if ! result="$(timeout --kill-after=3s 35s docker exec -i \
+    -e BP_C6_POC_FIXTURE_GATE=isolated-synthetic-only -e BP_C6_POC_FIXTURE_MODE="$mode" \
+    -e BP_C6_POC_ACCOUNT_ID="$BP_C6_POC_ACCOUNT_ID" -e BP_C6_POC_INBOX_ID="$BP_C6_POC_INBOX_ID" \
+    -e BP_C6_POC_BOT_ID="$BP_C6_POC_BOT_ID" bp-c6poc-rails-1 \
+    /bin/sh -c 'cd /app && bundle exec rails runner -' \
+    < "$REPO_ROOT/scripts/c6-pref-native-fixture.rb" 2>/dev/null)"; then
+    failure NATIVE_EVENT_EXECUTION_FAILED
+  fi
+  printf '%s\n' "$result" | grep '^BP_C6_POC_CASE=' || failure NATIVE_EVENT_RECEIPT_MISSING
+}
 stop_c6() {
   [[ "$(id -u)" -eq 0 ]] || failure ROOT_REQUIRED
   [[ -f "$DEADLINE_FILE" && "$(date -u +%s)" -lt "$(cat "$DEADLINE_FILE")" ]] || failure WINDOW_EXPIRED
@@ -276,10 +349,12 @@ case "${1:-}" in
   database-provenance) database_provenance ;;
   prepare-db) prepare_db ;;
   prepare-auth) prepare_auth ;;
+  prepare-native) prepare_native ;;
+  native-case) native_case "$@" ;;
   guard) guard ;;
   launch) launch ;;
   stop-c6) stop_c6 ;;
   reset) reset ;;
   stop) /usr/bin/bash "$STOP_SCRIPT" stop ;;
-  *) printf 'usage: c6-pref-control.sh inspect|arm|database-provenance|prepare-db|prepare-auth|guard|launch|stop-c6|reset|stop\n' >&2; exit 64 ;;
+  *) printf 'usage: c6-pref-control.sh inspect|arm|database-provenance|prepare-db|prepare-auth|prepare-native|native-case TYPE|guard|launch|stop-c6|reset|stop\n' >&2; exit 64 ;;
 esac

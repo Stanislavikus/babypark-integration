@@ -53,7 +53,7 @@ function requirePinnedSource() {
     const base = git('merge-base', PINNED_SOURCE_HEAD, head);
     assert.equal(base, PINNED_SOURCE_HEAD, 'C6_POC_SOURCE_ANCESTRY_MISMATCH');
     const changed = git('diff', '--name-only', PINNED_SOURCE_HEAD, head).split('\n').filter(Boolean);
-    assert.deepEqual(changed.sort(), ['scripts/c6-pref-control.sh', 'scripts/c6-pref-deadman.sh', 'scripts/c6-pref-runner.mjs'], 'C6_POC_ONLY_TEST_FILES_ALLOWED');
+    assert.deepEqual(changed.sort(), ['scripts/c6-pref-control.sh', 'scripts/c6-pref-deadman.sh', 'scripts/c6-pref-native-fixture.rb', 'scripts/c6-pref-runner.mjs'], 'C6_POC_ONLY_TEST_FILES_ALLOWED');
   }
   const dirty = git('status', '--porcelain', '--untracked-files=no');
   assert.equal(dirty, '', 'C6_POC_TRACKED_WORKTREE_DIRTY');
