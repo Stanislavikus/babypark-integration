@@ -359,6 +359,7 @@ reset() {
   printf 'POC_ROOT_CONTROL_RESET; SYNTHETIC_SCRATCH_PRESERVED\n'
 }
 case "${1:-}" in
+  preflight) verify_source; inspect; printf 'C6_PREFLIGHT_PASS_HEAD=%s\n' "$(git -C "$REPO_ROOT" rev-parse HEAD)" ;;
   inspect) inspect ;;
   arm) arm ;;
   database-provenance) database_provenance ;;
@@ -371,5 +372,5 @@ case "${1:-}" in
   stop-c6) stop_c6 ;;
   reset) reset ;;
   stop) /usr/bin/bash "$STOP_SCRIPT" stop ;;
-  *) printf 'usage: c6-pref-control.sh inspect|arm|database-provenance|prepare-db|prepare-auth|prepare-native|native-case TYPE|guard|launch|stop-c6|reset|stop\n' >&2; exit 64 ;;
+  *) printf 'usage: c6-pref-control.sh preflight|inspect|arm|database-provenance|prepare-db|prepare-auth|prepare-native|native-case TYPE|guard|launch|stop-c6|reset|stop\n' >&2; exit 64 ;;
 esac
