@@ -172,7 +172,7 @@ database_provenance() {
   cat_status || failure CATALOG_CHANGED
   [[ ! -e "$PROVENANCE_MARKER" ]] || failure PROVENANCE_MARKER_ALREADY_EXISTS
   ( umask 077; printf '%s|%s|%s\n' "$provenance" "$volume_created" "$proof_label" > "$PROVENANCE_MARKER" )
-  printf 'POC_DB_EMPTY_PROVENANCE_RECORDED\n'
+  printf 'POC_DB_PROVENANCE_RECORDED: %s\n' "$proof_label"
 }
 launch() {
   [[ "$(id -u)" -eq 0 ]] || failure ROOT_REQUIRED_FOR_TRANSIENT_SYSTEMD
@@ -242,11 +242,17 @@ prepare_db() {
   verify_source; inspect; cat_status || failure CATALOG_CHANGED
   [[ -f "$PROVENANCE_MARKER" && "$(stat -c '%u:%a' "$PROVENANCE_MARKER")" == '0:600' ]] || failure UNVERIFIED_CHATWOOT_DB_ORIGIN
   [[ -f "$DEADLINE_FILE" && "$(date -u +%s)" -lt "$(cat "$DEADLINE_FILE")" ]] || failure WINDOW_EXPIRED
-  [[ ! -e "$SCRATCH/episode.sqlite" ]] || failure SYNTHETIC_DB_EXISTS_NO_AUTOREPLACE
-  BP_C6_SYNTHETIC_ONLY=yes BP_C6_POC_DB_PATH="$SCRATCH/episode.sqlite" \
+  [[ ! -e "$SCRATCH/episode.sqlite" && ! -L "$SCRATCH/episode.sqlite" ]] || failure SYNTHETIC_DB_EXISTS_NO_AUTOREPLACE
+  local staged="$CONTROL/episode-staging.sqlite"
+  [[ ! -e "$staged" && ! -L "$staged" ]] || failure ROOT_DB_STAGING_NOT_EMPTY
+  BP_C6_SYNTHETIC_ONLY=yes BP_C6_POC_PREPARE_ROOT_ONLY=yes BP_C6_POC_DB_PATH="$staged" \
     timeout --kill-after=3s 20s "$NODE" "$REPO_ROOT/scripts/c6-pref-runner.mjs" bootstrap-synthetic-db || failure SYNTHETIC_DB_BOOTSTRAP_FAILED
-  chown bpclaude:bpclaude "$SCRATCH/episode.sqlite" || failure SYNTHETIC_DB_CHOWN_FAILED
-  chmod 600 "$SCRATCH/episode.sqlite"
+  [[ -f "$staged" && ! -L "$staged" ]] || failure ROOT_DB_STAGING_UNEXPECTED_TYPE
+  [[ ! -e "${staged}-wal" && ! -e "${staged}-shm" && ! -e "${staged}-journal" ]] || failure SQLITE_SIDECARS_NOT_CHECKPOINTED
+  chmod 600 "$staged"
+  chown bpclaude:bpclaude "$staged" || failure SYNTHETIC_DB_CHOWN_FAILED
+  [[ ! -e "$SCRATCH/episode.sqlite" && ! -L "$SCRATCH/episode.sqlite" ]] || failure SYNTHETIC_DB_RACE
+  mv -fT -- "$staged" "$SCRATCH/episode.sqlite" || failure SYNTHETIC_DB_ATOMIC_MOVE_FAILED
   printf 'SYNTHETIC_DB_BOOTSTRAPPED_AND_OWNED_BY_BPCLAUDE\n'
 }
 prepare_auth() {
@@ -256,20 +262,23 @@ prepare_auth() {
   verify_source; cat_status || failure CATALOG_CHANGED
   [[ -f "$PROVENANCE_MARKER" ]] || failure DATABASE_PROVENANCE_NOT_VERIFIED
   [[ -f "$SCRATCH/episode.sqlite" ]] || failure SYNTHETIC_DB_MISSING
-  [[ ! -e "$SCRATCH/c6-synthetic.env" ]] || failure SYNTHETIC_AUTH_ALREADY_EXISTS
+  [[ ! -e "$SCRATCH/c6-synthetic.env" && ! -L "$SCRATCH/c6-synthetic.env" ]] || failure SYNTHETIC_AUTH_ALREADY_EXISTS
   [[ "${BP_C6_POC_ACCOUNT_ID:-}" =~ ^[0-9]{1,9}$ &&
      "${BP_C6_POC_INBOX_ID:-}" =~ ^[0-9]{1,9}$ &&
      "${BP_C6_POC_BOT_ID:-}" =~ ^[0-9]{1,9}$ ]] || failure NATIVE_FIXTURE_IDS_REQUIRED
   [[ "${BP_C6_POC_READ_TOKEN:-}" =~ ^[A-Za-z0-9_-]{16,128}$ &&
      "${BP_C6_POC_HMAC_SECRET:-}" =~ ^[A-Za-z0-9_-]{32,128}$ ]] || failure NATIVE_FIXTURE_SECRET_FORMAT_INVALID
   # A 600 synthetic file is writable by the isolated C6 user; no live keys.
-  local dest="$SCRATCH/c6-synthetic.env"
+  local dest="$SCRATCH/c6-synthetic.env" staged
+  staged="$(mktemp "$CONTROL/c6-auth-XXXXXXXX")" || failure ROOT_AUTH_STAGING_FAILED
   ( umask 077
     printf 'BP_C6_SYNTHETIC_ONLY=yes\nBP_C6_POC_DB_PATH=%s/episode.sqlite\nBP_C6_POC_CHATWOOT_BASE_URL=http://rails:3000\nBP_C6_POC_ACCOUNT_ID=%s\nBP_C6_POC_INBOX_ID=%s\nBP_C6_POC_BOT_ID=%s\nBP_C6_POC_READ_TOKEN=%s\nBP_C6_POC_HMAC_SECRET=%s\n' \
       "$SCRATCH_MOUNT" "$BP_C6_POC_ACCOUNT_ID" "$BP_C6_POC_INBOX_ID" "$BP_C6_POC_BOT_ID" \
-      "$BP_C6_POC_READ_TOKEN" "$BP_C6_POC_HMAC_SECRET" > "$dest"
+      "$BP_C6_POC_READ_TOKEN" "$BP_C6_POC_HMAC_SECRET" > "$staged"
   )
-  chmod 600 "$dest"; chown bpclaude:bpclaude "$dest"
+  chmod 600 "$staged"; chown bpclaude:bpclaude "$staged"
+  [[ ! -e "$dest" && ! -L "$dest" ]] || failure NATIVE_AUTH_RACE
+  mv -fT -- "$staged" "$dest" || failure NATIVE_AUTH_ATOMIC_MOVE_FAILED
   printf 'SYNTHETIC_NATIVE_FIXTURE_ENV_PREPARED\n'
 }
 

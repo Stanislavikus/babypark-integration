@@ -65,6 +65,11 @@ function sandboxPath(env) {
   const raw = env.BP_C6_POC_DB_PATH;
   assert.ok(raw && path.isAbsolute(raw), 'ABSOLUTE_DB_PATH_REQUIRED');
   const resolved = path.resolve(raw);
+  if (process.argv[2] === 'bootstrap-synthetic-db' && env.BP_C6_POC_PREPARE_ROOT_ONLY === 'yes') {
+    assert.equal(resolved, '/var/tmp/bp-c6poc-20261011/c6-control/episode-staging.sqlite',
+      'ROOT_ONLY_DB_BOOTSTRAP_PATH_REQUIRED');
+    return resolved;
+  }
   assert.ok(resolved.startsWith(SCRATCH_ROOT + '/') && resolved.endsWith('.sqlite'), 'DB_MUST_BE_IN_POC_SCRATCH');
   return resolved;
 }
