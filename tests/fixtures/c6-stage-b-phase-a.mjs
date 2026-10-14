@@ -690,46 +690,71 @@ async function runOne(group,scratch) {
     fs.rmSync(root,{recursive:true,force:false});
   }
 }
+function groupFailure(kind,exitCode,signal,stderr) {
+  // Group failure detail is a strict allowlist: never forward raw stdout,
+  // stderr, an exception message, PID or dynamic file path into evidence.
+  assert.ok(['TIMEOUT','EXIT','SIGNAL','OUTPUT_CAP','INVALID_RESULT'].includes(kind));
+  const error=new Error(kind==='INVALID_RESULT'?'SB_GROUP_RESULT_INVALID':'SB_GROUP_PROCESS_FAILED');
+  error.group_failure={
+    failure_kind:kind,
+    exit_code:Number.isInteger(exitCode)&&exitCode>=0&&exitCode<=255?exitCode:null,
+    signal:typeof signal==='string'&&/^SIG[A-Z0-9]{1,16}$/.test(signal)?signal:null,
+    group_halt_code:/SB_A_HALT_[A-Z0-9_]{1,96}/.exec(stderr)?.[0]??null
+  };
+  return error;
+}
 function groupProcess(group,scratch) {
   return new Promise((resolve,reject)=>{
     const child=spawn(process.execPath,['--no-warnings',SELF,'--group='+group,'--scratch='+scratch],
       {detached:true,stdio:['ignore','pipe','pipe'],
        env:{PATH:'/usr/bin:/bin',HOME:'/nonexistent',TMPDIR:scratch,NODE_OPTIONS:''}});
     ACTIVE_GROUP_PID=child.pid;
-    let stdout='',stderr='',timedOut=false;
+    let stdout='',stderr='',timedOut=false,outputCapExceeded=false;
     let done=false;
     const cap=CAPS[group]*1000;
     const killer=setTimeout(()=>{timedOut=true;try{process.kill(-child.pid,'SIGTERM')}catch{}
       setTimeout(()=>{if(!done)try{process.kill(-child.pid,'SIGKILL')}catch{}},1000).unref();},cap);
     function collect(which,b){
       const x=String(b);
-      if(which==='out'){stdout+=x;if(stdout.length>2_000_000)try{process.kill(-child.pid,'SIGTERM')}catch{}}
-      else{stderr+=x;if(stderr.length>100_000)try{process.kill(-child.pid,'SIGTERM')}catch{}}
+      if(which==='out'){
+        if(stdout.length+x.length>2_000_000)outputCapExceeded=true;
+        stdout+=x;
+      }else{
+        if(stderr.length+x.length>100_000)outputCapExceeded=true;
+        stderr+=x;
+      }
+      if(outputCapExceeded)try{process.kill(-child.pid,'SIGTERM')}catch{}
     }
     child.stdout.on('data',b=>collect('out',b));
     child.stderr.on('data',b=>collect('err',b));
-    child.once('error',e=>{if(done)return;done=true;clearTimeout(killer);ACTIVE_GROUP_PID=null;reject(e);});
+    child.once('error',e=>{
+      if(done)return;done=true;clearTimeout(killer);ACTIVE_GROUP_PID=null;
+      reject(groupFailure('EXIT',null,null,''));
+    });
     child.once('close',(code,signal)=>{
       if(done)return;done=true;clearTimeout(killer);ACTIVE_GROUP_PID=null;
-      if(timedOut||code!==0||signal!==null) {
-        reject(new Error('SB_GROUP_FAILED_'+group+'_EXIT_'+code+'_SIGNAL_'+signal+
-          '_ERRCODE_'+(/SB_A_HALT_[A-Z0-9_]+/.exec(stderr)?.[0]??'UNKNOWN')));
+      // Reason precedence reflects the first policy failure that we recorded:
+      // OUTPUT_CAP > TIMEOUT > SIGNAL > EXIT; zero exit is checked last.
+      if(outputCapExceeded||timedOut||code!==0||signal!==null){
+        const kind=outputCapExceeded?'OUTPUT_CAP':timedOut?'TIMEOUT':
+          signal!==null?'SIGNAL':'EXIT';
+        reject(groupFailure(kind,code,signal,stderr));
         return;
       }
       try{
         const data=JSON.parse(stdout.trim());
         assert.equal(data.id,group);assert.equal(data.status,'PASS_SYNTHETIC_COMPONENT_OR_SURROGATE_ONLY');
         resolve(data);
-      }catch(e){reject(new Error('SB_GROUP_RESULT_INVALID_'+group));}
+      }catch(e){reject(groupFailure('INVALID_RESULT',code,signal,stderr));}
     });
   });
 }
 function phaseAHaltCode(error) {
   // Never publish a raw exception message or stack.
+  if(error?.group_failure?.failure_kind==='INVALID_RESULT')return 'GROUP_RESULT_INVALID';
+  if(error?.group_failure)return 'GROUP_PROCESS_FAILED';
   const message=String(error?.message??'');
-  if(message.startsWith('SB_GROUP_FAILED_'))return 'GROUP_PROCESS_FAILED';
-  if(message.startsWith('SB_GROUP_RESULT_INVALID_'))return 'GROUP_RESULT_INVALID';
-  return /SB_A_HALT_[A-Z0-9_]+/.exec(message)?.[0]??'UNCLASSIFIED';
+  return /SB_A_HALT_[A-Z0-9_]{1,96}/.exec(message)?.[0]??'UNCLASSIFIED';
 }
 async function runAll(scratch) {
   const started=ms(),all=[];
@@ -768,6 +793,10 @@ async function runAll(scratch) {
       completed_group_ids:all.map(x=>x.id),failed_or_incomplete_group:activeGroup,
       pending_group_ids:ORDER.slice(all.length),
       halt_code:interrupted?'EXTERNAL_SIGTERM':phaseAHaltCode(error),
+      failure_kind:interrupted?'SIGNAL':error?.group_failure?.failure_kind??null,
+      exit_code:interrupted?null:error?.group_failure?.exit_code??null,
+      signal:interrupted?'SIGTERM':error?.group_failure?.signal??null,
+      group_halt_code:interrupted?null:error?.group_failure?.group_halt_code??null,
       total_elapsed_ms:elapsed(started),not_a_pass:true,
       remaining_gates:['ALL_PHASE_A_INCOMPLETE','ALL_C6_ACTIVATION_GATES']};
   }finally{process.removeListener('SIGTERM',signal);}
