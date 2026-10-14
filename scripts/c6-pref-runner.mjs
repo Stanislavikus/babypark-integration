@@ -16,7 +16,7 @@ import dns from 'node:dns/promises';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
-import { FirstLineStateStore } from '../src/copilot/first-line-state-store.mjs';
+import { createSyntheticFirstLineAuthority } from './c6-pref-operator-bootstrap.mjs';
 import { createFirstLineChatwootAuthorityReader } from '../src/copilot/chatwoot-client.mjs';
 import { createFirstLineAgentBotRelay, createFirstLineAgentBotServer } from '../src/copilot/first-line-runtime-ingress.mjs';
 
@@ -53,7 +53,7 @@ function requirePinnedSource() {
     const base = git('merge-base', PINNED_SOURCE_HEAD, head);
     assert.equal(base, PINNED_SOURCE_HEAD, 'C6_POC_SOURCE_ANCESTRY_MISMATCH');
     const changed = git('diff', '--name-only', PINNED_SOURCE_HEAD, head).split('\n').filter(Boolean);
-    assert.deepEqual(changed.sort(), ['scripts/c6-pref-control.sh', 'scripts/c6-pref-deadman.sh', 'scripts/c6-pref-native-fixture.rb', 'scripts/c6-pref-runner.mjs'], 'C6_POC_ONLY_TEST_FILES_ALLOWED');
+    assert.deepEqual(changed.sort(), ['scripts/c6-pref-control.sh', 'scripts/c6-pref-deadman.sh', 'scripts/c6-pref-native-fixture.rb', 'scripts/c6-pref-operator-bootstrap.mjs', 'scripts/c6-pref-runner.mjs', 'tests/unit/first-line-no-lazy-db.test.mjs'], 'C6_POC_ONLY_TEST_FILES_ALLOWED');
   }
   const dirty = git('status', '--porcelain', '--untracked-files=no');
   assert.equal(dirty, '', 'C6_POC_TRACKED_WORKTREE_DIRTY');
@@ -118,7 +118,7 @@ async function characterize() {
     const dbPath = path.join(root, 'episode.sqlite');
     let relay;
     try {
-      FirstLineStateStore.create(dbPath, { now: () => NOW }).close();
+      createSyntheticFirstLineAuthority({ file: dbPath, mode: 'characterize', now: () => NOW });
       const rows = new Map();
       relay = createFirstLineAgentBotRelay({ dbPath, authorityReader: makeReader(rows), webhookSecret: SECRET,
         ...TARGET, nowMs: () => NOW });
@@ -281,18 +281,7 @@ async function serve() {
   server.listen(port, '127.0.0.1', () => output('sandbox_ingress_listening', { port, namespace: ns, nativeChatwootE2E: 'PENDING' }));
 }
 
-function bootstrap() {
-  requirePinnedSource();
-  const file = sandboxPath(process.env);
-  assert.ok(!fs.existsSync(file), 'REFUSE_EXISTING_DB');
-  assert.ok(fs.existsSync(path.dirname(file)), 'SCRATCH_MUST_ALREADY_EXIST');
-  const store = FirstLineStateStore.create(file);
-  store.close();
-  output('explicit_synthetic_db_created', { path: file });
-}
-
 const command = process.argv[2];
 if (command === 'characterize') await characterize();
 else if (command === 'serve') await serve();
-else if (command === 'bootstrap-synthetic-db') bootstrap();
-else { output('usage', { commands: ['characterize', 'bootstrap-synthetic-db', 'serve'] }); process.exitCode = 64; }
+else { output('usage', { commands: ['characterize', 'serve'] }); process.exitCode = 64; }

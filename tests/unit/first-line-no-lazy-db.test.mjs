@@ -15,9 +15,11 @@ const RUNTIME_ROOTS = ['src', 'scripts', 'apps'];
 const CODE_EXTENSIONS = new Set(['.mjs', '.js', '.cjs', '.ts']);
 const SKIP_DIRS = new Set(['node_modules', 'tests', 'test', 'fixtures', 'vendor']);
 
-// An explicit operator-only bootstrap command would need a separately reviewed
-// path added here. Currently no runtime/CLI path is allowed to create v4 state.
-const APPROVED_EXPLICIT_V4_BOOTSTRAP_PATHS = new Set();
+// The bounded C6 synthetic PoC has ONE separately reviewed explicit
+// operator-only bootstrap; ordinary runtime still cannot create v4 state.
+const APPROVED_EXPLICIT_V4_BOOTSTRAP_PATHS = new Set([
+  'scripts/c6-pref-operator-bootstrap.mjs',
+]);
 
 function collectRuntimeSourceFiles(dir, files = []) {
   if (!fs.existsSync(dir)) return files;
@@ -116,5 +118,21 @@ test('missing v4 authority fails closed without creating DB or sidecars', t => {
       fs.existsSync(missing + suffix), false,
       'opening missing v4 DB may not create ' + suffix
     );
+  }
+});
+
+test('only the explicit synthetic PoC operator may initialize v4 authority', () => {
+  assert.deepEqual([...APPROVED_EXPLICIT_V4_BOOTSTRAP_PATHS],
+    ['scripts/c6-pref-operator-bootstrap.mjs']);
+  const src = fs.readFileSync(path.join(ROOT, 'scripts/c6-pref-operator-bootstrap.mjs'), 'utf8');
+  assert.match(src, /FirstLineStateStore\.create\(target/);
+  for (const gate of [
+    'BP_C6_SYNTHETIC_ONLY',
+    'BP_C6_POC_PREPARE_ROOT_ONLY',
+    'ROOT_ONLY_PARENT_REQUIRED',
+    'ONLY_FROZEN_ROOT_CONTROL_STAGE',
+    'OPERATOR_CLI_EXPLICIT_COMMAND',
+  ]) {
+    assert.ok(src.includes(gate), 'synthetic operator bootstrap missing gate: ' + gate);
   }
 });

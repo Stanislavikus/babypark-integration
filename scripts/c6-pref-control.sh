@@ -49,6 +49,7 @@ verify_source() {
   [[ "$(sha256sum "$REPO_ROOT/scripts/c6-pref-runner.mjs" | awk '{print $1}')" == "${BP_C6_POC_RUNNER_SHA256:-UNSET}" ]] || failure RUNNER_HASH_MISMATCH
   [[ "$(sha256sum "$REPO_ROOT/scripts/c6-pref-control.sh" | awk '{print $1}')" == "${BP_C6_POC_CONTROL_SHA256:-UNSET}" ]] || failure CONTROL_HASH_MISMATCH
   [[ "$(sha256sum "$REPO_ROOT/scripts/c6-pref-native-fixture.rb" | awk '{print $1}')" == "${BP_C6_POC_FIXTURE_SHA256:-UNSET}" ]] || failure FIXTURE_HASH_MISMATCH
+  [[ "$(sha256sum "$REPO_ROOT/scripts/c6-pref-operator-bootstrap.mjs" | awk '{print $1}')" == "${BP_C6_POC_OPERATOR_SHA256:-UNSET}" ]] || failure OPERATOR_BOOTSTRAP_HASH_MISMATCH
   [[ -x "$NODE" && "$("$NODE" --version)" == v24.20.0 ]] || failure NODE24_NOT_PINNED
 }
 inspect() {
@@ -252,7 +253,7 @@ prepare_db() {
   local staged="$CONTROL/episode-staging.sqlite"
   [[ ! -e "$staged" && ! -L "$staged" ]] || failure ROOT_DB_STAGING_NOT_EMPTY
   BP_C6_SYNTHETIC_ONLY=yes BP_C6_POC_PREPARE_ROOT_ONLY=yes BP_C6_POC_DB_PATH="$staged" \
-    timeout --kill-after=3s 20s "$NODE" "$REPO_ROOT/scripts/c6-pref-runner.mjs" bootstrap-synthetic-db || failure SYNTHETIC_DB_BOOTSTRAP_FAILED
+    timeout --kill-after=3s 20s "$NODE" "$REPO_ROOT/scripts/c6-pref-operator-bootstrap.mjs" operator-init || failure SYNTHETIC_DB_BOOTSTRAP_FAILED
   [[ -f "$staged" && ! -L "$staged" ]] || failure ROOT_DB_STAGING_UNEXPECTED_TYPE
   [[ ! -e "${staged}-wal" && ! -e "${staged}-shm" && ! -e "${staged}-journal" ]] || failure SQLITE_SIDECARS_NOT_CHECKPOINTED
   chmod 600 "$staged"
