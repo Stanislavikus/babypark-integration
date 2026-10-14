@@ -341,8 +341,13 @@ async function sb03(root) {
 }
 async function sb04(root) {
   const cells=[],samples=[],holder=await makeHolder(root),rnd=rng(20261015);
-  let lastFile=null;
+  let lastFile=null,template=null;
   try{
+    // Initialize once; every fresh test DB is an exclusive copy of a closed
+    // DELETE-mode template, never a second handle on the same live database.
+    template=createProbe(root,'sb04-template');
+    assert.ok(fs.statSync(template).size>0 && fs.statSync(template).size<=64*1024,
+      'unexpected template size');
     for(const cache of [-64,-2000])for(const spill of ['ON','OFF'])for(const rows of [1,8,128]){
       const nPerControl=rows===128?LONG_SAMPLE:LIGHT_SAMPLE;
       // Randomize all three controls, preserving the full Fit sample count PER control.
@@ -351,7 +356,8 @@ async function sb04(root) {
       for(const {trial,reader_hold_ms} of grid){
         const control=reader_hold_ms===null?'NO_READER':
           reader_hold_ms===10?'SHORT_READER':'LONG_READER';
-        const file=createProbe(root,'sb04-'+(cache<0?-cache:cache)+'-'+spill+'-'+rows+'-'+control+'-'+trial);
+        const file=path.join(root,'probe-sb04-'+(cache<0?-cache:cache)+'-'+spill+'-'+rows+'-'+control+'-'+trial+'.sqlite');
+        fs.copyFileSync(template,file,fs.constants.COPYFILE_EXCL);
         // The previous holder DB is closed by the next prepare ACK. Keep at
         // most one retired file; never unlink an actively held DB.
         await holder.prepare(file);
@@ -398,6 +404,7 @@ async function sb04(root) {
   }finally{
     await holder.close();
     if(lastFile!==null){assert.equal(path.dirname(lastFile),root);fs.unlinkSync(lastFile);}
+    if(template!==null){assert.equal(path.dirname(template),root);fs.unlinkSync(template);}
   }
   assert.equal(samples.length,2*2*3*(LIGHT_SAMPLE+LIGHT_SAMPLE+LONG_SAMPLE));
   for(const cell of cells){
@@ -717,32 +724,53 @@ function groupProcess(group,scratch) {
     });
   });
 }
+function phaseAHaltCode(error) {
+  // Never publish a raw exception message or stack.
+  const message=String(error?.message??'');
+  if(message.startsWith('SB_GROUP_FAILED_'))return 'GROUP_PROCESS_FAILED';
+  if(message.startsWith('SB_GROUP_RESULT_INVALID_'))return 'GROUP_RESULT_INVALID';
+  return /SB_A_HALT_[A-Z0-9_]+/.exec(message)?.[0]??'UNCLASSIFIED';
+}
 async function runAll(scratch) {
-  assertEnvironment(scratch);
   const started=ms(),all=[];
-  let interrupted=false;
+  let interrupted=false,activeGroup=null;
   function signal(){
+    if(interrupted)return;
     interrupted=true;
     if(ACTIVE_GROUP_PID!==null)try{process.kill(-ACTIVE_GROUP_PID,'SIGTERM')}catch{}
-    process.stderr.write('SB_A_HALT_OWNER_SCOPE_EXTERNAL_TERMINATION\n');
     process.exitCode=143;
   }
   process.once('SIGTERM',signal);
-  for(const group of ORDER){
-    if(interrupted)fail('EXTERNAL_TERMINATION');
-    if(elapsed(started)+CAPS[group]*1000>=1_200_000)
-      fail('PHASE_A_REMAINING_WALL_RESERVE');
-    // groupProcess has its own hard timeout and separate child process group.
-    const result=await groupProcess(group,scratch);
-    all.push(result);
-  }
-  process.removeListener('SIGTERM',signal);
-  return {schema:'babypark.c6.stage-b.phase-a.synthetic/1',
-    source_basis:'PR128:565d8de08fbd8e85598e554cb91e59dfa4f8c1a4',
-    phase:'A',status:'PASS_SYNTHETIC_EXECUTION_ONLY',seed:SEED,
-    groups:all,total_elapsed_ms:elapsed(started),
-    remaining_gates:['production_Rseq_native','K_total','target_peak_envelope',
-      'B2_full_restore','S2_claim_public_send_HUMAN','single_ingress_atomic_production_code']};
+  try{
+    assertEnvironment(scratch);
+    for(const group of ORDER){
+      activeGroup=group;
+      if(interrupted)fail('EXTERNAL_TERMINATION');
+      if(elapsed(started)+CAPS[group]*1000>=1_200_000)
+        fail('PHASE_A_REMAINING_WALL_RESERVE');
+      // Only successfully validated group results are retained.
+      const result=await groupProcess(group,scratch);
+      if(interrupted)fail('EXTERNAL_TERMINATION');
+      all.push(result);
+      activeGroup=null;
+    }
+    return {schema:'babypark.c6.stage-b.phase-a.synthetic/1',
+      source_basis:'PR128:565d8de08fbd8e85598e554cb91e59dfa4f8c1a4',
+      phase:'A',status:'PASS_SYNTHETIC_EXECUTION_ONLY',seed:SEED,
+      groups:all,total_elapsed_ms:elapsed(started),
+      remaining_gates:['production_Rseq_native','K_total','target_peak_envelope',
+        'B2_full_restore','S2_claim_public_send_HUMAN','single_ingress_atomic_production_code']};
+  }catch(error){
+    process.exitCode=interrupted?143:1;
+    return {schema:'babypark.c6.stage-b.phase-a.synthetic/1',
+      source_basis:'PR128:565d8de08fbd8e85598e554cb91e59dfa4f8c1a4',
+      phase:'A',status:'PARTIAL_HALT',seed:SEED,groups:all,
+      completed_group_ids:all.map(x=>x.id),failed_or_incomplete_group:activeGroup,
+      pending_group_ids:ORDER.slice(all.length),
+      halt_code:interrupted?'EXTERNAL_SIGTERM':phaseAHaltCode(error),
+      total_elapsed_ms:elapsed(started),not_a_pass:true,
+      remaining_gates:['ALL_PHASE_A_INCOMPLETE','ALL_C6_ACTIVATION_GATES']};
+  }finally{process.removeListener('SIGTERM',signal);}
 }
 function parseArgs() {
   const args=process.argv.slice(2);
