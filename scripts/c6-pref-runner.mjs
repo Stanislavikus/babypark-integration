@@ -32,10 +32,10 @@ function output(event, fields = {}) {
 function requirePinnedSource() {
   const head = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8', timeout: 4000 }).trim();
   if (head !== PINNED_SOURCE_HEAD) {
-    // The reviewed runner is a separate test-only branch descendant; allow
-    // exact first parent ONLY if every path other than this script is unchanged.
-    const base = execFileSync('git', ['rev-parse', `${head}^`], { encoding: 'utf8', timeout: 4000 }).trim();
-    assert.equal(base, PINNED_SOURCE_HEAD, 'C6_POC_SOURCE_HEAD_MISMATCH');
+    // The test-only branch may have bounded amendments, but no PR #128 files
+    // may be changed or silently substituted.
+    const base = execFileSync('git', ['merge-base', PINNED_SOURCE_HEAD, head], { encoding: 'utf8', timeout: 4000 }).trim();
+    assert.equal(base, PINNED_SOURCE_HEAD, 'C6_POC_SOURCE_ANCESTRY_MISMATCH');
     const changed = execFileSync('git', ['diff', '--name-only', PINNED_SOURCE_HEAD, head], { encoding: 'utf8', timeout: 4000 }).trim().split('\n').filter(Boolean);
     assert.deepEqual(changed.sort(), ['scripts/c6-pref-deadman.sh', 'scripts/c6-pref-runner.mjs'], 'C6_POC_ONLY_TEST_FILES_ALLOWED');
   }
@@ -95,7 +95,7 @@ async function characterize() {
       const rows = new Map();
       relay = createFirstLineAgentBotRelay({ dbPath, authorityReader: makeReader(rows), webhookSecret: SECRET,
         ...TARGET, nowMs: () => NOW });
-      const observations = await run({ rows, relay });
+      const observations = await run({ rows, relay, dbPath });
       const found = observations.filter(x => x.actual !== x.expected);
       const result = { id, label, source: 'synthetic-local-not-native', status: found.length ? 'REPRODUCED_DEFECT' : 'PASS_LOCAL_ONLY',
         observations };
@@ -135,12 +135,33 @@ async function characterize() {
     const a = await relay.receive(signed(eventWire({ id: 106, kind: 'message_updated' }), 'x5-updated'));
     return [{ expected: 200, actual: a.status, outcome: a.outcome }];
   });
-  // These phases require orchestration that PR #128 currently does not expose
-  // as a complete executable loop. Never claim model, send or native fallback.
-  for (const [id, label] of [
-    ['X6', 'deferred customer behind SENDING and late echo'],
-    ['X7', 'injected transport failure, uncertainty, restart and human-attention'],
-  ]) { const result = { id, label, status: 'NOT_WIRED', source: 'static-inventory', reason: 'NO_COMPLETE_SYNTHETIC_C6_DISPATCHER_PROVEN' }; results.push(result); output('case', result); }
+  // Injection tests are against BabyPark's READ adapter, not Chatwoot's
+  // Sidekiq POST retry policy. Unknown/timeout responses must fail closed.
+  await check('X7', 'injected Chatwoot REST 429/500/503 and timeout', async ({ dbPath }) => {
+    const observations = [];
+    for (const fault of [429, 500, 503, 'timeout']) {
+      const reader = createFirstLineChatwootAuthorityReader({
+        baseUrl: 'https://synthetic.invalid', accountId: 11,
+        configuredAgentBotId: 7, readToken: 'synthetic-only-read', requestTimeoutMs: 250,
+        fetchImpl: async () => {
+          if (fault === 'timeout') throw new Error('synthetic-transport-timeout');
+          return new Response('{}', { status: fault });
+        },
+      });
+      const faultRelay = createFirstLineAgentBotRelay({ dbPath, authorityReader: reader,
+        webhookSecret: SECRET, ...TARGET, nowMs: () => NOW });
+      try {
+        const result = await faultRelay.receive(signed(eventWire({ id: 107 }), `x7-${fault}`));
+        observations.push({ fault: String(fault), expected: 503, actual: result.status, outcome: result.outcome });
+      } finally { faultRelay.close(); }
+    }
+    return observations;
+  });
+  // The full deferred-parent and restart/public-send/human-alert E2E
+  // orchestration is NOT EXPORTED by this pre-fix ingress-only executable.
+  const gap = { id: 'X6', label: 'deferred SENDING and late echo with exact Chatwoot',
+    status: 'NOT_WIRED', source: 'static-inventory', reason: 'NO_COMPLETE_SYNTHETIC_C6_DISPATCHER_PROVEN' };
+  results.push(gap); output('case', gap);
   output('summary', { total: results.length,
     defects: results.filter(x => x.status === 'REPRODUCED_DEFECT').length,
     notWired: results.filter(x => x.status === 'NOT_WIRED').length,
