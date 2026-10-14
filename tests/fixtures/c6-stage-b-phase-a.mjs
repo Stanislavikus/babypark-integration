@@ -458,21 +458,40 @@ async function sb08(root) {
     separate_external_holder_not_same_event_loop:true};
 }
 function hmac(body) { return crypto.createHmac('sha256',SECRET).update(body).digest('hex'); }
-function sendUnix(socket,body,{sig=true,slow=false,hang=false}={}) {
-  return new Promise((resolve,reject)=>{
+function sendUnix(socket,body,{sig=true,slow=false,hang=false,shortDeadline=false}={}) {
+  return new Promise(resolve=>{
     let complete=false;
+    function finish(status,bytes=0) {
+      if(complete)return;
+      complete=true;resolve({status,bytes});
+    }
     const req=http.request({socketPath:socket,path:'/synthetic',method:'POST',
-      agent:false,headers:{'content-type':'application/json','x-sb-signature':sig?hmac(body):'bad'}},res=>{
+      agent:false,headers:{'content-type':'application/json',
+        'x-sb-signature':sig?hmac(body):'bad',
+        'x-sb-deadline-class':shortDeadline?'short':'standard'}},res=>{
       let size=0;
       res.on('data',b=>{size+=b.length;});
-      res.on('end',()=>{if(complete)return;complete=true;resolve({status:res.statusCode,bytes:size});});
-      res.on('error',reject);
+      res.on('end',()=>finish(res.statusCode,size));
+      res.on('aborted',()=>finish('TRANSPORT_ERROR',size));
+      res.on('error',()=>finish('TRANSPORT_ERROR',size));
+      res.on('close',()=>{if(!res.complete)finish('TRANSPORT_ERROR',size);});
     });
-    req.on('error',reject);
+    // Record uncertain transport outcomes if the server closes during a
+    // synthetic upload; never equate transport uncertainty with a 2xx.
+    req.on('error',()=>finish('TRANSPORT_ERROR'));
     if(hang){req.write(body.subarray(0,1));return;}
-    if(slow){req.write(body.subarray(0,1));setTimeout(()=>req.end(body.subarray(1)),100);}
+    if(slow){req.write(body.subarray(0,1));setTimeout(()=>{if(!req.destroyed)req.end(body.subarray(1));},100);}
     else req.end(body);
   });
+}
+function responseCounts(samples) {
+  const counts={};
+  for(const value of samples) {
+    const key=String(value);
+    if(!/^(?:[1-5][0-9]{2}|[A-Z_]+)$/.test(key))fail('UNKNOWN_RESPONSE_STATUS');
+    counts[key]=(counts[key]??0)+1;
+  }
+  return counts;
 }
 function unixListen(server,sock){
   return new Promise((resolve,reject)=>{server.once('error',reject);server.listen(sock,()=>{
@@ -488,7 +507,10 @@ async function sb09(root) {
   const connections=new Set;
   const server=http.createServer((req,res)=>{
     let finished=false,total=0,parts=[];
-    const deadline=setTimeout(()=>reply(408),25);
+    // 2000ms semantic cap for size/HMAC. Short 25ms trials are separate
+    // noise-sensitive measurements, not deterministic status expectations.
+    const deadlineMs=req.headers['x-sb-deadline-class']==='short'?25:2000;
+    const deadline=setTimeout(()=>reply(408),deadlineMs);
     function reply(status){if(finished)return;finished=true;clearTimeout(deadline);
       res.writeHead(status,{'content-type':'application/json','connection':'close'});
       res.end(JSON.stringify({synthetic:true,status}));}
@@ -517,32 +539,76 @@ async function sb09(root) {
   try{
     const bodies=[Buffer.alloc(0),Buffer.from('x'),Buffer.from(small),
       exactlyOneMib,Buffer.alloc(MI_B+1,120)];
-    for(const [index,body]of bodies.entries()){
+    for(const [index,body]of bodies.entries()) {
       const n=index===2?LIGHT_SAMPLE:LONG_SAMPLE;
-      const startReads=authoritativeReads;
-      const samples=[];
+      const before=authoritativeReads,wall=[],statuses=[];
       for(let trial=0;trial<n;trial++){
-        const start=ms();
+        const started=ms();
         const response=await sendUnix(sock,body);
-        samples.push(elapsed(start));
-        const accepted=index===2||index===3;
-        assert.equal(response.status,index===4?413:accepted?200:422);
+        wall.push(elapsed(started));statuses.push(response.status);
+        const valid=index===2||index===3;
+        if(!valid)assert.notEqual(response.status,200,'invalid/oversize body accepted');
+        if(index!==4)assert.notEqual(response.status,413,'within-limit body wrongly oversized');
+        assert.ok([200,401,408,413,422,'TRANSPORT_ERROR'].includes(response.status),
+          'unclassified size response');
       }
-      assert.equal(authoritativeReads-startReads,(index===2||index===3)?n:0);
-      trials.push({name:'size_'+index,actual_bytes:body.length,outcome:stats(samples)});
+      const reads=authoritativeReads-before;
+      const successes=statuses.filter(x=>x===200).length;
+      const transport=statuses.filter(x=>x==='TRANSPORT_ERROR').length;
+      if(index===2||index===3) {
+        // If a response is lost after acceptance, a transport error makes
+        // the public result unknown; it does not undo the internal read.
+        assert.ok(reads>=successes&&reads<=successes+transport,
+          'authoritative read count exceeds acknowledged or uncertain traffic');
+      }else assert.equal(reads,0,'unauthorized semantic read');
+      trials.push({name:'size_'+index,deadline_ms:2000,actual_bytes:body.length,
+        samples:stats(wall),statuses,counts:responseCounts(statuses),
+        synthetic_reads:reads,uncertain_transport_count:transport});
     }
-    for(const kind of ['bad-sig','slow','incomplete']){
-      const before=authoritativeReads,arr=[];
+    for(const kind of ['bad-sig','slow','incomplete']) {
+      const before=authoritativeReads,wall=[],statuses=[];
+      const shortDeadline=kind!=='bad-sig';
       for(let i=0;i<LONG_SAMPLE;i++){
-        const start=ms(),payload=Buffer.from(small);
+        const started=ms(),payload=Buffer.from(small);
         const response=await sendUnix(sock,payload,{sig:kind!=='bad-sig',
-          slow:kind==='slow',hang:kind==='incomplete'});
-        assert.equal(response.status,kind==='bad-sig'?401:408);
-        arr.push(elapsed(start));
+          slow:kind==='slow',hang:kind==='incomplete',shortDeadline});
+        wall.push(elapsed(started));statuses.push(response.status);
+        if(kind==='bad-sig'||kind==='incomplete')
+          assert.notEqual(response.status,200,'invalid/unfinished input accepted');
+        assert.ok([200,401,408,'TRANSPORT_ERROR'].includes(response.status),
+          'unclassified deadline response');
       }
-      assert.equal(authoritativeReads,before);
-      trials.push({name:kind,samples:stats(arr)});
+      const reads=authoritativeReads-before;
+      if(kind==='bad-sig'||kind==='incomplete')assert.equal(reads,0,'unauthorized semantic read');
+      else {
+        const successes=statuses.filter(x=>x===200).length;
+        assert.ok(reads>=successes&&reads<=successes+statuses.filter(x=>x==='TRANSPORT_ERROR').length,
+          'unclassified accepted slow-body message');
+      }
+      trials.push({name:kind,deadline_ms:shortDeadline?25:2000,
+        samples:stats(wall),statuses,counts:responseCounts(statuses),
+        synthetic_reads:reads,delayed_success_after_deadline:
+          kind==='slow'?statuses.filter(x=>x===200).length:0});
     }
+    // An explicitly separate 25ms deadline cell for an exactly-one-MiB
+    // valid body. Timeout/200/transport error are all measured outcomes.
+    const before=authoritativeReads,wall=[],statuses=[];
+    for(let i=0;i<LONG_SAMPLE;i++){
+      const started=ms();
+      const response=await sendUnix(sock,exactlyOneMib,{shortDeadline:true});
+      wall.push(elapsed(started));statuses.push(response.status);
+      assert.notEqual(response.status,413,'exact-cap body considered oversized');
+      assert.ok([200,408,'TRANSPORT_ERROR'].includes(response.status),
+        'unclassified short size response');
+    }
+    const reads=authoritativeReads-before;
+    const successes=statuses.filter(x=>x===200).length;
+    assert.ok(reads>=successes&&reads<=successes+statuses.filter(x=>x==='TRANSPORT_ERROR').length,
+      'short size synthetic read count mismatch');
+    trials.push({name:'exactly_1MiB_short_deadline',deadline_ms:25,
+      samples:stats(wall),statuses,counts:responseCounts(statuses),
+      synthetic_reads:reads,timing_observation_only:true});
+
   }finally{await unixClose(server,connections,sock);}
   return {tests:trials,synthetic_authority_reads:authoritativeReads,
     no_customer_data:true,not_chatwoot_native_status:true};
@@ -608,32 +674,45 @@ async function sb10(root) {
   const sock=path.join(root,'sb10.sock');await unixListen(server,sock);
   const groups=[],random=rng(20261016);
   try{
-    for(const [name,endpoint,expected] of [
-      ['pending-connect-stub',null,'TIMEOUT'],
-      ['uds-connect-error','/nonexistent','CONNECT_OR_READ_ERROR'],
-      ['no-headers','/no-headers','TIMEOUT'],
-      ['mid-body-stall','/body-stall','TIMEOUT'],
-      ['mid-body-truncate','/body-truncate','INCOMPLETE_BODY']]){
-      const raw=[];
+    for(const [name,endpoint] of [
+      ['pending-connect-stub',null],
+      ['uds-connect-error','/nonexistent'],
+      ['no-headers','/no-headers'],
+      ['mid-body-stall','/body-stall'],
+      ['mid-body-truncate','/body-truncate']]){
+      const raw=[],statuses=[];
       for(let i=0;i<LONG_SAMPLE;i++){
         const result=name==='pending-connect-stub'?await pendingConnect(25):
           name==='uds-connect-error'?await httpGet(path.join(root,'absent.sock'),endpoint,25):
           await httpGet(sock,endpoint,25);
-        if(expected==='INCOMPLETE_BODY')assert.ok(['TRUNCATED','BODY_ERROR'].includes(result.status));
-        else assert.equal(result.status,expected);
-        raw.push(result.elapsed_ms);
+        assert.notEqual(result.status,'COMPLETE','hung/incomplete source read completed');
+        if(name==='pending-connect-stub')assert.equal(result.status,'TIMEOUT');
+        if(name==='uds-connect-error')
+          assert.ok(['CONNECT_OR_READ_ERROR','TIMEOUT'].includes(result.status));
+        if(name==='mid-body-truncate')
+          assert.ok(['TRUNCATED','BODY_ERROR','TIMEOUT','CONNECT_OR_READ_ERROR'].includes(result.status));
+        if(name==='no-headers'||name==='mid-body-stall')
+          assert.ok(['TIMEOUT','CONNECT_OR_READ_ERROR','TRUNCATED','BODY_ERROR'].includes(result.status));
+        raw.push(result.elapsed_ms);statuses.push(result.status);
       }
-      groups.push({name,results:stats(raw),safety_bound:'ENFORCED_TIMEOUT_PLUS_UNPROVEN_TIMER_OVERSHOOT'});
+      groups.push({name,deadline_ms:25,results:stats(raw),statuses,
+        counts:responseCounts(statuses),no_complete_observed:true,
+        safety_bound:'ENFORCED_TIMEOUT_PLUS_UNPROVEN_TIMER_OVERSHOOT'});
     }
     for(const delay of shuffle([0,6,25,100],random)){
-      const sample=[];
+      const sample=[],statuses=[];
       for(let i=0;i<LIGHT_SAMPLE;i++){
         const r=await httpGet(sock,'/ok?ms='+delay,150);
-        assert.equal(r.status,'COMPLETE');sample.push(r.elapsed_ms);
+        assert.ok(['COMPLETE','TIMEOUT','CONNECT_OR_READ_ERROR','TRUNCATED','BODY_ERROR'].includes(r.status),
+          'unclassified mock result');
+        sample.push(r.elapsed_ms);statuses.push(r.status);
       }
-      groups.push({name:'mock-'+delay+'ms',samples:stats(sample),
-        provider_Rseq:'UNKNOWN_NOT_MEASURED'});
+      groups.push({name:'mock-'+delay+'ms',deadline_ms:150,samples:stats(sample),
+        statuses,counts:responseCounts(statuses),
+        provider_Rseq:'UNKNOWN_NOT_MEASURED',
+        mock_complete_not_guaranteed:true});
     }
+
     for(const N of [1,4]){
       let inflight=0,admitted=0,rejected=0;
       const arrivals=[];

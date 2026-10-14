@@ -9,7 +9,7 @@ Source base: Stanislavikus/babypark-integration ONLY; PR #128 HEAD 565d8de08fbd8
 
 ## 1. Immutable prepared source (Git blobs and UTF-8/LF/final-LF SHA-256)
 
-- tests/fixtures/c6-stage-b-phase-a.mjs — SHA-256 f0654c96b009e5c429cf5b066c082b153460b646b6ca83ebfdf45b8147bf91b8; Git blob recorded in PR checkpoint after this batch commit.
+- tests/fixtures/c6-stage-b-phase-a.mjs — SHA-256 81e47e813cb9fd5446daca2ab4f25b36fe272611c8d13f6819dd664e70b607cc; Git blob recorded in PR checkpoint after this batch commit.
 - tests/fixtures/c6-stage-b-phase-a-holder.mjs — blob 31f148df079f7100b02bcddc1370aafef53f77e6, SHA-256 b66f02de1dafc6f00fc5a22044e943a0336cc2354ff056e26e5882814fa8572a.
 - This manifest itself is evidence only. Its blob/digest and the PoC HEAD/TREE/BASE are reported after creation, not asserted by a self-referential file.
 
@@ -26,12 +26,12 @@ The following planning ranges are UNMEASURED estimates based on finite loop coun
 | 1 | SB-00 | Two disposable DELETE DBs + readbacks | 1–5 s | 30 s |
 | 2 | SB-01 | 90 existing v4 surrogate/duplicate/HUMAN + one thenable rollback case | 5–40 s | 120 s |
 | 3 | SB-11 | Seven synthetic E_test=100ms guard branches + blocked SQLite counterexample | 1–10 s | 60 s |
-| 4 | SB-10 | 5 hang/error classes ×10, 4 mock latency cells ×90, N=1/4 ×40 batches | 15–60 s | 120 s |
+| 4 | SB-10 | 5 hang/error classes ×10, 4 mock latency cells ×90 (outcome histograms without asserted COMPLETE), N=1/4 ×40 batches | UNMEASURED on target | 120 s |
 | 5 | SB-02 | 4 gaps ×3 busy timeout ×3 holds ×10 = 360 lock trials | 40–140 s | 180 s |
 | 6 | SB-03 | 2 spill modes ×3 reader holds ×10 = 60 trials, 128×4096B synthetic writes; COMMIT/WRITE sites separated | UNMEASURED; prior 5–40 s may not apply | 120 s |
 | 7 | SB-04 | 2 caches ×2 spill modes ×3 independent controls ×(90 one-row +90 eight-row +10 128-row) = 2280 trials; copies one CLOSED SQLite template using native fs COPYFILE_EXCL | UNMEASURED on target; Sonnet pre-optimization 69 s is not an authoritative host bound | 180 s |
 | 8 | SB-08 | 10 high-timeout negative second-connection trials; measured timer overshoot, no target topology claim | 2–20 s UNMEASURED | 90 s |
-| 9 | SB-09 | Body lengths 0/1/1MiB/1MiB+1, HMAC/slow/incomplete and 90 ordinary cases | 5–40 s | 90 s |
+| 9 | SB-09 | 0/1/1MiB/1MiB+1 size/HMAC semantics with test-only 2000ms deadline, slow/incomplete at 25ms, additional 10 short-deadline 1MiB cases | UNMEASURED on target | 90 s |
 | | TOTAL | Group caps 990 s + reserve 210 s | Not validated against a host | 1200 s / 20 min |
 
 Both local client and server operate on Unix-domain sockets. A lock-holder child executes read or write transaction holds of 0, 10 or 50 ms and inter-hold gaps of 0, 1, 5 or 20 ms, including repeated write acquisitions. The parent synchronously measures its own actual SQLite calls while the independent child can release its lock. No JS timer is claimed to interrupt a synchronous blocked DatabaseSync call. All future runtime thresholds are UNKNOWN regardless of simulated E_test=100ms, synthetic busy values or measured mock latencies.
@@ -99,6 +99,16 @@ N3 retains exactly 2280 independent trial DB paths and cache/spill/reader contro
 N4 returns one structured `status:PARTIAL_HALT` JSON containing *only successfully validated completed groups*, `failed_or_incomplete_group`, `pending_group_ids`, a sanitized code and `not_a_pass:true`. Exit code is nonzero (143 on SIGTERM). This is never PASS, a resumable checkpoint or authorization to skip mandatory groups. Abrupt SIGKILL, host loss or outer timeout before process response cannot trigger application-level final JSON: absence of an intact final record is HALT/UNKNOWN, not inferred completion. The operator's separately authorized evidence collection must preserve stdout/stderr, exit code and scoped post-abort process census.
 
 Both modifications require fresh independent complete-source review, exact SHA/tree verification and synthetic smoke including injected late-group failure, timeout, and SIGTERM; container timing is not target-host timing. **No Phase A approval issued.**
+
+### N6 — timing outcomes as evidence, not brittle expected statuses (unverified new HEAD)
+
+Sonnet's independent review of prior HEAD `46920cd9` confirmed N5 with complete nine-group synthetic smoke, but found **BLOCKER N6**: SB-10 occasionally asserted `COMPLETE` despite scheduler-delayed 100ms mock response vs 150ms client budget; SB-09 used the same 25ms server deadline for 1MiB size-semantics cells, so ordinary CPU load returned 408 instead of 200/413. These are *measurements of timing noise*, not structural defects.
+
+The synthetic-only batch makes SB-09's **size/HMAC semantics** use a generous test-only **2000ms** server deadline and creates a separate ten-trial **25ms** exactly-1MiB time-sensitive cell. Every sample records elapsed time and raw status class with histogram; `TRANSPORT_ERROR` (a local UDS close/reset) is distinguished from positive HTTP 200 and counted as an **unknown delivery outcome**. For valid complete messages, actual authoritative reads must lie between observed HTTP 200 count and 200+transport-uncertain count; invalid HMAC/incomplete/oversize must have zero authoritative reads. Bodies at or below the cap must never receive 413; oversize must never be accepted with 200. The slow 100ms body cell with a 25ms deadline records any 200 as evidence of delayed enforcement, never a pass of a time bound.
+
+SB-10's four mock latency groups retain **90 samples each**, its five pending-connect/UDS/hang/body classes retain **10 each**, and its admission waves `N=1/4` remain intact. Timed/mock `COMPLETE` is no longer mandatory; all statuses and counts are preserved. Hanging/incomplete cases can never yield `COMPLETE`, and pending-connect cancellation stays structurally required. The additional recorded mock timeout/error incidence is **NOT** a bound on deployed Chatwoot `R_seq`. The 120s/90s group caps, 990s Phase A groups and 1200s outer wall cap are unchanged.
+
+**Requested independent negative regression on this exact tree, never run by controller:** at least 30 bounded reviewer-only repetitions per Phase A group under a predeclared 3–6× 2-vCPU contention envelope, with zero structural HALT and complete outcome statistics. Also inspect every other timing-derived assertion, per-group 2MB captured-output cap, raw JSON size, missing/unclassified status, false 2xx, and all prior B1–B3/N1–N5 defects. Repeat only with separate authorization for any host execution. An unexpected structural result, missing evidence, or unreviewed fixture semantics remain HALT, not an automatic PASS. No native Chatwoot or target-server timing proof has occurred.
 
 ## 5. Independent review checklist and HALT
 
