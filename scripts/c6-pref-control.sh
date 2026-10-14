@@ -211,6 +211,42 @@ launch() {
   printf 'C6_ISOLATED_SYSTEMD_STARTED\n'
 }
 
+
+prepare_db() {
+  [[ "$(id -u)" -eq 0 ]] || failure ROOT_REQUIRED
+  verify_source; inspect; cat_status || failure CATALOG_CHANGED
+  [[ -f "$PROVENANCE_MARKER" && "$(stat -c '%u:%a' "$PROVENANCE_MARKER")" == '0:600' ]] || failure UNVERIFIED_CHATWOOT_DB_ORIGIN
+  [[ -f "$DEADLINE_FILE" && "$(date -u +%s)" -lt "$(cat "$DEADLINE_FILE")" ]] || failure WINDOW_EXPIRED
+  [[ ! -e "$SCRATCH/episode.sqlite" ]] || failure SYNTHETIC_DB_EXISTS_NO_AUTOREPLACE
+  BP_C6_SYNTHETIC_ONLY=yes BP_C6_POC_DB_PATH="$SCRATCH/episode.sqlite" \
+    timeout --kill-after=3s 20s "$NODE" "$REPO_ROOT/scripts/c6-pref-runner.mjs" bootstrap-synthetic-db || failure SYNTHETIC_DB_BOOTSTRAP_FAILED
+  chown bpclaude:bpclaude "$SCRATCH/episode.sqlite" || failure SYNTHETIC_DB_CHOWN_FAILED
+  chmod 600 "$SCRATCH/episode.sqlite"
+  printf 'SYNTHETIC_DB_BOOTSTRAPPED_AND_OWNED_BY_BPCLAUDE\n'
+}
+prepare_auth() {
+  # Only after a separately PINNED, owner-authorized native fixture has
+  # created the in-sandbox AgentBot. Never synthesize or guess native IDs.
+  [[ "$(id -u)" -eq 0 ]] || failure ROOT_REQUIRED
+  verify_source; cat_status || failure CATALOG_CHANGED
+  [[ -f "$PROVENANCE_MARKER" ]] || failure DATABASE_PROVENANCE_NOT_VERIFIED
+  [[ -f "$SCRATCH/episode.sqlite" ]] || failure SYNTHETIC_DB_MISSING
+  [[ ! -e "$SCRATCH/c6-synthetic.env" ]] || failure SYNTHETIC_AUTH_ALREADY_EXISTS
+  [[ "${BP_C6_POC_ACCOUNT_ID:-}" =~ ^[0-9]{1,9}$ &&
+     "${BP_C6_POC_INBOX_ID:-}" =~ ^[0-9]{1,9}$ &&
+     "${BP_C6_POC_BOT_ID:-}" =~ ^[0-9]{1,9}$ ]] || failure NATIVE_FIXTURE_IDS_REQUIRED
+  [[ "${BP_C6_POC_READ_TOKEN:-}" =~ ^[A-Za-z0-9_-]{16,128}$ &&
+     "${BP_C6_POC_HMAC_SECRET:-}" =~ ^[A-Za-z0-9_-]{32,128}$ ]] || failure NATIVE_FIXTURE_SECRET_FORMAT_INVALID
+  # A 600 synthetic file is writable by the isolated C6 user; no live keys.
+  local dest="$SCRATCH/c6-synthetic.env"
+  ( umask 077
+    printf 'BP_C6_SYNTHETIC_ONLY=yes\nBP_C6_POC_DB_PATH=%s/episode.sqlite\nBP_C6_POC_CHATWOOT_BASE_URL=http://rails:3000\nBP_C6_POC_ACCOUNT_ID=%s\nBP_C6_POC_INBOX_ID=%s\nBP_C6_POC_BOT_ID=%s\nBP_C6_POC_READ_TOKEN=%s\nBP_C6_POC_HMAC_SECRET=%s\n' \
+      "$SCRATCH_MOUNT" "$BP_C6_POC_ACCOUNT_ID" "$BP_C6_POC_INBOX_ID" "$BP_C6_POC_BOT_ID" \
+      "$BP_C6_POC_READ_TOKEN" "$BP_C6_POC_HMAC_SECRET" > "$dest"
+  )
+  chmod 600 "$dest"; chown bpclaude:bpclaude "$dest"
+  printf 'SYNTHETIC_NATIVE_FIXTURE_ENV_PREPARED\n'
+}
 stop_c6() {
   [[ "$(id -u)" -eq 0 ]] || failure ROOT_REQUIRED
   [[ -f "$DEADLINE_FILE" && "$(date -u +%s)" -lt "$(cat "$DEADLINE_FILE")" ]] || failure WINDOW_EXPIRED
@@ -238,10 +274,12 @@ case "${1:-}" in
   inspect) inspect ;;
   arm) arm ;;
   database-provenance) database_provenance ;;
+  prepare-db) prepare_db ;;
+  prepare-auth) prepare_auth ;;
   guard) guard ;;
   launch) launch ;;
   stop-c6) stop_c6 ;;
   reset) reset ;;
   stop) /usr/bin/bash "$STOP_SCRIPT" stop ;;
-  *) printf 'usage: c6-pref-control.sh inspect|arm|database-provenance|guard|launch|stop-c6|reset|stop\n' >&2; exit 64 ;;
+  *) printf 'usage: c6-pref-control.sh inspect|arm|database-provenance|prepare-db|prepare-auth|guard|launch|stop-c6|reset|stop\n' >&2; exit 64 ;;
 esac
