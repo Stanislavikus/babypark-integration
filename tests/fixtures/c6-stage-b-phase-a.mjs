@@ -458,6 +458,15 @@ async function sb08(root) {
     separate_external_holder_not_same_event_loop:true};
 }
 function hmac(body) { return crypto.createHmac('sha256',SECRET).update(body).digest('hex'); }
+function wrongBodyHmac(body) {
+  // Valid, same-key HMAC for a DIFFERENT synthetic body. A broken comparison
+  // (while preserving the 64-hex length check) must fail the bad-sig cell.
+  const otherBody=Buffer.concat([body,Buffer.from(':different-synthetic-body')]);
+  const wrong=hmac(otherBody);
+  assert.match(wrong,/^[0-9a-f]{64}$/);
+  assert.notEqual(wrong,hmac(body),'negative HMAC must differ from transmitted body');
+  return wrong;
+}
 function sendUnix(socket,body,{sig=true,slow=false,hang=false,shortDeadline=false}={}) {
   return new Promise(resolve=>{
     let complete=false;
@@ -467,7 +476,7 @@ function sendUnix(socket,body,{sig=true,slow=false,hang=false,shortDeadline=fals
     }
     const req=http.request({socketPath:socket,path:'/synthetic',method:'POST',
       agent:false,headers:{'content-type':'application/json',
-        'x-sb-signature':sig?hmac(body):'bad',
+        'x-sb-signature':sig?hmac(body):wrongBodyHmac(body),
         'x-sb-deadline-class':shortDeadline?'short':'standard'}},res=>{
       let size=0;
       res.on('data',b=>{size+=b.length;});

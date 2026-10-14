@@ -9,7 +9,7 @@ Source base: Stanislavikus/babypark-integration ONLY; PR #128 HEAD 565d8de08fbd8
 
 ## 1. Immutable prepared source (Git blobs and UTF-8/LF/final-LF SHA-256)
 
-- tests/fixtures/c6-stage-b-phase-a.mjs — SHA-256 81e47e813cb9fd5446daca2ab4f25b36fe272611c8d13f6819dd664e70b607cc; Git blob recorded in PR checkpoint after this batch commit.
+- tests/fixtures/c6-stage-b-phase-a.mjs — SHA-256 1aa63787d30e3b48938319a230fd67eb477f4e1402f2c238c514018957e123c6; Git blob recorded in PR checkpoint after this batch commit.
 - tests/fixtures/c6-stage-b-phase-a-holder.mjs — blob 31f148df079f7100b02bcddc1370aafef53f77e6, SHA-256 b66f02de1dafc6f00fc5a22044e943a0336cc2354ff056e26e5882814fa8572a.
 - This manifest itself is evidence only. Its blob/digest and the PoC HEAD/TREE/BASE are reported after creation, not asserted by a self-referential file.
 
@@ -109,6 +109,12 @@ The synthetic-only batch makes SB-09's **size/HMAC semantics** use a generous te
 SB-10's four mock latency groups retain **90 samples each**, its five pending-connect/UDS/hang/body classes retain **10 each**, and its admission waves `N=1/4` remain intact. Timed/mock `COMPLETE` is no longer mandatory; all statuses and counts are preserved. Hanging/incomplete cases can never yield `COMPLETE`, and pending-connect cancellation stays structurally required. The additional recorded mock timeout/error incidence is **NOT** a bound on deployed Chatwoot `R_seq`. The 120s/90s group caps, 990s Phase A groups and 1200s outer wall cap are unchanged.
 
 **Requested independent negative regression on this exact tree, never run by controller:** at least 30 bounded reviewer-only repetitions per Phase A group under a predeclared 3–6× 2-vCPU contention envelope, with zero structural HALT and complete outcome statistics. Also inspect every other timing-derived assertion, per-group 2MB captured-output cap, raw JSON size, missing/unclassified status, false 2xx, and all prior B1–B3/N1–N5 defects. Repeat only with separate authorization for any host execution. An unexpected structural result, missing evidence, or unreviewed fixture semantics remain HALT, not an automatic PASS. No native Chatwoot or target-server timing proof has occurred.
+
+### N7 — HMAC negative-case mutation sensitivity (unverified new HEAD)
+
+Independent Sonnet 5.5 review of previous HEAD `57c60045` confirmed N6 in reviewer-only Node22/SQLite3.50 synthetic CPU-concurrent smoke (18/18 SB-10, 36/36 SB-09, complete Phase A ~157s under separate reviewer load), but found SHOULD FIX N7. Previously the `bad-sig` request supplied only three ASCII characters `bad`, so it exercised signature-length rejection but not the HMAC comparison itself; a mutation disabling only `timingSafeEqual` passed unnoticed.
+
+The test-only source now computes the HMAC of `actual_transmitted_body || ':different-synthetic-body'` using the same synthetic key, positively asserts a **64-character lowercase hexadecimal signature** and negatively asserts it differs from the correct HMAC for the actual transmitted body. This is supplied ONLY to the existing ten-trial `bad-sig` negative cell via `sig:false`; the valid-signature controls and all sample sizes are unchanged. As before, positive HTTP 200 or a synthetic authoritative read on this case is a structural HALT. Required independent regression: mutate only the signature comparison to a length-only check and prove `SB-09` rejects the mutation, while the unmodified fixture completes; inspect signatures, no diagnostic leaks, every other mandatory group, and the complete pinned tree. No test-host/Phase A execution or merge has been approved.
 
 ## 5. Independent review checklist and HALT
 
