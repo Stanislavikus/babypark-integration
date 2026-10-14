@@ -341,19 +341,24 @@ async function sb03(root) {
 }
 async function sb04(root) {
   const cells=[],samples=[],holder=await makeHolder(root),rnd=rng(20261015);
+  let lastFile=null;
   try{
     for(const cache of [-64,-2000])for(const spill of ['ON','OFF'])for(const rows of [1,8,128]){
-      const n=rows===128?LONG_SAMPLE:LIGHT_SAMPLE;
-      for(const trial of shuffle(Array.from({length:n},(_,i)=>i),rnd)){
-        const file=createProbe(root,'sb04-'+(cache<0?-cache:cache)+'-'+spill+'-'+rows+'-'+trial);
-        // Counterfactual controls without a reader and with a short (< busy_timeout)
-        // reader are interleaved into the SAME prescribed per-cell trial count.
-        const reader_hold_ms=trial%3===0?null:trial%3===1?10:50;
+      const nPerControl=rows===128?LONG_SAMPLE:LIGHT_SAMPLE;
+      // Randomize all three controls, preserving the full Fit sample count PER control.
+      const grid=shuffle([null,10,50].flatMap(reader_hold_ms=>
+        Array.from({length:nPerControl},(_,trial)=>({reader_hold_ms,trial}))),rnd);
+      for(const {trial,reader_hold_ms} of grid){
+        const control=reader_hold_ms===null?'NO_READER':
+          reader_hold_ms===10?'SHORT_READER':'LONG_READER';
+        const file=createProbe(root,'sb04-'+(cache<0?-cache:cache)+'-'+spill+'-'+rows+'-'+control+'-'+trial);
+        // The previous holder DB is closed by the next prepare ACK. Keep at
+        // most one retired file; never unlink an actively held DB.
+        await holder.prepare(file);
+        if(lastFile!==null){assert.equal(path.dirname(lastFile),root);fs.unlinkSync(lastFile);}
+        lastFile=file;
         let h=null;
-        if(reader_hold_ms!==null){
-          await holder.prepare(file);
-          h=await holder.hold('read',reader_hold_ms,0,1);
-        }
+        if(reader_hold_ms!==null)h=await holder.hold('read',reader_hold_ms,0,1);
         const db=new DatabaseSync(file);
         let outcome='COMMITTED',wall,insertTimes=[],failed_at=null;
         let measured_connection,memBefore,memAfter;
@@ -381,22 +386,26 @@ async function sb04(root) {
           memAfter=process.memoryUsage().rss;
         }finally{db.close();}
         if(h!==null)await holder.done(h);
-        samples.push({cache,spill,rows,trial,reader_hold_ms,
-          control:reader_hold_ms===null?'NO_READER':reader_hold_ms===10?'SHORT_READER':'LONG_READER',
+        samples.push({cache,spill,rows,trial,reader_hold_ms,control,
           measured_connection,outcome,failed_at,wall_ms:wall,
           process_rss_before_bytes:memBefore,process_rss_after_bytes:memAfter,
           insert_max_ms:insertTimes.length?Math.max(...insertTimes):null,
           insert_timings_ms:insertTimes});
       }
-      cells.push({cache,spill,rows,n,controls:'NO_READER/SHORT_READER/LONG_READER'});
+      cells.push({cache,spill,rows,n_per_control:nPerControl,total_n:3*nPerControl,
+        controls:['NO_READER','SHORT_READER','LONG_READER']});
     }
-  }finally{await holder.close();}
-  assert.equal(samples.length,2*2*(LIGHT_SAMPLE+LIGHT_SAMPLE+LONG_SAMPLE));
+  }finally{
+    await holder.close();
+    if(lastFile!==null){assert.equal(path.dirname(lastFile),root);fs.unlinkSync(lastFile);}
+  }
+  assert.equal(samples.length,2*2*3*(LIGHT_SAMPLE+LIGHT_SAMPLE+LONG_SAMPLE));
   for(const cell of cells){
     const subset=samples.filter(x=>x.cache===cell.cache&&x.spill===cell.spill&&x.rows===cell.rows);
-    assert.equal(subset.length,cell.n);
-    for(const type of ['NO_READER','SHORT_READER','LONG_READER'])
-      assert.ok(subset.some(x=>x.control===type),'missing reader control '+type);
+    assert.equal(subset.length,cell.total_n);
+    for(const type of cell.controls)
+      assert.equal(subset.filter(x=>x.control===type).length,cell.n_per_control,
+        'incorrect per-control cardinality: '+type);
   }
   return {cells,all_trials:samples,wall:stats(samples.map(x=>x.wall_ms)),
     tiny_cache_stress_not_ingress_latent_budget:true,
