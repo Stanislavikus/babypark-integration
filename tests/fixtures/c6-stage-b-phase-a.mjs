@@ -65,25 +65,39 @@ function check(sql,pragma,expected) {
   assert.equal(value,expected,'readback '+pragma);
   return value;
 }
-function createProbe(root,id,{cache=-2000,spill='OFF',busy=25}={}) {
+function createProbe(root,id) {
   assert.match(id,/^[A-Za-z0-9_-]+$/);
   const file=path.join(root,'probe-'+id+'.sqlite');
   const db=new DatabaseSync(file);
   try {
     db.exec('PRAGMA journal_mode=DELETE');
     db.exec('PRAGMA synchronous=FULL');
-    db.exec('PRAGMA busy_timeout='+busy);
-    db.exec('PRAGMA cache_size='+cache);
-    db.exec('PRAGMA cache_spill='+spill);
+    db.exec('PRAGMA busy_timeout=25');
     check(db,'journal_mode','delete');
     check(db,'synchronous',2);
-    check(db,'busy_timeout',busy);
-    check(db,'cache_size',cache);
-    if(spill==='OFF')check(db,'cache_spill',0);
-    else assert.ok(db.prepare('PRAGMA cache_spill').get().cache_spill>0);
+    check(db,'busy_timeout',25);
     db.exec('CREATE TABLE probe (id INTEGER PRIMARY KEY,v BLOB); INSERT INTO probe VALUES(1,zeroblob(32))');
   }finally{db.close();}
   return file;
+}
+// cache_size, cache_spill, synchronous and busy_timeout must be applied on EACH
+// measured connection. The createProbe setup connection was closed.
+function configureProbe(db,{cache=-2000,spill='OFF',busy=25}={}) {
+  if(!Number.isSafeInteger(cache)||cache>=0||
+      !['ON','OFF'].includes(spill)||![10,25,50,5000].includes(busy))
+    fail('MEASURED_PRAGMA_SHAPE');
+  db.exec('PRAGMA synchronous=FULL');
+  db.exec('PRAGMA busy_timeout='+busy);
+  db.exec('PRAGMA cache_size='+cache);
+  db.exec('PRAGMA cache_spill='+spill);
+  const config={journal:check(db,'journal_mode','delete'),
+    synchronous:check(db,'synchronous',2),
+    busy_timeout:check(db,'busy_timeout',busy),
+    cache_size:check(db,'cache_size',cache),
+    cache_spill:db.prepare('PRAGMA cache_spill').get().cache_spill};
+  if(spill==='OFF')assert.equal(config.cache_spill,0);
+  else assert.ok(config.cache_spill>0,'cache_spill ON effective readback');
+  return config;
 }
 function event(id) {
   return {sourceMessageId:id,eventKind:'CUSTOMER_MESSAGE',messageType:'incoming',
@@ -105,11 +119,12 @@ async function sb00(root) {
   for(let i=0;i<2;i++){
     const file=createProbe(root,'sb00-'+i);
     const db=new DatabaseSync(file);
-    try {out.push({database:'synthetic_'+i,journal:check(db,'journal_mode','delete'),
-      cache_spill:db.prepare('PRAGMA cache_spill').get().cache_spill,
-      busy_timeout:check(db,'busy_timeout',0),
-      synchronous:check(db,'synchronous',2)});}
-    finally{db.close();}
+    try {
+      const fresh_busy_timeout=check(db,'busy_timeout',0);
+      const configured=configureProbe(db,{cache:i===0?-64:-2000,
+        spill:i===0?'OFF':'ON',busy:25});
+      out.push({database:'synthetic_'+i,fresh_busy_timeout,...configured});
+    }finally{db.close();}
   }
   return {journal_family:'DELETE_ONLY_PHASE_A',databases:out,node:process.version,
     sqlite:process.versions.sqlite,rootless:true,network:'no_routes'};
@@ -166,7 +181,7 @@ async function sb11(root) {
       const before=Buffer.from(db.prepare('SELECT v FROM probe WHERE id=1').get().v);
       const entered=guardedEntry(db,n);
       assert.equal(entered,n>100);
-      assert.deepEqual(db.prepare('SELECT v FROM probe WHERE id=1').get().v,before);
+      assert.equal(Buffer.compare(Buffer.from(db.prepare('SELECT v FROM probe WHERE id=1').get().v),before),0);
       cases.push({remaining_test_ms:n,entered});
     }
   }finally{db.close();}
@@ -282,28 +297,47 @@ async function sb03(root) {
   const cases=[],holder=await makeHolder(root);
   try {
     for(const spill of ['ON','OFF'])for(const hold of [0,10,50])for(let trial=0;trial<LONG_SAMPLE;trial++){
-      const file=createProbe(root,'sb03-'+spill+'-'+hold+'-'+trial,{spill});
+      const file=createProbe(root,'sb03-'+spill+'-'+hold+'-'+trial);
       await holder.prepare(file);
       const h=await holder.hold('read',hold,0,1);
       const db=new DatabaseSync(file);
-      let begin_ms,commit_ms,outcome='COMMITTED';
-      try{
-        db.exec('PRAGMA busy_timeout=25');check(db,'busy_timeout',25);
-        const t=ms();db.exec('BEGIN IMMEDIATE');begin_ms=elapsed(t);
-        db.exec('UPDATE probe SET v=zeroblob(64) WHERE id=1');
-        const c=ms();
-        try {db.exec('COMMIT');}
-        catch(e){if(!/busy|locked/i.test(String(e.message)))throw e;
-          outcome='SQLITE_BUSY';db.exec('ROLLBACK');}
-        commit_ms=elapsed(c);
+      let begin_ms=null,commit_ms=null,write_ms=null,outcome='COMMITTED';
+      let failed_at=null,write_max_ms=null,measured_connection;
+      try {
+        measured_connection=configureProbe(db,{cache:-64,spill,busy:25});
+        const insert=db.prepare('INSERT OR REPLACE INTO probe VALUES (?,?)');
+        const content=Buffer.alloc(4096,42);
+        const insertTimes=[];
+        let phase='BEGIN';
+        try{
+          const t=ms();db.exec('BEGIN IMMEDIATE');begin_ms=elapsed(t);
+          phase='WRITE';const w=ms();
+          for(let i=1;i<=128;i++){
+            const tInsert=ms();insert.run(i,content);insertTimes.push(elapsed(tInsert));
+          }
+          write_ms=elapsed(w);
+          write_max_ms=Math.max(...insertTimes);
+          phase='COMMIT';const c=ms();
+          try{db.exec('COMMIT');}finally{commit_ms=elapsed(c);}
+        }catch(e){
+          try{db.exec('ROLLBACK')}catch{}
+          if(!/busy|locked/i.test(String(e.message)))throw e;
+          outcome='SQLITE_BUSY';failed_at=phase;
+        }
       }finally{db.close();}
       await holder.done(h);
-      cases.push({spill,hold,trial,begin_ms,commit_ms,outcome});
+      cases.push({spill,hold,trial,begin_ms,write_ms,write_max_ms,
+        commit_ms,outcome,failed_at,synthetic_write_count:128,
+        measured_connection});
     }
   }finally{await holder.close();}
   assert.equal(cases.length,60);
-  return {per_trial:cases,commit_wall:stats(cases.map(x=>x.commit_ms)),
-    no_assumed_single_transaction_timeout:true};
+  const commitSamples=cases.filter(x=>x.commit_ms!==null).map(x=>x.commit_ms);
+  assert.ok(commitSamples.length>0,'at least one actual COMMIT attempt');
+  return {per_trial:cases,commit_wall:stats(commitSamples),
+    no_assumed_single_transaction_timeout:true,
+    cache_spill_trigger_or_internal_lock_site:'UNKNOWN_FROM_TIMING_ALONE',
+    reader_present_at_commit:'NOT_INDEPENDENTLY_ATTESTED'};
 }
 async function sb04(root) {
   const cells=[],samples=[],holder=await makeHolder(root),rnd=rng(20261015);
@@ -311,44 +345,63 @@ async function sb04(root) {
     for(const cache of [-64,-2000])for(const spill of ['ON','OFF'])for(const rows of [1,8,128]){
       const n=rows===128?LONG_SAMPLE:LIGHT_SAMPLE;
       for(const trial of shuffle(Array.from({length:n},(_,i)=>i),rnd)){
-        const file=createProbe(root,'sb04-'+(cache<0?-cache:cache)+'-'+spill+'-'+rows+'-'+trial,{cache,spill});
-        await holder.prepare(file);
-        const hold=await holder.hold('read',50,0,1);
+        const file=createProbe(root,'sb04-'+(cache<0?-cache:cache)+'-'+spill+'-'+rows+'-'+trial);
+        // Counterfactual controls without a reader and with a short (< busy_timeout)
+        // reader are interleaved into the SAME prescribed per-cell trial count.
+        const reader_hold_ms=trial%3===0?null:trial%3===1?10:50;
+        let h=null;
+        if(reader_hold_ms!==null){
+          await holder.prepare(file);
+          h=await holder.hold('read',reader_hold_ms,0,1);
+        }
         const db=new DatabaseSync(file);
-        let outcome='COMMITTED',wall,insertTimes=[];
+        let outcome='COMMITTED',wall,insertTimes=[],failed_at=null;
+        let measured_connection,memBefore,memAfter;
         try{
-          db.exec('PRAGMA busy_timeout=25');check(db,'busy_timeout',25);
-          check(db,'cache_size',cache);
-          if(spill==='OFF')check(db,'cache_spill',0);
-          else assert.ok(db.prepare('PRAGMA cache_spill').get().cache_spill>0);
+          measured_connection=configureProbe(db,{cache,spill,busy:25});
+          memBefore=process.memoryUsage().rss;
           const start=ms();
+          let phase='BEGIN';
           try{
             db.exec('BEGIN IMMEDIATE');
+            phase='WRITE';
             const insert=db.prepare('INSERT OR REPLACE INTO probe VALUES (?,?)');
             const content=Buffer.alloc(4096,42);
             for(let i=1;i<=rows;i++){
               const t=ms();insert.run(i,content);insertTimes.push(elapsed(t));
             }
+            phase='COMMIT';
             db.exec('COMMIT');
           }catch(e){
             try{db.exec('ROLLBACK')}catch{}
             if(!/busy|locked/i.test(String(e.message)))throw e;
-            outcome='SQLITE_BUSY';
+            outcome='SQLITE_BUSY';failed_at=phase;
           }
           wall=elapsed(start);
+          memAfter=process.memoryUsage().rss;
         }finally{db.close();}
-        await holder.done(hold);
-        samples.push({cache,spill,rows,trial,outcome,wall_ms:wall,
+        if(h!==null)await holder.done(h);
+        samples.push({cache,spill,rows,trial,reader_hold_ms,
+          control:reader_hold_ms===null?'NO_READER':reader_hold_ms===10?'SHORT_READER':'LONG_READER',
+          measured_connection,outcome,failed_at,wall_ms:wall,
+          process_rss_before_bytes:memBefore,process_rss_after_bytes:memAfter,
           insert_max_ms:insertTimes.length?Math.max(...insertTimes):null,
           insert_timings_ms:insertTimes});
       }
-      cells.push({cache,spill,rows,n});
+      cells.push({cache,spill,rows,n,controls:'NO_READER/SHORT_READER/LONG_READER'});
     }
   }finally{await holder.close();}
   assert.equal(samples.length,2*2*(LIGHT_SAMPLE+LIGHT_SAMPLE+LONG_SAMPLE));
+  for(const cell of cells){
+    const subset=samples.filter(x=>x.cache===cell.cache&&x.spill===cell.spill&&x.rows===cell.rows);
+    assert.equal(subset.length,cell.n);
+    for(const type of ['NO_READER','SHORT_READER','LONG_READER'])
+      assert.ok(subset.some(x=>x.control===type),'missing reader control '+type);
+  }
   return {cells,all_trials:samples,wall:stats(samples.map(x=>x.wall_ms)),
     tiny_cache_stress_not_ingress_latent_budget:true,
-    cache_spill_site_count_not_established_by_timing_alone:true};
+    cache_spill_site_count_not_established_by_timing_alone:true,
+    reader_present_at_commit:'NOT_INDEPENDENTLY_ATTESTED'};
 }
 async function sb08(root) {
   const holder=await makeHolder(root),samples=[];
@@ -359,25 +412,33 @@ async function sb08(root) {
       const h=await holder.hold('write',50,0,1);
       const ingress=new DatabaseSync(file);
       const second=new DatabaseSync(file); // INTENTIONALLY negative same-loop ONLY.
-      let timerFired=false,outcome='ACQUIRED',wall;
+      let timerFiredAt=null,outcome='ACQUIRED',wall;
+      const scheduled=ms();
+      const timerDone=new Promise(resolve=>setTimeout(()=>{timerFiredAt=ms();resolve();},1));
+      let firedDuringSyncSqlite;
       try{
         ingress.exec('PRAGMA busy_timeout=25');second.exec('PRAGMA busy_timeout=5000');
         check(ingress,'busy_timeout',25);check(second,'busy_timeout',5000);
-        setTimeout(()=>{timerFired=true;},1);
         const start=ms();
         try{second.exec('BEGIN IMMEDIATE');second.exec('ROLLBACK');}
         catch(e){if(!/busy|locked/i.test(String(e.message)))throw e;outcome='SQLITE_BUSY';try{second.exec('ROLLBACK')}catch{}}
         wall=elapsed(start);
-        assert.equal(timerFired,false,'synchronous sqlite should postpone JS timer');
+        firedDuringSyncSqlite=timerFiredAt!==null;
+        assert.equal(firedDuringSyncSqlite,false,'timer cannot fire during synchronous call');
       }finally{second.close();ingress.close();}
       await holder.done(h);
-      await sleep(2);
+      await timerDone;
+      const timer_elapsed_ms=Number((timerFiredAt-scheduled).toFixed(4));
       samples.push({trial:i,wall_ms:wall,second_connection_outcome:outcome,
-        timer_delayed:true,extra_connection_forbidden_in_target:true});
+        timer_elapsed_ms,timer_overshoot_ms:Math.max(0,timer_elapsed_ms-1),
+        timer_fired_during_sync_sqlite:firedDuringSyncSqlite,
+        synthetic_connections_opened:2});
     }
   }finally{await holder.close();}
   return {trials:samples,wait:stats(samples.map(x=>x.wall_ms)),
-    positive_target_connections:1,negative_simulated_same_loop_connections:2,
+    timer_lag:stats(samples.map(x=>x.timer_overshoot_ms)),
+    intended_ingress_connection_count:'NOT_MEASURED_BY_NEGATIVE_CONTROL',
+    negative_simulated_same_loop_connections:2,
     separate_external_holder_not_same_event_loop:true};
 }
 function hmac(body) { return crypto.createHmac('sha256',SECRET).update(body).digest('hex'); }
@@ -660,8 +721,8 @@ async function runAll(scratch) {
   process.once('SIGTERM',signal);
   for(const group of ORDER){
     if(interrupted)fail('EXTERNAL_TERMINATION');
-    if(elapsed(started)+CAPS[group]*1000+210_000>1_200_000 &&
-       ORDER.indexOf(group)!==0)fail('PHASE_A_REMAINING_WALL_RESERVE');
+    if(elapsed(started)+CAPS[group]*1000>=1_200_000)
+      fail('PHASE_A_REMAINING_WALL_RESERVE');
     // groupProcess has its own hard timeout and separate child process group.
     const result=await groupProcess(group,scratch);
     all.push(result);
@@ -686,14 +747,18 @@ function parseArgs() {
       ((parts.phase==='A')===(typeof parts.group==='string')))fail('ARGUMENT_DENIED');
   return parts;
 }
+let ACTIVE_GROUP_ID='UNPARSED';
 async function main(){
   const args=parseArgs();
+  ACTIVE_GROUP_ID=args.group??'PHASE_A';
   const output=args.phase==='A'?await runAll(args.scratch):await runOne(args.group,args.scratch);
   process.stdout.write(JSON.stringify(output)+'\n');
 }
 await main().catch(e=>{
   // Synthetic diagnostics only: no customer content, no DB/HTTP response dumps.
-  process.stderr.write('SB_A_FIXTURE_HALT:'+(/SB_A_HALT_[A-Z0-9_]+/.exec(String(e?.message))?.[0] ??
-    /SB_[A-Z0-9_]+/.exec(String(e?.message))?.[0] ?? 'UNCLASSIFIED')+'\n');
+  const cause=/SB_A_HALT_[A-Z0-9_]+/.exec(String(e?.message))?.[0] ??
+    /SB_[A-Z0-9_]+/.exec(String(e?.message))?.[0] ?? 'UNCLASSIFIED';
+  process.stderr.write('SB_A_FIXTURE_HALT:GROUP_'+ACTIVE_GROUP_ID.replace(/[^A-Z0-9]/g,'_')+
+    ':CAUSE_'+cause+'\n');
   process.exitCode=1;
 });

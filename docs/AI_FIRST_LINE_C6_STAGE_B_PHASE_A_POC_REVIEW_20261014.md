@@ -9,13 +9,13 @@ Source base: Stanislavikus/babypark-integration ONLY; PR #128 HEAD 565d8de08fbd8
 
 ## 1. Immutable prepared source (Git blobs and UTF-8/LF/final-LF SHA-256)
 
-- tests/fixtures/c6-stage-b-phase-a.mjs — blob c927286e845a4564e9078f9c988c2d2e19a2ba0d, SHA-256 211792fc7dbf070b7f289d3791cfa139c028200a62b780879f3407fabddf7d99.
+- tests/fixtures/c6-stage-b-phase-a.mjs — SHA-256 6d4f62ebbead2b09221f7a94dd307cdf1f900afeb28d9c9972d80e1236801c76; Git blob recorded in PR checkpoint after this batch commit.
 - tests/fixtures/c6-stage-b-phase-a-holder.mjs — blob 31f148df079f7100b02bcddc1370aafef53f77e6, SHA-256 b66f02de1dafc6f00fc5a22044e943a0336cc2354ff056e26e5882814fa8572a.
 - This manifest itself is evidence only. Its blob/digest and the PoC HEAD/TREE/BASE are reported after creation, not asserted by a self-referential file.
 
 Scope: Native Node v24.20.0 and bundled SQLite 3.53.4; existing node:test, node:sqlite, node:perf_hooks, V1/V2 v4 store fixture patterns; no new runtime dependency or custom production code. Exactly nine Phase A SB groups. Isolated SQLite files, separate IPC-only lock-holder process, Unix-domain HTTP only, synthetic HMAC secret, invented metadata and no real Chatwoot/production network calls. All writable files belong under a newly created private scratch path. Group processes are spawned as their own process groups and have independently bounded timeouts. The harness verifies nonroot uid/gid 65534, 0700 scratch ownership, absence of IPv4/IPv6 external routes and exact Node/SQLite versions before admitting any group.
 
-Evidence limitation: SB-01 verifies existing v4 semantics and a separate surrogate thenable guard/rollback, not the future one-transaction ingress. SB-02/03/04 record observable SQLite call time, errors and per-INSERT timings; internal SQLite retry/poll/EXCLUSIVE site identities are not proved just from observations. SB-10 tests pending-connect cancellation through a stub and local UDS no-header/body-stall/truncation, not the live Chatwoot REST boundary. A fast mocked GET is NOT native R_seq and finite synthetic samples are NOT hard production bounds. Future atomic ingress implementation, provider retry/HUMAN, whole C6 ING-1…ING-6 and B2 are still HALT.
+Evidence limitation: SB-01 verifies existing v4 semantics and a separate surrogate thenable guard/rollback, not the future one-transaction ingress. SB-02/03/04 record observable SQLite call time, errors and per-INSERT timings; SB-03 now uses 128 synthetic 4096-byte writes under measured-connection cache -64 and explicit spill ON/OFF read-back; this is a stress contrast, not proof of an internal SQLite spill site or proof that a reader survives until COMMIT. SB-04 retains 760 trials but interleaves NO_READER / SHORT_READER(10ms) / LONG_READER(50ms) controls within each cache/spill/size cell; internal SQLite retry/poll/EXCLUSIVE site identities are not proved just from observations. SB-10 tests pending-connect cancellation through a stub and local UDS no-header/body-stall/truncation, not the live Chatwoot REST boundary. A fast mocked GET is NOT native R_seq and finite synthetic samples are NOT hard production bounds. Future atomic ingress implementation, provider retry/HUMAN, whole C6 ING-1…ING-6 and B2 are still HALT.
 
 ## 2. Review-only time/priority plan
 
@@ -28,9 +28,9 @@ The following planning ranges are UNMEASURED estimates based on finite loop coun
 | 3 | SB-11 | Seven synthetic E_test=100ms guard branches + blocked SQLite counterexample | 1–10 s | 60 s |
 | 4 | SB-10 | 5 hang/error classes ×10, 4 mock latency cells ×90, N=1/4 ×40 batches | 15–60 s | 120 s |
 | 5 | SB-02 | 4 gaps ×3 busy timeout ×3 holds ×10 = 360 lock trials | 40–140 s | 180 s |
-| 6 | SB-03 | 2 spill modes ×3 reader holds ×10 = 60 reader/COMMIT trials | 5–40 s | 120 s |
-| 7 | SB-04 | 2 caches ×2 spill modes ×(90 one-row +90 eight-row +10 128-row) = 760 trials | 45–150 s | 180 s |
-| 8 | SB-08 | 10 high-timeout second-connection cases versus external holder | 2–20 s | 90 s |
+| 6 | SB-03 | 2 spill modes ×3 reader holds ×10 = 60 trials, 128×4096B synthetic writes; COMMIT/WRITE sites separated | UNMEASURED; prior 5–40 s may not apply | 120 s |
+| 7 | SB-04 | 2 caches ×2 spill modes ×(90 one-row +90 eight-row +10 128-row) = 760 trials; each cell includes no-reader/10ms/50ms controls | UNMEASURED; prior 45–150 s may not apply | 180 s |
+| 8 | SB-08 | 10 high-timeout negative second-connection trials; measured timer overshoot, no target topology claim | 2–20 s UNMEASURED | 90 s |
 | 9 | SB-09 | Body lengths 0/1/1MiB/1MiB+1, HMAC/slow/incomplete and 90 ordinary cases | 5–40 s | 90 s |
 | | TOTAL | Group caps 990 s + reserve 210 s | Not validated against a host | 1200 s / 20 min |
 
@@ -68,9 +68,13 @@ Proposed command shape for Phase A, ONLY after distinct exact owner go-ahead and
   '
 ~~~
 
-NOT YET RUNNABLE: source checkout must be pinned to the PoC HEAD emitted after this authoring stage and rechecked by the reviewer. Group runner has a 1200s aggregate allowance plus per-group timers; outer timeout is an independent stop. SIGTERM/SIGKILL may target only the newly spawned campaign process group, not any live host process. At preflight, teardown or executable checksum ambiguity: HALT, do not rerun or disable network restrictions. Capture raw synthetic JSON and its digest only after separately authorized execution. No B2/WAL Phase B code or run is authorized by this plan.
+NOT YET RUNNABLE: source checkout must be pinned to the PoC HEAD emitted after this authoring stage and rechecked by the reviewer. Group runner checks remaining elapsed wall time against each prospective group cap; the 210s reserve is shared across startup/IPC/cleanup and is NOT recharged before each group. The 1200s external hard timeout still bounds the total, so if overhead exhausts it a mandatory group must HALT rather than be skipped. Group runner has a 1200s aggregate allowance plus per-group timers; outer timeout is an independent stop. SIGTERM/SIGKILL may target only the newly spawned campaign process group, not any live host process. At preflight, teardown or executable checksum ambiguity: HALT, do not rerun or disable network restrictions. Capture raw synthetic JSON and its digest only after separately authorized execution. No B2/WAL Phase B code or run is authorized by this plan.
 
-## 4. Independent review checklist and HALT
+## 4. Sonnet 5.5 preliminary findings and batch remedy (not a gate closure)
+
+Initial independent review on old HEAD 293bf6aa reported three BLOCKER (SB-11 Buffer vs Uint8Array; SB-04 connection-local PRAGMA missing; SB-03 false spill ON/OFF labels) and four SHOULD FIX (SB-04 control, SB-08 hardcoded observations, wall-reserve accounting, HALT group identity). This batch addresses the cited source mechanics together; no executable test or claim of successful verification has occurred on the new tree. New measured connections also read back connection-local synchronous=FULL; the initial database-creation connection does not establish this setting for a reopened handle. SB-03 spill trigger/internal exclusive site and actual COMMIT reader overlap remain explicitly UNPROVEN by timing alone. Potential SB-09 413 EPIPE/ECONNRESET remains a review item, not a silently accepted PASS. New group status remains UNVERIFIED.
+
+## 5. Independent review checklist and HALT
 
 Review the exact two full source files and this manifest on one new PoC HEAD/tree/base, not merely the D1–D10 summary. Verify: the namespace is made BEFORE setpriv, no external TCP, UID/route refusal, no customer/secrets, scratch and fixture cleanup, parent/holder timers and process-group shutdown on timeout, negative no-header/body cases, no ignored Promise/thenable in test-only guard, no real Chatwoot request, no frozen main/PR128/PR134 changes, exact trial counts, per-group budgets, raw/sanitized evidence, and appropriate classification of every partial/unproven scenario. Any unexpected process, endpoint, fail-open result, stale ref, timeout, missing proven isolation, wrong journal/PRAGMA, incomplete data, unauthorized fixture execution, or evidence that the 20min cap cannot contain a mandatory grid => HALT and batch-report the independent root causes; do not weaken the gates or auto-retry.
 
