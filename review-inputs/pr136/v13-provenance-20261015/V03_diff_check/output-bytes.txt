@@ -1,0 +1,3 @@
+0 /tmp/v13-pr136-provenance-20261015T203454Z/V03_diff_check/stdout
+0 /tmp/v13-pr136-provenance-20261015T203454Z/V03_diff_check/stderr
+0 total

@@ -1,0 +1,14 @@
+FULL_READ_OK HEAD docs/AI_FIRST_LINE_DESIGN.md chars=217473
+FULL_READ_OK HEAD docs/AI_FIRST_LINE_ACCEPTANCE.md chars=153311
+FULL_READ_OK BASE docs/AI_FIRST_LINE_DESIGN.md chars=212412
+PATTERN BASE docs/AI_FIRST_LINE_DESIGN.md:2820 'Agreement §8 mis-cite for timing' => 'Agreement §8'
+PATTERN BASE docs/AI_FIRST_LINE_DESIGN.md:2941 'stale code-stage HALT without lane scope' => 'HALTs the code-stage'
+PATTERN BASE docs/AI_FIRST_LINE_DESIGN.md:3067 'stale code-stage HALT without lane scope' => 'HALTs the code-stage'
+FULL_READ_OK BASE docs/AI_FIRST_LINE_ACCEPTANCE.md chars=151030
+PATTERN BASE docs/AI_FIRST_LINE_ACCEPTANCE.md:1222 'stale code-stage HALT without lane scope' => 'HALTs the code-stage'
+MARKER_HEAD_## 43. Native HUMAN handoff v1=FOUND
+MARKER_HEAD_### Q39a=FOUND
+MARKER_HEAD_### Q39b=FOUND
+MARKER_HEAD_### Q37=FOUND
+BASE_DESIGN_Agreement_§8=FOUND
+HEAD_DESIGN_Agreement_§8=MISSING

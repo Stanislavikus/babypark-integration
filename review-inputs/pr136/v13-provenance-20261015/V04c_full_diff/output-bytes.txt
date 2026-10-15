@@ -1,0 +1,3 @@
+26778 /tmp/v13-pr136-provenance-20261015T203454Z/V04c_full_diff/stdout
+    0 /tmp/v13-pr136-provenance-20261015T203454Z/V04c_full_diff/stderr
+26778 total

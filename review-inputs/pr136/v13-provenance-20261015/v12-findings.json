@@ -1,0 +1,23 @@
+[
+  {
+    "severity": "NON_BLOCKING",
+    "class": "CODE_STAGE_AMBIGUITY",
+    "trace": "DESIGN @134857",
+    "invariant": "Prefer lane-scoped terms",
+    "fix": "value for v4 `FirstLineStateStore`. For the **proposed timing-dependent ingress code stage only**, the writable v4 connection MUST set an explicit, evidence-bound `busy_timeout` under Agreement \u00a75. Th"
+  },
+  {
+    "severity": "NON_BLOCKING",
+    "class": "CODE_STAGE_AMBIGUITY",
+    "trace": "DESIGN @137596",
+    "invariant": "Prefer lane-scoped terms",
+    "fix": " bounded non-deployed timing-control authoring.** The separately owner-approved code-stage Fit must cite actual provider timeout semantics and derive enforceable finite REST/body/SQLite busy/queue/adm"
+  },
+  {
+    "severity": "NON_BLOCKING",
+    "class": "CODE_STAGE_AMBIGUITY",
+    "trace": "DESIGN @148261",
+    "invariant": "Prefer lane-scoped terms",
+    "fix": "exhausted component budget MUST NOT be falsely ACKed or assumed HUMAN. For the *code stage*, freeze the candidate bounded overload/error-state matrix, test on synthetic native-shaped fixtures, and req"
+  }
+]

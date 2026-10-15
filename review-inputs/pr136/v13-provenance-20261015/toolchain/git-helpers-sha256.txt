@@ -1,0 +1,5 @@
+5099657171fed9f497e1a535e84c828f3ab7023b48ae0f5bee1da8f65cc52aad  /usr/bin/git-lfs
+2a8c18fbf43da9f692d75474c72bea9dfd796c260b0f3dfe456376abc3bbd668  /usr/bin/git-receive-pack
+24224cc6bb2ef420e0d1073b88c726664098f692167b164a79f82b39496ec190  /usr/bin/git-shell
+2a8c18fbf43da9f692d75474c72bea9dfd796c260b0f3dfe456376abc3bbd668  /usr/bin/git-upload-archive
+2a8c18fbf43da9f692d75474c72bea9dfd796c260b0f3dfe456376abc3bbd668  /usr/bin/git-upload-pack

@@ -1,0 +1,5 @@
+-rwxr-xr-x. 1 root root 20487760 Aug 27 14:29 /usr/bin/git-lfs
+lrwxrwxrwx. 1 root root        3 Jul  2  2025 /usr/bin/git-receive-pack -> git
+-rwxr-xr-x. 1 root root   639808 Jul  2  2025 /usr/bin/git-shell
+lrwxrwxrwx. 1 root root        3 Jul  2  2025 /usr/bin/git-upload-archive -> git
+lrwxrwxrwx. 1 root root        3 Jul  2  2025 /usr/bin/git-upload-pack -> git
