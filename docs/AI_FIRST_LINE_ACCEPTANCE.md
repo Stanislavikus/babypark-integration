@@ -1349,9 +1349,18 @@ native PoC, host action, deployment or customer traffic.
 
 Expected: absent or non-explicit approval of both the numeric objective
 and its exact availability scope/counting rules blocks merge.
-Availability minutes with missing evidence count as unavailable;
-RTO and RPO are measured separately. Later Lane A/B authoring
-still needs separate Scan/Fit and owner go-ahead.
+Q39c availability regression: a minute with a proven ingress-to-
+durable-HUMAN path, verified delivery of its operator-owned channel
+alert and a passing independent synthetic end-to-end notification
+check counts as available even if no human has acknowledged it.
+An internally queued/accepted alert without verifiable delivery,
+a delivery without a passing independent path check, or a bare
+webhook ACK/open!/HUMAN record does not count as available.
+Actual human acknowledgement/response time is measured separately,
+and delivery does not certify physical §43 handoff. Availability
+minutes with missing evidence count as unavailable; RTO and RPO
+are measured separately. Later Lane A/B authoring still needs
+separate Scan/Fit and owner go-ahead.
 
 ### Q40 — structured submission arriving before local CLARIFY confirmation is not lost
 A CLARIFY public message is visible to the customer and receives a native

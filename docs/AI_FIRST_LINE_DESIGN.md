@@ -2915,7 +2915,17 @@ The denominator is every wall-clock minute of each such interval.
 A minute is available only when an eligible Website customer message
 can be admitted through a proven path to either (a) authorized AI
 processing or (b) a durable HUMAN continuation with verified,
-actionable operator attention. A webhook ACK, Chatwoot `open!`
+actionable operator attention. For this availability metric, **verified actionable operator
+attention** means an alert for the durable HUMAN/operational fault is
+actually delivered to the designated, operator-owned notification
+channel with independently verifiable delivery evidence, while a
+separate synthetic end-to-end check proves that the notification
+path is working. Mere internal enqueue/HTTP ACK/provider acceptance
+without delivery proof does not count. Human acknowledgement and
+response time are separately measured operational objectives, not
+prerequisites for counting an otherwise proven available minute.
+Alert delivery does not certify §43 physical handoff completion or
+waive continued reconciliation. A webhook ACK, Chatwoot `open!`
 status transition or durable HUMAN record alone does not prove
 availability. Count minutes without either proven path as unavailable,
 including planned maintenance, Chatwoot/model-provider outages,
