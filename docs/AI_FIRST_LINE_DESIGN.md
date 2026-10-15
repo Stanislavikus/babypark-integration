@@ -2911,8 +2911,10 @@ completed backup/restore and §43 operator recovery.
 The 99.9% objective measures **end-to-end Website First Line
 service-path availability** on calendar-month intervals after
 production activation (the first interval starts at activation).
-The denominator is every wall-clock minute of each such interval.
-A minute is available only when an eligible Website customer message
+The availability denominator comprises all wall-clock minutes of
+that interval **minus only the valid, capped maintenance exclusions**
+defined below. Excluded minutes count in neither the numerator nor
+the denominator; all other minutes remain eligible. A minute is available only when an eligible Website customer message
 can be admitted through a proven path to either (a) authorized AI
 processing or (b) a durable HUMAN continuation with verified,
 actionable operator attention. For this availability metric, **verified actionable operator
@@ -2927,16 +2929,50 @@ prerequisites for counting an otherwise proven available minute.
 Alert delivery does not certify §43 physical handoff completion or
 waive continued reconciliation. A webhook ACK, Chatwoot `open!`
 status transition or durable HUMAN record alone does not prove
-availability. Count minutes without either proven path as unavailable,
-including planned maintenance, Chatwoot/model-provider outages,
-failures of operator-attention delivery, and unknown/unmonitored
-intervals; no exclusions are assumed. Reconstruct the intervals from
-independent synthetic end-to-end checks plus incident/health records;
+availability.
+
+**Owner-selected planned-maintenance accounting exception
+(2026-10-15; proposed Q39c):** Exclude no more than **120 minutes
+per calendar month** of qualifying, preannounced maintenance.
+A window qualifies only if its exact start/end and purpose are
+recorded in an auditable, customer-content-free maintenance log
+**before the window begins**, and an announcement is **actually
+delivered** to the designated operator(s) **at least 24 hours before
+the window starts**, with timestamped delivery evidence.
+Retroactive announcements, unverified delivery, late notice,
+missing window bounds or missing provenance cannot qualify.
+Count qualifying window minutes cumulatively in chronological
+order within each calendar month, including partial months, without
+double-counting overlaps or carrying forward unused allowances.
+Exclude up to 120 qualifying minutes from BOTH numerator and
+denominator; minutes beyond the cap remain in the denominator
+and count as unavailable maintenance. An invalid window grants
+no exclusion; count actual failures and missing observability
+as unavailable. Unplanned Chatwoot/model-provider failures
+(including any independently evidenced failures concurrent with a
+planned window) remain unavailable; never use a maintenance window
+to mask an unplanned incident. Record month assignment in a
+separately selected, proven reporting timezone before activation.
+The **120-minute allowance and 24-hour notice interval were
+selected by the owner on 2026-10-15**, not measured or inferred
+from traffic, reliability tests or provider callback budgets:
+they are reporting-policy limits, not authorized runtime safety
+timeouts under Agreement §8. This exemption changes only the
+availability arithmetic. It does NOT suspend signed ingress,
+fail-closed behavior, durable HUMAN, operator alert delivery,
+§43 handoff/reconciliation or backup/recovery duties.
+
+Count every nonexcluded minute without a proven AI-or-visible-HUMAN
+path as unavailable, including out-of-plan failures, maintenance
+overages, undelivered operator alerts and unknown/unmonitored
+intervals. Reconstruct all minutes from independent synthetic
+end-to-end checks plus incident, maintenance and notice records;
 insufficient evidence cannot be counted as available or as a proven
 99.9% result. This is a service-path target, **not** a claim that AI
 answers 99.9% of questions, and is separate from disaster-recovery
-RTO and data-loss RPO. The exact metric and exclusions require
-explicit owner approval under Q39c before becoming merged authority.
+RTO and data-loss RPO. The exact metric, 120-minute allowance,
+24-hour notice rule and failure accounting require explicit owner
+approval under Q39c before becoming merged authority.
 
 **Lane A — narrow pre-timing correctness authoring.** On a separately
 owner-approved, current bound Scan/Fit, implement only signed,

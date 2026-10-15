@@ -1338,17 +1338,47 @@ send and reconciliation retain independent §29.8.2 timing gates.
 Before merging the normative DESIGN §29.8.3 reliability objective,
 the owner must explicitly approve approximately 500 chats/month,
 99.9% monthly end-to-end Website First Line service-path availability
-under DESIGN §29.8.3's explicit numerator/denominator, evidence,
-no-exclusions and failure-handling definition, RPO <= 24 hours,
-RTO <= one working day, and revalidation on sustained >10x growth.
-The PR text itself or an
+under DESIGN §29.8.3's numerator/denominator and evidence rules,
+plus the **owner-selected 2026-10-15 allowance of at most 120
+qualifying preannounced maintenance minutes/month, with proven
+operator notice delivery at least 24 hours before each window**.
+Minutes exceeding the cap and unplanned incidents remain
+unavailable. RPO <= 24 hours, RTO <= one working day and
+revalidation on sustained >10x growth are separate targets.
+The 120/24 policy values are owner-selected, not measured timing
+or concurrency safety limits. The PR text itself or an
 AI review is not owner authorization. Bind that endorsement to the
 exact HEAD/tree/base/governance/verification bundle under the
 Agreement. Such sign-off approves no Lane A/B implementation,
 native PoC, host action, deployment or customer traffic.
 
-Expected: absent or non-explicit approval of both the numeric objective
-and its exact availability scope/counting rules blocks merge.
+Exercise synthetic monthly availability accounting fixtures:
+1. Positive: an exactly 90-minute window whose bounds/purpose were
+   logged before start and whose operator notice was delivered >=24
+   hours before start is excluded from BOTH numerator and denominator,
+   using 90 of 120 allotted minutes.
+2. Negative: a window announced after it began, or with operator
+   notice delivered <24 hours before start, or with no verifiable
+   delivery, is not excluded; missing service proof counts unavailable.
+3. Negative: separately observed unplanned provider/Chatwoot failure
+   on top of an otherwise qualifying maintenance interval still counts
+   unavailable, including overlaps: no laundering by the schedule.
+4. Negative: after using all 120 minutes this month, a second
+   announced 60-minute window contributes 60 unavailable minutes;
+   overlapping windows are not double-counted, and next month starts
+   with a fresh cap.
+5. Boundary: windows spanning month end and initial partial months
+   allocate exact duration to each month under a frozen timezone;
+   unknown timezone, window-log or notice provenance denies exclusion.
+6. Safety: during maintenance, durable HUMAN, fail-closed ingress,
+   operator attention and §43 recovery remain mandatory.
+
+Expected: absent or non-explicit owner approval of the objective,
+the **owner-selected 120-minute cap**, **24-hour delivered advance
+notice** and exact exclusion/failure rules blocks merge. Valid
+maintenance is removed from both sides of the availability fraction;
+excess, unplanned outages and unverified minutes count unavailable.
+These policy limits do not authorize timing controls or live runtime.
 Q39c availability regression: a minute with a proven ingress-to-
 durable-HUMAN path, verified delivery of its operator-owned channel
 alert and a passing independent synthetic end-to-end notification
