@@ -1,6 +1,7 @@
 {
   "body_len": 25285,
-  "body_sha256": "bee9f17fb88bcec45f11bb8abe1bf8e08b04613518eee506558935bdbb7b2587",
+  "body_sha256": "31886d2873e5f9a463968fbba5502794c9012634630b6b24b102e5fcb37a58ae",
+  "body_canonical_sha256": "768b7a479c5ec593c028b88b026bc748682307036390a1227f02855c510606b0",
   "http_status": 200,
   "http_status_line": "HTTP/2 200",
   "head_sha": "262f7a8999d797f4ceceb531004986cfd6667d73",

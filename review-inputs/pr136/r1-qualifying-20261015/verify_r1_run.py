@@ -11,6 +11,8 @@ import urllib.request
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
+sys.path.insert(0, str(ROOT))
+from e05_fetch_pr136 import canonical_body_sha  # noqa: E402
 
 
 def load_frozen() -> dict:
@@ -95,6 +97,11 @@ def verify_run(run_dir: Path, live_pr_check: bool = True) -> list[str]:
     captured_sha = att["body_sha256"]
     captured_bytes = (e05 / "response.body.json").read_bytes()
     need(hashlib.sha256(captured_bytes).hexdigest() == captured_sha, "e05 body internal sha")
+    captured_canon = att.get("body_canonical_sha256") or canonical_body_sha(captured_bytes)
+    need(
+        canonical_body_sha(captured_bytes) == captured_canon,
+        "e05 canonical sha internal",
+    )
 
     if live_pr_check:
         url = frozen["pr136_api_url"]
@@ -106,19 +113,27 @@ def verify_run(run_dir: Path, live_pr_check: bool = True) -> list[str]:
         live_body = b""
         live_status = 0
         matched = False
-        last_live_sha = ""
+        last_live_raw = ""
+        last_live_canon = ""
         for attempt in range(12):
             req = urllib.request.Request(url, headers=headers)
             with urllib.request.urlopen(req, timeout=60) as resp:
                 live_status = resp.status
                 live_body = resp.read()
-            last_live_sha = hashlib.sha256(live_body).hexdigest()
-            if live_status == 200 and last_live_sha == captured_sha:
+            last_live_raw = hashlib.sha256(live_body).hexdigest()
+            last_live_canon = canonical_body_sha(live_body)
+            if live_status == 200 and (
+                last_live_raw == captured_sha or last_live_canon == captured_canon
+            ):
                 matched = True
                 break
             time.sleep(0.35)
         need(live_status == 200, f"live pr http {live_status}")
-        need(matched, f"live body sha drift {last_live_sha} != {captured_sha}")
+        need(
+            matched,
+            f"live pr body drift raw={last_live_raw} canon={last_live_canon} "
+            f"!= captured raw={captured_sha} canon={captured_canon}",
+        )
         live = json.loads(live_body.decode())
         need(live["head"]["sha"] == frozen["campaign_head"], "live head drift")
         need(live["base"]["sha"] == frozen["campaign_base_oid"], "live base drift")

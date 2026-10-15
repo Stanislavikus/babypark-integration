@@ -25,6 +25,12 @@ def fetch_body() -> tuple[int, bytes, str]:
     return status, body, status_line
 
 
+def canonical_body_sha(body: bytes) -> str:
+    obj = json.loads(body.decode())
+    canon = json.dumps(obj, sort_keys=True, separators=(",", ":")).encode()
+    return hashlib.sha256(canon).hexdigest()
+
+
 def write_e05(e05_dir: Path) -> dict:
     e05_dir.mkdir(parents=True, exist_ok=True)
     status, body, status_line = fetch_body()
@@ -33,6 +39,7 @@ def write_e05(e05_dir: Path) -> dict:
     att = {
         "body_len": len(body),
         "body_sha256": hashlib.sha256(body).hexdigest(),
+        "body_canonical_sha256": canonical_body_sha(body),
         "http_status": status,
         "http_status_line": status_line.strip(),
     }
