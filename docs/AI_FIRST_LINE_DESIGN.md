@@ -2848,12 +2848,15 @@ deployment is selected by this docs-only exception.
 webhook ingress/ACK feasibility, not claiming, S2, public sends, UNCERTAIN
 reconciliation, HUMAN scheduling or customer execution. All other
 timing-dependent paths retain the independent §29.8.2 gate. This clause
-defines the staged proof sequence: measured isolated components and
-derived enforceable design caps before ingress production code; full
-callback verification before customer execution. It does not itself
-authorize production-code edits, approve unmeasured values or activate
-C6. Separate owner approval of a measured ingress code-stage Fit is
-still required.
+defines separate, explicitly approved authoring lanes: non-deployed
+classification/atomicity fixes before timing calibration (lane A), and
+non-deployed timing-control design and tests under finite conservative
+bounds (lane B). Neither lane authorizes live webhook ingress,
+customer data, deployment or public send. Full provider/native callback
+timing, fail-closed durable HUMAN, operator attention and backup
+recovery must be proven before customer execution. Both lanes require
+fresh Agreement §§1–3 Scan/Fit and their own exact owner go-ahead;
+the reliability lens below grants no code approval by itself.
 
 **C1/v4 concurrency.** The historical §29.3 C1 `EpisodeStore` schema-v1
 `busy_timeout=5000` requirement does not mandate that numeric value for
@@ -2879,6 +2882,54 @@ per-attempt versus aggregate semantics and the upstream call path are
 before being used in a callback budget. Increasing the installation-wide value MUST
 require a failed evidenced five-second fit plus separate owner approval,
 scope/Sidekiq review and recorded rollback; this clause does not change it.
+
+**Initial-v1 owner reliability objective.** The chosen operating
+objective is approximately **500 chats/month**, **99.9% service
+availability**, **RPO <= 24 hours**, **RTO <= one working day**, and
+fail-closed **durable HUMAN continuation** whenever authority or
+autonomous safety is uncertain. These are product/recovery targets,
+not a measured per-second traffic peak or proof of any native
+Chatwoot webhook response-time budget. Current peak load is UNKNOWN;
+enforce an explicit bounded concurrent AND cumulative admission
+envelope with fail-closed overload and observable recovery BEFORE
+customer activation. Revalidate that envelope before sustained
+growth beyond **10x** initial monthly volume or any material runtime
+or provider change. RPO/RTO still require separately proven B2
+completed backup/restore and §43 operator recovery.
+
+**Lane A — narrow pre-timing correctness authoring.** On a separately
+owner-approved, current bound Scan/Fit, implement only signed,
+version-pinned AgentBot/Contact/template/private event classification,
+exact source/sender/equality, atomic durable HUMAN, deferred-parent,
+and S2 semantic safety with synthetic regressions. This is permissible
+without a broad representative load-measurement campaign because the
+receiver stays **UNWIRED and DISABLED for live/customer use**. It
+does not authorize numeric REST/SQLite timeout changes, concurrency
+or body deadline values, Chatwoot configuration, public POST,
+deployment, schema changes, or merge-ready/activation claims.
+Any change in lock-site topology is registered for lane B; a unit
+test cannot substitute for native E2E. The remaining detailed timing
+requirements below do not prohibit this *unwired correctness-only*
+authoring stage.
+
+**Lane B — bounded non-deployed timing-control authoring.** The
+separately owner-approved code-stage Fit must cite actual provider
+timeout semantics and derive enforceable finite REST/body/SQLite
+busy/queue/admission limits with a positive response margin. A
+conservative explicitly finite low-volume design envelope and
+synthetic component checks may precede complete representative
+production-load measurements; an open-ended measurement campaign
+is not required merely to author **UNWIRED** controls. No guessed
+numeric default, assumed peak based on monthly mean, fictitious
+deterministic latency bound, or 2xx for unproven success is allowed.
+Missing verified effective PRAGMAs, unbounded synchronous lock sites,
+unknown native provider outcomes or absent HUMAN/operator recovery
+HALT *customer execution*. Customer activation and merge-as-ready
+still require the complete version-pinned native timeout/failure
+matrix, target-matched bounded workload and fail-closed evidence,
+operator attention and B2 restore proof. This provision neither
+selects numeric values nor overrides the independent §29.8.2
+requirements for public send, S2 and handoff.
 
 **Ingress topology and invariants.** The target permits exactly one
 ingress OS process / Node event loop **at most**, including during
@@ -2992,7 +3043,8 @@ and overshoot are measured/calibrated allocations, not claimed
 interruptible. A statistical tail-SLO and safety margin do NOT prove
 a hard wall-clock deadline. If target-matched workload, necessary
 bounds or a real connection PRAGMA read-back is unproven, the
-candidate ingress code-stage HALTs. Expiry of any SQLite busy wait
+timing-enabled activation stage HALTs; unwired lane A correctness
+authoring does not acquire any numerical timing authority. Expiry of any SQLite busy wait
 is `SQLITE_BUSY` or another recorded fail-closed outcome, not a
 success/handoff/ACK. No `await` or asynchronous yield is allowed
 inside the owning transaction; future ingress MUST reject
@@ -3032,8 +3084,8 @@ ownership. If no fail-closed overload response preserves those
 obligations, activation HALTs; never weaken HMAC, exact source proof
 or no-retry.
 
-**Two distinct evidence gates.** For ingress-only production-code
-implementation, freeze the one-process topology, independent
+**Two distinct evidence gates.** For timing-dependent code and its
+later activation, freeze the one-process topology, independent
 synthetic **component benchmarks** of the existing v4 store, SQLite
 lock waits, mock HTTP/body/queue and response model, and an explicit
 derived **design allocation** for
@@ -3046,7 +3098,8 @@ before collecting load profiles. Its bounded command/metric allowlist,
 time window, non-secret/no-customer-content output, authorization and
 retention MUST be recorded; this docs-only amendment authorizes no
 production observation, real Chatwoot API call or configuration change.
-If such evidence is unavailable, target-matched budgeting HALTs.
+If such evidence is unavailable, target-matched activation
+budgeting HALTs. This does not activate the unwired authoring lanes.
 Benchmark results MUST bind
 exact Node executable and bundled SQLite versions, CPU architecture /
 vCPU class, memory/swap, filesystem and storage latency/throughput,
@@ -3075,8 +3128,10 @@ Justify each numeric choice by an existing owner-approved and
 source-cited reliability objective **if one is actually frozen**,
 or by a defensible statistical sample-size argument, an existing
 normative bound, or measured target variance/calibration—not intuition.
-No currently unfrozen reliability objective or sample size is presumed
-to exist; missing evidence HALTs the proposed stage. Include raw
+The owner reliability objective above is now selected; a numeric
+sample size, per-second peak and benchmark distribution remain
+unproven and must not be guessed. Missing evidence HALTs customer
+activation, not unwired correctness authoring. Include raw
 non-customer timing distributions and observed maxima; a percentile
 alone cannot prove a hard bound. Calculate each selected enforceable
 limit from the measured baseline, uncertainty, calibrated target
@@ -3096,10 +3151,10 @@ code; record versions, complete applicable licenses, capabilities
 and reproducible fit. Only genuine uncovered gaps can justify
 limited **test-only** glue after the stage's separate approval.
 No extra production runtime dependency or Chatwoot core patch is
-authorized here. New ingress code MUST enforce the **enforceable**
-controls classified above; it MUST refuse startup/admission where a
-control or measured/competitor-derived bound is absent or
-unproven, and remain unwired for customer execution. Measured-only `C_sync`/`Q`/`O` and calibrated SQLite overshoot
+authorized here. Timing-enabled ingress code MUST enforce the **enforceable**
+controls classified above; it MUST refuse live startup/admission
+where a required bound is absent or unproven. Unwired lane A/B
+authoring is not activation, nor a timing PASS. Measured-only `C_sync`/`Q`/`O` and calibrated SQLite overshoot
 are NOT claimed preemptible or hard-enforced by ingress.
 A non-production synthetic benchmark is not an end-to-end measurement.
 Its matrix MUST exercise a high-timeout co-resident non-ingress SQLite
