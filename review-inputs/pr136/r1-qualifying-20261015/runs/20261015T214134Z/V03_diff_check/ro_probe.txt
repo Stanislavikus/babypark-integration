@@ -1,0 +1,2 @@
+rc_touch_git_head=1
+rc_touch_worktree=1

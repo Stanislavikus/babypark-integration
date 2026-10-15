@@ -1,0 +1,56 @@
+{
+  "substantive_review_complete": true,
+  "blocker_count": 0,
+  "auxiliary_phrase_findings": 0,
+  "r136_rows": [
+    {
+      "id": "R136-01",
+      "evidence_pass": true,
+      "focused_check": "DESIGN Lane A + Q39a"
+    },
+    {
+      "id": "R136-02",
+      "evidence_pass": true,
+      "focused_check": "BLK-5/6 semantics in DESIGN \u00a729.8.3"
+    },
+    {
+      "id": "R136-03",
+      "evidence_pass": true,
+      "focused_check": "Q39a(7) negative gate"
+    },
+    {
+      "id": "R136-04",
+      "evidence_pass": true,
+      "focused_check": "Lane B provenance (i)\u2013(v)"
+    },
+    {
+      "id": "R136-05",
+      "evidence_pass": true,
+      "focused_check": "measurement vs authoring split"
+    },
+    {
+      "id": "R136-06",
+      "evidence_pass": true,
+      "focused_check": "activation barrier"
+    },
+    {
+      "id": "R136-07",
+      "evidence_pass": true,
+      "focused_check": "Agreement scan gate"
+    },
+    {
+      "id": "R136-08",
+      "evidence_pass": true,
+      "focused_check": "frozen manifest SHA-256 in bundle"
+    }
+  ],
+  "v05_corpus_entries": 4,
+  "changed_name_status_lines": [
+    "M\tdocs/AI_FIRST_LINE_ACCEPTANCE.md",
+    "M\tdocs/AI_FIRST_LINE_DESIGN.md"
+  ],
+  "campaign_head": "262f7a8999d797f4ceceb531004986cfd6667d73",
+  "campaign_base_oid": "0dfb9b0a1cfe23d455fd436ae9abeac626d0d729",
+  "manifest_sha256": "adda61453c1e14c16b1a90d072051ab3e4e29f1e110bd2c1f539aad90de8d3d6",
+  "verifier_image_id": "sha256:eb44e0d4af8d2774d04e5f250707e39e00bfa7cfd241317db2c0be6973344558"
+}

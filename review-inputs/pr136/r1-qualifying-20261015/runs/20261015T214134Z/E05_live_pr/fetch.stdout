@@ -1,0 +1,9 @@
+{
+  "body_len": 25285,
+  "body_sha256": "bee9f17fb88bcec45f11bb8abe1bf8e08b04613518eee506558935bdbb7b2587",
+  "http_status": 200,
+  "http_status_line": "HTTP/2 200",
+  "head_sha": "262f7a8999d797f4ceceb531004986cfd6667d73",
+  "base_sha": "0dfb9b0a1cfe23d455fd436ae9abeac626d0d729",
+  "updated_at": "2026-10-15T13:53:02Z"
+}

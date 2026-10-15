@@ -1,12 +1,12 @@
-# QUALIFYING R1 — PR #136 (batch E01–E05 remediation)
+# QUALIFYING R1 — PR #136 (batch E01–E05 + consistency gate)
 
 Status: EVIDENCE / NON-NORMATIVE — **qualifying R1 only**; not V13, not merge, not R136→DONE.
 
 ## Result
 
-**QUALIFYING R1 — ZERO BLOCKERS** on frozen tuple (blocker gate evidence).
+**QUALIFYING R1 — ZERO BLOCKERS** on frozen tuple (blocker gate + `verify_r1_run.py` + synthetic negative selftests).
 
-Canonical run directory: `runs/20261015T212500Z/` (see `LATEST_RUN.txt`).
+Canonical run directory: `runs/20261015T214134Z/` (see `LATEST_RUN.txt`).
 
 ## Frozen tuple (unchanged)
 
@@ -18,43 +18,27 @@ Canonical run directory: `runs/20261015T212500Z/` (see `LATEST_RUN.txt`).
 | GOV | `e777fce4af8e8c3372f1f9de9ef7d00f786c2c89` |
 | Manifest | `adda61453c1e14c16b1a90d072051ab3e4e29f1e110bd2c1f539aad90de8d3d6` |
 
-## E01 — full-lifetime immutability
+## Consistency gate (A/B/C)
 
-Mechanism: Docker pinned image + **per-check volume** + **`:ro` execute phase** + negative write-probe (`ro_probe.txt`, both `rc=1`).  
-See `ISOLATION_MECHANISM.md`, `IMMUTABILITY_WORKTREE_ANALYSIS.md`.
+| Class | Mechanism |
+|-------|-----------|
+| **A Runtime immutability** | Pinned verifier `IMAGE_ID` from `docker-image.pin.json`; execute phase `--read-only` root + `tmpfs /tmp`; per-check `toolchain_probe.result=TOOLCHAIN_IMMUTABLE` (failed `touch` on `/usr/bin/git`, `python3`, `curl`); RO git volume probes unchanged. |
+| **B Verifiable PASS** | `verify_r1_run.py`: exit/RO/toolchain, HEAD/TREE/pre/post/porcelain, frozen stdout digests, manifest, E05 HTTP 200 + body SHA + live re-fetch match (retry); `synthetic_gate_negative_tests.py` on copied run dirs. |
+| **C Full review** | `semantic/V05-V12_SUBSTANTIVE_REVIEW.md` + `exhaustive-review-inventory.json` (R136-01…08 traces); `v12-findings.json` auxiliary only. |
 
-## E02 — executable environment
+## E01–E05 summary
 
-Per check: `e02-environment.txt` (git config, alternates, replace, env, argv).  
-Image pin: `runs/*/docker-image.pin.json`; toolchain: `toolchain-in-container.txt`.
-
-## E03 — writable lifecycle
-
-Separate Docker volume + `/out` mount per check; `pre.txt`/`post.txt`, `exit_code`, stdout/stderr digests; volume removed after capture.
-
-## E04 — complete R1 evidence
-
-| Check | Evidence path |
-|-------|----------------|
-| V03–V04c Git | `runs/20261015T212500Z/V03_*` … `V04c_*` |
-| V05 corpus | `runs/…/semantic/v05-corpus-manifest.json` + HEAD/BASE files |
-| V06–V10 | `r1_semantic_review.py` + zero rows in `semantic/v12-findings.json` |
-| V11 structure | `runs/…/E05_live_pr/attestation.json` + `semantic/r136-row-evidence.json` |
-| V12 | `semantic/v12-findings.json` → `[]` |
-
-## E05 — live PR
-
-`runs/20261015T212500Z/E05_live_pr/`: request meta, sanitized headers, body bytes, SHA-256, head/base match tuple.
+See `ISOLATION_MECHANISM.md`. Git checks: `V03_diff_check`, `V04a_name_status`, `V04b_stat`, `V04c_full_diff`. E05: `e05_fetch_pr136.py` + `E05_live_pr/`. E04 semantic: `r1_semantic_review.py`.
 
 ## V13 / V14
 
-**Out of scope for this bundle.** Future V13 must use a clean context without relying on this report’s conclusions.
+**Out of scope.** No merge.
 
 ## Reproduce
 
 ```bash
 cd review-inputs/pr136/r1-qualifying-20261015
-export R1_OUT_ROOT="$PWD/runs/$(date -u +%Y%m%dT%H%M%SZ)"
+unset R1_OUT_ROOT
 ./run-r1-qualifying.sh
 python3 post_batch_inventory.py
 python3 compute-bundle-sha256.py

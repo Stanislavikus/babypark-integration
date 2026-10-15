@@ -1,0 +1,3 @@
+rc_touch_usr_bin_git=1
+rc_touch_usr_bin_python3=1
+rc_touch_usr_bin_curl=1

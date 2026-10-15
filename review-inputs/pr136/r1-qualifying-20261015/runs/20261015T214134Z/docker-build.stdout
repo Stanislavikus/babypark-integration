@@ -1,0 +1,8 @@
+Sending build context to Docker daemon  18.93MB
+Step 1/2 : FROM ubuntu@sha256:534baea6a22c03a63003dbc8dbe78fe34bc0d7e595d9a9dc9834884ff530eb55
+ ---> 534baea6a22c
+Step 2/2 : RUN apt-get update  && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends       git ca-certificates python3 curl  && rm -rf /var/lib/apt/lists/*
+ ---> Using cache
+ ---> eb44e0d4af8d
+Successfully built eb44e0d4af8d
+Successfully tagged pr136-r1-verifier:20261015

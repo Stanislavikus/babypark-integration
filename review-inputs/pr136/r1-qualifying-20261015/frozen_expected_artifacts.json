@@ -1,0 +1,19 @@
+{
+  "campaign_head": "262f7a8999d797f4ceceb531004986cfd6667d73",
+  "campaign_tree": "ffb8953002feaeb5f417a09a832c86f24051afa2",
+  "campaign_base_oid": "0dfb9b0a1cfe23d455fd436ae9abeac626d0d729",
+  "gov_blob": "e777fce4af8e8c3372f1f9de9ef7d00f786c2c89",
+  "manifest_sha256": "adda61453c1e14c16b1a90d072051ab3e4e29f1e110bd2c1f539aad90de8d3d6",
+  "head_design_blob": "9fbca03b302fba4c575d4c97ad989e81091808d2",
+  "head_acceptance_blob": "14d0cd0cc8c459ed17b16dff2b3882128b4d88ff",
+  "git_outputs_sha256": {
+    "V03_diff_check_stdout": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "V04a_name_status_stdout": "f1493242fb8ed69fbf96c864a81acb4a4e7eedad998b7a37ef0b7437d405b6af",
+    "V04b_stat_stdout": "9a9e3f4d640f75087c8ebebacc87f457680c0eb049a78dc2e8f5b22d800755e3",
+    "V04c_full_diff_stdout": "cd63aba108a9d0fae925297722c5799428372acef71281f762f42efe423db714"
+  },
+  "v04a_name_status_bytes": "M\tdocs/AI_FIRST_LINE_ACCEPTANCE.md\nM\tdocs/AI_FIRST_LINE_DESIGN.md\n",
+  "pr136_api_url": "https://api.github.com/repos/Stanislavikus/babypark-integration/pulls/136",
+  "verifier_image_id": "sha256:eb44e0d4af8d2774d04e5f250707e39e00bfa7cfd241317db2c0be6973344558",
+  "e05_captured_body_sha256": "bee9f17fb88bcec45f11bb8abe1bf8e08b04613518eee506558935bdbb7b2587"
+}

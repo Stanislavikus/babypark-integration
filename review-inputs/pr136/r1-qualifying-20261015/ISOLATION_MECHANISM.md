@@ -19,7 +19,8 @@ Applies to: PR #136 qualifying R1 bundle `review-inputs/pr136/r1-qualifying-2026
 - Base image: `ubuntu@sha256:534baea6a22c03a63003dbc8dbe78fe34bc0d7e595d9a9dc9834884ff530eb55`
 - Verifier image: built from `Dockerfile.verifier` → recorded in `docker-image.pin.json`
 - **Materialize phase (writable volume):** shallow public `git clone` + `git checkout` campaign HEAD inside container only; no host `/workspace` reuse.
-- **Execute phase (`:ro` mount):** mandatory Git commands run with repository volume mounted read-only; writable outputs only on separate `/out` volume mount.
+- **Execute phase (`--read-only` root + `:ro` repo volume + `tmpfs /tmp`):** mandatory Git commands run with digest-pinned `IMAGE_ID`; writable outputs only on `/out` host bind mount.
+- **Toolchain immutability (A):** executor attempts `touch` on `/usr/bin/git`, `/usr/bin/python3`, `/usr/bin/curl`; must fail (`toolchain_probe.result=TOOLCHAIN_IMMUTABLE`).
 - **Negative write-probe (E01):** executor attempts `touch .git/HEAD` and `touch` on tracked file under `:ro` mount; must fail (non-zero / EROFS).
 
 This is not a custom sandbox framework; it is stock Docker with digest-pinned distribution image and read-only bind mounts.

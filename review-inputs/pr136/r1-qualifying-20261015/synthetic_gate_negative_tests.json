@@ -1,0 +1,46 @@
+[
+  {
+    "case": "wrong_exit_code",
+    "halted": true,
+    "gap_sample": [
+      "V03_diff_check exit"
+    ]
+  },
+  {
+    "case": "wrong_stdout_sha",
+    "halted": true,
+    "gap_sample": [
+      "V03_diff_check stdout sha 5bde8791660b2e936d6a9e9819142df7dbb73245d46f33e3a5d46d8426fba4c0 != e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    ]
+  },
+  {
+    "case": "wrong_pre_head",
+    "halted": true,
+    "gap_sample": [
+      "V03_diff_check pre_head=deadbeef",
+      "V03_diff_check pre_tree=None",
+      "V03_diff_check pre dirty"
+    ]
+  },
+  {
+    "case": "wrong_e05_head",
+    "halted": true,
+    "gap_sample": [
+      "e05 head"
+    ]
+  },
+  {
+    "case": "toolchain_mutable",
+    "halted": true,
+    "gap_sample": [
+      "V04b_stat toolchain_probe"
+    ]
+  },
+  {
+    "case": "missing_substantive_review",
+    "halted": true,
+    "gap_sample": [
+      "substantive review md missing"
+    ]
+  }
+]
