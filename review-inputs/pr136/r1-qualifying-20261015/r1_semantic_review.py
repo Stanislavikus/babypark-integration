@@ -180,88 +180,27 @@ def main() -> int:
 
     blockers = [f for f in findings if f["severity"] == "BLOCKER"]
 
-    # C: substantive exhaustive V05–V12 (phrase checks in v12-findings are auxiliary only)
-    v05_lines = [
-        "# V05–V12 substantive qualifying R1 review (PR #136 frozen tuple)",
-        "",
-        f"- campaign_head: `{head}`",
-        f"- campaign_base: `{base}`",
-        f"- verifier_image_id: `{args.image_id}`",
-        f"- manifest_sha256: `{MANIFEST_SHA}`",
-        "",
-        "## V05 — full corpus at HEAD and BASE",
-    ]
-    for entry in manifest:
-        v05_lines.append(
-            f"- **{entry['rev']} `{entry['path']}`**: bytes={entry['bytes']} "
-            f"sha256=`{entry['sha256']}` git_blob=`{entry['git_blob']}`"
-        )
-    v05_lines += [
-        "",
-        "## V06 — Lane A numeric prohibition (HEAD DESIGN)",
-        "- Positive: Lane A described as UNWIRED / non-numeric timing in authoring plane.",
-        "- Negative trace: regex scan for numeric `busy_timeout` / ms literals in Lane A context "
-        f"(automated hits logged in v12-findings; blockers={len([f for f in findings if f['class']=='LANE_A_NUMERIC'])})",
-        "",
-        "## V07 — normative anchors (HEAD)",
-    ]
-    for phrase, inv in required_phrases:
-        present = phrase in hd or phrase in ha
-        v05_lines.append(f"- `{phrase}` ({inv}): **{'PASS' if present else 'FAIL'}**")
-    v05_lines += [
-        "",
-        "## V08 — stale / out-of-scope reintroduction guard",
-        "- Negative: `HALTs the code-stage`, bare `Agreement §8`, `Q39c` must not appear in HEAD corpus.",
-        "",
-        "## V09 — Lane A/B split (§29.8.3)",
-        f"- Lane A in DESIGN: {'yes' if 'Lane A' in hd else 'no'}; Lane B: {'yes' if 'Lane B' in hd else 'no'}",
-        "",
-        "## V10 — Q39a case (7) fail-closed (ACCEPTANCE)",
-        f"- Q39a(7) FAIL CLOSED present: {'yes' if '(7)' in q39a and 'FAIL CLOSED' in q39a else 'no'}",
-        "",
-        "## V11 — changed surface (BASE..HEAD)",
-        f"```\n{ns}\n```",
-        f"- Expected exactly two modified docs: **{'PASS' if set(ns.splitlines()) == expected else 'FAIL'}**",
-        "",
-        "## V12 — R136 traceability rows (contract traces)",
-    ]
-    for row in r136_checks:
-        status = "PASS" if row["evidence_pass"] else "FAIL"
-        v05_lines.append(f"- **{row['id']}** [{status}]: {row['focused_check']}")
-    v05_lines += [
-        "",
-        "## Tuple / manifest immutability",
-        f"- Frozen manifest on disk matches bundle: "
-        f"**{'PASS' if hashlib.sha256((Path(__file__).resolve().parent / 'frozen-required-verification-manifest.txt').read_bytes()).hexdigest() == MANIFEST_SHA else 'FAIL'}**",
-        "- Campaign HEAD/TREE/BASE are not mutated by this semantic pass (read-only clone).",
-        "",
-        "## Auxiliary automated phrase inventory",
-        f"- v12-findings.json entries: {len(findings)} (BLOCKER={len(blockers)}); "
-        "empty blocker list alone is insufficient — this document is the exhaustive substantive record.",
-    ]
-    (out / "V05-V12_SUBSTANTIVE_REVIEW.md").write_text("\n".join(v05_lines) + "\n", encoding="utf-8")
-
-    inventory = {
-        "substantive_review_complete": True,
+    auxiliary = {
+        "auxiliary_only": True,
+        "substantive_review_complete": False,
+        "independent_review_required": "INDEPENDENT_EXHAUSTIVE_R1_REVIEW.md",
         "blocker_count": len(blockers),
-        "auxiliary_phrase_findings": len(findings),
-        "r136_rows": r136_checks,
+        "phrase_findings": len(findings),
+        "r136_heuristic_rows": r136_checks,
         "v05_corpus_entries": len(manifest),
         "changed_name_status_lines": ns.splitlines(),
         "campaign_head": head,
         "campaign_base_oid": base,
         "manifest_sha256": MANIFEST_SHA,
         "verifier_image_id": args.image_id,
+        "disclaimer": "Heuristic phrase scan only; cannot declare qualifying ZERO BLOCKERS alone.",
     }
-    (out / "exhaustive-review-inventory.json").write_text(
-        json.dumps(inventory, indent=2) + "\n"
-    )
-
+    (out / "auxiliary-phrase-scan.json").write_text(json.dumps(findings, indent=2) + "\n")
+    (out / "auxiliary-scan-inventory.json").write_text(json.dumps(auxiliary, indent=2) + "\n")
     (out / "v12-findings.json").write_text(json.dumps(findings, indent=2) + "\n")
     (out / "exit_code").write_text("0" if not blockers else "1")
     (out / "R1_SEMANTIC_SUMMARY.txt").write_text(
-        f"blockers={len(blockers)} non_blocker={len(findings)-len(blockers)}\n"
-        f"substantive_review=V05-V12_SUBSTANTIVE_REVIEW.md\n"
+        f"blockers={len(blockers)} auxiliary_only=true\n"
     )
     import shutil
 

@@ -15,5 +15,7 @@
   "v04a_name_status_bytes": "M\tdocs/AI_FIRST_LINE_ACCEPTANCE.md\nM\tdocs/AI_FIRST_LINE_DESIGN.md\n",
   "pr136_api_url": "https://api.github.com/repos/Stanislavikus/babypark-integration/pulls/136",
   "verifier_image_id": "sha256:eb44e0d4af8d2774d04e5f250707e39e00bfa7cfd241317db2c0be6973344558",
-  "e05_captured_body_sha256": "bee9f17fb88bcec45f11bb8abe1bf8e08b04613518eee506558935bdbb7b2587"
+  "pr_body_utf8_bytes": 7962,
+  "pr_body_utf8_sha256": "bb25e5ff09cd35379effe94c00b54e6dda958e750fe22870df781b988a846b7e",
+  "independent_exhaustive_review_sha256": "9bade91cb12fe0e5613ec8e64ad4403dd870eb42f9f540011f291896fa8e2752"
 }

@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Qualifying R1 verification E01–E05 for PR #136 frozen tuple.
-# Exit 0 only if all mandatory checks PASS, verify_r1_run PASS, and negative selftests PASS.
+# Exit 0 only if all mandatory checks PASS, verify_r1_run PASS, negative selftests PASS,
+# and independent exhaustive review is bound (scripts cannot self-declare substantive ZERO BLOCKERS).
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -192,17 +193,19 @@ run_git_check V04c_full_diff "diff ${CAMPAIGN_BASE_OID}..HEAD"
   echo "verifier_image_id=$IMAGE_ID"
 } >"$OUT_ROOT/V01-tuple.txt"
 
-# E05 live PR capture (no auth; same client as verify_r1_run)
+# E05 live PR capture — fresh empty dir only (see e05_fetch_pr136.assert_fresh_e05_dir)
 E05="$OUT_ROOT/E05_live_pr"
-mkdir -p "$E05"
 UTC=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+python3 "$ROOT_DIR/e05_fetch_pr136.py" "$E05" >"$OUT_ROOT/E05_fetch.stdout"
 {
   echo "url=https://api.github.com/repos/Stanislavikus/babypark-integration/pulls/136"
   echo "method=GET"
   echo "utc_capture=$UTC"
+  echo "e05_dir=E05_live_pr"
 } >"$E05/request.meta"
-python3 "$ROOT_DIR/e05_fetch_pr136.py" "$E05" >"$E05/fetch.stdout"
-sha256sum "$E05/response.body.json" >"$E05/response.body.sha256"
+
+cp "$ROOT_DIR/INDEPENDENT_EXHAUSTIVE_R1_REVIEW.md" "$OUT_ROOT/INDEPENDENT_EXHAUSTIVE_R1_REVIEW.md"
+python3 "$ROOT_DIR/bind_independent_review.py" "$OUT_ROOT"
 
 # Semantic review V05–V12 + R136 (E04)
 set +e

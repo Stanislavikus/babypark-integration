@@ -55,8 +55,18 @@ def main() -> int:
         lambda d: (d / "V04b_stat/toolchain_probe.result").write_text("TOOLCHAIN_MUTABLE\n"),
     )
     trial(
-        "missing_substantive_review",
-        lambda d: (d / "semantic/V05-V12_SUBSTANTIVE_REVIEW.md").unlink(missing_ok=True),
+        "missing_independent_review",
+        lambda d: (d / "INDEPENDENT_EXHAUSTIVE_R1_REVIEW.md").unlink(missing_ok=True),
+    )
+    trial(
+        "stale_e05_sidecar",
+        lambda d: (d / "E05_live_pr/pr_body_utf8.sha256").write_text(
+            "deadbeef  pr_body_utf8.md\n"
+        ),
+    )
+    trial(
+        "modified_pr_body_unchanged_head_base",
+        lambda d: (d / "E05_live_pr/pr_body_utf8.md").write_bytes(b"tampered\n"),
     )
 
     out = ROOT / "synthetic_gate_negative_tests.json"

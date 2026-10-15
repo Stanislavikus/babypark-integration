@@ -1,0 +1,4405 @@
+# BabyPark AI First Line — Frozen Design v0.8
+
+Status: FROZEN — C6/C25 pre-implementation safety contract + prior v0.7/C5 contract
+Applies to: BabyPark AI First Line Website v1 / Slice C normative design.
+Supersedes: `docs/AI_FIRST_LINE_DESIGN.md` at canonical main `13f7f81b7c7cdc94fd977363fc7027387e76728a`.
+Implementation: C1/C2a/C2b/C2c/C3/C4/C5 are merged. This amendment freezes the
+remaining C6 relay/reauthorization and C25 dependent-follow-up semantics before
+production implementation. It adds no C6/C25 production code, Chatwoot write,
+deployment or activation in this stage.
+Contract amendment base: canonical main `13f7f81b7c7cdc94fd977363fc7027387e76728a` (C6 A-prime ingress-only timing gate).
+Chatwoot runtime verified: package v4.18.0; deployed tracked sources and the
+current gitignored production Vite manifest/chunks/source maps were verified
+against the running target. Exact hashes/equivalence evidence is recorded in
+`docs/AI_FIRST_LINE_C5_CONTRACT_TRACEABILITY.md`.
+
+This document is the single normative repository source of truth for the first
+customer-facing BabyPark AI design. It incorporates the complete v0.6 design
+delta; no separate delta document is required to interpret it.
+
+It consolidates the research and review rounds that followed AgentBot safety
+foundation #49 and race fix #51/#52. Do not reconstruct this design from chat
+history.
+
+## 1. Product objective
+
+The first customer-facing AI answers a narrow set of factual ecommerce questions from typed, reviewed authority.
+It must not behave as a universal sales consultant.
+
+Priorities:
+1. factual correctness;
+2. deterministic financial/operational values;
+3. explicit authority/freshness;
+4. human handoff on uncertainty;
+5. traceability;
+6. low operational burden;
+7. Drupal → Magento portability;
+8. no BabyPark patches inside Chatwoot core.
+
+## 2. Authority domains
+
+There is no global priority ladder across all knowledge.
+
+### 2.1 OperationalFact
+Typed operational truth:
+- store temporary closure/status overlay;
+- special opening hours;
+- reviewed baseline hours/status;
+- call-center hours;
+- approved phones/addresses;
+- temporary operational outages.
+
+### 2.2 CommercePolicy
+Typed reviewed business commitments:
+- payment;
+- prepayment;
+- delivery;
+- return policy;
+- warranty;
+- reviewed scoped exceptions.
+
+### 2.3 CatalogFact
+Never copied into knowledge authority.
+Always read through CatalogService from one accepted canonical generation:
+- products/variants;
+- trusted offers;
+- commercial availability;
+- physical store stock;
+- images/URLs;
+- categories/brands;
+- variant option labels;
+- catalog freshness metadata.
+
+### 2.4 KnowledgeContent
+Future lower-authority RAG layer for articles/manuals/site/manufacturer prose.
+Out of scope.
+
+### 2.5 Guidance
+Behavior/policy: clarify, handoff, templates, tool policy.
+Guidance cannot create or override facts.
+
+## 3. Storage
+
+Create `knowledge.sqlite` as durable business authority.
+It is separate from `copilot.sqlite`.
+
+`copilot.sqlite` remains execution/idempotency state.
+Knowledge publication history is not disposable/rebuildable execution state.
+
+### 3.1 Canonical physical-store identity
+
+Before store-scoped OperationalFacts become production authority, BabyPark must
+have provider-neutral stable store identities.
+
+Extend the existing IdentityStore with canonical physical stores and provider
+xrefs:
+
+```
+stores {
+  store_id
+  lifecycle
+  created_at
+  updated_at
+}
+
+source_stores {
+  provider
+  native_store_id
+  store_id
+  reviewed_source
+  first_seen_at
+  last_seen_at
+}
+```
+
+Frozen invariants:
+- `store_id` is BabyPark canonical identity.
+- Provider-native IDs are xrefs, never customer-facing authority IDs.
+- Current Drupal store/location identifiers map to canonical `store_id`.
+- Future Magento MSI `source_code` maps to the same canonical `store_id`.
+- Future 1C/SaaS warehouse/store identifiers may map to the same canonical `store_id`.
+- Mapping is reviewed/deterministic; no fuzzy automatic matching by name/address.
+- One provider-native source maps to exactly one canonical store.
+- v1 requires one active physical Magento source per canonical physical store;
+  ambiguous active many-to-one/one-to-many topology fails cutover preflight.
+- Durable xref history may retain reviewed historical provider IDs; preflight
+  determines which provider locations are active.
+- Retired stores are tombstoned; stable IDs are never reused.
+
+### 3.2 Field-level source-of-truth matrix
+
+Similar-looking data in different systems must not compete.
+
+| Fact family | AI authority | Rule |
+|---|---|---|
+| Canonical physical-store identity | BabyPark IdentityStore | Stable across Drupal/Magento/provider cutover |
+| Physical-store weekly hours | BabyPark Knowledge | Reviewed baseline |
+| Physical-store special hours / closure / temporary status | BabyPark Knowledge | Typed temporal overlays |
+| Physical-store customer address / phone | BabyPark Knowledge | Reviewed store facts; commerce systems may receive projections |
+| Call-center phone | BabyPark Knowledge | Business-wide `business/babypark` OperationalFact; exact `call_center.phone` schema below |
+| Product price / commercial availability | CatalogService | Accepted provider-neutral catalog |
+| Physical per-store stock | CatalogService | Always keyed by canonical `store_id` |
+| Website-chat support hours | Chatwoot inbox working-hours config | Applies to chat/support channel only |
+| Magento MSI `source_code` | Provider xref | Never canonical BabyPark identity |
+| Magento source address/phone | Projection/cross-check by default | Not AI authority unless a future explicit authority migration changes the contract |
+| Magento pickup `frontend_description` | Presentation only | Never parsed into schedule/policy authority |
+| Magento general Store Hours of Operation text | Presentation/config text only | Never physical-store schedule authority |
+
+Examples:
+- “Когда открыт магазин X?” → BabyPark Knowledge by canonical `store_id`.
+- “Когда отвечает чат?” → Chatwoot inbox working hours.
+- “Есть товар в магазине X?” → CatalogService stock by the same canonical `store_id`.
+
+No resolver may answer a physical-store-hours question from Chatwoot or Magento
+text fields.
+
+### 3.2.1 Call-center business subject and phone authority
+
+Website First Line v1 freezes the call-center namespace family to one
+business-wide Knowledge subject: `subject_type=business`,
+`subject_id=babypark`. This is a **new explicit convention introduced here**;
+it must not be described as a previously frozen generic convention.
+`call_center.hours` shares that subject binding, but this freeze does not define
+its effect schema and C4 does not answer call-center-hours questions in v1.
+
+`call_center.phone` is an approval-required OperationalFact with exact schema:
+- `record_type=OPERATIONAL_FACT`;
+- `schema_version=1`;
+- `namespace=call_center.phone`;
+- `effect_family=call_center.phone`;
+- `scope={}`;
+- `effect_type=PHONE`;
+- `effect_value={"e164":"+..."}` with exactly one key and value matching
+  `^\\+[1-9]\\d{1,14}$`;
+- no other namespace may use `effect_family=call_center.phone` in v1.
+
+The C4 call-center-phone adapter invokes `projectActiveKnowledge()` for the full
+`business/babypark` subject without a namespace prefilter, then inspects only the
+`call_center.phone` effect family. This preserves same-family cross-namespace
+visibility. Before mapping any fact it validates every active same-family row's
+record type, schema version, namespace, empty scope, effect type and exact E.164
+value shape. A malformed or foreign same-family row is invalid authority and
+rejects before ANSWER/CLARIFY; it is not POLICY_NOT_FOUND.
+
+For valid active rows:
+- zero => HUMAN / POLICY_NOT_FOUND;
+- one canonical effect, or several rows with the exact same canonical effect =>
+  ANSWER / OPERATIONAL_FACT;
+- two different canonical effects => HUMAN / POLICY_CONFLICT.
+
+A changed number uses ordinary atomic supersession. v1 has one call center; a
+second live number is not a new identity and is never resolved with CLARIFY.
+Chatwoot inbox working hours remain a separate chat-support authority and are
+never used as call-center phone/hours authority.
+
+### 3.2.2 Store phone and public CommercePolicy schemas
+
+Website First Line v1 uses a dedicated store-phone family rather than the older
+non-normative test-fixture grouping with `store.identity`:
+- `subject_type=store`, `subject_id=<canonical store_id>`;
+- `record_type=OPERATIONAL_FACT`, `schema_version=1`;
+- `namespace=effect_family=store.phone`, `scope={}`;
+- `effect_type=PHONE`;
+- exact one-key `effect_value={"e164":"+..."}` matching
+  `^\\+[1-9]\\d{1,14}$`.
+
+`resolveStorePhone(store,{nowUtc,storeId})` and
+`resolveCallCenterPhone(store,{nowUtc})` are the two required typed v1 phone
+readers. They share one private strict PHONE reducer: project the complete active
+subject without namespace prefilter; reject malformed or foreign same-family
+rows; accept compatible duplicate canonical effects; map zero to
+POLICY_NOT_FOUND and different canonical effects to POLICY_CONFLICT. The
+customer-facing DTO union is only:
+- `{status:'RESOLVED', effect_family, e164, revision_ids}`;
+- `{status:'POLICY_NOT_FOUND', effect_family, revisions:[]}`;
+- `{status:'POLICY_CONFLICT', effect_family, revisions:[...]}`.
+
+`store.address` remains Knowledge authority but is **not** a Website First Line
+v1 public request family; C4 must not ad-hoc read it merely because address data
+exists.
+
+Store operational questions use **two** typed readers over the same frozen
+OperationalFact precedence:
+- `resolveStoreOperationalState(store,{nowUtc,storeId})` answers current
+  open/closed state;
+- `resolveStoreTodaySchedule(store,{nowUtc,storeId})` answers the current
+  Europe/Kyiv local-day schedule **only when current operating state is not a
+  §9.2 CLOSED terminal**.
+
+For a today-hours request C4 first evaluates current operating state. If an
+active `store.temporary_closure` / `store.status_override` or applicable
+baseline-status authority resolves the store CLOSED at current `now`, the older
+§9.2 rule remains authoritative: return the current CLOSED answer and suppress
+hours. The schedule reader never weakens that frozen safety boundary merely
+because a finite closure could end later in the day.
+
+Otherwise `resolveStoreTodaySchedule` evaluates the **entire current
+Europe/Kyiv local civil day**, not only whether the store is open at the instant
+`now`. It first selects base hours for that local date: `store.special_hours`
+owns the whole civil day when present, otherwise the current weekday from
+`store.weekly_hours`. It also accounts for already-published future same-day
+operating-state revisions whose effective intervals overlap those base hours:
+CLOSED removes only its future overlapping portion; OPEN never invents hours;
+conflicting peer states on any future segment => POLICY_CONFLICT.
+
+The exact customer-safe resolved DTO is
+`{status:'RESOLVED',open_now:boolean,intervals:[{open,close},...],source,
+revision_ids}`. `intervals` is the complete non-overlapping local `HH:MM`
+schedule in ascending order after applicable known future CLOSED segments are
+removed. It is not reduced to `open_now`. Therefore before-opening and
+between-split-interval reads preserve the later intervals and final close.
+
+If base hours are missing, return POLICY_NOT_FOUND. Conflicting authority =>
+POLICY_CONFLICT; malformed/unrepresentable hours or DST-local boundaries reject
+rather than guess. This reader exists to preserve schedule information that the
+current-state reader deliberately does not carry; it is not a second way around
+a current CLOSED terminal.
+
+Public CommercePolicy ANSWER families in this freeze are exactly the following
+closed schemas. These constraints are normative **here**; operational/evidence
+documents may mirror them but cannot widen them.
+
+All three use `record_type=COMMERCE_POLICY`, `schema_version=1`,
+`subject_type=business`, `subject_id=babypark`, and are approval-required.
+
+- `commerce.payment_methods`: `namespace=effect_family=commerce.payment_methods`,
+  `scope={}`, `effect_type=PAYMENT_METHODS`, and exact
+  `effect_value={methods:[...]}`. `methods` is non-empty, duplicate-free,
+  lexicographically sorted, and every code is exactly one of
+  `BANK_TRANSFER | CASH_COURIER | COD_NOVA_POSHTA`.
+- `commerce.prepayment`: `namespace=effect_family=commerce.prepayment`,
+  `effect_type=PREPAYMENT`; reviewed scope follows the already-frozen
+  CommercePolicy exact-binding/exception rules; exact `effect_value` contains
+  only `amount_minor` (non-negative safe integer) and `currency` (uppercase
+  three-letter code).
+- `commerce.return_period`: `namespace=effect_family=commerce.return_period`,
+  `scope={}`, `effect_type=RETURN_PERIOD`, and exact `effect_value` contains
+  only `applies_to='GOOD_QUALITY'`, positive safe-integer `calendar_days`,
+  and boolean `purchase_day_excluded`.
+
+C4 validates the complete applicable row/schema before a resolved policy can
+become public payload. For payment methods, codes authorize method **names only**.
+No fee, percentage, amount or condition is implied by `COD_NOVA_POSHTA`;
+numeric COD terms require a future separately reviewed typed authority contract.
+
+A delivery request such as Q13 remains actionable (never NON_ACTIONABLE_ACK),
+but public delivery-policy schema is not certified in this freeze. Until one is
+explicitly frozen it terminates before authority as HUMAN /
+COMMERCE_POLICY_NOT_AUTHORITATIVE. Warranty is likewise not a reviewed public
+ANSWER family in v1. Merely having generic CommercePolicy JSON does not widen the
+public contract.
+
+### 3.3 Magento cutover contract
+
+Magento does not redefine BabyPark stores.
+
+Before an accepted Magento-derived catalog/stock generation can replace the
+current provider:
+
+1. enumerate every Magento MSI Source used as a physical BabyPark inventory/pickup location;
+2. explicitly bind every applicable `source_code` to an existing canonical `store_id`;
+3. reject unmapped, duplicate or conflicting active bindings;
+4. emit canonical Catalog `stores.store_id` / `store_stock.store_id` using those stable IDs;
+5. keep all existing store-scoped Knowledge revisions valid unchanged;
+6. keep AI tools provider-neutral: no prompt/template/resolver branches on Drupal vs Magento.
+
+Magento provider cutover changes the adapter/xref layer, not the AI fact model.
+
+### 3.4 Magento evidence behind the boundary
+
+Adobe Commerce / Magento Inventory models physical inventory locations as MSI
+Sources. Source data includes provider `source_code`, name, address/geolocation,
+contact information, enabled state and pickup metadata. Source Items carry
+SKU/source quantity and status.
+
+The native Source/Pickup structures do not provide a typed structured weekly
+opening-hours model. Pickup `frontend_description` and general Store Hours of
+Operation are presentation/free-form text. They are deliberately not machine
+schedule authority.
+
+## 4. Immutable revision model
+
+### knowledge_revisions
+
+Revision body is immutable after insert.
+
+Conceptual fields:
+
+```
+revision_id
+record_type
+schema_version
+namespace
+effect_family
+subject_type
+subject_id
+scope_json
+effect_type
+effect_value_json
+effective_from_utc
+expires_at_utc
+parent_revision_id
+exception_of_revision_id
+author_actor_id
+created_at_utc
+revision_hash
+```
+
+Initial record types:
+- OPERATIONAL_FACT
+- COMMERCE_POLICY
+- VOCABULARY_ENTRY
+
+Editing a draft creates a new revision.
+No UPDATE rewrites a revision body.
+
+### knowledge_events
+
+Append-only publication ledger:
+
+```
+event_id
+event_seq
+revision_id
+event_type
+actor_id
+occurred_at_utc
+reason
+metadata_json
+previous_event_hash
+event_hash
+```
+
+Event types:
+- DRAFT_CREATED
+- APPROVED
+- PUBLISHED
+- REVOKED
+- SUPERSEDED
+- optionally WITHDRAWN
+
+Revision authority state is derived from the ledger.
+
+## 5. Canonical hashing
+
+Do not leave revision/event hash encoding implementation-defined.
+
+Use BabyPark canonical JSON v1:
+- UTF-8;
+- recursive lexicographic object-key ordering;
+- array order preserved;
+- no insignificant whitespace;
+- integer values as canonical decimal integers;
+- timestamps normalized to RFC3339 UTC with `Z`;
+- no floating money;
+- explicit null where schema requires null;
+- hash algorithm SHA-256.
+
+`revision_hash` = SHA-256 of canonical authoritative revision body excluding `revision_hash`.
+
+`event_hash` = SHA-256 of canonical event body excluding `event_hash`, including `previous_event_hash`.
+
+Restore verification validates:
+- chain linkage;
+- hashes;
+- event state-machine validity;
+- resolver semantics on known verification vectors.
+
+## 6. Event state machine
+
+Append-only alone is not sufficient. Event writes are atomically validated.
+
+Approval-required revision:
+
+```
+DRAFT_CREATED
+  -> APPROVED
+  -> PUBLISHED
+  -> REVOKED | SUPERSEDED
+```
+
+Direct-publish temporary revision:
+
+```
+DRAFT_CREATED
+  -> PUBLISHED
+  -> REVOKED | SUPERSEDED
+```
+
+Optional:
+```
+DRAFT_CREATED -> WITHDRAWN
+APPROVED -> WITHDRAWN
+```
+
+Rules:
+- DRAFT_CREATED is first and unique.
+- APPROVED requires existing draft.
+- Commerce author cannot approve own revision.
+- KNOWLEDGE_ADMIN does not bypass self-approval.
+- Approval-required namespace cannot publish without valid APPROVED.
+- PUBLISHED is unique.
+- REVOKED only from PUBLISHED.
+- SUPERSEDED only from PUBLISHED.
+- terminal revisions cannot be resurrected.
+- parent_revision_id is lineage only and changes no authority.
+- resolver independently validates event history; corrupt/manual ledgers fail closed.
+
+Publishing a replacement and superseding its predecessor occurs in one SQLite transaction.
+
+SUPERSEDED must reference an already-published successor.
+
+SUPERSEDED is allowed only when predecessor and successor share:
+- namespace;
+- subject identity;
+- effect_family.
+
+Temporary overlays never supersede baseline namespaces.
+
+## 7. Time semantics
+
+All revisions require `effective_from_utc`.
+
+Persist authority boundaries as absolute UTC instants.
+
+General active-revision predicate:
+
+```
+effective_from_utc <= now
+AND
+(expires_at_utc IS NULL OR now < expires_at_utc)
+```
+
+`expires_at_utc = NULL` means an open-ended interval and is allowed only where
+the publication policy permits an open-ended authority, such as reviewed
+baselines or long-lived CommercePolicy.
+
+Direct-publish temporary overlays always require finite `expires_at_utc`.
+
+All expiry boundaries are exclusive:
+
+```
+now == expires_at_utc
+```
+
+means inactive.
+
+No cron job is authority for expiry.
+
+### Business-calendar timezone
+
+`Europe/Kyiv` is the canonical business-calendar timezone for store schedules.
+
+It is used for:
+- interpreting weekly weekday/hour schedules;
+- converting selected local civil dates into UTC revision bounds;
+- evaluating "today", weekday and local clock time for store-hours answers;
+- parsing human input such as "до кінця дня".
+
+Stored revision bounds remain absolute UTC instants.
+
+### store.special_hours civil-day invariant
+
+`store.special_hours` is a daily schedule replacement and must cover exactly one
+local civil day.
+
+For declared local date D:
+
+```
+effective_from_utc =
+  instant(start of D in Europe/Kyiv)
+
+expires_at_utc =
+  instant(start of D+1 in Europe/Kyiv)
+```
+
+Publication rejects any other revision envelope.
+
+Opening intervals, for example 11:00–18:00, live inside the effect. They are not
+revision expiry boundaries. A multi-day special schedule is represented as one
+immutable revision per local civil day.
+
+This deliberately handles 23/25-hour DST civil days through timezone conversion
+rather than fixed 24-hour arithmetic.
+
+### Other temporary overlays
+
+`store.temporary_closure` and `store.status_override` are state-like overlays,
+not daily opening schedules.
+
+They may span any finite interval satisfying:
+
+```
+effective_from_utc < expires_at_utc
+```
+
+Legitimate examples include:
+- closure for three whole days;
+- closure from 15:00 today until 10:00 tomorrow;
+- status override until 16:00.
+
+They remain subject to the subject + effect_family conflict rules below.
+
+## 8. Publication workflow
+
+Publication policy is namespace-risk based.
+
+### Direct publish allowlist — temporary overlays only
+
+Initial allowlist:
+- store.status_override
+- store.special_hours
+- store.temporary_closure
+
+Requirements:
+- authorized OPERATIONAL_EDITOR grant;
+- `expires_at_utc` mandatory;
+- `effective_from_utc < expires_at_utc`;
+- no null expiry;
+- `store.special_hours` must use exactly one Europe/Kyiv local civil-day
+  envelope from local midnight D to local midnight D+1;
+- `store.temporary_closure` and `store.status_override` may use any finite
+  interval and are not forced into civil-day envelopes.
+
+### Approval-required baseline/identity facts
+
+Examples:
+- store.weekly_hours
+- store.baseline_status
+- store.address
+- store.phone
+- call_center.hours
+- call_center.phone
+
+### CommercePolicy
+
+Always approval-required.
+
+Author and approver must differ by stable BabyPark actor_id.
+
+## 9. Operational resolver composition
+
+Operational state is not a scalar "overlay else baseline".
+A store answer composes operating-state and hours effect families.
+
+Only identifiers may survive from an earlier clarification turn; the operational resolver itself is rerun for the current answer using the current `now` and current published authority.
+
+### 9.1 Peer conflict rule across namespaces
+
+For active revisions sharing:
+- the same subject; and
+- the same `effect_family`;
+
+conflicting canonical effects are checked **regardless of namespace**.
+
+Different namespaces do not hide a conflict in the same effect family.
+
+Example:
+- `store.temporary_closure = CLOSED`;
+- overlapping `store.status_override = OPEN`;
+
+for the same store and operating-state effect family:
+
+```
+HUMAN / POLICY_CONFLICT
+```
+
+Two active peer overlays in the same overlay namespace/effect family with different canonical effects also conflict.
+
+This conflict rule does not convert temporary overlays into successors of baseline authority.
+
+### 9.2 Resolve operating state first
+
+Resolve active closing/status overlays for the store.
+
+If the resolved operating state is `CLOSED`, it suppresses:
+- `store.special_hours`;
+- `store.weekly_hours`;
+
+for the overlapping interval.
+
+A customer must never receive opening hours for a store resolved CLOSED.
+
+An OPEN/non-closing status does not itself invent opening hours; if non-conflicting, hours are still resolved by the hours resolver.
+
+### 9.3 Resolve special hours as a full civil-day replacement
+
+Only when the store is not resolved CLOSED:
+
+1. find active `store.special_hours` overlays for the current local civil day;
+2. conflicting peer special-hours effects fail closed;
+3. if one canonical special-hours effect applies, it replaces `store.weekly_hours` for the **entire overlay revision envelope**;
+4. within that civil day, local times outside the explicit opening interval(s) in the special-hours effect are CLOSED;
+5. baseline weekly hours do not fill those gaps;
+6. only after the special-hours revision expires at the next local civil-day boundary may weekly baseline apply again.
+
+Example:
+
+```
+weekly baseline: 10:00–20:00
+special hours for local date D: 11:00–18:00
+special-hours revision envelope: whole local date D
+```
+
+At 18:30 on D:
+- the special-hours revision is still active;
+- 18:30 is outside its opening interval;
+- the store resolves CLOSED;
+- baseline 10:00–20:00 does not reopen it.
+
+### 9.4 Weekly baseline
+
+If:
+- no closing overlay applies; and
+- no active special-hours overlay applies;
+
+resolve approved `store.weekly_hours` baseline using the current weekday and local time in `Europe/Kyiv`.
+
+An open-ended baseline with `expires_at_utc = NULL` is active whenever:
+
+```
+effective_from_utc <= now
+```
+
+and its ledger/publication state is authoritative.
+
+### 9.5 Overlay/baseline lifecycle
+
+Temporary overlay and baseline coexist.
+
+Overlay expiry reveals baseline again.
+
+Temporary overlays never `SUPERSEDED`:
+- weekly-hours baseline;
+- baseline-status authority.
+
+`SUPERSEDED` remains allowed only within the same:
+- namespace;
+- subject identity;
+- effect_family.
+
+## 10. Commerce conflict rule
+
+No hidden:
+- latest wins;
+- most specific wins;
+- priority number wins.
+
+Multiple applicable equal canonical effects are compatible.
+
+Different applicable effects produce:
+`HUMAN / POLICY_CONFLICT`
+unless a valid explicit exception resolves the overlap.
+
+Canonical effect equality:
+```
+effect_type + canonical normalized effect_value
+```
+
+Customer wording comes from templates, not policy prose.
+
+## 11. Exception scope model
+
+v1 CommercePolicy scope is a conjunction of optional exact bindings:
+
+```
+category_id
+brand_id
+product_id
+variant_id
+store_id
+```
+
+Empty conjunction = global.
+
+A child scope is strictly narrower than parent iff:
+1. every binding present in parent is present in child with the same value;
+2. child adds at least one additional binding.
+
+Equal binding sets are not an exception.
+
+Category descendants do NOT implicitly make CommercePolicy scope narrower.
+Catalog taxonomy changes across generations; exception validity must not depend on a changing tree.
+
+Example:
+parent: category_id=furniture
+child: category_id=furniture + brand_id=Veres
+=> valid narrower scope.
+
+Equal scope with changed effect requires SUPERSEDED or yields POLICY_CONFLICT.
+
+## 12. Exception temporal rules
+
+Authority intervals are half-open:
+`[effective_from, expires_at)`.
+
+Exception interval must be a non-empty subset of parent interval.
+
+Rules:
+- child.from >= parent.from;
+- if parent.to finite, child.to finite and child.to <= parent.to;
+- if child.to finite, child.from < child.to;
+- exception graph acyclic;
+- compatible effect_family;
+- strict scope narrowing.
+
+## 13. Employee control plane
+
+BabyPark AI/Knowledge Control is an independent BabyPark Web App.
+
+Preferred host:
+`ai.babypark.ua`
+
+Chatwoot Dashboard App is an embedding/container, not authority storage.
+
+Zoho is not part of this authority path.
+
+The first working UI must remain usable directly at ai.babypark.ua even if iframe login/session behavior is unreliable.
+
+## 14. Authentication and authorization
+
+### Authentication
+Preferred first implementation:
+Cloudflare Tunnel + Cloudflare Access.
+
+Origin should not expose a public bypass around Access.
+
+Backend validates:
+- JWT signature;
+- issuer;
+- audience;
+- expiry.
+
+Verified Access identity maps to stable BabyPark actor_id.
+
+### Authorization
+BabyPark backend owns RBAC.
+
+Initial logical roles:
+- VIEWER
+- OPERATIONAL_EDITOR
+- COMMERCE_DRAFTER
+- COMMERCE_APPROVER
+- KNOWLEDGE_ADMIN
+
+Grants may be scoped by namespace and subject/store.
+
+Chatwoot Dashboard App `currentAgent` is display/diagnostic context only.
+It never authorizes a write.
+
+Before declaring iframe the primary UI, test:
+- Chrome;
+- Edge;
+- normal mode;
+- relevant private/incognito behavior;
+- Access login and renewal inside iframe;
+- CSP.
+
+Embedded response:
+`frame-ancestors https://chat.babypark.ua`.
+
+## 15. Durable backup requirement
+
+`knowledge.sqlite` is not production-ready until recovery is proven.
+
+Implement/reuse a generic Durable SQLite Backup Profile:
+1. consistent SQLite backup;
+2. integrity check;
+3. manifest/checksum;
+4. encryption;
+5. off-host copy;
+6. independent verification;
+7. restore into scratch;
+8. semantic integrity verification.
+
+Knowledge restore proof validates revision hashes, event hash chain and resolver outputs.
+
+No age-only deletion may remove the only verified recovery copy.
+
+## 16. Decision classes
+
+Only:
+- ANSWER
+- CLARIFY
+- HUMAN
+
+Reason codes are machine-level.
+
+Required examples:
+
+ANSWER:
+- OPERATIONAL_FACT
+- COMMERCE_POLICY
+- PRODUCT_PRICE_SINGLE
+- PRODUCT_PRICE_RANGE
+- PRODUCT_NOT_IN_STOCK
+- VARIANT_LIST
+- VARIANT_LIST_PARTIAL
+- VARIANT_PRICE_LIST
+- OBJECTIVE_SHORTLIST
+- OBJECTIVE_SHORTLIST_EMPTY
+- STORE_STOCK
+
+CLARIFY:
+- AMBIGUOUS_PRODUCT
+- AMBIGUOUS_VARIANT
+- AMBIGUOUS_CATEGORY
+- AMBIGUOUS_BRAND
+- AMBIGUOUS_STORE
+- AMBIGUOUS_MONEY
+- MISSING_SHORTLIST_ANCHOR
+
+HUMAN:
+- POLICY_CONFLICT
+- POLICY_NOT_FOUND
+- CATALOG_COMMERCIAL_STALE
+- CATALOG_STOCK_STALE
+- PRICE_COHORT_INCOMPLETE
+- ZERO_PRICE_UNVERIFIED
+- MIXED_CURRENCY
+- UNSUPPORTED_CONSTRAINT
+- UNSUPPORTED_EXCLUSION
+- SUBJECTIVE_RECOMMENDATION
+- PRODUCT_ATTRIBUTE_NOT_AUTHORITATIVE
+- COMPATIBILITY_NOT_AUTHORITATIVE
+- RETURN_CASE_SPECIFIC
+- ORDER_SPECIFIC
+- CATALOG_IDENTITY_COLLISION
+- IDENTITY_NOT_RESOLVABLE
+- MULTIPLE_REQUEST_FAMILIES_MATCHED
+- MULTIPLE_IDENTITY_AMBIGUITIES
+- MULTIPLE_CLARIFICATION_REQUIREMENTS
+- CLARIFY_EXHAUSTED
+- PRODUCT_VARIANT_NOT_RESOLVABLE
+- PRODUCT_PRESENTATION_NOT_AVAILABLE
+- COMMERCE_POLICY_NOT_AUTHORITATIVE
+- UNSUPPORTED_RESPONSE_LANGUAGE
+
+### 16.1 Customer response locale
+
+Website First Line v1 has exactly two public response locales: `uk` and `ru`.
+C4 obtains the response locale only from the **current certified C2 extraction**
+for the complete open customer turn. It does not infer response language from
+Catalog `matched_languages`, Knowledge source-language priority, browser/contact
+metadata, Chatwoot profile fields or `intent_hint`.
+
+If the current certified C2 `language` is exactly `uk` or `ru`, that exact tag is
+`response_locale`. Any other syntactically valid language tag is a closed-world
+HUMAN / UNSUPPORTED_RESPONSE_LANGUAGE outcome before any public CLARIFY or
+factual authority read. There is no hidden default/fallback locale.
+
+Mixed RU/UK customer wording does not create a third locale. If C2 certifies the
+turn as `uk` or `ru`, C4 uses that one certified tag; if C2 emits another/unknown
+tag, C4 hands off. Response locale is presentation metadata only: it never
+selects authority IDs, changes facts or changes Catalog/Knowledge authority.
+
+Every C4 ANSWER or CLARIFY decision carries `response_locale`=`uk|ru`. HUMAN
+carries no public response locale because v1 HUMAN sends no AI preface. C5 must
+consume this field and must not perform its own language detection or fallback.
+
+### 16.2 Exact C4 decision/render contract
+
+C5 is not allowed to interpret authority DTOs. C4 returns one frozen exact-shape
+customer-safe decision object:
+
+```text
+C4Decision {
+  schema = bp.first-line.decision/1
+  decision = ANSWER | CLARIFY | HUMAN
+  reason
+  response_locale = uk | ru | null
+  template_id = string | null
+  render_payload = object | null
+  requested_slot = string | null
+  choices = [{token,label}, ...]
+}
+```
+
+All eight keys are always present and no additional enumerable key is allowed.
+The object contains no raw customer text, authority revision IDs, catalog
+generation/freshness metadata, product/variant/category/brand/store IDs, SKU,
+quantity, cohort IDs, debug fields or whole source DTO. Those remain private
+DecisionBasis/decision-context metadata and are never input to C5.
+
+Class invariants:
+- HUMAN: `response_locale/template_id/render_payload/requested_slot=null`,
+  `choices=[]`;
+- ANSWER: `response_locale=uk|ru`, non-null allowlisted `template_id`, exact
+  template payload, `requested_slot=null`, `choices=[]`;
+- CLARIFY: `response_locale=uk|ru`, allowlisted clarify template,
+  **`render_payload=null` for every CLARIFY template**, `requested_slot` is
+  frozen, and `choices` contains only customer-safe
+  `{token:'bp-choice:<ordinal>',label}` rows when finite choices are presented.
+  `TPL_CLARIFY_MONEY_V1` and `TPL_CLARIFY_SHORTLIST_ANCHOR_V1` are free-text
+  prompts and require **exactly `choices=[]`**; any non-empty choice array is
+  invalid because there is no canonical candidate reservation behind it.
+  Canonical candidate values for candidate-based prompts remain private durable
+  clarification reservation data; C5 never sees or renders them. `{}`, an
+  arbitrary object, or any non-null CLARIFY render payload is invalid and rejects
+  before action preparation.
+
+Unknown template IDs, missing/extra payload keys, wrong primitive types, unsafe
+labels or extra DTO fields reject before public action preparation.
+
+ANSWER templates and **only** their render payloads:
+
+| template_id | decision reason/family | exact render_payload |
+|---|---|---|
+| `TPL_STORE_OPEN_STATUS_V1` | OPERATIONAL_FACT / current store open-status | `{open:boolean,closes_at_local:string|null}`; time is exact `HH:MM` when currently open |
+| `TPL_STORE_HOURS_TODAY_V1` | OPERATIONAL_FACT / composed today-schedule | `{open_now:boolean,intervals:[{open:string,close:string},...]}`; interval times are exact `HH:MM`, complete for the local day and already adjusted for known CLOSED state intervals |
+| `TPL_STORE_PHONE_V1` | OPERATIONAL_FACT / store.phone | `{e164:string}` |
+| `TPL_CALL_CENTER_PHONE_V1` | OPERATIONAL_FACT / call_center.phone | `{e164:string}` |
+| `TPL_PAYMENT_METHODS_V1` | COMMERCE_POLICY / payment methods | `{methods:[closed-code,...]}`; codes only, no conditions |
+| `TPL_PREPAYMENT_V1` | COMMERCE_POLICY / prepayment | `{amount_minor:integer,currency:string}` |
+| `TPL_RETURN_PERIOD_V1` | COMMERCE_POLICY / return period | `{applies_to:'GOOD_QUALITY',calendar_days:integer,purchase_day_excluded:boolean}` |
+| `TPL_PRODUCT_PRICE_SINGLE_V1` | PRODUCT_PRICE_SINGLE | `{currency:string,current_minor:integer}` |
+| `TPL_PRODUCT_PRICE_RANGE_V1` | PRODUCT_PRICE_RANGE | `{currency:string,min_current_minor:integer,max_current_minor:integer}` |
+| `TPL_PRODUCT_NOT_IN_STOCK_V1` | PRODUCT_NOT_IN_STOCK | `{}` |
+| `TPL_VARIANT_LIST_V1` | VARIANT_LIST | `{total_variant_count:integer,named_variant_count:integer,labels:[string,...]}`; all labels must be pairwise-distinguishable under the frozen public-label key |
+| `TPL_VARIANT_LIST_PARTIAL_V1` | VARIANT_LIST_PARTIAL | same shape; `named_variant_count < total_variant_count` is explicit and all emitted labels must be pairwise-distinguishable |
+| `TPL_VARIANT_PRICE_LIST_V1` | VARIANT_PRICE_LIST | `{currency:string,variants:[{label:string,current_minor:integer},...]}`; requires complete safe pairwise-distinguishable labels |
+| `TPL_SHORTLIST_TOP3_V1` | OBJECTIVE_SHORTLIST where total > displayed | `{total_product_count:integer,products:[ShortlistItem,...]}` |
+| `TPL_SHORTLIST_ALL_V1` | OBJECTIVE_SHORTLIST where total == displayed | same shape |
+| `TPL_SHORTLIST_EMPTY_V1` | OBJECTIVE_SHORTLIST_EMPTY | `{}` |
+| `TPL_STORE_STOCK_V1` | STORE_STOCK | `{in_stock:boolean,variant_label:string|null}` |
+
+`ShortlistItem` is exact customer-safe projection:
+`{title,product_url,image_url,price_min_minor,price_max_minor,currency,partial_model_match}`.
+`title` must pass the exact public-display-text predicate below; URLs/images are
+null or pass the exact public-URL predicate below; price fields are integer minor
+units; `partial_model_match` is boolean. No canonical ID/SKU enters the item.
+
+Variant enumeration ANSWER payloads (`VARIANT_LIST`, `VARIANT_LIST_PARTIAL`,
+`VARIANT_PRICE_LIST`) must satisfy the same frozen public-label normalization and
+pairwise-distinguishability rule as CLARIFY choices. If two different canonical
+variants yield duplicate-equivalent emitted labels, C4 returns HUMAN /
+PRODUCT_VARIANT_NOT_RESOLVABLE before constructing public payload; differing
+prices do not make duplicate labels distinguishable. Ordinal position, SKU and
+variant ID are never public disambiguators.
+
+Variant-price-list rows with `label_complete=false` cannot be represented safely
+without an internal identifier and therefore map to HUMAN /
+PRODUCT_VARIANT_NOT_RESOLVABLE rather than partial public prices.
+
+All CLARIFY templates use `render_payload=null`; prompt wording is determined
+only by `(template_id,response_locale,requested_slot,choices)`. No CLARIFY
+reason has an object payload in v1.
+
+CLARIFY template mapping:
+- AMBIGUOUS_PRODUCT -> `TPL_CLARIFY_PRODUCT_V1`, slot `product_id`;
+- AMBIGUOUS_VARIANT -> `TPL_CLARIFY_VARIANT_V1`, slot `variant_id`;
+- AMBIGUOUS_CATEGORY -> `TPL_CLARIFY_CATEGORY_V1`, slot `category_id`; the
+  private durable candidate value is the exact tuple
+  `{category_id,match_mode}` where `match_mode` is `NODE_ONLY` or
+  `INCLUDE_DESCENDANTS`, while the public choice exposes only token+label;
+- AMBIGUOUS_BRAND -> `TPL_CLARIFY_BRAND_V1`, slot `brand_id`;
+- AMBIGUOUS_STORE -> `TPL_CLARIFY_STORE_V1`, slot `store_id`;
+- AMBIGUOUS_MONEY -> `TPL_CLARIFY_MONEY_V1`, slot `max_price_minor`, and
+  **exactly `choices=[]`**;
+- MISSING_SHORTLIST_ANCHOR -> `TPL_CLARIFY_SHORTLIST_ANCHOR_V1`, concrete slot
+  `category_id`, and **exactly `choices=[]`**. v1 deliberately asks for category
+  rather than emitting the unsupported union slot `shortlist_anchor`; a brand
+  remains a valid shortlist anchor when it was already resolved in the customer
+  turn, but it is not treated as an answer to this category-specific prompt.
+
+Every finite candidate must have one bounded safe customer label. For PRODUCT
+and CATEGORY ambiguity, the C2 identity candidate's convenience `title`/`name`
+field is **not** customer-presentation evidence because those resolvers may have
+cross-locale fallback semantics. C4 instead performs the exact bounded
+candidate-presentation reads frozen in §28.4 phase 7 and accepts only
+`localized[response_locale].title` for PRODUCT or `names[response_locale]` for
+CATEGORY when every read reports the same certified C2 catalog generation.
+Cross-locale fallback is forbidden. Brand/store/variant labels may use their
+canonical sanitized factual label where no locale-specific field exists.
+
+A finite choice set must also be **pairwise distinguishable to the customer**.
+For comparison only, derive `choice_label_key` by NFC-normalizing the rendered
+label, collapsing Unicode whitespace to one ASCII space, trimming, and applying
+locale lowercase with the exact `response_locale`. Two different private
+candidate values may not share one `choice_label_key`. Ordinal tokens are not a
+customer-visible disambiguator and must never be used to hide duplicate labels.
+
+If PRODUCT/CATEGORY/BRAND/STORE identity candidates cannot all be represented
+with safe exact-locale/factual and pairwise-distinguishable labels, the turn
+fails closed to HUMAN / IDENTITY_NOT_RESOLVABLE. AMBIGUOUS_VARIANT uses HUMAN /
+PRODUCT_VARIANT_NOT_RESOLVABLE under the same distinguishability rule. Candidate
+ordering is the deterministic resolver order only after this validation, and a
+public token ordinal maps only to the private reservation at the same ordinal.
+
+### 16.3 Exact public presentation safety predicate
+
+All customer-visible PRODUCT/CATEGORY/BRAND/STORE labels, shortlist titles and
+variant labels are validated again at the C4 public boundary. Upstream ingest or
+resolver acceptance is not presentation authorization.
+
+`public_display_text(raw,{internal_ids})` is exact. `internal_ids` is **not caller-selected**; DecisionBasis derives the mandatory closed set below for the projection kind and rejects if required provenance cannot be read:
+1. `raw` must be a string. NFC-normalize it.
+2. **Before whitespace normalization**, reject any Unicode General_Category
+   `Cc` **or `Cf`** code point (`/\p{Cc}|\p{Cf}/u`). This deliberately rejects
+   zero-width/default-format controls such as U+200B/U+200C/U+200D/U+2060 and
+   therefore also covers bidi override/isolate controls.
+3. Collapse Unicode whitespace runs to one ASCII space and trim.
+4. Result must contain 1..160 Unicode code points. The 160 ceiling is inherited
+   from the already-shipped customer-facing variant-label bound, not newly guessed.
+5. Reject URL-like values if the normalized value matches any exact predicate:
+   `/^[A-Za-z][A-Za-z0-9+.-]*:/u`, `/^\/\//u`, or `/^www\./iu`.
+6. Reject debug/internal-looking values if the normalized value matches either
+   exact regex:
+   - `/(?:^|[^\p{L}\p{N}_])(?:id|oid|aid|nid|vid|fid)\s*[:=#-]\s*\S+/iu`;
+   - `/^(?:a|o|s|i|b|d):\d+[:;{]/iu`.
+   The first rule is boundary-sensitive and separator-sensitive; for example
+   `Blue oid:32976` and `oid-32976` reject, while `xoid:32976` does not match that
+   debug-token rule. The serialized-prefix rule is intentionally case-insensitive,
+   so `O:8:{...}`, `o:8:{...}` and `A:1:{...}` all reject.
+7. Case-insensitive normalized equality with any member of the mandatory
+   projection-specific internal-ID set is rejected.
+8. Otherwise return the normalized string. No renderer may apply a weaker second
+   sanitizer or recover rejected text from another source.
+
+Mandatory `internal_ids` derivation is exact:
+- PRODUCT identity choice: candidate `canonical_product_id`, non-null
+  `canonical_variant_id`, `sku`, `sku_key`; plus same-generation `getProduct()`
+  `product_id`, `default_variant_id`, `brand.brand_id`, every
+  `variants[*].variant_id|sku|sku_key`, every category `category_id|parent_id`,
+  every attribute `attribute_id|owner_id`, every image `image_id|variant_id`, and
+  kit component `component_variant_id|component_product_id|sku` when present;
+- CATEGORY choice: reserved/current `canonical_category_id`, presentation
+  `category_id`, and non-null `parent_id`;
+- BRAND choice: `canonical_brand_id` and presentation `brand_id`;
+- STORE choice: `canonical_store_id` and presentation `store_id`;
+- VARIANT choice/list/price/stock label: fact/reservation `variant_id` and `sku`
+  plus a bounded same-generation `getVariant({variantId})` read supplying
+  `variant_id`, `product_id`, `sku`, `sku_key` and every option object's non-null
+  `option_id` / `attribute_id` used by label construction;
+- shortlist PRODUCT title: current shortlist `product_id`, every
+  `matching_variant_ids[*]`, and the full same-generation `getProduct()` internal
+  identifier set listed for PRODUCT above.
+
+Null/absent fields are ignored; non-string identifier values are stringified only
+for equality comparison. Required same-generation identifier reads that fail,
+drift, or cannot prove the mandatory set fail closed with the projection's
+existing HUMAN reason (identity PRODUCT/CATEGORY/BRAND/STORE ->
+IDENTITY_NOT_RESOLVABLE; VARIANT -> PRODUCT_VARIANT_NOT_RESOLVABLE; shortlist
+required title -> PRODUCT_PRESENTATION_NOT_AVAILABLE). An empty or caller-pruned
+set is never permitted.
+
+Variant labels have an additional composition rule: **every constituent label
+part is validated independently before composition** with the complete mandatory
+VARIANT `internal_ids` set above, not merely with that part's local
+`option_id`/`attribute_id`. A rejected part makes the whole variant label
+unrepresentable; C4 never drops the bad part and keeps the remainder. Only after
+all parts pass may they be joined deterministically with ` / `; the resulting
+whole label is then validated again with the same complete VARIANT `internal_ids`
+set. Therefore a SKU/internal ID cannot hide inside a composite label such as
+`SKU123 / Blue` even though the final string is not equal to `SKU123`.
+
+`public_url(raw,kind)` where `kind=product|image` is exact:
+- `null` is allowed; otherwise `raw` is a string of 1..4096 Unicode code points
+  (4096 is inherited from the frozen Catalog ingest URL bound);
+- reject Unicode whitespace, Unicode `Cc`, backslash, and percent-encoded control
+  octets `%00..%1F` / `%7F` before parsing;
+- WHATWG URL parse must succeed;
+- scheme must be exactly `https:`; username/password, fragment and non-default
+  port are forbidden;
+- hostname must be a public DNS hostname with at least one dot; IP literals,
+  `localhost`, and `.localhost/.local/.internal/.invalid/.test/.example` names
+  are forbidden;
+- `product` host must be exactly `babypark.ua` or a subdomain of `babypark.ua`;
+- `image` may use any public HTTPS DNS host satisfying the common host rule,
+  because Catalog images may be CDN-hosted.
+
+Return the canonical parsed HTTPS URL. For shortlist output, an unsafe/missing
+required title => HUMAN / PRODUCT_PRESENTATION_NOT_AVAILABLE. `product_url` and
+`image_url` are optional: an unsafe optional URL is projected as `null`, never
+passed through and never replaced from another locale/generation/source.
+Identity-choice label failure keeps the existing IDENTITY_NOT_RESOLVABLE /
+PRODUCT_VARIANT_NOT_RESOLVABLE mappings.
+
+Private provenance and authority dependencies are registered out-of-band with
+the genuine decision object for `decision_context_id` construction. They are not
+enumerable C4Decision properties and cannot be supplied/replaced by the caller.
+
+## 17. Catalog freshness
+
+Only relevant layers gate an answer.
+
+Price / general objective shortlist:
+- commercial/offer authority must be answerable.
+
+Specific-store stock or store-filter shortlist:
+- commercial/offer authority;
+- stock authority.
+
+An unrelated stale layer does not fail the answer.
+
+Relevant `need_reconcile` / `need_full` fails closed.
+
+## 18. Current verified production catalog evidence
+
+At research time:
+- 16,245 active products;
+- 49,257 variants;
+- 8,223 multi-variant products;
+- 1,776 products with multiple priced variants;
+- about 87.5% of variants have option labels;
+- IN_STOCK variants: 8,673;
+- trusted-price IN_STOCK variants: 8,673;
+- current price currency in that cohort: UAH;
+- EXPECTED variants: 468 with no trusted offers;
+- MADE_TO_ORDER variants: 160 with no trusted offers.
+
+These are evidence, not permanent invariants.
+Runtime always rechecks completeness.
+
+## 19. Price-now cohort
+
+Current customer price uses:
+- active variant;
+- commercial_availability == IN_STOCK;
+- trusted offer exists;
+- one currency;
+- relevant commercial authority answerable.
+
+EXPECTED and MADE_TO_ORDER do not enter "price now".
+
+Missing trusted offer in relevant IN_STOCK cohort:
+`HUMAN / PRICE_COHORT_INCOMPLETE`.
+
+Mixed currencies:
+`HUMAN / MIXED_CURRENCY`.
+
+Zero IN_STOCK variants with fresh commercial authority:
+`ANSWER / PRODUCT_NOT_IN_STOCK`.
+
+## 20. Zero price
+
+Canonical schema permits `current_minor >= 0`.
+
+But v1 has no semantic authority proving that zero means "free".
+
+Therefore:
+trusted offer with `current_minor == 0`
+=> `HUMAN / ZERO_PRICE_UNVERIFIED`.
+
+Do not silently remove it from the cohort.
+Do not render "free" without an explicit future authority contract.
+
+## 21. Product-level price summary
+
+Natural customer product/model queries are product-level, not SKU-only.
+
+For unique product:
+1. identify relevant active IN_STOCK variant cohort;
+2. verify offer completeness/currency;
+3. compute min/max trusted current price.
+
+If min == max:
+`ANSWER / PRODUCT_PRICE_SINGLE`.
+
+If min != max:
+`ANSWER / PRODUCT_PRICE_RANGE`.
+
+`VARIANT_PRICE_LIST` remains a supported deterministic C4 family and the
+downstream target for the separately scoped C25 dependent-follow-up routing.
+The C5 v1 range wording frozen in §40.4 does **not** invite/promise that follow-up
+before C25 routing exists. Adding a customer-facing invitation later requires
+the C25 routing prerequisite plus a separately reviewed wording-contract update.
+
+### 21.1 C25 dependent variant-price follow-up
+
+C25 is the one v1 ANSWER-dependent continuation. It is narrower than a general
+conversation-memory feature and does **not** create a second copy of product
+identity in episode stable slots.
+
+The dependent route is available only when all of the following are proven:
+- the same logical episode is still active;
+- the immediately preceding BabyPark public action in that episode reached
+  **normal CONFIRMED before any HUMAN escalation**, is
+  `ANSWER / PRODUCT_PRICE_RANGE` with `TPL_PRODUCT_PRICE_RANGE_V1`, and its
+  authoritative BabyPark public-reply ledger row still proves the same
+  action/source relation;
+- that predecessor action's immutable semantic scope contains exactly one
+  canonical `product.product_id`; this is the historical PRODUCT continuation
+  context. The predecessor's `variant_id`, rendered bytes, labels and dynamic
+  price values are never inherited;
+- if the active episode already has a stable `product_id`, it must equal the
+  predecessor scope product. Its original `derived_through_event_seq` is never
+  rewritten by ANSWER confirmation. If that provenance came from a native
+  STRUCTURED_SUBMISSION, the ordinary §29.7 mutable-selection re-proof still
+  applies before any C25 public send;
+- the dependent turn consists of exactly one supported Website
+  `CUSTOMER_MESSAGE`. Its exact current Chatwoot read must carry one
+  provider-native reply relation to the predecessor message:
+  `content_attributes.in_reply_to == predecessor.confirmed_source_message_id`
+  and
+  `content_attributes.in_reply_to_external_id == predecessor.action_id`.
+  Both values are required. The referenced message must be the same-conversation
+  unique confirmed BabyPark predecessor. Missing/null/malformed/partial,
+  cross-conversation, mismatched or ambiguous reply provenance forbids C25;
+- accepted `event_seq`, numeric Chatwoot message IDs, `created_at`, webhook
+  delivery order and §29.5 deferred-parent metadata are **not** evidence that the
+  customer saw/replied to the range answer. A customer event accepted while the
+  predecessor was SENDING/UNCERTAIN may become eligible later only if the exact
+  native reply relation above independently proves the predecessor;
+- the exact dependent-message text is independently accepted by the frozen
+  `VARIANT_PRICE_LIST` request-language contract below. C25 uses the same
+  ordered-exact-read text semantics as C4: transient exact customer contents are
+  joined with one LF; because the dependent C25 turn contains exactly one
+  customer message, that combined text is exactly that message body. The
+  predecessor `product_id` is supplied only as provenance-bound continuation
+  context; the validator runs regardless of model `intent_hint` and C25 does not
+  introduce a second NLP classifier. Website First Line v1 freezes that family to
+  the union of these two Unicode/ignore-case predicates:
+  - `/(?:точн\p{L}*\s+(?:цен|цін)\p{L}*|(?:цен|цін)\p{L}*)[\s\S]{0,48}(?:вариант|варіант)\p{L}*/iu`;
+  - `/(?:вариант|варіант)\p{L}*[\s\S]{0,48}(?:цен|цін)\p{L}*/iu`.
+  These are the **target C4/C25 matcher contract**. The canonical Stage-0 base
+  intentionally still contains an older merged C4 forward-order implementation
+  whose Russian `цен` branch does not yet include Ukrainian `цін`. This
+  docs-only amendment does not patch that production code. Before any C25
+  implementation/activation, the downstream production stage MUST replace/reuse
+  one shared C4 matcher whose exact behavior equals both predicates above and
+  prove contract/code parity. A separate C25-only matcher is forbidden.
+  Positive controls include both `"Да, покажите точные цены вариантов"` and
+  `"Так, покажіть точні ціни варіантів"`. A future widening/narrowing of these
+  predicates is a reviewed C4/C25 contract change, not an ad-hoc routing rule;
+- the new turn's own C2 resolution contributes no new
+  PRODUCT/CATEGORY/BRAND/STORE/MONEY identity or constraint row. Any such new
+  identity/constraint makes the turn standalone under the ordinary §29.1/Q09
+  rules rather than implicitly inheriting the old product;
+- current C2/C3 certification, predecessor/stable-slot provenance checks and all
+  current Catalog authority/freshness checks pass.
+
+C25 never reconstructs product identity from old customer-facing text, old
+rendered output or dynamic prices. It uses only the immutable product_id from the
+normal-CONFIRMED predecessor action scope, optionally cross-checked against an
+existing unchanged stable product slot. The current variant-price authority is
+reread from CatalogService and the current response locale comes from the new
+customer turn.
+
+A public range action that only gains unique remote-send proof **after** durable
+HUMAN escalation is historical late-send evidence under §29.8, not a normal
+CONFIRMED C25 predecessor.
+
+C25 has no wall-clock continuation window in v1. Its dependency boundary is the
+explicit same-conversation native reply relation above, not inferred chronology.
+At both planning and final S2 authorization BabyPark exact-reads the incoming
+customer message and predecessor and re-proves the same
+`(in_reply_to, in_reply_to_external_id)` pair against the unique normal-CONFIRMED
+range action. Missing, corrupt, mutated or mismatched predecessor action, scope,
+source/reply relation, deferred relation or stable-selection provenance fails
+closed to HUMAN/ordinary standalone routing and authorizes no inherited PRODUCT.
+
+The current C5 range wording still does not advertise C25; any invitation or
+structured continuation affordance remains a separate reviewed wording/transport
+contract change.
+
+## 22. Product resolution
+
+1 credible canonical product => continue.
+
+0 customer-level canonical candidates => HUMAN / IDENTITY_NOT_RESOLVABLE.
+
+Multiple known, bounded customer-level candidates => CLARIFY / AMBIGUOUS_PRODUCT.
+CLARIFY is reserved for a real finite candidate set that can be presented and
+selected; zero candidates must not degrade into an open-ended "tell me more"
+prompt.
+
+The same zero-versus-known-many rule applies to required canonical
+category/brand/store identity resolution: zero canonical candidates => HUMAN /
+IDENTITY_NOT_RESOLVABLE; multiple known bounded candidates => the corresponding
+AMBIGUOUS_* CLARIFY reason. Absence of an optional shortlist anchor remains the
+separate `MISSING_SHORTLIST_ANCHOR` case.
+
+Unresolved catalog identity corruption/collision => HUMAN / CATALOG_IDENTITY_COLLISION.
+Never expose internal identity-collision candidates.
+
+C4 evaluates the **complete certified identity-row multiset**, never one selected
+row in isolation. Before any ANSWER or CLARIFY:
+- any `INVALID_AUTHORITY / CATALOG_IDENTITY_COLLISION` row => HUMAN /
+  CATALOG_IDENTITY_COLLISION;
+- any other `INVALID_AUTHORITY` row => fail before decision creation;
+- any PRODUCT/CATEGORY/BRAND/STORE `NOT_FOUND` row forbids ANSWER and CLARIFY
+  for the whole turn and yields HUMAN / IDENTITY_NOT_RESOLVABLE unless a more
+  specific C3 latch reason wins;
+- `AMBIGUOUS_*` may be considered only when no identity row is NOT_FOUND or
+  INVALID_AUTHORITY;
+- exactly one ambiguous identity kind may use the corresponding CLARIFY path;
+- more than one simultaneously ambiguous required identity kind => HUMAN /
+  MULTIPLE_IDENTITY_AMBIGUITIES.
+
+Thus `NOT_FOUND + RESOLVED` never becomes ANSWER, `NOT_FOUND + AMBIGUOUS` never
+becomes CLARIFY, and multiple NOT_FOUND rows never degrade to
+`MISSING_SHORTLIST_ANCHOR`.
+
+After INVALID_AUTHORITY and NOT_FOUND have been handled, C4 also reduces
+**same-kind singular-slot cardinality** before request-family selection or any
+dynamic authority read. v1 singular resolver kinds are PRODUCT, CATEGORY,
+BRAND, STORE and MONEY. Multiple rows of one kind are admissible only when every
+row is `RESOLVED` and all rows prove the same exact semantic slot value; those
+rows collapse to one value while their source-span provenance remains retained.
+
+Semantic equality is exact and kind-specific:
+- PRODUCT: `(canonical_product_id, canonical_variant_id)`; `null` variant and an
+  exact variant are different values;
+- CATEGORY: `(canonical_category_id, match_mode)`;
+- BRAND: `canonical_brand_id`;
+- STORE: `canonical_store_id`;
+- MONEY: `(currency, minor_units)`.
+
+If one singular kind has two different RESOLVED values, any mix of RESOLVED and
+AMBIGUOUS rows, or more than one AMBIGUOUS row, C4 returns HUMAN /
+UNSUPPORTED_CONSTRAINT before authority. It never chooses the first row,
+intersects/unions values, invents min/max roles, or presents candidates from an
+arbitrarily selected row. This is a v1 fail-closed boundary, not a claim that
+multi-product/multi-category/multi-money requests are inherently unsupported in
+future versions.
+
+## 23. Variant labels
+
+Raw Drupal option labels may be shown only as sanitized factual labels.
+Do not infer universal COLOR/SIZE/MATERIAL semantics.
+
+**Review trigger (data-based, not phase-based).**
+`PRODUCT_ATTRIBUTE_NOT_AUTHORITATIVE` routing, including C30/C31, must be
+explicitly re-certified — never silently reinterpreted — the first time the
+current production-authoritative Catalog generation contains at least one
+canonical `product_attributes` row referencing `attribute_defs`, regardless of
+source provider. This trigger is a required checklist item of the next
+source-provider cutover review, not an independently schedulable task. Until an
+explicit re-certification change is reviewed and merged into the frozen base
+docs, HUMAN routing stays in force even when richer canonical attribute data is
+technically available. Populated data alone never changes frozen policy.
+
+C4 treats reviewed product-attribute request language as a **pre-authority
+terminal family outcome** in v1. After the request-family match set has been
+reduced to exactly one attribute-query family, C4 returns HUMAN /
+PRODUCT_ATTRIBUTE_NOT_AUTHORITATIVE without reading product attribute values or
+using free description text. C30/C31 and the populated-data C31a fixture use the
+same terminal mapping until an explicit re-certification changes this frozen
+contract.
+
+`displayable_variant_label()` minimum:
+- non-empty;
+- valid text;
+- bounded length;
+- whitespace normalization;
+- no control characters;
+- no URL/blob/debug-like value;
+- no raw internal ID.
+
+Completeness is explicit.
+
+If 7 relevant variants but only 5 safe labels:
+do not imply that only 5 variants exist.
+
+## 24. "Available now" variant cohort
+
+Question like:
+"Какие варианты сейчас есть?"
+
+uses:
+- active;
+- IN_STOCK.
+
+EXPECTED and MADE_TO_ORDER are not "available now".
+
+## 25. Variant price list
+
+Explicit contract:
+`ANSWER / VARIANT_PRICE_LIST`.
+
+Cohort:
+- active;
+- IN_STOCK;
+- trusted offer;
+- safe currency;
+- commercial layer answerable.
+
+Stable order:
+`current_minor ASC, variant_id ASC`.
+
+Display count and label completeness are explicit.
+
+## 26. Objective shortlist
+
+Allowed as factual filtering, not recommendation.
+
+Examples:
+- "Прогулочные коляски до 20 000 грн"
+- "Покажи Cybex до 30 000"
+
+No:
+- popularity;
+- margin;
+- conversion;
+- "best";
+- recommendation ranker.
+
+## 27. Closed-world resolvers
+
+LLM never chooses authority IDs.
+
+It may identify raw spans/phrases.
+Deterministic reviewed resolvers produce canonical IDs.
+
+### Category
+Reviewed vocabulary returns 0/1/many category candidates.
+
+Every vocabulary entry includes explicit:
+- canonical_category_id;
+- match_mode: NODE_ONLY | INCLUDE_DESCENDANTS.
+
+No default match mode.
+
+### Brand
+Same 0/1/many rule.
+LLM never emits brand_id as authority.
+
+### Money
+Deterministic parser maps approved forms such as:
+- 20 000 грн
+- 20 тысяч
+- 20 тисяч
+- 20к
+to integer minor units.
+
+Ambiguous => CLARIFY / AMBIGUOUS_MONEY.
+
+### Store
+Natural store phrase must resolve to exactly one canonical active store.
+Failure never silently removes store constraint.
+
+Vocabulary is durable reviewed authority and has revision IDs.
+
+## 28. ObjectiveConstraintLatch
+
+Protect not only extracted slots but constraints the model failed to extract.
+
+Latch runs after C2c routing and before C4 decision.
+
+For the current accepted semantic basis, customer text is exact-read from Chatwoot
+and held only transiently together with C2-certified consumed spans.
+
+"Full current bot episode" does not require BabyPark to persist or later reconstruct
+the raw/normalized episode body. Episode-wide constraint safety is the union of:
+- previously committed typed constraint latches for the active episode; and
+- the current transient exact-read latch evaluation.
+
+A non-CLEAR latch blocks ANSWER and CLARIFY for that processing attempt. C4 maps
+the latch to HUMAN. Therefore an unsupported constraint discovered on turn 1
+normally prevents an AI clarification on turn 1.
+
+Cross-turn crash/concurrency safety is durable but body-free. C3 maintains a
+**set of typed unsupported latch classes** for the active episode. For each
+distinct class BabyPark may persist only:
+- the latch class;
+- the accepted source event sequence that first proved that class;
+- ordinary episode version/lifecycle metadata.
+
+`CLEAR` is never persisted beside unsupported classes. It means only that the
+effective latch set is empty.
+
+It MUST NOT persist the raw/normalized phrase, leftover text, tokens or a content
+digest merely to remember the constraint.
+
+Unsupported latch classes are monotonic for the active episode:
+- later turns may add a newly proven class;
+- repeated proof of the same class is idempotent;
+- later customer text cannot remove a class;
+- all proven classes remain available to trace/handoff even though C4 emits one
+  primary HUMAN reason.
+
+### 28.1 Pending-HUMAN routing fence
+
+C2c normally runs before C3. Therefore crash/concurrency recovery needs one
+cross-stage fence: if an active episode already has a non-empty unsupported latch
+set and HUMAN/native handoff has not terminalized that episode, a later customer
+event MUST NOT cause C2c route application to close/replace it as a standalone
+new AI episode.
+
+The later event may trigger reprocessing/recovery, but the latched episode remains
+the semantic owner until the durable HUMAN continuation reaches one of the §43
+terminal ownership proofs:
+- `human_takeover`; or
+- `ownership_lost`.
+
+No ANSWER or CLARIFY may be prepared from that later event while HUMAN
+continuation is live. Both terminal reasons permanently end BabyPark autonomous
+AI ownership for that episode; neither permits the old latch/episode to revive.
+
+This is not a new decision class and does not make C3 an ownership machine.
+Chatwoot still owns bot/human assignment; BabyPark only prevents its own semantic
+episode replacement while a previously proven HUMAN blocker is pending.
+
+This is safe for v1 because HUMAN ends the AI episode and automatic bot re-entry
+after either terminal ownership outcome is out of scope.
+
+### 28.2 C4 primary HUMAN reason
+
+C3 retains the complete latch set and never chooses the final public reason.
+C4 preserves that set and selects one primary HUMAN reason using this fixed
+order:
+
+1. `RETURN_CASE` -> `RETURN_CASE_SPECIFIC`
+2. `ORDER_SPECIFIC` -> `ORDER_SPECIFIC`
+3. `UNSUPPORTED_COMPATIBILITY` -> `COMPATIBILITY_NOT_AUTHORITATIVE`
+4. `SUBJECTIVE_RECOMMENDATION` -> `SUBJECTIVE_RECOMMENDATION`
+5. `UNSUPPORTED_EXCLUSION` -> `UNSUPPORTED_EXCLUSION`
+6. `UNSUPPORTED_AGE_SUITABILITY` -> `UNSUPPORTED_CONSTRAINT`
+7. any certified PRODUCT/CATEGORY/BRAND/STORE `NOT_FOUND` identity row ->
+   `IDENTITY_NOT_RESOLVABLE`
+8. `OTHER_UNCONSUMED_CONSTRAINT` -> `UNSUPPORTED_CONSTRAINT`
+
+A contentful zero-candidate phrase is **not** required to make C3 CLEAR.
+For example, an unknown model name may legitimately leave
+`OTHER_UNCONSUMED_CONSTRAINT`; the latch remains intact while the certified
+NOT_FOUND identity row selects `IDENTITY_NOT_RESOLVABLE` above the generic
+OTHER fallback. A specific latch such as `UNSUPPORTED_EXCLUSION` still outranks
+the identity reason. No latch is deleted or rewritten to obtain a preferred
+reason.
+
+### 28.3 Sealed transient DecisionBasis
+
+C4 kernel has one admissible input capability: a transient opaque
+`DecisionBasis` token. It MUST NOT accept caller-supplied C3 proofs, resolution
+rows, exact-read arrays, request-family results or authority fact DTOs as
+independent kernel arguments.
+
+The decision-authority composition seam creates the token in one invocation. In
+that invocation it must:
+1. receive the current certified routing projection and exact Chatwoot reads;
+2. consume the exact certified C2 resolution proven against those reads;
+3. call `evaluateObjectiveConstraintLatch` itself and retain the exact genuine
+   C3 result;
+4. run **all** reviewed deterministic request-family validators, recording the
+   complete match set;
+5. reduce the complete certified identity-row multiset under §22;
+6. derive the complete **pre-authority clarification set** for the one matched
+   family before any domain-authority read. This set includes required unresolved
+   PRODUCT/CATEGORY/BRAND/STORE identity ambiguity, AMBIGUOUS_MONEY and
+   MISSING_SHORTLIST_ANCHOR. The exact set is retained and is never reduced by
+   choosing a slot in source-code order;
+7. for any finite identity clarification set, perform only the exact bounded
+   **candidate-presentation reads** allowed by §16.2/§28.4: they may decorate the
+   already-certified candidate IDs for public labels but may not add/remove/
+   replace candidates or determine business facts. Every Catalog read must return
+   the same `generation_id` as the certified C2 `catalog_generation_id`; drift,
+   missing exact-locale presentation or unsafe/indistinguishable labels becomes a
+   terminal identity-representability HUMAN before clarification budget;
+8. validate the current clarification budget as exactly integer 0 or 1 and
+   reduce all local gates under the total precedence in §28.4, including C3,
+   identity integrity/NOT_FOUND, same-kind singular-slot cardinality,
+   request-family cardinality, all frozen single-family pre-authority terminals
+   (attribute query and uncertified delivery policy), response-locale allowlist,
+   candidate-label representability and the clarification set. A local terminal HUMAN or
+   CLARIFY outcome is retained in the private snapshot and **no family authority
+   read occurs**;
+9. only when §28.4 produces no pre-authority terminal outcome and every required
+   canonical ID/value is resolved, perform the current authority read required
+   for that family. Never choose an arbitrary candidate, omit an unresolved
+   filter/value, widen the request, or read dynamic authority after a prior
+   terminal outcome merely to choose a different reason;
+10. validate the returned authority outcome against the exact closed
+   `(authority family, status, reason)` union emitted by that authority
+   contract. Every emitted tuple has one explicit mapping or an explicit
+   intentional rejection. Wildcard/default mappings such as "any allowlisted
+   UNANSWERABLE" are forbidden; an unknown/new tuple fails before decision
+   creation until the frozen contract is amended;
+11. derive an allowlisted immutable typed private snapshot and return only an
+    opaque frozen token.
+
+Private basis metadata is held only in process in WeakMap/WeakSet-equivalent
+state. It may retain source object references for provenance, but the kernel
+uses only the private immutable typed snapshot. The token and metadata are never
+durable and contain no raw/normalized customer body, residue, email, phone,
+attachment URL or content-derived digest.
+
+A missing, serialized, `structuredClone`d, reconstructed or otherwise
+unregistered token fails before decision creation. The token is single-use:
+after one decision attempt, reuse fails. Recovery/retry or a later customer turn
+must rebuild a new basis from exact reads and current authority.
+
+Because the kernel receives no independent proof/fact arguments, callers cannot
+mix a C3 result from basis A, a resolution from basis B or a fact DTO for another
+product. Certification is the capability boundary, not structural equality.
+
+For any certified identity row with status `NOT_FOUND`, the exact certified C2
+resolution captured in DecisionBasis is the zero-candidate evidence. No second
+parallel zero-candidate proof object exists.
+
+### 28.4 Total terminal precedence and authority short-circuit
+
+C4 has one total precedence across independent gates. This order chooses the one
+machine reason and determines whether dynamic authority may be read. All local
+pure validators/reducers may collect their evidence, but a lower phase never
+replaces a terminal outcome from a higher phase.
+
+0. **Invalid/certification state:** missing/forged basis inputs, invalid
+   `clarification_prompts_sent`, unknown/non-allowlisted enum/status/reason or
+   other unclassified typed state => reject before decision creation. No dynamic
+   authority read.
+1. **Identity integrity:** if any identity row is `INVALID_AUTHORITY /
+   CATALOG_IDENTITY_COLLISION`, HUMAN / CATALOG_IDENTITY_COLLISION wins. If no
+   collision exists but any other `INVALID_AUTHORITY` row exists, reject. A
+   collision outranks semantic C3 latch reasons; the complete latch set remains
+   retained for trace/handoff.
+2. **C3 + identity NOT_FOUND:** if phase 1 did not terminate, apply §28.2 exactly
+   across the complete C3 latch set plus any certified identity `NOT_FOUND` row.
+   Any resulting HUMAN reason terminates the decision before authority.
+3. **Singular-slot cardinality:** reduce same-kind PRODUCT/CATEGORY/BRAND/STORE/
+   MONEY rows under §22. Equivalent all-RESOLVED rows collapse; any different
+   RESOLVED values or any multi-row set containing AMBIGUOUS => HUMAN /
+   UNSUPPORTED_CONSTRAINT. No authority read.
+4. **Request-family cardinality:** only if no earlier terminal outcome exists,
+   zero matches rejects, more than one match => HUMAN /
+   MULTIPLE_REQUEST_FAMILIES_MATCHED, exactly one match continues.
+5. **Single-family pre-authority terminal:** attribute-query family => HUMAN /
+   PRODUCT_ATTRIBUTE_NOT_AUTHORITATIVE; delivery-policy family => HUMAN /
+   COMMERCE_POLICY_NOT_AUTHORITATIVE until an exact public delivery schema is
+   separately frozen. Future pre-authority terminal families require an explicit
+   frozen mapping; there is no default.
+6. **Response locale:** current certified C2 language must be exactly `uk` or
+   `ru`; otherwise HUMAN / UNSUPPORTED_RESPONSE_LANGUAGE. No domain-authority
+   read.
+7. **Finite identity candidate presentation/representability:** only for a
+   clarification requirement that presents PRODUCT/CATEGORY/BRAND/STORE
+   candidates. PRODUCT labels come from exact `getProduct({productId})`
+   `localized[response_locale].title`; CATEGORY labels come from exact
+   `listCategories({language:response_locale,categoryIds:[...]}).categories[*].names[response_locale]`.
+   C4 ignores fallback `candidate.title`, fallback category `name`, and
+   cross-locale presentation as public label evidence. Every such Catalog read
+   must report the exact certified C2 `catalog_generation_id`; generation drift,
+   missing exact-locale label, unsafe label or duplicate-equivalent labels =>
+   HUMAN / IDENTITY_NOT_RESOLVABLE. BRAND/STORE use their already-certified
+   canonical factual labels and obey the same safety/distinguishability rule.
+   These reads decorate the fixed candidate set only; they never change identity
+   or business authority.
+8. **Clarification set/budget:** only after phase 7 succeeds, apply §29 to the
+   complete pre-authority clarification set. Budget 1 + any non-empty set =>
+   HUMAN / CLARIFY_EXHAUSTED; budget 0 + one requirement => corresponding
+   CLARIFY; budget 0 + >1 identity-only => HUMAN /
+   MULTIPLE_IDENTITY_AMBIGUITIES; budget 0 + any other >1 => HUMAN /
+   MULTIPLE_CLARIFICATION_REQUIREMENTS.
+9. **Current authority:** only after phases 0-8 produce no terminal outcome may
+   C4 perform the family authority read. Exact ANSWER/HUMAN tuples map under the
+   closed family table. If the exact store-stock read returns `CLARIFY /
+   AMBIGUOUS_VARIANT`, C4 validates all candidate variant labels for safety and
+   pairwise distinguishability **before** applying the 0/1 budget. Label failure
+   => HUMAN / PRODUCT_VARIANT_NOT_RESOLVABLE at budget 0 or 1; only a
+   representable candidate set uses budget 0 => CLARIFY / AMBIGUOUS_VARIANT or
+   budget 1 => HUMAN / CLARIFY_EXHAUSTED.
+
+Therefore a C3 HUMAN, identity-integrity HUMAN, singular-slot-cardinality
+HUMAN, multi-family HUMAN, attribute-query HUMAN, unsupported-response-language
+HUMAN or pre-authority CLARIFY/HUMAN can never be replaced by a later
+stale/conflicting authority result, because that authority call is not made. Cross-product property tests use an authority
+spy to prove zero calls for every pre-authority terminal phase.
+
+Supported resolvers consume:
+- product;
+- category;
+- brand;
+- money;
+- store.
+
+Latch detects at minimum:
+- negation/exclusion;
+- subjective/recommendation language;
+- age/suitability markers;
+- compatibility markers;
+- order-specific markers;
+- return-case markers;
+- other unconsumed contentful constraints.
+
+Examples:
+"до 20 000, но не Cybex"
+=> HUMAN / UNSUPPORTED_EXCLUSION.
+
+"для ребёнка 6 месяцев"
+=> HUMAN / UNSUPPORTED_CONSTRAINT.
+
+"какая лучше"
+=> HUMAN / SUBJECTIVE_RECOMMENDATION.
+
+False-positive HUMAN is acceptable.
+Silent constraint removal is not.
+
+Unknown contentful residue after subtracting:
+- C2-certified resolver spans; and
+- explicitly reviewed **supported-v1 request language** plus glue/social language
+is itself a latch: `OTHER_UNCONSUMED_CONSTRAINT`.
+
+Supported request language is a bounded deterministic validator, not free-form
+LLM permission. The model `intent_hint` may prioritize validator order, but it
+MUST NOT be the sole gate for whether a reviewed validator runs and MUST NOT
+itself mark arbitrary text as consumed.
+
+Every frozen supported-only v1 vector must be recognized by the corresponding
+deterministic request-language validator independently of model hint quality.
+
+All reviewed request-family validators run for the turn; source-code order and
+`intent_hint` never select the winner. If C3/identity gates have not already
+forced HUMAN:
+- zero matching families => fail before decision creation;
+- exactly one matching family => continue;
+- more than one matching family => HUMAN /
+  MULTIPLE_REQUEST_FAMILIES_MATCHED.
+
+A multi-family match is one known fail-closed state, not an implicit priority
+between otherwise valid domains.
+A validator may accept only reviewed language for that v1 intent family. If all
+contentful text is accounted for by certified spans plus reviewed request/glue/
+social validators and no unsupported marker is present, the effective latch set
+MUST be empty (`CLEAR`).
+
+Therefore ordinary supported questions such as payment policy, general return
+policy or store hours do not become HUMAN merely because their request words are
+not product/category/brand/money/store spans. Conversely, extra unsupported
+clauses remain visible residue.
+
+Uncertainty never becomes CLEAR merely because a known marker classifier or
+supported-intent validator did not recognize the residue.
+
+## 29. Clarification episode
+
+Episode state may persist **stable identifiers and customer selections only**.
+
+It stores:
+- normalized stable slots such as product_id/category_id/brand_id/store_id;
+- source_message_ids[];
+- presented candidates;
+- requested missing slot;
+- `clarification_prompts_sent`.
+
+It must **not** persist dynamic factual authority from an earlier turn as truth for a later answer.
+
+Specifically, never reuse an earlier-turn cached:
+- price;
+- offer completeness;
+- commercial availability;
+- stock quantity;
+- catalog freshness state;
+- `need_reconcile` / `need_full`;
+- resolved OperationalFact effect;
+- resolved CommercePolicy effect;
+- operational `now` evaluation.
+
+Before every public `ANSWER`, and before any `CLARIFY` that displays dynamic customer-facing catalog/operational facts, rerun the relevant authority reads against state current for that specific response.
+
+For CatalogFact this means:
+- reopen/read the currently accepted catalog generation;
+- revalidate the preserved identifiers against that generation;
+- reread relevant commercial/offer/stock layers;
+- re-evaluate freshness and completeness.
+
+For OperationalFact / CommercePolicy this means:
+- reread current published authority;
+- evaluate the current `now`;
+- run the resolver again.
+
+A preserved identifier that no longer resolves safely in current authority fails closed rather than reviving stale facts.
+
+The final `decision_context_id` is built from the authority actually reread for the final response, not from the earlier clarification turn.
+
+That current authority outcome is captured inside the same sealed DecisionBasis
+that C4 consumes. The kernel never accepts an authority DTO separately. Outcome
+mapping is keyed by the exact tuple `(authority family, status, reason)`, not by
+a global reason-string switch. A fact-layer `NOT_FOUND / PRODUCT_NOT_FOUND`
+therefore does not mean identity zero-candidates and does not mean
+`PRODUCT_NOT_IN_STOCK`; unless explicitly frozen for that authority family it
+fails before decision creation. A previous-turn DTO, an outcome for another
+canonical ID, or an outcome from another generation/revision cannot be attached
+to the current basis.
+
+Clarification does not restart intent extraction from zero.
+
+When the system presents candidates, the next customer message may only:
+- choose one of the presented candidates;
+- or fill the explicitly requested missing slot.
+
+For v1 price-ceiling clarification, the requested slot is concrete:
+`max_price_minor`. A successful MONEY reply supplies one exact UAH amount and
+commits `max_price_minor` plus `currency=UAH`.
+
+The historical generic requested slot `money` is not semantically sufficient
+because it loses min/max direction across the clarification boundary. v3 may read
+legacy persisted `money` for migration compatibility, but new CLARIFY actions
+MUST NOT create it and a pending legacy `money` reservation fails closed rather
+than guessing direction.
+
+`min_price_minor` remains an allowed stable customer constraint, but Slice C v1
+does not invent a lower-bound money clarification without a frozen requirement.
+
+Previously resolved stable identifier slots remain fixed unless the user explicitly changes them.
+
+Clarification counting is prompt-based, not attempt/round-based.
+
+Rules:
+- the only valid persisted values are integer `0` and integer `1`; any
+  missing/null/other value fails before decision creation;
+- initial episode: `clarification_prompts_sent=0`;
+- `0` is the **only** state in which any clarify-capable outcome may emit
+  `CLARIFY`;
+- after that prompt is emitted: `clarification_prompts_sent=1`;
+- a successful selection may allow a later ANSWER after current-authority
+  rereads, but it never resets the budget;
+- finite identity candidate sets must first pass the §28.4 presentation/label
+  representability gate; an unrepresentable PRODUCT/CATEGORY/BRAND/STORE set
+  yields HUMAN / IDENTITY_NOT_RESOLVABLE, and an unrepresentable VARIANT set
+  yields HUMAN / PRODUCT_VARIANT_NOT_RESOLVABLE, at budget `0` or `1`;
+- only **after** every required finite candidate set is representable, budget `1`
+  plus any non-empty clarification requirement set — one requirement or many,
+  pre-authority or post-authority AMBIGUOUS_VARIANT — yields HUMAN /
+  CLARIFY_EXHAUSTED before any lower clarification-cardinality HUMAN reason;
+- when the budget is `0`, exactly one representable finite requirement may CLARIFY; more than
+  one identity-only requirement yields HUMAN / MULTIPLE_IDENTITY_AMBIGUITIES,
+  while any other set of more than one requirement yields HUMAN /
+  MULTIPLE_CLARIFICATION_REQUIREMENTS;
+- no path emits a second CLARIFY and no path chooses one requirement from a
+  multi-requirement set by code order.
+
+Outcome:
+
+```
+HUMAN / CLARIFY_EXHAUSTED
+```
+
+Thus there is exactly one assistant clarification prompt per episode.
+
+### 29.0.1 Native clarification submission
+
+A successful response to the single CLARIFY prompt is not required to create a
+new Chatwoot customer message.
+
+Chatwoot/provider transport may represent the customer choice in either form:
+
+1. **new incoming message** — the provider/Chatwoot channel creates a newer
+   customer message carrying the reply; or
+2. **structured submission** — the provider-native control updates the already
+   confirmed CLARIFY message with a structured submitted value.
+
+Chatwoot v4.18 Web Widget `input_select` is the normative v1 example of the
+second form: the widget PATCHes the existing outgoing CLARIFY message,
+`content_attributes.submitted_values` changes, and Chatwoot emits
+`message_updated`. No new customer message ID exists.
+
+A structured submission is a work/selection signal, **not** a second
+Conversation Event Ledger message event. BabyPark MUST NOT:
+- append a second ordinary ledger row with the same Chatwoot message ID;
+- synthesize a fake customer message ID;
+- treat a `message_updated` delivery as proof merely because it exists.
+
+Before accepting a structured clarification selection, BabyPark must:
+- authenticate and deduplicate the Chatwoot delivery;
+- exact-read the referenced Chatwoot message;
+- prove that it is the exact confirmed BabyPark CLARIFY action for the current
+  conversation/episode;
+- prove the expected structured content type;
+- accept exactly one submitted choice under the confirmed response contract;
+- map that choice to exactly one canonical candidate/allowed requested value
+  reserved by the confirmed CLARIFY action;
+- fail closed on unknown, multiple, stale, mismatched or unconfirmed values.
+
+On success, only the canonical stable customer selection/slot and ordinary
+episode version/lifecycle metadata may become durable. Raw presentation labels,
+raw customer bodies and provider callback payloads are not durable authority.
+
+Because the transport created no new customer message, a structured submission
+does not append a new `source_message_id` to the episode solely to simulate a
+turn. The confirmed CLARIFY action plus authenticated exact-read submission is
+the provenance for that selection.
+
+Repeated delivery of the same structured submission is idempotent. A conflicting
+or changed submission after semantic commit fails closed; it never silently
+rewrites an already accepted stable choice.
+
+Where Chatwoot/provider transport collapses a native selection to ordinary
+incoming text (including current Telegram callback content and WhatsApp
+button/list title behavior), v1 may accept an **exact-message selection** only
+when deterministic resolution proves one reserved candidate/requested value and
+its single certified span consumes the whole customer message except leading
+and trailing Unicode whitespace. This is a narrow deterministic fallback, not a
+general NLP/negation classifier.
+
+An unresolved catalog identity collision is:
+
+```
+HUMAN / CATALOG_IDENTITY_COLLISION
+```
+
+and internal collision candidates are not exposed to the customer.
+
+## 29.1 Logical episode boundary
+
+BabyPark logical episode state is independent of the Chatwoot conversation
+status machine. `pending`, `open` and `resolved` are transport/ownership state;
+they do not define semantic episode identity.
+
+A new actionable customer message starts a new episode when there is no active
+episode.
+
+An existing episode is continued only when the new customer response is proven
+to be semantically dependent on that episode. A response may be a real newer
+customer message or a verified native structured submission under §29.0.1, for
+example:
+- selecting one of the candidates BabyPark presented;
+- filling the explicitly requested missing slot;
+- invoking an explicitly supported deterministic follow-up that relies on
+  preserved stable slots, such as C25 `VARIANT_PRICE_LIST`.
+
+A successful clarification selection does not append a second independent
+identity row to the old ambiguity. The continuation seam performs one
+**provenance-bound clarification discharge reducer** before ordinary C4 identity/
+family reduction:
+1. locate the episode's unique CONFIRMED CLARIFY action that owns the historical
+   one-prompt reservation; its `basis_event_seqs`/descriptor define the original
+   request-family semantics;
+2. reread/rebuild that original covered customer basis under current C2/C3 rules;
+3. require durable stable selection state committed by the already proven
+   selection path and matching the confirmed action's reserved slot/candidate.
+   This includes the concrete money slot `max_price_minor` with proven
+   `{currency:'UAH',minor_units}` and, for CATEGORY, the atomic pair
+   `(category_id,category_match_mode)`;
+4. for CATEGORY, re-prove according to the selection origin before discharge:
+   - **presented-candidate / structured submission:** rerun the current category
+     resolver on the original ambiguity phrase/basis that produced the confirmed
+     CLARIFY, not on the ordinal token. The result may correctly remain
+     `AMBIGUOUS`; success requires the privately reserved selected
+     `{category_id,match_mode}` tuple to be an exact member of the current
+     candidate set. Extra current candidates do not erase the customer's proven
+     selection. Absence of the tuple, INVALID/NOT_FOUND authority, or a same-ID
+     mode replacement such as `NODE_ONLY -> INCLUDE_DESCENDANTS` fails HUMAN /
+     IDENTITY_NOT_RESOLVABLE;
+   - **requested-slot free-text fill:** rerun the category resolver on that exact
+     follow-up phrase and require one current `RESOLVED` tuple exactly equal to
+     the atomically committed `(category_id,category_match_mode)`. Current
+     ambiguity/NOT_FOUND/INVALID or mode drift fails HUMAN /
+     IDENTITY_NOT_RESOLVABLE.
+   The structured ordinal itself is never treated as a vocabulary phrase and no
+   path guesses descendant scope;
+5. replace **exactly that one unresolved/ambiguous slot** in the original
+   continuation view with the proven stable canonical selection before
+   singular-cardinality, ambiguity and family-match reduction. CATEGORY supplies
+   both `category_id` and `category_match_mode` to the original family. For MONEY
+   the historical AMBIGUOUS_MONEY row is discharged and the selected upper-bound
+   `(currency,max_price_minor)` is supplied to the original objective shortlist
+   family; neither old ambiguity remains alongside its replacement;
+6. preserve every unrelated original stable constraint/family input (for example
+   the original category/brand anchor while resolving C40 money, or the original
+   price ceiling while resolving C43 category) and then reread all current dynamic
+   authority.
+
+The reducer never globally deletes AMBIGUOUS rows, never guesses which old row
+was answered and never lets a later standalone query inherit this context. If
+there is no unique confirmed CLARIFY provenance, slot mismatch, value mismatch,
+multiple possible discharge targets, or the rebuilt original family no longer
+matches the reservation semantics, fail closed to HUMAN/reject rather than
+renewing ambiguity. After successful discharge the persisted prompt budget
+remains `1`; it is not reset.
+
+A standalone new query closes/replaces the prior logical episode and starts a
+new one. Its `clarification_prompts_sent` starts at zero and no old stable slot
+is inherited implicitly.
+
+A logical episode closes as `human_takeover` only after the v0.8 §43
+handoff protocol proves current human/open-queue ownership or proves the
+BabyPark-native handoff completed. If exact Chatwoot authority instead proves
+that the configured AgentBot already lost ownership to a resolved/snoozed/
+other-bot or otherwise non-human/non-AI terminal state, BabyPark performs no
+handoff write and closes the episode as `ownership_lost`. Unknown/unavailable
+ownership does not close the episode and remains durably retryable.
+
+A closed episode is never revived merely because Chatwoot later changes from
+`resolved` to `pending` or otherwise returns ownership to the AgentBot. A later
+customer message must satisfy the same new-episode/dependent-follow-up rules.
+
+Dynamic authority is never episode state. Preserved identifiers only constrain
+a later reread of current authority.
+
+ANSWER confirmation never rewrites stable customer-selection provenance merely
+to make a later continuation easier. In particular, C25 does **not** promote or
+rewrite `product_id` in `episode_slots` when a PRODUCT_PRICE_RANGE answer is
+confirmed.
+
+The normal-CONFIRMED public action itself is durable semantic provenance: its
+immutable semantic scope and authoritative action/source relation may provide the
+historical PRODUCT context allowed by §21.1. Any stable slot that already exists
+keeps the original `derived_through_event_seq` of the customer selection that
+created it, including a confirmed CLARIFY event for STRUCTURED_SUBMISSION. This
+preserves the mandatory mutable-selection re-proof in §29.7/Q10c/U07.
+
+A standalone new query still closes/replaces the prior episode and cannot inherit
+either predecessor-action context or old stable slots implicitly.
+
+## 29.2 Non-actionable acknowledgement
+
+`NON_ACTIONABLE_ACK` is an internal lifecycle disposition, not a fourth AI
+decision class. The public decision taxonomy remains exactly:
+`ANSWER / CLARIFY / HUMAN`.
+
+It is allowed only after one **deterministic exact-text ACK proof**. The proof is
+independent of the extraction producer and model `intent_hint`; C3 `CLEAR` by
+itself is not ACK authorization.
+
+The v1 proof requires all of:
+- the complete open turn contains exactly one accepted supported public incoming
+  `CUSTOMER_MESSAGE` from the contact and no attachment/unknown content shape;
+- there is no pending CLARIFY reservation, live HUMAN continuation or unresolved
+  constraint latch;
+- exact-read the current Chatwoot message transiently, NFC-normalize its text,
+  collapse Unicode whitespace runs to one ASCII space and trim;
+- the complete normalized text matches exactly
+  `/^(?:спасибо|дякую)(?:\s*\p{P})*$/iu`.
+
+The closed predicate deliberately supports only the standalone Russian/Ukrainian
+thank-you forms plus optional Unicode punctuation. It does not accept `ок`,
+`окей`, `добре`, emoji, a second customer message, or any extra word in v1.
+Those inputs continue ordinary C2/C3/C4 processing and therefore fail closed
+rather than becoming permanent silence. Widening the ACK predicate is a reviewed
+contract change.
+
+The exact-text proof is **non-authorizing** until one owning-store stale/no-newer
+admission succeeds. Initial ACK admission is one `BEGIN IMMEDIATE` transition
+over the same certified routing basis that proved the open turn. It MUST
+atomically recheck:
+- exact expected `stream_revision` and `through_event_seq`;
+- exact expected `routing_ledger_fingerprint`;
+- the same active episode/version when an active episode exists;
+- no live public action, durable HUMAN continuation, pending CLARIFY reservation
+  or unresolved constraint latch;
+- no different semantic-origin fence already owns the same
+  `(stream_id,stream_revision)`.
+
+Only if every predicate still matches may that same transaction insert the
+immutable `NON_ACTIONABLE_ACK` origin and close the current logical episode, if
+one exists, as `non_actionable_ack`. A concurrent/newly accepted event, changed
+routing fingerprint, changed episode/version or newly appearing owner makes the
+proof stale: commit zero ACK state and rebuild/continue ordinary fail-closed
+routing. A duplicate/restart that finds the **same already committed ACK origin**
+reuses it idempotently; it does not rerun the text proof into a new outcome.
+
+For `NON_ACTIONABLE_ACK`:
+- emit no public AI message;
+- do not hand off;
+- do not call Chatwoot resolve;
+- atomically commit a permanent same-`stream_revision` semantic outcome fence
+  `NON_ACTIONABLE_ACK` in `episode.sqlite` before disposable work may finish;
+- close the logical BabyPark episode in that same owning-store semantic commit.
+
+That outcome fence is replay authority for the accepted turn. Loss/recreation of
+`copilot.sqlite`, duplicate webhook delivery, process restart or a later
+nondeterministic extraction attempt at the same `stream_revision` must observe
+and reuse `NON_ACTIONABLE_ACK`; the same revision can never later become
+ANSWER, CLARIFY or HUMAN.
+
+A social prefix does not suppress actionable content. For example,
+"Спасибо, а сколько стоит доставка?" does not match the exact ACK predicate and
+remains an ordinary actionable request.
+
+If BabyPark already emitted its one CLARIFY prompt, even exact "спасибо" does
+not enter the ACK path because a pending clarification is an explicit ACK-proof
+disqualifier. If it does not select an offered candidate or validly fill the
+requested slot, the frozen outcome remains `HUMAN / CLARIFY_EXHAUSTED`.
+
+If the deterministic ACK proof does not pass exactly, do not classify the turn as
+`NON_ACTIONABLE_ACK`; continue ordinary extraction/latch/decision processing.
+No model score, `intent_hint`, heuristic sentiment/social classifier or C3
+`CLEAR` may substitute for that proof.
+
+Automatic Chatwoot pending-conversation cleanup/resolve is not part of Slice C
+v1. No causal "which message reopened the conversation" detector is required by
+the v1 critical path.
+
+## 29.3 C1 persisted episode state (historical pre-production evidence)
+
+C1 uses a separate `episode.sqlite`. It is not a table in `copilot.sqlite`.
+
+`copilot.sqlite` remains webhook delivery/job execution and idempotency state.
+`episode.sqlite` is restart-durable logical conversation state needed across
+dependent customer turns.
+
+C1 persists only:
+- one active episode per `conversation_id`;
+- ordered `source_message_ids`;
+- a non-cascading per-conversation `max_message_id` watermark that prevents an
+  already-consumed or older Chatwoot message from starting a fresh episode after
+  the prior episode closed or was cleaned up;
+- allowlisted canonical stable slots/customer selections;
+- presented canonical candidate values, hard-bounded to at most 20 per clarification;
+- one requested missing slot;
+- `clarification_prompts_sent` constrained to 0 or 1;
+- lifecycle timestamps/reason;
+- an optimistic episode version for stale-writer rejection; every mutation requires an explicit positive `expectedVersion`.
+
+Canonical identity-shaped slots are domain-tagged and exact-form only:
+- `product_id`: `prod_<lowercase UUID shape>`;
+- `variant_id`: `var_<lowercase UUID shape>`;
+- `store_id`: `store_<lowercase UUID shape>`;
+- `brand_id`: `brand_<32 lowercase hex>`;
+- `category_id`: `cat_<32 lowercase hex>`.
+
+C1 shape validation prevents provider-native IDs, cross-domain IDs and free-form
+text from entering durable identity slots. It is not a substitute for current
+authority validation: C2 and later decision paths must still resolve/revalidate
+that an ID exists and is authoritative before using it.
+
+`conversation_id` and every `source_message_id` are canonical internal integers:
+C1 accepts only positive JavaScript safe integers and performs no `Number(...)`
+coercion from booleans, arrays, hexadecimal/exponent strings or whitespace-padded
+text.
+
+Public episode reads (`loadActive` and `getEpisode`) MUST return one committed
+SQLite snapshot. The episode head row, ordered source messages, stable slots and
+presented candidates MUST NOT be assembled from different commits. C1 therefore
+wraps each public multi-query read in one deferred read transaction; private
+`#readEpisode` remains transaction-neutral so write transactions can reuse it
+without nested `BEGIN`.
+
+For historical C1 schema v1 only, every `EpisodeStore` connection MUST
+explicitly set SQLite `busy_timeout=5000`. This restates the existing
+C1 rule and does not retroactively modify the historic C1 contract
+(§29.4); v4 ingress applicability is addressed separately in §29.8.3.
+C1 MUST NOT rely on the Node `DatabaseSync` constructor's version-dependent
+`timeout` option: a concurrent writer that has already acquired a RESERVED lock
+must wait for the reader snapshot to release before COMMIT rather than fail
+immediately with `SQLITE_BUSY` on runtimes where that constructor option is not
+implemented.
+
+C1 never persists:
+- raw/normalized customer message bodies;
+- current/dynamic price facts or offer completeness; user-supplied normalized
+  money constraints (`min_price_minor`, `max_price_minor`, `currency`) are stable
+  episode constraints and are allowed;
+- commercial availability;
+- stock quantity;
+- catalog freshness / need flags;
+- resolved OperationalFact/CommercePolicy effects;
+- operational `now` evaluation;
+- Chatwoot reopen/status-causality markers;
+- resolver/vocabulary revision state such as `category_match_mode`;
+- candidate presentation labels or free-form summaries.
+
+Source message bodies required by later Slice C processing are reread from
+Chatwoot by `source_message_ids` and handled transiently. They are not copied
+into `episode.sqlite`.
+
+Closed episodes are immutable. Starting a later episode for the same Chatwoot
+conversation creates fresh state and never revives clarification budget,
+candidate state or stable slots from the closed episode. It also requires a
+strictly newer source message than the retained conversation watermark. Closed
+episode TTL cleanup MUST NOT cascade-delete or reset that watermark.
+
+The storage-policy class is rebuildable/fail-closed rather than business
+authority: loss of episode state may reduce continuity but must never permit the
+system to guess prior customer selections. If safe reconstruction from current
+Chatwoot history is unavailable, later routing fails closed.
+
+## 29.4 v0.7 pre-production storage supersession
+
+C1 schema v1 remains accepted evidence for its isolated slice, but it was never
+activated as the production First Line runtime. v0.7 therefore makes a clean
+pre-production schema-v2 cut rather than preserving accidental compatibility.
+
+The v0.7 runtime target promotes `episode.sqlite` from rebuildable episode-only
+state to BabyPark's durable semantic conversation database. It contains:
+
+- provider-neutral conversation streams;
+- an append-only metadata-only Conversation Event Ledger;
+- a monotonic `stream_revision`;
+- logical episode/open-turn projections;
+- canonical semantic state with provenance;
+- clarification reservations;
+- durable public-action/outbox state.
+
+For the **v0.7 runtime target**, CATEGORY stable identity is the exact pair
+`(category_id,category_match_mode)`, where `category_match_mode` is exactly
+`NODE_ONLY | INCLUDE_DESCENDANTS`. A proven category selection must commit both
+components atomically with the same accepted-event provenance, and restart
+rebuild must re-prove the same pair before category-scoped authority is used.
+
+This pair requirement was originally frozen by the docs-only PR #100 contract
+amendment before the prerequisite implementation existed. The prerequisite
+C2/state-store retrofit was subsequently implemented and verified as part of the
+merged C4 production campaign, PR #107 on canonical main
+`565f8eb30bf39afa80bb4d59258cc2fd13aa67d5`. Current C4 may therefore rely on
+the exact pair under the merged v0.7 contract. The historical C1 contract in
+§29.3 remains unchanged evidence and is not retroactively rewritten.
+
+`copilot.sqlite` remains disposable delivery/job/lease/reconciler execution
+state. Domain truth MUST be committed in `episode.sqlite` before the originating
+copilot job may be terminalized. Cross-file atomicity is not required: retry
+after a crash is idempotent by stable source/action keys.
+
+Routine raw or normalized customer message bodies, content-derived hashes,
+customer email/phone/avatar and attachment URLs remain forbidden durable state.
+
+## 29.5 Conversation Event Ledger
+
+Each provider conversation maps to one BabyPark conversation stream. The parent
+identity is the conversation/stream, not the customer/contact: one customer may
+have multiple simultaneous conversations or channels.
+
+Every accepted source event receives an immutable local integer `event_seq`.
+This sequence means only:
+
+> the order in which BabyPark authoritatively accepted events into its stream.
+
+It is NOT Chatwoot message-ID order and does not claim source commit order.
+A legal stream may therefore contain:
+
+- event_seq 1 -> source_message_id 98;
+- event_seq 2 -> source_message_id 101;
+- event_seq 3 -> source_message_id 100.
+
+The stable source identity is unique by
+`(source_provider, source_conversation_id, source_message_id)`.
+That unique ledger lookup is the ONLY `ALREADY_KNOWN` test. A source
+message ID at or below any scan cursor/high-water hint MUST still be exact-read
+and ingested if its unique source key is absent.
+
+Any source scan cursor is an optimization hint only. It is never completeness,
+chronology or replay authority. Every newly accepted relevant event increments
+`stream_revision`.
+
+Conversation topology, open-turn membership and response coverage are derived
+from local accepted `event_seq` plus confirmed BabyPark actions, never by
+numeric comparison of Chatwoot source-message IDs.
+
+One additional ordering relation is required around an unresolved outgoing
+action. If a newly accepted `CUSTOMER_MESSAGE` is observed while the same stream
+has one live `SENDING` or `UNCERTAIN` BabyPark public action, the owning
+`episode.sqlite` transaction records bounded metadata that associates that
+customer event as **deferred behind that action**. This is not source chronology
+and stores no customer content.
+
+For a newly inserted customer event, these writes are one atomic
+`BEGIN IMMEDIATE` semantic transition:
+1. append the customer event with its immutable `event_seq`;
+2. increment the stream's `last_event_seq` / `stream_revision`;
+3. if the same transaction observes one same-stream `SENDING` or `UNCERTAIN`
+   action, persist that exact `action_id` as the event's immutable deferred
+   parent.
+
+There is never a crash window where the customer event/revision can commit while
+its required deferred-parent relation is still pending in another transaction.
+The relation has at most one parent, is same-stream, is legal only for
+`CUSTOMER_MESSAGE`, and points to the exact public action that was
+SENDING/UNCERTAIN in the accepting transaction. Duplicate delivery of an already
+accepted source event is idempotent but MUST verify any required persisted
+relation; it never fabricates, drops or reparents one.
+
+The association is immutable and restart-durable:
+- if the parent action later reaches **normal CONFIRMED before HUMAN escalation**,
+  all customer events deferred behind it become the next customer open turn in
+  their own accepted `event_seq` order even when the confirmed BabyPark outgoing
+  row was accepted locally later and therefore has a larger `event_seq`;
+- a later accepted confirmation row never hides/reorders those customer events;
+- if the parent action instead acquires durable HUMAN continuation, ownership is
+  lost, or only gains late remote-send evidence after HUMAN escalation, deferred
+  customer events remain under that HUMAN/non-AI ownership and cannot
+  independently start another AI action;
+- multiple deferred customer events retain their accepted order and ordinary
+  complete-turn/default-deny rules.
+
+The deferred-parent relation is a **scheduling/topology fence only**. It is never
+proof that the customer saw, replied to, or semantically depended on the parent
+public action. The same is true of ordinary accepted `event_seq` order:
+BabyPark acceptance order is not source chronology. Therefore neither a deferred
+parent nor "accepted after local confirmation" can by itself authorize C25 or
+any other ANSWER-dependent inheritance. C25 requires the explicit provider-native
+reply relation frozen in §21.1.
+
+If the action has already normally confirmed before customer-event acceptance,
+ordinary accepted `event_seq` order applies for routing/liveness and no deferred
+relation is needed, but that order still is not C25 causal authority. If HUMAN
+already owns continuation, the later customer event remains under HUMAN
+ownership rather than acquiring a new AI deferred parent.
+
+Every durable read/admission path fails closed on a cross-stream parent, missing
+parent action, non-customer relation, multiple/conflicting parents, or any
+relation that cannot be proven consistent with the accepted event/action
+history. Corrupt deferred metadata authorizes zero AI public side effects.
+
+The implementation may use a bounded action-reference field on the event or an
+equivalent relation inside the same semantic store, but it may never infer this
+relation from numeric Chatwoot message IDs, `created_at`, webhook delivery order
+or customer text.
+
+Event rows persist only bounded metadata required for topology and recovery.
+Customer text remains in Chatwoot and is exact-reread transiently when semantic
+processing needs it.
+
+## 29.6 Chatwoot row authority and default-deny classification
+
+Exact source-message lookup used to distinguish absent/private/activity rows MUST
+be unfiltered where needed. A deleted row is an existing source row; its explicit
+ID may enter the ledger, but its replacement/deleted text MUST NOT enter the
+extractor.
+
+For Website First Line v1, public/non-activity topology is classified
+default-deny. Known categories include:
+
+- public incoming Contact -> customer event;
+- public outgoing from the configured BabyPark AgentBot -> candidate BabyPark
+  response event, subject to BabyPark action provenance;
+- known neutral website template/system rows -> non-customer topology metadata;
+- public human, other-bot, sender-null automation or unknown public row ->
+  continuity/ownership blocker, never silently ignored.
+
+Chatwoot webhook delivery is a trigger/repair channel, not ordering authority and
+not an absolute completeness guarantee. Every webhook target is exact-checked
+regardless of scan cursor. Bounded reconciliation/backfill may discover and append
+a lower source message ID after a higher one has already been accepted.
+
+## 29.7 Final authorization before public side effects
+
+A multi-query partition walk may ingest/backfill, but it MUST NOT authorize a
+customer-visible AI side effect because its queries do not share one PostgreSQL
+snapshot.
+
+C6 uses a two-phase S1/S2 structure. **S1/preflight is non-authorizing. S2 is the
+one final authorizing conversation-topology snapshot.**
+
+### 29.7.1 S1 / transient semantic rebuild
+
+While holding the current GATING claim, the relay may:
+1. run an optional whole-conversation preflight to classify/ingest already
+   visible unseen rows;
+2. exact-reread the action's covered customer source messages transiently;
+3. run the potentially variable extraction producer once against those exact
+   bytes;
+4. certify that transient extraction and rebuild current deterministic C2
+   resolution and C3 proof/request-family state;
+5. build a new genuine DecisionBasis and rerun C4, rereading current
+   Catalog/Knowledge authority and current operational `now`;
+6. if a stable slot used by the decision came from a native structured
+   clarification submission, prove it against the same confirmed CLARIFY
+   action/reservation/current `submitted_values`;
+7. compare fresh action type/decision, reason, template, response locale,
+   semantic scope and, for CLARIFY, requested slot plus exact ordered private
+   canonical candidates with the immutable prepared action;
+8. render only from that fresh genuine C4 decision.
+
+Everything in S1 is transient and **still non-authorizing**. A HUMAN result,
+authority failure, descriptor/scope mismatch, structured-selection mismatch or
+renderer failure performs zero public POSTs and follows §29.8 HUMAN ownership
+rules. Raw bodies, normalized bodies, extraction output and content digests
+remain non-durable.
+
+The durable **semantic scope v1** is the exact non-dynamic canonical
+interpretation that shaped C4 at preparation. It is not customer text and not
+business truth. It has exactly these typed slots:
+- `product = null | {product_id, variant_id}`, where `variant_id` is string or
+  null;
+- `category = null | {category_id, match_mode}` with the frozen category match
+  mode;
+- `brand_id = null | canonical brand id`;
+- `store_id = null | canonical store id`;
+- `money = null | {currency:'UAH', min_price_minor, max_price_minor}`, where
+  each bound is a **non-negative** safe integer or null and at least one bound is
+  non-null.
+
+The prepared action stores `descriptor_version=1` plus this exact scope. C4
+derives the scope from the complete **effective certified slot set actually
+consumed by C4** after any proven clarification discharge/continuation; it is not
+caller-selected and a caller cannot omit a resolved or preserved constraint to
+make later equality easier. This includes an allowed stable
+`min_price_minor` when the objective authority consumes it, even though Slice C
+v1 does not invent a lower-bound money clarification.
+
+Before any durable MONEY state can become effective C4 scope, its relational
+shape is fail-closed validated:
+- no bounds => semantic scope is exactly `money=null`; a persisted
+  currency-only constraint is invalid/corrupt v1 state, not an implicit budget;
+- either bound present => persisted/effective currency is exactly `UAH`;
+- each bound is a non-negative JavaScript safe integer, so exact customer
+  `0 UAH` remains representable even though separate price-authority rules may
+  later refuse to describe a zero catalog price as "free";
+- if both bounds are present, `min_price_minor <= max_price_minor`;
+- each preserved bound keeps its own valid
+  `derived_through_event_seq` provenance and is revalidated against the current
+  certified turn/selection basis that created it. Different lower/upper bounds
+  are not required to share one event;
+- the existing requested `max_price_minor` clarification remains stricter: its
+  selected amount and `currency=UAH` are one atomic same-provenance pair.
+
+Missing/non-UAH/partial/malformed MONEY relation or an impossible min/max range
+fails closed before C4/public send. C4 may not silently assume UAH merely because
+Catalog objective APIs are UAH-scoped.
+
+Dynamic reply values such as current product/variant price, stock, policy amount,
+hours, presentation labels and shortlist contents are deliberately not part of
+the semantic scope and remain fresh authority.
+
+### 29.7.2 S2 / one final authorizing gate
+
+Only after fresh C4 and C5 output exist may the relay enter S2:
+
+1. perform one whole-conversation Chatwoot messages query with
+   `after=0`, `before=2147483648`, `filter_internal_messages=true`;
+2. default-deny classify every row, idempotently ingest unseen source keys and
+   increment `stream_revision` for newly accepted relevant events;
+3. prove every source message covered by the action is still present and not
+   deleted/reclassified and that any deferred-parent relation needed for current
+   topology is valid;
+4. exact-reread every covered customer message and require byte equality with the
+   exact transient bytes used for the S1 semantic rebuild. Re-certify the same
+   extraction/capabilities against these S2 exact reads; the variable extraction
+   producer is not rerun inside S2;
+5. for every structured selection used by the fresh decision, exact-reread the
+   confirmed CLARIFY message again and re-prove the same action,
+   ordinal/reservation/stable value from current `submitted_values`;
+6. for C25, exact-reread the one dependent incoming Website message and the
+   predecessor BabyPark range message, then re-prove
+   `content_attributes.in_reply_to == predecessor.confirmed_source_message_id`
+   and
+   `content_attributes.in_reply_to_external_id == predecessor.action_id`,
+   same conversation, unique normal-CONFIRMED predecessor and unchanged
+   predecessor/stable-selection provenance. Neither deferred metadata nor
+   `event_seq` can substitute for this causal reply proof;
+7. exact-read the **current** Chatwoot account-conversation wire **after**
+   those topology/text/structured/C25-causality proofs. Decode ownership/status
+   with the one closed C6 conversation decoder in §43 and decode `inbox_id` as
+   a positive safe integer. The **only** send-eligible tuple is
+   `inbox_id == configured Website inbox` + `pending + SAME_AGENTBOT`.
+   Missing/invalid/mismatched inbox, every other reviewed status/owner class,
+   `UNKNOWN`, malformed/unavailable wire or decoder failure authorizes zero
+   public POSTs: attach absorbing durable HUMAN continuation to this immutable
+   PUBLIC_ACTION origin and continue only through §43 read-only reconciliation.
+   This is the final external ownership gate before local send admission;
+8. require the immutable semantic-origin fence still identifies this exact public
+   action, no durable HUMAN continuation has been attached, and the prepared
+   stream_revision/episode/version/latch/reservation/current GATING lease/deadline
+   still match;
+9. atomically transition `GATING -> SENDING` inside one `BEGIN IMMEDIATE`,
+   rechecking those local predicates;
+10. perform the one external POST attempt.
+
+On verified Chatwoot v4.18.0 the S2 messages query is one messages-between SQL
+statement scoped to the conversation, with `id >= 0`, no upper predicate and
+`LIMIT 1000`. A result count below 1000 is the complete public/non-activity
+topology visible to that statement snapshot. A result count of exactly 1000 is
+`HISTORY_UNPROVABLE`; no AI public POST is authorized.
+
+If S2 ingests a relevant event, the current account-conversation read is not
+exactly the configured Website inbox + `pending + SAME_AGENTBOT` send-eligible
+tuple, covered customer bytes differ, structured selection differs, C25 native
+reply provenance differs/fails, deferred/action provenance is corrupt,
+effective MONEY relational integrity fails, or any local CAS predicate differs,
+the S1 decision/render is discarded and performs zero public POSTs. An
+ownership/inbox failure attaches durable HUMAN continuation before any later
+handoff/reconciliation work; the S1 result is never reused by a later claim.
+
+`stream_revision` equality never substitutes for the final current
+ownership/status/inbox read. On the verified Chatwoot v4.18.0 tuple, bulk and
+automation status changes can make a conversation `open`, `resolved` or
+`snoozed` while leaving the configured AgentBot owner and without creating a
+new customer/public message; such a state is therefore reachable without a
+BabyPark revision change and must fail S2 send admission.
+
+This ordering deliberately makes conversation topology/ownership the last full
+external authorization before local send admission while keeping Catalog/
+Knowledge/C4 facts freshly read immediately before S2. A Chatwoot/source or
+Catalog/Knowledge transaction may still commit after its own last authoritative
+read and before the external POST. That is the explicitly accepted irreducible
+cross-system race; eliminating it would require conditional/CAS primitives
+inside all external authorities and Chatwoot, which v1 does not have.
+
+Transport/HTTP failures during pre-SENDING authority reads may retry only within
+the separately frozen bounded read policy and while the GATING claim/deadline
+remain valid. Failure to establish S1 semantics or S2 authority never permits
+prepared or previously rendered content to be sent.
+
+No new durable selection-provenance column is required in v1. A structured
+selection's durable slot has `derived_through_event_seq` equal to the confirmed
+CLARIFY ledger event that supplied the submission, while an exact-message
+selection is derived through its later incoming customer event. That provenance
+is never rewritten by ANSWER confirmation. Together with the episode's unique
+CONFIRMED CLARIFY action, it deterministically identifies when S1 and S2 must
+re-read/re-prove `submitted_values`.
+
+## 29.8 Durable public-action outbox, handoff ownership and send outcome
+
+Public customer actions are durable domain state in `episode.sqlite`, owned by
+an independent PublicActionRelay rather than by the originating copilot input
+job.
+
+At most one live public action/handoff-owned action may exist per conversation
+stream. Storage MUST enforce this for PREPARED/GATING/SENDING/UNCERTAIN and any
+durable relay-owned handoff-required state with a partial unique index or an
+equivalent stronger constraint.
+
+Every accepted stream revision has **at most one immutable semantic-origin
+fence** in `episode.sqlite`. A revision that is superseded by a newer accepted
+revision before semantic work commits any outcome may legitimately have no
+origin fence. Once semantic work commits one, its origin kind is exactly one of:
+- `PUBLIC_ACTION(action_id)` for one ANSWER/CLARIFY action;
+- `DIRECT_HUMAN` for a planning-time HUMAN with no public action origin;
+- `NON_ACTIONABLE_ACK`.
+
+The uniqueness key is `(stream_id, stream_revision)` across those origin kinds.
+The origin fence is immutable replay authority: retry, restart, duplicate
+webhook, liveness sweep or a nondeterministic extractor may only reuse it and may
+never replace it with a different public action, ACK or direct-HUMAN origin.
+
+A PUBLIC_ACTION origin has two separate concepts:
+- the historical public-action lifecycle/evidence for its stable `action_id`;
+- the **current continuation owner**, which may monotonically escalate from that
+  public action to durable HUMAN when reauthorization or send reconciliation
+  fails closed.
+
+That escalation does **not** replace/replan the immutable PUBLIC_ACTION origin.
+It attaches durable HUMAN continuation to the same stream/revision/action
+history. Once HUMAN continuation exists it is absorbing for AI: no later event,
+retry or late send proof may restore autonomous AI ownership for that episode.
+DIRECT_HUMAN and NON_ACTIONABLE_ACK are likewise absorbing origin outcomes.
+
+Forbidden same-revision transitions include:
+- one PUBLIC_ACTION origin to a different action;
+- PUBLIC_ACTION to NON_ACTIONABLE_ACK;
+- DIRECT_HUMAN to any AI action or ACK;
+- NON_ACTIONABLE_ACK to any other outcome.
+The only allowed post-origin class transition is PUBLIC_ACTION -> durable HUMAN
+**continuation ownership**, while the origin/action evidence remains intact.
+
+For public actions, the existing durable identity
+`(stream_id, prepared_stream_revision)` remains permanent across terminal and
+non-terminal states. Retrying that revision reuses the same action and cannot
+reserve clarification budget or send twice. DIRECT_HUMAN and ACK use equivalent
+permanent origin fences in the same semantic store. The exact physical schema is
+a downstream implementation decision, but a second semantic origin for the same
+revision is forbidden.
+
+A prepared ANSWER/CLARIFY action carries at least:
+- stable action ID;
+- stream ID;
+- non-null episode/basis identity and episode version;
+- prepared `stream_revision`;
+- action class;
+- immutable `descriptor_version=1`;
+- prepared machine `reason`, `template_id`, `response_locale` (`uk|ru`);
+- the exact semantic scope v1 from §29.7;
+- source-event coverage needed by the final stale-action gate;
+- requested slot/canonical candidate reservation when CLARIFY requires it;
+- exact candidate count/order metadata sufficient to prove persisted ordinals are
+  exactly contiguous `1..N`;
+- lifecycle/lease/deadline metadata.
+
+`episode_id`/`episode_version` are a required pair for every customer-visible
+ANSWER/CLARIFY action. Durable reads fail closed if an action is detached from
+its owning stream/episode, basis events are absent/from another stream, candidate
+ordinals are missing/duplicated/non-contiguous, a CLARIFY reservation does not
+point back to its owning action, or confirmation provenance does not point to one
+matching BabyPark public-reply ledger event. Deleting/compacting an episode may
+not silently null out a live or historical action's required episode identity.
+
+The prepared descriptor/scope is durable **decision/provenance**, not cached
+business truth. `render_payload`, price, stock, policy effects, operational
+hours/status, customer-facing labels, raw/normalized text, extraction output and
+customer-content digests are never persisted in the action.
+
+After semantic reauthorization, exact descriptor/scope mismatch, current HUMAN,
+renderer failure, `HISTORY_UNPROVABLE`, covered-source mutation/deletion, expired
+deadline or another same-revision fail-closed condition performs zero public
+POSTs and transfers continuation to a durable native-HUMAN path; it is not
+terminalized as an orphan STALE row. `STALE`/`CANCELLED` without handoff ownership
+is permitted only when a strictly newer accepted stream revision or atomic
+standalone replacement has taken ownership of continuation.
+
+HUMAN continuation is durable stream/revision semantic state in
+`episode.sqlite`. A DIRECT_HUMAN origin binds the active episode/version when
+one is safely provable, but the episode link may be absent when topology/
+ownership becomes unprovable before an episode can safely be created. A missing
+episode therefore never prevents BabyPark from durably recording that the
+current stream revision owes HUMAN.
+
+Before disposable execution work may become terminal, planning-time HUMAN
+commits a DIRECT_HUMAN origin fence. When HUMAN arises from an existing
+PUBLIC_ACTION, the same owning-store transaction preserves that immutable action
+origin and attaches a durable HUMAN continuation obligation to it; the action is
+not rewritten as a new planning outcome. Input-job/reconcile rows may drive §43
+handoff attempts but are never the sole semantic record.
+
+The same owning semantic store also owns native-handoff attempt history whenever
+§43 has an independently proven **safe automated handoff primitive** to call. On
+the deployed Chatwoot v4.18.0 tuple verified for Stage 0, the current AgentBot
+`toggle_status(open)` path is **not** such a primitive and MUST NOT be called by
+Website First Line automation: §43 therefore remains read/reconcile/manual for a
+pending conversation still owned by the configured BabyPark AgentBot.
+
+If a later downstream stage proves and owner-approves a safe automated primitive
+under a fresh Agreement §§1–3 native-first fit gate, a HUMAN owner may have at
+most one unresolved handoff attempt. Its durable attempt identity/state is
+committed before that primitive's external write boundary and survives worker
+lease expiry, restart and deletion/recreation of `copilot.sqlite`. No disposable
+execution lease can erase/reclassify an outcome-unknown attempt or authorize
+another write. Positive deterministic non-commit evidence, if the selected
+primitive can prove it, is bounded durable attempt metadata and never customer
+content.
+
+Once HUMAN continuation exists, later customer events may still be ingested for
+topology/recovery but cannot supersede it with a newer autonomous AI outcome.
+They remain under HUMAN/non-AI ownership until §43 proves transfer/loss
+terminalization. There is no v1 `NOT_SENT` terminal semantic outcome for an
+actionable current revision: any definitive pre-SENDING refusal that is not
+atomically superseded by a strictly newer AI-owned revision acquires HUMAN
+continuation; any post-SENDING non-confirmation reconciles/HUMAN under the
+no-retry protocol while preserving the original public-action evidence.
+
+If an owning unsent CLARIFY transitions to HUMAN, its one-prompt reservation
+remains consumed and bound until the episode closes. Releasing that reservation
+is permitted only for the already-frozen safe atomic cancellation/replacement by
+a strictly newer AI-owned revision **before** any HUMAN obligation is committed.
+This prevents HUMAN recovery from accidentally authorizing a second CLARIFY.
+
+Native HUMAN sends no public AI preface and follows the complete §43 handoff
+protocol.
+
+The relay claim uses CAS/lease semantics. A lease holder may authorize SENDING or
+move its current same-revision action to relay-owned handoff. A stale worker may
+not cancel/stale a newer live GATING claim merely because it still knows the
+action ID. Lease-unbound mutation is allowed only when the predicate itself makes
+the old action unsendable under the final CAS, such as atomic replacement by a
+strictly newer `stream_revision`, or a deadline sweeper acting only when no live
+GATING lease exists.
+
+The final `GATING -> SENDING` transition atomically verifies, inside one
+`BEGIN IMMEDIATE`, the expected action state/claim plus current
+stream_revision/episode/version/latch/reservation/deadline invariants. A parallel
+replacement/handoff transition therefore prevents POST.
+
+Once SENDING is durable, the action crosses a **no-retry boundary**:
+- there is at most one Chatwoot public POST attempt for that `action_id`;
+- HTTP retry/backoff never repeats that POST, regardless of timeout, connection
+  reset, 4xx, 429, 5xx, malformed response or process crash;
+- `source_id=action_id` is correlation/positive evidence, not server-enforced
+  idempotency;
+- a valid 2xx response is not by itself the durable confirmation authority;
+  the returned/message identity must be reconciled against authoritative
+  Chatwoot data and the Conversation Event Ledger;
+- exactly one matching BabyPark public reply with `source_id=action_id` may
+  confirm the action;
+- zero matching rows never proves non-send;
+- more than one matching row is an ambiguity/anomaly and fails open to HUMAN.
+
+A SENDING action left without positive confirmation becomes UNCERTAIN through
+the recovery/reconciliation path; it is never returned to PREPARED/GATING and
+never POSTed again. UNCERTAIN performs bounded authoritative reconciliation.
+
+A unique authoritative BabyPark public reply produces **normal CONFIRMED** only
+when that proof is committed before durable HUMAN continuation has attached to
+the PUBLIC_ACTION origin. Normal confirmation is monotonic/idempotent and is the
+only confirmation class that can satisfy C25 predecessor semantics.
+
+If the bounded reconciliation window expires without positive proof, or
+source-tag evidence is ambiguous/corrupt, durable HUMAN continuation attaches to
+the existing PUBLIC_ACTION origin. False HUMAN is acceptable; duplicate public AI
+output is not.
+
+A unique matching BabyPark public reply discovered **after** HUMAN continuation
+has attached is historical **late remote-send evidence**, not a transition back
+to autonomous AI and not normal CONFIRMED. The action/source relation remains
+durable for transcript topology/audit, but late evidence MUST NOT:
+- remove or weaken HUMAN continuation;
+- reopen or continue an AI episode;
+- become a C25 predecessor or create stable continuation context;
+- release clarification budget;
+- authorize another AI action/send;
+- suppress or reverse native handoff.
+
+Any customer events deferred behind that action remain HUMAN/non-AI after late
+proof. More than one matching source row remains an anomaly and cannot be
+normalized by choosing one.
+
+A normally confirmed ANSWER does not automatically close the episode. It commits
+the action result while preserving existing stable customer-selection provenance;
+ANSWER confirmation creates no C25 stable-slot promotion under §29.1. Normal
+CONFIRMED CLARIFY keeps its one-prompt budget. Standalone replacement,
+NON_ACTIONABLE_ACK or completed native HUMAN handoff/ownership-loss owns episode
+closure.
+
+Independent relay/reconciliation/liveness execution must be recoverable from
+`episode.sqlite` even if `copilot.sqlite`, webhook delivery or the originating
+worker is lost. The scheduling mechanism is not frozen here and remains subject
+to the fresh §1–§3 implementation-options gate; it may not become a second
+semantic source of truth or own post-SENDING retry state.
+
+Website First Line v1 activation requires every `episode.sqlite` writer that
+participates in this protocol to run against one local filesystem database on
+one host/process domain where the reviewed SQLite locking semantics apply.
+Multi-host writers, replicated writable copies and network-filesystem locking are
+outside this contract and require a separately reviewed durable-store/concurrency
+change before use. Backup/restore does not create a second writable authority.
+
+### 29.8.1 Restore/cutover recovery barrier
+
+A restored backup is authoritative bytes only for the durable state actually
+contained in that backup. BabyPark never assumes that a missing semantic-origin
+fence proves the corresponding customer turn was never processed after the
+backup snapshot.
+
+If recovery cannot prove a **lossless semantic cut** (for example, an orderly
+shutdown/cutover that proves no `episode.sqlite` semantic mutation occurred
+after the restored snapshot), autonomous Website First Line planning/sending is
+disabled for the recovery cut. Before autonomous AI may resume, an explicit
+recovery procedure MUST establish safe ownership for every conversation/turn
+whose semantic history may intersect the lost interval:
+- a customer/public Chatwoot row visible during recovery but absent from restored
+  semantic state is `RECOVERY_UNPROVABLE`, never guessed to be new work;
+- an unknown/ambiguous configured-AgentBot public reply remains a continuity
+  blocker under Q41;
+- a customer turn that may have lost a silent `NON_ACTIONABLE_ACK`,
+  `DIRECT_HUMAN` or PUBLIC_ACTION/HUMAN-continuation fence performs zero AI
+  public actions and is transferred/quarantined to durable HUMAN/manual recovery;
+- `HISTORY_UNPROVABLE`, malformed source state or an incomplete recovery
+  snapshot cannot establish a safe cut;
+- recovery metadata may persist only bounded epoch/baseline/ownership markers,
+  source identities and ordinary semantic IDs. It never stores customer bodies,
+  normalized bodies or content-derived digests.
+
+The v1 recovery procedure may be conservative: ambiguous pre-recovery
+conversations may all go to HUMAN. Autonomous AI resumes only after the
+recovery/cutover procedure proves that remaining work begins from a clean
+post-recovery semantic boundary. A stale backup is never made safe merely by
+replaying webhooks, comparing numeric Chatwoot IDs/`created_at`, or rerunning
+the nondeterministic extractor.
+
+### 29.8.2 Liveness and unavailable external authority
+
+The relay guarantees **semantic liveness**, not impossible external-service
+success. By the configured action/turn deadline, a still-relevant revision must
+have one durable continuation owner in `episode.sqlite`: a current public
+action path that can still progress safely, or durable HUMAN continuation.
+Loss of the originating job/webhook may never orphan the turn.
+
+Native handoff then follows §43 state reconciliation. If Chatwoot ownership/read
+authority remains unknown/unavailable, BabyPark cannot truthfully claim physical
+handoff completion. When the separately measured bounded handoff/reconciliation
+escalation window is exhausted without one §43 terminal proof, BabyPark:
+- keeps the HUMAN continuation durable and absorbing for autonomous AI;
+- records a durable operator-attention/operational-fault condition that the
+  deployment health/operations surface must expose;
+- sends no AI public fallback/preface and does not reopen/toggle blindly;
+- resumes handoff reconciliation only from a fresh exact ownership read when
+  external authority becomes available.
+
+The operator-attention condition is operational metadata, not a new semantic
+decision class or customer transcript. Its delivery/monitoring implementation is
+selected only in the later Agreement §§1–§3 implementation-options stage.
+
+Numeric timing values are not frozen by this amendment. Two narrow
+pre-measurement, **non-customer, non-production** artifacts are permitted:
+(1) a pure offline C6 timing/budget formula validator using synthetic fixtures;
+(2) a disposable isolated measurement harness exercising the existing
+FirstLineStateStore v4/schema/SQLite primitives and bounded synthetic
+HTTP/body/event-loop/commit/lock contention, with mock external authority.
+The second is for independently measured **component feasibility** where
+the real ingress callback does not yet exist. Both may use test-only code,
+temporary synthetic SQLite and version-pinned Node/SQLite tools, but neither
+may create/change a production entrypoint, bind a publicly reachable
+port/listener, invoke deployed Chatwoot, process
+customer data, use real credentials, send public messages, modify production
+configuration, or persist customer material. A fixture flag, caller input,
+environment default, synthetic value or simulated success NEVER establishes
+production timing authority or authorizes public POST. Separately reviewed,
+target-matched measured components and verified provider configuration may
+support a proposed bounded ingress code-stage allocation under §29.8.3;
+the synthetic fixture itself does not become such authority. Before any
+benchmark harness is constructed, a separately approved non-production
+stage MUST complete Agreement §§1–3 native/free-OSS scan; the allowance
+in this paragraph is **not** permission to bypass that approval or scan.
+Neither artifact waives fail-closed ingress or HUMAN requirements.
+
+Except for those non-production artifacts and the narrow §29.8.3
+**ingress-only staged feasibility rule**, BEFORE production implementation
+or activation of timing-dependent customer-facing paths (webhook ingestion,
+claiming work, AI/public dispatch or send/handoff reconciliation), every
+applicable lease, authority/read timeout, producer timeout, deadline,
+pre-SENDING read-retry budget, UNCERTAIN reconciliation window and HUMAN
+handoff/escalation window must be measured or inherited from merged
+authority per AI Working Agreement §8. For the *not-yet-approved ingress*
+work alone, the code-stage gate may use bounded design allocations
+derived from actual component-harness measurements and the positively
+attested provider timeout, with an explicit plan to verify and reject
+over-budget final code **before** any customer execution. Unmeasured
+guesses or synthetic fixture values alone are never sufficient. Other
+C6 production paths retain the measured/inherited pre-code gate.
+
+The actual target's Chatwoot webhook timeout and safe complete
+callback budget also require evidence before customer execution. The
+historical C1 `EpisodeStore` busy_timeout=5000 milliseconds is a
+per-wait C1 bound, **not** a mandated v4 `FirstLineStateStore` setting
+(§29.8.3), and cannot by itself prove that callback budget.
+Configuration must be startup-validated so selected
+lease/deadline/retry relationships cannot permit a POST from an expired claim
+or convert unavailable authority into false terminal success. Missing
+authority HALTs autonomous AI processing and public dispatch, not the existing
+durable HUMAN/operator recovery obligations in this §29.8.2 and §43.
+
+Unwired source merely present in a whole-repository release, unrelated
+Catalog/Gateway releases, and standalone C6 backup/restore that does not
+execute these customer-facing paths do not constitute C6 runtime activation.
+No registry/attestation mechanism, numerical threshold or production
+deployment is selected by this docs-only exception.
+
+### 29.8.3 C6 ingress-only timing feasibility
+
+**Scope and authority.** This clause governs only Chatwoot AgentBot
+webhook ingress/ACK feasibility, not claiming, S2, public sends, UNCERTAIN
+reconciliation, HUMAN scheduling or customer execution. All other
+timing-dependent paths retain the independent §29.8.2 gate. This clause
+defines the staged proof sequence: measured isolated components and
+derived enforceable design caps before ingress production code; full
+callback verification before customer execution. It does not itself
+authorize production-code edits, approve unmeasured values or activate
+C6. Separate owner approval of a measured ingress code-stage Fit is
+still required.
+
+**C1/v4 concurrency.** The historical §29.3 C1 `EpisodeStore` schema-v1
+`busy_timeout=5000` requirement does not mandate that numeric value for
+v4 `FirstLineStateStore`. For the **proposed timing-dependent ingress
+code stage only**, the writable v4 connection MUST set an explicit,
+evidence-bound `busy_timeout` under Agreement §5. The existing v4
+`FirstLineStateStore` uses a fixed 5000-ms constant in merged code;
+this amendment does not retroactively require measurement or modify
+non-ingress paths before their own approved stage. A smaller ingress
+wait is a candidate only if measured/inherited and all transaction,
+unique source-key, lease/CAS and fail-closed guarantees remain intact.
+The existing 5000-ms constant is evidence, **not** approved ingress
+timing authority.
+
+**Target.** Attempt to retain the production Chatwoot v4.18.0
+`WEBHOOK_TIMEOUT=5 s`, recorded by read-only Rails `GlobalConfig`
+attestation in `docs/AI_FIRST_LINE_C6_INGRESS_RUNTIME_ATTESTATION_20261013.md`.
+That observation is neither a permanent deployment assertion nor proof of
+five seconds of usable end-to-end callback time. Possible distinct
+Chatwoot HTTP connection/open/read timeout settings, their actual values,
+per-attempt versus aggregate semantics and the upstream call path are
+**unattested** here and require source-pinned read-only verification
+before being used in a callback budget. Increasing the installation-wide value MUST
+require a failed evidenced five-second fit plus separate owner approval,
+scope/Sidekiq review and recorded rollback; this clause does not change it.
+
+**Ingress topology and invariants.** The target permits exactly one
+ingress OS process / Node event loop **at most**, including during
+rolling restarts, with a positively configured finite concurrent
+admission limit `N`, enforced body-byte and body-receipt deadlines,
+and a bounded rejected/slow-body resource envelope. A concurrency
+limit alone does not bound callback turnover or rejection storms. Any transient
+dual-process overlap invalidates this topology and MUST be prevented
+or separately reviewed before customer execution.
+An accepted event MUST use at most one owning `BEGIN IMMEDIATE`
+mutation with immutable source-topology/duplicate/deferred-parent and
+blocker-to-durable-HUMAN checks performed inside that transaction.
+`UNIQUE(source_provider,source_conversation_id)` protects stream
+cardinality but cannot replace the exact unique
+`(source_provider,source_conversation_id,source_message_id)` source-key
+`ALREADY_KNOWN` lookup performed **inside** the owning transaction;
+new customer events must also atomically retain their deferred-parent
+relationship (DESIGN §29.5; ACCEPTANCE Q39b(3)).
+The owning transaction and every synchronous store transaction it
+  relies on MUST execute without **any asynchronous yield/await**,
+  including non-Chatwoot I/O or promises; a single yield can deadlock
+  the event loop while a second callback blocks in synchronous SQLite.
+  Future ingress implementation MUST reject async/thenable transaction
+  bodies and prove this property with a synthetic regression. This
+  docs-only clause does not claim the merged store already has such a
+  guard.
+The callback's exact number of sequential authoritative REST reads must
+be explicitly bounded. The default 5000-ms REST timeout in the current
+reader is NOT admissible unchanged for a strict five-second budget with
+positive margin and other nonzero work. A materially different process,
+store writer or event-loop topology invalidates this feasibility basis.
+
+**Budget model.** Each admitted callback MUST satisfy a conservative
+target-matched allocation in the chosen deployment/harness configuration:
+
+`I + R_seq + C_sync + SUM(j=1..K, B_wait[j]) + Q + O < T_safe`
+
+`T_safe = T_webhook - M`, `M > 0` with independent provenance,
+initial `T_webhook = 5000 ms`. The margin is subtracted **once**.
+
+- `I`: this callback's bounded body receipt, byte-cap enforcement,
+  parsing and HMAC verification. Enforce both byte and body-read
+  deadlines and measure non-preemptible CPU and event-loop timer lag.
+  Other callbacks' parsing/validation and rejected/slow-body CPU
+  are accounted in `Q`, never also in `C_sync`.
+- `R_seq`: bounded sequential exact authoritative REST read/attempt
+  time for this callback, including verified timer delivery lag.
+  Independent callbacks may overlap asynchronously, then resume work.
+- `N`: the enforced cap on **simultaneously admitted** callbacks.
+  `N` is not a bound on cumulative callback arrivals or on repeated
+  synchronous resumptions after sequential REST awaits.
+- `C_sync`: evidenced conservative total **non-lock-wait** synchronous
+  SQLite execution and semantic CPU of **all** same-event-loop work
+  able to delay this response, regardless of arrival order. Count
+  distinct resume points, later-admitted/replenished callbacks and
+  co-resident non-ingress activity. Derive a finite bound from explicit
+  total-admission/rate/queue limits and measured per-segment work;
+  multiplying a single callback's cost by `N` is NOT enough without
+  proof excluding replenishment and further REST resumes. Unbounded
+  synchronous work or unknown cumulative count HALTs the code-stage.
+  Existing v4 two-transaction ingest operations are a surrogate,
+  not final proof for the future one-transaction path.
+- `B_v4`: evidence-bound explicit `PRAGMA busy_timeout` of the
+  proposed ingress connection only; not a global SQLite setting.
+- `B_site[j]`: verified effective `PRAGMA busy_timeout` of the
+  **connection owning** potentially blocked acquisition `j`.
+  Inventory all SQLite connections with synchronous work on this
+  event loop, including merged non-ingress v4 connections retaining
+  their existing 5000-ms constant. Verify each PRAGMA read-back
+  at startup; mismatch, missing provenance, or an unknown connection
+  HALTs unless its exclusion from the event loop is proven.
+- `K`: bounded count of **potentially blocked SQLite acquisitions**
+  across all work capable of delaying this response, including
+  later-admitted requests and co-resident non-ingress/recovery jobs.
+  Count `BEGIN IMMEDIATE`, DELETE-mode `COMMIT` reader waits,
+  deferred-read SHARED acquisitions, and every statement-level lock
+  attempt, including silently retried cache-spill EXCLUSIVE attempts.
+  An owning transaction may incur more than two waits. Either prove
+  `PRAGMA cache_spill=OFF` for the applicable connection/workload
+  with read-back or conservatively bound dirty-page/statement-level
+  attempts; neither is selected by this docs-only change. Unknown
+  repeatability/site count HALTs. Repeated external lock reacquisitions
+  within one blocked SQLite call consume that site's allowance.
+- `B_wait[j]`: conservative **wall-clock** allocation for each site
+  using its own `B_site[j]`, NEVER `B_v4` for a different connection.
+  Unless a version-pinned target-matched enforceable completion
+  guarantee supports a shorter bound, charge the entire applicable
+  `B_site[j]` PLUS evidenced polling/scheduling/stall overshoot.
+  A short external lock hold or observed free interval is not an
+  enforceable completion guarantee: SQLite polling may miss nonzero
+  lock-free gaps. A measured percentile, sample maximum or idle-host
+  result is *statistical* evidence, not a deterministic bound.
+  Explicitly declare the conservative calibrated operating envelope,
+  predeclared uncertainty/confidence and a failure/retest criterion.
+  If the required overshoot/scheduling allocation cannot be
+  substantiated for the **code stage**, HALT; never guess a hard
+  wall-clock bound or assume JS timers preempt synchronous SQLite.
+- `Q`: other event-loop/queue delay, including rejected or over-`N`
+  delivery storms, other callbacks' body/HMAC CPU, slow-body
+  resource occupancy and unrelated co-tenant CPU, excluding work
+  already charged to `I`, `C_sync` or SQLite waits.
+- `O`: measured response-completion overhead to Chatwoot. Remote
+  network/worker tails and native failure effects are separately
+  verified before customer execution.
+
+**Control classification and failure rule.** Enforce the byte/body
+admission deadline, finite concurrent `N`, bounded total work
+admission/replenishment, `R_seq` configured request timeouts and
+connection-specific SQLite busy timeouts. `C_sync`, `Q`, `O`
+and overshoot are measured/calibrated allocations, not claimed
+interruptible. A statistical tail-SLO and safety margin do NOT prove
+a hard wall-clock deadline. If target-matched workload, necessary
+bounds or a real connection PRAGMA read-back is unproven, the
+candidate ingress code-stage HALTs. Expiry of any SQLite busy wait
+is `SQLITE_BUSY` or another recorded fail-closed outcome, not a
+success/handoff/ACK. No `await` or asynchronous yield is allowed
+inside the owning transaction; future ingress MUST reject
+async/thenable transaction bodies and test this. No public send,
+S2, reconciliation or customer activation is authorized by a
+passing component fit.
+
+**Competitors and journal decision.** A post-send recovery service would
+be a separate writer/process and MUST limit scan batch, read duration and
+write lock hold before it can coexist with ingress. B2 backup would use
+a separate read-only connection and MUST set a documented page-step
+`rate`, overall deadline, bounded writer-interference/restart policy,
+and maximum completed offsite snapshot age; endlessly restarted
+`sqlite.backup()` does not demonstrate compliance with the
+owner-approved maximum data-loss window (RPO); until that value and
+completed offsite snapshot age are evidenced, B2 remains HALT. Before B2
+creates the first production v4 `episode.sqlite`, evaluate SQLite
+DELETE first against measured bounded contention and B2 restore checks;
+use WAL only if its benefits and checkpoint/-wal/-shm recovery semantics
+are independently proven. Select the mode *before* DB creation, verify
+actual `PRAGMA journal_mode` immediately *after* creation and before
+any runtime use or B2 rehearsal. This clause selects neither mode.
+
+**Admission overload and provider effects.** A callback beyond `N`,
+a `SQLITE_BUSY` on expiry of `B_v4`, or an otherwise exhausted
+component budget MUST NOT be falsely ACKed or assumed HUMAN. For the *code stage*,
+freeze the candidate bounded overload/error-state matrix, test on
+synthetic native-shaped fixtures, and require fail-closed behavior and
+a disabled/no-customer startup mode until real provider consequences
+have been established. This permits isolated code development without
+claiming a specific HTTP code is safe for customers. **Before customer
+execution**, the selected overload status MUST have version-pinned,
+authorized native Chatwoot failure/retry/ownership evidence plus a
+working durable HUMAN/operator-attention recovery mechanism. A 4xx/5xx,
+including a retryable 429/500, is not proof of notification or human
+ownership. If no fail-closed overload response preserves those
+obligations, activation HALTs; never weaken HMAC, exact source proof
+or no-retry.
+
+**Two distinct evidence gates.** For ingress-only production-code
+implementation, freeze the one-process topology, independent
+synthetic **component benchmarks** of the existing v4 store, SQLite
+lock waits, mock HTTP/body/queue and response model, and an explicit
+derived **design allocation** for
+`I,R_seq,N,C_sync,K,B_v4,B_site[j],B_wait[j],Q,O,M` with verified
+per-connection PRAGMA readbacks and finite cumulative work.
+
+**Target-matched measurement protocol.** A separate owner-approved,
+read-only production host/service telemetry collection stage is required
+before collecting load profiles. Its bounded command/metric allowlist,
+time window, non-secret/no-customer-content output, authorization and
+retention MUST be recorded; this docs-only amendment authorizes no
+production observation, real Chatwoot API call or configuration change.
+If such evidence is unavailable, target-matched budgeting HALTs.
+Benchmark results MUST bind
+exact Node executable and bundled SQLite versions, CPU architecture /
+vCPU class, memory/swap, filesystem and storage latency/throughput,
+as well as co-resident Chatwoot Web/Worker, PostgreSQL, Redis and
+Gateway load/scheduling. The competing-load envelope (including
+observed peaks, not just idle or mean utilization) MUST come from
+recorded, timestamped, read-only production host/service CPU, memory,
+I/O and scheduling observations over a justified representative
+window; never from invented synthetic peak values. If peak evidence
+is unavailable, explicitly HALT the target-matched budget until a
+safe read-only observation window establishes it. Use an isolated non-production environment
+demonstrably equivalent to the intended host under that competing
+load, or a recorded **conservative** cross-host calibration that
+bounds every material difference. Merely using the same Node version
+on a faster or otherwise unmatched machine is insufficient. No
+benchmark may run against production databases, live Chatwoot
+endpoints, production keys or customer messages. Unmatched or
+unbounded shared CPU/disk/lock contention HALTs the code-stage
+budget; it cannot be silently represented as zero.
+
+Before the first run, freeze a reproducible measurement plan stating
+workload and database sizes, concurrency and conflicting-writer
+profiles; independent run count, warm-up, measured percentile(s),
+tail uncertainty/confidence rule, and safety multiplier/margin.
+Justify each numeric choice by an existing owner-approved and
+source-cited reliability objective **if one is actually frozen**,
+or by a defensible statistical sample-size argument, an existing
+normative bound, or measured target variance/calibration—not intuition.
+No currently unfrozen reliability objective or sample size is presumed
+to exist; missing evidence HALTs the proposed stage. Include raw
+non-customer timing distributions and observed maxima; a percentile
+alone cannot prove a hard bound. Calculate each selected enforceable
+limit from the measured baseline, uncertainty, calibrated target
+difference and positive remaining callback budget, recording the
+derivation and rejection criteria before ingress code is modified.
+Measure existing primitives on exact pinned runtime/SQLite, state
+measured versus surrogate versus enforced upper limits separately.
+Numbers not supported by that evidence remain unresolved; neither
+a tool default nor a fixture becomes production authority.
+
+**Integration-first prerequisite.** Before implementing even the
+disposable benchmark harness, execute Agreement §§1–3 native/free-OSS
+scan. Prefer Node/SQLite built-in profiling and maintained existing
+commercially usable benchmark tools/adapters (for example,
+`autocannon`, `tinybench`, `mitata`) over new custom measurement
+code; record versions, complete applicable licenses, capabilities
+and reproducible fit. Only genuine uncovered gaps can justify
+limited **test-only** glue after the stage's separate approval.
+No extra production runtime dependency or Chatwoot core patch is
+authorized here. New ingress code MUST enforce the **enforceable**
+controls classified above; it MUST refuse startup/admission where a
+control or measured/competitor-derived bound is absent or
+unproven, and remain unwired for customer execution. Measured-only `C_sync`/`Q`/`O` and calibrated SQLite overshoot
+are NOT claimed preemptible or hard-enforced by ingress.
+A non-production synthetic benchmark is not an end-to-end measurement.
+Its matrix MUST exercise a high-timeout co-resident non-ingress SQLite
+connection with lower-timeout ingress, cache-spill per-statement waits,
+multiple REST resume waves, replenishment of active callbacks,
+slow-body deadlines and over-`N` rejection storms. Do not infer
+`C_sync` or `K` from the initial `N` alone.
+The full callback may be measured only after code exists, and is not
+required as a pre-code measurement. Before *customer execution*,
+recheck the real target timeout and chosen journal mode; run the exact
+implemented callback under bounded synthetic load, overlapping REST,
+lock/backup/recovery, repeated contention and overload, with positive
+response margin; and prove native timeout/non-2xx effects, durable
+HUMAN plus operational attention and B2 recovery. If either gate is
+unprovable, HALT that stage. No real Chatwoot connection, customer
+data, deployment, public POST, config mutation or first production
+DB creation is authorized by this docs-only amendment.
+
+## 29.9 Clarification and semantic provenance under v0.8
+
+A CLARIFY reservation is committed atomically with its PREPARED public action
+before any public send attempt. The storage transition is itself the proof that
+this action was planned at pre-reservation budget `0`: it inserts the CLARIFY
+action and atomically changes the active episode to
+`clarification_prompts_sent=1`, `clarification_action_id=action_id`, the exact
+requested slot and the action's post-reservation episode version.
+
+Send-time semantic reauthorization of **that same owning unsent CLARIFY** must
+not feed the persisted post-reservation `1` back into ordinary C4 and thereby
+exhaust its own prompt. EpisodeStore instead issues a transient, single-action
+**clarification reservation attestation** only when all of these still hold:
+- action type is CLARIFY and state is PREPARED or the relay's current GATING
+  claim;
+- action episode/version is the current active episode/version;
+- episode has `clarification_prompts_sent=1`;
+- `clarification_action_id == action_id`;
+- episode/action requested slot and reserved canonical candidates are unchanged.
+
+Only while rebuilding semantics for that exact action does the attestation expose
+an **effective pre-reservation budget 0**. It is not a general budget override,
+is not durable, cannot be supplied by callers, and is invalid for another/new
+action. The fresh decision must still be semantically identical to the durable
+reservation. A competing/new clarification sees ordinary persisted budget `1`
+and therefore exhausts.
+
+Before SENDING, that exact reservation may be released only as part of a safe
+atomic cancellation/replacement of the unsent action. After SENDING, the budget
+remains consumed even when the outcome is uncertain. False HUMAN is acceptable;
+duplicate CLARIFY is not.
+
+Semantic interpretations of a still-open unanswered customer turn are proposed
+state until the corresponding customer-facing action is durably handled.
+Durable semantic state carries provenance through accepted event sequence /
+stream revision rather than pretending an unfinished turn was already answered.
+
+HUMAN terminalization follows §43. A bound episode closes as
+`human_takeover` only after human/open non-AI ownership is proven, or as
+`ownership_lost` only when exact current Chatwoot authority proves the
+configured AgentBot no longer owns a state that BabyPark is permitted to hand
+off. Unknown/unavailable ownership keeps the HUMAN obligation live.
+
+A pure `NON_ACTIONABLE_ACK` may close without an external public-message side
+effect only after the complete open turn and no-newer gate are proven and its
+same-revision immutable `NON_ACTIONABLE_ACK` semantic-origin fence has committed.
+
+## 29.10 C2 implementation decomposition after v0.8 freeze
+
+C2a — Conversation Event Ledger + Durable Action Foundation:
+- EpisodeStore schema/read attestation and clean schema-v2 cut;
+- conversation streams/events and `stream_revision`;
+- unique source-event ingestion and late-lower-ID acceptance;
+- exact Chatwoot row reader/default-deny classification;
+- bounded non-authorizing backfill;
+- one-statement authorizing snapshot contract;
+- durable public-actions/outbox constraints and relay recovery skeleton;
+- no LLM/extraction.
+
+C2b — Structured Extraction + deterministic resolution:
+- versioned extractor schema;
+- turn-index exact-quote certification;
+- language handling;
+- exact SKU/title product identity only;
+- existing category/brand/store/money resolvers;
+- unsupported-marker veto;
+- no public action.
+
+C2c — Episode/open-turn routing planner:
+- accepted-event projection into logical episode/open turn;
+- supported dependent follow-up vs standalone replacement;
+- pending clarification response handling;
+- candidate selection;
+- batch-aware acknowledgement;
+- semantic provenance/limits;
+- stale-plan token feeding the PublicActionRelay.
+
+C3 then runs ObjectiveConstraintLatch over the reconstructed, transient text and
+certified spans.
+
+## 30. Shortlist minimum anchor
+
+Price-only browse is forbidden.
+
+Require at least:
+- exact category;
+OR
+- exact brand.
+
+Optional:
+- min/max price;
+- store.
+
+Missing anchor:
+CLARIFY / MISSING_SHORTLIST_ANCHOR.
+
+The v1 clarification requests **category only** (`requested_slot=category_id`).
+This is intentional: C2c already proves exact `category_id` requested-slot
+follow-ups, while the generic `shortlist_anchor` union is not a supported
+dependency slot and must never be emitted by C4. The original request's stable
+money/store constraints remain preserved across the clarification. A future
+category-or-brand union requires an explicit C2c contract change; it is not
+inferred here.
+
+## 31. Dedicated objective CatalogService contract
+
+Do not reuse current `searchProducts()` as factual shortlist authority.
+
+Current code can match through a non-default variant while top-level product price remains default-variant price.
+
+Create a dedicated provider-neutral contract, conceptually:
+
+```
+searchObjectiveProducts({
+  categoryId?,
+  categoryMatchMode?,
+  brandId?,
+  minPriceMinor?,
+  maxPriceMinor?,
+  storeId?,
+  limit
+})
+```
+
+Require categoryId OR brandId.
+
+## 32. Objective cohort
+
+Relevant variants:
+- active;
+- IN_STOCK;
+- satisfy exact canonical filters.
+
+With price filter:
+- matching membership and presentation derive from the same trusted-price cohort.
+
+If relevant anchored IN_STOCK universe contains an offer hole that prevents proving complete result membership:
+HUMAN / PRICE_COHORT_INCOMPLETE.
+
+Zero price:
+HUMAN / ZERO_PRICE_UNVERIFIED.
+
+Mixed relevant currency:
+HUMAN / MIXED_CURRENCY.
+
+Do not silently remove incomplete products from total count.
+
+## 33. Category tree semantics for objective search
+
+NODE_ONLY:
+match direct category membership only.
+
+INCLUDE_DESCENDANTS:
+expand descendants from the same pinned catalog generation.
+
+Vocabulary revision and match mode are part of decision provenance.
+
+This category-tree rule applies to objective search.
+It does NOT define CommercePolicy exception-scope narrowing.
+
+## 34. Store-filter objective search
+
+With storeId:
+- stock layer must be answerable;
+- every anchored active IN_STOCK variant must have an explicit store_stock row
+  for that exact store before the exact-store cohort is considered complete;
+- quantity = 0 is a confirmed non-participating store state;
+- participating variant must have quantity > 0 at that exact store.
+
+A missing exact-store row is not interpreted as quantity = 0. It means the
+store-filtered cohort cannot be proven complete and fails closed as:
+HUMAN / CATALOG_STOCK_STALE.
+
+Commercial IN_STOCK does not substitute for store stock.
+
+Stale/blocking stock layer:
+HUMAN / CATALOG_STOCK_STALE.
+
+Store-stock freshness in v1 is layer authority. source_updated_at is retained
+evidence but there is no independent row-level stale state/TTL contract.
+
+Unknown store never falls back to general availability.
+
+## 35. Objective result DTO
+
+Conceptually:
+
+```
+ObjectiveProductMatch {
+  product_id
+  title
+  image_url
+  product_url
+
+  matched_variant_count
+
+  matching_price_min_minor
+  matching_price_max_minor
+  currency
+
+  matching_variant_ids[]
+  displayable_variant_labels[]
+  total_matching_variant_labels
+  displayable_variant_label_count
+
+  all_available_variants_match_filters
+
+  matched_store_id?
+}
+```
+
+The `all_available_variants_match_filters` flag is evaluated only against the same
+customer-purchasable availability universe used by objective search: active +
+IN_STOCK variants, plus quantity > 0 at the exact canonical store when storeId
+participates. EXPECTED, MADE_TO_ORDER, OUT_OF_STOCK, DISCONTINUED and confirmed
+quantity = 0 exact-store variants are outside this denominator and do not turn
+the flag false merely because such variants exist. A missing exact-store row
+makes the denominator unprovable and fails the whole store-filtered answer closed.
+
+Response also includes total_product_count before display limit.
+
+## 36. Shortlist ranking
+
+Stable deterministic ordering:
+`matching_price_min_minor ASC, product_id ASC`.
+
+Display limit: 3.
+
+No hidden recommendation score.
+
+## 37. Shortlist count wording
+
+0:
+ANSWER / OBJECTIVE_SHORTLIST_EMPTY.
+No automatic widening.
+
+1–3:
+show all and state exact count.
+
+>3:
+state total and that only top 3 by deterministic price ordering are shown.
+
+Never say "нашёл 3" if total is 47.
+
+## 38. Matched-cohort presentation
+
+Example:
+- default variant 27,300;
+- another IN_STOCK variant 19,300;
+- filter <=20,000.
+
+Product may match.
+
+Card must show the matched cohort (19,300), not default 27,300 and not full 19,300–27,300 range.
+
+Set:
+`all_available_variants_match_filters=false`.
+
+This means that only part of the active + IN_STOCK purchasable cohort matched
+the objective filters. It does not describe non-purchasable lifecycle variants.
+
+## 39. Specific-store stock semantics
+
+"Есть эта модель в магазине X?" is not automatically answerable for a multi-variant model.
+
+ANSWER / STORE_STOCK is allowed when:
+- an exact variant was already selected; OR
+- the resolved product has exactly one active IN_STOCK variant.
+
+Then:
+- store resolves exactly to an active canonical store_id;
+- commercial and stock layers are answerable;
+- the selected exact variant/store pair must have an explicit store_stock row;
+- quantity > 0 => factual yes;
+- quantity = 0 => factual no.
+
+A missing exact variant/store row is not a confirmed zero. It fails closed as:
+HUMAN / CATALOG_STOCK_STALE.
+
+If product has multiple active IN_STOCK variants and no variant selected:
+- CLARIFY / AMBIGUOUS_VARIANT only when every customer-selectable candidate has
+  a safe, non-empty and unique display label;
+- otherwise HUMAN / PRODUCT_VARIANT_NOT_RESOLVABLE.
+
+If product has zero active IN_STOCK variants and no exact variant is already
+selected, B4 does not invent a model-level store-stock fact:
+HUMAN / PRODUCT_VARIANT_NOT_RESOLVABLE.
+
+If clarification remains unresolved:
+HUMAN / CLARIFY_EXHAUSTED.
+
+Do not aggregate "one color exists" into "the model is in the store".
+
+Do not expose quantity.
+Do not claim "можно забрать сегодня".
+
+## 40. Neutral presentation model
+
+Business logic returns neutral `ProductPresentation`, not Chatwoot-specific cards.
+
+ProductPresentation v1:
+
+```text
+ProductPresentation {
+  contract = bp.catalog.product-presentation/1
+  product_id
+  variant_id?
+  variant_label?
+  title?
+  product_url?
+  image_url?
+}
+```
+
+Rules:
+- canonical product/variant IDs only inside business/Catalog logic; C5 does not
+  receive those IDs in its public render payload;
+- variant_label is sanitized factual text and may be null;
+- product-level image is preferred;
+- variant image fallback may use only the exact selected variant or the already
+  proven matched cohort; never an unrelated/default variant;
+- price, stock quantity and customer wording do not live inside ProductPresentation;
+- exact price/stock facts remain deterministic values in the enclosing factual DTO.
+
+### 40.1 Exact-locale public presentation
+
+The existing Catalog presentation helper may fall back to another available
+language for generic/non-public consumers. Website First Line **must not** use
+that cross-locale fallback for public title/URL text.
+
+For public shortlist presentation projection, C4 reads the already-public CatalogService
+`getProduct({productId})` result and selects only
+`product.localized[response_locale]`. Every such presentation read must report
+`catalog.generation_id` exactly equal to the generation carried by the current
+`searchObjectiveProducts()` shortlist fact. A generation mismatch, missing
+product row or missing exact-locale presentation means the shortlist cannot be
+safely presented and yields HUMAN / PRODUCT_PRESENTATION_NOT_AVAILABLE. C4 never
+combines membership/price from one catalog generation with title/URL/image from
+another. It may use language-neutral image evidence only from that same-generation
+product read / already proven cohort. It must not select another localized entry
+when the exact response locale is absent.
+
+If a template requires a product title (currently shortlist presentation templates) and any
+selected item lacks a non-empty safe title in the exact `response_locale`, C4
+returns HUMAN / PRODUCT_PRESENTATION_NOT_AVAILABLE. It never exposes a product
+ID, substitutes a RU title into a UK response (or vice versa), or asks C5 to
+choose a fallback. `product_url` may be null; if present it must come from the
+same exact-locale entry. Price/stock templates that do not require title/URL are
+not blocked merely because localized presentation is absent.
+
+C5 receives only the exact `C4Decision` from §16.2. WebsiteRenderer/TextRenderer:
+- perform no language detection;
+- perform no Catalog/Knowledge/Chatwoot read;
+- perform no LLM call;
+- accept only the allowlisted template for `response_locale`;
+- reject unknown/extra payload fields;
+- format exact critical values without semantic rewriting;
+- map PAYMENT_METHODS codes only to fixed locale-specific method names. The code
+  `COD_NOVA_POSHTA` never causes a percentage/fee/condition to be printed.
+
+Every public template has an explicit `uk` and `ru` branch. Missing branch is a
+renderer failure and produces zero public send; there is no default language.
+
+Initial adapters:
+- WebsiteRenderer;
+- TextRenderer.
+
+TextRenderer is the deterministic C5 text adapter implemented by this bounded
+repository stage. It remains unconnected to Viber/Telegram production.
+
+### 40.2 C5 genuine-decision and exact output boundary
+
+C5 is a pure presentation adapter over one **genuine** C4 public decision. A
+structurally matching object, clone, deserialized copy or caller-built eight-key
+object is not sufficient authority to render. C4 must own an in-process
+capability/provenance check for decisions returned by its public decision
+constructor, and C5 must require that check before rendering. This check exposes
+no DecisionBasis/private context and does not make C5 an authority reader.
+
+A valid HUMAN decision returns no render result (`null`). It is not a renderer
+error and never produces customer content.
+
+WebsiteRenderer returns exactly one of these frozen shapes for ANSWER/CLARIFY:
+
+```text
+WebsiteRenderText {
+  schema = bp.first-line.website-render/1
+  content_type = text
+  content = string with 1..150000 Unicode code points
+  content_attributes = {}
+}
+
+WebsiteRenderSelect {
+  schema = bp.first-line.website-render/1
+  content_type = input_select
+  content = string with 1..150000 Unicode code points
+  content_attributes = {
+    items: [{title:'<ordinal>',value:'bp-choice:<ordinal>'}, ...]
+  }
+}
+```
+
+No additional enumerable key is allowed at either level. C5 never emits sender,
+conversation/account IDs, source/action IDs, template/provider parameters or
+private reservation values. C6 owns the Chatwoot POST envelope and action
+identity.
+
+The Website `content` ceiling is counted in Unicode **code points**, matching
+Chatwoot/Ruby UTF-8 string-length semantics, not JavaScript UTF-16 code units.
+For example U+1F600 counts as one code point even though JavaScript
+`"😀".length === 2`. The implementation must use an equivalent code-point
+count (for example `Array.from(content).length`) on the final transport content
+after all Website escaping; unescaped/source length is not the admission test.
+
+Renderer output is transient in-memory presentation only. C5 owns no durable
+store/cache/outbox and MUST NOT persist or routinely log rendered content,
+dynamic labels, product URLs, choice labels/tokens, or a content-derived digest.
+The only durable pre-send state remains the C6/§29.8 machine descriptor and
+provenance; Chatwoot remains transcript authority for the eventual public
+message.
+
+WebsiteRenderer mapping is exact:
+- every ANSWER uses `content_type=text`, including shortlist answers;
+- candidate-based CLARIFY uses `input_select`. Its `content` is the fixed
+  locale prompt followed by one U+000A LF and the exact ordered rows
+  `1. <label>`, `2. <label>`, ... with Website transport entity encoding
+  applied only to each dynamic label and no trailing LF. `content_attributes.items`
+  has the same cardinality/order; each item is exactly
+  `{title:String(ordinal),value:choice.token}` where ordinal starts at 1.
+  Dynamic factual labels never enter `items[*].title`;
+- `TPL_CLARIFY_MONEY_V1` and `TPL_CLARIFY_SHORTLIST_ANCHOR_V1` use `text` with
+  `content_attributes={}`;
+- C5 v1 does **not** emit Chatwoot `cards`. Shortlist `image_url` is not
+  rendered or fetched; this avoids making C5 a network/media adapter. A non-null
+  safe `product_url` remains part of the semantic row. TextRenderer copies that
+  canonical URL literally. WebsiteRenderer emits it as **non-clickable plain
+  text** using the same reversible Website transport-neutral entity encoding as other
+  dynamic factual text; C5 v1 never lets Chatwoot/linkify choose a dynamic URL boundary
+  or hyperlink target.
+
+TextRenderer returns exactly
+`{schema:'bp.first-line.text-render/1',content:string}` for ANSWER/CLARIFY and
+`null` for HUMAN. It has no transport metadata and remains unconnected to
+Viber/Telegram in C5. Its `content` is the exact semantic §40.4 branch before
+Website-only transport entity encoding and has no trailing newline. For finite
+CLARIFY the exact bytes are `<prompt>\n1. <label>\n2. <label>...`, with one
+U+000A LF before each ordinal row and no `bp-choice` token/private candidate
+value. ANSWER multiline/list content uses the same §40.4 line breaks and no
+trailing LF.
+
+Genuine C4 provenance never waives public-contract validation. Before rendering,
+C5 revalidates the complete exact §16.2 public relation among `decision`,
+`reason`, `response_locale`, `template_id`, `render_payload`,
+`requested_slot` and `choices`, including the frozen
+`reason -> allowed template_id` relation. Private request-family identity is
+not a C5 input and is not reconstructed by the renderer. A genuine object with
+an impossible public reason/template pair is still invalid.
+
+Unknown/forged decision, unsupported locale/template/reason tuple, invalid
+payload/choice shape, missing locale branch, unsupported currency, unsafe
+dynamic text, final Website content outside 1..150000 Unicode code points or
+other invalid output is one fail-closed renderer failure family:
+`FIRST_LINE_RENDERER_INVALID`. It produces no fallback text and is never
+permission for C6 to use a previously prepared render.
+
+### 40.3 Exact C5 formatting and Chatwoot transport neutrality
+
+C5 performs no language detection and never calls `Intl` with an unchecked
+locale. The only public locales are the already-certified exact tags `uk` and
+`ru`.
+
+Website First Line v1 public monetary rendering is deliberately UAH-only.
+Although the C4 schema carries a safe three-letter currency code, C5 renders a
+money-bearing template only when the current payload currency is exactly `UAH`.
+Any other currency is `FIRST_LINE_RENDERER_INVALID` / zero public send until a
+separately reviewed public formatting contract is frozen.
+
+UAH formatting is exact and contains no locale/runtime dependency:
+- divide the non-negative integer minor value by 100;
+- group the integer major part from the right in threes with one ASCII space;
+- omit `,00`; otherwise render comma plus exactly two minor digits;
+- append exactly one ASCII space plus `грн`.
+Examples: `2730000 -> "27 300 грн"`, `2730050 -> "27 300,50 грн"`,
+`50 -> "0,50 грн"`.
+
+Other critical formatting is exact:
+- E.164 phone and `HH:MM` are copied byte-for-byte;
+- one schedule interval is `HH:MM–HH:MM` using U+2013 EN DASH;
+- intervals and ordinary label/method lists join with `, `;
+- integer counters are unsigned ASCII decimal with no grouping;
+- TextRenderer copies a non-null canonical product URL byte-for-byte. For
+  WebsiteRenderer, the canonical URL is first subject to the same literal Liquid
+  opening-delimiter gate as every other dynamic Website string and is then
+  reversibly transport-neutral entity encoded as plain text. C5 performs no
+  redirect/fetch and emits no dynamic Website hyperlink.
+
+Chatwoot v4.18.0 renders ordinary Web Widget message `content` through
+`markdown-it` with `linkify=true`. For finite `input_select`, the agent
+Dashboard renders the same stored `content` through its native
+`dashboard/components-next/message/bubbles/Form.vue` path with DOMPurify
+rather than Markdown. C5 therefore owns one exact Website transport-neutral
+encoding for **dynamic free-form factual text inserted into `content`**
+(shortlist titles, variant/stock labels and canonical product URLs): after the
+Liquid check below, replace every ASCII punctuation code point in
+`U+0021..U+002F`, `U+003A..U+0040`, `U+005B..U+0060` or
+`U+007B..U+007E` with the uppercase hexadecimal numeric HTML entity
+`&#xHH;`, where `HH` is the two-digit ASCII code point (for example
+`!` -> `&#x21;`, `&` -> `&#x26;`, `<` -> `&#x3C;`,
+`_` -> `&#x5F;`). Unicode letters/digits/whitespace are unchanged.
+
+Those entity bytes are transport content. The verified Web Widget
+Markdown/DOMPurify path and, for `input_select`, the verified agent Dashboard
+DOMPurify path must both display the original normalized/canonical factual text
+and must create no dynamic link, image, emphasis, code or HTML element from it.
+Fixed template text and generated money/time/counters/payment names do not use
+this encoding and therefore must themselves be frozen in a form that is stable
+under the verified formatter. Website First Line v1 intentionally emits **zero
+dynamic hyperlinks**; an already-C4-validated `product_url` is shown as exact
+visible plain text instead of relying on Chatwoot bare-link/autolink boundary
+rules.
+
+For finite Website CLARIFY, dynamic choice labels are rendered only inside
+the numbered `content` list and therefore use the same reversible
+transport-neutral entity encoding as other Website free-form factual text. C5
+creates each native `input_select.items[*].title` as only the generated
+unsigned ASCII ordinal (`"1"`, `"2"`, ...). An unmodified native Widget
+selection submits that selected option and normally echoes the ordinal.
+
+That echoed/submitted `title` is **not** an authority field: Chatwoot's Widget
+update endpoint permits a client-supplied `submitted_values[*].title` and does
+not server-bind it back to the original item. A modified client can therefore
+change display title while keeping the same `value`. BabyPark must treat any
+submitted title as untrusted customer presentation data and must never derive a
+selection/fact from it. Structured-selection authority uses only the exact
+single `submitted_values[0].value` / `bp-choice:<ordinal>` proven through the
+existing C2/C4 reauthorization chain and the future C6 final gate. A displayed
+tampered title is customer-originated content, not an AI factual claim. The
+public labels remain pairwise-distinguishable in the visible numbered list; the
+ordinal button references an already-distinguishable row and is never used to
+hide duplicate labels.
+
+Payment method names are a closed table and carry no fee/condition:
+- `BANK_TRANSFER`: uk `банківський переказ`; ru `банковский перевод`;
+- `CASH_COURIER`: uk `готівкою кур’єру`; ru `наличными курьеру`;
+- `COD_NOVA_POSHTA`: uk `післяплата у Новій пошті`; ru
+  `наложенный платеж в Новой почте`.
+
+Chatwoot v4.18.0 evaluates Liquid for outgoing message `content` during message
+creation. WebsiteRenderer must not escape this with
+`{% raw %}...{% endraw %}`. Before any Website transport entity encoding/interpolation,
+every dynamic public string that WebsiteRenderer may place into `content` fails
+closed if it contains ASCII `{{` or `{%`. For `product_url`, this check is
+against the **canonical §16.3 C4 projection received by C5**: a canonical URL
+that still contains a literal opening delimiter rejects, while a percent-encoded
+sequence such as `%7B%7B` contains no Liquid delimiter and remains inert
+transport-neutral entity-encoded plain text. After rendering, final `content` is checked again
+for literal opening delimiters; every select item title is independently required
+to equal its unsigned ASCII ordinal exactly. WebsiteRenderer then checks final
+`content` length after all transport encoding: 1..150000 Unicode code points,
+matching the verified Chatwoot v4.18.0 Message content ceiling. Length failure is
+`FIRST_LINE_RENDERER_INVALID`, never a send/retry hint. Fixed branches are
+regression-tested to contain neither Liquid opening delimiter. A dynamic value
+that still contains a literal Liquid opening delimiter at the C5 boundary
+therefore yields `FIRST_LINE_RENDERER_INVALID`; C5/C6 do not let Chatwoot
+reinterpret it against contact/agent/conversation/inbox/account drops. This is an
+additional presentation safety gate and never weakens §16.3.
+
+The WebsiteRenderer transport contract above is bound to the verified deployed
+Chatwoot v4.18.0 behavior recorded by this amendment. Because production
+`public/vite/**` artifacts are gitignored, tracked Git source identity alone is
+not sufficient browser-runtime provenance. Before first production activation,
+and after any Chatwoot package/version/source/build change that can affect
+message creation, Liquid processing, Web Widget Markdown, agent Dashboard
+`input_select` presentation, `input_select` submission/echo or message
+content limits, the bounded deployment stage must revalidate those exact native
+surfaces against the target deployed runtime. That proof must include the
+production Vite manifest, the manifest-selected relevant chunks/source maps and
+their equivalence to the inspected tracked sources (or an equivalently
+content-bound reproducible build proof), plus the relevant locked parser/sanitizer
+versions. A version/source/bundle mismatch, missing source-map/build provenance,
+unavailable proof or changed behavior blocks WebsiteRenderer activation/send; it
+never falls back to assumptions from v4.18.0 and never requires a Chatwoot core
+patch.
+
+### 40.4 Exact uk/ru C5 wording
+
+Braced names below denote deterministic §40.3 substitutions; they are not a
+runtime template language and literal braces do not appear in emitted content.
+
+ANSWER branches:
+
+| template_id | uk | ru |
+|---|---|---|
+| `TPL_STORE_OPEN_STATUS_V1` | open+close `Магазин зараз відкритий до {time}.`; open+null `Магазин зараз відкритий.`; closed `Магазин зараз зачинений.` | open+close `Магазин сейчас открыт до {time}.`; open+null `Магазин сейчас открыт.`; closed `Магазин сейчас закрыт.` |
+| `TPL_STORE_HOURS_TODAY_V1` | empty `Сьогодні магазин зачинений.`; otherwise `Графік на сьогодні: {intervals}. Зараз магазин {відкритий|зачинений}.` | empty `Сегодня магазин закрыт.`; otherwise `График на сегодня: {intervals}. Сейчас магазин {открыт|закрыт}.` |
+| `TPL_STORE_PHONE_V1` | `Телефон магазину: {e164}.` | `Телефон магазина: {e164}.` |
+| `TPL_CALL_CENTER_PHONE_V1` | `Телефон контакт-центру: {e164}.` | `Телефон контакт-центра: {e164}.` |
+| `TPL_PAYMENT_METHODS_V1` | `Способи оплати: {methods}.` | `Способы оплаты: {methods}.` |
+| `TPL_PREPAYMENT_V1` | `Передоплата: {money}.` | `Предоплата: {money}.` |
+| `TPL_RETURN_PERIOD_V1` | `Період повернення товару належної якості (календарні дні): {days}. День покупки {не враховується|враховується}.` | `Срок возврата товара надлежащего качества (календарные дни): {days}. День покупки {не учитывается|учитывается}.` |
+| `TPL_PRODUCT_PRICE_SINGLE_V1` | `Ціна: {money}.` | `Цена: {money}.` |
+| `TPL_PRODUCT_PRICE_RANGE_V1` | `Ціна залежить від варіанта: від {min_money} до {max_money}.` | `Цена зависит от варианта: от {min_money} до {max_money}.` |
+| `TPL_PRODUCT_NOT_IN_STOCK_V1` | `Зараз товару немає в наявності.` | `Сейчас товара нет в наличии.` |
+| `TPL_VARIANT_LIST_V1` | `Доступні варіанти ({named}/{total}): {labels}.` | `Доступные варианты ({named}/{total}): {labels}.` |
+| `TPL_VARIANT_LIST_PARTIAL_V1` | named>0: `Варіанти з доступними назвами ({named}/{total}): {labels}.`; named=0: `Кількість доступних варіантів: {total}. Назви недоступні.` | named>0: `Варианты с доступными названиями ({named}/{total}): {labels}.`; named=0: `Количество доступных вариантов: {total}. Названия недоступны.` |
+| `TPL_VARIANT_PRICE_LIST_V1` | first line `Ціни варіантів:`, then `• {label} — {money}` per row | first line `Цены вариантов:`, then `• {label} — {money}` per row |
+| `TPL_SHORTLIST_TOP3_V1` | `Кількість знайдених товарів: {total}. Перші результати:` then shortlist rows | `Количество найденных товаров: {total}. Первые результаты:` then shortlist rows |
+| `TPL_SHORTLIST_ALL_V1` | `Знайдені товари:` then shortlist rows | `Найденные товары:` then shortlist rows |
+| `TPL_SHORTLIST_EMPTY_V1` | `За заданими умовами товарів не знайдено.` | `По заданным условиям товары не найдены.` |
+| `TPL_STORE_STOCK_V1` | no label: `Є в наявності в цьому магазині.` / `Немає в наявності в цьому магазині.`; with label: `Варіант «{label}» є в наявності в цьому магазині.` / `Варіанта «{label}» немає в наявності в цьому магазині.` | no label: `Есть в наличии в этом магазине.` / `Нет в наличии в этом магазине.`; with label: `Вариант «{label}» есть в наличии в этом магазине.` / `Варианта «{label}» нет в наличии в этом магазине.` |
+
+Shortlist row `i` is exact:
+- price is one UAH amount when min=max, otherwise `{min_money}–{max_money}`;
+- base row is `{i}. {title} — {price}` in both locales;
+- append ` (часткова відповідність моделі)` /
+  ` (частичное соответствие модели)` when `partial_model_match=true`;
+- if `product_url` is non-null, the semantic/TextRenderer row appends newline
+  then that canonical URL; WebsiteRenderer appends newline then the exact
+  transport-neutral entity encoding of that URL, so Chatwoot displays the canonical URL
+  as non-clickable plain text;
+- rows are separated by one newline;
+- `image_url` is ignored by C5 v1 and never fetched.
+
+CLARIFY prompt branches:
+
+| template_id | uk | ru |
+|---|---|---|
+| `TPL_CLARIFY_PRODUCT_V1` | `Уточніть, будь ласка, який товар ви маєте на увазі.` | `Уточните, пожалуйста, какой товар вы имеете в виду.` |
+| `TPL_CLARIFY_VARIANT_V1` | `Уточніть, будь ласка, який варіант ви маєте на увазі.` | `Уточните, пожалуйста, какой вариант вы имеете в виду.` |
+| `TPL_CLARIFY_CATEGORY_V1` | `Уточніть, будь ласка, яку категорію ви маєте на увазі.` | `Уточните, пожалуйста, какую категорию вы имеете в виду.` |
+| `TPL_CLARIFY_BRAND_V1` | `Уточніть, будь ласка, який бренд ви маєте на увазі.` | `Уточните, пожалуйста, какой бренд вы имеете в виду.` |
+| `TPL_CLARIFY_STORE_V1` | `Уточніть, будь ласка, який магазин ви маєте на увазі.` | `Уточните, пожалуйста, какой магазин вы имеете в виду.` |
+| `TPL_CLARIFY_MONEY_V1` | `Уточніть, будь ласка, максимальну суму в гривнях.` | `Уточните, пожалуйста, максимальную сумму в гривнах.` |
+| `TPL_CLARIFY_SHORTLIST_ANCHOR_V1` | `Уточніть, будь ласка, категорію товару.` | `Уточните, пожалуйста, категорию товара.` |
+
+For `TPL_STORE_HOURS_TODAY_V1`, `open_now=true` with empty intervals is invalid.
+For `TPL_STORE_OPEN_STATUS_V1`, closed requires `closes_at_local=null`.
+`TPL_PRODUCT_PRICE_RANGE_V1` requires `min_current_minor < max_current_minor`;
+an equal pair belongs only to `TPL_PRODUCT_PRICE_SINGLE_V1`.
+`TPL_VARIANT_LIST_V1` requires `total_variant_count=named_variant_count>0`.
+`TPL_VARIANT_LIST_PARTIAL_V1` requires
+`total_variant_count>named_variant_count>=0`; the named=0 branch above emits no
+empty punctuation/list placeholder.
+TOP3/ALL require at least one product; zero uses only `TPL_SHORTLIST_EMPTY_V1`.
+
+## 41. Critical-value rendering
+
+LLM does not rewrite:
+- prices;
+- stock;
+- opening hours;
+- phones;
+- policy money/dates;
+- factual product lists.
+
+LLM may participate in intent/raw-span extraction.
+Authority comes from deterministic tools/resolvers.
+
+## 42. Mixed supported + unsupported customer turn
+
+v1 does not partially answer a mixed turn.
+
+Example:
+"Сколько стоит и совместима ли с адаптером X?"
+
+=> HUMAN / COMPATIBILITY_NOT_AUTHORITATIVE.
+
+No partial public price before handoff.
+
+## 43. Native HUMAN handoff v1
+
+This section is the complete Website First Line v1 HUMAN handoff authority and
+also defines the one closed current-conversation ownership decoder reused by
+§29.7.2 S2 send admission. Legacy AgentBot safety documents may be consulted as
+historical evidence but do not authorize C6 behavior.
+
+HUMAN creates **no public AI handoff preface**. Once durable HUMAN continuation
+owns the stream under §29.8, BabyPark may only pursue native ownership
+transfer/reconciliation; no later AI answer/clarification may supersede it.
+
+Every C6 ownership decision uses an exact current Chatwoot account-conversation
+read. The configured Website inbox and AgentBot identities are explicit. C6
+MUST NOT use the legacy `normalizeConversation()` ownership projection or
+`evaluateOwnership()` as ownership authority for either §29.7.2 S2 or §43:
+the projection treats every non-`AgentBot` `assignee_type` as human, while the
+legacy evaluator also relies on Chatwoot message-id ordering that v0.8 forbids
+as causal/current-turn authority.
+
+Before either §29.7.2 S2 send admission or §43.1 reconciliation, the current
+wire is decoded once into one closed `owner_class` plus one reviewed status.
+The exact wire `inbox_id` must also be a positive safe integer. Missing/invalid
+`inbox_id` is unknown authority; for S2, any value other than the configured
+Website inbox is a send-admission failure and cannot authorize a public POST.
+The only accepted owner classes are:
+- `UNASSIGNED` — both `meta.assignee` and `meta.assignee_type` are absent;
+- `HUMAN_USER` — `meta.assignee_type == 'User'` and
+  `meta.assignee.id` is a positive safe integer;
+- `SAME_AGENTBOT` — `meta.assignee_type == 'AgentBot'` and the positive
+  assignee id equals the configured BabyPark Website AgentBot id;
+- `OTHER_AGENTBOT` — `meta.assignee_type == 'AgentBot'` with another
+  positive id;
+- `OTHER_AUTOMATION` — on the deployed Enterprise v4.18.0 tuple,
+  `meta.assignee_type == 'Captain::Assistant'` with a positive id;
+- `UNKNOWN` — any missing/inconsistent id/type pair, any other assignee type,
+  malformed `meta/assignee`, contradictory synthetic ownership evidence, or an
+  unavailable read.
+
+The reviewed current statuses are exactly `open / pending / resolved / snoozed`.
+Any other/malformed/unavailable status is `UNKNOWN`. An `UNKNOWN` owner/status
+or missing/invalid current inbox always default-denies.
+
+The same decoded wire has two context-specific consumers and they must not be
+conflated:
+- **before HUMAN, §29.7.2 S2 send admission** permits exactly configured Website
+  inbox + `pending + SAME_AGENTBOT`; every other tuple/mismatch/unavailable
+  read performs zero POST and attaches durable HUMAN continuation;
+- **after HUMAN owns continuation, §43.1 handoff reconciliation** applies the
+  disjoint matrix below. In that context even `pending + SAME_AGENTBOT` remains
+  unresolved HUMAN and cannot authorize an AI public action.
+
+The stock account-conversation JSON serializes one `assigned_entity` and the
+normal validated human-assignment path clears AgentBot ownership. That is
+sufficient for the **current read-only reconciliation matrix**, but the external
+wire is not proof that no hidden competing database owner could exist after an
+out-of-contract/corrupt write. Therefore a future automated handoff primitive
+MUST NOT treat this pre-read as proof of the negative write precondition
+"no human/other automation". The primitive's own server-side write must
+atomically enforce its expected owner/status/competing-owner predicates or be
+monotonic-safe under every intervening state.
+
+Any inbox/sender/assignee/status shape not proven by this closed decoder is
+default-deny. Inbox mismatch never proves takeover/loss by itself; it blocks AI
+send and leaves the resulting HUMAN obligation to §43 reconciliation.
+
+Deployed Chatwoot v4.18.0 does **not** provide a safe automated native handoff
+write for this contract. Stage-0 source-fit proves all of the following for the
+current account-conversation `toggle_status(open)` path:
+- `ConversationPolicy#show?` authorizes any AgentBot to access the conversation;
+  it does not require the conversation to remain assigned to that AgentBot;
+- `bot_handoff?` checks only AgentBot caller + current `pending` status +
+  requested `open`; it does not atomically require the configured BabyPark
+  AgentBot to still own the conversation and exposes no expected-owner/status
+  CAS or idempotency key;
+- if the status changes before request handling, the generic status branch may
+  set `open`; therefore a stale pre-read can reopen a resolved/snoozed
+  conversation;
+- if another AgentBot becomes owner while status remains `pending`, the
+  BabyPark AgentBot request can still enter `bot_handoff!`, clear that other
+  bot, open the conversation and dispatch a handoff event.
+
+Those mutations cannot be made safe by a post-read: the displaced ownership or
+reopened state may already have been destroyed. The bounded public-send residual
+race accepted by §29.7 does not authorize this different mutable handoff race.
+Website First Line therefore **MUST NOT call the deployed v4.18.0 AgentBot
+`toggle_status(open)` path automatically**. Chatwoot core patches/forks remain
+forbidden.
+
+Current v1 handoff execution on this deployed tuple is consequently
+**read/reconcile/operator-manual**:
+- exact current ownership/status reads may prove handoff already achieved or
+  BabyPark ownership already lost;
+- a still `pending` conversation owned by the configured BabyPark AgentBot is
+  durable HUMAN but has **no authorized automated handoff write**. Keep HUMAN
+  absorbing, raise §29.8.2 operator-attention according to the measured
+  escalation policy, and require manual/native operator action outside autonomous
+  AI;
+- `open` while the same configured BabyPark AgentBot still owns the
+  conversation is likewise unresolved HUMAN, never proof of human takeover;
+- no elapsed time, execution lease or repeated read creates write authority.
+
+A later production stage may automate handoff only if a fresh Agreement §§1–3
+native-first fit gate, bound to the actual deployed/target Chatwoot tuple,
+proves an allowed primitive whose **write itself** either:
+1. atomically requires current `pending` + current configured BabyPark AgentBot
+   ownership and server-side absence of any competing human/other automation
+   owner; or
+2. is monotonic-safe for every state that can arise after the last authority
+   read.
+The pre-read `SAME_AGENTBOT` class alone is never proof of those negative
+write predicates. A custom Chatwoot core patch/fork is not an allowed way to
+satisfy that proof.
+
+Only after such a safe primitive is separately selected and owner-approved does
+the durable network-attempt protocol become active. Then, under one durable
+HUMAN continuation owner:
+- before the first automated write, atomically create one stable
+  `handoff_attempt_id` for the current stream/revision/HUMAN owner;
+- after a fresh exact ownership read proves that safe primitive's write-eligible
+  state, durably cross the attempt into a dispatch/outcome-unknown boundary
+  **before** invoking the primitive;
+- crash, lease expiry, restart, lost response or deletion/recreation of
+  `copilot.sqlite` never authorizes another write for that outcome-unknown
+  attempt;
+- a later attempt may exist only after positive deterministic non-commit evidence
+  for the prior attempt is durably attached to the same HUMAN owner and a new
+  exact read again proves write eligibility;
+- elapsed time, `pending`, missing execution rows, connection ambiguity or lack
+  of response is never non-commit proof.
+
+Attempt metadata is bounded machine state only and contains no customer
+text/content digest.
+
+### 43.1 Disjoint current-ownership matrix
+
+The matrix consumes exactly one decoded `owner_class` plus one reviewed status.
+It is mutually exclusive by construction and default-deny.
+
+1. **`open + owner_class in {HUMAN_USER, UNASSIGNED}`** — handoff is already
+   achieved into explicit human ownership or the proven non-AI/unassigned open
+   queue. Perform no BabyPark status write; terminalize `HANDOFF_DONE` and
+   close a bound episode as `human_takeover`.
+2. **any reviewed status + `owner_class in {OTHER_AGENTBOT,
+   OTHER_AUTOMATION}`** — BabyPark AI no longer owns the conversation. Perform
+   no write; terminalize `OWNERSHIP_LOST` and close a bound episode as
+   `ownership_lost`. Another automation is never reclassified as human.
+3. **`resolved|snoozed + owner_class in {UNASSIGNED, HUMAN_USER,
+   SAME_AGENTBOT}`** — perform no reopen/toggle write; terminalize
+   `OWNERSHIP_LOST` and close a bound episode as `ownership_lost`.
+4. **`open + SAME_AGENTBOT`** — unresolved HUMAN. Perform no automated status
+   write and no AI public action.
+5. **`pending + SAME_AGENTBOT`** — on the deployed v4.18.0 tuple, unresolved
+   HUMAN with no authorized automated write. Operator/manual handoff remains
+   required. A future separately proven safe primitive may make this state
+   write-eligible only under the gate above.
+6. **all remaining tuples** — including `UNKNOWN` owner/status,
+   `pending + HUMAN_USER|UNASSIGNED`, malformed/inconsistent wire ownership or
+   any unsupported status — default-deny. Perform no write; HUMAN remains
+   durable and silent, with operator-attention when its measured escalation
+   window expires.
+
+No raw wire observation is evaluated against more than one normal branch. A
+synthetic contradictory ownership fixture decodes to `UNKNOWN` before the
+matrix and therefore cannot also match a terminal branch.
+
+### 43.2 Reconciliation
+
+Every current read and every future-safe-primitive post-attempt read first runs
+the same closed owner decoder and then the same disjoint matrix:
+- `open + HUMAN_USER|UNASSIGNED` => `HANDOFF_DONE / human_takeover`;
+- `OTHER_AGENTBOT|OTHER_AUTOMATION` on any reviewed status, or
+  `resolved|snoozed + UNASSIGNED|HUMAN_USER|SAME_AGENTBOT` =>
+  `OWNERSHIP_LOST / ownership_lost`, never reopen;
+- `open + SAME_AGENTBOT` => unresolved HUMAN, no automated write;
+- `pending + SAME_AGENTBOT` => unresolved HUMAN. On deployed v4.18.0 there is
+  no automated write. If a future safe primitive has an outcome-unknown prior
+  attempt, the durable attempt remains blocking and only positive deterministic
+  non-commit evidence + a fresh write-eligible read may permit another attempt;
+- `UNKNOWN` owner/status and every remaining tuple => unresolved HUMAN, no
+  write; measured expiry raises §29.8.2 operator attention, never false terminal
+  success.
+
+`Captain::Assistant` is an explicitly recognized `OTHER_AUTOMATION` on the
+deployed Enterprise tuple, never a human. Any future/unknown assignee type
+remains `UNKNOWN` until a reviewed contract change adds it.
+
+A duplicate trigger cannot create a public message, reopen resolved/snoozed
+ownership, displace another AgentBot or manufacture human takeover. Current
+v4.18.0 handoff reconciliation is read-only with respect to status/ownership; any
+future automated primitive remains subject to the durable at-most-once attempt
+boundary above.
+
+A pending-HUMAN/C3-latched episode may terminalize through **either**
+`human_takeover` or `ownership_lost`. Both permanently end autonomous AI
+ownership for that episode and neither permits old customer events/latches to be
+reused after a later Chatwoot status change.
+
+The current handoff/liveness executor may live in an execution/reconcile job or a
+later selected runner, but semantic truth that HUMAN is owed is the immutable
+same-revision origin plus durable HUMAN continuation in `episode.sqlite`
+required by §29.8. Loss/recreation of `copilot.sqlite` therefore cannot erase an
+already committed HUMAN obligation.
+
+Public handoff preface remains deferred until a separately reviewed durable
+public-message action protocol explicitly authorizes one.
+
+## 44. Private handoff note — Slice D only
+
+Private note is a separate capability.
+
+Expose only:
+`createHandoffNote(note)`.
+
+There is no `private` argument.
+
+Wire payload hardcodes:
+`private: true`.
+
+Note is best-effort at-most-once:
+- durable job records note attempt before network call;
+- ambiguous/failing result is not retried;
+- note failure does not block handoff.
+
+Deterministic content only:
+- intent;
+- already answered fact codes;
+- unresolved reason;
+- product_id;
+- decision_context_id;
+- used revision IDs;
+- catalog generation;
+- confirmed_context facts that were independently reread and remain safe despite
+  the unresolved HUMAN reason.
+
+For HUMAN / CATALOG_STOCK_STALE, the private note must preserve all useful facts
+that are independently authoritative without claiming exact-store availability.
+For an already resolved exact product/variant this may include:
+- current general commercial availability;
+- current B1 price fact;
+- current reviewed delivery CommercePolicy, when one independently applies.
+
+These facts must be reread from their own current authority. A failed
+store-filtered B3 shortlist is not itself a confirmed partial shortlist: unknown
+exact-store membership must never be converted into a seller-visible claim that
+a particular product/variant is in that store.
+
+confirmed_context is seller-only context, never a public handoff preface.
+
+No LLM conversation summary.
+
+## 45. Decision context
+
+Every AI decision receives `decision_context_id`.
+
+Canonical input includes only authority that affected the decision:
+- knowledge_resolver_contract_version;
+- intent_schema_version;
+- tool_contract_version;
+- template_id;
+- template_version;
+- response_locale for public ANSWER/CLARIFY;
+- used operational revision IDs;
+- used commerce revision IDs;
+- used vocabulary revision IDs;
+- catalog_generation_id;
+- used catalog layers + freshness;
+- need_reconcile / need_full;
+- normalized tool arguments;
+- resolver outcome/reason;
+- model_id only if model participated.
+
+Canonicalization:
+- IDs sorted and unique;
+- object keys stable;
+- money integer minor units;
+- enum values canonical strings.
+
+Excluded:
+- raw customer body;
+- final message text;
+- current timestamp;
+- unrelated knowledge state.
+
+source_message_ids[] live in trace metadata, not fingerprint.
+
+## 46. Trace metadata
+
+Redacted metadata only:
+- conversation_id;
+- message_id/source_message_ids;
+- decision_context_id;
+- intent;
+- decision/reason;
+- template;
+- tool/resolver versions;
+- catalog generation;
+- used revision IDs;
+- model ID if used;
+- tool calls;
+- latency;
+- handoff result.
+
+No routine raw customer message storage.
+
+## 47. Resolver versioning
+
+Introduce:
+`KNOWLEDGE_RESOLVER_CONTRACT_VERSION`.
+
+Golden decision vectors enforce semantic version discipline.
+
+If canonical observable result changes:
+- ANSWER/CLARIFY/HUMAN;
+- reason;
+- resolved canonical effect;
+
+CI requires version bump.
+
+Pure refactor with identical behavior does not.
+
+## 48. Metrics
+
+Initial:
+- containment_rate;
+- human_correction_rate;
+- post_answer_human_request_rate.
+
+human_correction_rate uses explicit employee action:
+"AI відповів неправильно"
+linked to decision_context_id.
+
+Do not infer correction from next seller message.
+
+Chatwoot First Response Time is used for human-response latency.
+No arbitrary 10-second threshold.
+
+## 49. Explicit v1 non-goals
+
+No:
+- broad site RAG;
+- description-to-fact extraction;
+- compatibility reasoning;
+- age suitability;
+- subjective recommendation;
+- margin/popularity ranker;
+- order/1C customer lookups;
+- individual return eligibility;
+- Telegram/Viber customer AI;
+- voice/Asterisk AI;
+- automatic bot re-entry after handoff;
+- raw option -> COLOR/SIZE inference;
+- public handoff preface;
+- sale/promotion interpretation;
+- general multi-variant "stock anywhere" aggregation.
+
+## 50. Slice decomposition
+
+### Slice A — Knowledge Authority
+- additive canonical physical-store identity in IdentityStore;
+- reviewed bootstrap of current BabyPark physical stores;
+- proof that Catalog store IDs resolve through canonical `store_id`;
+- deployment gate forbidding provider-native store IDs as Knowledge subjects;
+- knowledge.sqlite;
+- canonical hashing;
+- immutable revisions;
+- validated event state machine;
+- OperationalFact/CommercePolicy/Vocabulary;
+- overlay composition/expiry;
+- strict exception scope;
+- approval/self-approval;
+- explicit supersession;
+- resolver/versioning;
+- RBAC;
+- direct ai.babypark.ua UI;
+- Cloudflare Tunnel/Access boundary;
+- durable backup/off-host/restore proof.
+
+No Chatwoot message creation.
+
+Dashboard embedding is tested but direct UI works independently.
+
+### Slice B — Catalog factual/query contracts
+- product price summary;
+- zero-price handling;
+- variant-now list;
+- variant-price list;
+- deterministic category/brand/money/store resolvers;
+- category match mode;
+- ObjectiveConstraintLatch prerequisites/data contract;
+- dedicated matched-cohort objective search;
+- store-aware query semantics;
+- neutral ProductPresentation.
+
+No customer messages.
+
+### Slice C — Website First Line
+- C1 merged evidence: restart-durable ID/canonical-selection episode state;
+- v0.7 pre-production schema-v2 cut promotes `episode.sqlite` to durable semantic state;
+- C2a Conversation Event Ledger + `stream_revision` + durable public-action outbox;
+- local accepted `event_seq` is BabyPark ordering; Chatwoot message ID is source identity only;
+- deferred-behind-action metadata is atomically committed with customer-event
+  acceptance/revision while a prior action is SENDING/UNCERTAIN, preventing later
+  local confirmation ingestion from hiding the customer turn; it is
+  scheduling/topology only and never evidence that the customer saw/replied to
+  the parent action;
+- at most one immutable semantic-origin fence per `(stream_id,stream_revision)`;
+  committed origins are PUBLIC_ACTION(action_id), DIRECT_HUMAN or
+  NON_ACTIONABLE_ACK, and a PUBLIC_ACTION may only escalate monotonically to
+  HUMAN continuation while preserving its origin/action evidence;
+- one live public/HUMAN continuation owner per stream; no actionable current
+  revision may terminate as orphan STALE/CANCELLED/NOT_SENT;
+- S1/preflight + variable extraction + fresh semantic C2/C3/C4/C5 are
+  non-authorizing; only S2, the final whole-conversation Chatwoot snapshot plus
+  exact text/structured proof and then one strict current-conversation decoder,
+  may precede the local send CAS. Public send eligibility is exactly configured
+  Website inbox + `pending + SAME_AGENTBOT`; every other inbox/status/owner
+  result performs zero POST and attaches durable HUMAN continuation;
+- immutable descriptor v1 + complete typed canonical semantic scope protect
+  product/variant/category/brand/store/customer-money interpretation, including
+  every effective **non-negative** nullable min/max bound actually consumed by C4
+  plus fail-closed UAH/range/provenance integrity, while all dynamic business
+  truth remains transient/fresh;
+- SENDING is a permanent one-POST/no-retry boundary; unique authoritative source
+  proof before HUMAN gives normal CONFIRMED, while proof discovered after HUMAN
+  is historical late-remote evidence and cannot re-enter AI;
+- stale backup/restore enters a fail-closed recovery barrier unless a lossless
+  semantic cut is proven; silent ACK/HUMAN/action history is never guessed from
+  replayed Chatwoot rows;
+- semantic liveness guarantees one durable continuation owner by deadline;
+  prolonged unavailable Chatwoot authority raises durable operator-attention
+  while HUMAN remains live rather than fabricating handoff success;
+- logical episode/open customer turn independent of Chatwoot status;
+- internal `NON_ACTIONABLE_ACK` no-action disposition only after the closed
+  deterministic exact-text §29.2 proof; C3 CLEAR, extraction/intent_hint and
+  heuristics cannot authorize permanent silence; no Chatwoot resolve;
+- C2b structured extraction and deterministic resolution;
+- C2c episode/open-turn routing and semantic provenance;
+- C25 narrow range-answer dependent follow-up uses the immutable semantic-scope
+  `product_id` of one unique normal-CONFIRMED predecessor only when the Website
+  incoming message exact-read proves the native
+  `in_reply_to=confirmed_source_message_id` +
+  `in_reply_to_external_id=action_id` causal pair; event/deferred ordering never
+  substitutes for causality and ANSWER confirmation never rewrites stable
+  customer-selection provenance;
+- §21.1 is the target shared C4/C25 matcher contract; the current merged C4
+  Ukrainian-forward drift is explicit and C25 production/activation remains
+  blocked until one shared production matcher proves exact parity;
+- ObjectiveConstraintLatch;
+- ANSWER/CLARIFY/HUMAN;
+- deterministic templates;
+- implemented WebsiteRenderer (repository C5; unconnected/not deployed);
+- implemented TextRenderer (repository C5; unconnected/not deployed);
+- public messages only for ANSWER/CLARIFY;
+- HUMAN sends no AI preface and follows self-contained §43 read/reconcile rules
+  with a closed ownership wire decoder and mutually exclusive status×owner
+  matrix: `open + HUMAN_USER|UNASSIGNED` may prove `human_takeover`,
+  `OTHER_AGENTBOT|OTHER_AUTOMATION` or the explicit resolved/snoozed branches
+  prove ownership loss, while `open|pending + SAME_AGENTBOT` remains durable
+  HUMAN and `UNKNOWN` default-denies; deployed Chatwoot v4.18.0
+  `toggle_status(open)` is explicitly **not** a safe
+  automated handoff primitive and is forbidden for Website First Line. Any future
+  separately proven/approved safe primitive must use the durable `episode.sqlite`
+  attempt/dispatch no-retry boundary before its native write;
+- one local-filesystem writable `episode.sqlite` authority in v1;
+- measured/inherited timing thresholds only;
+- decision trace.
+
+### Slice D — Private Handoff Note
+- createHandoffNote();
+- hardcoded private:true;
+- at-most-once attempt;
+- deterministic body;
+- confirmed_context enrichment for independently authoritative facts on HUMAN,
+  including CATALOG_STOCK_STALE without inventing exact-store availability;
+- separate message-create certification.
+
+### Slice E — Seller Assist (deferred)
+- starts only after native HUMAN handoff / operator ownership;
+- autonomous AI remains forbidden from sending public customer messages;
+- reuses the same BabyPark Knowledge/Catalog/Policy engine rather than creating
+  a second AI brain;
+- may answer operator questions, propose one or more grounded reply drafts, and
+  rewrite/fix/translate operator text;
+- operator explicitly chooses, edits or ignores a suggestion before sending;
+- Chatwoot Dashboard App or equivalent operator UI is presentation only; factual
+  authority remains BabyPark services;
+- not part of current Slice A implementation.
+
+Future BabyPark AI HUB direction is tracked separately in
+`docs/AI_HUB_DIRECTION.md`. It is an observability/control plane over existing
+BabyPark authorities, not a new source of truth, and is not part of Slice B.
+
+## 51. Review status
+
+v0.3 blocker review found:
+- dynamic Catalog/Operational authority could be ambiguously cached across clarification turns;
+- open-ended baselines were not fully covered by the activity predicate;
+- early-closing `store.special_hours` could fall back to weekly baseline later
+  the same civil day.
+
+v0.4 incorporated those fixes, but blocker review then found:
+- the civil-day invariant for `store.special_hours` existed in resolver
+  semantics but was not enforced at publication;
+- clarification-count wording was inconsistent;
+- Drupal → Magento required an explicit provider-neutral physical-store identity
+  and field-level source-of-truth contract.
+
+v0.5 resolves those blockers by:
+1. enforcing exactly one Europe/Kyiv civil-day revision envelope for
+   `store.special_hours`;
+2. keeping `store.temporary_closure` / `store.status_override` as arbitrary
+   finite state overlays;
+3. defining prompt-based `clarification_prompts_sent` with at most one CLARIFY
+   prompt per episode;
+4. introducing canonical BabyPark `store_id` + reviewed provider xrefs and a
+   fail-closed Magento cutover preflight;
+5. freezing the field-level authority split between Knowledge, CatalogService
+   and Chatwoot support-hours configuration.
+
+v0.6 closes the pre-Slice-C lifecycle seams found during implementation review:
+1. separates Chatwoot conversation status from BabyPark logical episode identity;
+2. defines dependent follow-up versus standalone-new-query boundaries;
+3. introduces internal `NON_ACTIONABLE_ACK` without adding a fourth decision class;
+4. explicitly forbids v1 automatic Chatwoot resolve for acknowledgement/hygiene;
+5. freezes C1 `episode.sqlite` as ID/canonical-selection-only state with no raw
+   message body or dynamic authority persistence;
+6. requires optimistic stale-writer rejection and one active episode per
+   conversation.
+
+v0.7 froze the Conversation Event Ledger / durable action-outbox foundation
+after adversarial review of webhook ordering, PostgreSQL sequence/MVCC visibility,
+rapid customer bursts, automation rows, long-history bootstrap, clarification
+crashes and cross-SQLite recovery.
+
+Key closure invariants are:
+1. BabyPark accepted `event_seq`, not Chatwoot source ID, is durable event order;
+2. unique source-event existence, never a high-water comparison, is replay/dedupe truth;
+3. a single whole-conversation Chatwoot statement snapshot authorizes public sends;
+4. `stream_revision` invalidates stale plans when reconciliation accepts new events;
+5. one live action per stream plus permanent same-revision action uniqueness prevents duplicate public sends;
+6. durable public actions survive input-job/coprocessor loss through the independent relay;
+7. no CDC/WAL, third DB or Chatwoot core patch is required for Website First Line v1.
+
+Slice C umbrella issue #75 remains the frozen program boundary. C1/C2a/C2b/C2c/C3
+are merged historical evidence and C4 deterministic decision runtime is merged via
+PR #107 on canonical main `565f8eb30bf39afa80bb4d59258cc2fd13aa67d5`.
+The prior CATEGORY-pair prerequisite is therefore implemented and reviewed.
+The merged C5 contract in §40.2–§40.4 freezes exact
+wording/output/formatting, genuine-decision provenance,
+transient-output/privacy, Chatwoot Liquid/Markdown neutrality, native
+`input_select` ordinal transport, the 150000 Unicode code-point content bound,
+product-URL plain-text transport, and runtime-drift revalidation.
+
+v0.8 adds only the pre-implementation C6/C25 contract needed before production
+coding. In addition to exact semantic-scope provenance, final authorization,
+one-POST SENDING, reconciliation, corruption/liveness, timing authority and the
+narrow C25 route, the exhaustive Stage-0 inventories freeze:
+1. at most one immutable semantic-origin fence per
+   `(stream_id,stream_revision)`, with PUBLIC_ACTION/DIRECT_HUMAN/ACK origins
+   and monotonic PUBLIC_ACTION -> HUMAN continuation rather than destructive
+   outcome-class replacement;
+2. durable stream/revision HUMAN ownership with no actionable current-turn
+   `NOT_SENT` escape and no AI supersession once HUMAN owns continuation;
+3. historical late remote-send evidence that can never reverse HUMAN, create C25
+   context or re-enter AI;
+4. retention of CLARIFY budget when an owning clarification fails to HUMAN;
+5. an atomic, corruption-checked deferred-behind-action relation for customer
+   events accepted while a prior send is SENDING/UNCERTAIN, explicitly
+   scheduling/topology-only and never C25 causal authority;
+6. permanent NON_ACTIONABLE_ACK silence only after one closed deterministic
+   exact-text §29.2 proof **and** one unchanged-basis owning-store admission CAS
+   that atomically commits ACK plus any current episode close; extraction/model
+   intent, heuristics, C3 CLEAR and stale routing state are not ACK authority;
+7. exact symmetric uk/ru §21.1 target matcher predicates, with the current merged
+   C4 Ukrainian-forward drift explicitly recorded and C25 activation blocked
+   until one shared production C4/C25 matcher proves exact parity;
+8. C25 product inheritance only from a unique normal-CONFIRMED range predecessor
+   whose exact Website native reply pair is proven and re-proven at S2; local
+   event/deferred/message-ID/created_at ordering never substitutes for causality;
+9. a two-phase authorization model: S1 semantic rebuild/fresh C4/C5 remains
+   non-authorizing; S2 is the final complete Chatwoot topology snapshot followed
+   by current text/structured/C25-causality proof and the one closed current
+   conversation decoder. Only configured Website inbox +
+   `pending + SAME_AGENTBOT` may reach the local send CAS; every other
+   inbox/status/owner result attaches durable HUMAN continuation with zero POST;
+10. complete canonical customer-money semantic scope, including non-negative
+    nullable `min_price_minor` and `max_price_minor`, exact UAH/range/provenance
+    relational integrity and merged support for a customer constraint of 0;
+11. a stale-backup recovery barrier that fails closed for silent ACK/HUMAN/action
+    history unless a lossless semantic cut can be proven;
+12. semantic liveness that guarantees durable continuation ownership without
+    falsely promising physical handoff while Chatwoot authority is unavailable;
+    bounded outage escalation produces operator-attention while HUMAN remains
+    absorbing;
+13. one strict closed current-conversation ownership-wire decoder shared by S2
+    send admission and §43 handoff, including strict current `inbox_id`,
+    `Captain::Assistant => OTHER_AUTOMATION`, unknown=>default-deny and a
+    mutually exclusive §43 status×owner matrix, plus an explicit deployed-v4.18
+    prohibition on automated AgentBot
+    `toggle_status(open)`: once HUMAN owns continuation, current
+    `open|pending + SAME_AGENTBOT` remains durable HUMAN/operator-manual, while
+    only `open + HUMAN_USER|UNASSIGNED` proves takeover,
+    and a future separately proven safe primitive must enforce competing-owner
+    absence in its own write before crossing the durable `episode.sqlite`
+    attempt/dispatch boundary;
+14. complete requirements traceability through Q58/C25h for restart, crash,
+    corruption, replay, restore, outage, late-confirmation, exact ACK, MONEY,
+    handoff-attempt, handoff-TOCTOU and causal dependent-follow-up permutations.
+
+It does not select a scheduler/workflow product, extraction producer or other
+implementation option; those decisions still require fresh Agreement §§1–3
+evidence. C5 remains unconnected/not deployed and this docs-only amendment
+performs no Chatwoot POST or production activation.
+
+This v0.8 file remains the single normative design source; no separate normative
+delta document applies.

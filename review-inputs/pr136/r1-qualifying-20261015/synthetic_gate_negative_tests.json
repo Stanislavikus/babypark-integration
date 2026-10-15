@@ -37,10 +37,25 @@
     ]
   },
   {
-    "case": "missing_substantive_review",
+    "case": "missing_independent_review",
     "halted": true,
     "gap_sample": [
-      "substantive review md missing"
+      "independent exhaustive review missing"
+    ]
+  },
+  {
+    "case": "stale_e05_sidecar",
+    "halted": true,
+    "gap_sample": [
+      "e05 pr body sidecar stale"
+    ]
+  },
+  {
+    "case": "modified_pr_body_unchanged_head_base",
+    "halted": true,
+    "gap_sample": [
+      "e05 pr body sha vs attestation",
+      "e05 pr body sidecar stale"
     ]
   }
 ]

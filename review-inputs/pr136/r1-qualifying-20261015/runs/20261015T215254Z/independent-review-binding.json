@@ -1,0 +1,12 @@
+{
+  "independent_exhaustive_review_sha256": "9bade91cb12fe0e5613ec8e64ad4403dd870eb42f9f540011f291896fa8e2752",
+  "report_bytes": 9786,
+  "campaign_head": "262f7a8999d797f4ceceb531004986cfd6667d73",
+  "campaign_tree": "ffb8953002feaeb5f417a09a832c86f24051afa2",
+  "campaign_base_oid": "0dfb9b0a1cfe23d455fd436ae9abeac626d0d729",
+  "gov_blob": "e777fce4af8e8c3372f1f9de9ef7d00f786c2c89",
+  "manifest_sha256": "adda61453c1e14c16b1a90d072051ab3e4e29f1e110bd2c1f539aad90de8d3d6",
+  "qualifying_r1_only": true,
+  "declares_zero_blockers": true,
+  "note": "Independent qualifying R1 exhaustive pass; not V13 isolated confirmation."
+}

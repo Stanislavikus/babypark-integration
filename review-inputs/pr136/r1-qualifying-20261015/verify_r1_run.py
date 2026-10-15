@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT))
-from e05_fetch_pr136 import canonical_body_sha  # noqa: E402
+from e05_fetch_pr136 import pr_body_utf8_from_api, verify_e05_dir  # noqa: E402
 
 
 def load_frozen() -> dict:
@@ -69,7 +69,6 @@ def verify_run(run_dir: Path, live_pr_check: bool = True) -> list[str]:
         need(pre.get("pre_porcelain") == "0", f"{cid} pre dirty")
         need(post.get("post_porcelain") == "0", f"{cid} post dirty")
 
-        key = f"{cid.replace('V04a_', 'V04a_').replace('V04b_', 'V04b_').replace('V04c_', 'V04c_')}"
         sha_map = {
             "V03_diff_check": "V03_diff_check_stdout",
             "V04a_name_status": "V04a_name_status_stdout",
@@ -87,21 +86,10 @@ def verify_run(run_dir: Path, live_pr_check: bool = True) -> list[str]:
     need(sha256_file(mp) == frozen["manifest_sha256"], "manifest sha")
 
     e05 = run_dir / "E05_live_pr"
+    gaps.extend(verify_e05_dir(e05, frozen))
     att = json.loads((e05 / "attestation.json").read_text())
-    need(att["head_sha"] == frozen["campaign_head"], "e05 head")
-    need(att["base_sha"] == frozen["campaign_base_oid"], "e05 base")
-    need(
-        att.get("http_status") == 200 or "200" in att.get("http_status_line", ""),
-        "e05 not HTTP 200",
-    )
-    captured_sha = att["body_sha256"]
-    captured_bytes = (e05 / "response.body.json").read_bytes()
-    need(hashlib.sha256(captured_bytes).hexdigest() == captured_sha, "e05 body internal sha")
-    captured_canon = att.get("body_canonical_sha256") or canonical_body_sha(captured_bytes)
-    need(
-        canonical_body_sha(captured_bytes) == captured_canon,
-        "e05 canonical sha internal",
-    )
+    need(att.get("http_status") == 200, "e05 not HTTP 200")
+    need(att.get("r136_row_gaps") == [], f"e05 r136 gaps {att.get('r136_row_gaps')}")
 
     if live_pr_check:
         url = frozen["pr136_api_url"]
@@ -110,42 +98,57 @@ def verify_run(run_dir: Path, live_pr_check: bool = True) -> list[str]:
             "X-GitHub-Api-Version": "2022-11-28",
             "User-Agent": "babypark-pr136-r1-verifier",
         }
-        live_body = b""
-        live_status = 0
         matched = False
-        last_live_raw = ""
-        last_live_canon = ""
-        for attempt in range(12):
+        last_body_sha = ""
+        live_status = 0
+        for _ in range(12):
             req = urllib.request.Request(url, headers=headers)
             with urllib.request.urlopen(req, timeout=60) as resp:
                 live_status = resp.status
-                live_body = resp.read()
-            last_live_raw = hashlib.sha256(live_body).hexdigest()
-            last_live_canon = canonical_body_sha(live_body)
-            if live_status == 200 and (
-                last_live_raw == captured_sha or last_live_canon == captured_canon
-            ):
+                api_bytes = resp.read()
+            live_body_sha = hashlib.sha256(pr_body_utf8_from_api(api_bytes)).hexdigest()
+            last_body_sha = live_body_sha
+            if live_status == 200 and live_body_sha == att["pr_body_utf8_sha256"]:
                 matched = True
                 break
             time.sleep(0.35)
         need(live_status == 200, f"live pr http {live_status}")
         need(
             matched,
-            f"live pr body drift raw={last_live_raw} canon={last_live_canon} "
-            f"!= captured raw={captured_sha} canon={captured_canon}",
+            f"live pr_body sha {last_body_sha} != captured {att['pr_body_utf8_sha256']}",
         )
-        live = json.loads(live_body.decode())
+        live = json.loads(api_bytes.decode())
         need(live["head"]["sha"] == frozen["campaign_head"], "live head drift")
         need(live["base"]["sha"] == frozen["campaign_base_oid"], "live base drift")
 
+    report = run_dir / "INDEPENDENT_EXHAUSTIVE_R1_REVIEW.md"
+    binding_path = run_dir / "independent-review-binding.json"
+    need(report.is_file(), "independent exhaustive review missing")
+    need(binding_path.is_file(), "independent review binding missing")
+    if not report.is_file() or not binding_path.is_file():
+        return gaps
+    binding = json.loads(binding_path.read_text())
+    report_sha = sha256_file(report)
+    need(
+        report_sha == binding.get("independent_exhaustive_review_sha256"),
+        "independent review binding sha mismatch",
+    )
+    need(
+        binding.get("independent_exhaustive_review_sha256")
+        == frozen.get("independent_exhaustive_review_sha256"),
+        "independent review sha vs frozen",
+    )
+    need(binding.get("manifest_sha256") == frozen["manifest_sha256"], "binding manifest")
+    need(binding.get("campaign_head") == frozen["campaign_head"], "binding head")
+    need(binding.get("declares_zero_blockers") is True, "binding zero blockers flag")
+
     sem = run_dir / "semantic"
-    need((sem / "V05-V12_SUBSTANTIVE_REVIEW.md").exists(), "substantive review md missing")
-    need((sem / "exhaustive-review-inventory.json").exists(), "exhaustive inventory missing")
+    need((sem / "auxiliary-phrase-scan.json").exists(), "auxiliary phrase scan missing")
     blockers = json.loads((sem / "v12-findings.json").read_text())
-    need(blockers == [], f"semantic blockers {blockers}")
-    inv = json.loads((sem / "exhaustive-review-inventory.json").read_text())
-    need(inv.get("blocker_count", 1) == 0, "inventory blocker_count")
-    need(inv.get("substantive_review_complete") is True, "substantive flag")
+    need(blockers == [], f"auxiliary semantic blockers {blockers}")
+    inv = json.loads((sem / "auxiliary-scan-inventory.json").read_text())
+    need(inv.get("substantive_review_complete") is not True, "script must not claim substantive complete")
+    need(inv.get("auxiliary_only") is True, "auxiliary inventory flag")
 
     return gaps
 
