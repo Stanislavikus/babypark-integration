@@ -2912,10 +2912,24 @@ from independently evidenced source telemetry and synthetic
 representative tests, then enforce a bounded concurrent AND
 cumulative admission envelope with fail-closed overload, durable
 HUMAN continuity, delivered operator attention and observable
-recovery. Do not silently drop excess demand or claim that an
-unverified overload HTTP response has handed a customer to HUMAN.
-Demonstrate separately that staffed HUMAN handling and escalation
-attention are viable for a measured/defensible demand envelope.
+recovery. **Staged customer activation below 10,000/month planned
+demand is permitted** only against a separately proven smaller
+admitted peak/cumulative envelope, with independently proven
+handling of *all* offered demand above the AI admission limit:
+the exact native ingress/overflow route must still create a
+durable, uniquely correlated HUMAN continuation, preserve the
+Chatwoot transcript and actually deliver an operator-owned
+"admission limit reached" alert with independently verifiable
+delivery and recovery. A saturated receiver cannot simply discard
+unadmitted messages or rely on an unverified 429/5xx/Chatwoot
+retry as HUMAN. If that end-to-end overflow-to-HUMAN path or
+operator capacity for its bounded load cannot be proven,
+**do not activate even the smaller envelope**. Expanding it
+requires fresh target-matched proof and explicit authorization;
+do not silently admit more traffic. Demonstrate separately that
+staffed HUMAN handling and escalation attention are viable for
+the proved bounded demand envelope, not the untested remainder
+of the 10,000/month planning target.
 A **hypothetical**, NOT measured, 20–30% HUMAN rate at 10,000
 chats/month would imply 2,000–3,000 HUMAN cases/month; this is a
 staffing stress scenario, not a forecast or a frozen routing rate.
@@ -2927,18 +2941,53 @@ docs-only objective selects no provider price, staffing SLA or
 numerical runtime limit.
 
 **Review triggers.** The old 500/month-based **>10x** threshold
-(roughly 5,000/month) is no longer a valid safety gate for a
-10,000/month launch. A full capacity/HUMAN/cost fit to the new
-planning demand is mandatory BEFORE activation, regardless of
-growth multiples. After proving an actual admitted operating
-envelope, revalidate **before** demand exceeds that envelope,
-or before sustained >10x growth against the separately recorded,
-already verified operating reference volume, or any material
-runtime, provider, traffic-mix, HUMAN-rate or incident change,
-whichever comes first. A nominal 10x of 10,000/month is NOT
-permission to defer review until 100,000 chats/month. RPO/RTO
-still require separately proven B2 completed backup/restore
-and §43 operator recovery.
+(roughly 5,000/month) is no longer valid for a 10,000/month
+planning demand. Before an initial staged launch, prove the
+chosen **smaller admitted envelope AND the full bounded
+overflow-to-HUMAN and operator recovery path**; the full
+10,000/month capacity is a target for later expansion, not
+automatically a day-one activation prerequisite. After proving
+an admitted operating envelope, revalidate **before** offered
+demand or HUMAN overload exceeds any verified monthly/hourly
+peak, concurrent, cumulative, staffing or recovery bound,
+or before sustained >10x growth against a separately recorded
+verified operating reference volume, or any material runtime,
+provider, traffic-mix, HUMAN-rate or incident change, whichever
+comes first. A nominal 10x of 10,000/month is NOT permission to
+defer review until 100,000 chats/month.
+
+**Demand evidence and warning gate (S9).** Before first staged
+activation, validate Chatwoot-native reporting/API against the
+deployed version for Website new-conversation identities,
+calendar-month counts, maximum rolling/hourly arrivals, and
+HUMAN continuation count/share, covering both AI-admitted and
+overflowed conversations without duplicate/reopened counting.
+Prefer native aggregate reporting; do not routinely store
+customer content, contact details or content-derived digests.
+Record only bounded aggregate counters, observation times,
+source/version, verified operating limits and alert/decision
+metadata. The reporting timezone, collection cadence, evidence
+freshness, delivery destination, owner and escalation route
+must be frozen by an independently supported monitoring fit.
+Choose a **separately owner-approved pre-limit alert fraction**
+strictly below each verified monthly/hourly/HUMAN/peak
+operational bound, with collection and notification latency
+demonstrably early enough for the observed maximum burst.
+**70% is an unapproved candidate, not a default or measured
+safety threshold.** When any monitored dimension crosses its
+approved pre-limit value, deliver a verifiable alert to the
+designated operator-owned channel and open a recorded
+capacity/HUMAN-cost revalidation decision before expansion.
+Unknown/stale counts, monitoring gaps, missed delivery or
+missing approved warning thresholds deny capacity expansion,
+and prevent activation if the end-to-end safety gate depends
+on them. Never infer a safe ingress or HUMAN path from an
+aggregate count. Revalidate source/API capability and any
+native/free OSS reporting alternative under Agreement §§1–3
+before implementing instrumentation; this proposal selects
+no new monitoring product or production code. RPO/RTO still
+require separately proven B2 completed backup/restore and
+§43 operator recovery.
 
 **Service availability definition (proposed; owner sign-off at Q39c).**
 The 99.9% objective measures **end-to-end Website First Line
@@ -2984,12 +3033,21 @@ a declared affected component, wholly contained within a qualifying
 window and not overlapping any independently evidenced failure of
 an undeclared component, is planned-only and eligible for exclusion.
 A failure of an undeclared component (for example, Gateway or a
-provider during Chatwoot-only maintenance), or an incident that
-continues past the declared window end, is **unplanned** for its
-entire independently evidenced incident interval, including any
-overlap with the window. Any calendar minute touched by such a
-failure is not excludable, even if Chatwoot is also down for
-maintenance. Unknown component identity, root-cause attribution,
+provider during Chatwoot-only maintenance) is **unplanned** for
+its entire independently evidenced incident interval, including
+overlap with a planned window. **Owner-selected variant B
+(2026-10-15):** when an incident of a *declared* maintenance
+component continues beyond the window's recorded end, its
+planned-only portion **inside** the announced window remains
+eligible for exclusion; **only the overrun after the declared
+end** is unplanned and unavailable. Do not retroactively
+reclassify the earlier planned-only interval. For conservative
+minute-resolution accounting, a boundary-crossing minute is
+not excluded unless that entire calendar minute is within
+the announced window and unaffected by unplanned downtime.
+Any calendar minute touched by an independent unplanned
+failure is not excludable, even if Chatwoot is also down
+for maintenance. Unknown component identity, root-cause attribution,
 start/end or overlap is **not evidence of planned-only downtime**
 and cannot earn an exclusion. Classification happens before
 applying the allowance. Count only *actually excluded* planned-only

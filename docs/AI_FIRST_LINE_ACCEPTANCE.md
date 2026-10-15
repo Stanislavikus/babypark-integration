@@ -1345,12 +1345,20 @@ qualifying preannounced maintenance minutes/month, with proven
 operator notice delivery at least 24 hours before each window**.
 Minutes exceeding the cap and unplanned incidents remain
 unavailable. RPO <= 24 hours and RTO <= one working day remain
-separate targets. Initial 10,000/month capacity, HUMAN handling,
-model/API spend and bounded-overload recovery must be re-proven
-before customer activation; subsequent reviews trigger BEFORE
-exceeding the verified envelope, or >10x of a separately recorded
-verified operating reference, or any material risk change, whichever
-comes first. An inherited 500/month assumption or nominal
+separate targets. Staged launch below the 10,000/month planning
+demand may proceed only after a lower admitted envelope **and
+the bounded over-limit durable-HUMAN/alert/owner-attention path**
+are independently proven. Missing native retry/overflow authority,
+staffing or monitoring proof blocks activation. Demand tracking
+and early warning must be grounded in verified Chatwoot-native
+monthly new-conversation counts, rolling/hourly peak and HUMAN
+share, covering admitted and overflowed traffic. The pre-limit
+warning fraction, observed burst/cadence, alert delivery and
+operator decision ownership require separate recorded proof
+and owner selection (**70% remains only a candidate**).
+Subsequent reviews trigger BEFORE exceeding any verified bound
+or >10x of a separately recorded verified operating reference
+or any material risk change, whichever comes first. An inherited 500/month assumption or nominal
 100,000/month future threshold cannot substitute for proof.
 The 120/24 policy values are owner-selected, not measured timing
 or concurrency safety limits. The PR text itself or an
@@ -1378,6 +1386,28 @@ using any real customer data:
 4. A claim that the new 10x reference (100,000/month if based on
    10,000) defers review despite a lower verified admission/peak
    or HUMAN capacity: FAIL CLOSED at the first breached envelope.
+5. A staged launch admits only a lower proven peak/monthly
+   envelope while offered demand can exceed it. PASS the
+   authoring/activation *scope* only if the overflowed event
+   receives one proven durable HUMAN continuation and a
+   delivered "admission limit reached" operator alert with
+   proven native delivery/recovery, and staffed capacity
+   covers the overflow. An unproven 429/5xx retry, silently
+   dropped message or unverified operator alert FAILS CLOSED.
+   This case does not replace final §29.8.2–3, §43 or B2
+   activation evidence or permit automatic production launch.
+6. Demand tracking: verify deployed Chatwoot-native report/API
+   attribution, deduplicated new-conversation monthly count,
+   rolling/hourly peak and HUMAN share including overflow,
+   privacy-minimal aggregate evidence, bounded observation
+   freshness, and an operator-owned delivered pre-limit
+   alert plus recorded revalidation decision. If a verified
+   envelope dimension N reaches its separately approved
+   pre-limit fraction while the recorded alert or review
+   is absent, expansion FAILS CLOSED. If the fraction is
+   missing/unapproved, including an unapproved default of
+   70%, the gate cannot PASS. A stale or incomplete Chatwoot
+   count cannot silently validate future capacity.
 
 Exercise synthetic monthly availability accounting fixtures:
 1. Positive: an exactly 90-minute window whose bounds/purpose were
@@ -1395,9 +1425,12 @@ Exercise synthetic monthly availability accounting fixtures:
    with that window is unavailable for every affected minute,
    including overlapping Chatwoot maintenance, and those denied
    minutes consume **zero** of the 120-minute allowance.
-   A failure episode of a named component continuing beyond the
-   logged end is unplanned for its entire recorded interval and
-   earns no maintenance allowance.
+   A declared component's maintenance overrun is divided at
+   the logged end: the planned-only interval inside the window
+   remains eligible for the allowance, while only post-window
+   overrun minutes are unplanned/unavailable. An independently
+   evidenced failure of an undeclared component still prevents
+   exclusion during any overlap.
    Unknown incident component, attribution, bounds or overlap fails
    closed as non-excludable; a valid classification must not infer
    that every failure during maintenance was caused by maintenance.
@@ -1416,6 +1449,15 @@ Exercise synthetic monthly availability accounting fixtures:
    denominator as unavailable and does not consume the cap.
    Verify cumulative usage counts **only excluded minutes**,
    chronological ordering, and no double count across windows.
+8. Owner-selected overrun variant B: an on-time announced
+   Chatwoot-only window runs for 120 qualifying minutes and
+   its Chatwoot downtime continues for 2 more minutes.
+   Exclude the first 120 if no independent undeclared fault
+   occurs and the monthly cap was unused; the last 2 minutes
+   are unavailable and consume zero cap. Do not retroactively
+   mark all 122 minutes unavailable. If window boundaries
+   are not minute-aligned, do not exclude a crossing minute
+   without proof it lies fully within the qualifying window.
 
 Expected: absent or non-explicit owner approval of the objective,
 the **owner-selected 120-minute cap**, **24-hour delivered advance
@@ -1423,9 +1465,11 @@ notice** and exact exclusion/failure rules blocks merge. Valid
 maintenance is removed from both sides of the availability fraction;
 excess, unplanned outages and unverified minutes count unavailable.
 A denied/unplanned overlap minute does not consume the 120-minute
-allowance. The 10,000/month planning volume likewise proves
-neither peak throughput nor operator capacity and does not authorize
-timing controls or live runtime.
+allowance. A declared-component overrun affects only the period
+after the announced end, not the prior eligible window portion.
+The 10,000/month planning volume likewise proves neither peak
+throughput nor operator capacity and does not authorize timing
+controls or live runtime.
 
 Q39c availability regression: a minute with a proven ingress-to-
 durable-HUMAN path, verified delivery of its operator-owned channel
