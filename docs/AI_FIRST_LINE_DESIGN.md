@@ -3028,10 +3028,11 @@ Retroactive announcements, unverified delivery, late notice,
 missing window bounds or missing provenance cannot qualify.
 Classify each calendar-minute interval from the immutable declared
 component set, logged bounds and independently verifiable incident
-start/end/component evidence: only downtime attributable solely to
-a declared affected component, wholly contained within a qualifying
-window and not overlapping any independently evidenced failure of
-an undeclared component, is planned-only and eligible for exclusion.
+start/end/component evidence: only the portion of downtime
+attributable solely to a declared affected component that lies
+within a qualifying window and does not overlap any independently
+evidenced failure of an undeclared component is planned-only and
+eligible for exclusion.
 A failure of an undeclared component (for example, Gateway or a
 provider during Chatwoot-only maintenance) is **unplanned** for
 its entire independently evidenced incident interval, including
