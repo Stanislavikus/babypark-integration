@@ -1192,9 +1192,12 @@ Exercise the following distinct cases:
    source equality, existing v4 writer atomic durable HUMAN, deferred
    routing/planner, and S2 safety using synthetic regressions.
    No timing numbers, activation, schema change or customer wiring.
+   S2 corrections are semantic-only; independent S2 timing gates
+   under DESIGN §29.8.2 remain unchanged.
 7. A claimed Lane A adds or changes a numeric REST/SQLite timeout,
-   body/queue deadline, concurrency/admission limit, enabled
-   listener, Chatwoot config, public POST or v4 schema.
+   body/queue deadline, concurrency/admission limit, any S2/claim/send/
+   reconciliation timing or lease value, enabled listener, Chatwoot
+   config, public POST or v4 schema.
 8. Separately approved Lane B authors sourced, enforceable finite
    timing candidate controls with synthetic tests, remaining disabled
    and keeping final callback/native HUMAN readiness unresolved.
@@ -1334,16 +1337,21 @@ send and reconciliation retain independent §29.8.2 timing gates.
 
 Before merging the normative DESIGN §29.8.3 reliability objective,
 the owner must explicitly approve approximately 500 chats/month,
-99.9% service availability, RPO <= 24 hours, RTO <= one working day,
-and revalidation on sustained >10x growth. The PR text itself or an
+99.9% monthly end-to-end Website First Line service-path availability
+under DESIGN §29.8.3's explicit numerator/denominator, evidence,
+no-exclusions and failure-handling definition, RPO <= 24 hours,
+RTO <= one working day, and revalidation on sustained >10x growth.
+The PR text itself or an
 AI review is not owner authorization. Bind that endorsement to the
 exact HEAD/tree/base/governance/verification bundle under the
 Agreement. Such sign-off approves no Lane A/B implementation,
 native PoC, host action, deployment or customer traffic.
 
-Expected: absent or non-explicit objective approval blocks merge;
-later Lane A/B authoring still needs separate Scan/Fit and owner
-go-ahead.
+Expected: absent or non-explicit approval of both the numeric objective
+and its exact availability scope/counting rules blocks merge.
+Availability minutes with missing evidence count as unavailable;
+RTO and RPO are measured separately. Later Lane A/B authoring
+still needs separate Scan/Fit and owner go-ahead.
 
 ### Q40 — structured submission arriving before local CLARIFY confirmation is not lost
 A CLARIFY public message is visible to the customer and receives a native

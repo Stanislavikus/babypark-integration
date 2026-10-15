@@ -2850,10 +2850,14 @@ deployment is selected by this docs-only exception.
 
 ### 29.8.3 C6 ingress-only timing feasibility
 
-**Scope and authority.** This clause governs only Chatwoot AgentBot
-webhook ingress/ACK feasibility, not claiming, S2, public sends, UNCERTAIN
-reconciliation, HUMAN scheduling or customer execution. All other
-timing-dependent paths retain the independent §29.8.2 gate. This clause
+**Scope and authority.** This clause governs Chatwoot AgentBot
+webhook ingress/ACK timing feasibility. The narrow Lane A exception
+also permits only **unwired, non-timing correctness authoring** in
+the existing v4 event writer, deferred-parent routing/planner and
+S2 semantic safety where needed to preserve ingress-ledger continuity.
+It grants no timing relaxation for claiming, S2, public sends, UNCERTAIN
+reconciliation, HUMAN scheduling or customer execution; these
+independent paths retain their §29.8.2 and frozen-contract gates. This clause
 defines separate, explicitly approved authoring lanes: non-deployed
 classification/atomicity fixes before timing calibration (lane A), and
 non-deployed timing-control design and tests under finite conservative
@@ -2902,6 +2906,27 @@ customer activation. Revalidate that envelope before sustained
 growth beyond **10x** initial monthly volume or any material runtime
 or provider change. RPO/RTO still require separately proven B2
 completed backup/restore and §43 operator recovery.
+
+**Service availability definition (proposed; owner sign-off at Q39c).**
+The 99.9% objective measures **end-to-end Website First Line
+service-path availability** on calendar-month intervals after
+production activation (the first interval starts at activation).
+The denominator is every wall-clock minute of each such interval.
+A minute is available only when an eligible Website customer message
+can be admitted through a proven path to either (a) authorized AI
+processing or (b) a durable HUMAN continuation with verified,
+actionable operator attention. A webhook ACK, Chatwoot `open!`
+status transition or durable HUMAN record alone does not prove
+availability. Count minutes without either proven path as unavailable,
+including planned maintenance, Chatwoot/model-provider outages,
+failures of operator-attention delivery, and unknown/unmonitored
+intervals; no exclusions are assumed. Reconstruct the intervals from
+independent synthetic end-to-end checks plus incident/health records;
+insufficient evidence cannot be counted as available or as a proven
+99.9% result. This is a service-path target, **not** a claim that AI
+answers 99.9% of questions, and is separate from disaster-recovery
+RTO and data-loss RPO. The exact metric and exclusions require
+explicit owner approval under Q39c before becoming merged authority.
 
 **Lane A — narrow pre-timing correctness authoring.** On a separately
 owner-approved, current bound Scan/Fit, implement only signed,
