@@ -2865,8 +2865,9 @@ bounds (lane B). Neither lane authorizes live webhook ingress,
 customer data, deployment or public send. Full provider/native callback
 timing, fail-closed durable HUMAN, operator attention and backup
 recovery must be proven before customer execution. Both lanes require
-fresh Agreement §§1–3 Scan/Fit and their own exact owner go-ahead;
-the reliability lens below grants no code approval by itself.
+fresh Agreement §§1–3 Scan/Fit and their own exact owner go-ahead.
+Neither lane independently authorizes production code, customer traffic,
+Chatwoot configuration, or a runtime merge.
 
 **C1/v4 concurrency.** The historical §29.3 C1 `EpisodeStore` schema-v1
 `busy_timeout=5000` requirement does not mandate that numeric value for
@@ -2892,197 +2893,6 @@ per-attempt versus aggregate semantics and the upstream call path are
 before being used in a callback budget. Increasing the installation-wide value MUST
 require a failed evidenced five-second fit plus separate owner approval,
 scope/Sidekiq review and recorded rollback; this clause does not change it.
-
-**Initial-v1 owner reliability objective (updated 2026-10-15).**
-The owner-selected **planning demand is approximately 10,000
-Website First Line chats/month**, replacing the obsolete 500/month
-planning assumption. The unchanged targets are **99.9% service
-availability**, **RPO <= 24 hours**, **RTO <= one working day**, and
-fail-closed **durable HUMAN continuation** when authority or
-autonomous safety is uncertain. Planning demand is not admitted
-capacity, a per-second peak, an arrival distribution, measured
-SQLite/Node throughput, or proof of any native Chatwoot callback
-budget. The peak, burst shape, model-token mix and true HUMAN
-escalation rate are UNKNOWN. Monthly arithmetic cannot establish
-a concurrency, queue, latency or service-level guarantee.
-
-**Capacity, cost and HUMAN readiness at 10,000/month.** BEFORE
-customer activation, derive a target-matched peak/burst envelope
-from independently evidenced source telemetry and synthetic
-representative tests, then enforce a bounded concurrent AND
-cumulative admission envelope with fail-closed overload, durable
-HUMAN continuity, delivered operator attention and observable
-recovery. **Staged customer activation below 10,000/month planned
-demand is permitted** only against a separately proven smaller
-admitted peak/cumulative envelope, with independently proven
-handling of *all* offered demand above the AI admission limit:
-the exact native ingress/overflow route must still create a
-durable, uniquely correlated HUMAN continuation, preserve the
-Chatwoot transcript and actually deliver an operator-owned
-"admission limit reached" alert with independently verifiable
-delivery and recovery. A saturated receiver cannot simply discard
-unadmitted messages or rely on an unverified 429/5xx/Chatwoot
-retry as HUMAN. If that end-to-end overflow-to-HUMAN path or
-operator capacity for its bounded load cannot be proven,
-**do not activate even the smaller envelope**. Expanding it
-requires fresh target-matched proof and explicit authorization;
-do not silently admit more traffic. Demonstrate separately that
-staffed HUMAN handling and escalation attention are viable for
-the proved bounded demand envelope, not the untested remainder
-of the 10,000/month planning target.
-A **hypothetical**, NOT measured, 20–30% HUMAN rate at 10,000
-chats/month would imply 2,000–3,000 HUMAN cases/month; this is a
-staffing stress scenario, not a forecast or a frozen routing rate.
-Model/API usage may scale roughly 20x compared with a 500-chat
-scenario **only at an unchanged token/channel mix**; estimate and
-approve the actual provider/token budget, monitoring and overrun
-response from authoritative current terms before activation. This
-docs-only objective selects no provider price, staffing SLA or
-numerical runtime limit.
-
-**Review triggers.** The old 500/month-based **>10x** threshold
-(roughly 5,000/month) is no longer valid for a 10,000/month
-planning demand. Before an initial staged launch, prove the
-chosen **smaller admitted envelope AND the full bounded
-overflow-to-HUMAN and operator recovery path**; the full
-10,000/month capacity is a target for later expansion, not
-automatically a day-one activation prerequisite. After proving
-an admitted operating envelope, revalidate **before** offered
-demand or HUMAN overload exceeds any verified monthly/hourly
-peak, concurrent, cumulative, staffing or recovery bound,
-or before sustained >10x growth against a separately recorded
-verified operating reference volume, or any material runtime,
-provider, traffic-mix, HUMAN-rate or incident change, whichever
-comes first. A nominal 10x of 10,000/month is NOT permission to
-defer review until 100,000 chats/month.
-
-**Demand evidence and warning gate (S9).** Before first staged
-activation, validate Chatwoot-native reporting/API against the
-deployed version for Website new-conversation identities,
-calendar-month counts, maximum rolling/hourly arrivals, and
-HUMAN continuation count/share, covering both AI-admitted and
-overflowed conversations without duplicate/reopened counting.
-Prefer native aggregate reporting; do not routinely store
-customer content, contact details or content-derived digests.
-Record only bounded aggregate counters, observation times,
-source/version, verified operating limits and alert/decision
-metadata. The reporting timezone, collection cadence, evidence
-freshness, delivery destination, owner and escalation route
-must be frozen by an independently supported monitoring fit.
-Choose a **separately owner-approved pre-limit alert fraction**
-strictly below each verified monthly/hourly/HUMAN/peak
-operational bound, with collection and notification latency
-demonstrably early enough for the observed maximum burst.
-**70% is an unapproved candidate, not a default or measured
-safety threshold.** When any monitored dimension crosses its
-approved pre-limit value, deliver a verifiable alert to the
-designated operator-owned channel and open a recorded
-capacity/HUMAN-cost revalidation decision before expansion.
-Unknown/stale counts, monitoring gaps, missed delivery or
-missing approved warning thresholds deny capacity expansion,
-and prevent activation if the end-to-end safety gate depends
-on them. Never infer a safe ingress or HUMAN path from an
-aggregate count. Revalidate source/API capability and any
-native/free OSS reporting alternative under Agreement §§1–3
-before implementing instrumentation; this proposal selects
-no new monitoring product or production code. RPO/RTO still
-require separately proven B2 completed backup/restore and
-§43 operator recovery.
-
-**Service availability definition (proposed; owner sign-off at Q39c).**
-The 99.9% objective measures **end-to-end Website First Line
-service-path availability** on calendar-month intervals after
-production activation (the first interval starts at activation).
-The availability denominator comprises all wall-clock minutes of
-that interval **minus only the valid, capped maintenance exclusions**
-defined below. Excluded minutes count in neither the numerator nor
-the denominator; all other minutes remain eligible. A minute is
-available only when an eligible Website customer message
-can be admitted through a proven path to either (a) authorized AI
-processing or (b) a durable HUMAN continuation with verified,
-actionable operator attention. For this availability metric,
-**verified actionable operator attention** means an alert for the durable HUMAN/operational fault is
-actually delivered to the designated, operator-owned notification
-channel with independently verifiable delivery evidence, while a
-separate synthetic end-to-end check proves that the notification
-path is working. Mere internal enqueue/HTTP ACK/provider acceptance
-without delivery proof does not count. Human acknowledgement and
-response time are separately measured operational objectives, not
-prerequisites for counting an otherwise proven available minute.
-Alert delivery does not certify §43 physical handoff completion or
-waive continued reconciliation. A webhook ACK, Chatwoot `open!`
-status transition or durable HUMAN record alone does not prove
-availability.
-
-**Owner-selected planned-maintenance accounting exception
-(2026-10-15; proposed Q39c):** Exclude no more than **120 minutes
-per calendar month** of qualifying, preannounced maintenance.
-A window qualifies only if its exact start/end, purpose **and exact
-affected component identities** (for example, Chatwoot but not
-Gateway or an external provider) are recorded in an auditable,
-customer-content-free maintenance log
-**before the window begins**, and an announcement is **actually
-delivered** to the designated operator(s) **at least 24 hours before
-the window starts**, with timestamped delivery evidence.
-Retroactive announcements, unverified delivery, late notice,
-missing window bounds or missing provenance cannot qualify.
-Classify each calendar-minute interval from the immutable declared
-component set, logged bounds and independently verifiable incident
-start/end/component evidence: only the portion of downtime
-attributable solely to a declared affected component that lies
-within a qualifying window and does not overlap any independently
-evidenced failure of an undeclared component is planned-only and
-eligible for exclusion.
-A failure of an undeclared component (for example, Gateway or a
-provider during Chatwoot-only maintenance) is **unplanned** for
-its entire independently evidenced incident interval, including
-overlap with a planned window. **Owner-selected variant B
-(2026-10-15):** when an incident of a *declared* maintenance
-component continues beyond the window's recorded end, its
-planned-only portion **inside** the announced window remains
-eligible for exclusion; **only the overrun after the declared
-end** is unplanned and unavailable. Do not retroactively
-reclassify the earlier planned-only interval. For conservative
-minute-resolution accounting, a boundary-crossing minute is
-not excluded unless that entire calendar minute is within
-the announced window and unaffected by unplanned downtime.
-Any calendar minute touched by an independent unplanned
-failure is not excludable, even if Chatwoot is also down
-for maintenance. Unknown component identity, root-cause attribution,
-start/end or overlap is **not evidence of planned-only downtime**
-and cannot earn an exclusion. Classification happens before
-applying the allowance. Count only *actually excluded* planned-only
-minutes toward the cumulative 120-minute cap, in chronological
-order in each calendar month including partial months; denied
-minutes consume **zero** of the cap. Do not double-count overlapping
-windows or carry unused allowance forward. Exclude the earliest
-120 qualifying planned-only minutes from BOTH numerator and
-denominator; eligible planned-only minutes above that cap remain
-in the denominator and are counted unavailable. An invalid window
-grants no exclusion. Independently evidenced unplanned Chatwoot,
-Gateway or model-provider failures remain unavailable; never use
-maintenance scheduling to mask an incident. Record month assignment in a
-separately selected, proven reporting timezone before activation.
-The **120-minute allowance and 24-hour notice interval were
-selected by the owner on 2026-10-15**, not measured or inferred
-from traffic, reliability tests or provider callback budgets:
-they are reporting-policy limits, not authorized runtime safety
-timeouts under Agreement §8. This exemption changes only the
-availability arithmetic. It does NOT suspend signed ingress,
-fail-closed behavior, durable HUMAN, operator alert delivery,
-§43 handoff/reconciliation or backup/recovery duties.
-
-Count every nonexcluded minute without a proven AI-or-visible-HUMAN
-path as unavailable, including out-of-plan failures, maintenance
-overages, undelivered operator alerts and unknown/unmonitored
-intervals. Reconstruct all minutes from independent synthetic
-end-to-end checks plus incident, maintenance and notice records;
-insufficient evidence cannot be counted as available or as a proven
-99.9% result. This is a service-path target, **not** a claim that AI
-answers 99.9% of questions, and is separate from disaster-recovery
-RTO and data-loss RPO. The exact metric, 120-minute allowance,
-24-hour notice rule and failure accounting require explicit owner
-approval under Q39c before becoming merged authority.
 
 **Lane A — narrow pre-timing correctness authoring.** On a separately
 owner-approved, current bound Scan/Fit, implement only signed,
@@ -3122,7 +2932,7 @@ with conservative finite allocations. Each candidate MUST name its
 source, enforceability and unresolved properties; missing evidence
 for any candidate numeric value HALTs that Lane B control.
 None proves a hard end-to-end callback tail, peak load or activation.
-Never infer peak concurrency from ~500 monthly chats, invent a
+Never infer peak concurrency from monthly chat volume, invent a
 numeric default, or ACK unproven success.
 Missing verified effective PRAGMAs, unbounded synchronous lock sites,
 unknown native provider outcomes or absent HUMAN/operator recovery
@@ -3339,10 +3149,11 @@ Justify each numeric choice by an existing owner-approved and
 source-cited reliability objective **if one is actually frozen**,
 or by a defensible statistical sample-size argument, an existing
 normative bound, or measured target variance/calibration—not intuition.
-The owner-selected 10,000/month demand above is a planning input
-only; a numeric sample size, per-second peak and benchmark
-distribution remain unproven and must not be guessed. Missing evidence HALTs customer
-activation, not unwired correctness authoring. Include raw
+No separately proven reliability objective, numeric sample size,
+per-second peak or benchmark distribution is assumed in this slice.
+Missing source evidence HALTs target-matched timing acceptance and
+customer activation, not approved unwired Lane A correctness
+or independently sourced provisional Lane B authoring. Include raw
 non-customer timing distributions and observed maxima; a percentile
 alone cannot prove a hard bound. Before customer-executable timing-enabled ingress is approved,
 calculate each selected effective limit from the measured baseline,
