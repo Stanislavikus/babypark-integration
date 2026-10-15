@@ -1,0 +1,13 @@
+=== argv0 git ===
+/usr/bin/git
+2a8c18fbf43da9f692d75474c72bea9dfd796c260b0f3dfe456376abc3bbd668  /usr/bin/git
+e50d468e8b0adfb05733f5b87b3cff34829c4a8c1aea50c865aa8bdfe4bb150f  /usr/bin/python3
+1ccbd3dae948374ba8eef1ebda26c64b783ede50b463196e53666e0880bdac60  /usr/bin/curl
+git version 2.43.0
+Python 3.12.3
+curl 8.5.0 (x86_64-pc-linux-gnu) libcurl/8.5.0 OpenSSL/3.0.13 zlib/1.3 brotli/1.1.0 zstd/1.5.5 libidn2/2.3.7 libpsl/0.21.2 (+libidn2/2.3.7) libssh/0.10.6/openssl/zlib nghttp2/1.59.0 librtmp/2.3 OpenLDAP/2.6.10
+	linux-vdso.so.1 (0x00007fab55ad0000)
+	libpcre2-8.so.0 => /lib/x86_64-linux-gnu/libpcre2-8.so.0 (0x00007fab55627000)
+	libz.so.1 => /lib/x86_64-linux-gnu/libz.so.1 (0x00007fab5560b000)
+	libc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x00007fab553f8000)
+	/lib64/ld-linux-x86-64.so.2 (0x00007fab55ad2000)

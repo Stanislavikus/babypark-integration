@@ -1,0 +1,19 @@
+utc=2026-10-15T21:23:25Z
+pwd=/data/repo
+argv_git=/usr/bin/git
+=== git config (effective) ===
+file:.git/config	core.repositoryformatversion=0
+file:.git/config	core.filemode=true
+file:.git/config	core.bare=false
+file:.git/config	core.logallrefupdates=true
+file:.git/config	remote.origin.url=https://github.com/Stanislavikus/babypark-integration.git
+file:.git/config	remote.origin.fetch=+refs/heads/*:refs/remotes/origin/*
+file:.git/config	branch.main.remote=origin
+file:.git/config	branch.main.merge=refs/heads/main
+=== replace ===
+=== alternates ===
+none
+=== env (selected) ===
+HOME=/root
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+PWD=/data/repo

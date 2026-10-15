@@ -1,0 +1,3 @@
+194 /out/stdout
+  0 /out/stderr
+194 total
