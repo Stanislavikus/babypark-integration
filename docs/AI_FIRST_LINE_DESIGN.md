@@ -2893,19 +2893,52 @@ before being used in a callback budget. Increasing the installation-wide value M
 require a failed evidenced five-second fit plus separate owner approval,
 scope/Sidekiq review and recorded rollback; this clause does not change it.
 
-**Initial-v1 owner reliability objective.** The chosen operating
-objective is approximately **500 chats/month**, **99.9% service
+**Initial-v1 owner reliability objective (updated 2026-10-15).**
+The owner-selected **planning demand is approximately 10,000
+Website First Line chats/month**, replacing the obsolete 500/month
+planning assumption. The unchanged targets are **99.9% service
 availability**, **RPO <= 24 hours**, **RTO <= one working day**, and
-fail-closed **durable HUMAN continuation** whenever authority or
-autonomous safety is uncertain. These are product/recovery targets,
-not a measured per-second traffic peak or proof of any native
-Chatwoot webhook response-time budget. Current peak load is UNKNOWN;
-enforce an explicit bounded concurrent AND cumulative admission
-envelope with fail-closed overload and observable recovery BEFORE
-customer activation. Revalidate that envelope before sustained
-growth beyond **10x** initial monthly volume or any material runtime
-or provider change. RPO/RTO still require separately proven B2
-completed backup/restore and §43 operator recovery.
+fail-closed **durable HUMAN continuation** when authority or
+autonomous safety is uncertain. Planning demand is not admitted
+capacity, a per-second peak, an arrival distribution, measured
+SQLite/Node throughput, or proof of any native Chatwoot callback
+budget. The peak, burst shape, model-token mix and true HUMAN
+escalation rate are UNKNOWN. Monthly arithmetic cannot establish
+a concurrency, queue, latency or service-level guarantee.
+
+**Capacity, cost and HUMAN readiness at 10,000/month.** BEFORE
+customer activation, derive a target-matched peak/burst envelope
+from independently evidenced source telemetry and synthetic
+representative tests, then enforce a bounded concurrent AND
+cumulative admission envelope with fail-closed overload, durable
+HUMAN continuity, delivered operator attention and observable
+recovery. Do not silently drop excess demand or claim that an
+unverified overload HTTP response has handed a customer to HUMAN.
+Demonstrate separately that staffed HUMAN handling and escalation
+attention are viable for a measured/defensible demand envelope.
+A **hypothetical**, NOT measured, 20–30% HUMAN rate at 10,000
+chats/month would imply 2,000–3,000 HUMAN cases/month; this is a
+staffing stress scenario, not a forecast or a frozen routing rate.
+Model/API usage may scale roughly 20x compared with a 500-chat
+scenario **only at an unchanged token/channel mix**; estimate and
+approve the actual provider/token budget, monitoring and overrun
+response from authoritative current terms before activation. This
+docs-only objective selects no provider price, staffing SLA or
+numerical runtime limit.
+
+**Review triggers.** The old 500/month-based **>10x** threshold
+(roughly 5,000/month) is no longer a valid safety gate for a
+10,000/month launch. A full capacity/HUMAN/cost fit to the new
+planning demand is mandatory BEFORE activation, regardless of
+growth multiples. After proving an actual admitted operating
+envelope, revalidate **before** demand exceeds that envelope,
+or before sustained >10x growth against the separately recorded,
+already verified operating reference volume, or any material
+runtime, provider, traffic-mix, HUMAN-rate or incident change,
+whichever comes first. A nominal 10x of 10,000/month is NOT
+permission to defer review until 100,000 chats/month. RPO/RTO
+still require separately proven B2 completed backup/restore
+and §43 operator recovery.
 
 **Service availability definition (proposed; owner sign-off at Q39c).**
 The 99.9% objective measures **end-to-end Website First Line
@@ -3247,9 +3280,9 @@ Justify each numeric choice by an existing owner-approved and
 source-cited reliability objective **if one is actually frozen**,
 or by a defensible statistical sample-size argument, an existing
 normative bound, or measured target variance/calibration—not intuition.
-The owner reliability objective above is now selected; a numeric
-sample size, per-second peak and benchmark distribution remain
-unproven and must not be guessed. Missing evidence HALTs customer
+The owner-selected 10,000/month demand above is a planning input
+only; a numeric sample size, per-second peak and benchmark
+distribution remain unproven and must not be guessed. Missing evidence HALTs customer
 activation, not unwired correctness authoring. Include raw
 non-customer timing distributions and observed maxima; a percentile
 alone cannot prove a hard bound. Before customer-executable timing-enabled ingress is approved,

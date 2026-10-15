@@ -1336,21 +1336,48 @@ send and reconciliation retain independent §29.8.2 timing gates.
 ### Q39c — explicit reliability-objective owner sign-off
 
 Before merging the normative DESIGN §29.8.3 reliability objective,
-the owner must explicitly approve approximately 500 chats/month,
+the owner must explicitly approve **approximately 10,000 chats/month
+as planning demand, not proven admission or peak capacity**, and
 99.9% monthly end-to-end Website First Line service-path availability
 under DESIGN §29.8.3's numerator/denominator and evidence rules,
 plus the **owner-selected 2026-10-15 allowance of at most 120
 qualifying preannounced maintenance minutes/month, with proven
 operator notice delivery at least 24 hours before each window**.
 Minutes exceeding the cap and unplanned incidents remain
-unavailable. RPO <= 24 hours, RTO <= one working day and
-revalidation on sustained >10x growth are separate targets.
+unavailable. RPO <= 24 hours and RTO <= one working day remain
+separate targets. Initial 10,000/month capacity, HUMAN handling,
+model/API spend and bounded-overload recovery must be re-proven
+before customer activation; subsequent reviews trigger BEFORE
+exceeding the verified envelope, or >10x of a separately recorded
+verified operating reference, or any material risk change, whichever
+comes first. An inherited 500/month assumption or nominal
+100,000/month future threshold cannot substitute for proof.
 The 120/24 policy values are owner-selected, not measured timing
 or concurrency safety limits. The PR text itself or an
 AI review is not owner authorization. Bind that endorsement to the
 exact HEAD/tree/base/governance/verification bundle under the
 Agreement. Such sign-off approves no Lane A/B implementation,
 native PoC, host action, deployment or customer traffic.
+
+Exercise planning-envelope documentation regressions, without
+using any real customer data:
+1. A 500/month baseline or review trigger around 5,000/month is
+   presented as authority to launch at 10,000/month: FAIL CLOSED;
+   first require independently justified burst, admission, callback,
+   SQLite and recovery evidence matched to the new demand envelope.
+2. A hypothetical 20% or 30% HUMAN continuation rate at 10,000
+   chats/month gives 2,000 or 3,000 cases/month respectively;
+   these are staffing stress cases, not observed routing rates.
+   Missing feasible operator coverage and independently proven
+   durable-HUMAN alert/recovery path block customer activation.
+3. A claimed exact API spend or a 20x cost guarantee from the
+   change 500→10,000 without an evidenced token mix and provider
+   pricing is rejected. Current price/usage terms, approved budget,
+   monitoring and cost-overrun response are separate operational
+   readiness evidence; no fixed model pricing is selected here.
+4. A claim that the new 10x reference (100,000/month if based on
+   10,000) defers review despite a lower verified admission/peak
+   or HUMAN capacity: FAIL CLOSED at the first breached envelope.
 
 Exercise synthetic monthly availability accounting fixtures:
 1. Positive: an exactly 90-minute window whose bounds/purpose were
@@ -1396,8 +1423,9 @@ notice** and exact exclusion/failure rules blocks merge. Valid
 maintenance is removed from both sides of the availability fraction;
 excess, unplanned outages and unverified minutes count unavailable.
 A denied/unplanned overlap minute does not consume the 120-minute
-allowance. These policy limits do not authorize timing controls or
-live runtime.
+allowance. The 10,000/month planning volume likewise proves
+neither peak throughput nor operator capacity and does not authorize
+timing controls or live runtime.
 
 Q39c availability regression: a minute with a proven ingress-to-
 durable-HUMAN path, verified delivery of its operator-owned channel
