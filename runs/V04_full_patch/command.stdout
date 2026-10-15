@@ -1,0 +1,420 @@
+diff --git a/docs/AI_FIRST_LINE_ACCEPTANCE.md b/docs/AI_FIRST_LINE_ACCEPTANCE.md
+index 5c8a3ef..14d0cd0 100644
+--- a/docs/AI_FIRST_LINE_ACCEPTANCE.md
++++ b/docs/AI_FIRST_LINE_ACCEPTANCE.md
+@@ -1176,9 +1176,10 @@ Exercise the following distinct cases:
+ 2. Fixture values, environment defaults, or caller-supplied fixture mode reach
+    any production webhook, AI public-action or customer-facing timing path.
+ 3. A non-validator C6 change implements a timing-dependent claim,
+-   dispatch or reconciliation path before measured/inherited authority;
+-   or implements ingress without the separately approved §29.8.3
+-   measured-component/derived-limit code-stage gate.
++   dispatch or reconciliation path without measured/inherited authority;
++   or wires customer ingress without full §29.8.3 native-budget and
++   HUMAN/recovery proof; or authors unwired ingress without the
++   relevant lane-specific current Scan/Fit and exact owner approval.
+ 4. A whole-repository release contains dormant C6 files, an unrelated
+    Catalog/Gateway fix, or standalone C6 backup/restore, without executing
+    any customer-facing C6 runtime path.
+@@ -1186,19 +1187,40 @@ Exercise the following distinct cases:
+    relationship is unproved, including misuse of the historical C1
+    `EpisodeStore` busy_timeout=5000 as a v4 setting or
+    as a whole-callback bound.
++6. A separately owner-approved, current-Scan/Fit-bound Lane A changes
++   only signed native event/sender/template/private classification,
++   source equality, existing v4 writer atomic durable HUMAN, deferred
++   routing/planner, and S2 safety using synthetic regressions.
++   No timing numbers, activation, schema change or customer wiring.
++   S2 corrections are semantic-only; independent S2 timing gates
++   under DESIGN §29.8.2 remain unchanged.
++7. A claimed Lane A adds or changes a numeric REST/SQLite timeout,
++   body/queue deadline, concurrency/admission limit, any S2/claim/send/
++   reconciliation timing or lease value, enabled listener, Chatwoot
++   config, public POST or v4 schema.
++8. Separately approved Lane B authors sourced, enforceable finite
++   timing candidate controls with synthetic tests, remaining disabled
++   and keeping final callback/native HUMAN readiness unresolved.
+ 
+ Expected:
+ - (1) requires a separately owner-approved non-production stage and
+   the Agreement §§1–3 native/free-OSS scan before benchmark harness
+   code; neither artifact is production timing authority nor a
+   general C6 production-code exception.
+-- (2), (3) and (5) FAIL CLOSED under §29.8.2/Q39/U14; fixture flags,
+-  caller input, environment defaults and synthetic values NEVER authorize
+-  production timing authority or public POST, or replace target-matched
+-  measurements/inherited facts.
+-- (4) alone is not C6 timing-dependent runtime implementation/activation.
+-- Earlier §29.8.2, Q37/Q39 and §43 durable HUMAN, liveness and no-retry
+-  obligations remain unchanged; this exception cannot bypass them.
++- (2), (3), (5), (7) FAIL CLOSED under §29.8.2/Q39/U14;
++  numeric timing controls in Lane A fail the authoring gate itself.
++  Fixtures, defaults and caller input never grant production timing
++  authority, public POST or a substitute for target-matched proof.
++- (4) alone is not C6 timing-dependent runtime activation.
++- (6) PASSES only unwired Lane A authoring with current Scan/Fit,
++  explicitly scoped v4 writer/planner, exact owner approval and
++  synthetic correctness proof; no component timing measurements or
++  numerical callback allocation is its authoring prerequisite.
++- (8) PASSES only unwired Lane B authoring with provenance-bound
++  finite enforced controls and its own owner approval; unknown
++  native/load/recovery facts still block customer activation.
++- §29.8.2, Q37/Q39 and §43 HUMAN/liveness/no-retry duties remain
++  unchanged; neither lane bypasses them.
+ 
+ ### Q39b — ingress-only callback feasibility and C1/v4 applicability
+ 
+@@ -1219,7 +1241,8 @@ or C6 runtime activation:
+    COMMIT, including non-ingress and recovery connections. A read-only
+    competing connection can delay COMMIT even without writing.
+    Compare cache-spill-disabled and bounded dirty-page cases; an
+-   unbounded silent statement-level wait HALTs the code-stage.
++   unbounded silent statement-level wait HALTs timing-budget
++   readiness and customer activation, never Lane A correctness.
+    Exercise repeated short competitor holds with zero and nonzero
+    gaps (SQLite polls may miss either), and measured overshoot.
+ 3. One owning atomic ingest transaction repeats exact
+@@ -1242,14 +1265,19 @@ or C6 runtime activation:
+    enforced completion; sampled percentiles, individual lock holds
+    and short free gaps are not hard bounds. Validation/HMAC is
+    charged once; JS timers do not preempt synchronous SQLite.
++   Lane A's atomic correctness proof requires no numeric callback
++   derivation; this equation applies to Lane B budget proof and
++   customer activation, not as a hidden Lane A pre-code gate.
+    Reject default 5000-ms authoritative REST reads against strict
+    5000-ms Chatwoot target with positive margin/other work.
+ 4. Exercise beyond-`N` admission, blocked SQLite, backup/recovery,
+    repeated writer contention, unknown journal mode, and expiry
+    of per-site waits. `SQLITE_BUSY` means failure, never ACK.
+-   For code-stage startup, reject unverified `B_site`, absent
+-   cumulative work bounds/body deadline, unsourced margin or
+-   candidate envelope violating `T_safe`. Before customers prove
++   Lane B authoring rejects unsourced or unenforceable finite
++   controls, keeps all actual callback-balance unknowns unresolved
++   and remains disabled. For customer startup, reject unverified
++   `B_site`, absent cumulative work bounds/body deadline, unsourced
++   margin or an envelope violating `T_safe`. Before customers prove
+    durable HUMAN plus operational attention; HTTP status alone
+    cannot prove either.
+ 5. Chatwoot v4.18.0 native response matrix: 4xx, 429, 500, 503,
+@@ -1263,15 +1291,18 @@ or C6 runtime activation:
+    v4/SQLite/mock-HTTP benchmark with synthetic data and no
+    production connections. Require separately approved test stage
+    and Agreement §§1–3 native/free-OSS comparison *before*
+-   constructing the harness. Code-stage Fit requires provider-target
+-   provenance, target-matched measured components, per-site
+-   timeouts, conservative cumulative allocations and separate owner
+-   approval. Full implemented callback measurement happens
+-   before customer execution, not before its code exists.
++   constructing the harness. Lane B Fit requires version-pinned provider timeout
++   semantics, each enforceable finite candidate supported by
++   DESIGN §29.8.3's allowed provenance, a bounded-work design
++   and separate owner approval. Target-matched measurements and
++   the native callback matrix are customer activation requirements,
++   not prerequisites to authoring unwired lane A/B code.
+    Reproduce target Node/SQLite/CPU/memory/disk and co-resident
+    Web/Worker/Postgres/Redis/Gateway loads, observed timestamped
+    peaks and predeclared runs/warmup/percentile/uncertainty/margin.
+-   Missing peak/variance or unmatched environment HALTs.
++   Missing peak/variance or unmatched environment HALTs
++   target-matched timing acceptance and customer activation, not
++   unwired Lane A correctness or sourced provisional Lane B.
+    Exercise slow/partial-body admission, rejected over-`N` floods,
+    high-timeout non-ingress SQLite, cache spill and repeated
+    REST-resume/replenishment waves; if work is unbounded HALT.
+@@ -1289,14 +1320,18 @@ or C6 runtime activation:
+    No custom test glue without documented gap/approval, extra
+    production runtime dependency or Chatwoot core patch.
+ 
+-Expected: An evidenced synthetic component Fit plus separately
+-owner-approved **unwired ingress-only code-stage** may be authorized,
+-not customer traffic. Both non-production artifacts are non-authorizing
+-for customer execution. Only a fully measured implemented native
+-callback budget with positive margin, provider error/HUMAN attention
+-and B2 recovery proof may authorize customers. No claim, S2,
+-public send or reconciliation pre-code timing relaxation is created.
+-Unknown, guessed or unbounded evidence HALTs.
++Expected: Lane A can be approved solely for unwired, correctness-only
++native classification, scoped v4 writer/planner and S2 changes on
++current Scan/Fit, exact owner approval and synthetic regressions;
++numeric timing changes in Lane A FAIL CLOSED. Lane B may author
++provenance-bound, enforceable finite candidate timing controls while
++disabled, with missing final/native evidence explicitly unresolved.
++Each lane requires its own current Scan/Fit and owner code-stage
++go-ahead. Neither is Runtime merge approval, customer execution or
++timing PASS. Only target-matched complete native callback measurement
++with positive margin, native failures, durable HUMAN/operator attention
++and B2 restore may authorize customer traffic. Claim, S2, public
++send and reconciliation retain independent §29.8.2 timing gates.
+ 
+ ### Q40 — structured submission arriving before local CLARIFY confirmation is not lost
+ A CLARIFY public message is visible to the customer and receives a native
+diff --git a/docs/AI_FIRST_LINE_DESIGN.md b/docs/AI_FIRST_LINE_DESIGN.md
+index e3aebe8..9fbca03 100644
+--- a/docs/AI_FIRST_LINE_DESIGN.md
++++ b/docs/AI_FIRST_LINE_DESIGN.md
+@@ -2801,29 +2801,35 @@ port/listener, invoke deployed Chatwoot, process
+ customer data, use real credentials, send public messages, modify production
+ configuration, or persist customer material. A fixture flag, caller input,
+ environment default, synthetic value or simulated success NEVER establishes
+-production timing authority or authorizes public POST. Separately reviewed,
+-target-matched measured components and verified provider configuration may
+-support a proposed bounded ingress code-stage allocation under §29.8.3;
+-the synthetic fixture itself does not become such authority. Before any
++production timing authority or authorizes public POST. For separately approved **unwired** ingress lane B (§29.8.3),
++positively verified provider settings, native enforceable limits and
++bounded synthetic component evidence may support provisional finite
++controls. The complete native callback timing budget still requires
++target-matched measurement before customer execution. Lane A allows
++no numerical timing authority and requires no timing measurements
++merely to author unwired classification/atomicity fixes. Synthetic
++fixtures are never production timing authority.
++Before any
+ benchmark harness is constructed, a separately approved non-production
+ stage MUST complete Agreement §§1–3 native/free-OSS scan; the allowance
+ in this paragraph is **not** permission to bypass that approval or scan.
+ Neither artifact waives fail-closed ingress or HUMAN requirements.
+ 
+-Except for those non-production artifacts and the narrow §29.8.3
+-**ingress-only staged feasibility rule**, BEFORE production implementation
+-or activation of timing-dependent customer-facing paths (webhook ingestion,
+-claiming work, AI/public dispatch or send/handoff reconciliation), every
+-applicable lease, authority/read timeout, producer timeout, deadline,
+-pre-SENDING read-retry budget, UNCERTAIN reconciliation window and HUMAN
+-handoff/escalation window must be measured or inherited from merged
+-authority per AI Working Agreement §8. For the *not-yet-approved ingress*
+-work alone, the code-stage gate may use bounded design allocations
+-derived from actual component-harness measurements and the positively
+-attested provider timeout, with an explicit plan to verify and reject
+-over-budget final code **before** any customer execution. Unmeasured
+-guesses or synthetic fixture values alone are never sufficient. Other
+-C6 production paths retain the measured/inherited pre-code gate.
++Except for the non-production artifacts above and the separately
++approved, **UNWIRED/DISABLED** authoring lanes A and B (§29.8.3),
++BEFORE implementation intended for customer-facing execution or
++activation of timing-dependent paths (ingress, claim, S2, public send
++or handoff reconciliation), applicable numeric leases, read/producer
++timeouts, deadlines, retries, UNCERTAIN and HUMAN windows must be
++measured or inherited per the Agreement and §29.8.2. Lane A is an
++exception ONLY for correctness/atomicity authoring with a current
++bound Scan/Fit, synthetic regressions and exact owner approval; it
++neither changes timing controls nor requires numeric derivation.
++Lane B may author finite individually enforced candidate limits using
++the permitted evidence sources below, without treating unknown
++end-to-end callback latency as ready for customers. Other C6
++production paths retain their independent measured/inherited pre-code
++gate. Guessed values and fixture results grant no timing authority.
+ 
+ The actual target's Chatwoot webhook timeout and safe complete
+ callback budget also require evidence before customer execution. The
+@@ -2844,16 +2850,24 @@ deployment is selected by this docs-only exception.
+ 
+ ### 29.8.3 C6 ingress-only timing feasibility
+ 
+-**Scope and authority.** This clause governs only Chatwoot AgentBot
+-webhook ingress/ACK feasibility, not claiming, S2, public sends, UNCERTAIN
+-reconciliation, HUMAN scheduling or customer execution. All other
+-timing-dependent paths retain the independent §29.8.2 gate. This clause
+-defines the staged proof sequence: measured isolated components and
+-derived enforceable design caps before ingress production code; full
+-callback verification before customer execution. It does not itself
+-authorize production-code edits, approve unmeasured values or activate
+-C6. Separate owner approval of a measured ingress code-stage Fit is
+-still required.
++**Scope and authority.** This clause governs Chatwoot AgentBot
++webhook ingress/ACK timing feasibility. The narrow Lane A exception
++also permits only **unwired, non-timing correctness authoring** in
++the existing v4 event writer, deferred-parent routing/planner and
++S2 semantic safety where needed to preserve ingress-ledger continuity.
++It grants no timing relaxation for claiming, S2, public sends, UNCERTAIN
++reconciliation, HUMAN scheduling or customer execution; these
++independent paths retain their §29.8.2 and frozen-contract gates. This clause
++defines separate, explicitly approved authoring lanes: non-deployed
++classification/atomicity fixes before timing calibration (lane A), and
++non-deployed timing-control design and tests under finite conservative
++bounds (lane B). Neither lane authorizes live webhook ingress,
++customer data, deployment or public send. Full provider/native callback
++timing, fail-closed durable HUMAN, operator attention and backup
++recovery must be proven before customer execution. Both lanes require
++fresh Agreement §§1–3 Scan/Fit and their own exact owner go-ahead.
++Neither lane independently authorizes production code, customer traffic,
++Chatwoot configuration, or a runtime merge.
+ 
+ **C1/v4 concurrency.** The historical §29.3 C1 `EpisodeStore` schema-v1
+ `busy_timeout=5000` requirement does not mandate that numeric value for
+@@ -2880,6 +2894,55 @@ before being used in a callback budget. Increasing the installation-wide value M
+ require a failed evidenced five-second fit plus separate owner approval,
+ scope/Sidekiq review and recorded rollback; this clause does not change it.
+ 
++**Lane A — narrow pre-timing correctness authoring.** On a separately
++owner-approved, current bound Scan/Fit, implement only signed,
++version-pinned AgentBot/Contact/template/private event classification,
++exact source/sender/equality, atomic durable HUMAN, deferred-parent,
++and S2 semantic safety with synthetic regressions. This is permissible
++without a broad representative load-measurement campaign because the
++receiver stays **UNWIRED and DISABLED for live/customer use**. It
++does not authorize numeric REST/SQLite timeout changes, concurrency
++or body deadline values, Chatwoot configuration, public POST,
++deployment, schema changes, or merge-ready/activation claims.
++The exact Lane A Scan/Fit MUST explicitly include the existing
++FirstLineStateStore v4 writer/transaction extension needed for
++atomic append-plus-durable-HUMAN (BLK-5), the deferred-parent
++routing/planner correction (BLK-6) and scoped S2 correctness.
++Retain immutable semantic origins, unique source equality, CAS,
++leases, durable continuation, and privacy invariants. This is not
++a general writer or schema exception. Any change in lock-site
++topology is registered for lane B; a unit test cannot replace
++native E2E. Detailed timing requirements below do not prevent
++this *unwired correctness-only* Lane A authoring.
++
++**Lane B — bounded non-deployed timing-control authoring.** The
++separately owner-approved code-stage Fit must cite actual provider
++timeout semantics and derive enforceable finite REST/body/SQLite
++busy/queue/admission limits with a positive response margin. A
++conservative explicitly finite low-volume envelope may be authored
++and tested on synthetic components while disabled, ahead of a
++representative production-load campaign. Permissible sources for
++candidate numeric limits are: (i) source/version-pinned, positively
++verified Chatwoot timeout semantics; (ii) frozen normative upper
++limits; (iii) enforceable native Node/HTTP/SQLite caps with effective
++PRAGMA readbacks as applicable; (iv) a static proof of bounded
++admission, queue, CPU work and SQLite acquisition sites; (v)
++separately approved, version-pinned synthetic component measurements
++with conservative finite allocations. Each candidate MUST name its
++source, enforceability and unresolved properties; missing evidence
++for any candidate numeric value HALTs that Lane B control.
++None proves a hard end-to-end callback tail, peak load or activation.
++Never infer peak concurrency from monthly chat volume, invent a
++numeric default, or ACK unproven success.
++Missing verified effective PRAGMAs, unbounded synchronous lock sites,
++unknown native provider outcomes or absent HUMAN/operator recovery
++HALT *customer execution*. Customer activation and merge-as-ready
++still require the complete version-pinned native timeout/failure
++matrix, target-matched bounded workload and fail-closed evidence,
++operator attention and B2 restore proof. This provision neither
++selects numeric values nor overrides the independent §29.8.2
++requirements for public send, S2 and handoff.
++
+ **Ingress topology and invariants.** The target permits exactly one
+ ingress OS process / Node event loop **at most**, including during
+ rolling restarts, with a positively configured finite concurrent
+@@ -2938,7 +3001,9 @@ initial `T_webhook = 5000 ms`. The margin is subtracted **once**.
+   total-admission/rate/queue limits and measured per-segment work;
+   multiplying a single callback's cost by `N` is NOT enough without
+   proof excluding replenishment and further REST resumes. Unbounded
+-  synchronous work or unknown cumulative count HALTs the code-stage.
++  synchronous work or unknown cumulative count HALTs Lane B timing
++  fitness and customer activation until enforced and verified; it
++  does not prohibit unwired Lane A correctness authoring.
+   Existing v4 two-transaction ingest operations are a surrogate,
+   not final proof for the future one-transaction path.
+ - `B_v4`: evidence-bound explicit `PRAGMA busy_timeout` of the
+@@ -2973,9 +3038,12 @@ initial `T_webhook = 5000 ms`. The margin is subtracted **once**.
+   result is *statistical* evidence, not a deterministic bound.
+   Explicitly declare the conservative calibrated operating envelope,
+   predeclared uncertainty/confidence and a failure/retest criterion.
+-  If the required overshoot/scheduling allocation cannot be
+-  substantiated for the **code stage**, HALT; never guess a hard
+-  wall-clock bound or assume JS timers preempt synchronous SQLite.
++  If overshoot/scheduling allocation is not substantiated, HALT
++  complete callback timing fitness and customer activation.
++  Lane B may author individually sourced finite controls only
++  while disabled, recording the incomplete total budget explicitly.
++  Never guess a hard wall-clock bound or presume that JS timers
++  preempt synchronous SQLite; Lane A cannot change numeric controls.
+ - `Q`: other event-loop/queue delay, including rejected or over-`N`
+   delivery storms, other callbacks' body/HMAC CPU, slow-body
+   resource occupancy and unrelated co-tenant CPU, excluding work
+@@ -2992,7 +3060,8 @@ and overshoot are measured/calibrated allocations, not claimed
+ interruptible. A statistical tail-SLO and safety margin do NOT prove
+ a hard wall-clock deadline. If target-matched workload, necessary
+ bounds or a real connection PRAGMA read-back is unproven, the
+-candidate ingress code-stage HALTs. Expiry of any SQLite busy wait
++timing-enabled activation stage HALTs; unwired lane A correctness
++authoring does not acquire any numerical timing authority. Expiry of any SQLite busy wait
+ is `SQLITE_BUSY` or another recorded fail-closed outcome, not a
+ success/handoff/ACK. No `await` or asynchronous yield is allowed
+ inside the owning transaction; future ingress MUST reject
+@@ -3032,11 +3101,13 @@ ownership. If no fail-closed overload response preserves those
+ obligations, activation HALTs; never weaken HMAC, exact source proof
+ or no-retry.
+ 
+-**Two distinct evidence gates.** For ingress-only production-code
+-implementation, freeze the one-process topology, independent
+-synthetic **component benchmarks** of the existing v4 store, SQLite
+-lock waits, mock HTTP/body/queue and response model, and an explicit
+-derived **design allocation** for
++**Two distinct evidence gates.** Before Lane B timing authoring,
++freeze provenance for the candidate enforced finite bounds, positive
++margin and bounded-work design (§29.8.3), with synthetic tests as
++appropriate. Before customer activation, independently prove
++target-matched component/native callback performance, one-process
++topology, existing v4 SQLite waits, mock HTTP/body/queue and response
++model, and a calibrated **final allocation** for
+ `I,R_seq,N,C_sync,K,B_v4,B_site[j],B_wait[j],Q,O,M` with verified
+ per-connection PRAGMA readbacks and finite cumulative work.
+ 
+@@ -3046,7 +3117,8 @@ before collecting load profiles. Its bounded command/metric allowlist,
+ time window, non-secret/no-customer-content output, authorization and
+ retention MUST be recorded; this docs-only amendment authorizes no
+ production observation, real Chatwoot API call or configuration change.
+-If such evidence is unavailable, target-matched budgeting HALTs.
++If such evidence is unavailable, target-matched activation
++budgeting HALTs. This does not activate the unwired authoring lanes.
+ Benchmark results MUST bind
+ exact Node executable and bundled SQLite versions, CPU architecture /
+ vCPU class, memory/swap, filesystem and storage latency/throughput,
+@@ -3064,8 +3136,10 @@ bounds every material difference. Merely using the same Node version
+ on a faster or otherwise unmatched machine is insufficient. No
+ benchmark may run against production databases, live Chatwoot
+ endpoints, production keys or customer messages. Unmatched or
+-unbounded shared CPU/disk/lock contention HALTs the code-stage
+-budget; it cannot be silently represented as zero.
++unbounded shared CPU/disk/lock contention HALTs target-matched
++callback-budget proof and customer activation; it cannot be
++silently represented as zero, nor does it prevent a separately
++approved unwired Lane A or sourced provisional Lane B stage.
+ 
+ Before the first run, freeze a reproducible measurement plan stating
+ workload and database sizes, concurrency and conflicting-writer
+@@ -3075,13 +3149,19 @@ Justify each numeric choice by an existing owner-approved and
+ source-cited reliability objective **if one is actually frozen**,
+ or by a defensible statistical sample-size argument, an existing
+ normative bound, or measured target variance/calibration—not intuition.
+-No currently unfrozen reliability objective or sample size is presumed
+-to exist; missing evidence HALTs the proposed stage. Include raw
++No separately proven reliability objective, numeric sample size,
++per-second peak or benchmark distribution is assumed in this slice.
++Missing source evidence HALTs target-matched timing acceptance and
++customer activation, not approved unwired Lane A correctness
++or independently sourced provisional Lane B authoring. Include raw
+ non-customer timing distributions and observed maxima; a percentile
+-alone cannot prove a hard bound. Calculate each selected enforceable
+-limit from the measured baseline, uncertainty, calibrated target
+-difference and positive remaining callback budget, recording the
+-derivation and rejection criteria before ingress code is modified.
++alone cannot prove a hard bound. Before customer-executable timing-enabled ingress is approved,
++calculate each selected effective limit from the measured baseline,
++uncertainty, calibrated target difference and positive remaining
++callback budget; record its derivation and rejection criteria.
++Unwired Lane B can author only provisional sourced finite controls
++with unmeasured calibration visibly unresolved. Lane A correctness
++authoring needs neither those timing derivations nor numeric changes.
+ Measure existing primitives on exact pinned runtime/SQLite, state
+ measured versus surrogate versus enforced upper limits separately.
+ Numbers not supported by that evidence remain unresolved; neither
+@@ -3096,10 +3176,10 @@ code; record versions, complete applicable licenses, capabilities
+ and reproducible fit. Only genuine uncovered gaps can justify
+ limited **test-only** glue after the stage's separate approval.
+ No extra production runtime dependency or Chatwoot core patch is
+-authorized here. New ingress code MUST enforce the **enforceable**
+-controls classified above; it MUST refuse startup/admission where a
+-control or measured/competitor-derived bound is absent or
+-unproven, and remain unwired for customer execution. Measured-only `C_sync`/`Q`/`O` and calibrated SQLite overshoot
++authorized here. Timing-enabled ingress code MUST enforce the **enforceable**
++controls classified above; it MUST refuse live startup/admission
++where a required bound is absent or unproven. Unwired lane A/B
++authoring is not activation, nor a timing PASS. Measured-only `C_sync`/`Q`/`O` and calibrated SQLite overshoot
+ are NOT claimed preemptible or hard-enforced by ingress.
+ A non-production synthetic benchmark is not an end-to-end measurement.
+ Its matrix MUST exercise a high-timeout co-resident non-ingress SQLite

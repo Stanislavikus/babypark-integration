@@ -1,0 +1,8 @@
+label=V04_stat_post
+utc=2026-10-15T20:18:29Z
+git_dir=/tmp/pr136-V04_stat-bare-W09kkb
+head=262f7a8999d797f4ceceb531004986cfd6667d73
+tree=ffb8953002feaeb5f417a09a832c86f24051afa2
+base_present=yes
+refs_digest=a82bb1a9df5f9cd1fa225d118350b902fe05bdce31d1a17ec409e95f7276a017
+objects_pack_digest=cb1065a11a5c4ccc3b7009778ad0389837cc7374d266fdc47155edd1d5741dba

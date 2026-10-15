@@ -1,0 +1,8 @@
+label=V04_full_patch_pre
+utc=2026-10-15T20:18:29Z
+git_dir=/tmp/pr136-V04_full_patch-bare-UQMBCl
+head=262f7a8999d797f4ceceb531004986cfd6667d73
+tree=ffb8953002feaeb5f417a09a832c86f24051afa2
+base_present=yes
+refs_digest=a82bb1a9df5f9cd1fa225d118350b902fe05bdce31d1a17ec409e95f7276a017
+objects_pack_digest=4353a6105c14fea116381a0b91620046fd5fc55740be6a11e5abf56c15afdf2d

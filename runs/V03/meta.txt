@@ -1,0 +1,6 @@
+check_id=V03
+utc_start=2026-10-15T20:18:29Z
+command=/usr/bin/git diff --check 0dfb9b0a1cfe23d455fd436ae9abeac626d0d729..HEAD
+CAMPAIGN_BASE_OID=0dfb9b0a1cfe23d455fd436ae9abeac626d0d729
+CAMPAIGN_HEAD=262f7a8999d797f4ceceb531004986cfd6667d73
+utc_end=2026-10-15T20:18:29Z
