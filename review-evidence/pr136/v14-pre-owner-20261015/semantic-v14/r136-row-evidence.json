@@ -1,0 +1,42 @@
+[
+  {
+    "id": "R136-01",
+    "evidence_pass": true,
+    "focused_check": "DESIGN Lane A + Q39a"
+  },
+  {
+    "id": "R136-02",
+    "evidence_pass": true,
+    "focused_check": "BLK-5/6 semantics in DESIGN \u00a729.8.3"
+  },
+  {
+    "id": "R136-03",
+    "evidence_pass": true,
+    "focused_check": "Q39a(7) negative gate"
+  },
+  {
+    "id": "R136-04",
+    "evidence_pass": true,
+    "focused_check": "Lane B provenance (i)\u2013(v)"
+  },
+  {
+    "id": "R136-05",
+    "evidence_pass": true,
+    "focused_check": "measurement vs authoring split"
+  },
+  {
+    "id": "R136-06",
+    "evidence_pass": true,
+    "focused_check": "activation barrier"
+  },
+  {
+    "id": "R136-07",
+    "evidence_pass": true,
+    "focused_check": "Agreement scan gate"
+  },
+  {
+    "id": "R136-08",
+    "evidence_pass": true,
+    "focused_check": "frozen manifest SHA-256 in bundle"
+  }
+]
