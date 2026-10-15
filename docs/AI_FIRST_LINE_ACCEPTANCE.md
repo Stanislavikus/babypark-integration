@@ -1360,9 +1360,20 @@ Exercise synthetic monthly availability accounting fixtures:
 2. Negative: a window announced after it began, or with operator
    notice delivered <24 hours before start, or with no verifiable
    delivery, is not excluded; missing service proof counts unavailable.
-3. Negative: separately observed unplanned provider/Chatwoot failure
-   on top of an otherwise qualifying maintenance interval still counts
-   unavailable, including overlaps: no laundering by the schedule.
+3. Component-attribution matrix: a timely logged window names
+   **Chatwoot only**, not Gateway or the model provider. A
+   Chatwoot-only maintenance outage wholly inside the logged window
+   is eligible for exclusion (subject to the remaining monthly cap).
+   A separately evidenced Gateway or provider failure concurrent
+   with that window is unavailable for every affected minute,
+   including overlapping Chatwoot maintenance, and those denied
+   minutes consume **zero** of the 120-minute allowance.
+   A failure episode of a named component continuing beyond the
+   logged end is unplanned for its entire recorded interval and
+   earns no maintenance allowance.
+   Unknown incident component, attribution, bounds or overlap fails
+   closed as non-excludable; a valid classification must not infer
+   that every failure during maintenance was caused by maintenance.
 4. Negative: after using all 120 minutes this month, a second
    announced 60-minute window contributes 60 unavailable minutes;
    overlapping windows are not double-counted, and next month starts
@@ -1372,13 +1383,22 @@ Exercise synthetic monthly availability accounting fixtures:
    unknown timezone, window-log or notice provenance denies exclusion.
 6. Safety: during maintenance, durable HUMAN, fail-closed ingress,
    operator attention and §43 recovery remain mandatory.
+7. Minute-resolution accounting: if a single minute overlaps both
+   a planned-only Chatwoot outage and an independently evidenced
+   unplanned Gateway outage, the full minute remains in the
+   denominator as unavailable and does not consume the cap.
+   Verify cumulative usage counts **only excluded minutes**,
+   chronological ordering, and no double count across windows.
 
 Expected: absent or non-explicit owner approval of the objective,
 the **owner-selected 120-minute cap**, **24-hour delivered advance
 notice** and exact exclusion/failure rules blocks merge. Valid
 maintenance is removed from both sides of the availability fraction;
 excess, unplanned outages and unverified minutes count unavailable.
-These policy limits do not authorize timing controls or live runtime.
+A denied/unplanned overlap minute does not consume the 120-minute
+allowance. These policy limits do not authorize timing controls or
+live runtime.
+
 Q39c availability regression: a minute with a proven ingress-to-
 durable-HUMAN path, verified delivery of its operator-owned channel
 alert and a passing independent synthetic end-to-end notification

@@ -2914,11 +2914,12 @@ production activation (the first interval starts at activation).
 The availability denominator comprises all wall-clock minutes of
 that interval **minus only the valid, capped maintenance exclusions**
 defined below. Excluded minutes count in neither the numerator nor
-the denominator; all other minutes remain eligible. A minute is available only when an eligible Website customer message
+the denominator; all other minutes remain eligible. A minute is
+available only when an eligible Website customer message
 can be admitted through a proven path to either (a) authorized AI
 processing or (b) a durable HUMAN continuation with verified,
-actionable operator attention. For this availability metric, **verified actionable operator
-attention** means an alert for the durable HUMAN/operational fault is
+actionable operator attention. For this availability metric,
+**verified actionable operator attention** means an alert for the durable HUMAN/operational fault is
 actually delivered to the designated, operator-owned notification
 channel with independently verifiable delivery evidence, while a
 separate synthetic end-to-end check proves that the notification
@@ -2934,24 +2935,41 @@ availability.
 **Owner-selected planned-maintenance accounting exception
 (2026-10-15; proposed Q39c):** Exclude no more than **120 minutes
 per calendar month** of qualifying, preannounced maintenance.
-A window qualifies only if its exact start/end and purpose are
-recorded in an auditable, customer-content-free maintenance log
+A window qualifies only if its exact start/end, purpose **and exact
+affected component identities** (for example, Chatwoot but not
+Gateway or an external provider) are recorded in an auditable,
+customer-content-free maintenance log
 **before the window begins**, and an announcement is **actually
 delivered** to the designated operator(s) **at least 24 hours before
 the window starts**, with timestamped delivery evidence.
 Retroactive announcements, unverified delivery, late notice,
 missing window bounds or missing provenance cannot qualify.
-Count qualifying window minutes cumulatively in chronological
-order within each calendar month, including partial months, without
-double-counting overlaps or carrying forward unused allowances.
-Exclude up to 120 qualifying minutes from BOTH numerator and
-denominator; minutes beyond the cap remain in the denominator
-and count as unavailable maintenance. An invalid window grants
-no exclusion; count actual failures and missing observability
-as unavailable. Unplanned Chatwoot/model-provider failures
-(including any independently evidenced failures concurrent with a
-planned window) remain unavailable; never use a maintenance window
-to mask an unplanned incident. Record month assignment in a
+Classify each calendar-minute interval from the immutable declared
+component set, logged bounds and independently verifiable incident
+start/end/component evidence: only downtime attributable solely to
+a declared affected component, wholly contained within a qualifying
+window and not overlapping any independently evidenced failure of
+an undeclared component, is planned-only and eligible for exclusion.
+A failure of an undeclared component (for example, Gateway or a
+provider during Chatwoot-only maintenance), or an incident that
+continues past the declared window end, is **unplanned** for its
+entire independently evidenced incident interval, including any
+overlap with the window. Any calendar minute touched by such a
+failure is not excludable, even if Chatwoot is also down for
+maintenance. Unknown component identity, root-cause attribution,
+start/end or overlap is **not evidence of planned-only downtime**
+and cannot earn an exclusion. Classification happens before
+applying the allowance. Count only *actually excluded* planned-only
+minutes toward the cumulative 120-minute cap, in chronological
+order in each calendar month including partial months; denied
+minutes consume **zero** of the cap. Do not double-count overlapping
+windows or carry unused allowance forward. Exclude the earliest
+120 qualifying planned-only minutes from BOTH numerator and
+denominator; eligible planned-only minutes above that cap remain
+in the denominator and are counted unavailable. An invalid window
+grants no exclusion. Independently evidenced unplanned Chatwoot,
+Gateway or model-provider failures remain unavailable; never use
+maintenance scheduling to mask an incident. Record month assignment in a
 separately selected, proven reporting timezone before activation.
 The **120-minute allowance and 24-hour notice interval were
 selected by the owner on 2026-10-15**, not measured or inferred
