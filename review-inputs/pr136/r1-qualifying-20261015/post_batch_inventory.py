@@ -8,8 +8,10 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
-LATEST = (ROOT / "LATEST_RUN.txt").read_text().strip()
-RUN = Path(LATEST)
+latest_raw = (ROOT / "LATEST_RUN.txt").read_text().strip()
+RUN = Path(latest_raw)
+if not RUN.is_absolute():
+    RUN = ROOT / RUN
 MANIFEST_SHA = "adda61453c1e14c16b1a90d072051ab3e4e29f1e110bd2c1f539aad90de8d3d6"
 PATCH_SHA = "cd63aba108a9d0fae925297722c5799428372acef71281f762f42efe423db714"
 
