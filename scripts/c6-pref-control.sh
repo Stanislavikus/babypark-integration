@@ -156,25 +156,48 @@ database_provenance() {
     [[ "$(sha256sum "$ROOT/evidence/r0-s0-trigger.log" | awk '{print $1}')" == \
       '1ec058a4ed481323dea3bec5a53244f6cc11febf49d7fb57c2f4c743e1ba75b5' ]] || failure S0_EVENT_EVIDENCE_CHANGED
     [[ "$volume_created" == 2026-10-11T18:54:45Z ]] || failure ORIGINAL_POC_VOLUME_IDENTITY_CHANGED
-    # Counts alone do NOT authorize a copied DB. Positively prove every
-    # account/inbox/contact/conversation/message belongs to only the original
-    # synthetic account=1, inbox=1, conv<=2, msg<=4; all objects are recent.
-    local closed_shape
+    # Frozen metadata-only P0 fingerprint, not a broad count threshold.
+    # P0 has one original synthetic AgentBot ID 1 (not zero).
+    # Refuse any unknown message, sender, inbox, source ID, timestamp or
+    # contact identity; never SELECT or persist message bodies or PII.
+    local closed_shape expected_shape
     if ! closed_shape="$(timeout --kill-after=3s 20s docker exec -i bp-c6poc-postgres-1 /bin/sh -c \
-      'psql -XAt -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "SELECT
-       (SELECT COUNT(*) FROM accounts WHERE id<>1),
-       (SELECT COUNT(*) FROM inboxes WHERE id<>1 OR account_id<>1),
-       (SELECT COUNT(*) FROM contacts WHERE account_id<>1 OR id>2),
-       (SELECT COUNT(*) FROM conversations WHERE account_id<>1 OR inbox_id<>1 OR id>2),
-       (SELECT COUNT(*) FROM messages WHERE account_id<>1 OR inbox_id<>1 OR id>4),
-       (SELECT COUNT(*) FROM agent_bots WHERE account_id<>1 OR id>1),
-       (SELECT COUNT(*) FROM accounts),
-       (SELECT COUNT(*) FROM inboxes),
-       (SELECT COUNT(*) FROM conversations),
-       (SELECT COUNT(*) FROM messages);"')"; then
+      'PGOPTIONS="-c default_transaction_read_only=on" exec psql -XAt -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB"' <<'C6_P0_READONLY_SQL'
+SELECT
+  (SELECT COUNT(*) FROM accounts),
+  (SELECT COUNT(*) FROM inboxes),
+  (SELECT COUNT(*) FROM agent_bots),
+  (SELECT COUNT(*) FROM contacts),
+  (SELECT COUNT(*) FROM conversations),
+  (SELECT COUNT(*) FROM messages),
+  (SELECT COALESCE(string_agg(
+      id::text || ':' || message_type::text || ':' || content_type::text || ':' || conversation_id::text,
+      ',' ORDER BY id), '') FROM messages),
+  (SELECT COUNT(*) FROM accounts WHERE id IS DISTINCT FROM 1),
+  (SELECT COUNT(*) FROM inboxes WHERE id IS DISTINCT FROM 1 OR account_id IS DISTINCT FROM 1),
+  (SELECT COUNT(*) FROM agent_bots WHERE id IS DISTINCT FROM 1 OR account_id IS DISTINCT FROM 1),
+  (SELECT COUNT(*) FROM contacts WHERE
+      id IS DISTINCT FROM 1 OR account_id IS DISTINCT FROM 1
+      OR email IS NOT NULL OR phone_number IS NOT NULL
+      OR created_at < TIMESTAMP '2026-10-11 18:54:45'
+      OR created_at >= TIMESTAMP '2026-10-12 00:00:00'),
+  (SELECT COUNT(*) FROM conversations WHERE
+      id NOT IN (1, 2) OR account_id IS DISTINCT FROM 1
+      OR inbox_id IS DISTINCT FROM 1 OR contact_id IS DISTINCT FROM 1),
+  (SELECT COUNT(*) FROM messages WHERE
+      account_id IS DISTINCT FROM 1 OR inbox_id IS DISTINCT FROM 1
+      OR source_id IS NOT NULL
+      OR created_at < TIMESTAMP '2026-10-11 18:54:45'
+      OR created_at >= TIMESTAMP '2026-10-12 00:00:00'
+      OR (id IN (1, 4) AND
+          (sender_type IS DISTINCT FROM 'Contact' OR sender_id IS DISTINCT FROM 1))
+      OR (id IN (2, 3, 5) AND (sender_type IS NOT NULL OR sender_id IS NOT NULL)));
+C6_P0_READONLY_SQL
+    )"; then
       failure POC_METADATA_SHAPE_READ_FAILED
     fi
-    [[ "$closed_shape" =~ ^0\|0\|0\|0\|0\|0\|1\|1\|[12]\|[1-4]$ ]] || failure FOREIGN_OR_UNPROVEN_CHATWOOT_ROWS
+    expected_shape='1|1|1|1|2|5|1:0:0:1,2:3:0:1,3:3:3:1,4:0:0:2,5:2:0:2|0|0|0|0|0|0'
+    [[ "$closed_shape" == "$expected_shape" ]] || failure FOREIGN_OR_UNPROVEN_CHATWOOT_ROWS
     proof_label=PINNED_ORIGINAL_POC_FIXTURE_ONLY
   fi
   cat_status || failure CATALOG_CHANGED
