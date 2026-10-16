@@ -609,3 +609,174 @@ test('F2 sent-delivered-read repeats on same native email template never create 
     {status:200,outcome:'duplicate_source'});
   relay.close();
 });
+
+
+test('F1-R repeated already-accepted source HUMAN: all PREPARED/GATING x ANSWER/CLARIFY x lease cuts', t => {
+  for (const state of ['PREPARED','GATING']) {
+    for (const kind of ['ANSWER','CLARIFY']) {
+      for (const expired of state === 'GATING' ? [false,true] : [false]) {
+        const file=fixture(t);
+        let clock=NOW;
+        let store=FirstLineStateStore.open(file,{now:()=>clock});
+        const stream=store.ensureConversationStream({sourceProvider:'chatwoot',sourceConversationId:55});
+        const customer=id=>({
+          sourceMessageId:id,eventKind:'CUSTOMER_MESSAGE',messageType:'incoming',
+          senderClass:'contact',senderId:9001,contentType:'text',deleted:false,
+          unsupported:false,hasAttachments:false,sourceId:null,
+        });
+        store.ingestConversationEvent(stream.stream_id,customer(101));
+        const episode=store.beginEpisode({streamId:stream.stream_id});
+        const action=prepareTestPublicAction(store,{
+          descriptor:testActionDescriptor(),streamId:stream.stream_id,
+          episodeId:episode.episode_id,expectedEpisodeVersion:episode.version,
+          preparedStreamRevision:1,actionType:kind,basisEventSeqs:[1],
+          deadlineAt:NOW+120000,
+          ...(kind==='CLARIFY'?{
+            requestedSlot:'store_id',
+            presentedCandidates:[{slot:'store_id',value:'store_11111111-1111-4111-8111-111111111111'}],
+          }:{}),
+        });
+        if(state==='GATING'){
+          store.claimNextPublicAction({leaseMs:30000,token:'f1r-owner'});
+          if(expired)clock+=30001;
+        }
+        const before=store.getEpisode(episode.episode_id);
+        assert.equal(store.getPublicAction(action.action_id).state,state);
+        const accepted=store.ingestVerifiedChatwootEvent({
+          sourceConversationId:55,event:customer(101),humanReason:'NATIVE_CUSTOMER_UPDATE',
+        });
+        assert.equal(accepted.inserted,false);
+        assert.equal(store.getConversationStream(stream.stream_id).stream_revision,1);
+        assert.equal(store.listConversationEvents(stream.stream_id).length,1);
+        const after=store.getEpisode(episode.episode_id);
+        assert.equal(after.clarification_prompts_sent,before.clarification_prompts_sent);
+        assert.equal(after.requested_slot,before.requested_slot);
+        assert.equal(after.clarification_action_id,before.clarification_action_id);
+        assert.equal(store.getPublicAction(action.action_id).state,'STALE');
+        const owner=store.getUnresolvedContinuationOwner(stream.stream_id);
+        assert.equal(owner.owner_kind,'HUMAN');
+        assert.equal(owner.human_reason,'NATIVE_CUSTOMER_UPDATE');
+        assert.equal(owner.action_id,action.action_id);
+        assert.equal(store.db.prepare(
+          'SELECT origin_kind FROM semantic_origins WHERE stream_id=? AND stream_revision=1'
+        ).get(stream.stream_id).origin_kind,'PUBLIC_ACTION');
+        store.close();
+        store=FirstLineStateStore.open(file,{now:()=>clock});
+        assert.equal(store.getUnresolvedContinuationOwner(stream.stream_id).owner_kind,'HUMAN');
+        assert.equal(store.getPublicAction(action.action_id).state,'STALE');
+        assert.equal(store.getConversationStream(stream.stream_id).stream_revision,1);
+        assert.equal(store.getEpisode(episode.episode_id).clarification_prompts_sent,
+          before.clarification_prompts_sent);
+        store.close();
+      }
+    }
+  }
+});
+
+test('F1-R same-source HUMAN crash rollback preserves original lease, stream and CLARIFY budget', t => {
+  for(const state of ['PREPARED','GATING']){
+    for(const kind of ['ANSWER','CLARIFY']){
+      const file=fixture(t);
+      let store=FirstLineStateStore.open(file);
+      const stream=store.ensureConversationStream({sourceProvider:'chatwoot',sourceConversationId:55});
+      const customer=id=>({
+        sourceMessageId:id,eventKind:'CUSTOMER_MESSAGE',messageType:'incoming',
+        senderClass:'contact',senderId:9001,contentType:'text',deleted:false,
+        unsupported:false,hasAttachments:false,sourceId:null,
+      });
+      store.ingestConversationEvent(stream.stream_id,customer(101));
+      const episode=store.beginEpisode({streamId:stream.stream_id});
+      const action=prepareTestPublicAction(store,{
+        descriptor:testActionDescriptor(),streamId:stream.stream_id,
+        episodeId:episode.episode_id,expectedEpisodeVersion:episode.version,
+        preparedStreamRevision:1,actionType:kind,basisEventSeqs:[1],
+        deadlineAt:NOW+60000,
+        ...(kind==='CLARIFY'?{
+          requestedSlot:'store_id',
+          presentedCandidates:[{slot:'store_id',value:'store_11111111-1111-4111-8111-111111111111'}],
+        }:{}),
+      });
+      if(state==='GATING')store.claimNextPublicAction({leaseMs:30000,token:'f1r-lease'});
+      const preAction=store.getPublicAction(action.action_id);
+      const preEp=store.getEpisode(episode.episode_id);
+      store.db.exec("CREATE TEMP TRIGGER f1r_abort BEFORE UPDATE OF owner_kind "+
+        "ON continuation_owners BEGIN SELECT RAISE(ABORT,'synthetic-f1r-owner-crash'); END");
+      assert.throws(()=>store.ingestVerifiedChatwootEvent({
+        sourceConversationId:55,event:customer(101),humanReason:'NATIVE_CUSTOMER_UPDATE',
+      }),/synthetic-f1r-owner-crash/);
+      store.close();
+      store=FirstLineStateStore.open(file);
+      assert.equal(store.getPublicAction(action.action_id).state,state);
+      assert.equal(store.getPublicAction(action.action_id).lease_token,preAction.lease_token);
+      assert.equal(store.getUnresolvedContinuationOwner(stream.stream_id).owner_kind,'PUBLIC_ACTION');
+      assert.equal(store.getConversationStream(stream.stream_id).stream_revision,1);
+      assert.equal(store.listConversationEvents(stream.stream_id).length,1);
+      assert.equal(store.getEpisode(episode.episode_id).clarification_prompts_sent,
+        preEp.clarification_prompts_sent);
+      store.close();
+    }
+  }
+});
+
+test('F2-R native CSAT display_type star/emoji are status-only; unknown/response => HUMAN', async t => {
+  for(const [attrs,needHuman] of [
+    [{display_type:'emoji'},false],
+    [{display_type:'star'},false],
+    [{display_type:'other'},true],
+    [{display_type:'star',submitted_values:[{value:'PRIVATE_RATING'}]},true],
+    [{display_type:'emoji',alien:'PRIVATE_UNKNOWN'},true],
+  ]){
+    const file=fixture(t),rows=new Map(),reads=[];
+    rows.set(977,row(977,{
+      message_type:'template',sender:null,content_type:'input_csat',
+      content_attributes:attrs,
+    }));
+    const relay=makeRelay(file,rows,reads);
+    const body=envelope(977,{event:'message_updated',message_type:'template',sender:null});
+    assert.equal((await relay.receive(signed(body))).status,200);
+    audit(file,(store,stream)=>{
+      assert.equal(store.getUnresolvedContinuationOwner(stream.stream_id)?.owner_kind??null,
+        needHuman?'HUMAN':null);
+    });
+    const bytes=fs.readFileSync(file);
+    assert.equal(bytes.includes(Buffer.from('PRIVATE_RATING')),false);
+    assert.equal(bytes.includes(Buffer.from('PRIVATE_UNKNOWN')),false);
+    relay.close();
+  }
+});
+
+
+test('F1-R signed native incoming message_updated repeats existing source under GATING and transfers to HUMAN', async t=>{
+  const file=fixture(t),rows=new Map(),reads=[];
+  let store=FirstLineStateStore.open(file);
+  const stream=store.ensureConversationStream({sourceProvider:'chatwoot',sourceConversationId:55});
+  store.ingestConversationEvent(stream.stream_id,{
+    sourceMessageId:101,eventKind:'CUSTOMER_MESSAGE',messageType:'incoming',
+    senderClass:'contact',senderId:9001,contentType:'text',deleted:false,
+    unsupported:false,hasAttachments:false,sourceId:null,
+  });
+  const action=prepareTestPublicAction(store,{
+    descriptor:testActionDescriptor(),streamId:stream.stream_id,
+    preparedStreamRevision:1,actionType:'ANSWER',basisEventSeqs:[1],
+    deadlineAt:NOW+60000,
+  });
+  assert.equal(store.claimNextPublicAction({leaseMs:30000,token:'live-gating'}).action_id,
+    action.action_id);
+  store.close();
+  rows.set(101,row(101));
+  const relay=makeRelay(file,rows,reads);
+  t.after(()=>relay.close());
+  const updated=envelope(101,{event:'message_updated'});
+  assert.deepEqual(await relay.receive(signed(updated)),
+    {status:200,outcome:'duplicate_source'});
+  assert.deepEqual(await relay.receive(signed(updated,'idempotent-retry')),
+    {status:200,outcome:'duplicate_source'});
+  audit(file,(owner,found)=>{
+    assert.equal(owner.getConversationStream(found.stream_id).stream_revision,1);
+    assert.equal(owner.listConversationEvents(found.stream_id).length,1);
+    assert.equal(owner.getPublicAction(action.action_id).state,'STALE');
+    assert.equal(owner.getUnresolvedContinuationOwner(found.stream_id).owner_kind,'HUMAN');
+    assert.throws(()=>owner.markActionSending(action.action_id,'live-gating'));
+  });
+  assert.equal(reads.length,2);
+});
