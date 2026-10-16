@@ -1,0 +1,526 @@
+{
+  "activation_gates_not_satisfied_by_synthetic_checks": [
+    "H-LIVE-02b bounded PREPARED/GATING recovery after process death, separately owner-approved stage (OPEN; not closed by Batch 2)",
+    "Lane B measured ingress timing and finite request/SQLite envelope (OPEN; no target-matched measured fit yet)",
+    "Lane B additional lock/REST sites from S2: one full read per S2 proof, up to bounded number of fresh exact row reads per missing source, one synchronous BEGIN IMMEDIATE per ingested source and one final S2 refusal HUMAN tx; these must be measured/registered before activation",
+    "Real Chatwoot pinned instance version; source event status/submit/retry/4xx/429/5xx/timeout characterization (OPEN)",
+    "Operator-visible HUMAN handoff notification and B2 restore/load/replay (OPEN)",
+    "Production AI activation and merge separately require owner GO, not authorized here"
+  ],
+  "additional_review_requirements": [
+    "One full exhaustive adversarial inventory across exact HEAD/tree/base and this immutable manifest digest, not only Batch 2 delta; continue after first finding, include BLK-1..6 and new S2/HUMAN contract",
+    "One genuinely independent exhaustive verification using distinct test/model procedure, including Sonnet model-based deferred order and S2-discovered sources",
+    "No ZERO closure while any known causal BLOCKER remains. If HEAD/TREE/base/manifest changes, restart all check sets."
+  ],
+  "changed_paths": [
+    {
+      "class": "repository-configuration",
+      "path": ".gitattributes",
+      "status": "A"
+    },
+    {
+      "class": "deployment-configuration",
+      "path": "deploy/chatwoot-host/systemd/candidate/babypark-first-line-recovery.service",
+      "status": "A"
+    },
+    {
+      "class": "docs",
+      "path": "docs/AI_FIRST_LINE_C6_CP4_HEARTBEAT_SF1_OPTIONS_20261011.md",
+      "status": "A"
+    },
+    {
+      "class": "docs",
+      "path": "docs/AI_FIRST_LINE_C6_CP4_NATIVE_CHATWOOT_SF1_REVIEW_20261011.md",
+      "status": "A"
+    },
+    {
+      "class": "docs",
+      "path": "docs/AI_FIRST_LINE_C6_CP4_OPERATIONS_DISCOVERY_20261011.md",
+      "status": "A"
+    },
+    {
+      "class": "docs",
+      "path": "docs/AI_FIRST_LINE_C6_CP4_SF1_SCOPE_CORRECTION_20261011.md",
+      "status": "A"
+    },
+    {
+      "class": "docs",
+      "path": "docs/AI_FIRST_LINE_C6_INGRESS_TIMING_FIT_20261013.md",
+      "status": "A"
+    },
+    {
+      "class": "docs",
+      "path": "docs/AI_FIRST_LINE_C6_INGRESS_TIMING_OPTIONS_20261013.md",
+      "status": "A"
+    },
+    {
+      "class": "docs",
+      "path": "docs/AI_FIRST_LINE_C6_INGRESS_TIMING_PRE_RUN_20261013.md",
+      "status": "A"
+    },
+    {
+      "class": "docs",
+      "path": "docs/AI_FIRST_LINE_C6_INGRESS_TIMING_PRE_RUN_V2_20261013.md",
+      "status": "A"
+    },
+    {
+      "class": "docs",
+      "path": "docs/AI_FIRST_LINE_C6_INGRESS_TIMING_RUN_RAW_20261013.json",
+      "status": "A"
+    },
+    {
+      "class": "docs",
+      "path": "docs/AI_FIRST_LINE_C6_INGRESS_TIMING_RUN_REPORT_20261013.md",
+      "status": "A"
+    },
+    {
+      "class": "docs",
+      "path": "docs/AI_FIRST_LINE_C6_INGRESS_TIMING_RUN_V2_RAW_20261013.json",
+      "status": "A"
+    },
+    {
+      "class": "docs",
+      "path": "docs/AI_FIRST_LINE_C6_INGRESS_TIMING_RUN_V2_REPORT_20261013.md",
+      "status": "A"
+    },
+    {
+      "class": "docs",
+      "path": "docs/AI_FIRST_LINE_C6_PR128_INGRESS_CONVERGENCE_PLAN_20261014.md",
+      "status": "A"
+    },
+    {
+      "class": "docs",
+      "path": "docs/AI_FIRST_LINE_C6_PRODUCTION_TELEMETRY_PILOT_PROPOSAL_20261013.md",
+      "status": "A"
+    },
+    {
+      "class": "docs",
+      "path": "docs/AI_FIRST_LINE_C6_PRODUCTION_TELEMETRY_PILOT_RESULT_20261013.md",
+      "status": "A"
+    },
+    {
+      "class": "docs",
+      "path": "docs/AI_FIRST_LINE_C6_RUNTIME_ACK_FIT_20261011.md",
+      "status": "A"
+    },
+    {
+      "class": "docs",
+      "path": "docs/AI_FIRST_LINE_C6_RUNTIME_ACK_OPTIONS_20261011.md",
+      "status": "A"
+    },
+    {
+      "class": "docs",
+      "path": "docs/AI_FIRST_LINE_C6_RUNTIME_R1_FIT_20261011.md",
+      "status": "A"
+    },
+    {
+      "class": "docs",
+      "path": "docs/AI_FIRST_LINE_C6_RUNTIME_R1_OPTIONS_20261011.md",
+      "status": "A"
+    },
+    {
+      "class": "docs",
+      "path": "docs/AI_FIRST_LINE_C6_SIDEKIQ_ALIVE_GSERVER_CPU_DIAGNOSIS_20261013.md",
+      "status": "A"
+    },
+    {
+      "class": "docs",
+      "path": "docs/AI_FIRST_LINE_C6_SIDEKIQ_WORKER_DIAGNOSTIC_PROPOSAL_20261013.md",
+      "status": "A"
+    },
+    {
+      "class": "docs",
+      "path": "docs/AI_FIRST_LINE_C6_SIDEKIQ_WORKER_DIAGNOSTIC_RESULT_20261013.md",
+      "status": "A"
+    },
+    {
+      "class": "docs",
+      "path": "docs/AI_FIRST_LINE_C6_WORKER_CHILD_RUBY_IDENTITY_20261013.md",
+      "status": "A"
+    },
+    {
+      "class": "docs",
+      "path": "docs/AI_FIRST_LINE_C6_WORKER_CHILD_THREAD_CPU_RESULT_20261013.md",
+      "status": "A"
+    },
+    {
+      "class": "runtime-script",
+      "path": "scripts/first-line-postsend-service.mjs",
+      "status": "A"
+    },
+    {
+      "class": "runtime",
+      "path": "src/copilot/chatwoot-client.mjs",
+      "status": "M"
+    },
+    {
+      "class": "runtime",
+      "path": "src/copilot/first-line-action-preparation.mjs",
+      "status": "A"
+    },
+    {
+      "class": "runtime",
+      "path": "src/copilot/first-line-current-conversation.mjs",
+      "status": "A"
+    },
+    {
+      "class": "runtime",
+      "path": "src/copilot/first-line-decision-authority.mjs",
+      "status": "M"
+    },
+    {
+      "class": "runtime",
+      "path": "src/copilot/first-line-postsend-recovery-scheduler.mjs",
+      "status": "A"
+    },
+    {
+      "class": "runtime",
+      "path": "src/copilot/first-line-public-action-gate.mjs",
+      "status": "M"
+    },
+    {
+      "class": "runtime",
+      "path": "src/copilot/first-line-public-send-coordinator.mjs",
+      "status": "A"
+    },
+    {
+      "class": "runtime",
+      "path": "src/copilot/first-line-routing-planner.mjs",
+      "status": "M"
+    },
+    {
+      "class": "runtime",
+      "path": "src/copilot/first-line-runtime-ingress.mjs",
+      "status": "A"
+    },
+    {
+      "class": "runtime",
+      "path": "src/copilot/first-line-runtime-semantics.mjs",
+      "status": "A"
+    },
+    {
+      "class": "runtime",
+      "path": "src/copilot/first-line-s2-covered-text.mjs",
+      "status": "A"
+    },
+    {
+      "class": "runtime",
+      "path": "src/copilot/first-line-s2-preflight.mjs",
+      "status": "A"
+    },
+    {
+      "class": "runtime",
+      "path": "src/copilot/first-line-s2-refusal.mjs",
+      "status": "A"
+    },
+    {
+      "class": "runtime",
+      "path": "src/copilot/first-line-source-integrity.mjs",
+      "status": "A"
+    },
+    {
+      "class": "runtime",
+      "path": "src/copilot/first-line-state-store.mjs",
+      "status": "M"
+    },
+    {
+      "class": "tests",
+      "path": "tests/fixtures/c6-ingress-native-timing-v2.mjs",
+      "status": "A"
+    },
+    {
+      "class": "tests",
+      "path": "tests/fixtures/c6-ingress-native-timing.mjs",
+      "status": "A"
+    },
+    {
+      "class": "tests",
+      "path": "tests/fixtures/first-line-coordinator-kill-child.mjs",
+      "status": "A"
+    },
+    {
+      "class": "tests",
+      "path": "tests/fixtures/first-line-postsend-scheduler-child.mjs",
+      "status": "A"
+    },
+    {
+      "class": "tests",
+      "path": "tests/fixtures/first-line-systemd-notify-stub.mjs",
+      "status": "A"
+    },
+    {
+      "class": "tests",
+      "path": "tests/helpers/legacy-public-action-gate-fixture.mjs",
+      "status": "A"
+    },
+    {
+      "class": "tests",
+      "path": "tests/helpers/legacy-sending-fixture.mjs",
+      "status": "A"
+    },
+    {
+      "class": "tests",
+      "path": "tests/unit/copilot-first-line-recovery.test.mjs",
+      "status": "M"
+    },
+    {
+      "class": "tests",
+      "path": "tests/unit/first-line-action-preparation.test.mjs",
+      "status": "A"
+    },
+    {
+      "class": "tests",
+      "path": "tests/unit/first-line-batch2-atomic-human-s2.test.mjs",
+      "status": "A"
+    },
+    {
+      "class": "tests",
+      "path": "tests/unit/first-line-blk6-multicycle-adversarial.test.mjs",
+      "status": "A"
+    },
+    {
+      "class": "tests",
+      "path": "tests/unit/first-line-blk6-multicycle.test.mjs",
+      "status": "A"
+    },
+    {
+      "class": "tests",
+      "path": "tests/unit/first-line-blk6-order-matrix.test.mjs",
+      "status": "A"
+    },
+    {
+      "class": "tests",
+      "path": "tests/unit/first-line-clarification-selection.test.mjs",
+      "status": "M"
+    },
+    {
+      "class": "tests",
+      "path": "tests/unit/first-line-coordinator-process-crash.test.mjs",
+      "status": "A"
+    },
+    {
+      "class": "tests",
+      "path": "tests/unit/first-line-current-conversation.test.mjs",
+      "status": "A"
+    },
+    {
+      "class": "tests",
+      "path": "tests/unit/first-line-decision-continuation.test.mjs",
+      "status": "M"
+    },
+    {
+      "class": "tests",
+      "path": "tests/unit/first-line-decision.test.mjs",
+      "status": "M"
+    },
+    {
+      "class": "tests",
+      "path": "tests/unit/first-line-dependency-proof.test.mjs",
+      "status": "M"
+    },
+    {
+      "class": "tests",
+      "path": "tests/unit/first-line-episode-transition.test.mjs",
+      "status": "M"
+    },
+    {
+      "class": "tests",
+      "path": "tests/unit/first-line-lane-a-native-batch.test.mjs",
+      "status": "A"
+    },
+    {
+      "class": "tests",
+      "path": "tests/unit/first-line-no-lazy-db.test.mjs",
+      "status": "A"
+    },
+    {
+      "class": "tests",
+      "path": "tests/unit/first-line-postsend-recovery-scheduler.test.mjs",
+      "status": "A"
+    },
+    {
+      "class": "tests",
+      "path": "tests/unit/first-line-postsend-service.test.mjs",
+      "status": "A"
+    },
+    {
+      "class": "tests",
+      "path": "tests/unit/first-line-public-action-gate.test.mjs",
+      "status": "M"
+    },
+    {
+      "class": "tests",
+      "path": "tests/unit/first-line-public-send-boundary.test.mjs",
+      "status": "A"
+    },
+    {
+      "class": "tests",
+      "path": "tests/unit/first-line-reply-evidence.test.mjs",
+      "status": "A"
+    },
+    {
+      "class": "tests",
+      "path": "tests/unit/first-line-route-application.test.mjs",
+      "status": "M"
+    },
+    {
+      "class": "tests",
+      "path": "tests/unit/first-line-routing-planner.test.mjs",
+      "status": "M"
+    },
+    {
+      "class": "tests",
+      "path": "tests/unit/first-line-runtime-ingress.test.mjs",
+      "status": "A"
+    },
+    {
+      "class": "tests",
+      "path": "tests/unit/first-line-runtime-semantics.test.mjs",
+      "status": "A"
+    },
+    {
+      "class": "tests",
+      "path": "tests/unit/first-line-s2-covered-text.test.mjs",
+      "status": "A"
+    },
+    {
+      "class": "tests",
+      "path": "tests/unit/first-line-s2-refusal.test.mjs",
+      "status": "A"
+    },
+    {
+      "class": "tests",
+      "path": "tests/unit/first-line-send-restart-fence.test.mjs",
+      "status": "A"
+    },
+    {
+      "class": "tests",
+      "path": "tests/unit/first-line-state-store-v4.test.mjs",
+      "status": "M"
+    },
+    {
+      "class": "tests",
+      "path": "tests/unit/first-line-state-store.test.mjs",
+      "status": "M"
+    }
+  ],
+  "independent_review_requirements": [
+    "Full exact-HEAD/tree/base/gov/manifest exhaustive adversarial HEAVY pass, including BLK-1..6, async/restart/lease/source replay, unknown sender and denied facts",
+    "Second genuinely independent exhaustive zero-BLOCKER confirmation against identical immutable manifest",
+    "Review continues past first finding; batch fix then restart verification on the new exact tree"
+  ],
+  "known_activation_barriers": [
+    "H-LIVE-02b bounded PREPARED/GATING recovery after process death, separately owner-approved stage (OPEN; not closed by Batch 2)",
+    "Lane B measured ingress timing and finite request/SQLite envelope (OPEN; no target-matched measured fit yet)",
+    "Lane B additional lock/REST sites from S2: one full read per S2 proof, up to bounded number of fresh exact row reads per missing source, one synchronous BEGIN IMMEDIATE per ingested source and one final S2 refusal HUMAN tx; these must be measured/registered before activation",
+    "Real Chatwoot pinned instance version; source event status/submit/retry/4xx/429/5xx/timeout characterization (OPEN)",
+    "Operator-visible HUMAN handoff notification and B2 restore/load/replay (OPEN)",
+    "Production AI activation and merge separately require owner GO, not authorized here"
+  ],
+  "owner_precode_binding": {
+    "approved_go_utc": "2026-10-16T18:51:09Z",
+    "architecture_fit_v2_sha256": "e4c0a129ff1e3c085300c98f4e006d727fe91e547e4492f90c4c98795bd5c0f4",
+    "native_oss_scan_v2_sha256": "c9f355192c4e0eae14cf0f3787df09c43b4df123237aa06b1ffb27e845560d64",
+    "scope": "After exact-main rebase, H-LIVE-02a and H-S2-03 only; no H-LIVE-02b, Lane B, deploy, Chatwoot core patches or activation"
+  },
+  "package_suite_ownership": {
+    "apps/drupal-exporter": "not applicable: no exporter or behaviorally imported catalog paths changed",
+    "gateway_target_identity": "not applicable: no gateway executable or characterization surface changed",
+    "root": "all 78 changed paths, including the S2/Chatwoot/SQLite runtime and Batch 2 tests"
+  },
+  "remaining_known_nonblocking": [
+    "Internal low-level preparePublicAction basis completeness hardening; candidate/S2 exact basis comparison still mandatory"
+  ],
+  "required_checks": [
+    {
+      "binding": "CAMPAIGN_BASE_OID=f3d92325e6b4ef04f0137c4c49dde07c05731bbe",
+      "command": "test -n \"${CAMPAIGN_BASE_OID:-}\" && git cat-file -e \"${CAMPAIGN_BASE_OID}^{commit}\"",
+      "id": "preflight_campaign_base"
+    },
+    {
+      "binding": "CAMPAIGN_BASE_OID=f3d92325e6b4ef04f0137c4c49dde07c05731bbe",
+      "command": "git diff --check \"${CAMPAIGN_BASE_OID}..HEAD\"",
+      "id": "git_diff_check"
+    },
+    {
+      "binding": "CAMPAIGN_BASE_OID=f3d92325e6b4ef04f0137c4c49dde07c05731bbe",
+      "command": "git diff --name-status \"${CAMPAIGN_BASE_OID}..HEAD\"",
+      "id": "git_changed_surface"
+    },
+    {
+      "command": "npm test",
+      "id": "root_npm_test",
+      "required_by": "agreement 7.0a runtime changes"
+    },
+    {
+      "command": "npm run storage:validate",
+      "id": "storage_validate",
+      "required_by": "root npm test invokes"
+    },
+    {
+      "command": "npm run test:unit",
+      "id": "unit",
+      "required_by": "root npm test invokes"
+    },
+    {
+      "command": "npm run test:legacy",
+      "id": "legacy",
+      "required_by": "root npm test invokes"
+    },
+    {
+      "command": "npm run test:refactor",
+      "id": "refactor",
+      "required_by": "root npm test invokes"
+    },
+    {
+      "can_be_satisfied_by": "root test:unit",
+      "command": "node --test --test-concurrency=1 tests/unit/first-line-lane-a-native-batch.test.mjs tests/unit/first-line-runtime-ingress.test.mjs",
+      "id": "native_status_event_matrix"
+    },
+    {
+      "can_be_satisfied_by": "root test:unit",
+      "command": "node --test --test-concurrency=1 tests/unit/first-line-blk6-order-matrix.test.mjs tests/unit/first-line-blk6-multicycle.test.mjs tests/unit/first-line-blk6-multicycle-adversarial.test.mjs tests/unit/first-line-state-store-v4.test.mjs tests/unit/first-line-routing-planner.test.mjs",
+      "id": "deferred_state_space"
+    },
+    {
+      "can_be_satisfied_by": "root test:unit",
+      "command": "node --test --test-concurrency=1 tests/unit/first-line-coordinator-process-crash.test.mjs tests/unit/first-line-send-restart-fence.test.mjs tests/unit/first-line-postsend-recovery-scheduler.test.mjs",
+      "id": "recovery_and_failure"
+    },
+    {
+      "can_be_satisfied_by": "root test:unit",
+      "command": "node --test --test-concurrency=1 tests/unit/first-line-batch2-atomic-human-s2.test.mjs",
+      "id": "batch2_lease_and_s2_exact",
+      "matrix": "27 focused tests (14 originally low-level plus rejection and page/replay, updated final 27); actual exact native reader required before public enablement"
+    },
+    {
+      "can_be_satisfied_by": "root test:unit",
+      "command": "node --test --test-concurrency=1 tests/unit/first-line-action-preparation.test.mjs tests/unit/first-line-s2-covered-text.test.mjs tests/unit/first-line-s2-refusal.test.mjs tests/unit/first-line-public-action-gate.test.mjs",
+      "id": "s2_authorization_regression"
+    },
+    {
+      "can_be_satisfied_by": "root test:unit",
+      "command": "node --test --test-concurrency=1 tests/unit/first-line-send-restart-fence.test.mjs tests/unit/first-line-postsend-recovery-scheduler.test.mjs tests/unit/first-line-coordinator-process-crash.test.mjs",
+      "id": "postsend_and_restart_fence"
+    }
+  ],
+  "required_runtime_provenance": {
+    "fresh_npm_ci": "new initially empty deps layer from exact committed lock; npm ci --ignore-scripts --no-audit --no-fund; deps frozen read-only",
+    "image_id": "sha256:f7dd6300c82e401c82530054cbbb05d883536793e3176de47cdcb453a8c85cd8",
+    "isolated_exact_tree": "separate network-disabled OCI tmpfs per required test command, read-only Git source and lock-installed deps; fresh empty tmpfs each; verify before+after HEAD/TREE/clean",
+    "package_lock_sha256": "c2bf97d1ffe4161d56b034132d8e194ef08c701710827dfc8ff49b429cc4b3a1"
+  },
+  "schema": "bp.c6.pr128.batch2.required-verification-manifest/2",
+  "verification_basis": {
+    "agreement_blob_oid": "e777fce4af8e8c3372f1f9de9ef7d00f786c2c89",
+    "campaign_base_oid": "f3d92325e6b4ef04f0137c4c49dde07c05731bbe",
+    "classification": "HEAVY",
+    "head_oid": "d4229e900171ce6113970f75201919cc0e217816",
+    "origin_main_oid_at_freeze": "f3d92325e6b4ef04f0137c4c49dde07c05731bbe",
+    "parent_rebased_head_oid": "7d9a0e4c26bb982ed52707fb31f78004e1dc65b6",
+    "pr": 128,
+    "related_archived_head": "aadc8f4dafb14fa0f659653c0edd5a727bebea4b",
+    "repository": "Stanislavikus/babypark-integration",
+    "tree_oid": "a36dffc6e46d16cbf4ce2c2ccfa9d57b418129f4"
+  }
+}
