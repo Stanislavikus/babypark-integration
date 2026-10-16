@@ -1,0 +1,5 @@
+IMAGE_REF=alpine/git@sha256:16ad8e788e1d3b0c30f18da8dde5c0ace3b187445a62d8af893b003ca1e70592
+RepoDigests=["alpine/git@sha256:16ad8e788e1d3b0c30f18da8dde5c0ace3b187445a62d8af893b003ca1e70592"] Id=sha256:16ad8e788e1d3b0c30f18da8dde5c0ace3b187445a62d8af893b003ca1e70592
+git version 2.45.2
+/usr/bin/git
+2b0cf7eef70e8ab6cf6766149c87fe00165a1895196f3f3b2937fa51bef14d0c  /usr/bin/git

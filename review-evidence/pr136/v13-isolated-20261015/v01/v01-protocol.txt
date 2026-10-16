@@ -1,0 +1,13 @@
+=== V01 Canonical source and pin ===
+UTC: 2026-10-15T22:07:25Z
+https://x-access-token:[REDACTED]@github.com/Stanislavikus/babypark-integration
+CANONICAL_REPO=Stanislavikus/babypark-integration
+origin_main=0dfb9b0a1cfe23d455fd436ae9abeac626d0d729
+CAMPAIGN_HEAD=262f7a8999d797f4ceceb531004986cfd6667d73
+CAMPAIGN_TREE=ffb8953002feaeb5f417a09a832c86f24051afa2
+CAMPAIGN_BASE=0dfb9b0a1cfe23d455fd436ae9abeac626d0d729
+GOV_BLOB_AT_BASE=e777fce4af8e8c3372f1f9de9ef7d00f786c2c89
+merge_base=0dfb9b0a1cfe23d455fd436ae9abeac626d0d729
+ffb8953002feaeb5f417a09a832c86f24051afa2
+262f7a8999d797f4ceceb531004986cfd6667d73
+68

@@ -1,0 +1,9 @@
+=== V02 Immutable verification environment ===
+UTC: 2026-10-15T22:07:32Z
+WORKTREE=/tmp/wt-pr136-v13-3126
+git version 2.43.0
+/usr/bin/git
+/usr/bin/git
+2a8c18fbf43da9f692d75474c72bea9dfd796c260b0f3dfe456376abc3bbd668  /usr/bin/git
+v22.14.0
+Linux cursor 6.12.94+ #1 SMP PREEMPT_DYNAMIC Thu Oct 15 16:04:59 UTC 2026 x86_64 x86_64 x86_64 GNU/Linux

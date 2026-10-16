@@ -1,0 +1,6 @@
+check_id=v04-git-diff-stat
+UTC_HOST_END=2026-10-15T22:24:34Z
+exact_argv=git diff --stat 0dfb9b0a1cfe23d455fd436ae9abeac626d0d729..HEAD
+host_repo_root=/workspace
+image=alpine/git@sha256:16ad8e788e1d3b0c30f18da8dde5c0ace3b187445a62d8af893b003ca1e70592
+materialization_disposed=true

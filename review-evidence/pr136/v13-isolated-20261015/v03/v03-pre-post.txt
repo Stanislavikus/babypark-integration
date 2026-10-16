@@ -1,0 +1,10 @@
+=== V03 pre-check ===
+UTC: 2026-10-15T22:07:33Z
+262f7a8999d797f4ceceb531004986cfd6667d73
+ffb8953002feaeb5f417a09a832c86f24051afa2
+CAMPAIGN_BASE_OID_ok
+base_commit_exists
+exit_code=0
+=== V03 post-check ===
+262f7a8999d797f4ceceb531004986cfd6667d73
+ffb8953002feaeb5f417a09a832c86f24051afa2
