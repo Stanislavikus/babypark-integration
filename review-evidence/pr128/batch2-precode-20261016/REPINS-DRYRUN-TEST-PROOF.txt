@@ -1,0 +1,15 @@
+# PR #128 — isolated re-pin dry-run proof (2026-10-16)
+Status: NON-NORMATIVE PRE-CODE EVIDENCE, NEVER AN AUTHORIZATION TO MOVE PR #128.
+Applies to: Stanislavikus/babypark-integration PR #128, intended one-time rebase before C6 Lane A Batch 2.
+Supersedes: none.
+
+Source PR Draft HEAD aadc8f4dafb14fa0f659653c0edd5a727bebea4b, TREE c0e91285ffc40e12ea202775f26240eb3d407a35, old pinned BASE 0dfb9b0a1cfe23d455fd436ae9abeac626d0d729.
+Canonical main target f3d92325e6b4ef04f0137c4c49dde07c05731bbe, governance blob e777fce4af8e8c3372f1f9de9ef7d00f786c2c89.
+Temporary isolated rebase, no branch ref update: 64 branch commits rebased on top of 11 new main commits with rebase --rebase-merges --onto main oldbase temporary-scratch-branch. Scratch local author identity used, not for publication.
+No changed-path intersection between old-base..HEAD and old-base..main; main changed only docs/AI_FIRST_LINE_ACCEPTANCE.md and docs/AI_FIRST_LINE_DESIGN.md.
+Old vs rebased tree differs only in those two docs. Full git diff --binary old-base..old-HEAD vs new-main..scratch-HEAD: byte-identical, length 697157, SHA-256 0dd8dfee65639720544bec8cc34a525c899c8f37a8d6c1c20c1673ed40199303.
+Scratch HEAD 5b374244edecbbd3cc75c47b90f93d0e704688a2; TREE 7a5a944a3fc7da3857ecba9eb0db1345caa10eb6. New merge-base exactly main. 77 changed files, git diff --check PASS, scratch status clean.
+Full root npm test on scratch rebased tree, Node 22.23.3 with Git in pinned OCI image ID sha256:f7dd6300c82e401c82530054cbbb05d883536793e3176de47cdcb453a8c85cd8, read-only source and preexisting frozen package-lock dependencies, network disabled, tmpfs isolated: EXIT 0, unit 1362/1362, legacy 13/13, refactor 13/13, 0 failures. Log SHA-256 606da50b5ef9451810f97394d15fd1d285972b5d18c91fc6424eb95e21a01502, 2026-10-16T18:25:30Z to 18:27:06Z UTC.
+This reuses earlier exact same package-lock dependency layer (not a newly recorded npm ci run); acceptable for diagnostic preflight, NOT a new immutable §7.0a baseline if dependencies differ. Final authorized rebase must use fresh exact-tree verification.
+No GitHub PR ref moved, no merge, no Chatwoot configuration or customer data touched.
+If either exact PR HEAD or canonical main/GOV differs at actual owner-approved execution, HALT and redo preflight; do NOT assume scratch SHA can be the final published SHA. Follow owner-approved lease-guarded branch write and archive old head before any real rebase.

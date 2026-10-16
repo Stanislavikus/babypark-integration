@@ -1,0 +1,39 @@
+# C6 PR128 — Batch 2 pre-code Native/OSS Scan (2026-10-16)
+Status: NON-NORMATIVE, PRE-CODE DECISION EVIDENCE ONLY. NOT A PRODUCTION CODE AUTHORIZATION.
+Applies to: Stanislavikus/babypark-integration only; PR #128 C6 Lane A Batch 2 correctness, no babypark-b2b.
+Supersedes: none; supplements earlier narrow Lane A scan SHA256 8dc319437b3237fed68d5f72ede425ffc0a991a0bccda547db4f5f88c4b70b2b.
+Normalized evidence form: UTF-8, LF, final newline. UTC snapshot date: 2026-10-16.
+
+## Frozen requirements and authorization boundary
+Unmerged PR #128 OLD HEAD aadc8f4dafb14fa0f659653c0edd5a727bebea4b, TREE c0e91285ffc40e12ea202775f26240eb3d407a35, OLD BASE 0dfb9b0a1cfe23d455fd436ae9abeac626d0d729. Canonical origin/main f3d92325e6b4ef04f0137c4c49dde07c05731bbe, Agreement blob e777fce4af8e8c3372f1f9de9ef7d00f786c2c89. If any of these change materially, refresh bindings before GO/code. Planned re-pin to main is separately authorized, not implied by this scan.
+
+Two exact gaps from Sonnet independently reproduced synthetic probes:
+H-LIVE-02: S2 denial while action is GATING and existing claim lease has expired must atomically leave zero public POST, one absorbing durable HUMAN continuation, terminalize any unsent action, preserve pre-consumed CLARIFY count/slot, and fence stale GATING->SENDING worker. Every refusal reason and PREPARED/GATING state tested including process restart/failed SQLite statement.
+H-S2-03: S2 whole Chatwoot conversation authority may include previously undelivered source rows. §29.7.2 step 2 requires classify + idempotently ingest fresh authoritative rows to durable ledger before S2 action decision, not just STALE. For each missing key read exact current row again (not reuse stale snapshot), verify sender/type/source/channel/internal/shape, strict changed-source fail closed, event and deferred parent/HUMAN in existing single synchronous owning SQLite transaction, then recompute S2 from fresh authority. No unbounded retry or fabricated history. A lost webhook must not orphan HUMAN, and no new customer-facing POST on unproven authority.
+
+Keep frozen privacy: no routine durable customer raw/normalized text, email, phone, attachment URL or text digest; Chatwoot is transcript authority. No Chatwoot core changes, no extra state system, no new runtime dependencies, no guessed dynamic facts. Unknown state/format/source -> deny/HUMAN. Only synthetic, UNWIRED disabled Lane A: no actual production API or customer data. No Lane B timing/queue/connection budget, no deployment, no merge/activation.
+
+## Reproducible native / OSS discovery
+Query/discovery paths checked 2026-10-16:
+- Chatwoot official AgentBot + webhooks guides; REST conversation/messages, native HMAC and message_updated sources, upstream pinned tag v4.18.0 at https://github.com/chatwoot/chatwoot/tree/v4.18.0 (commit 9f920b549c14491a4e587687a3eed5d21c6ccc7d; annotated tag previously recorded 5c1487713ff2ea407188855211533a1e30e24589).
+- GitHub repository search / public sources: "Chatwoot AgentBot Node webhook connector"; "Chatwoot n8n nodes 2026"; "Chatwoot conversation messages API"; "Chatwoot v4.18 status/submit agentbot".
+- GitHub API metadata, exact HEAD, license and public README for the candidates below.
+- Repository implementation inspect: src/copilot/first-line-public-action-gate.mjs, first-line-s2-preflight.mjs, first-line-state-store.mjs, chatwoot-client.mjs; pinned PR head above.
+- Historical owner-named Captain audit docs/OSS_AI_RUNTIME_REUSE_AUDIT.md at c73f4807189b973f1e44f29888edab5f195db5c6, blob 38a8625563b6d0d22a69a0a3e1999369edcefc85. Historical negative evidence only; current suitability unproven.
+
+Requirement matrix: A=atomic lease-safe durable HUMAN with existing v4 invariants; B=fresh S2 full-history reconciliation + exact source shape; C=privacy, native Chatwoot upgrade-safe, fail closed; D=free ready solution faster/less burden than existing adaptation.
+
+Candidate 1. Native Chatwoot v4.18.0 AgentBot REST + existing native config: A FAIL as to BabyPark-owned v4 atomic owner/lease; B PARTIAL (authoritative API supplies messages but not BabyPark ledger reconciliation); C PASS for upstream transport, not installed version certification; D PASS as existing stack. Upstream GitHub license metadata NOASSERTION; no new license rights asserted. Source: https://github.com/chatwoot/chatwoot
+Candidate 2. Existing repository FirstLineStateStore/reader/S2, exact HEAD: A PARTIAL (already has #attachHumanOnRepeatedSourceWithinTx, lease CAS + #attachHumanToUnsentAction; missing S2 expired-GATING reuse and guaranteed refusal handoff); B PARTIAL (readExactSourceMessage and ingestVerifiedChatwootEvent, but S2 currently returns STALE before ingest); C PASS on synthetic classification/metadata, must preserve; D PASS highest fit, zero new dependencies. Requires bounded in-place composition, not new service. Source: pinned babypark-integration tree.
+Candidate 3. serversmx/n8n-nodes-chatwoot, MIT, main fa1b7c25d98306dd98f7796bbf3bce1237bba015, pushed 2026-09-26. A FAIL, B PARTIAL (Chatwoot REST/triggers, no v4 atomic ledger), C UNPROVEN (new n8n durable workflow/customer text policy, signing variant), D FAIL versus existing; n8n self-host fair-code and transitive terms not established as simpler compliant path. https://github.com/serversmx/n8n-nodes-chatwoot
+Candidate 4. rjsebening/n8n-nodes-chatwoot, MIT, main 36d9e68f1178afb19002b03c6c1f1d2bf8867c24, 2026-08-11. A FAIL, B PARTIAL API coverage, C UNPROVEN, D FAIL new n8n. https://github.com/rjsebening/n8n-nodes-chatwoot
+Candidate 5. pixelinfinito/n8n-nodes-chatwoot, MIT, master 4136756e1ac75ea46d3780008bba405015a55a63, 2025-07-29. A FAIL B PARTIAL C UNPROVEN D FAIL, older/unmaintained relative to now, no exact atomic v4 proof. https://github.com/pixelinfinito/n8n-nodes-chatwoot
+Candidate 6. fazer-ai/n8n-nodes-chatwoot, MIT, main 3845057e327f5a16641acd3f5e90667882b0d31c, 2026-06-09. A FAIL B PARTIAL C UNPROVEN D FAIL, extra n8n. https://github.com/fazer-ai/n8n-nodes-chatwoot
+Candidate 7. fazer-ai/agents, Apache-2.0 repo, main 482e3bc6963bb702d2460b0bf57607df772b305b, 2026-10-16. A FAIL for BabyPark's v4 owner, B PARTIAL provider integration; C UNPROVEN new persistence/transcript footprint, D FAIL higher integration burden. https://github.com/fazer-ai/agents
+Candidate 8. hkalia/chatwoot-n8n-integration, license NOT VERIFIED (GitHub metadata null), main 53b8fc8960216e440462a52ea6a6d723ec76c3e2, 2025-07-12. A FAIL B PARTIAL webhook orchestration C UNPROVEN D FAIL extra service and license risk. https://github.com/hkalia/chatwoot-n8n-integration
+Candidate 9. Captain — owner/prior audit candidate, present-day implementation/version not verified. A/B FAIL/UNPROVEN C/D UNPROVEN; historical reason was no v4 transaction ownership and new operational footprint. No claim of permanent market exclusion.
+
+Decision (PRE-CODE RECOMMENDATION, NOT GO): KEEP-EXISTING native Chatwoot + repo v4 store/reader, in-place minimal integration in existing S2 and lease reconciliation. None of the examined ready solutions is proven to meet all A–D and be faster/safer with no quality loss. If discovery of a qualifying complete adapter, licensing or deployed Chatwoot version materially changes, STOP and re-scan before code. A semantic contract mismatch cannot be "fixed" by unsafely marking all STALE as HUMAN without owner-approved normative amendment.
+
+Implementation selection remains prohibited until bounded Architecture Fit cites this file's exact SHA-256 and owner separately authorizes code and re-pin. No REST calls to real Chatwoot were made.
+
