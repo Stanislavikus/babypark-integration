@@ -3203,17 +3203,28 @@ export class FirstLineStateStore {
               'continuation action is missing or belongs to another stream');
           }
           if (['PREPARED', 'GATING'].includes(action.state)) {
-            // Event ingestion already advanced stream_revision. An unsent action
-            // may be superseded without depending on a GATING lease, but
-            // HUMAN must retain any consumed CLARIFY budget and requested slot.
-            this.#supersedeUnsentAction(
-              action, 'ingress_human_interrupt', 'STALE', at, true
-            );
-            this.#commitDirectHumanOriginWithinTx({
-              stream: id, revision: accepted.stream.stream_revision,
-              humanReason: reason, requestedEpisodeId: null,
-              requestedEpisodeVersion: null, at,
-            });
+            if (accepted.stream.stream_revision > action.prepared_stream_revision) {
+              // A genuinely new source event advanced the ledger; supersede
+              // its previous action and use a new DIRECT_HUMAN semantic origin.
+              this.#supersedeUnsentAction(
+                action, 'ingress_human_interrupt', 'STALE', at, true
+              );
+              this.#commitDirectHumanOriginWithinTx({
+                stream: id, revision: accepted.stream.stream_revision,
+                humanReason: reason, requestedEpisodeId: null,
+                requestedEpisodeVersion: null, at,
+              });
+            } else if (accepted.stream.stream_revision === action.prepared_stream_revision &&
+                       !accepted.inserted) {
+              // The exact source already exists. V4 forbids inventing a
+              // second ledger event or incrementing stream_revision without
+              // one. Transfer the SAME continuation to HUMAN atomically,
+              // while terminalizing the unsent action and preserving CLARIFY.
+              this.#attachHumanOnRepeatedSourceWithinTx(action, reason, at);
+            } else {
+              fail('FIRST_LINE_HUMAN_ACTION_RECONCILIATION_REQUIRED',
+                'an unsent action has no proven newer or repeated source cut');
+            }
           } else if (['SENDING', 'UNCERTAIN'].includes(action.state)) {
             this.#escalatePublicActionToHumanWithinTx({
               id: owner.action_id, humanReason: reason, suppliedLease: null, at,
@@ -5965,6 +5976,50 @@ export class FirstLineStateStore {
         }
       }
     }
+  }
+
+  #attachHumanOnRepeatedSourceWithinTx(action, reason, at) {
+    const stream = this.#requireStream(action.stream_id);
+    if (stream.stream_revision !== action.prepared_stream_revision ||
+        stream.last_event_seq !== stream.stream_revision) {
+      fail('FIRST_LINE_HUMAN_ACTION_RECONCILIATION_REQUIRED',
+        'same-revision HUMAN requires the immutable existing source cut');
+    }
+    if (action.state === 'PREPARED') {
+      this.#attachHumanToUnsentAction(action, reason, 'STALE', at);
+      return;
+    }
+    if (action.state !== 'GATING' ||
+        !Number.isSafeInteger(action.lease_expires_at) ||
+        typeof action.lease_token !== 'string') {
+      fail('FIRST_LINE_HUMAN_ACTION_RECONCILIATION_REQUIRED',
+        'GATING has no valid lease for same-revision HUMAN transition');
+    }
+    let claim = action.lease_token;
+    if (action.lease_expires_at <= at) {
+      // Reclaim an expired PRE-SEND lease using the existing v4 CAS
+      // protocol. A previous worker cannot enter SENDING on an expired
+      // token; the claim replacement and HUMAN transition share one tx.
+      claim = crypto.randomUUID();
+      const changed = this.#withMutationLeaseToken(claim, () =>
+        this.db.prepare(
+          "UPDATE public_actions SET state='GATING',lease_token=?," +
+          'lease_expires_at=?,attempts=attempts+1,updated_at=? ' +
+          "WHERE action_id=? AND state='GATING' AND lease_expires_at<=?"
+        ).run(claim, at + 30000, at, action.action_id, at).changes
+      );
+      if (changed !== 1) {
+        fail('FIRST_LINE_STALE_WRITE',
+          'expired GATING lease changed before safe HUMAN takeover');
+      }
+      action = this.#readAction(action.action_id);
+    }
+    // This transaction is the exact signed-event owner, not a deferred
+    // scheduler. The existing send-admission guard verifies PUBLIC_ACTION
+    // on every GATING->SENDING CAS; this state becomes HUMAN in the same tx.
+    this.#withMutationLeaseToken(claim, () =>
+      this.#attachHumanToUnsentAction(action, reason, 'STALE', at)
+    );
   }
 
   #attachHumanToUnsentAction(action, reason, terminalState, at = this.now()) {

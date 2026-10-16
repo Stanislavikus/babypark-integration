@@ -294,8 +294,13 @@ export function createFirstLineChatwootAuthorityReader({
     const keys = Object.keys(attrs);
     // items is a native option definition, never a submitted value;
     // permitted only for the known bot input_select message.
-    if (!keys.every(key => key === 'items' && bot &&
-        event.contentType === 'input_select' && Array.isArray(attrs.items))) {
+    if (!keys.every(key =>
+      (key === 'items' && bot && event.contentType === 'input_select' &&
+       Array.isArray(attrs.items)) ||
+      (key === 'display_type' && template &&
+       event.contentType === 'input_csat' &&
+       ['emoji', 'star'].includes(attrs.display_type))
+    )) {
       return 'UNKNOWN_OR_SEMANTIC';
     }
     return 'NATIVE_STATUS_SHAPE';
