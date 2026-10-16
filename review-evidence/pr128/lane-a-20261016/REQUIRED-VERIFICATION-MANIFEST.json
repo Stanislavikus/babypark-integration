@@ -1,0 +1,486 @@
+{
+  "activation_gates_not_satisfied_by_synthetic_checks": [
+    "Real Chatwoot pinned deployed version/native webhook status/submit/retry/4xx/429/5xx/timeout characterization",
+    "Operator-visible durable HUMAN delivery",
+    "AI kill switch without deployment",
+    "B2 backup restore drill",
+    "Load and repeated-delivery profiles",
+    "Separate owner production activation GO"
+  ],
+  "changed_paths": [
+    {
+      "class": "repository-configuration",
+      "path": ".gitattributes",
+      "status": "A"
+    },
+    {
+      "class": "deployment-configuration",
+      "path": "deploy/chatwoot-host/systemd/candidate/babypark-first-line-recovery.service",
+      "status": "A"
+    },
+    {
+      "class": "docs",
+      "path": "docs/AI_FIRST_LINE_C6_CP4_HEARTBEAT_SF1_OPTIONS_20261011.md",
+      "status": "A"
+    },
+    {
+      "class": "docs",
+      "path": "docs/AI_FIRST_LINE_C6_CP4_NATIVE_CHATWOOT_SF1_REVIEW_20261011.md",
+      "status": "A"
+    },
+    {
+      "class": "docs",
+      "path": "docs/AI_FIRST_LINE_C6_CP4_OPERATIONS_DISCOVERY_20261011.md",
+      "status": "A"
+    },
+    {
+      "class": "docs",
+      "path": "docs/AI_FIRST_LINE_C6_CP4_SF1_SCOPE_CORRECTION_20261011.md",
+      "status": "A"
+    },
+    {
+      "class": "docs",
+      "path": "docs/AI_FIRST_LINE_C6_INGRESS_TIMING_FIT_20261013.md",
+      "status": "A"
+    },
+    {
+      "class": "docs",
+      "path": "docs/AI_FIRST_LINE_C6_INGRESS_TIMING_OPTIONS_20261013.md",
+      "status": "A"
+    },
+    {
+      "class": "docs",
+      "path": "docs/AI_FIRST_LINE_C6_INGRESS_TIMING_PRE_RUN_20261013.md",
+      "status": "A"
+    },
+    {
+      "class": "docs",
+      "path": "docs/AI_FIRST_LINE_C6_INGRESS_TIMING_PRE_RUN_V2_20261013.md",
+      "status": "A"
+    },
+    {
+      "class": "docs",
+      "path": "docs/AI_FIRST_LINE_C6_INGRESS_TIMING_RUN_RAW_20261013.json",
+      "status": "A"
+    },
+    {
+      "class": "docs",
+      "path": "docs/AI_FIRST_LINE_C6_INGRESS_TIMING_RUN_REPORT_20261013.md",
+      "status": "A"
+    },
+    {
+      "class": "docs",
+      "path": "docs/AI_FIRST_LINE_C6_INGRESS_TIMING_RUN_V2_RAW_20261013.json",
+      "status": "A"
+    },
+    {
+      "class": "docs",
+      "path": "docs/AI_FIRST_LINE_C6_INGRESS_TIMING_RUN_V2_REPORT_20261013.md",
+      "status": "A"
+    },
+    {
+      "class": "docs",
+      "path": "docs/AI_FIRST_LINE_C6_PR128_INGRESS_CONVERGENCE_PLAN_20261014.md",
+      "status": "A"
+    },
+    {
+      "class": "docs",
+      "path": "docs/AI_FIRST_LINE_C6_PRODUCTION_TELEMETRY_PILOT_PROPOSAL_20261013.md",
+      "status": "A"
+    },
+    {
+      "class": "docs",
+      "path": "docs/AI_FIRST_LINE_C6_PRODUCTION_TELEMETRY_PILOT_RESULT_20261013.md",
+      "status": "A"
+    },
+    {
+      "class": "docs",
+      "path": "docs/AI_FIRST_LINE_C6_RUNTIME_ACK_FIT_20261011.md",
+      "status": "A"
+    },
+    {
+      "class": "docs",
+      "path": "docs/AI_FIRST_LINE_C6_RUNTIME_ACK_OPTIONS_20261011.md",
+      "status": "A"
+    },
+    {
+      "class": "docs",
+      "path": "docs/AI_FIRST_LINE_C6_RUNTIME_R1_FIT_20261011.md",
+      "status": "A"
+    },
+    {
+      "class": "docs",
+      "path": "docs/AI_FIRST_LINE_C6_RUNTIME_R1_OPTIONS_20261011.md",
+      "status": "A"
+    },
+    {
+      "class": "docs",
+      "path": "docs/AI_FIRST_LINE_C6_SIDEKIQ_ALIVE_GSERVER_CPU_DIAGNOSIS_20261013.md",
+      "status": "A"
+    },
+    {
+      "class": "docs",
+      "path": "docs/AI_FIRST_LINE_C6_SIDEKIQ_WORKER_DIAGNOSTIC_PROPOSAL_20261013.md",
+      "status": "A"
+    },
+    {
+      "class": "docs",
+      "path": "docs/AI_FIRST_LINE_C6_SIDEKIQ_WORKER_DIAGNOSTIC_RESULT_20261013.md",
+      "status": "A"
+    },
+    {
+      "class": "docs",
+      "path": "docs/AI_FIRST_LINE_C6_WORKER_CHILD_RUBY_IDENTITY_20261013.md",
+      "status": "A"
+    },
+    {
+      "class": "docs",
+      "path": "docs/AI_FIRST_LINE_C6_WORKER_CHILD_THREAD_CPU_RESULT_20261013.md",
+      "status": "A"
+    },
+    {
+      "class": "runtime-script",
+      "path": "scripts/first-line-postsend-service.mjs",
+      "status": "A"
+    },
+    {
+      "class": "runtime",
+      "path": "src/copilot/chatwoot-client.mjs",
+      "status": "M"
+    },
+    {
+      "class": "runtime",
+      "path": "src/copilot/first-line-action-preparation.mjs",
+      "status": "A"
+    },
+    {
+      "class": "runtime",
+      "path": "src/copilot/first-line-current-conversation.mjs",
+      "status": "A"
+    },
+    {
+      "class": "runtime",
+      "path": "src/copilot/first-line-decision-authority.mjs",
+      "status": "M"
+    },
+    {
+      "class": "runtime",
+      "path": "src/copilot/first-line-postsend-recovery-scheduler.mjs",
+      "status": "A"
+    },
+    {
+      "class": "runtime",
+      "path": "src/copilot/first-line-public-action-gate.mjs",
+      "status": "M"
+    },
+    {
+      "class": "runtime",
+      "path": "src/copilot/first-line-public-send-coordinator.mjs",
+      "status": "A"
+    },
+    {
+      "class": "runtime",
+      "path": "src/copilot/first-line-routing-planner.mjs",
+      "status": "M"
+    },
+    {
+      "class": "runtime",
+      "path": "src/copilot/first-line-runtime-ingress.mjs",
+      "status": "A"
+    },
+    {
+      "class": "runtime",
+      "path": "src/copilot/first-line-runtime-semantics.mjs",
+      "status": "A"
+    },
+    {
+      "class": "runtime",
+      "path": "src/copilot/first-line-s2-covered-text.mjs",
+      "status": "A"
+    },
+    {
+      "class": "runtime",
+      "path": "src/copilot/first-line-s2-preflight.mjs",
+      "status": "A"
+    },
+    {
+      "class": "runtime",
+      "path": "src/copilot/first-line-s2-refusal.mjs",
+      "status": "A"
+    },
+    {
+      "class": "runtime",
+      "path": "src/copilot/first-line-source-integrity.mjs",
+      "status": "A"
+    },
+    {
+      "class": "runtime",
+      "path": "src/copilot/first-line-state-store.mjs",
+      "status": "M"
+    },
+    {
+      "class": "tests",
+      "path": "tests/fixtures/c6-ingress-native-timing-v2.mjs",
+      "status": "A"
+    },
+    {
+      "class": "tests",
+      "path": "tests/fixtures/c6-ingress-native-timing.mjs",
+      "status": "A"
+    },
+    {
+      "class": "tests",
+      "path": "tests/fixtures/first-line-coordinator-kill-child.mjs",
+      "status": "A"
+    },
+    {
+      "class": "tests",
+      "path": "tests/fixtures/first-line-postsend-scheduler-child.mjs",
+      "status": "A"
+    },
+    {
+      "class": "tests",
+      "path": "tests/fixtures/first-line-systemd-notify-stub.mjs",
+      "status": "A"
+    },
+    {
+      "class": "tests",
+      "path": "tests/helpers/legacy-public-action-gate-fixture.mjs",
+      "status": "A"
+    },
+    {
+      "class": "tests",
+      "path": "tests/helpers/legacy-sending-fixture.mjs",
+      "status": "A"
+    },
+    {
+      "class": "tests",
+      "path": "tests/unit/copilot-first-line-recovery.test.mjs",
+      "status": "M"
+    },
+    {
+      "class": "tests",
+      "path": "tests/unit/first-line-action-preparation.test.mjs",
+      "status": "A"
+    },
+    {
+      "class": "tests",
+      "path": "tests/unit/first-line-blk6-multicycle-adversarial.test.mjs",
+      "status": "A"
+    },
+    {
+      "class": "tests",
+      "path": "tests/unit/first-line-blk6-multicycle.test.mjs",
+      "status": "A"
+    },
+    {
+      "class": "tests",
+      "path": "tests/unit/first-line-blk6-order-matrix.test.mjs",
+      "status": "A"
+    },
+    {
+      "class": "tests",
+      "path": "tests/unit/first-line-clarification-selection.test.mjs",
+      "status": "M"
+    },
+    {
+      "class": "tests",
+      "path": "tests/unit/first-line-coordinator-process-crash.test.mjs",
+      "status": "A"
+    },
+    {
+      "class": "tests",
+      "path": "tests/unit/first-line-current-conversation.test.mjs",
+      "status": "A"
+    },
+    {
+      "class": "tests",
+      "path": "tests/unit/first-line-decision-continuation.test.mjs",
+      "status": "M"
+    },
+    {
+      "class": "tests",
+      "path": "tests/unit/first-line-decision.test.mjs",
+      "status": "M"
+    },
+    {
+      "class": "tests",
+      "path": "tests/unit/first-line-dependency-proof.test.mjs",
+      "status": "M"
+    },
+    {
+      "class": "tests",
+      "path": "tests/unit/first-line-episode-transition.test.mjs",
+      "status": "M"
+    },
+    {
+      "class": "tests",
+      "path": "tests/unit/first-line-lane-a-native-batch.test.mjs",
+      "status": "A"
+    },
+    {
+      "class": "tests",
+      "path": "tests/unit/first-line-no-lazy-db.test.mjs",
+      "status": "A"
+    },
+    {
+      "class": "tests",
+      "path": "tests/unit/first-line-postsend-recovery-scheduler.test.mjs",
+      "status": "A"
+    },
+    {
+      "class": "tests",
+      "path": "tests/unit/first-line-postsend-service.test.mjs",
+      "status": "A"
+    },
+    {
+      "class": "tests",
+      "path": "tests/unit/first-line-public-action-gate.test.mjs",
+      "status": "M"
+    },
+    {
+      "class": "tests",
+      "path": "tests/unit/first-line-public-send-boundary.test.mjs",
+      "status": "A"
+    },
+    {
+      "class": "tests",
+      "path": "tests/unit/first-line-reply-evidence.test.mjs",
+      "status": "A"
+    },
+    {
+      "class": "tests",
+      "path": "tests/unit/first-line-route-application.test.mjs",
+      "status": "M"
+    },
+    {
+      "class": "tests",
+      "path": "tests/unit/first-line-routing-planner.test.mjs",
+      "status": "M"
+    },
+    {
+      "class": "tests",
+      "path": "tests/unit/first-line-runtime-ingress.test.mjs",
+      "status": "A"
+    },
+    {
+      "class": "tests",
+      "path": "tests/unit/first-line-runtime-semantics.test.mjs",
+      "status": "A"
+    },
+    {
+      "class": "tests",
+      "path": "tests/unit/first-line-s2-covered-text.test.mjs",
+      "status": "A"
+    },
+    {
+      "class": "tests",
+      "path": "tests/unit/first-line-s2-refusal.test.mjs",
+      "status": "A"
+    },
+    {
+      "class": "tests",
+      "path": "tests/unit/first-line-send-restart-fence.test.mjs",
+      "status": "A"
+    },
+    {
+      "class": "tests",
+      "path": "tests/unit/first-line-state-store-v4.test.mjs",
+      "status": "M"
+    },
+    {
+      "class": "tests",
+      "path": "tests/unit/first-line-state-store.test.mjs",
+      "status": "M"
+    }
+  ],
+  "independent_review_requirements": [
+    "Full exact-HEAD/tree/base/gov/manifest exhaustive adversarial HEAVY pass, including BLK-1..6, async/restart/lease/source replay, unknown sender and denied facts",
+    "Second genuinely independent exhaustive zero-BLOCKER confirmation against identical immutable manifest",
+    "Review continues past first finding; batch fix then restart verification on the new exact tree"
+  ],
+  "owner_precode_binding": {
+    "architecture_fit_sha256": "34b3d3b11dd2f6a46be05cd836d3a4a9fee057e4bd86efcaba0aa176a9695c07",
+    "native_oss_scan_sha256": "8dc319437b3237fed68d5f72ede425ffc0a991a0bccda547db4f5f88c4b70b2b",
+    "scope": "BLK-1..6 current runtime, synthetic only; no deploy, PR merge or public traffic"
+  },
+  "package_suite_ownership": {
+    "apps/drupal-exporter": "not applicable: no changed exporter or shared catalog/exporter imported executable surfaces",
+    "gateway_target_identity": "not applicable: no changed src/gateway or gateway characterization surface",
+    "root": "all changed executable and test surfaces"
+  },
+  "required_checks": [
+    {
+      "binding": "CAMPAIGN_BASE_OID=0dfb9b0a1cfe23d455fd436ae9abeac626d0d729",
+      "command": "test -n \"${CAMPAIGN_BASE_OID:-}\" && git cat-file -e \"${CAMPAIGN_BASE_OID}^{commit}\"",
+      "id": "preflight_campaign_base"
+    },
+    {
+      "binding": "CAMPAIGN_BASE_OID=0dfb9b0a1cfe23d455fd436ae9abeac626d0d729",
+      "command": "git diff --check \"${CAMPAIGN_BASE_OID}..HEAD\"",
+      "id": "git_diff_check"
+    },
+    {
+      "binding": "CAMPAIGN_BASE_OID=0dfb9b0a1cfe23d455fd436ae9abeac626d0d729",
+      "command": "git diff --name-status \"${CAMPAIGN_BASE_OID}..HEAD\"",
+      "id": "git_changed_surface"
+    },
+    {
+      "command": "npm test",
+      "id": "root_npm_test",
+      "required_by": "agreement 7.0a runtime changes"
+    },
+    {
+      "command": "npm run storage:validate",
+      "id": "storage_validate",
+      "required_by": "root npm test invokes"
+    },
+    {
+      "command": "npm run test:unit",
+      "id": "unit",
+      "required_by": "root npm test invokes"
+    },
+    {
+      "command": "npm run test:legacy",
+      "id": "legacy",
+      "required_by": "root npm test invokes"
+    },
+    {
+      "command": "npm run test:refactor",
+      "id": "refactor",
+      "required_by": "root npm test invokes"
+    },
+    {
+      "can_be_satisfied_by": "root test:unit",
+      "command": "node --test --test-concurrency=1 tests/unit/first-line-lane-a-native-batch.test.mjs tests/unit/first-line-runtime-ingress.test.mjs",
+      "id": "native_status_event_matrix"
+    },
+    {
+      "can_be_satisfied_by": "root test:unit",
+      "command": "node --test --test-concurrency=1 tests/unit/first-line-blk6-order-matrix.test.mjs tests/unit/first-line-blk6-multicycle.test.mjs tests/unit/first-line-blk6-multicycle-adversarial.test.mjs tests/unit/first-line-state-store-v4.test.mjs tests/unit/first-line-routing-planner.test.mjs",
+      "id": "deferred_state_space"
+    },
+    {
+      "can_be_satisfied_by": "root test:unit",
+      "command": "node --test --test-concurrency=1 tests/unit/first-line-coordinator-process-crash.test.mjs tests/unit/first-line-send-restart-fence.test.mjs tests/unit/first-line-postsend-recovery-scheduler.test.mjs",
+      "id": "recovery_and_failure"
+    }
+  ],
+  "required_runtime_provenance": {
+    "base_node_oci_reference": "node@sha256:c3de60bf2f9dd0ac6370e6117950ff62d6e339527e7472301c9c78a017978392",
+    "container_image_id": "sha256:f7dd6300c82e401c82530054cbbb05d883536793e3176de47cdcb453a8c85cd8",
+    "package_lock_sha256": "c2bf97d1ffe4161d56b034132d8e194ef08c701710827dfc8ff49b429cc4b3a1",
+    "preparation": "fresh exact-HEAD Git materialization, empty deps layer via lockfile npm ci --ignore-scripts; freeze deps, read-only source/deps throughout check; separate network-disabled read-only OCI containers with fresh tmpfs for each required check"
+  },
+  "schema": "bp.c6.pr128.lane-a.required-verification-manifest/1",
+  "verification_basis": {
+    "agreement_blob_oid": "e777fce4af8e8c3372f1f9de9ef7d00f786c2c89",
+    "campaign_base_oid": "0dfb9b0a1cfe23d455fd436ae9abeac626d0d729",
+    "classification": "HEAVY",
+    "head_oid": "aadc8f4dafb14fa0f659653c0edd5a727bebea4b",
+    "origin_main_oid_at_freeze": "f3d92325e6b4ef04f0137c4c49dde07c05731bbe",
+    "pr": 128,
+    "repository": "Stanislavikus/babypark-integration",
+    "tree_oid": "c0e91285ffc40e12ea202775f26240eb3d407a35"
+  }
+}
