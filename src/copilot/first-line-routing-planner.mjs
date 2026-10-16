@@ -230,6 +230,7 @@ export function projectOpenTurn(rawSnapshot) {
   }
 
   const customerEntries = [];
+  let confirmedBoundary = null;
 
   for (let index = suffix.length - 1; index >= 0; index -= 1) {
     const entry = suffix[index];
@@ -246,6 +247,37 @@ export function projectOpenTurn(rawSnapshot) {
       if (!supportedCustomerEvent(event)) {
         return unprovable(snapshot, 'UNSUPPORTED_CUSTOMER_EVENT', entry);
       }
+      if (confirmedBoundary) {
+        // Once we crossed the newest CONFIRMED send boundary in reverse
+        // ledger order, ONLY customers durably deferred behind that same
+        // exact action are still unanswered. Earlier ordinary messages
+        // belong to the completed action and must never reopen.
+        if (!entry.deferred_parent) {
+          return customerEntries.length > 0
+            ? openTurn(snapshot, customerEntries,
+              'AFTER_CONFIRMED_BABYPARK_REPLY', confirmedBoundary)
+            : noOpenTurn(snapshot, 'CONFIRMED_BABYPARK_REPLY_LAST', confirmedBoundary);
+        }
+        if (entry.deferred_parent.stream_id !== snapshot.stream.stream_id ||
+            entry.deferred_parent.event_seq !== event.event_seq ||
+            entry.deferred_parent.action_id !==
+              confirmedBoundary.confirmed_babypark_action.action_id) {
+          return unprovable(snapshot, 'DEFERRED_PARENT_CONFLICT', entry);
+        }
+      } else if (entry.deferred_parent) {
+        // When the exact parent is still SENDING/UNCERTAIN the projection
+        // remains an OPEN_TURN *for topology only*. The separately certified
+        // live_public_action fences any new candidate/send. If the parent
+        // is neither live nor confirmed in this suffix, fail closed.
+        const parent = entry.deferred_parent;
+        const live = snapshot.live_public_action;
+        if (parent.stream_id !== snapshot.stream.stream_id ||
+            parent.event_seq !== event.event_seq ||
+            live?.action_id !== parent.action_id ||
+            !['SENDING', 'UNCERTAIN'].includes(live.state)) {
+          return unprovable(snapshot, 'DEFERRED_PARENT_UNRESOLVED', entry);
+        }
+      }
       customerEntries.push(entry);
       if (customerEntries.length > MAX_OPEN_TURN_EVENTS) {
         return unprovable(snapshot, 'OPEN_TURN_EVENT_LIMIT');
@@ -260,16 +292,18 @@ export function projectOpenTurn(rawSnapshot) {
       if (!supportedConfirmedBabyparkReply(event, entry.confirmed_babypark_action)) {
         return unprovable(snapshot, 'UNSUPPORTED_CONFIRMED_BABYPARK_REPLY', entry);
       }
-      return customerEntries.length > 0
-        ? openTurn(snapshot, customerEntries, 'AFTER_CONFIRMED_BABYPARK_REPLY', entry)
-        : noOpenTurn(snapshot, 'CONFIRMED_BABYPARK_REPLY_LAST', entry);
+      if (confirmedBoundary) {
+        return customerEntries.length > 0
+          ? openTurn(snapshot, customerEntries,
+            'AFTER_CONFIRMED_BABYPARK_REPLY', confirmedBoundary)
+          : noOpenTurn(snapshot, 'CONFIRMED_BABYPARK_REPLY_LAST', confirmedBoundary);
+      }
+      confirmedBoundary = entry;
+      continue;
     }
 
-    if (event.event_kind === 'HUMAN_PUBLIC_REPLY') {
-      return unprovable(snapshot, 'OWNERSHIP_BLOCKER', entry);
-    }
-
-    if (BLOCKING_PUBLIC_KINDS.has(event.event_kind)) {
+    if (event.event_kind === 'HUMAN_PUBLIC_REPLY' ||
+        BLOCKING_PUBLIC_KINDS.has(event.event_kind)) {
       return unprovable(snapshot, 'OWNERSHIP_BLOCKER', entry);
     }
 
@@ -278,6 +312,12 @@ export function projectOpenTurn(rawSnapshot) {
 
   if (snapshot.suffix_truncated) {
     return unprovable(snapshot, 'ROUTING_SUFFIX_LIMIT');
+  }
+  if (confirmedBoundary) {
+    return customerEntries.length > 0
+      ? openTurn(snapshot, customerEntries,
+        'AFTER_CONFIRMED_BABYPARK_REPLY', confirmedBoundary)
+      : noOpenTurn(snapshot, 'CONFIRMED_BABYPARK_REPLY_LAST', confirmedBoundary);
   }
   if (customerEntries.length === 0) {
     return noOpenTurn(snapshot, 'NO_CUSTOMER_EVENT');

@@ -135,12 +135,11 @@ test('CP1 rejects incorrect signature/target/event before any Chatwoot read or D
     payload(101, 55, { account: { id: 12 } }),
     payload(101, 55, { inbox: { id: 98 } }),
     payload(101, 55, { conversation: { id: 55, inbox_id: 98 } }),
-    payload(101, 55, { event: 'message_updated' }),
     payload(101, 55, { message_type: 'outgoing' }),
-    payload(101, 55, { private: true }),
     payload(101, 55, { sender: { type: 'User', id: 23 } }),
     payload(101, 55, { sender: { name: 'contact without id' } }),
     payload(101, 55, { id: Number.MAX_SAFE_INTEGER }),
+    payload(101, 55, { event: 'unrecognized_event' }),
   ]) {
     assert.equal((await relay.receive(signed(body))).status, 422);
   }
@@ -359,19 +358,18 @@ test('B1 known noncustomer webhook never turns signed-only claims into authority
   assert.deepEqual(await relay.receive(signed(payload(301, 55, {
     message_type: 'template', sender: null,
   }), 'unknown-template')), { status: 422, outcome: 'source_not_customer' });
-  for (const body of [
-    payload(302, 55, { message_type: 'outgoing', sender: { type: 'AgentBot', id: 8 } }),
-    payload(302, 55, { message_type: 'outgoing', sender: { type: 'User', id: 22 } }),
-    payload(302, 55, { message_type: 'outgoing', private: true,
-      sender: { type: 'AgentBot', id: 7 } }),
-    payload(302, 55, { event: 'message_updated', message_type: 'incoming' }),
-    payload(302, 55, { event: 'unknown_event', message_type: 'outgoing',
-      sender: { type: 'AgentBot', id: 7 } }),
+  for (const [body, expected] of [
+    [payload(302, 55, { message_type: 'outgoing', sender: { type: 'AgentBot', id: 8 } }), 503],
+    [payload(302, 55, { message_type: 'outgoing', sender: { type: 'User', id: 22 } }), 503],
+    [payload(302, 55, { message_type: 'outgoing', private: true,
+      sender: { type: 'AgentBot', id: 7 } }), 503],
+    [payload(302, 55, { event: 'message_updated', message_type: 'incoming' }), 503],
+    [payload(302, 55, { event: 'unknown_event', message_type: 'outgoing',
+      sender: { type: 'AgentBot', id: 7 } }), 422],
   ]) {
-    assert.deepEqual(await relay.receive(signed(body, 'deny-signed-only')),
-      { status: 422, outcome: 'event_not_admitted' });
+    assert.equal((await relay.receive(signed(body, 'deny-signed-only'))).status, expected);
   }
-  assert.equal(reads.length, 2);
+  assert.equal(reads.length, 6, 'authentic but absent sources must be exact read');
   audit(file, store => assert.equal(store.findConversationStream({
     sourceProvider: 'chatwoot', sourceConversationId: 55,
   }), null));
@@ -402,12 +400,19 @@ test('B1 Q10/Q40 structured message_updated cannot be ACKed as harmless bot echo
     }),
   ]) {
     assert.deepEqual(await relay.receive(signed(body, 'structured-update')),
-      { status: 422, outcome: 'structured_update_unhandled' });
+      { status: 200, outcome: 'topology_recorded' });
   }
   assert.equal(reads.length, 2, 'must current-read before structured deny');
-  audit(file, store => assert.equal(store.findConversationStream({
-    sourceProvider: 'chatwoot', sourceConversationId: 55,
-  }), null));
+  audit(file, store => {
+    const stream = store.findConversationStream({
+      sourceProvider: 'chatwoot', sourceConversationId: 55,
+    });
+    assert.deepEqual(store.listConversationEvents(stream.stream_id).map(x => x.event_kind),
+      ['BABYPARK_PUBLIC_REPLY', 'SYSTEM_TEMPLATE']);
+    const owner = store.getUnresolvedContinuationOwner(stream.stream_id);
+    assert.equal(owner.owner_kind, 'HUMAN');
+    assert.equal(owner.human_reason, 'NATIVE_STRUCTURED_UPDATE');
+  });
 });
 
 
