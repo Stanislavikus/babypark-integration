@@ -134,10 +134,17 @@ export function createFirstLineAgentBotRelay({
       return { status: 200, outcome: 'internal_ignored' };
     }
     const event = current.event;
+    // Unknown native template types must still be durably classified HUMAN
+    // instead of rejected with 422 and omitted from the topology ledger.
+    const unknownTemplate = source.expectedKind === 'SYSTEM_TEMPLATE' &&
+      current.event?.eventKind === 'UNKNOWN_PUBLIC' &&
+      current.event?.messageType === 'template' &&
+      current.event?.senderClass === 'none' &&
+      current.event?.senderId === null;
     if (!event || (current.code !== 'SUPPORTED_CUSTOMER_TEXT' &&
                     current.code !== 'PROVEN_UNSUPPORTED_OR_TOPOLOGY') ||
         event.sourceMessageId !== source.sourceMessageId ||
-        event.eventKind !== source.expectedKind ||
+        (event.eventKind !== source.expectedKind && !unknownTemplate) ||
         event.senderId !== source.signedSenderId ||
         (source.expectedKind === 'CUSTOMER_MESSAGE' && event.senderClass !== 'contact') ||
         (source.expectedKind === 'BABYPARK_PUBLIC_REPLY' &&
@@ -164,23 +171,29 @@ export function createFirstLineAgentBotRelay({
       return { status: 422, outcome: 'source_not_customer' };
     }
 
-    // Current native message_updated can contain a customer selection or
-    // changed customer words. A same-ID metadata replay is NOT content proof.
-    // Attach absorbing HUMAN with the source ingestion inside ONE transaction.
+    // Native status updates are common for bot replies and templates. On the
+    // exact authenticated/current REST row, only a verified native structural
+    // whitelist can prove no customer submission. All unknown/submitted
+    // shapes, edited incoming customer messages and other public owners
+    // require absorbing HUMAN in the SAME source ingestion transaction.
     const isUnsupported = source.expectedKind === 'CUSTOMER_MESSAGE' &&
       current.code !== 'SUPPORTED_CUSTOMER_TEXT';
-    const needsHuman = isUnsupported ||
-      (payload.event === 'message_updated' &&
-        (source.expectedKind === 'CUSTOMER_MESSAGE' ||
-         event.contentType !== 'text')) ||
-      ['HUMAN_PUBLIC_REPLY', 'OTHER_BOT_PUBLIC_REPLY', 'AUTOMATION_PUBLIC'].includes(source.expectedKind);
+    const updatedByCustomerOrUnknown = payload.event === 'message_updated' && (
+      source.expectedKind === 'CUSTOMER_MESSAGE' ||
+      (['SYSTEM_TEMPLATE', 'BABYPARK_PUBLIC_REPLY'].includes(source.expectedKind) &&
+       current.transientUpdateShape !== 'NATIVE_STATUS_SHAPE')
+    );
+    const otherPublicOwner = ['HUMAN_PUBLIC_REPLY', 'OTHER_BOT_PUBLIC_REPLY',
+      'AUTOMATION_PUBLIC'].includes(source.expectedKind);
+    const needsHuman = isUnsupported || unknownTemplate ||
+      updatedByCustomerOrUnknown || otherPublicOwner;
     const humanReason = needsHuman
       ? isUnsupported ? 'UNSUPPORTED_CUSTOMER_EVENT'
-        : source.expectedKind === 'HUMAN_PUBLIC_REPLY' ? 'HUMAN_PUBLIC_REPLY'
-          : ['OTHER_BOT_PUBLIC_REPLY','AUTOMATION_PUBLIC'].includes(source.expectedKind)
-            ? 'OTHER_PUBLIC_OWNER'
-            : source.expectedKind === 'CUSTOMER_MESSAGE'
-              ? 'NATIVE_CUSTOMER_UPDATE' : 'NATIVE_STRUCTURED_UPDATE'
+        : otherPublicOwner ? (source.expectedKind === 'HUMAN_PUBLIC_REPLY'
+          ? 'HUMAN_PUBLIC_REPLY' : 'OTHER_PUBLIC_OWNER')
+          : source.expectedKind === 'CUSTOMER_MESSAGE'
+            ? 'NATIVE_CUSTOMER_UPDATE'
+            : 'NATIVE_STRUCTURED_UPDATE'
       : null;
     try {
       const accepted = store.ingestVerifiedChatwootEvent({

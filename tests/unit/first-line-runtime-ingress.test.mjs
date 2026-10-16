@@ -357,7 +357,7 @@ test('B1 known noncustomer webhook never turns signed-only claims into authority
     { status: 422, outcome: 'source_not_customer' });
   assert.deepEqual(await relay.receive(signed(payload(301, 55, {
     message_type: 'template', sender: null,
-  }), 'unknown-template')), { status: 422, outcome: 'source_not_customer' });
+  }), 'unknown-template')), { status: 200, outcome: 'topology_recorded' });
   for (const [body, expected] of [
     [payload(302, 55, { message_type: 'outgoing', sender: { type: 'AgentBot', id: 8 } }), 503],
     [payload(302, 55, { message_type: 'outgoing', sender: { type: 'User', id: 22 } }), 503],
@@ -370,9 +370,14 @@ test('B1 known noncustomer webhook never turns signed-only claims into authority
     assert.equal((await relay.receive(signed(body, 'deny-signed-only'))).status, expected);
   }
   assert.equal(reads.length, 6, 'authentic but absent sources must be exact read');
-  audit(file, store => assert.equal(store.findConversationStream({
-    sourceProvider: 'chatwoot', sourceConversationId: 55,
-  }), null));
+  audit(file, store => {
+    const stream = store.findConversationStream({
+      sourceProvider: 'chatwoot', sourceConversationId: 55,
+    });
+    assert.deepEqual(store.listConversationEvents(stream.stream_id).map(x => x.event_kind),
+      ['UNKNOWN_PUBLIC']);
+    assert.equal(store.getUnresolvedContinuationOwner(stream.stream_id).owner_kind, 'HUMAN');
+  });
 });
 
 

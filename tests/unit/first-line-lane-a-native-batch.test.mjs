@@ -334,3 +334,199 @@ test('BLK-1 signed native sender identity cannot override authoritative sender',
   }))), { status: 422, outcome: 'source_not_customer' });
   audit(file, (_store, stream) => assert.equal(stream, null));
 });
+
+test('F1 PREPARED/GATING incoming HUMAN uses same-tx supersede, preserves CLARIFY and restarts', t => {
+  for (const state of ['PREPARED','GATING']) {
+    for (const actionType of ['ANSWER','CLARIFY']) {
+      const file = fixture(t);
+      let store = FirstLineStateStore.open(file);
+      const stream = store.ensureConversationStream({ sourceProvider: 'chatwoot', sourceConversationId: 55 });
+      const customer = id => ({
+        sourceMessageId: id, eventKind: 'CUSTOMER_MESSAGE', messageType: 'incoming',
+        senderClass: 'contact', senderId: 9001, contentType: 'text',
+        deleted: false, unsupported: false, hasAttachments: false,
+      });
+      store.ingestConversationEvent(stream.stream_id, customer(101));
+      const episode = store.beginEpisode({ streamId: stream.stream_id });
+      const action = prepareTestPublicAction(store, {
+        descriptor: testActionDescriptor(), streamId: stream.stream_id,
+        episodeId: episode.episode_id, expectedEpisodeVersion: episode.version,
+        preparedStreamRevision: 1, actionType,
+        basisEventSeqs: [1], deadlineAt: NOW + 60_000,
+        ...(actionType === 'CLARIFY' ? {
+          requestedSlot: 'store_id',
+          presentedCandidates: [{slot:'store_id',value:'store_11111111-1111-4111-8111-111111111111'}],
+        } : {}),
+      });
+      if (state === 'GATING') {
+        assert.equal(store.claimNextPublicAction({leaseMs:30000,token:'f1-lease'}).action_id,action.action_id);
+      }
+      const budget = store.getEpisode(episode.episode_id);
+      assert.equal(budget.clarification_prompts_sent,actionType === 'CLARIFY' ? 1 : 0);
+      assert.equal(store.getPublicAction(action.action_id).state,state);
+      const done = store.ingestVerifiedChatwootEvent({
+        sourceConversationId:55,event:customer(102),humanReason:'NATIVE_CUSTOMER_UPDATE',
+      });
+      assert.equal(done.inserted,true);
+      assert.equal(store.getPublicAction(action.action_id).state,'STALE');
+      assert.equal(store.getUnresolvedContinuationOwner(stream.stream_id).owner_kind,'HUMAN');
+      assert.equal(store.listConversationEvents(stream.stream_id).length,2);
+      const after = store.getEpisode(episode.episode_id);
+      assert.equal(after.clarification_prompts_sent,budget.clarification_prompts_sent);
+      assert.equal(after.requested_slot,budget.requested_slot);
+      store.close();
+      store=FirstLineStateStore.open(file);
+      assert.equal(store.getPublicAction(action.action_id).state,'STALE');
+      assert.equal(store.getUnresolvedContinuationOwner(stream.stream_id).owner_kind,'HUMAN');
+      assert.equal(store.getConversationStream(stream.stream_id).stream_revision,2);
+      assert.equal(store.getEpisode(episode.episode_id).clarification_prompts_sent,budget.clarification_prompts_sent);
+      store.close();
+    }
+  }
+});
+
+test('F1 crash during DIRECT_HUMAN insertion rolls back unsent supersession and source', t => {
+  const file = fixture(t);
+  let store = FirstLineStateStore.open(file);
+  const stream = store.ensureConversationStream({sourceProvider:'chatwoot',sourceConversationId:55});
+  const customer = id => ({
+    sourceMessageId:id,eventKind:'CUSTOMER_MESSAGE',messageType:'incoming',
+    senderClass:'contact',senderId:9001,contentType:'text',deleted:false,
+    unsupported:false,hasAttachments:false,
+  });
+  store.ingestConversationEvent(stream.stream_id,customer(101));
+  const action = prepareTestPublicAction(store, {
+    descriptor:testActionDescriptor(),streamId:stream.stream_id,
+    preparedStreamRevision:1,actionType:'ANSWER',basisEventSeqs:[1],
+    deadlineAt:NOW+60000,
+  });
+  store.db.exec("CREATE TEMP TRIGGER f1_abort BEFORE INSERT ON semantic_origins " +
+    "BEGIN SELECT RAISE(ABORT,'f1-injected-crash'); END");
+  assert.throws(()=>store.ingestVerifiedChatwootEvent({
+    sourceConversationId:55,event:customer(102),humanReason:'NATIVE_CUSTOMER_UPDATE',
+  }),/f1-injected-crash/);
+  store.close();
+  store=FirstLineStateStore.open(file);
+  assert.equal(store.getPublicAction(action.action_id).state,'PREPARED');
+  assert.equal(store.getConversationStream(stream.stream_id).stream_revision,1);
+  assert.equal(store.listConversationEvents(stream.stream_id).length,1);
+  assert.equal(store.getUnresolvedContinuationOwner(stream.stream_id).owner_kind,'PUBLIC_ACTION');
+  store.close();
+});
+
+test('F2 native input_email read-status update is neutral, with restart idempotency', async t => {
+  const file = fixture(t), rows = new Map(), reads = [];
+  rows.set(901, row(901, {
+    message_type:'template', sender:null, content_type:'input_email',
+    content_attributes:{},
+  }));
+  let relay = makeRelay(file,rows,reads);
+  const created=envelope(901,{message_type:'template',sender:null});
+  const updated=envelope(901,{event:'message_updated',message_type:'template',sender:null});
+  assert.deepEqual(await relay.receive(signed(created)),{status:200,outcome:'topology_recorded'});
+  assert.deepEqual(await relay.receive(signed(updated)),{status:200,outcome:'duplicate_source'});
+  audit(file,(store,stream)=>{
+    assert.equal(store.getUnresolvedContinuationOwner(stream.stream_id),null);
+    assert.deepEqual(store.listConversationEvents(stream.stream_id).map(e=>e.event_kind),
+      ['SYSTEM_TEMPLATE']);
+  });
+  relay.close();
+  relay=makeRelay(file,rows,reads);
+  assert.deepEqual(await relay.receive(signed(updated,'restart-delivery')),
+    {status:200,outcome:'duplicate_source'});
+  audit(file,(store,stream)=>assert.equal(store.getUnresolvedContinuationOwner(stream.stream_id),null));
+  relay.close();
+});
+
+test('F2 submitted_email, submitted_values and CSAT all become HUMAN with no durable PII', async t => {
+  const cases=[
+    ['input_email',{submitted_email:'secret@example.invalid'}],
+    ['input_email',{submitted_values:[{value:'secret@example.invalid'}]}],
+    ['input_csat',{submitted_values:[{
+      csat_survey_response:{feedback_message:'PRIVATE_SURVEY_WORDS',rating:5},
+    }]}],
+  ];
+  for(const [type,attrs] of cases){
+    const file=fixture(t),rows=new Map(),reads=[];
+    rows.set(901,row(901,{
+      message_type:'template',sender:null,content_type:type,
+      content_attributes:attrs,
+    }));
+    const relay=makeRelay(file,rows,reads);
+    assert.deepEqual(await relay.receive(signed(envelope(901,{
+      event:'message_updated',message_type:'template',sender:null,
+    }))),{status:200,outcome:'topology_recorded'});
+    audit(file,(store,stream)=>{
+      assert.equal(store.getUnresolvedContinuationOwner(stream.stream_id).owner_kind,'HUMAN');
+      assert.equal(store.getUnresolvedContinuationOwner(stream.stream_id).human_reason,'NATIVE_STRUCTURED_UPDATE');
+      assert.equal(store.listConversationEvents(stream.stream_id).length,1);
+    });
+    const db=fs.readFileSync(file);
+    for(const str of ['secret@example.invalid','PRIVATE_SURVEY_WORDS']){
+      assert.equal(db.includes(Buffer.from(str)),false);
+    }
+    relay.close();
+  }
+});
+
+test('F2 unexpected content_attributes key or type fail closed to durable HUMAN',async t=>{
+  for(const [type,attrs] of [
+    ['input_email',{unknown_key:'PRIVATE_VALUE'}],
+    ['form',{}],
+    ['input_csat',{items:[{title:'unexpected choice'}]}],
+  ]){
+    const file=fixture(t),rows=new Map(),reads=[];
+    rows.set(901,row(901,{
+      message_type:'template',sender:null,content_type:type,
+      content_attributes:attrs,
+    }));
+    const relay=makeRelay(file,rows,reads);
+    assert.equal((await relay.receive(signed(envelope(901,{
+      event:'message_updated',message_type:'template',sender:null,
+    })))).status,200);
+    audit(file,(store,stream)=>{
+      assert.equal(store.getUnresolvedContinuationOwner(stream.stream_id).owner_kind,'HUMAN');
+      assert.equal(store.listConversationEvents(stream.stream_id).length,1);
+    });
+    assert.equal(fs.readFileSync(file).includes(Buffer.from('PRIVATE_VALUE')),false);
+    relay.close();
+  }
+});
+
+test('F2 input_select bot read-status event does not absorb HUMAN while customer selection does',async t=>{
+  for(const selection of [false,true]){
+    const file=fixture(t),rows=new Map(),reads=[];
+    rows.set(901,row(901,{
+      message_type:'outgoing',sender:{type:'agent_bot',id:7},
+      content_type:'input_select',source_id:'synthetic-action',
+      content_attributes:selection
+        ? {items:[{value:'safe'}],submitted_values:[{value:'PRIVATE_OPTION'}]}
+        : {items:[{value:'safe'}]},
+    }));
+    const relay=makeRelay(file,rows,reads);
+    assert.equal((await relay.receive(signed(envelope(901,{
+      event:'message_updated',message_type:'outgoing',
+      sender:{type:'agent_bot',id:7},
+    })))).status,200);
+    audit(file,(store,stream)=>{
+      const owner=store.getUnresolvedContinuationOwner(stream.stream_id);
+      assert.equal(owner?.owner_kind??null,selection?'HUMAN':null);
+      assert.equal(store.listConversationEvents(stream.stream_id).length,1);
+    });
+    assert.equal(fs.readFileSync(file).includes(Buffer.from('PRIVATE_OPTION')),false);
+    relay.close();
+  }
+});
+
+test('F3 incoming content update is HUMAN even if authoritative current shape is text',async t=>{
+  const file=fixture(t),rows=new Map(),reads=[];
+  rows.set(901,row(901));
+  const relay=makeRelay(file,rows,reads);
+  assert.equal((await relay.receive(signed(envelope(901)))).status,200);
+  assert.equal((await relay.receive(signed(envelope(901,{event:'message_updated'})))).status,200);
+  audit(file,(store,stream)=>{
+    assert.equal(store.getUnresolvedContinuationOwner(stream.stream_id).owner_kind,'HUMAN');
+    assert.equal(store.listConversationEvents(stream.stream_id).length,1);
+  });
+  relay.close();
+});
