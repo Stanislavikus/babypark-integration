@@ -1,0 +1,28 @@
+# C6 PR #128 Batch 2 — exact HEAD verification receipt (2026-10-16)
+Status: DIAGNOSTIC/REQUIRED-CHECK EVIDENCE ONLY. NOT AN INDEPENDENT HEAVY ZERO-BLOCKER VERDICT; NO MERGE OR ACTIVATION.
+Applies to: Stanislavikus/babypark-integration C6 Lane A Batch 2, PR #128 Draft.
+
+Immutable source pin: HEAD d4229e900171ce6113970f75201919cc0e217816; TREE a36dffc6e46d16cbf4ce2c2ccfa9d57b418129f4; BASE/main f3d92325e6b4ef04f0137c4c49dde07c05731bbe; GOV e777fce4af8e8c3372f1f9de9ef7d00f786c2c89.
+Approved Scan v2 SHA256 c9f355192c4e0eae14cf0f3787df09c43b4df123237aa06b1ffb27e845560d64; Fit v2 SHA256 e4c0a129ff1e3c085300c98f4e006d727fe91e547e4492f90c4c98795bd5c0f4.
+FROZEN required-verification manifest SHA256 5513516d5ca831ece650b1e3a68e1d8a9eaee2d951c397c7e74e0eaef0613631, 78 changed files, 14 required checks; stored separately under review-evidence/pr128/batch2-20261016/REQUIRED-VERIFICATION-MANIFEST.json.
+
+Source and dependency provenance:
+- Git fetched exact HEAD into a fresh detached checkout; HEAD and Git tree verified before and after.
+- Package-lock SHA256 c2bf97d1ffe4161d56b034132d8e194ef08c701710827dfc8ff49b429cc4b3a1.
+- New empty dependency layer created via npm ci --ignore-scripts --no-audit --no-fund; then frozen read-only.
+- OCI image sha256:f7dd6300c82e401c82530054cbbb05d883536793e3176de47cdcb453a8c85cd8; Node v22.23.3.
+- Required suite execution: --network none, --read-only, source/dependencies read-only mounts, fresh isolated tmpfs per command. No external Chatwoot/PII.
+- Original code checkout remains clean after run; no new project state/schema/runtime packages/deploy.
+- Base-scoped git diff --check PASS, git diff --name-status enumerated and verified exactly 78 manifest records. Git governance blob checked from canonical main.
+
+Observed isolated suite results on the exact HEAD/tree:
+- storage:validate EXIT 0, log SHA256 20a07fabed0c6c0429ac4ee96fb411f30c0a3759a16e4b9207bc1974d0e9a1.
+- npm run test:unit EXIT 0, 1389 tests, 1389 pass, 0 fail, log SHA256 c809564a0aeba80aa2451371f4ece24e37cf31b19a00bcc05ecbf8dfd95b672b.
+- npm run test:legacy EXIT 0, 13/13 PASS, log SHA256 80769ef0370c3ce6b6d71a7e7f0b27cf5a833edde213014fb2bb57714c82999c.
+- npm run test:refactor EXIT 0, 13/13 PASS, log SHA256 0ad8ac4f7037b4fc6ea83be5b6aea2c945e4a0c883c7a320bf586a2dad073d9e.
+- Full root npm test EXIT 0 on frozen sources/deps, unit 1389/1389, legacy 13/13, refactor 13/13 PASS, log SHA256 5e67c4e9d3b40afa3cfbee9a58ceea30f203ece73a6a62a7016ff4883a046758.
+- New Batch 2 test suite contains 27 cases actually present in exact-HEAD unit output, all PASS. H-LIVE-02a covers PREPARED/GATING × ANSWER/CLARIFY × active/equality/expired, durable HUMAN/CAS stale-worker fence/restart, DB error refusal. H-S2-03 covers one/two missing sources, ingress race, changed/exact missing, duplicate/partial pagination, swapped same-length source, unsent action cuts and preserved CLARIFY, deadline equality, SQLite ingest failure.
+- Earlier unpinned diagnostic from a scratch checkout counted 1390 unit because of a temporary extra test. It is NOT evidence for this HEAD: 1389 is the exact committed count, no discrepancy in executable committed content.
+
+Pending independent work: full first exhaustive HEAVY adversarial inventory of entire applicable CP1–CP5 runtime on this exact tuple/manifest, continuing past first finding; independent second pass only after fixing all detected BLOCKERS. Test count or this receipt does not certify that all independent blocker classes were found.
+Unresolved activation barriers: H-LIVE-02b unsent PREPARED/GATING crash recovery, Lane B measured ingress timing and additional REST/SQLite lock sites, native live Chatwoot behavior/4xx/429/5xx/retries, operator-visible HUMAN alert and backup/restore; no merge, deploy or activation GO.
