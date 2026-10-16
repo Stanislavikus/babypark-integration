@@ -5,7 +5,7 @@
   "gov_blob": "e777fce4af8e8c3372f1f9de9ef7d00f786c2c89",
   "manifest_sha256": "adda61453c1e14c16b1a90d072051ab3e4e29f1e110bd2c1f539aad90de8d3d6",
   "closure_certificate_identity_sha256": "798bd44e2f824c62106d98c729c5d02d950536b51c9127bfe7d9344736058f98",
-  "final_gate_bundle_sha256": "7e68ebec4a0f0d81102733ae8a4929589518af917f1903961861de4bd6813baa",
+  "final_gate_bundle_sha256": "0f18476ead5654b6aef76ca344f7e823e3eebda255968d471bfa34f452cd438e",
   "terminal_traceability_proposed_sha256": "ee7b2046f7d8590122f5312f6e74175cd27c01386a1b530588cf9934d7b79dba",
   "pr136_live_body_sha256_at_remediation_read": "bb25e5ff09cd35379effe94c00b54e6dda958e750fe22870df781b988a846b7e",
   "pr136_proposed_body_sha256": "d03608db6b00bc9a1b6bfdba7ccdefa52da79500013e64606daea0ed67d8a0d6",
