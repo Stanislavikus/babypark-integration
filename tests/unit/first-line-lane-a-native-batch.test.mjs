@@ -530,3 +530,82 @@ test('F3 incoming content update is HUMAN even if authoritative current shape is
   });
   relay.close();
 });
+
+test('F1 PREPARED/GATING CLARIFY/ANSWER crash before HUMAN is all-or-nothing across restart', t => {
+  for (const state of ['PREPARED', 'GATING']) {
+    for (const kind of ['ANSWER', 'CLARIFY']) {
+      const file = fixture(t);
+      let store = FirstLineStateStore.open(file);
+      const stream = store.ensureConversationStream({
+        sourceProvider:'chatwoot',sourceConversationId:55,
+      });
+      const customer = id => ({
+        sourceMessageId:id,eventKind:'CUSTOMER_MESSAGE',messageType:'incoming',
+        senderClass:'contact',senderId:9001,contentType:'text',
+        deleted:false,unsupported:false,hasAttachments:false,
+      });
+      store.ingestConversationEvent(stream.stream_id,customer(101));
+      const episode=store.beginEpisode({streamId:stream.stream_id});
+      const action=prepareTestPublicAction(store,{
+        descriptor:testActionDescriptor(),streamId:stream.stream_id,
+        episodeId:episode.episode_id,expectedEpisodeVersion:episode.version,
+        preparedStreamRevision:1,actionType:kind,basisEventSeqs:[1],
+        deadlineAt:NOW+60000,
+        ...(kind==='CLARIFY'?{
+          requestedSlot:'store_id',
+          presentedCandidates:[{slot:'store_id',
+            value:'store_11111111-1111-4111-8111-111111111111'}],
+        }:{}),
+      });
+      if(state==='GATING'){
+        store.claimNextPublicAction({leaseMs:30000,token:'crash-gating'});
+      }
+      const pre=store.getEpisode(episode.episode_id);
+      store.db.exec("CREATE TEMP TRIGGER abort_direct_human BEFORE INSERT ON semantic_origins "+
+        "BEGIN SELECT RAISE(ABORT,'synthetic-human-crash'); END");
+      assert.throws(()=>store.ingestVerifiedChatwootEvent({
+        sourceConversationId:55,event:customer(102),humanReason:'NATIVE_CUSTOMER_UPDATE',
+      }),/synthetic-human-crash/);
+      store.close();
+      store=FirstLineStateStore.open(file);
+      assert.equal(store.getPublicAction(action.action_id).state,state);
+      assert.equal(store.getUnresolvedContinuationOwner(stream.stream_id).owner_kind,
+        'PUBLIC_ACTION');
+      assert.equal(store.getConversationStream(stream.stream_id).stream_revision,1);
+      assert.equal(store.listConversationEvents(stream.stream_id).length,1);
+      const after=store.getEpisode(episode.episode_id);
+      assert.equal(after.clarification_prompts_sent,pre.clarification_prompts_sent);
+      assert.equal(after.requested_slot,pre.requested_slot);
+      store.close();
+    }
+  }
+});
+
+test('F2 sent-delivered-read repeats on same native email template never create HUMAN', async t => {
+  const file=fixture(t),rows=new Map(),reads=[];
+  const make=status=>row(951,{
+    message_type:'template',sender:null,content_type:'input_email',
+    content_attributes:{},status,
+  });
+  const receiveStatus=status=>signed(envelope(951,{
+    event:'message_updated',message_type:'template',sender:null,
+  }),status);
+  rows.set(951,make('sent'));
+  let relay=makeRelay(file,rows,reads);
+  assert.equal((await relay.receive(signed(envelope(951,{
+    message_type:'template',sender:null,
+  })))).status,200);
+  for(const status of ['delivered','read']){
+    rows.set(951,make(status));
+    assert.deepEqual(await relay.receive(receiveStatus(status)),
+      {status:200,outcome:'duplicate_source'});
+    audit(file,(store,stream)=>{
+      assert.equal(store.getUnresolvedContinuationOwner(stream.stream_id),null);
+    });
+  }
+  relay.close();
+  relay=makeRelay(file,rows,reads);
+  assert.deepEqual(await relay.receive(receiveStatus('restart-read')),
+    {status:200,outcome:'duplicate_source'});
+  relay.close();
+});
