@@ -1,0 +1,26 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import net from 'node:net';
+import { createFirstLineAgentBotServer } from '../../src/copilot/first-line-runtime-ingress.mjs';
+test('HEAVY diagnostic: slow bodies occupy unbounded requests beyond 5s budget', async t=>{
+ let admissions=0;
+ const s=createFirstLineAgentBotServer({receive:async()=>{admissions++;return {status:200,outcome:'synthetic_only'}}});
+ s.listen(0,'127.0.0.1');
+ await new Promise((ok,no)=>{s.once('listening',ok);s.once('error',no);});
+ const port=s.address().port;
+ const sockets=[];
+ t.after(()=>{for(const so of sockets)so.destroy();s.close();s.closeAllConnections();});
+ for(let i=0;i<12;i++){
+  const socket=net.connect({host:'127.0.0.1',port});
+  sockets.push(socket);
+  await new Promise((ok,no)=>{socket.once('connect',ok);socket.once('error',no)});
+  socket.write('POST /api/first-line/agentbot/webhook HTTP/1.1\r\nHost: localhost\r\nContent-Type: application/json\r\nContent-Length: 10000\r\nConnection: keep-alive\r\n\r\n{');
+ }
+ await new Promise(r=>setTimeout(r,350));
+ assert.equal(admissions,0);
+ const connected=sockets.filter(s=>!s.destroyed).length;
+ const info={node:process.version,requestTimeoutMs:s.requestTimeout,headersTimeoutMs:s.headersTimeout,maxRequestsPerSocket:s.maxRequestsPerSocket,slowBodies:connected,enteredRelay:admissions};
+ console.log('INGRESS_ADMISSION_DIAGNOSTIC',JSON.stringify(info));
+ assert.equal(connected,12);
+ assert(s.requestTimeout>5000 || s.requestTimeout===0);
+});
