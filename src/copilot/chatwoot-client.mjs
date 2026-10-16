@@ -265,6 +265,42 @@ export function createFirstLineChatwootAuthorityReader({
     return { conversation, source, wireMessage: matches[0] };
   }
 
+  // Native Chatwoot v4.18.0 widget update routes mutate only
+  // submitted_email or submitted_values on controlled templates; the native
+  // delivery/read-status service mutates status, not content_attributes.
+  // AgentBot webhook_data omits previous_changes and status. This classifier
+  // is a conservative positive native-shape proof, NOT a comparison of text.
+  // Never retain submission values, customer text, email or derived digests.
+  function classifyNativeStatusUpdateShape(wireMessage, event) {
+    if (event.deleted || event.unsupported || event.hasAttachments ||
+        !['SYSTEM_TEMPLATE', 'BABYPARK_PUBLIC_REPLY'].includes(event.eventKind)) {
+      return 'UNKNOWN_OR_SEMANTIC';
+    }
+    const template =
+      event.eventKind === 'SYSTEM_TEMPLATE' && event.messageType === 'template' &&
+      event.senderClass === 'none' && event.senderId === null &&
+      ['text', 'input_email', 'input_csat'].includes(event.contentType);
+    const bot =
+      event.eventKind === 'BABYPARK_PUBLIC_REPLY' &&
+      event.messageType === 'outgoing' &&
+      event.senderClass === 'configured_agent_bot' &&
+      ['text', 'input_select'].includes(event.contentType);
+    if (!template && !bot) return 'UNKNOWN_OR_SEMANTIC';
+    const attrs = wireMessage?.content_attributes;
+    if (attrs === null || attrs === undefined) return 'NATIVE_STATUS_SHAPE';
+    if (typeof attrs !== 'object' || Array.isArray(attrs)) {
+      return 'UNKNOWN_OR_SEMANTIC';
+    }
+    const keys = Object.keys(attrs);
+    // items is a native option definition, never a submitted value;
+    // permitted only for the known bot input_select message.
+    if (!keys.every(key => key === 'items' && bot &&
+        event.contentType === 'input_select' && Array.isArray(attrs.items))) {
+      return 'UNKNOWN_OR_SEMANTIC';
+    }
+    return 'NATIVE_STATUS_SHAPE';
+  }
+
   async function readExactSourceMessage(conversationId, sourceMessageId) {
     const exact = await readExactWireMessage(conversationId, sourceMessageId);
     const { conversation, source, wireMessage } = exact;
@@ -295,6 +331,7 @@ export function createFirstLineChatwootAuthorityReader({
       sourceMessageId: source,
       event: Object.freeze({ ...event }),
       transientContent: isSupportedCustomerText ? wireMessage.content : null,
+      transientUpdateShape: classifyNativeStatusUpdateShape(wireMessage, event),
     });
   }
 

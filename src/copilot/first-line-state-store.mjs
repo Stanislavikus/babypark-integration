@@ -3198,16 +3198,30 @@ export class FirstLineStateStore {
           });
         } else if (owner.owner_kind === 'PUBLIC_ACTION') {
           const action = this.#readAction(owner.action_id);
-          if (!action || action.stream_id !== id ||
-              !['SENDING', 'UNCERTAIN'].includes(action.state)) {
+          if (!action || action.stream_id !== id) {
             fail('FIRST_LINE_HUMAN_ACTION_RECONCILIATION_REQUIRED',
-              'unsent public action cannot silently acquire an unrelated HUMAN owner');
+              'continuation action is missing or belongs to another stream');
           }
-          // This is the established exact PUBLIC_ACTION -> HUMAN escalation,
-          // including its immutable human-cut relation, in the SAME ingress tx.
-          this.#escalatePublicActionToHumanWithinTx({
-            id: owner.action_id, humanReason: reason, suppliedLease: null, at,
-          });
+          if (['PREPARED', 'GATING'].includes(action.state)) {
+            // Event ingestion already advanced stream_revision. An unsent action
+            // may be superseded without depending on a GATING lease, but
+            // HUMAN must retain any consumed CLARIFY budget and requested slot.
+            this.#supersedeUnsentAction(
+              action, 'ingress_human_interrupt', 'STALE', at, true
+            );
+            this.#commitDirectHumanOriginWithinTx({
+              stream: id, revision: accepted.stream.stream_revision,
+              humanReason: reason, requestedEpisodeId: null,
+              requestedEpisodeVersion: null, at,
+            });
+          } else if (['SENDING', 'UNCERTAIN'].includes(action.state)) {
+            this.#escalatePublicActionToHumanWithinTx({
+              id: owner.action_id, humanReason: reason, suppliedLease: null, at,
+            });
+          } else {
+            fail('FIRST_LINE_HUMAN_ACTION_RECONCILIATION_REQUIRED',
+              'action state cannot acquire a HUMAN continuation');
+          }
         } else if (owner.owner_kind !== 'HUMAN') {
           fail('FIRST_LINE_HUMAN_ACTION_RECONCILIATION_REQUIRED',
             'unknown continuation owner class');
@@ -5879,7 +5893,8 @@ export class FirstLineStateStore {
     action,
     reason,
     terminalState = 'CANCELLED',
-    at = this.now()
+    at = this.now(),
+    preserveClarificationReservation = false
   ) {
     if (action.state !== 'PREPARED' && action.state !== 'GATING') {
       fail('FIRST_LINE_ACTION_STATE_INVALID',
@@ -5929,7 +5944,8 @@ export class FirstLineStateStore {
         });
     }
 
-    if (action.action_type === 'CLARIFY' && action.episode_id) {
+    if (action.action_type === 'CLARIFY' && action.episode_id &&
+        !preserveClarificationReservation) {
       const episode = this.db.prepare(
         'SELECT * FROM episodes WHERE episode_id=?'
       ).get(action.episode_id);
