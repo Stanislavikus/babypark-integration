@@ -12,9 +12,9 @@
 ## Files
 - `pr136-v14-oci-execution-texts-20261016.tar.gz` — 4 complete result directories, streams, command/exit records, HEAD/tree/porcelain pre/post, manifest, runner and report. SHA-256 `15a8af68d33d85cd54c3034fdd2dfcb039500f283c5544c45c46258140ac2f82`; Git blob `143a2f2118300b4e67ee67473ecafa23fa79f81f`.
 - `OCI-VERIFICATION-REPORT.md` — SHA-256 `9558087371250be669ce2f126b62a2209990d632c62e56384fd625027f4ca323`.
-- `PR136-LIVE-BODY-PROPOSED.md` — draft only, **not applied to live PR**. SHA-256 `b827b0fc27fb14de78ce09c350eab53c97f69b317234711c64567e0b9c31c257`, 8483 bytes.
+- `PR136-LIVE-BODY-PROPOSED.md` — draft only, **not applied to live PR**. SHA-256 `eb9c50f1a068a80af0bd50d05681ccb8fa4a470e41a3fa5db7ea4db568319022`, 8492 bytes.
 
-V13 original live body: `review-evidence/pr136/v13-isolated-20261015/v11-live-api/body-utf8-bytes.bin`, SHA-256 `bb25e5ff09cd35379effe94c00b54e6dda958e750fe22870df781b988a846b7e`, 7962 bytes. A fresh PR read before drafting reproduced those exact bytes. Proposal changes one status/evidence line only, leaving all R136-01..08 **IN PROGRESS**. See V13 verdict at evidence commit `9806eb51f99c1b4c6146a91aad2790c785144147`.
+V13 original live body: `review-evidence/pr136/v13-isolated-20261015/v11-live-api/body-utf8-bytes.bin`, SHA-256 `bb25e5ff09cd35379effe94c00b54e6dda958e750fe22870df781b988a846b7e`, 7962 bytes. A fresh PR read before drafting reproduced those exact bytes. Sonnet independently attested the prior proposed-body delta (SHA-256 `b827b0fc27fb14de78ce09c350eab53c97f69b317234711c64567e0b9c31c257`) as status/evidence-only. The corrected proposed body differs from it only by replacing a mutable evidence-branch URL with fixed commit `9b836b608b06c10b820cbd8424b8a4f94de81e20` on that same line. Reattestation of the new exact body remains OPEN; all R136-01..08 are still **IN PROGRESS**. See V13 verdict at evidence commit `9806eb51f99c1b4c6146a91aad2790c785144147`.
 
 OCI image `alpine/git@sha256:16ad8e788e1d3b0c30f18da8dde5c0ace3b187445a62d8af893b003ca1e70592`; source bundle SHA-256 `81da36ae198f1b415958ba040175c57a60af07da758f74c4cf30d967f5fd1d2e`; full patch digest `cd63aba108a9d0fae925297722c5799428372acef71281f762f42efe423db714` matching V13.
 
