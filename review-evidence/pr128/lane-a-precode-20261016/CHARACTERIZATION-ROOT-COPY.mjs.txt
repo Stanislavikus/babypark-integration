@@ -1,0 +1,31 @@
+import crypto from 'node:crypto';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { FirstLineStateStore } from './src/copilot/first-line-state-store.mjs';
+import { createFirstLineChatwootAuthorityReader } from './src/copilot/chatwoot-client.mjs';
+import { createFirstLineAgentBotRelay } from './src/copilot/first-line-runtime-ingress.mjs';
+const now=2_000_000_000_000, secret='synthetic-only';
+const root=fs.mkdtempSync(path.join(os.tmpdir(),'bp-laneA-native-'));
+const dbPath=path.join(root,'episode.sqlite');
+FirstLineStateStore.create(dbPath,{now:()=>now}).close();
+const rows=new Map(), invocations=[];
+function row(id,extras={}) {return {id,message_type:'incoming',private:false,sender:{type:'Contact',id:9001},content_type:'text',content:'SYNTHETIC_ONLY',content_attributes:{},attachments:[],source_id:null,...extras};}
+const reader=createFirstLineChatwootAuthorityReader({
+ baseUrl:'https://chatwoot.synthetic.invalid',accountId:11,configuredAgentBotId:7,readToken:'synthetic-only',
+ fetchImpl:async url=>{const u=new URL(url),id=Number(u.searchParams.get('after'));invocations.push(id);return Response.json({payload:rows.has(id)?[rows.get(id)]:[]});}
+});
+const relay=createFirstLineAgentBotRelay({dbPath,authorityReader:reader,webhookSecret:secret,accountId:11,inboxId:99,agentBotId:7,nowMs:()=>now});
+function payload(id,extra={}) {return {event:'message_created',id,message_type:'incoming',private:false,sender:{id:9001},account:{id:11},inbox:{id:99},conversation:{id:55,inbox_id:99},...extra};}
+function signed(body){const raw=Buffer.from(JSON.stringify(body)),ts=String(now/1000);return {raw,headers:{'x-chatwoot-timestamp':ts,'x-chatwoot-delivery':'synthetic-'+body.id,'x-chatwoot-signature':'sha256='+crypto.createHmac('sha256',secret).update(ts+'.').update(raw).digest('hex')}};}
+async function probe(label,wire,exact){rows.set(wire.id,exact);const prev=invocations.length;const result=await relay.receive(signed(wire));console.log(JSON.stringify({scenario:label,status:result.status,outcome:result.outcome,authorityReads:invocations.length-prev}));}
+try {
+ await probe('baseline_customer_created',payload(101),row(101));
+ await probe('BLK1_native_agent_bot_snakecase',payload(102,{message_type:'outgoing',sender:{type:'agent_bot',id:7}}),row(102,{message_type:'outgoing',sender:{type:'agent_bot',id:7}}));
+ await probe('BLK3_customer_message_updated',payload(103,{event:'message_updated'}),row(103));
+ await probe('BLK4_private_human_reply',payload(104,{message_type:'outgoing',private:true,sender:{type:'User',id:22}}),row(104,{message_type:'outgoing',private:true,sender:{type:'User',id:22}}));
+ await probe('baseline_structured_template_created',payload(105,{message_type:'template',sender:null}),row(105,{message_type:'template',sender:null,content_type:'input_email',content:'SYNTHETIC_ONLY'}));
+ await probe('BLK2_structured_template_updated',payload(106,{event:'message_updated',message_type:'template',sender:null}),row(106,{message_type:'template',sender:null,content_type:'input_email',content_attributes:{submitted_values:['synthetic@example.invalid']}}));
+ const store=FirstLineStateStore.open(dbPath);
+ try {const stream=store.findConversationStream({sourceProvider:'chatwoot',sourceConversationId:55});console.log(JSON.stringify({ledger:stream?store.listConversationEvents(stream.stream_id).map(e=>({id:e.source_message_id,kind:e.event_kind})):[]}));}finally{store.close();}
+}finally{relay.close();fs.rmSync(root,{recursive:true,force:true});}
