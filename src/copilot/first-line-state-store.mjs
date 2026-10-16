@@ -5433,6 +5433,91 @@ export class FirstLineStateStore {
     });
   }
 
+  /**
+   * Batch 2 S2 refusal: the existing pre-send HUMAN cut is committed
+   * synchronously in the owning SQLite transaction. Unlike a transient
+   * S2 failure return, the caller must receive a durable HUMAN owner.
+   *
+   * A stale prepared revision is superseded before a DIRECT_HUMAN origin
+   * is committed at the newly accepted source revision. For a same-revision
+   * refusal, reuse the signed-ingress lease-reclaim CAS, with CLARIFY
+   * reservation preserved. This method does not authorize a new send.
+   */
+  handoffDeniedFirstLineS2ToHuman(actionId, {
+    reason, leaseToken = null,
+  } = {}) {
+    const id = safeToken(actionId, 'action_id');
+    const humanReason = safeToken(reason, 'human_reason');
+    const token = leaseToken === null ? null : safeToken(leaseToken, 'lease_token');
+    const at = this.now();
+    return tx(this.db, () => {
+      const action = this.#requireReadableAction(id);
+      const existingOwner = this.#readContinuationOwner(
+        action.stream_id, action.prepared_stream_revision
+      );
+      if (existingOwner?.action_id === id &&
+          existingOwner.terminal_outcome === 'SUPERSEDED' &&
+          action.state === 'STALE') {
+        // A newly authenticated S2 source was already ingested in the same
+        // existing writer protocol. Its immutable newer DIRECT_HUMAN origin
+        // now owns continuation; do not reopen the superseded action.
+        const current = this.#readUnresolvedOwner(action.stream_id);
+        if (current?.owner_kind === 'HUMAN' &&
+            current.stream_revision >
+              action.prepared_stream_revision &&
+            current.terminal_outcome === null) {
+          return current;
+        }
+        fail('FIRST_LINE_HUMAN_ACTION_RECONCILIATION_REQUIRED',
+          'S2 superseded action has no newer absorbing HUMAN owner');
+      }
+      if (!existingOwner || existingOwner.action_id !== id ||
+          existingOwner.terminal_outcome !== null) {
+        fail('FIRST_LINE_HUMAN_ACTION_RECONCILIATION_REQUIRED',
+          'S2 refused action lacks live continuation ownership');
+      }
+      if (existingOwner.owner_kind === 'HUMAN') {
+        return existingOwner;
+      }
+      if (existingOwner.owner_kind !== 'PUBLIC_ACTION' ||
+          !['PREPARED', 'GATING'].includes(action.state)) {
+        fail('FIRST_LINE_HUMAN_ACTION_RECONCILIATION_REQUIRED',
+          'S2 refusal cannot terminalize a sent or unknown action');
+      }
+      if (action.state === 'GATING' && token !== action.lease_token) {
+        fail('FIRST_LINE_ACTION_CLAIM_INVALID',
+          'S2 refusal must prove the exact original GATING claim');
+      }
+      if (action.state === 'PREPARED' && token !== null) {
+        fail('FIRST_LINE_ACTION_CLAIM_INVALID',
+          'PREPARED S2 refusal may not claim a GATING token');
+      }
+      const stream = this.#requireStream(action.stream_id);
+      if (stream.stream_revision > action.prepared_stream_revision) {
+        this.#supersedeUnsentAction(
+          action, humanReason, 'STALE', at, true
+        );
+        this.#commitDirectHumanOriginWithinTx({
+          stream: action.stream_id,
+          revision: stream.stream_revision,
+          humanReason, requestedEpisodeId: null,
+          requestedEpisodeVersion: null, at,
+        });
+        return this.#readUnresolvedOwner(action.stream_id);
+      }
+      this.#attachHumanOnRepeatedSourceWithinTx(action, humanReason, at);
+      const owner = this.#readContinuationOwner(
+        action.stream_id, action.prepared_stream_revision
+      );
+      if (!owner || owner.owner_kind !== 'HUMAN' ||
+          owner.terminal_outcome !== null) {
+        fail('FIRST_LINE_HUMAN_ACTION_RECONCILIATION_REQUIRED',
+          'S2 refusal did not durably commit HUMAN');
+      }
+      return owner;
+    });
+  }
+
   escalatePublicActionToHuman(
     actionId,
     { reason, leaseToken = null }

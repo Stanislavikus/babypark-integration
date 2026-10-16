@@ -4,6 +4,7 @@ import { sameFirstLineSourceEvent } from './first-line-source-integrity.mjs';
 import { getFirstLineDecisionPrivateContext } from './first-line-decision.mjs';
 import { isGenuineFirstLineTransientCandidate } from './first-line-runtime-semantics.mjs';
 import { isDeepStrictEqual } from 'node:util';
+import { CHATWOOT_AUTHORITATIVE_LIMIT } from './chatwoot-client.mjs';
 
 // Positive S2 preflight is an ephemeral, identity-minted proof rather than
 // a caller-supplied boolean. No text, normalized text or content digests.
@@ -115,12 +116,14 @@ export async function assessFirstLineS2Preflight({
     return Object.freeze({ code: 'HUMAN_REQUIRED', reason: 'S2_HISTORY_UNPROVABLE' });
   }
 
+  // One complete, already finite Chatwoot snapshot gives the set of source
+  // identities to inspect. It is NOT authority to append an unseen row.
+  // Each such source must be read again using the exact native REST reader.
   const durable = store.listConversationEvents(streamId);
-  if (snapshot.events.length !== durable.length) {
-    // Unknown newly visible customer, bot or other public event is NEVER
-    // silently accepted as still-fresh; the normal inbound adapter may
-    // ingest it on a different pass and invalidate this S1 candidate.
-    return Object.freeze({ code: 'STALE', reason: 'S2_HISTORY_TOPOLOGY_CHANGED' });
+  if (snapshot.events.length >= CHATWOOT_AUTHORITATIVE_LIMIT ||
+      (snapshot.rowCount !== undefined &&
+       snapshot.rowCount !== snapshot.events.length)) {
+    return Object.freeze({ code: 'HUMAN_REQUIRED', reason: 'S2_HISTORY_PAGINATION_UNPROVABLE' });
   }
   const durableBySource = new Map();
   for (const row of durable) {
@@ -130,12 +133,67 @@ export async function assessFirstLineS2Preflight({
     durableBySource.set(row.source_message_id, row);
   }
   const seen = new Set();
+  const missing = [];
   for (const row of snapshot.events) {
-    if (seen.has(row?.sourceMessageId) ||
-        !sameFirstLineSourceEvent(durableBySource.get(row?.sourceMessageId), row)) {
+    if (!Number.isSafeInteger(row?.sourceMessageId) ||
+        row.sourceMessageId <= 0 ||
+        seen.has(row.sourceMessageId)) {
       return Object.freeze({ code: 'HUMAN_REQUIRED', reason: 'S2_HISTORY_TOPOLOGY_UNPROVABLE' });
     }
     seen.add(row.sourceMessageId);
+    const existing = durableBySource.get(row.sourceMessageId);
+    if (existing && !sameFirstLineSourceEvent(existing, row)) {
+      return Object.freeze({ code: 'HUMAN_REQUIRED', reason: 'S2_HISTORY_TOPOLOGY_UNPROVABLE' });
+    }
+    if (!existing) missing.push(row);
+  }
+  // A same-size snapshot can replace one known source by another. Cardinality
+  // alone is not a proof of set inclusion; every durable source must be
+  // represented in the complete external history before admitting anything.
+  if ([...durableBySource.keys()].some(sourceId => !seen.has(sourceId))) {
+    return Object.freeze({ code: 'HUMAN_REQUIRED', reason: 'S2_HISTORY_MISSING_DURABLE_SOURCE' });
+  }
+  if (missing.length > 0) {
+    // An ungated assessment can report stale, but cannot mutate the ledger.
+    // In production the action-bound GATING owner is what permits the S2
+    // reconciliation protocol. One snapshot => at most one bounded pass.
+    if (actionId === null) {
+      return Object.freeze({ code: 'STALE', reason: 'S2_HISTORY_TOPOLOGY_CHANGED' });
+    }
+    if (typeof authorityReader.readExactSourceMessage !== 'function') {
+      return Object.freeze({ code: 'HUMAN_REQUIRED', reason: 'S2_EXACT_SOURCE_READER_UNAVAILABLE' });
+    }
+    for (const row of missing) {
+      let exact;
+      try {
+        exact = await authorityReader.readExactSourceMessage(
+          conversationId, row.sourceMessageId
+        );
+      } catch {
+        return Object.freeze({ code: 'HUMAN_REQUIRED', reason: 'S2_EXACT_SOURCE_UNAVAILABLE' });
+      }
+      if (!exact || exact.sourceConversationId !== conversationId ||
+          exact.sourceMessageId !== row.sourceMessageId ||
+          !['SUPPORTED_CUSTOMER_TEXT', 'PROVEN_UNSUPPORTED_OR_TOPOLOGY'].includes(exact.code) ||
+          !exact.event || !isDeepStrictEqual(exact.event, row)) {
+        return Object.freeze({ code: 'HUMAN_REQUIRED', reason: 'S2_EXACT_SOURCE_CHANGED' });
+      }
+      try {
+        // Existing single BEGIN IMMEDIATE writer handles idempotency, immutable
+        // source identity, original semantic owner and the same-tx HUMAN cut.
+        // No raw text, email, phone or content-derived digest enters SQLite.
+        store.ingestVerifiedChatwootEvent({
+          sourceConversationId: conversationId,
+          event: exact.event,
+          humanReason: 'S2_NEW_AUTHORITATIVE_SOURCE',
+        });
+      } catch {
+        return Object.freeze({ code: 'HUMAN_REQUIRED', reason: 'S2_SOURCE_RECONCILIATION_FAILED' });
+      }
+    }
+    // Always abandon this original S1/C4 candidate. A future independent
+    // fresh S1/S2 pass is needed after the stream revision changes.
+    return Object.freeze({ code: 'STALE', reason: 'S2_HISTORY_RECONCILED' });
   }
 
   // Contract §29.7.2 steps 3–6: re-prove every covered exact source after

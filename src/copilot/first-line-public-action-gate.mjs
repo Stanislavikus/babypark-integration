@@ -47,14 +47,12 @@ export async function gatePublicActionToSending({
   if (result?.code !== 'PREFLIGHT_PROVEN') {
     // Once there is no authorizing proof, the claim is never silently retried.
     // HUMAN is absorbing. The current native owner may itself be unknown.
-    let owner = null;
-    try {
-      owner = store.escalatePublicActionToHuman(actionId, {
-        reason: 's2_final_authorization_denied', leaseToken,
-      });
-    } catch {
-      // Escalation failures remain fail-closed; no SENDING/POST.
-    }
+    // No success-shaped HUMAN_REQUIRED may be returned before the owning
+    // SQLite transaction has actually recorded its absorbing HUMAN cut.
+    // On CAS/DB contention the error propagates: caller must stop, never POST.
+    const owner = store.handoffDeniedFirstLineS2ToHuman(actionId, {
+      reason: 's2_final_authorization_denied', leaseToken,
+    });
     return Object.freeze({
       code: 'HUMAN_REQUIRED', reason: result?.reason ?? 'S2_UNPROVABLE',
       continuationOwner: owner,
