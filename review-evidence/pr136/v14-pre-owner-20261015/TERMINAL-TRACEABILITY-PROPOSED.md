@@ -1,4 +1,4 @@
-# PR #136 — terminal §6 traceability (V14 freeze)
+# PR #136 — proposed terminal §6 traceability (not live until PR body attestation)
 
 Status: EVIDENCE / NON-NORMATIVE  
 Normalization: UTF-8, LF, final newline  

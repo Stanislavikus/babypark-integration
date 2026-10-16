@@ -1,5 +1,12 @@
 #!/usr/bin/env python3
-"""Deterministic aggregate SHA-256 for PR136 V14 final-gate evidence bundle."""
+"""Deterministic aggregate SHA-256 for PR136 V14 final-gate evidence bundle.
+
+Carriers excluded from preimage (derived / post-hoc binding):
+  FINAL-GATE-BUNDLE_SHA256.txt
+  final-gate-bundle.manifest
+  PRE-OWNER-CLOSURE-CERTIFICATE.sha256
+  OWNER-APPROVAL-BINDING.json
+"""
 from __future__ import annotations
 
 import hashlib
@@ -11,6 +18,7 @@ EXCLUDE = frozenset(
         "FINAL-GATE-BUNDLE_SHA256.txt",
         "final-gate-bundle.manifest",
         "PRE-OWNER-CLOSURE-CERTIFICATE.sha256",
+        "OWNER-APPROVAL-BINDING.json",
     }
 )
 
