@@ -1,0 +1,21 @@
+{
+  "schema": "PR136_PRE_OWNER_DUAL_DIGEST_BINDING_V1",
+  "status": "INDEPENDENT_FINAL_CROSSCHECK_AND_OWNER_APPROVAL_PENDING",
+  "repository": "Stanislavikus/babypark-integration",
+  "pr_number": 136,
+  "campaign_head": "262f7a8999d797f4ceceb531004986cfd6667d73",
+  "campaign_tree": "ffb8953002feaeb5f417a09a832c86f24051afa2",
+  "campaign_base": "0dfb9b0a1cfe23d455fd436ae9abeac626d0d729",
+  "governance_blob": "e777fce4af8e8c3372f1f9de9ef7d00f786c2c89",
+  "required_verification_manifest_sha256": "adda61453c1e14c16b1a90d072051ab3e4e29f1e110bd2c1f539aad90de8d3d6",
+  "live_terminal_pr_body_sha256": "b898db55eeeded8bed7767ed0781514e60822b521367e4a9c0cc340b54614dcc",
+  "terminal_traceability_sha256": "2ba56cd785b1633c7354ca180b6ef63cf0b370247a417b9c06ad33d3dab1586a",
+  "pre_owner_closure_certificate_sha256": "78b082e3e5e805cbd8eab4bd9528537d7568470e71f64758250a3133ba8e3e9a",
+  "final_gate_bundle_sha256": "572443b1b8ad15195ad89edf7cbb84878e210f6852027775dbeeb2334cb2564d",
+  "bundle_format": "deterministic GNU tar sorted mtime 0 uid/gid 0 | gzip -n",
+  "bundle_git_blob": "21256a9d75ae13cb12fcfd6d535e17fa4d4b6a8a",
+  "owner_contract_approval": null,
+  "owner_merge_go": null,
+  "merge_authorized": false,
+  "runtime_activation_authorized": false
+}
