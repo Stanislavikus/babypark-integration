@@ -239,9 +239,14 @@ export function projectOpenTurn(rawSnapshot) {
   // Select the latest normally confirmed action by prepared revision, not
   // by webhook source id, timestamp or echo acceptance order.
   let latestConfirmed = null;
+  const confirmedByActionId = new Map();
   for (const entry of suffix) {
     const candidate = entry.confirmed_babypark_action;
     if (!candidate) continue;
+    if (confirmedByActionId.has(candidate.action_id)) {
+      return unprovable(snapshot, 'AMBIGUOUS_CONFIRMED_ACTION', entry);
+    }
+    confirmedByActionId.set(candidate.action_id, entry);
     if (!latestConfirmed ||
         candidate.prepared_stream_revision >
           latestConfirmed.confirmed_babypark_action.prepared_stream_revision) {
@@ -265,10 +270,37 @@ export function projectOpenTurn(rawSnapshot) {
         return unprovable(snapshot, 'UNSUPPORTED_CUSTOMER_EVENT', entry);
       }
       if (confirmedBoundary) {
-        // Once we crossed the newest CONFIRMED send boundary in reverse
-        // ledger order, ONLY customers durably deferred behind that same
-        // exact action are still unanswered. Earlier ordinary messages
-        // belong to the completed action and must never reopen.
+        const boundaryAction = confirmedBoundary.confirmed_babypark_action;
+        if (event.event_seq <= boundaryAction.prepared_stream_revision) {
+          // A later normally confirmed action was prepared AFTER this
+          // customer's accepted event. This event is therefore in that
+          // completed action's basis/history, even if it was deferred
+          // behind an EARLIER confirmed action whose echo preceded it.
+          // Require the older parent to be proven in this bounded suffix;
+          // never treat an unknown/HUMAN-owned relation as completed.
+          if (entry.deferred_parent) {
+            const parent = entry.deferred_parent;
+            const previous = confirmedByActionId.get(parent.action_id);
+            const previousAction = previous?.confirmed_babypark_action;
+            if (parent.stream_id !== snapshot.stream.stream_id ||
+                parent.event_seq !== event.event_seq ||
+                !previousAction ||
+                !supportedConfirmedBabyparkReply(previous.event, previousAction) ||
+                previousAction.prepared_stream_revision >= event.event_seq ||
+                previousAction.prepared_stream_revision >=
+                  boundaryAction.prepared_stream_revision) {
+              return unprovable(snapshot, 'DEFERRED_PARENT_HISTORICAL_CONFLICT', entry);
+            }
+          }
+          return customerEntries.length > 0
+            ? openTurn(snapshot, customerEntries,
+              'AFTER_CONFIRMED_BABYPARK_REPLY', confirmedBoundary)
+            : noOpenTurn(snapshot, 'CONFIRMED_BABYPARK_REPLY_LAST', confirmedBoundary);
+        }
+        // A later accepted event is still open only when the immutable
+        // parent matches the exact most-recently confirmed outgoing action.
+        // Absent parent preserves the ordinary completed-boundary cut;
+        // competing/forged parents always fail closed.
         if (!entry.deferred_parent) {
           return customerEntries.length > 0
             ? openTurn(snapshot, customerEntries,
@@ -277,8 +309,7 @@ export function projectOpenTurn(rawSnapshot) {
         }
         if (entry.deferred_parent.stream_id !== snapshot.stream.stream_id ||
             entry.deferred_parent.event_seq !== event.event_seq ||
-            entry.deferred_parent.action_id !==
-              confirmedBoundary.confirmed_babypark_action.action_id) {
+            entry.deferred_parent.action_id !== boundaryAction.action_id) {
           return unprovable(snapshot, 'DEFERRED_PARENT_CONFLICT', entry);
         }
       } else if (entry.deferred_parent) {
