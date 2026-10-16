@@ -232,6 +232,23 @@ export function projectOpenTurn(rawSnapshot) {
   const customerEntries = [];
   let confirmedBoundary = null;
 
+  // An authenticated Chatwoot bot echo can enter the local ledger BEFORE
+  // a customer message that is durably deferred during that same SENDING/
+  // UNCERTAIN action. The later normal CONFIRMED cut proves ownership, even
+  // when reverse event_seq traversal has not encountered that echo yet.
+  // Select the latest normally confirmed action by prepared revision, not
+  // by webhook source id, timestamp or echo acceptance order.
+  let latestConfirmed = null;
+  for (const entry of suffix) {
+    const candidate = entry.confirmed_babypark_action;
+    if (!candidate) continue;
+    if (!latestConfirmed ||
+        candidate.prepared_stream_revision >
+          latestConfirmed.confirmed_babypark_action.prepared_stream_revision) {
+      latestConfirmed = entry;
+    }
+  }
+
   for (let index = suffix.length - 1; index >= 0; index -= 1) {
     const entry = suffix[index];
     const event = entry.event;
@@ -265,16 +282,24 @@ export function projectOpenTurn(rawSnapshot) {
           return unprovable(snapshot, 'DEFERRED_PARENT_CONFLICT', entry);
         }
       } else if (entry.deferred_parent) {
-        // When the exact parent is still SENDING/UNCERTAIN the projection
-        // remains an OPEN_TURN *for topology only*. The separately certified
-        // live_public_action fences any new candidate/send. If the parent
-        // is neither live nor confirmed in this suffix, fail closed.
+        // A deferred child can be seen before its confirmed parent echo in
+        // reverse scan order. Resolve only against the EXACT, latest,
+        // normal CONFIRMED parent proved in this certified suffix. A child
+        // of an older response cannot reopen after a newer confirmation.
+        // While still sending, retain the pre-existing live-action fence.
         const parent = entry.deferred_parent;
         const live = snapshot.live_public_action;
+        const latest = latestConfirmed?.confirmed_babypark_action;
+        const confirmedParent =
+          latest?.action_id === parent.action_id &&
+          event.event_seq > latest.prepared_stream_revision &&
+          supportedConfirmedBabyparkReply(latestConfirmed.event, latest);
+        const liveParent =
+          live?.action_id === parent.action_id &&
+          ['SENDING', 'UNCERTAIN'].includes(live.state);
         if (parent.stream_id !== snapshot.stream.stream_id ||
             parent.event_seq !== event.event_seq ||
-            live?.action_id !== parent.action_id ||
-            !['SENDING', 'UNCERTAIN'].includes(live.state)) {
+            (!confirmedParent && !liveParent)) {
           return unprovable(snapshot, 'DEFERRED_PARENT_UNRESOLVED', entry);
         }
       }
