@@ -1,0 +1,10 @@
+{
+  "read_at_utc": "2026-10-16T06:20:00Z",
+  "pr_number": 136,
+  "head_sha": "262f7a8999d797f4ceceb531004986cfd6667d73",
+  "live_body_utf8_sha256": "bb25e5ff09cd35379effe94c00b54e6dda958e750fe22870df781b988a846b7e",
+  "live_in_progress_row_count": 9,
+  "proposed_body_utf8_sha256": "d03608db6b00bc9a1b6bfdba7ccdefa52da79500013e64606daea0ed67d8a0d6",
+  "live_body_matches_proposed": false,
+  "status": "PENDING_OWNER_BODY_UPDATE"
+}
