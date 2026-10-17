@@ -14,6 +14,7 @@ export async function redriveFirstLineOwnerlessPage({
       typeof store?.getConversationStream !== 'function' ||
       typeof store?.getUnresolvedContinuationOwner !== 'function' ||
       typeof store?.getSemanticOrigin !== 'function' ||
+      typeof store?.readRoutingSnapshot !== 'function' ||
       !reader || typeof reader.readExactSourceMessage !== 'function' ||
       typeof produceExtraction !== 'function' ||
       !catalogService || !knowledgeStore ||
@@ -24,19 +25,55 @@ export async function redriveFirstLineOwnerlessPage({
   // Deliberately DO NOT clear/reclaim/recreate existing PUBLIC_ACTION
   // origins. PREPARED/GATING restart requires its own exact descriptor,
   // transient-proof and lease-aware recovery (U04/U05/U08).
-  const earlyActions = store.listRecoverablePublicActions()
-    .filter(a => a.state === 'PREPARED' || a.state === 'GATING')
-    .map(a => Object.freeze({
-      actionId: a.action_id, streamId: a.stream_id,
-      state: a.state, code: 'EARLY_ACTION_REBUILD_REQUIRED',
-    }));
-  const page = store.listOwnerlessCurrentStreams({ afterStreamId, limit });
+  let earlyActions = [];
+  let earlyActionsStatus = 'READ_OK';
+  try {
+    earlyActions = store.listRecoverablePublicActions()
+      .filter(a => a.state === 'PREPARED' || a.state === 'GATING')
+      .map(a => Object.freeze({
+        actionId: a.action_id, streamId: a.stream_id,
+        state: a.state, code: 'EARLY_ACTION_REBUILD_REQUIRED',
+      }));
+  } catch {
+    // A bad action row does not prevent independent ownerless streams from
+    // receiving continuation. Report the unreadable global action surface.
+    earlyActionsStatus = 'EARLY_ACTIONS_UNREADABLE';
+  }
+  let page;
+  try {
+    page = store.listOwnerlessCurrentStreams({ afterStreamId, limit });
+  } catch {
+    // A global SQL/authority failure is not an empty page or successful
+    // recovery. The cursor remains unchanged for an operator to investigate.
+    return Object.freeze({
+      results: Object.freeze([]),
+      earlyActions: Object.freeze(earlyActions),
+      earlyActionsStatus,
+      discoveryStatus: 'OWNERLESS_PAGE_UNREADABLE',
+      nextCursor: afterStreamId,
+      operationallyComplete: false,
+    });
+  }
   const results = [];
 
   for (const row of page) {
     let code = 'BLOCKED_UNPROVABLE';
     let revision = row.streamRevision;
     try {
+      // Validate each exact stream/ledger/active ownership independently
+      // before any semantic planner can create an origin or new action.
+      // readRoutingSnapshot fails closed on corrupt deferred relations and
+      // illegal terminal cuts, without crossing other stream boundaries.
+      try {
+        store.readRoutingSnapshot(row.streamId);
+      } catch (error) {
+        code = error?.code === 'FIRST_LINE_DB_CORRUPT'
+          ? 'BLOCKED_STREAM_CORRUPT' : 'BLOCKED_STREAM_UNREADABLE';
+        results.push(Object.freeze({
+          streamId: row.streamId, streamRevision: revision, code,
+        }));
+        continue;
+      }
       const before = store.getConversationStream(row.streamId);
       if (!before || before.stream_revision !== revision) {
         code = 'STALE_REPLAN';
@@ -96,6 +133,8 @@ export async function redriveFirstLineOwnerlessPage({
   return Object.freeze({
     results: Object.freeze(results),
     earlyActions: Object.freeze(earlyActions),
+    earlyActionsStatus,
+    discoveryStatus: 'READ_OK',
     nextCursor: page.length === 0 ? null : page[page.length - 1].streamId,
     // This synthetic seam is not the complete CP4 lifecycle or an operator
     // notification mechanism. It MUST NEVER emit an operational heartbeat.

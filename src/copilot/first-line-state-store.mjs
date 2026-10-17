@@ -3140,7 +3140,7 @@ export class FirstLineStateStore {
     const pageSize = positiveInteger(limit, 'limit');
     return readTx(this.db, () => {
       const rows = this.db.prepare(
-        'SELECT s.stream_id FROM conversation_streams s ' +
+        'SELECT s.stream_id, s.stream_revision FROM conversation_streams s ' +
         'WHERE s.stream_revision > 0 AND (? IS NULL OR s.stream_id > ?) ' +
         'AND NOT EXISTS (SELECT 1 FROM semantic_origins so ' +
         'WHERE so.stream_id=s.stream_id AND so.stream_revision=s.stream_revision) ' +
@@ -3148,17 +3148,14 @@ export class FirstLineStateStore {
         'WHERE co.stream_id=s.stream_id AND co.terminal_outcome IS NULL) ' +
         'ORDER BY s.stream_id LIMIT ?'
       ).all(after, after, pageSize);
-      return Object.freeze(rows.map(row => {
-        const stream = this.#readStream(row.stream_id);
-        if (!stream || stream.stream_revision < 1) {
-          fail('FIRST_LINE_DB_CORRUPT', 'ownerless scan stream is invalid');
-        }
-        this.#assertDeferredRelationsValid(stream.stream_id);
-        return Object.freeze({
-          streamId: stream.stream_id,
-          streamRevision: stream.stream_revision,
-        });
-      }));
+      // Discovery is only a cursor over candidate ids. Never validate an
+      // entire stream history here: one damaged row must not starve healthy
+      // conversations. The redriver proves each source inside its own
+      // fail-closed boundary before planning or committing any owner.
+      return Object.freeze(rows.map(row => Object.freeze({
+        streamId: row.stream_id,
+        streamRevision: row.stream_revision,
+      })));
     });
   }
 
