@@ -3,15 +3,34 @@ import { recoverFirstLinePublicSendWithoutTransientText } from './first-line-pub
 // CP4 post-SENDING-only liveness component. No outbound HTTP/writer or
 // public-send path is exposed. PREPARED / GATING and non-actionable revisions
 // are not handled here and still require separate CP4 coverage.
+const CORRUPT = 'FIRST_LINE_DB_CORRUPT';
+
+// A per-action corrupt durable row is isolated, but global query/read faults
+// and unfamiliar exceptions must fail the sweep rather than report success.
 export function runFirstLinePostSendRecoverySweep({ store } = {}) {
-  if (!store || typeof store.listRecoverablePublicActions !== 'function' ||
+  if (!store || typeof store.listRecoverablePublicActionIds !== 'function' ||
+      typeof store.getRecoverablePublicAction !== 'function' ||
       typeof store.getPublicAction !== 'function') {
     throw new TypeError('first_line_recovery_store_required');
   }
-  const actions = store.listRecoverablePublicActions();
+  const ids = store.listRecoverablePublicActionIds();
   let recovered = 0;
   let notYetEligible = 0;
-  for (const action of actions) {
+  const blockedActionIds = [];
+  for (const actionId of ids) {
+    let action;
+    try {
+      action = store.getRecoverablePublicAction(actionId);
+    } catch (error) {
+      if (error?.code !== CORRUPT) throw error;
+      blockedActionIds.push(actionId);
+      continue;
+    }
+    // A concurrent terminalization is safe; no recovery should resurrect it.
+    if (!action) continue;
+    if (action.action_id !== actionId) {
+      throw new TypeError('first_line_recovery_action_identity_mismatch');
+    }
     if (action.state === 'PREPARED' || action.state === 'GATING') {
       notYetEligible += 1;
       continue;
@@ -19,14 +38,27 @@ export function runFirstLinePostSendRecoverySweep({ store } = {}) {
     if (!['SENDING', 'UNCERTAIN'].includes(action.state)) {
       throw new TypeError('first_line_recovery_unknown_state');
     }
-    const result = recoverFirstLinePublicSendWithoutTransientText({
-      store, actionId: action.action_id,
-    });
-    if (result.code !== 'HUMAN_REQUIRED' ||
-        result.continuationOwner?.owner_kind !== 'HUMAN') {
-      throw new Error('first_line_recovery_nonhuman_outcome');
+    try {
+      const result = recoverFirstLinePublicSendWithoutTransientText({
+        store, actionId,
+      });
+      if (result.code !== 'HUMAN_REQUIRED' ||
+          result.continuationOwner?.owner_kind !== 'HUMAN') {
+        throw new Error('first_line_recovery_nonhuman_outcome');
+      }
+      recovered += 1;
+    } catch (error) {
+      if (error?.code !== CORRUPT) throw error;
+      blockedActionIds.push(actionId);
     }
-    recovered += 1;
+  }
+  if (blockedActionIds.length > 0) {
+    // Safe metadata only. A partial sweep is NEVER a completed heartbeat.
+    return Object.freeze({
+      recovered, notYetEligible,
+      blockedActionIds: Object.freeze(blockedActionIds),
+      operationallyComplete: false,
+    });
   }
   return Object.freeze({ recovered, notYetEligible });
 }
@@ -41,7 +73,9 @@ export function createFirstLinePostSendRecoveryScheduler({
   if (!Number.isSafeInteger(intervalMs) || intervalMs <= 0 ||
       typeof onFault !== 'function' ||
       typeof onCompleted !== 'function' ||
-      typeof store?.listRecoverablePublicActions !== 'function') {
+      typeof store?.listRecoverablePublicActionIds !== 'function' ||
+      typeof store?.getRecoverablePublicAction !== 'function' ||
+      typeof store?.getPublicAction !== 'function') {
     throw new TypeError('first_line_recovery_schedule_invalid');
   }
   let timer = null;
@@ -52,6 +86,13 @@ export function createFirstLinePostSendRecoveryScheduler({
     running = true;
     try {
       const completed = runFirstLinePostSendRecoverySweep({ store });
+      if (completed.operationallyComplete === false) {
+        const fault = new Error('first_line_recovery_partial_corrupt');
+        fault.code = 'FIRST_LINE_CP4_PARTIAL_CORRUPT';
+        fault.blockedActionIds = completed.blockedActionIds;
+        fault.recovered = completed.recovered;
+        throw fault;
+      }
       onCompleted(completed);
       return completed;
     } catch (error) {
@@ -71,6 +112,13 @@ export function createFirstLinePostSendRecoveryScheduler({
       }
       // Synchronously perform startup recovery BEFORE scheduling later ticks.
       const initial = runFirstLinePostSendRecoverySweep({ store });
+      if (initial.operationallyComplete === false) {
+        const fault = new Error('first_line_recovery_partial_corrupt');
+        fault.code = 'FIRST_LINE_CP4_PARTIAL_CORRUPT';
+        fault.blockedActionIds = initial.blockedActionIds;
+        fault.recovered = initial.recovered;
+        throw fault;
+      }
       onCompleted(initial);
       timer = setInterval(() => { tick().catch(() => {}); }, intervalMs);
       return initial;

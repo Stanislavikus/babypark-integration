@@ -463,3 +463,49 @@ test('S8-1 property: every subset of corrupt terminal cuts isolates all healthy 
     }
   ), { numRuns: 7, endOnFailure: true });
 });
+
+
+test('S8-3 active recovery barrier blocks without durable HUMAN; lossless-cut completion permits re-drive', async t => {
+  const f = setup(t, 'BARRIER_PRIVATE_CONTENT_26');
+  const second = f.store.ensureConversationStream({
+    sourceProvider: 'chatwoot', sourceConversationId: 56,
+  });
+  f.store.ingestConversationEvent(second.stream_id, event(102));
+  const barrier = f.store.enterRecoveryBarrier({ reason: 'SYNTHETIC_RESTORE_UNPROVABLE' });
+  for (let pass = 0; pass < 2; pass++) {
+    const result = await redriveFirstLineOwnerlessPage(f.options());
+    assert.equal(result.operationallyComplete, false);
+    assert.deepEqual(result.results.map(row => row.code), [
+      'BLOCKED_RECOVERY_BARRIER', 'BLOCKED_RECOVERY_BARRIER',
+    ]);
+    assert.equal(f.store.db.prepare('SELECT COUNT(*) AS n FROM semantic_origins').get().n, 0);
+    assert.equal(f.store.db.prepare('SELECT COUNT(*) AS n FROM continuation_owners').get().n, 0);
+    assert.equal(f.store.db.prepare('SELECT COUNT(*) AS n FROM public_actions').get().n, 0);
+    for (const sid of [f.sid, second.stream_id]) {
+      assert.equal(f.store.getUnresolvedContinuationOwner(sid), null);
+    }
+  }
+  // Synthetic proof of lossless cut: lifting a mere flag without verifying
+  // recovery provenance is never an authorization for real customer execution.
+  f.store.completeRecoveryBarrier(barrier.recovery_epoch, {
+    completion: 'LOSSLESS_SEMANTIC_CUT',
+  });
+  const result = await redriveFirstLineOwnerlessPage(f.options());
+  assert.deepEqual(result.results.map(row => row.code), ['HUMAN_DURABLE', 'HUMAN_DURABLE']);
+  assert.equal(f.store.db.prepare('SELECT COUNT(*) AS n FROM semantic_origins').get().n, 2);
+  absentDb(f, 'BARRIER_PRIVATE_CONTENT_26');
+});
+
+test('S8-3 barrier reason stays typed; unrelated read failure is not misreported as barrier', async t => {
+  const f = setup(t);
+  const original = f.store.readRoutingSnapshot.bind(f.store);
+  f.store.readRoutingSnapshot = () => {
+    const error = new Error('PRIVATE_EXCEPTION_BODY');
+    error.code = 'FIRST_LINE_OTHER_UNREADABLE';
+    throw error;
+  };
+  const result = await redriveFirstLineOwnerlessPage(f.options());
+  assert.equal(result.results[0].code, 'BLOCKED_STREAM_UNREADABLE');
+  assert(!JSON.stringify(result).includes('PRIVATE_EXCEPTION_BODY'));
+  f.store.readRoutingSnapshot = original;
+});

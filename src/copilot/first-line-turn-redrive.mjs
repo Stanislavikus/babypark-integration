@@ -68,7 +68,9 @@ export async function redriveFirstLineOwnerlessPage({
         store.readRoutingSnapshot(row.streamId);
       } catch (error) {
         code = error?.code === 'FIRST_LINE_DB_CORRUPT'
-          ? 'BLOCKED_STREAM_CORRUPT' : 'BLOCKED_STREAM_UNREADABLE';
+          ? 'BLOCKED_STREAM_CORRUPT'
+          : error?.code === 'FIRST_LINE_RECOVERY_BARRIER_ACTIVE'
+            ? 'BLOCKED_RECOVERY_BARRIER' : 'BLOCKED_STREAM_UNREADABLE';
         results.push(Object.freeze({
           streamId: row.streamId, streamRevision: revision, code,
         }));

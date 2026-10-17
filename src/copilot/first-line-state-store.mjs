@@ -5006,6 +5006,37 @@ export class FirstLineStateStore {
     );
   }
 
+  // CP4 recovery discovery contains identifiers only. Inspect each action in
+  // its own read transaction so one corrupt stream never starves unrelated
+  // SENDING/UNCERTAIN recoveries. This scan cannot authorize any state change.
+  listRecoverablePublicActionIds() {
+    return readTx(this.db, () => Object.freeze(this.db.prepare(
+      "SELECT action_id FROM public_actions " +
+      "WHERE state IN ('PREPARED','GATING','SENDING','UNCERTAIN') " +
+      "ORDER BY created_at,action_id"
+    ).all().map(row => row.action_id)));
+  }
+
+  // Per-action equivalent of listRecoverablePublicActions' validation.
+  // A committed terminal transition by a concurrent worker is not an error.
+  getRecoverablePublicAction(actionId) {
+    const id = safeToken(actionId, 'action_id');
+    return readTx(this.db, () => {
+      const action = this.#readAction(id);
+      if (!action || !LIVE_ACTION_STATES.has(action.state)) return null;
+      this.#assertDeferredRelationsValid(action.stream_id);
+      if (action.continuation_owner.owner_kind !== 'PUBLIC_ACTION' ||
+          action.continuation_owner.terminal_outcome !== null) return null;
+      if (action.descriptor === null) {
+        fail('FIRST_LINE_DB_CORRUPT',
+          'autonomous recoverable action lacks v4 descriptor', {
+            action_id: action.action_id,
+          });
+      }
+      return action;
+    });
+  }
+
   listRecoverablePublicActions({ now = this.now() } = {}) {
     nonNegativeInteger(now, 'now');
     return readTx(this.db, () => {
