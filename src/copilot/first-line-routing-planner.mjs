@@ -230,6 +230,29 @@ export function projectOpenTurn(rawSnapshot) {
   }
 
   const customerEntries = [];
+  let confirmedBoundary = null;
+
+  // An authenticated Chatwoot bot echo can enter the local ledger BEFORE
+  // a customer message that is durably deferred during that same SENDING/
+  // UNCERTAIN action. The later normal CONFIRMED cut proves ownership, even
+  // when reverse event_seq traversal has not encountered that echo yet.
+  // Select the latest normally confirmed action by prepared revision, not
+  // by webhook source id, timestamp or echo acceptance order.
+  let latestConfirmed = null;
+  const confirmedByActionId = new Map();
+  for (const entry of suffix) {
+    const candidate = entry.confirmed_babypark_action;
+    if (!candidate) continue;
+    if (confirmedByActionId.has(candidate.action_id)) {
+      return unprovable(snapshot, 'AMBIGUOUS_CONFIRMED_ACTION', entry);
+    }
+    confirmedByActionId.set(candidate.action_id, entry);
+    if (!latestConfirmed ||
+        candidate.prepared_stream_revision >
+          latestConfirmed.confirmed_babypark_action.prepared_stream_revision) {
+      latestConfirmed = entry;
+    }
+  }
 
   for (let index = suffix.length - 1; index >= 0; index -= 1) {
     const entry = suffix[index];
@@ -246,6 +269,71 @@ export function projectOpenTurn(rawSnapshot) {
       if (!supportedCustomerEvent(event)) {
         return unprovable(snapshot, 'UNSUPPORTED_CUSTOMER_EVENT', entry);
       }
+      if (confirmedBoundary) {
+        const boundaryAction = confirmedBoundary.confirmed_babypark_action;
+        if (event.event_seq <= boundaryAction.prepared_stream_revision) {
+          // A later normally confirmed action was prepared AFTER this
+          // customer's accepted event. This event is therefore in that
+          // completed action's basis/history, even if it was deferred
+          // behind an EARLIER confirmed action whose echo preceded it.
+          // Require the older parent to be proven in this bounded suffix;
+          // never treat an unknown/HUMAN-owned relation as completed.
+          if (entry.deferred_parent) {
+            const parent = entry.deferred_parent;
+            const previous = confirmedByActionId.get(parent.action_id);
+            const previousAction = previous?.confirmed_babypark_action;
+            if (parent.stream_id !== snapshot.stream.stream_id ||
+                parent.event_seq !== event.event_seq ||
+                !previousAction ||
+                !supportedConfirmedBabyparkReply(previous.event, previousAction) ||
+                previousAction.prepared_stream_revision >= event.event_seq ||
+                previousAction.prepared_stream_revision >=
+                  boundaryAction.prepared_stream_revision) {
+              return unprovable(snapshot, 'DEFERRED_PARENT_HISTORICAL_CONFLICT', entry);
+            }
+          }
+          return customerEntries.length > 0
+            ? openTurn(snapshot, customerEntries,
+              'AFTER_CONFIRMED_BABYPARK_REPLY', confirmedBoundary)
+            : noOpenTurn(snapshot, 'CONFIRMED_BABYPARK_REPLY_LAST', confirmedBoundary);
+        }
+        // A later accepted event is still open only when the immutable
+        // parent matches the exact most-recently confirmed outgoing action.
+        // Absent parent preserves the ordinary completed-boundary cut;
+        // competing/forged parents always fail closed.
+        if (!entry.deferred_parent) {
+          return customerEntries.length > 0
+            ? openTurn(snapshot, customerEntries,
+              'AFTER_CONFIRMED_BABYPARK_REPLY', confirmedBoundary)
+            : noOpenTurn(snapshot, 'CONFIRMED_BABYPARK_REPLY_LAST', confirmedBoundary);
+        }
+        if (entry.deferred_parent.stream_id !== snapshot.stream.stream_id ||
+            entry.deferred_parent.event_seq !== event.event_seq ||
+            entry.deferred_parent.action_id !== boundaryAction.action_id) {
+          return unprovable(snapshot, 'DEFERRED_PARENT_CONFLICT', entry);
+        }
+      } else if (entry.deferred_parent) {
+        // A deferred child can be seen before its confirmed parent echo in
+        // reverse scan order. Resolve only against the EXACT, latest,
+        // normal CONFIRMED parent proved in this certified suffix. A child
+        // of an older response cannot reopen after a newer confirmation.
+        // While still sending, retain the pre-existing live-action fence.
+        const parent = entry.deferred_parent;
+        const live = snapshot.live_public_action;
+        const latest = latestConfirmed?.confirmed_babypark_action;
+        const confirmedParent =
+          latest?.action_id === parent.action_id &&
+          event.event_seq > latest.prepared_stream_revision &&
+          supportedConfirmedBabyparkReply(latestConfirmed.event, latest);
+        const liveParent =
+          live?.action_id === parent.action_id &&
+          ['SENDING', 'UNCERTAIN'].includes(live.state);
+        if (parent.stream_id !== snapshot.stream.stream_id ||
+            parent.event_seq !== event.event_seq ||
+            (!confirmedParent && !liveParent)) {
+          return unprovable(snapshot, 'DEFERRED_PARENT_UNRESOLVED', entry);
+        }
+      }
       customerEntries.push(entry);
       if (customerEntries.length > MAX_OPEN_TURN_EVENTS) {
         return unprovable(snapshot, 'OPEN_TURN_EVENT_LIMIT');
@@ -260,16 +348,18 @@ export function projectOpenTurn(rawSnapshot) {
       if (!supportedConfirmedBabyparkReply(event, entry.confirmed_babypark_action)) {
         return unprovable(snapshot, 'UNSUPPORTED_CONFIRMED_BABYPARK_REPLY', entry);
       }
-      return customerEntries.length > 0
-        ? openTurn(snapshot, customerEntries, 'AFTER_CONFIRMED_BABYPARK_REPLY', entry)
-        : noOpenTurn(snapshot, 'CONFIRMED_BABYPARK_REPLY_LAST', entry);
+      if (confirmedBoundary) {
+        return customerEntries.length > 0
+          ? openTurn(snapshot, customerEntries,
+            'AFTER_CONFIRMED_BABYPARK_REPLY', confirmedBoundary)
+          : noOpenTurn(snapshot, 'CONFIRMED_BABYPARK_REPLY_LAST', confirmedBoundary);
+      }
+      confirmedBoundary = entry;
+      continue;
     }
 
-    if (event.event_kind === 'HUMAN_PUBLIC_REPLY') {
-      return unprovable(snapshot, 'OWNERSHIP_BLOCKER', entry);
-    }
-
-    if (BLOCKING_PUBLIC_KINDS.has(event.event_kind)) {
+    if (event.event_kind === 'HUMAN_PUBLIC_REPLY' ||
+        BLOCKING_PUBLIC_KINDS.has(event.event_kind)) {
       return unprovable(snapshot, 'OWNERSHIP_BLOCKER', entry);
     }
 
@@ -278,6 +368,12 @@ export function projectOpenTurn(rawSnapshot) {
 
   if (snapshot.suffix_truncated) {
     return unprovable(snapshot, 'ROUTING_SUFFIX_LIMIT');
+  }
+  if (confirmedBoundary) {
+    return customerEntries.length > 0
+      ? openTurn(snapshot, customerEntries,
+        'AFTER_CONFIRMED_BABYPARK_REPLY', confirmedBoundary)
+      : noOpenTurn(snapshot, 'CONFIRMED_BABYPARK_REPLY_LAST', confirmedBoundary);
   }
   if (customerEntries.length === 0) {
     return noOpenTurn(snapshot, 'NO_CUSTOMER_EVENT');

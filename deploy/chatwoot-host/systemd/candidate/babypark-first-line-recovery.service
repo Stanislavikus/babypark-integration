@@ -1,0 +1,46 @@
+# NOT INSTALLED. C6/CP4 candidate only, requires measured timing and B2 gates.
+# External operator attention and missed-heartbeat alarm are NOT implemented.
+[Unit]
+Description=BabyPark First Line post-send recovery (candidate, no public writer)
+After=local-fs.target
+RequiresMountsFor=/var/lib/babypark-first-line
+# CANDIDATE policy only: measure and bind restart thresholds at rollout.
+StartLimitIntervalSec=10min
+StartLimitBurst=3
+
+[Service]
+Type=notify
+NotifyAccess=all
+User=babypark-firstline
+Group=babypark-firstline
+EnvironmentFile=/etc/babypark-first-line-recovery.env
+ExecStart=/usr/bin/node /opt/babypark-integration/current/scripts/first-line-postsend-service.mjs
+Restart=on-failure
+# CANDIDATE ONLY, NOT APPROVED NUMERIC BUDGET. Must be derived from
+# actual interval + worst-case sweep + signal-delay evidence before deploy.
+WatchdogSec=120s
+RestartSec=10s
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+# The directory and existing v4 DB must be pre-provisioned by an explicit
+# owner-approved operator action; the service must not initialize SQLite.
+ReadWritePaths=/var/lib/babypark-first-line
+InaccessiblePaths=/var/lib/babypark-integration
+InaccessiblePaths=-/var/backups/babypark-knowledge
+UMask=0077
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+LockPersonality=true
+RestrictSUIDSGID=true
+
+# Intentionally no [Install] or auto-enable path.
+# The unit must not be installed with provisional StartLimit*/WatchdogSec values.
+# Preflight requirements: measured limits, dedicated system user, pre-created
+# 0600 episode.sqlite, root-owned 0600 EnvironmentFile with only DB path and
+# interval, no Chatwoot/bridge/knowledge/backup credentials, actual watchdog
+# integration proof, off-host missed-heartbeat alert, operator attention, B2.
+# A missing DB after activation is a FAILED restart-limit exhaustion alarm:
+# do NOT use ConditionPathExists=, which would silently skip the service.
