@@ -56,8 +56,27 @@ export function runFirstLinePostSendRecoverySweep({ store } = {}) {
       }
       recovered += 1;
     } catch (error) {
-      if (error?.code !== CORRUPT) throw error;
-      blockedActionIds.push(actionId);
+      if (error?.code === CORRUPT) {
+        blockedActionIds.push(actionId);
+        continue;
+      }
+      // A separate SQLite transaction may have terminalized this exact action
+      // after the coordinator read but before its irreversible state write.
+      // Only a proven committed terminal row makes that specific conflict
+      // harmless; do not suppress programmer, SQL, or still-live failures.
+      if (error?.code === 'FIRST_LINE_ACTION_STATE_INVALID') {
+        let current;
+        try {
+          current = store.getPublicAction(actionId);
+        } catch (readError) {
+          if (readError?.code !== CORRUPT) throw readError;
+          blockedActionIds.push(actionId);
+          continue;
+        }
+        if (current?.action_id === actionId &&
+            TERMINAL_ACTION_STATES.has(current.state)) continue;
+      }
+      throw error;
     }
   }
   if (blockedActionIds.length > 0) {

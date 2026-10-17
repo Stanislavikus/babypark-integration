@@ -346,3 +346,180 @@ test('N-22 mixed SQLite: concurrent terminal, corrupt row and healthy UNCERTAIN 
   assert.throws(() => scheduler.start(), { code: 'FIRST_LINE_CP4_PARTIAL_CORRUPT' });
   assert.equal(runFirstLinePostSendRecoverySweep({ store }).recovered, 0);
 });
+
+
+function injectConfirmedSourceAtWriteSeam(store, actionId, streamId, seam) {
+  let injected = 0;
+  const insertProof = () => {
+    assert.equal(injected++, 0, 'terminalization must be injected exactly once');
+    store.ingestConversationEvent(streamId, {
+      sourceMessageId: 93901, eventKind: 'BABYPARK_PUBLIC_REPLY',
+      messageType: 'outgoing', senderClass: 'configured_agent_bot', senderId: 7,
+      contentType: 'text', deleted: false, unsupported: false,
+      hasAttachments: false, sourceId: actionId,
+    });
+    assert.equal(store.confirmPublicActionFromLedger(actionId).state, 'CONFIRMED');
+  };
+  if (seam === 'markActionUncertain') {
+    const original = store.markActionUncertain.bind(store);
+    store.markActionUncertain = (id, args) => {
+      if (id === actionId && injected === 0) insertProof();
+      return original(id, args);
+    };
+  } else if (seam === 'escalatePublicActionToHuman') {
+    const original = store.escalatePublicActionToHuman.bind(store);
+    store.escalatePublicActionToHuman = (id, args) => {
+      if (id === actionId && injected === 0) insertProof();
+      return original(id, args);
+    };
+  } else {
+    throw new Error('unexpected test seam');
+  }
+  return () => injected;
+}
+
+test('R2-BLK-01 real SQLite: both write seams terminalize without starving healthy neighbors', t => {
+  for (const seam of ['markActionUncertain', 'escalatePublicActionToHuman']) {
+    const { store, ids, dir } = cp4Fixture(t);
+    if (seam === 'escalatePublicActionToHuman') {
+      store.markActionUncertain(ids[0], { reason: 'synthetic_preexisting_uncertain' });
+    }
+    const firstStream = store.getPublicAction(ids[0]).stream_id;
+    const getInjected = injectConfirmedSourceAtWriteSeam(store, ids[0], firstStream, seam);
+    // The first action must become CONFIRMED while the other two recover.
+    assert.deepEqual(runFirstLinePostSendRecoverySweep({ store }),
+      { recovered: 2, notYetEligible: 0 }, seam);
+    assert.equal(getInjected(), 1, seam);
+    assert.equal(store.getPublicAction(ids[0]).state, 'CONFIRMED');
+    assert.equal(store.getUnresolvedContinuationOwner(firstStream), null,
+      'terminal action cannot acquire a fabricated HUMAN continuation');
+    for (const id of ids.slice(1)) {
+      const action = store.getPublicAction(id);
+      assert.equal(action.state, 'UNCERTAIN', seam);
+      assert.equal(store.getUnresolvedContinuationOwner(action.stream_id)?.owner_kind,
+        'HUMAN', seam);
+    }
+    assert.deepEqual(runFirstLinePostSendRecoverySweep({ store }),
+      { recovered: 0, notYetEligible: 0 }, 'idempotent replay');
+    for (const name of fs.readdirSync(dir)) {
+      if (!name.startsWith('episode.sqlite')) continue;
+      assert.equal(fs.readFileSync(path.join(dir, name)).includes(
+        Buffer.from('PRIVATE_CUSTOMER_TEST_CONTENT')), false);
+    }
+  }
+});
+
+test('R2-BLK-01 typed error reread: only same-id frozen terminal states are harmless', () => {
+  for (const finalState of [
+    ...TERMINAL_ACTION_STATES, 'SENDING', 'UNCERTAIN', 'GATING',
+    'PREPARED', 'UNRECOGNIZED', null, 'MISMATCH',
+  ]) {
+    let reads = 0;
+    const originalError = new Error('synthetic_write_state_conflict');
+    originalError.code = 'FIRST_LINE_ACTION_STATE_INVALID';
+    const store = {
+      listRecoverablePublicActionIds: () => ['synthetic-race'],
+      getRecoverablePublicAction: () => ({ action_id: 'synthetic-race', state: 'SENDING' }),
+      getPublicAction: id => {
+        reads++;
+        if (reads === 1) return { action_id: id, state: 'SENDING' };
+        if (finalState === null) return null;
+        return { action_id: finalState === 'MISMATCH' ? 'different' : id,
+          state: finalState };
+      },
+      markActionUncertain: () => { throw originalError; },
+    };
+    if (TERMINAL_ACTION_STATES.has(finalState)) {
+      assert.deepEqual(runFirstLinePostSendRecoverySweep({ store }),
+        { recovered: 0, notYetEligible: 0 }, finalState);
+    } else {
+      assert.throws(() => runFirstLinePostSendRecoverySweep({ store }),
+        error => error === originalError, String(finalState));
+    }
+    assert.equal(reads, 2, String(finalState));
+  }
+});
+
+test('R2-BLK-01 typed errors cannot mask unrelated faults; reread corrupt is partial, never completed', () => {
+  for (const code of ['SQLITE_BUSY', 'FIRST_LINE_UNEXPECTED', undefined]) {
+    let reads = 0;
+    const cause = new Error('synthetic_unrelated_fault');
+    if (code !== undefined) cause.code = code;
+    const store = {
+      listRecoverablePublicActionIds: () => ['synthetic-race'],
+      getRecoverablePublicAction: () => ({ action_id: 'synthetic-race', state: 'SENDING' }),
+      getPublicAction: id => { reads++; return { action_id: id, state: 'SENDING' }; },
+      markActionUncertain: () => { throw cause; },
+    };
+    assert.throws(() => runFirstLinePostSendRecoverySweep({ store }),
+      error => error === cause, String(code));
+    assert.equal(reads, 1, 'no reread on unrelated error');
+  }
+  const stateError = new Error('synthetic_state_conflict');
+  stateError.code = 'FIRST_LINE_ACTION_STATE_INVALID';
+  const corruptError = new Error('PRIVATE_ROW_ERROR_DETAIL');
+  corruptError.code = 'FIRST_LINE_DB_CORRUPT';
+  let firstReads = 0;
+  const store = {
+    listRecoverablePublicActionIds: () => ['raced', 'healthy'],
+    getRecoverablePublicAction: id => ({ action_id: id, state: 'UNCERTAIN' }),
+    getPublicAction: id => {
+      if (id === 'raced') {
+        if (firstReads++ === 0) return { action_id: id, state: 'UNCERTAIN' };
+        throw corruptError;
+      }
+      return { action_id: id, state: 'UNCERTAIN', stream_id: 'healthy-stream' };
+    },
+    getUnresolvedContinuationOwner: id => ({
+      owner_kind: id === 'healthy-stream' ? 'HUMAN' : 'PUBLIC_ACTION',
+    }),
+    escalatePublicActionToHuman: id => {
+      if (id === 'raced') throw stateError;
+      throw new Error('no new HUMAN needed for healthy synthetic action');
+    },
+  };
+  const completed = [];
+  const result = runFirstLinePostSendRecoverySweep({ store });
+  assert.deepEqual(result, {
+    recovered: 1, notYetEligible: 0,
+    blockedActionIds: ['raced'], operationallyComplete: false,
+  });
+  assert.deepEqual(completed, [], 'partial recovery is never an operator heartbeat');
+});
+
+test('R2-BLK-01 benign terminal write race does not disable periodic scheduler', async () => {
+  let enumerations = 0;
+  let reads = 0;
+  let completed = 0;
+  const faults = [];
+  let received;
+  const didComplete = new Promise(resolve => { received = resolve; });
+  const error = new Error('synthetic_periodic_terminal_write_race');
+  error.code = 'FIRST_LINE_ACTION_STATE_INVALID';
+  const store = {
+    listRecoverablePublicActionIds() {
+      enumerations++;
+      return enumerations === 1 ? [] : ['periodic-raced'];
+    },
+    getRecoverablePublicAction: () => ({ action_id: 'periodic-raced', state: 'SENDING' }),
+    getPublicAction: id => ({ action_id: id, state: reads++ % 2 === 0
+      ? 'SENDING' : 'CONFIRMED' }),
+    markActionUncertain: () => { throw error; },
+  };
+  const scheduler = createFirstLinePostSendRecoveryScheduler({
+    store, intervalMs: 10,
+    onFault: e => faults.push(e.code),
+    onCompleted: () => { completed++; if (completed >= 2) received(); },
+  });
+  scheduler.start();
+  try {
+    await Promise.race([
+      didComplete,
+      new Promise(resolve => setTimeout(resolve, 150)),
+    ]);
+    assert.equal(completed >= 2, true, 'benign race must leave timer live');
+    assert.deepEqual(faults, []);
+  } finally {
+    scheduler.stop();
+  }
+});
