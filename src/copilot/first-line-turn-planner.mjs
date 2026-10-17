@@ -31,7 +31,7 @@ function stale() {
 }
 
 export async function planFirstLineTurnToOutcome({
-  store, streamId, reader, produceExtraction, catalogService, knowledgeStore, nowUtc,
+  store, streamId, reader, produceExtraction, catalogService, knowledgeStore,
 } = {}) {
   if (typeof streamId !== 'string' || !streamId ||
       typeof store?.getConversationStream !== 'function' ||
@@ -64,6 +64,9 @@ export async function planFirstLineTurnToOutcome({
   let candidate;
   let reason = null;
   try {
+    // The S1 clock is local authority, never a date supplied by ingress,
+    // caller, or replay. This remains non-authorizing; S2 checks time anew.
+    const nowUtc = new Date(store.now()).toISOString();
     candidate = await buildFirstLineTransientCandidate({
       store, streamId, reader, produceExtraction, catalogService, knowledgeStore, nowUtc,
     });

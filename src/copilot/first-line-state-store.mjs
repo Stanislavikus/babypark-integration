@@ -3129,6 +3129,39 @@ export class FirstLineStateStore {
     return readTx(this.db, () => this.#readStream(id));
   }
 
+
+  // S-8 synthetic-only discovery seam. This is NOT a scheduler/lease:
+  // the authoritative v4 CAS below decides whether any continuation is
+  // committed. Never infer missing ownership from webhook delivery timing.
+  // A caller supplies an explicit page size/cursor to avoid hidden budgets.
+  listOwnerlessCurrentStreams({ afterStreamId = null, limit } = {}) {
+    const after = afterStreamId === null
+      ? null : safeToken(afterStreamId, 'after_stream_id');
+    const pageSize = positiveInteger(limit, 'limit');
+    return readTx(this.db, () => {
+      const rows = this.db.prepare(
+        'SELECT s.stream_id FROM conversation_streams s ' +
+        'WHERE s.stream_revision > 0 AND (? IS NULL OR s.stream_id > ?) ' +
+        'AND NOT EXISTS (SELECT 1 FROM semantic_origins so ' +
+        'WHERE so.stream_id=s.stream_id AND so.stream_revision=s.stream_revision) ' +
+        'AND NOT EXISTS (SELECT 1 FROM continuation_owners co ' +
+        'WHERE co.stream_id=s.stream_id AND co.terminal_outcome IS NULL) ' +
+        'ORDER BY s.stream_id LIMIT ?'
+      ).all(after, after, pageSize);
+      return Object.freeze(rows.map(row => {
+        const stream = this.#readStream(row.stream_id);
+        if (!stream || stream.stream_revision < 1) {
+          fail('FIRST_LINE_DB_CORRUPT', 'ownerless scan stream is invalid');
+        }
+        this.#assertDeferredRelationsValid(stream.stream_id);
+        return Object.freeze({
+          streamId: stream.stream_id,
+          streamRevision: stream.stream_revision,
+        });
+      }));
+    });
+  }
+
   recordScanHighwater(streamId, sourceMessageId) {
     const id = safeToken(streamId, 'stream_id');
     const source = positiveInteger(sourceMessageId, 'source_message_id');
