@@ -5,6 +5,22 @@ import { TERMINAL_ACTION_STATES } from './first-line-state-store.mjs';
 // public-send path is exposed. PREPARED / GATING and non-actionable revisions
 // are not handled here and still require separate CP4 coverage.
 const CORRUPT = 'FIRST_LINE_DB_CORRUPT';
+// Mirror the existing state-store safeToken(action_id) grammar for row-local
+// isolation. Never copy a corrupt raw identifier into an operator-visible
+// result, exception or log.
+const MALFORMED_ACTION_ID = 'INVALID_ACTION_ID';
+const CANONICAL_ACTION_ID = /^[A-Za-z0-9][A-Za-z0-9._:/-]*$/u;
+
+function isCanonicalActionId(id) {
+  return typeof id === 'string' && id.length >= 1 && id.length <= 160 &&
+    CANONICAL_ACTION_ID.test(id);
+}
+
+function malformedActionIdFailure() {
+  const error = new Error('first_line_recovery_malformed_id_unclassified');
+  error.code = 'FIRST_LINE_RECOVERY_MALFORMED_ID_UNCLASSIFIED';
+  return error;
+}
 
 // A per-action corrupt durable row is isolated, but global query/read faults
 // and unfamiliar exceptions must fail the sweep rather than report success.
@@ -19,14 +35,27 @@ export function runFirstLinePostSendRecoverySweep({ store } = {}) {
   let notYetEligible = 0;
   const blockedActionIds = [];
   for (const actionId of ids) {
+    const validId = isCanonicalActionId(actionId);
     let action;
     try {
       action = store.getRecoverablePublicAction(actionId);
     } catch (error) {
-      if (error?.code !== CORRUPT) throw error;
-      blockedActionIds.push(actionId);
-      continue;
+      // Only an enumerated malformed ID plus the precise identifier
+      // validation error is a recoverable per-row classification. A VALID ID
+      // with the same code can indicate unrelated bad state and MUST fail.
+      if (error?.code === CORRUPT ||
+          (error?.code === 'FIRST_LINE_VALUE_INVALID' && !validId)) {
+        blockedActionIds.push(validId ? actionId : MALFORMED_ACTION_ID);
+        continue;
+      }
+      // Unknown/SQL faults remain fatal, without exposing an untrusted
+      // malformed ID even if the upstream exception text contains it.
+      if (!validId) throw malformedActionIdFailure();
+      throw error;
     }
+    // A malformed ID returned without a typed validation error is an
+    // unclassified store outcome, never permission for a successful sweep.
+    if (!validId) throw malformedActionIdFailure();
     // A concurrent terminalization is safe; no recovery should resurrect it.
     if (!action) continue;
     if (action.action_id !== actionId) {
@@ -64,7 +93,8 @@ export function runFirstLinePostSendRecoverySweep({ store } = {}) {
       // after the coordinator read but before its irreversible state write.
       // Only a proven committed terminal row makes that specific conflict
       // harmless; do not suppress programmer, SQL, or still-live failures.
-      if (error?.code === 'FIRST_LINE_ACTION_STATE_INVALID') {
+      if (error?.code === 'FIRST_LINE_ACTION_STATE_INVALID' ||
+          error?.code === 'FIRST_LINE_HUMAN_CONTINUATION_ACTIVE') {
         let current;
         try {
           current = store.getPublicAction(actionId);
@@ -73,8 +103,29 @@ export function runFirstLinePostSendRecoverySweep({ store } = {}) {
           blockedActionIds.push(actionId);
           continue;
         }
-        if (current?.action_id === actionId &&
+        if (error.code === 'FIRST_LINE_ACTION_STATE_INVALID' &&
+            current?.action_id === actionId &&
             TERMINAL_ACTION_STATES.has(current.state)) continue;
+        // A concurrent writer may have already settled the *same* semantic
+        // action to HUMAN with an immutable, different reason. The typed
+        // conflict is NOT proof; only the store-validated committed owner
+        // for this action/stream/revision is safe to skip. No new handoff is
+        // counted, and the persisted human_reason is never overwritten.
+        const owner = current?.continuation_owner;
+        if (error.code === 'FIRST_LINE_HUMAN_CONTINUATION_ACTIVE' &&
+            current?.action_id === actionId &&
+            (current.state === 'SENDING' || current.state === 'UNCERTAIN') &&
+            typeof current.stream_id === 'string' && current.stream_id.length > 0 &&
+            Number.isSafeInteger(current.prepared_stream_revision) &&
+            current.prepared_stream_revision > 0 &&
+            owner?.owner_kind === 'HUMAN' &&
+            owner.action_id === actionId &&
+            owner.stream_id === current.stream_id &&
+            owner.stream_revision === current.prepared_stream_revision &&
+            owner.terminal_outcome === null &&
+            typeof owner.human_reason === 'string' && owner.human_reason.length > 0) {
+          continue;
+        }
       }
       throw error;
     }

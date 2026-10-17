@@ -523,3 +523,292 @@ test('R2-BLK-01 benign terminal write race does not disable periodic scheduler',
     scheduler.stop();
   }
 });
+
+
+test('R2-HC-01: real SQLite immutable HUMAN reason race cannot starve healthy neighbors', t => {
+  for (const preexistingUncertain of [false, true]) {
+    const { store, ids, dir } = cp4Fixture(t);
+    const actionId = ids[0];
+    if (preexistingUncertain) store.markActionUncertain(actionId, {
+      reason: 'synthetic_preexisting_uncertain',
+    });
+    const before = store.getPublicAction(actionId);
+    const original = store.escalatePublicActionToHuman.bind(store);
+    let races = 0;
+    store.escalatePublicActionToHuman = (id, args) => {
+      if (id === actionId && races++ === 0) {
+        const competing = original(id, { reason: 'send_outcome_unproven' });
+        assert.equal(competing.owner_kind, 'HUMAN');
+      }
+      return original(id, args);
+    };
+    assert.deepEqual(runFirstLinePostSendRecoverySweep({ store }),
+      { recovered: 2, notYetEligible: 0 });
+    assert.equal(races, 1, 'competing writer injected exactly once');
+    const settled = store.getPublicAction(actionId);
+    assert.equal(settled.state, 'UNCERTAIN');
+    assert.equal(settled.continuation_owner.owner_kind, 'HUMAN');
+    assert.equal(settled.continuation_owner.human_reason, 'send_outcome_unproven');
+    assert.equal(settled.continuation_owner.action_id, actionId);
+    assert.equal(settled.continuation_owner.stream_id, before.stream_id);
+    assert.equal(settled.continuation_owner.stream_revision, before.prepared_stream_revision);
+    assert.equal(settled.continuation_owner.terminal_outcome, null);
+    for (const id of ids.slice(1)) {
+      const a = store.getPublicAction(id);
+      assert.equal(a.state, 'UNCERTAIN');
+      assert.equal(a.continuation_owner.owner_kind, 'HUMAN');
+    }
+    assert.deepEqual(runFirstLinePostSendRecoverySweep({ store }),
+      { recovered: 0, notYetEligible: 0 }, 'repeated sweep cannot invent a second HUMAN');
+    for (const name of fs.readdirSync(dir)) {
+      if (name.startsWith('episode.sqlite')) assert.equal(
+        fs.readFileSync(path.join(dir, name)).includes(Buffer.from('PRIVATE_CUSTOMER_TEST_CONTENT')),
+        false);
+    }
+  }
+});
+
+test('R2-HC-01 typed immutable HUMAN conflict requires exact action/stream/revision and live owner', () => {
+  const specs = [
+    ['CORRECT', {}, true],
+    ['BAD_ID', { action_id: 'wrong' }, false],
+    ['BAD_ACTION_STREAM', { stream_id: 'wrong-stream' }, false],
+    ['BAD_REVISION', { prepared_stream_revision: 3 }, false],
+    ['BAD_OWNER_ID', { continuation_owner: { action_id: 'wrong' } }, false],
+    ['BAD_OWNER_STREAM', { continuation_owner: { stream_id: 'wrong-stream' } }, false],
+    ['BAD_OWNER_REVISION', { continuation_owner: { stream_revision: 5 } }, false],
+    ['BAD_OWNER_KIND', { continuation_owner: { owner_kind: 'PUBLIC_ACTION' } }, false],
+    ['BAD_OWNER_TERMINAL', { continuation_owner: { terminal_outcome: 'HUMAN_TAKEOVER' } }, false],
+    ['BAD_OWNER_REASON', { continuation_owner: { human_reason: null } }, false],
+    ['BAD_STATE_GATING', { state: 'GATING' }, false],
+    ['BAD_STATE_UNKNOWN', { state: 'UNCLASSIFIED' }, false],
+    ['NO_ACTION', null, false],
+  ];
+  for (const [label, patch, isValid] of specs) {
+    const conflict = new Error('synthetic_reason_collision');
+    conflict.code = 'FIRST_LINE_HUMAN_CONTINUATION_ACTIVE';
+    const a = {
+      action_id: 'race-action', stream_id: 'race-stream', prepared_stream_revision: 2,
+      state: 'UNCERTAIN',
+      continuation_owner: {
+        owner_kind: 'HUMAN', action_id: 'race-action',
+        stream_id: 'race-stream', stream_revision: 2, terminal_outcome: null,
+        human_reason: 'send_outcome_unproven',
+      },
+    };
+    const latest = patch === null ? null : {
+      ...a, ...patch, continuation_owner: {
+        ...a.continuation_owner, ...(patch.continuation_owner || {}),
+      },
+    };
+    let reads = 0;
+    const store = {
+      listRecoverablePublicActionIds: () => ['race-action'],
+      getRecoverablePublicAction: () => ({ action_id: 'race-action', state: 'UNCERTAIN' }),
+      getPublicAction: () => ++reads === 1 ? {
+        action_id: 'race-action', state: 'UNCERTAIN',
+      } : latest,
+      getUnresolvedContinuationOwner: () => ({ owner_kind: 'PUBLIC_ACTION' }),
+      escalatePublicActionToHuman: () => { throw conflict; },
+    };
+    if (isValid) {
+      assert.deepEqual(runFirstLinePostSendRecoverySweep({ store }),
+        { recovered: 0, notYetEligible: 0 }, label);
+    } else {
+      assert.throws(() => runFirstLinePostSendRecoverySweep({ store }),
+        e => e === conflict, label);
+    }
+    assert.equal(reads, 2, label);
+  }
+});
+
+test('R2-HC-01 secondary corrupt read isolates row; SQLite and unknown errors remain fatal', () => {
+  const conflict = new Error('reason_collision');
+  conflict.code = 'FIRST_LINE_HUMAN_CONTINUATION_ACTIVE';
+  const corrupt = new Error('PRIVATE_CORRUPT_DETAIL');
+  corrupt.code = 'FIRST_LINE_DB_CORRUPT';
+  for (const failure of [corrupt, Object.assign(new Error('PRIVATE_SQL'), { code: 'SQLITE_BUSY' }),
+    new Error('PRIVATE_UNEXPECTED')]) {
+    let reads = 0;
+    const store = {
+      listRecoverablePublicActionIds: () => ['bad', 'healthy'],
+      getRecoverablePublicAction: id => ({ action_id: id, state: 'UNCERTAIN' }),
+      getPublicAction: id => {
+        if (id === 'bad') { if (reads++ === 0) return { action_id: id, state: 'UNCERTAIN' }; throw failure; }
+        return { action_id: id, state: 'UNCERTAIN' };
+      },
+      getUnresolvedContinuationOwner: () => ({ owner_kind: 'PUBLIC_ACTION' }),
+      escalatePublicActionToHuman: id => {
+        if (id === 'bad') throw conflict;
+        return { owner_kind: 'HUMAN' };
+      },
+    };
+    if (failure === corrupt) {
+      assert.deepEqual(runFirstLinePostSendRecoverySweep({ store }), {
+        recovered: 1, notYetEligible: 0, blockedActionIds: ['bad'],
+        operationallyComplete: false,
+      });
+    } else {
+      assert.throws(() => runFirstLinePostSendRecoverySweep({ store }), e => e === failure);
+    }
+  }
+});
+
+test('R2-VAL-01 malformed SQLite action id is isolated with fixed marker, never raw private bytes', t => {
+  const { store, ids } = cp4Fixture(t);
+  const sensitiveId = 'PRIVATE_CUSTOMER_TEXT@example.test\nphone +999 000 111';
+  // Only fixture corruption: production schema refuses this mutation.
+  assert.throws(() => store.db.prepare('UPDATE public_actions SET action_id=? WHERE action_id=?')
+    .run(sensitiveId, ids[0]));
+  store.db.exec('PRAGMA foreign_keys=OFF; DROP TRIGGER IF EXISTS public_actions_immutable_semantics_v4');
+  store.db.prepare('UPDATE public_actions SET action_id=? WHERE action_id=?').run(sensitiveId, ids[0]);
+  assert.ok(store.listRecoverablePublicActionIds().includes(sensitiveId));
+  const result = runFirstLinePostSendRecoverySweep({ store });
+  assert.deepEqual(result, { recovered: 2, notYetEligible: 0,
+    blockedActionIds: ['INVALID_ACTION_ID'], operationallyComplete: false });
+  assert.equal(JSON.stringify(result).includes(sensitiveId), false);
+  for (const id of ids.slice(1)) {
+    const a = store.getPublicAction(id);
+    assert.equal(a.state, 'UNCERTAIN');
+    assert.equal(a.continuation_owner.owner_kind, 'HUMAN');
+  }
+  const completed = [], faults = [];
+  const scheduler = createFirstLinePostSendRecoveryScheduler({
+    store, intervalMs: 50, onCompleted: value => completed.push(value),
+    onFault: e => faults.push(e),
+  });
+  let fault;
+  assert.throws(() => scheduler.start(), e => { fault = e; return e.code === 'FIRST_LINE_CP4_PARTIAL_CORRUPT'; });
+  assert.deepEqual(completed, [], 'partial must not produce completed heartbeat');
+  assert.deepEqual(fault.blockedActionIds, ['INVALID_ACTION_ID']);
+  assert.equal(JSON.stringify(fault).includes(sensitiveId), false);
+  assert.equal(String(fault.message).includes(sensitiveId), false);
+  assert.deepEqual(faults, [], 'startup failure does not emit a false periodic onFault');
+});
+
+test('R2-VAL-01 fail closed: valid id with same VALUE_INVALID must not be ignored', () => {
+  const invalid = new Error('synthetic_other_value_invalid');
+  invalid.code = 'FIRST_LINE_VALUE_INVALID';
+  const source = {
+    listRecoverablePublicActionIds: () => ['perfectly-valid-id'],
+    getRecoverablePublicAction: () => { throw invalid; },
+    getPublicAction: () => { throw new Error('not expected'); },
+  };
+  assert.throws(() => runFirstLinePostSendRecoverySweep({ store: source }),
+    e => e === invalid);
+  // Malformed ID + unrelated database fault is still a fatal error, not a partial success.
+  const malformed = 'PRIVATE_TEXT\n<untrusted>';
+  for (const code of ['SQLITE_BUSY', 'UNKNOWN', undefined]) {
+    const error = new Error('fault includes '+malformed);
+    if (code) error.code = code;
+    const store = {
+      listRecoverablePublicActionIds: () => [malformed],
+      getRecoverablePublicAction: () => { throw error; },
+      getPublicAction: () => { throw new Error('unreachable'); },
+    };
+    assert.throws(() => runFirstLinePostSendRecoverySweep({ store }),
+      e => {
+        assert.equal(String(e.message).includes(malformed), false,
+          'untrusted enumerated id may never flow into operator error');
+        return true;
+      });
+  }
+  // Even with an improperly permissive store, a malformed identifier must not silently count as complete.
+  const store = {
+    listRecoverablePublicActionIds: () => [malformed],
+    getRecoverablePublicAction: () => null,
+    getPublicAction: () => null,
+  };
+  assert.throws(() => runFirstLinePostSendRecoverySweep({ store }), e => {
+    assert.equal(String(e.message).includes(malformed), false);
+    return true;
+  });
+});
+
+test('R2-VAL-01 canonical boundary matrix separates malformed id errors from valid id errors', () => {
+  for (const id of ['', ' invalid', 'some\ntext', '<customer>', '_leading', 'x'.repeat(161),
+    'x'.repeat(160), 'x_8.a:b/c-9']) {
+    const syntacticallyValid = id.length >= 1 && id.length <= 160 &&
+      /^[A-Za-z0-9][A-Za-z0-9._:/-]*$/u.test(id);
+    const fault = Object.assign(new Error('synthetic_validation_fault'), {
+      code: 'FIRST_LINE_VALUE_INVALID',
+    });
+    const store = {
+      listRecoverablePublicActionIds: () => [id],
+      getRecoverablePublicAction: () => { throw fault; },
+      getPublicAction: () => null,
+    };
+    if (syntacticallyValid) {
+      assert.throws(() => runFirstLinePostSendRecoverySweep({ store }), e => e === fault);
+    } else {
+      assert.deepEqual(runFirstLinePostSendRecoverySweep({ store }), {
+        recovered: 0, notYetEligible: 0, blockedActionIds: ['INVALID_ACTION_ID'],
+        operationallyComplete: false,
+      });
+    }
+  }
+});
+
+
+test('R2 combined adversarial: concurrent HUMAN, corrupt neighbor, healthy SENDING remain isolated', t => {
+  const { store, ids } = cp4Fixture(t);
+  const first = store.getPublicAction(ids[0]);
+  const original = store.escalatePublicActionToHuman.bind(store);
+  damageActionSourceCoverage(store, [ids[1]]);
+  let raceCount = 0;
+  store.escalatePublicActionToHuman = (id, args) => {
+    if (id === ids[0] && raceCount++ === 0) {
+      const competing = original(id, { reason: 'send_outcome_unproven' });
+      assert.equal(competing.owner_kind, 'HUMAN');
+    }
+    return original(id, args);
+  };
+  const result = runFirstLinePostSendRecoverySweep({ store });
+  assert.deepEqual(result, { recovered: 1, notYetEligible: 0,
+    blockedActionIds: [ids[1]], operationallyComplete: false });
+  assert.equal(store.getPublicAction(ids[0]).continuation_owner.human_reason,
+    'send_outcome_unproven');
+  assert.equal(store.getPublicAction(ids[0]).stream_id, first.stream_id);
+  assert.equal(store.getPublicAction(ids[2]).continuation_owner.owner_kind, 'HUMAN');
+  assert.deepEqual(runFirstLinePostSendRecoverySweep({ store }), {
+    recovered: 0, notYetEligible: 0,
+    blockedActionIds: [ids[1]], operationallyComplete: false,
+  });
+});
+
+test('R2-HC-01 benign immutable HUMAN collision does not disable periodic scheduler', async () => {
+  let sweeps = 0;
+  let reads = 0;
+  let notifications = 0;
+  const faults = [];
+  const conflict = Object.assign(new Error('conflicting immutable HUMAN reason'),
+    { code: 'FIRST_LINE_HUMAN_CONTINUATION_ACTIVE' });
+  let resolve;
+  const reached = new Promise(r => { resolve = r; });
+  const store = {
+    listRecoverablePublicActionIds() {
+      return ++sweeps === 1 ? ['raced'] : [];
+    },
+    getRecoverablePublicAction: id => ({ action_id: id, state: 'UNCERTAIN' }),
+    getPublicAction: id => ++reads === 1
+      ? { action_id: id, state: 'UNCERTAIN', stream_id: 'stream-a' }
+      : { action_id: id, state: 'UNCERTAIN', stream_id: 'stream-a',
+        prepared_stream_revision: 1,
+        continuation_owner: { owner_kind: 'HUMAN', action_id: id,
+          stream_id: 'stream-a', stream_revision: 1, terminal_outcome: null,
+          human_reason: 'send_outcome_unproven' } },
+    getUnresolvedContinuationOwner: () => ({ owner_kind: 'PUBLIC_ACTION' }),
+    escalatePublicActionToHuman: () => { throw conflict; },
+  };
+  const scheduler = createFirstLinePostSendRecoveryScheduler({
+    store, intervalMs: 5,
+    onFault: e => faults.push(e.code),
+    onCompleted: () => { notifications++; if (notifications >= 2) resolve(); },
+  });
+  assert.deepEqual(scheduler.start(), { recovered: 0, notYetEligible: 0 });
+  try {
+    await Promise.race([reached, new Promise(done => setTimeout(done, 150))]);
+    assert.ok(notifications >= 2, 'scheduler must remain live after benign HUMAN collision');
+    assert.deepEqual(faults, []);
+  } finally { scheduler.stop(); }
+});
