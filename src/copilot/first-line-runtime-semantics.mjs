@@ -188,7 +188,7 @@ export async function buildFirstLineTransientCandidate({
  * The model is never invoked again and the proof never authorizes POST.
  */
 export function reauthorizeFirstLineCandidateFacts({
-  store, streamId, candidate, coveredProof, catalogService, knowledgeStore, nowUtc,
+  store, streamId, candidate, coveredProof, catalogService, knowledgeStore,
 } = {}) {
   if (!candidate || candidate.code !== 'CANDIDATE' ||
       !candidateInputBindings.has(candidate) ||
@@ -199,7 +199,7 @@ export function reauthorizeFirstLineCandidateFacts({
       coveredProof?.code !== 'COVERED_TEXT_PROVEN' ||
       coveredProof.nonAuthorizing !== true ||
       !Array.isArray(coveredProof.exactReads) ||
-      typeof nowUtc !== 'string' || !catalogService || !knowledgeStore) {
+      typeof store.now !== 'function' || !catalogService || !knowledgeStore) {
     throw new TypeError('first_line_s2_facts_inputs_invalid');
   }
   const ids = candidate.projection.open_turn.source_message_ids;
@@ -220,6 +220,9 @@ export function reauthorizeFirstLineCandidateFacts({
   let decision;
   let rendering;
   try {
+    // One authoritative clock read at S2, after exact covered-source proofs.
+    // Caller-provided S1 time is never accepted as S2 freshness authority.
+    const nowUtc = new Date(store.now()).toISOString();
     resolution = resolveFirstLineExactReads({
       extraction: candidateInputBindings.get(candidate),
       exactReads: coveredProof.exactReads.map((exactRead, i) =>

@@ -9,7 +9,7 @@ import { isGenuineFirstLineTransientCandidate } from './first-line-runtime-seman
 // SENDING is committed before any transport call, including process-crash cuts.
 export async function executeFirstLinePublicSendOnce({
   store, candidate, actionId, leaseToken, authorityReader,
-  catalogService, knowledgeStore, nowUtc, configuredInboxId,
+  catalogService, knowledgeStore, configuredInboxId,
   transport, maxConfirmationReads, confirmationWaitMs,
 } = {}) {
   if (!isGenuineFirstLineTransientCandidate(candidate, {
@@ -29,7 +29,7 @@ export async function executeFirstLinePublicSendOnce({
   }
   const gate = await gatePublicActionToSending({
     store, candidate, actionId, leaseToken, authorityReader,
-    catalogService, knowledgeStore, nowUtc, configuredInboxId,
+    catalogService, knowledgeStore, configuredInboxId,
   });
   if (gate.code !== 'READY_TO_SEND') return gate;
   const conversationId = candidate.projection.source_conversation_id;

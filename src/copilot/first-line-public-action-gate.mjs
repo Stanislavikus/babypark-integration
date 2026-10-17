@@ -18,7 +18,7 @@ function fail(code, message) {
 // here; the coordinator owns the exactly-one attempt after this durable cut.
 export async function gatePublicActionToSending({
   store, authorityReader, actionId, leaseToken, candidate,
-  catalogService, knowledgeStore, nowUtc, configuredInboxId,
+  catalogService, knowledgeStore, configuredInboxId,
 } = {}) {
   if (!isGenuineFirstLineTransientCandidate(candidate, {
     store, streamId: candidate?.projection?.stream_id,
@@ -39,7 +39,7 @@ export async function gatePublicActionToSending({
   try {
     result = await assessFirstLineS2Preflight({
       store, streamId, candidate, authorityReader, catalogService,
-      knowledgeStore, nowUtc, configuredInboxId, actionId, leaseToken,
+      knowledgeStore, configuredInboxId, actionId, leaseToken,
     });
   } catch {
     result = { code: 'HUMAN_REQUIRED', reason: 'S2_PROOF_UNAVAILABLE' };

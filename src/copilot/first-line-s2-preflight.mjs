@@ -42,7 +42,7 @@ export function isCertifiedFirstLineS2Preflight(value, {
  */
 export async function assessFirstLineS2Preflight({
   store, streamId, candidate, authorityReader, catalogService,
-  knowledgeStore, nowUtc, configuredInboxId,
+  knowledgeStore, configuredInboxId,
   actionId = null, leaseToken = null,
 } = {}) {
   if (!store || typeof store.getConversationStream !== 'function' ||
@@ -205,7 +205,7 @@ export async function assessFirstLineS2Preflight({
   if (covered.code !== 'COVERED_TEXT_PROVEN') return covered;
   const facts = reauthorizeFirstLineCandidateFacts({
     store, streamId, candidate, coveredProof: covered,
-    catalogService, knowledgeStore, nowUtc,
+    catalogService, knowledgeStore,
   });
   if (facts.code !== 'CURRENT_FACTS_PROVEN') return facts;
 
