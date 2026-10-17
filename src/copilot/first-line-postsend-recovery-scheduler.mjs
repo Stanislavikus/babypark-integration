@@ -1,4 +1,5 @@
 import { recoverFirstLinePublicSendWithoutTransientText } from './first-line-public-send-coordinator.mjs';
+import { TERMINAL_ACTION_STATES } from './first-line-state-store.mjs';
 
 // CP4 post-SENDING-only liveness component. No outbound HTTP/writer or
 // public-send path is exposed. PREPARED / GATING and non-actionable revisions
@@ -42,6 +43,13 @@ export function runFirstLinePostSendRecoverySweep({ store } = {}) {
       const result = recoverFirstLinePublicSendWithoutTransientText({
         store, actionId,
       });
+      // Another process may have terminalized the action after our initial
+      // per-action read. That is already settled, never a missing HUMAN.
+      if (result.code === 'ALREADY_CONFIRMED' &&
+          result.action?.action_id === actionId &&
+          result.action.state === 'CONFIRMED') continue;
+      if (result.code === 'NO_RECONCILIATION' &&
+          TERMINAL_ACTION_STATES.has(result.state)) continue;
       if (result.code !== 'HUMAN_REQUIRED' ||
           result.continuationOwner?.owner_kind !== 'HUMAN') {
         throw new Error('first_line_recovery_nonhuman_outcome');

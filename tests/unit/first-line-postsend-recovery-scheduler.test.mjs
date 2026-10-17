@@ -4,7 +4,7 @@ import test from 'node:test';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { FirstLineStateStore } from '../../src/copilot/first-line-state-store.mjs';
+import { FirstLineStateStore, TERMINAL_ACTION_STATES } from '../../src/copilot/first-line-state-store.mjs';
 import { prepareTestPublicAction, testActionDescriptor } from '../helpers/first-line-action-descriptor.mjs';
 
 import {
@@ -227,4 +227,122 @@ test('CP4 periodical partial recovery sends operator fault and no completed hear
   assert.deepEqual(faults, ['FIRST_LINE_CP4_PARTIAL_CORRUPT']);
   assert.equal(done.length, 1, 'only the truly complete startup sweep is acknowledged');
   second.stop();
+});
+
+
+test('N-22 real SQLite: terminal confirmation between eligibility read and coordinator read is skipped', t => {
+  const { store, ids } = cp4Fixture(t);
+  const firstAction = store.getPublicAction(ids[0]);
+  const originalGet = store.getPublicAction.bind(store);
+  let raced = false;
+  store.getPublicAction = actionId => {
+    if (!raced && actionId === ids[0]) {
+      raced = true;
+      store.ingestConversationEvent(firstAction.stream_id, {
+        sourceMessageId: 931, eventKind: 'BABYPARK_PUBLIC_REPLY',
+        messageType: 'outgoing', senderClass: 'configured_agent_bot', senderId: 7,
+        contentType: 'text', deleted: false, unsupported: false,
+        hasAttachments: false, sourceId: actionId,
+      });
+      assert.equal(store.confirmPublicActionFromLedger(actionId).state, 'CONFIRMED');
+    }
+    return originalGet(actionId);
+  };
+  const result = runFirstLinePostSendRecoverySweep({ store });
+  assert.equal(raced, true, 'interleaving must occur inside recovery seam');
+  assert.deepEqual(result, { recovered: 2, notYetEligible: 0 });
+  assert.equal(originalGet(ids[0]).state, 'CONFIRMED');
+  assert.equal(store.getUnresolvedContinuationOwner(firstAction.stream_id), null,
+    'confirmed action must never fabricate a HUMAN continuation');
+  for (const actionId of ids.slice(1)) {
+    const item = originalGet(actionId);
+    assert.equal(item.state, 'UNCERTAIN');
+    assert.equal(store.getUnresolvedContinuationOwner(item.stream_id)?.owner_kind, 'HUMAN');
+  }
+  assert.deepEqual(runFirstLinePostSendRecoverySweep({ store }),
+    { recovered: 0, notYetEligible: 0 });
+});
+
+test('N-22 every frozen terminal state is a concurrent no-op without writes or false HUMAN', () => {
+  for (const state of TERMINAL_ACTION_STATES) {
+    let rereads = 0;
+    const store = {
+      listRecoverablePublicActionIds: () => ['action-raced'],
+      getRecoverablePublicAction: () => ({ action_id: 'action-raced', state: 'SENDING' }),
+      getPublicAction: actionId => {
+        rereads++;
+        return { action_id: actionId, state };
+      },
+      markActionUncertain() { throw new Error('NO_WRITES_ALLOWED'); },
+      escalatePublicActionToHuman() { throw new Error('NO_WRITES_ALLOWED'); },
+    };
+    const result = runFirstLinePostSendRecoverySweep({ store });
+    assert.deepEqual(result, { recovered: 0, notYetEligible: 0 }, state);
+    assert.equal(rereads, 1, state);
+  }
+});
+
+test('N-22 fail-closed: nonterminal, unknown, missing and corrupt rereads cannot masquerade as completed', () => {
+  for (const state of ['PREPARED', 'GATING', 'UNRECOGNIZED']) {
+    const store = {
+      listRecoverablePublicActionIds: () => ['action-raced'],
+      getRecoverablePublicAction: () => ({ action_id: 'action-raced', state: 'SENDING' }),
+      getPublicAction: () => ({ action_id: 'action-raced', state }),
+    };
+    assert.throws(() => runFirstLinePostSendRecoverySweep({ store }),
+      /first_line_recovery_nonhuman_outcome/u, state);
+  }
+  const base = {
+    listRecoverablePublicActionIds: () => ['action-raced'],
+    getRecoverablePublicAction: () => ({ action_id: 'action-raced', state: 'SENDING' }),
+  };
+  assert.throws(() => runFirstLinePostSendRecoverySweep({
+    store: { ...base, getPublicAction: () => null },
+  }), /first_line_recovery_action_absent/u);
+  assert.throws(() => runFirstLinePostSendRecoverySweep({
+    store: { ...base, getPublicAction: () => ({
+      action_id: 'different-action', state: 'CONFIRMED',
+    }) },
+  }), /first_line_recovery_nonhuman_outcome/u);
+  for (const code of ['SQLITE_BUSY', 'FIRST_LINE_UNKNOWN_ERROR']) {
+    const err = new Error('PRIVATE_READER_EXCEPTION');
+    err.code = code;
+    assert.throws(() => runFirstLinePostSendRecoverySweep({
+      store: { ...base, getPublicAction() { throw err; } },
+    }), e => e === err);
+  }
+});
+
+test('N-22 mixed SQLite: concurrent terminal, corrupt row and healthy UNCERTAIN preserve partial fence', t => {
+  const { store, ids } = cp4Fixture(t);
+  damageActionSourceCoverage(store, [ids[1]]);
+  const originalGet = store.getPublicAction.bind(store);
+  const firstStream = originalGet(ids[0]).stream_id;
+  let transitioned = false;
+  store.getPublicAction = actionId => {
+    if (!transitioned && actionId === ids[0]) {
+      transitioned = true;
+      store.ingestConversationEvent(firstStream, {
+        sourceMessageId: 939, eventKind: 'BABYPARK_PUBLIC_REPLY',
+        messageType: 'outgoing', senderClass: 'configured_agent_bot', senderId: 7,
+        contentType: 'text', deleted: false, unsupported: false,
+        hasAttachments: false, sourceId: actionId,
+      });
+      assert.equal(store.confirmPublicActionFromLedger(actionId).state, 'CONFIRMED');
+    }
+    return originalGet(actionId);
+  };
+  const result = runFirstLinePostSendRecoverySweep({ store });
+  assert.deepEqual(result, {
+    recovered: 1, notYetEligible: 0, blockedActionIds: [ids[1]],
+    operationallyComplete: false,
+  });
+  assert.equal(transitioned, true);
+  assert.equal(store.getUnresolvedContinuationOwner(firstStream), null);
+  assert.equal(store.getUnresolvedContinuationOwner(originalGet(ids[2]).stream_id)?.owner_kind, 'HUMAN');
+  const scheduler = createFirstLinePostSendRecoveryScheduler({
+    store, intervalMs: 100, onFault: () => {},
+  });
+  assert.throws(() => scheduler.start(), { code: 'FIRST_LINE_CP4_PARTIAL_CORRUPT' });
+  assert.equal(runFirstLinePostSendRecoverySweep({ store }).recovered, 0);
 });
