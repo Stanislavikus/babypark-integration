@@ -1,0 +1,56 @@
+name: Knowledge CI
+
+on:
+  pull_request:
+    paths:
+      - 'src/copilot/knowledge/**'
+      - 'tests/unit/copilot-knowledge-*.test.mjs'
+      - 'tests/unit/commerce-exception.test.mjs'
+      - 'config/storage-policy.yaml'
+      - 'docs/KNOWLEDGE_AUTHORITY.md'
+      - 'docs/CURRENT_STATE.md'
+      - '.github/workflows/knowledge-ci.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: knowledge-ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  knowledge:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Knowledge focused tests
+        shell: bash
+        run: |
+          shopt -s nullglob
+          files=(tests/unit/copilot-knowledge-*.test.mjs)
+          if [[ -f tests/unit/commerce-exception.test.mjs ]]; then
+            files+=(tests/unit/commerce-exception.test.mjs)
+          fi
+          if (( ${#files[@]} == 0 )); then
+            echo 'No Knowledge unit tests found' >&2
+            exit 1
+          fi
+          node --test --test-concurrency=1 "${files[@]}"
+
+      - name: Storage policy
+        run: npm run storage:validate
+
+      - name: Legacy gateway
+        run: npm run test:legacy
+
+      - name: Refactor gateway
+        run: npm run test:refactor
