@@ -6,6 +6,12 @@ import test from 'node:test';
 import { FirstLineStateStore } from '../../src/copilot/first-line-state-store.mjs';
 import { legacyGatePublicActionToSendingForTest as gatePublicActionToSending } from '../helpers/legacy-public-action-gate-fixture.mjs';
 import { prepareTestPublicAction, testActionDescriptor } from '../helpers/first-line-action-descriptor.mjs';
+import { buildFirstLineTransientCandidate } from '../../src/copilot/first-line-runtime-semantics.mjs';
+import { prepareFirstLinePublicActionFromCandidate } from '../../src/copilot/first-line-action-preparation.mjs';
+import { executeFirstLinePublicSendOnce } from '../../src/copilot/first-line-public-send-coordinator.mjs';
+import {
+  FIRST_LINE_EXTRACTION_SCHEMA, FIRST_LINE_INTENT_SCHEMA_VERSION,
+} from '../../src/copilot/first-line-extraction.mjs';
 
 const NOW = 2_000_000_000_000;
 
@@ -518,4 +524,120 @@ test('S2 caller cannot omit the new strict current owner authority', async t => 
   );
   assert.equal(store.getPublicAction(action.action_id).state, 'GATING');
   assert.equal(store.getPublicAction(action.action_id).send_started_at, null);
+});
+
+
+async function core4CoordinatorFixture(t) {
+  const store = tempStore(t);
+  const stream = store.ensureConversationStream({
+    sourceProvider: 'chatwoot', sourceConversationId: 55,
+  });
+  const incoming = customer(101);
+  store.ingestConversationEvent(stream.stream_id, incoming);
+  store.beginEpisode({ streamId: stream.stream_id });
+  const reader = {
+    async readExactSourceMessage() {
+      return { code: 'SUPPORTED_CUSTOMER_TEXT',
+        sourceConversationId: 55, sourceMessageId: 101, event: incoming,
+        transientContent: 'Какие способы оплаты есть?' };
+    },
+  };
+  const knowledgeStore = { authoritySnapshot: () => [{
+    revision_id: 'policy-1', record_type: 'COMMERCE_POLICY', schema_version: 1,
+    namespace: 'commerce.payment_methods', effect_family: 'commerce.payment_methods',
+    subject_type: 'business', subject_id: 'babypark', scope: {},
+    effect_type: 'PAYMENT_METHODS',
+    effect_value: { methods: ['BANK_TRANSFER', 'COD_NOVA_POSHTA'] },
+    exception_of_revision_id: null, state: 'PUBLISHED',
+    effective_from_utc: '2026-01-01T00:00:00.000Z', expires_at_utc: null,
+  }] };
+  const catalogService = {};
+  const candidate = await buildFirstLineTransientCandidate({
+    store, streamId: stream.stream_id, reader,
+    produceExtraction: async () => ({
+      schema: FIRST_LINE_EXTRACTION_SCHEMA,
+      intent_schema_version: FIRST_LINE_INTENT_SCHEMA_VERSION,
+      intent_hint: 'UNTRUSTED', language: 'ru', spans: [],
+    }), catalogService, knowledgeStore, nowUtc: '2026-01-10T12:00:00.000Z',
+  });
+  assert.equal(candidate.code, 'CANDIDATE', candidate.reason);
+  const { action } = prepareFirstLinePublicActionFromCandidate({
+    store, streamId: stream.stream_id, candidate, deadlineAt: NOW + 60_000,
+  });
+  assert.equal(store.claimNextPublicAction({ leaseMs: 10_000,
+    token: 'lease-core4' }).action_id, action.action_id);
+  const reply = {
+    ...incoming, sourceMessageId: 102, eventKind: 'BABYPARK_PUBLIC_REPLY',
+    messageType: 'outgoing', senderClass: 'configured_agent_bot',
+    senderId: 7, sourceId: action.action_id,
+  };
+  let posts = 0;
+  let remoteProof = false;
+  const authorityReader = {
+    ...reader,
+    async readAuthorizingConversationSnapshot() {
+      return { code: 'COMPLETE', complete: true,
+        events: remoteProof ? [incoming, reply] : [incoming] };
+    },
+    async readCurrentConversationAuthority(cid) {
+      return { code: 'SEND_ELIGIBLE', sourceConversationId: cid,
+        inboxId: 99, status: 'pending', ownerClass: 'SAME_AGENTBOT' };
+    },
+    async readCorrelatedPublicReplyEvidence() {
+      return remoteProof
+        ? { code: 'CORRELATED_REPLY_PROVEN', sourceMessageId: 102,
+          sourceConversationId: 55, inboxId: 99, actionId: action.action_id }
+        : { code: 'NO_CORRELATED_REPLY' };
+    },
+  };
+  return {
+    store, action, candidate, authorityReader, catalogService, knowledgeStore,
+    enableProof: () => { remoteProof = true; },
+    call: sendFn => executeFirstLinePublicSendOnce({
+      store, candidate, actionId: action.action_id, leaseToken: 'lease-core4',
+      authorityReader, catalogService, knowledgeStore,
+      configuredInboxId: 99, maxConfirmationReads: 1, confirmationWaitMs: 0,
+      transport: { async postOutgoingMessage(req) {
+        posts += 1;
+        assert.equal(req.sourceId, action.action_id);
+        await sendFn();
+        return { status: 201 };
+      }},
+    }),
+    getPosts: () => posts,
+  };
+}
+
+test('CORE4 S-3: CP3 survives exact same-action HUMAN reason race after one POST', async t => {
+  const f = await core4CoordinatorFixture(t);
+  const done = await f.call(() => {
+    f.store.markActionUncertain(f.action.action_id,
+      { reason: 'restart_exact_content_unavailable' });
+    f.store.escalatePublicActionToHuman(f.action.action_id,
+      { reason: 'restart_exact_content_unavailable' });
+  });
+  assert.equal(done.code, 'HUMAN_REQUIRED');
+  assert.equal(done.continuationOwner.owner_kind, 'HUMAN');
+  assert.equal(done.continuationOwner.human_reason, 'restart_exact_content_unavailable');
+  assert.equal(f.store.getPublicAction(f.action.action_id).state, 'UNCERTAIN');
+  assert.equal(f.getPosts(), 1, 'the coordinator must never repeat public POST');
+});
+
+test('CORE4 S-3: proof after immutable HUMAN never creates normal CONFIRMED', async t => {
+  const f = await core4CoordinatorFixture(t);
+  const done = await f.call(() => {
+    f.store.markActionUncertain(f.action.action_id,
+      { reason: 'restart_exact_content_unavailable' });
+    f.store.escalatePublicActionToHuman(f.action.action_id,
+      { reason: 'restart_exact_content_unavailable' });
+    f.enableProof();
+  });
+  assert.equal(done.code, 'HUMAN_REQUIRED');
+  assert.equal(done.continuationOwner.human_reason, 'restart_exact_content_unavailable');
+  const action = f.store.getPublicAction(f.action.action_id);
+  assert.equal(action.state, 'UNCERTAIN');
+  assert.equal(action.continuation_owner.owner_kind, 'HUMAN');
+  assert.equal(action.confirmed_source_message_id, 102,
+    'late remote evidence remains historical, not normal CONFIRMED');
+  assert.equal(f.getPosts(), 1);
 });

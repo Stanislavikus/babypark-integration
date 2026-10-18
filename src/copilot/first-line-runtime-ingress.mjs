@@ -81,6 +81,10 @@ export function createFirstLineAgentBotRelay({
   if (typeof webhookSecret !== 'string' || webhookSecret.length === 0) {
     throw new TypeError('first_line_webhook_secret_required');
   }
+  if (!Number.isSafeInteger(replayWindowSec) || replayWindowSec <= 0 ||
+      typeof nowMs !== 'function') {
+    throw new TypeError('first_line_replay_configuration_invalid');
+  }
   // Fail before accepting any event; never create a missing database.
   const store = FirstLineStateStore.open(dbPath);
   const target = Object.freeze({ accountId, inboxId, agentBotId });

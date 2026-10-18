@@ -74,6 +74,10 @@ export function runFirstLinePostSendRecoverySweep({ store } = {}) {
       });
       // Another process may have terminalized the action after our initial
       // per-action read. That is already settled, never a missing HUMAN.
+      if (result.code === 'LEASE_ACTIVE' && result.action?.action_id === actionId &&
+          result.action.state === 'SENDING' &&
+          Number.isSafeInteger(result.action.lease_expires_at) &&
+          result.action.lease_expires_at > 0) continue;
       if (result.code === 'ALREADY_CONFIRMED' &&
           result.action?.action_id === actionId &&
           result.action.state === 'CONFIRMED') continue;

@@ -92,9 +92,29 @@ export async function executeFirstLinePublicSendOnce({
   // Conservative outcome: one POST may have succeeded but positive authority
   // was absent/ambiguous. HUMAN continuation is absorbing, no replay.
   store.markActionUncertain(actionId, { reason: 'send_outcome_unproven' });
-  const continuationOwner = store.escalatePublicActionToHuman(actionId, {
-    reason: 'send_outcome_unproven',
-  });
+  let continuationOwner;
+  try {
+    continuationOwner = store.escalatePublicActionToHuman(actionId, {
+      reason: 'send_outcome_unproven',
+    });
+  } catch (error) {
+    if (error?.code !== 'FIRST_LINE_HUMAN_CONTINUATION_ACTIVE') throw error;
+    // The competing recovery worker may have committed immutable HUMAN
+    // after the single external POST. Never overwrite its reason.
+    const current = store.getPublicAction(actionId);
+    const owner = current?.continuation_owner;
+    if (current?.action_id !== actionId ||
+        !['SENDING', 'UNCERTAIN'].includes(current.state) ||
+        owner?.owner_kind !== 'HUMAN' ||
+        owner.action_id !== actionId ||
+        owner.stream_id !== current.stream_id ||
+        owner.stream_revision !== current.prepared_stream_revision ||
+        owner.terminal_outcome !== null ||
+        typeof owner.human_reason !== 'string' || !owner.human_reason) {
+      throw error;
+    }
+    continuationOwner = owner;
+  }
   return Object.freeze({
     code: 'HUMAN_REQUIRED', reason: 'SEND_OUTCOME_UNPROVEN',
     continuationOwner,
@@ -127,9 +147,13 @@ export function recoverFirstLinePublicSendWithoutTransientText({
   // This function has no caller-supplied transport or public send capability.
   // A false HUMAN is safer than a duplicate message after an ambiguous crash.
   if (action.state === 'SENDING') {
-    store.markActionUncertain(actionId, {
+    const result = store.markActionUncertain(actionId, {
       reason: 'restart_exact_content_unavailable',
+      recoveryOnlyIfLeaseExpired: true,
     });
+    if (result.state === 'SENDING') {
+      return Object.freeze({ code: 'LEASE_ACTIVE', action: result });
+    }
   }
   const owner = store.getUnresolvedContinuationOwner(action.stream_id);
   const continuationOwner = owner?.owner_kind === 'HUMAN'

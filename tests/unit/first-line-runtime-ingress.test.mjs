@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
+import { verifyAgentBotDelivery } from '../../src/copilot/auth.mjs';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -462,4 +463,36 @@ test('B1 existing source reclassified as HUMAN or INTERNAL is 409 before admissi
       'BABYPARK_PUBLIC_REPLY');
   });
   assert.equal(reads.length, 4);
+});
+
+
+test('CORE4 S-7: invalid signed replay window and clock fail closed, valid control unchanged', t => {
+  const { file } = fixture(t);
+  const reads = [];
+  const reader = makeReader(new Map(), reads);
+  for (const replayWindowSec of [NaN, Infinity, -Infinity, -1, 0, 1.5, '300', null]) {
+    assert.throws(() => createFirstLineAgentBotRelay({
+      dbPath: file, authorityReader: reader, webhookSecret: SECRET,
+      ...TARGET, replayWindowSec, nowMs: () => NOW,
+    }), { name: 'TypeError' }, String(replayWindowSec));
+  }
+  const old = signed(payload(), 'replay-stale', -86_400);
+  for (const replayWindowSec of [NaN, Infinity, -Infinity, -1, 0, 1.5, '300', null]) {
+    assert.deepEqual(verifyAgentBotDelivery({
+      ...old, secret: SECRET, nowMs: NOW, replayWindowSec,
+    }), { ok: false, status: 401, code: 'invalid_replay_configuration' });
+  }
+  for (const nowMs of [NaN, Infinity, -Infinity, -1, 1.5, 'clock']) {
+    assert.deepEqual(verifyAgentBotDelivery({
+      ...old, secret: SECRET, nowMs, replayWindowSec: 300,
+    }), { ok: false, status: 401, code: 'invalid_replay_configuration' });
+  }
+  assert.deepEqual(verifyAgentBotDelivery({
+    ...old, secret: SECRET, nowMs: NOW, replayWindowSec: 300,
+  }), { ok: false, status: 401, code: 'timestamp_outside_replay_window' });
+  const fresh = signed(payload(), 'replay-fresh', 0);
+  assert.equal(verifyAgentBotDelivery({
+    ...fresh, secret: SECRET, nowMs: NOW, replayWindowSec: 300,
+  }).ok, true);
+  assert.deepEqual(reads, [], 'auth tests must not call Chatwoot');
 });

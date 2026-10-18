@@ -3,6 +3,10 @@ import crypto from 'node:crypto';
 const DELIVERY_RE = /^[\x21-\x7e]{1,128}$/;
 
 export function verifyAgentBotDelivery({ raw, headers, secret, nowMs = Date.now(), replayWindowSec = 300 }) {
+  if (!Number.isSafeInteger(replayWindowSec) || replayWindowSec <= 0 ||
+      !Number.isSafeInteger(nowMs) || nowMs < 0) {
+    return { ok: false, status: 401, code: 'invalid_replay_configuration' };
+  }
   const deliveryId = headers['x-chatwoot-delivery'];
   const timestamp = headers['x-chatwoot-timestamp'];
   const signature = headers['x-chatwoot-signature'];

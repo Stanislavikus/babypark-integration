@@ -86,12 +86,13 @@ test('CP4 rejects unmeasured interval or missing fault notifier before startup',
 
 
 const CP4_NOW = 2_000_000_000_000;
-function cp4Fixture(t) {
+function cp4Fixture(t, { advanceBeyondSendingLease = true } = {}) {
+  let fixtureNow = CP4_NOW;
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'bp-cp4-isolation-'));
   const pathToDb = path.join(dir, 'episode.sqlite');
   let nextAction = 0;
   const store = FirstLineStateStore.create(pathToDb, {
-    now: () => CP4_NOW,
+    now: () => fixtureNow,
     actionIdFactory: () => 'action-cp4-' + String(++nextAction).padStart(2, '0'),
   });
   t.after(() => { try { store.close(); } catch {} fs.rmSync(dir, { recursive: true, force: true }); });
@@ -121,7 +122,10 @@ function cp4Fixture(t) {
     store.markActionSending(claim.action_id, token);
   }
   store.markActionUncertain(ids[2], { reason: 'synthetic_uncertain' });
-  return { store, ids, dir };
+  // Previous CP4 tests characterize *expired* sending claims. Keep those
+  // explicit: a new live-lease test below exercises the forbidden preemption.
+  if (advanceBeyondSendingLease) fixtureNow = CP4_NOW + 20_000;
+  return { store, ids, dir, setNow: value => { fixtureNow = value; } };
 }
 
 function damageActionSourceCoverage(store, ids) {
@@ -811,4 +815,86 @@ test('R2-HC-01 benign immutable HUMAN collision does not disable periodic schedu
     assert.ok(notifications >= 2, 'scheduler must remain live after benign HUMAN collision');
     assert.deepEqual(faults, []);
   } finally { scheduler.stop(); }
+});
+
+
+test('CORE4 G-SWEEP: live SENDING lease is never recovered; equality/expiry reopens only CP4', t => {
+  const { store, ids, setNow } = cp4Fixture(t, { advanceBeyondSendingLease: false });
+  const second = FirstLineStateStore.open(store.file, { now: () => CP4_NOW });
+  t.after(() => second.close());
+  assert.equal(store.getRecoverablePublicAction(ids[0]), null);
+  assert.equal(second.getRecoverablePublicAction(ids[1]), null);
+  assert.deepEqual(runFirstLinePostSendRecoverySweep({ store }),
+    { recovered: 1, notYetEligible: 0 }); // third action is already UNCERTAIN
+  for (const id of ids.slice(0, 2)) {
+    assert.equal(store.getPublicAction(id).state, 'SENDING');
+    assert.equal(store.getPublicAction(id).continuation_owner.owner_kind, 'PUBLIC_ACTION');
+  }
+  setNow(CP4_NOW + 19_999);
+  assert.equal(store.getRecoverablePublicAction(ids[0]), null);
+  setNow(CP4_NOW + 20_000);
+  assert.equal(store.getRecoverablePublicAction(ids[0])?.state, 'SENDING');
+  assert.deepEqual(runFirstLinePostSendRecoverySweep({ store }),
+    { recovered: 2, notYetEligible: 0 });
+  for (const id of ids) {
+    assert.equal(store.getPublicAction(id).state, 'UNCERTAIN');
+    assert.equal(store.getPublicAction(id).continuation_owner.owner_kind, 'HUMAN');
+  }
+  assert.deepEqual(runFirstLinePostSendRecoverySweep({ store }),
+    { recovered: 0, notYetEligible: 0 });
+});
+
+test('CORE4 G-SWEEP: the write transaction rejects a stale expired-lease discovery', t => {
+  const { store, ids, setNow } = cp4Fixture(t, { advanceBeyondSendingLease: false });
+  setNow(CP4_NOW + 20_000);
+  assert.equal(store.getRecoverablePublicAction(ids[0]).state, 'SENDING');
+  // A stale observer cannot authorize a write: CP3's live lease is
+  // re-evaluated by markActionUncertain under BEGIN IMMEDIATE.
+  setNow(CP4_NOW + 19_999);
+  const stayed = store.markActionUncertain(ids[0], {
+    reason: 'restart_exact_content_unavailable',
+    recoveryOnlyIfLeaseExpired: true,
+  });
+  assert.equal(stayed.state, 'SENDING');
+  assert.equal(store.getPublicAction(ids[0]).continuation_owner.owner_kind, 'PUBLIC_ACTION');
+  setNow(CP4_NOW + 20_000);
+  assert.equal(store.markActionUncertain(ids[0], {
+    reason: 'restart_exact_content_unavailable',
+    recoveryOnlyIfLeaseExpired: true,
+  }).state, 'UNCERTAIN');
+});
+
+test('CORE4 P16: invalid deferred topology aborts markActionUncertain before durable mutation', t => {
+  const { store, ids } = cp4Fixture(t);
+  const action = store.getPublicAction(ids[0]);
+  store.ingestConversationEvent(action.stream_id, {
+    sourceMessageId: 401, eventKind: 'CUSTOMER_MESSAGE',
+    messageType: 'incoming', senderClass: 'contact', senderId: 9001,
+    contentType: 'text', deleted: false, unsupported: false,
+    hasAttachments: false, sourceId: null,
+  });
+  assert.equal(store.getDeferredEventParent(action.stream_id, 2).action_id, ids[0]);
+  const trigger = store.db.prepare(
+    "SELECT sql FROM sqlite_master WHERE type='trigger' " +
+    "AND name='deferred_event_parents_no_delete'"
+  ).get();
+  assert.ok(trigger?.sql);
+  store.db.exec('DROP TRIGGER deferred_event_parents_no_delete');
+  try {
+    store.db.prepare('DELETE FROM deferred_event_parents WHERE stream_id=? AND event_seq=2')
+      .run(action.stream_id);
+  } finally {
+    store.db.exec(trigger.sql);
+  }
+  assert.throws(() => store.markActionUncertain(ids[0], {
+    reason: 'send_outcome_unproven',
+  }), { code: 'FIRST_LINE_DB_CORRUPT' });
+  assert.equal(store.getPublicAction(ids[0]).state, 'SENDING');
+  assert.equal(store.getPublicAction(ids[0]).continuation_owner.owner_kind, 'PUBLIC_ACTION');
+  assert.throws(() => store.markActionUncertain(ids[0], {
+    reason: 'restart_exact_content_unavailable',
+    recoveryOnlyIfLeaseExpired: true,
+  }), { code: 'FIRST_LINE_DB_CORRUPT' });
+  assert.equal(store.db.prepare('SELECT state FROM public_actions WHERE action_id=?')
+    .get(ids[0]).state, 'SENDING');
 });

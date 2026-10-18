@@ -4964,18 +4964,35 @@ export class FirstLineStateStore {
     });
   }
 
-  markActionUncertain(actionId, { reason = 'send_outcome_unknown' } = {}) {
+  markActionUncertain(actionId, {
+    reason = 'send_outcome_unknown', recoveryOnlyIfLeaseExpired = false,
+  } = {}) {
     const id = safeToken(actionId, 'action_id');
     const terminalReason = safeToken(reason, 'terminal_reason');
+    if (typeof recoveryOnlyIfLeaseExpired !== 'boolean') {
+      throw new TypeError('first_line_recovery_lease_option_invalid');
+    }
     return tx(this.db, () => {
       const action = this.#requireReadableAction(id);
+      // Re-attest within the same BEGIN IMMEDIATE as the irreversible write.
+      this.#assertDeferredRelationsValid(action.stream_id);
       if (action.state !== 'SENDING' && action.state !== 'UNCERTAIN') {
         fail('FIRST_LINE_ACTION_STATE_INVALID', 'only SENDING may become UNCERTAIN', { state: action.state });
       }
       if (action.state === 'SENDING') {
-        this.db.prepare(`UPDATE public_actions SET state='UNCERTAIN',terminal_reason=?,lease_token=NULL,
-          lease_expires_at=NULL,updated_at=? WHERE action_id=? AND state='SENDING'`)
-          .run(terminalReason, this.now(), id);
+        // Recovery must never preempt a still-live CP3 relay.
+        if (recoveryOnlyIfLeaseExpired && action.lease_expires_at !== null &&
+            action.lease_expires_at > this.now()) return action;
+        const changed = this.db.prepare(
+          "UPDATE public_actions SET state='UNCERTAIN',terminal_reason=?," +
+          "lease_token=NULL,lease_expires_at=NULL,updated_at=? " +
+          "WHERE action_id=? AND state='SENDING' " +
+          "AND (?=0 OR lease_expires_at IS NULL OR lease_expires_at<=?)"
+        ).run(terminalReason, this.now(), id,
+          recoveryOnlyIfLeaseExpired ? 1 : 0, this.now()).changes;
+        if (changed !== 1) {
+          fail('FIRST_LINE_STALE_WRITE', 'SENDING changed before UNCERTAIN');
+        }
       }
       return this.#readAction(id);
     });
@@ -5025,6 +5042,10 @@ export class FirstLineStateStore {
       const action = this.#readAction(id);
       if (!action || !LIVE_ACTION_STATES.has(action.state)) return null;
       this.#assertDeferredRelationsValid(action.stream_id);
+      // Advisory preflight: markActionUncertain repeats the lease condition
+      // inside its owning write transaction to close the TOCTOU race.
+      if (action.state === 'SENDING' && action.lease_expires_at !== null &&
+          action.lease_expires_at > this.now()) return null;
       if (action.continuation_owner.owner_kind !== 'PUBLIC_ACTION' ||
           action.continuation_owner.terminal_outcome !== null) return null;
       if (action.descriptor === null) {

@@ -77,13 +77,10 @@ for (const [mode, expectedPosts] of [
       assert.equal(restarted.claimNextPublicAction({
         leaseMs: 1_000, token: 'another-worker',
       }), null, 'restart may never claim a second POST for SENDING');
-      // Invoke the actual runtime recovery function, not manual SQL/store
-      // operations inside the test, on the independently reopened DB.
-      // Cold-start the actual CP4 scheduler in a separate process.
-      // Its startup sweep, rather than the test harness, performs the
-      // SENDING -> UNCERTAIN -> absorbing HUMAN transition.
-      const race = mode === 'KILL_AFTER_HTTP_RESPONSE';
-      const workers = race ? 2 : 1;
+      // Both independent cold-start schedulers MUST preserve the still-live
+      // lease. The test clock is frozen at send time, so neither may steal it.
+      const race = true;
+      const workers = 2;
       const runs = Array.from({ length: workers }, () => {
         let complete, ready;
         const done = new Promise((resolve, reject) => {
@@ -118,29 +115,30 @@ for (const [mode, expectedPosts] of [
           /^(?:\(node:\d+\) ExperimentalWarning:[^\n]*\n(?:\(Use [^\n]*\)\n)?)?$/u);
         assert.equal(JSON.parse(outcome.stdout.trim()).notYetEligible, 0);
       }
-      if (race) {
-        const db = new DatabaseSync(file);
-        try {
-          const humanCuts = db.prepare(
-            'SELECT count(*) AS total FROM public_action_human_cuts WHERE action_id=?'
-          ).get(actionId);
-          assert.equal(humanCuts.total, 1,
-            'two schedulers may only persist one immutable human cut');
-          const humanOwners = db.prepare(
-            "SELECT count(*) AS total FROM continuation_owners " +
-            "WHERE stream_id=? AND owner_kind='HUMAN' AND action_id=?"
-          ).get(stream.stream_id, actionId);
-          assert.equal(humanOwners.total, 1,
-            'two schedulers cannot create two HUMAN continuations');
-        } finally { db.close(); }
-      }
-      assert.equal(restarted.getPublicAction(actionId).state, 'UNCERTAIN');
+      const db = new DatabaseSync(file);
+      try {
+        const humanCuts = db.prepare(
+          'SELECT count(*) AS total FROM public_action_human_cuts WHERE action_id=?'
+        ).get(actionId);
+        assert.equal(humanCuts.total, 0,
+          'live lease cannot produce any premature HUMAN cut');
+      } finally { db.close(); }
+      assert.equal(restarted.getPublicAction(actionId).state, 'SENDING');
+      const live = recoverFirstLinePublicSendWithoutTransientText({
+        store: restarted, actionId,
+      });
+      assert.equal(live.code, 'LEASE_ACTIVE');
+      assert.equal(restarted.getPublicAction(actionId).state, 'SENDING');
+      // Now advance ONLY this reopened store clock past the durable 10s lease.
+      // This tests post-expiry recovery without tampering with SQLite triggers.
+      restarted.now = () => NOW + 10_000;
       const recovered = recoverFirstLinePublicSendWithoutTransientText({
         store: restarted, actionId,
       });
       assert.equal(recovered.code, 'HUMAN_REQUIRED');
       assert.equal(recovered.reason, 'RESTART_EXACT_CONTENT_UNAVAILABLE');
       assert.equal(recovered.continuationOwner.owner_kind, 'HUMAN');
+      assert.equal(restarted.getPublicAction(actionId).state, 'UNCERTAIN');
       assert.equal(restarted.claimNextPublicAction({
         leaseMs: 1_000, token: 'third-worker',
       }), null);
