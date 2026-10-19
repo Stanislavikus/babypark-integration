@@ -1,0 +1,163 @@
+/* BabyPark Contact Launcher L1: namespaced, CMS-neutral, no external stylesheets. */
+.bp-contact,
+.bp-contact * { box-sizing: border-box; }
+.bp-contact {
+  --bp-accent: #008fcf;
+  --bp-text: #203044;
+  --bp-mobile-right: 22px; /* Half of V4 preview's 44px; adjust after real-site measurement. */
+  --bp-mobile-bottom: calc(76px + env(safe-area-inset-bottom, 0px));
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 2147483000;
+  display: flex;
+  align-items: flex-end;
+  flex-direction: column;
+  gap: 10px;
+  font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+  color: var(--bp-text);
+  font-size: 14px;
+  line-height: 1.4;
+  isolation: isolate;
+}
+.bp-contact[hidden],
+.bp-contact [hidden] { display: none !important; }
+.bp-contact button,
+.bp-contact a { font: inherit; -webkit-tap-highlight-color: transparent; }
+.bp-contact button { cursor: pointer; }
+.bp-contact :focus-visible { outline: 3px solid #ffad35; outline-offset: 3px; }
+.bp-contact__trigger {
+  border: 0;
+  border-radius: 999px;
+  height: 56px;
+  padding: 0 19px;
+  display: inline-flex;
+  gap: 9px;
+  justify-content: center;
+  align-items: center;
+  background: var(--bp-accent);
+  color: #fff;
+  font-size: 13px !important;
+  font-weight: 800 !important;
+  letter-spacing: -.1px;
+  box-shadow: 0 9px 25px #006d9b37, 0 2px 6px #024d6e22;
+}
+.bp-contact__trigger:hover { background: #007fb9; }
+.bp-contact__trigger-symbol,
+.bp-contact__trigger-symbol svg { display: block; width: 24px; height: 24px; }
+.bp-contact__trigger-close {
+  display: none;
+  font-size: 29px;
+  line-height: 1;
+  font-weight: 400;
+}
+.bp-contact__trigger[aria-expanded="true"] .bp-contact__trigger-symbol { display: none; }
+.bp-contact__trigger[aria-expanded="true"] .bp-contact__trigger-close { display: block; }
+.bp-contact__trigger-label { white-space: nowrap; }
+.bp-contact__menu {
+  width: 279px;
+  max-width: calc(100vw - 36px);
+  max-height: calc(100dvh - 110px);
+  max-height: calc(100vh - 110px);
+  overflow-y: auto;
+  border: 1px solid #e7edf2;
+  background: #fff;
+  border-radius: 18px;
+  box-shadow: 0 16px 52px #243c4a31, 0 2px 6px #1e3c4c14;
+  padding: 7px;
+  animation: bp-contact-enter .15s ease-out;
+}
+@keyframes bp-contact-enter {
+  from { opacity: 0; transform: translateY(8px) scale(.97); }
+  to { opacity: 1; transform: none; }
+}
+.bp-contact__heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 8px 9px 14px;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: -.3px;
+}
+.bp-contact__menu-close {
+  flex: 0 0 29px;
+  width: 29px;
+  height: 29px;
+  padding: 0;
+  border: 0;
+  border-radius: 9px;
+  background: #f3f6f8;
+  color: #6d7c88;
+  font-size: 21px !important;
+  line-height: 1;
+}
+.bp-contact__options { display: grid; gap: 2px; }
+.bp-contact__channel {
+  width: 100%;
+  min-height: 49px;
+  padding: 6px 10px;
+  border: 0;
+  border-radius: 11px;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-align: left;
+  text-decoration: none !important;
+  color: #2a3645 !important;
+  font-weight: 730 !important;
+}
+.bp-contact__channel:hover,
+.bp-contact__channel:focus-visible { background: #f4f9fc; }
+.bp-contact__icon {
+  flex: 0 0 35px;
+  width: 35px;
+  height: 35px;
+  border-radius: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f1f7fa;
+}
+.bp-contact__icon img,
+.bp-contact__icon svg {
+  display: block;
+  width: 21px;
+  height: 21px;
+  object-fit: contain;
+}
+.bp-contact__icon--chat { color: #009cde; background: #e5f7ff; }
+.bp-contact__icon--telegram { background: #eaf8ff; }
+.bp-contact__icon--telegram img { filter: invert(51%) sepia(93%) saturate(1871%) hue-rotate(163deg) brightness(101%) contrast(88%); }
+.bp-contact__icon--whatsapp { background: #eafaf0; }
+.bp-contact__icon--whatsapp img { filter: invert(56%) sepia(84%) saturate(1232%) hue-rotate(97deg) brightness(95%) contrast(91%); }
+.bp-contact__icon--viber { background: #f3f0ff; }
+.bp-contact__icon--viber img { filter: invert(37%) sepia(77%) saturate(1918%) hue-rotate(230deg) brightness(103%) contrast(91%); }
+.bp-contact__icon--phone { background: #ecf8ff; }
+.bp-contact__icon--phone img { width: 19px; height: 19px; } /* ~20% smaller than previous 24px. */
+.bp-contact__name { font-size: 13px; font-weight: 730; white-space: nowrap; }
+@media (max-width: 640px) {
+  .bp-contact {
+    right: var(--bp-mobile-right);
+    bottom: var(--bp-mobile-bottom);
+    gap: 9px;
+  }
+  .bp-contact__trigger {
+    min-width: 54px;
+    width: 54px;
+    height: 54px;
+    padding: 0;
+  }
+  .bp-contact__trigger-label { display: none; }
+  .bp-contact__menu { width: min(280px, calc(100vw - 44px)); }
+  .bp-contact__channel { min-height: 48px; }
+}
+@media (max-height: 450px) {
+  .bp-contact { bottom: 12px; }
+  .bp-contact__menu { max-height: calc(100vh - 84px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bp-contact__menu { animation: none; }
+}
