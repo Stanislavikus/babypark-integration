@@ -4,10 +4,23 @@
   if (window.__babyParkLauncherL1) return;
   window.__babyParkLauncherL1 = true;
 
-  var ownScript = document.currentScript;
-  var assetBase = ownScript && ownScript.src
-    ? new URL('.', ownScript.src).href : null;
   var config = window.BabyParkLauncherConfig;
+  var ownScript = document.currentScript;
+  // Explicit same-origin assetBase survives Drupal JS aggregation/Magento bundling.
+  function resolveAssetBase() {
+    var origin = document.baseURI || window.location.href;
+    var value = config && config.assetBase;
+    var candidate = typeof value === 'string' && value ? value
+      : ownScript && ownScript.src ? new URL('.', ownScript.src).href : null;
+    if (!candidate) return null;
+    try {
+      var url = new URL(candidate, origin);
+      if (url.origin !== new URL(origin).origin || !/^https?:$/.test(url.protocol) ||
+          !url.pathname.endsWith('/') || url.search || url.hash) return null;
+      return url.href;
+    } catch (_) { return null; }
+  }
+  var assetBase = resolveAssetBase();
   var names = ['chat', 'telegram', 'whatsapp', 'viber', 'phone'];
   var labels = {
     chat: 'Чат з продавцем',
@@ -28,8 +41,8 @@
   };
   var chatOrigin = 'https://chat.babypark.ua';
   var widgetId = 'bp-contact-launcher-l1';
-  var state = { ready: false, expanded: false };
-  var root, menu, trigger, chatItem, rows = {};
+  var state = { ready: false, expanded: false, sdkStarted: false, sdkFailed: false };
+  var root, menu, trigger, chatStatus, rows = {};
 
   function channelConfig(name) {
     var channels = config && config.channels;
@@ -55,7 +68,7 @@
     var span = node('span', 'bp-contact__icon bp-contact__icon--' + name);
     if (name === 'chat') {
       // Static icon from approved BabyPark V4 mock; no customer-controlled markup.
-      span.innerHTML = '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11.4a7.8 7.8 0 0 1-8.2 7.7 9.6 9.6 0 0 1-3.3-.65L4 20l1.38-4.03A7.8 7.8 0 1 1 20 11.4Z"/><path d="M8.1 11.4h.01m3.89 0h.01m3.89 0h.01" stroke-width="2.5"/></svg>';
+      span.innerHTML = '<svg width="24" height="24" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11.4a7.8 7.8 0 0 1-8.2 7.7 9.6 9.6 0 0 1-3.3-.65L4 20l1.38-4.03A7.8 7.8 0 1 1 20 11.4Z"/><path d="M8.1 11.4h.01m3.89 0h.01m3.89 0h.01" stroke-width="2.5"/></svg>';
     } else if (assetBase) {
       var image = node('img');
       image.src = assetBase + 'icons/' + iconNames[name];
@@ -75,18 +88,37 @@
     if (restoreFocus) trigger.focus();
   }
 
+  function chatConfigured() {
+    return !!(channelConfig('chat') && config && typeof config.websiteToken === 'string' &&
+      /^[a-zA-Z0-9_-]{8,128}$/.test(config.websiteToken));
+  }
+
+  function styled() {
+    return !!(window.getComputedStyle && window.getComputedStyle(root).position === 'fixed');
+  }
+
   function syncVisible() {
     if (!root) return;
     var count = 0;
     names.forEach(function (name) {
       var available = name === 'chat'
-        ? !!(channelConfig('chat') && state.ready && window.$chatwoot && typeof window.$chatwoot.toggle === 'function')
+        ? !!(chatConfigured() && state.ready && window.$chatwoot &&
+             typeof window.$chatwoot.toggle === 'function')
         : !!targetFor(name);
       rows[name].hidden = !available;
       if (available) count += 1;
     });
-    if (!count) closeMenu(false);
-    root.hidden = count === 0;
+    if (chatStatus) {
+      chatStatus.hidden = !state.expanded || !chatConfigured() || !rows.chat.hidden;
+      if (!chatStatus.hidden) chatStatus.textContent = state.sdkFailed
+        ? 'Чат тимчасово недоступний. Спробуйте оновити сторінку.'
+        : 'Завантажуємо чат…';
+    }
+    // Show the trigger even if chat is the ONLY configured channel. The option
+    // itself remains hidden until the SDK fires the verified ready event.
+    if (!count && !chatConfigured()) closeMenu(false);
+    root.hidden = ((!count && !chatConfigured()) || !styled());
+    if (root.hidden && state.expanded) closeMenu(false);
   }
 
   function makeRow(name) {
@@ -102,6 +134,7 @@
         }
         closeMenu(false);
         window.$chatwoot.toggle('open');
+        trigger.focus();
       });
     } else {
       item.href = targetFor(name) || '#';
@@ -112,6 +145,7 @@
       } else {
         item.target = '_blank';
         item.rel = 'noopener noreferrer';
+        item.setAttribute('aria-label', labels[name] + ', відкриється у новій вкладці');
       }
       item.addEventListener('click', function (e) {
         var current = targetFor(name);
@@ -128,39 +162,41 @@
   }
 
   function initializeChatwoot() {
-    if (!channelConfig('chat')) return;
-    var token = config && config.websiteToken;
-    // A Website SDK token is public but a missing token must never produce a fake chat.
-    if (typeof token !== 'string' || !/^[a-zA-Z0-9_-]{8,128}$/.test(token)) return;
+    // L1-B: no SDK, iframe, cookie or Chatwoot Contact on passive page views.
+    // Only invoke on the FIRST explicit menu-open interaction.
+    if (state.sdkStarted || !chatConfigured()) return;
+    state.sdkStarted = true;
+    var token = config.websiteToken; // Public Website token, not API secret.
     window.addEventListener('chatwoot:ready', function () {
       state.ready = !!(window.$chatwoot && typeof window.$chatwoot.toggle === 'function');
+      state.sdkFailed = !state.ready;
       syncVisible();
     });
-    // SDK owns the conversation, bubble and transcript; no private API bearer token is exposed.
     window.chatwootSettings = Object.assign({}, window.chatwootSettings || {}, {
-      hideMessageBubble: true, locale: 'uk'
+      hideMessageBubble: true, locale: 'uk', showUnreadMessagesDialog: false
     });
     var sdk = document.createElement('script');
     sdk.async = true;
     sdk.src = chatOrigin + '/packs/js/sdk.js';
-    sdk.onerror = function () { state.ready = false; syncVisible(); };
+    function fail() { state.ready = false; state.sdkFailed = true; syncVisible(); }
+    sdk.onerror = fail;
     sdk.onload = function () {
-      if (window.chatwootSDK && typeof window.chatwootSDK.run === 'function') {
-        try { window.chatwootSDK.run({ websiteToken: token, baseUrl: chatOrigin }); }
-        catch (_) { state.ready = false; syncVisible(); }
-      }
+      if (!window.chatwootSDK || typeof window.chatwootSDK.run !== 'function') return fail();
+      try { window.chatwootSDK.run({ websiteToken: token, baseUrl: chatOrigin }); }
+      catch (_) { fail(); }
     };
-    document.head.appendChild(sdk);
+    try { document.head.appendChild(sdk); } catch (_) { fail(); }
   }
 
   function init() {
-    if (!document.body || !assetBase || !config || document.getElementById(widgetId)) return;
+    if (!document.body || !config || document.getElementById(widgetId)) return;
     root = node('aside', 'bp-contact');
     root.id = widgetId;
     root.hidden = true;
     menu = node('div', 'bp-contact__menu');
     menu.id = widgetId + '-menu';
     menu.hidden = true;
+    menu.setAttribute('role', 'group');
     menu.setAttribute('aria-label', 'Способи зв’язку');
     var header = node('div', 'bp-contact__heading', 'Як Вам зручніше?');
     var menuClose = node('button', 'bp-contact__menu-close', '×');
@@ -172,13 +208,18 @@
     var options = node('div', 'bp-contact__options');
     names.forEach(function (name) { options.appendChild(makeRow(name)); });
     menu.appendChild(options);
+    chatStatus = node('p', 'bp-contact__chat-status');
+    chatStatus.setAttribute('role', 'status');
+    chatStatus.setAttribute('aria-live', 'polite');
+    chatStatus.hidden = true;
+    menu.appendChild(chatStatus);
     trigger = node('button', 'bp-contact__trigger');
     trigger.type = 'button';
     trigger.setAttribute('aria-label', 'Зв’язатися з BabyPark');
     trigger.setAttribute('aria-controls', menu.id);
     trigger.setAttribute('aria-expanded', 'false');
     var openIcon = node('span', 'bp-contact__trigger-symbol');
-    openIcon.innerHTML = '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11.4a7.8 7.8 0 0 1-8.2 7.7 9.6 9.6 0 0 1-3.3-.65L4 20l1.38-4.03A7.8 7.8 0 1 1 20 11.4Z"/><path d="M8.1 11.4h.01m3.89 0h.01m3.89 0h.01" stroke-width="2.5"/></svg>';
+    openIcon.innerHTML = '<svg width="24" height="24" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11.4a7.8 7.8 0 0 1-8.2 7.7 9.6 9.6 0 0 1-3.3-.65L4 20l1.38-4.03A7.8 7.8 0 1 1 20 11.4Z"/><path d="M8.1 11.4h.01m3.89 0h.01m3.89 0h.01" stroke-width="2.5"/></svg>';
     var closeIcon = node('span', 'bp-contact__trigger-close');
     closeIcon.textContent = '×';
     closeIcon.setAttribute('aria-hidden', 'true');
@@ -192,6 +233,8 @@
       state.expanded = true;
       menu.hidden = false;
       trigger.setAttribute('aria-expanded', 'true');
+      initializeChatwoot();
+      syncVisible();
       var first = Array.prototype.find.call(options.children, function (item) { return !item.hidden; });
       if (first) first.focus();
     });
@@ -205,7 +248,8 @@
       if (e.key === 'Escape' && state.expanded) closeMenu(true);
     });
     syncVisible();
-    initializeChatwoot();
+    // CSS may load late; if missing entirely, remain hidden rather than unstyled.
+    window.addEventListener('load', syncVisible);
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init, { once: true });
