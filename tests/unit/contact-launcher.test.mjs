@@ -199,7 +199,7 @@ test('Escape and outside pointerdown close menu, with keyboard focus restored on
 test('assetBase stays correct through bundling and inline loading, but external origins are refused', () => {
   const cfg = { assetBase: '/themes/babypark2/assets/contact/', channels: { phone: { enabled: true, url: 'tel:+380982908838' } } };
   const aggregated = harness(cfg, { scriptSrc: 'https://babypark.ua/agg/js/agg_123.js' });
-  const icon = traverse(aggregated.body, el => el.tagName === 'IMG');
+  const icon = traverse(aggregated.body, el => el.tagName === 'IMG' && el.src.endsWith('/kyivstar.svg'));
   assert.equal(icon.src, 'https://babypark.ua/themes/babypark2/assets/contact/icons/kyivstar.svg');
   const inline = harness(cfg, { inline: true });
   assert.equal(inline.get('bp-contact').hidden, false);
