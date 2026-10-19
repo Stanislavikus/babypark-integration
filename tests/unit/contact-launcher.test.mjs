@@ -54,7 +54,7 @@ function harness(config, opts = {}) {
   const windowListeners = {};
   const document = {
     currentScript: opts.inline ? null : { src: opts.scriptSrc || 'https://babypark.ua/themes/babypark2/assets/contact/babypark-launcher.js' },
-    baseURI: 'https://babypark.ua/product/123',
+    baseURI: opts.documentBase || 'https://babypark.ua/product/123',
     readyState: 'complete',
     body, head,
     createElement: tag => new Element(tag),
@@ -165,7 +165,9 @@ test('L1-B SDK failures hide chat and disclose unavailable status without fake s
   assert.match(bad.get('bp-contact__chat-status').textContent, /недоступний/);
   assert.equal(bad.get('bp-contact').hidden, false, 'keep user-visible error for chat-only menu');
   bad.window.$chatwoot = { toggle() {} };
-  assert.equal(bad.get('bp-contact__channel--chat').hidden, true);
+  bad.window.dispatch('chatwoot:ready');
+  assert.equal(bad.get('bp-contact__channel--chat').hidden, true,
+    'late ready event must NOT resurrect failed SDK');
   const broken = harness({ websiteToken: 'PUBLICWEBSITETOKEN123', channels: { chat: { enabled: true } } });
   broken.get('bp-contact__trigger').click();
   broken.window.chatwootSDK = { run() { throw new Error('SDK failed'); } };
@@ -201,6 +203,10 @@ test('assetBase stays correct through bundling and inline loading, but external 
   const aggregated = harness(cfg, { scriptSrc: 'https://babypark.ua/agg/js/agg_123.js' });
   const icon = traverse(aggregated.body, el => el.tagName === 'IMG' && el.src.endsWith('/kyivstar.svg'));
   assert.equal(icon.src, 'https://babypark.ua/themes/babypark2/assets/contact/icons/kyivstar.svg');
+  const hostileBase = harness(cfg, { inline: true, documentBase: 'https://evil.example/' });
+  const trustedIcon = traverse(hostileBase.body, el => el.tagName === 'IMG' && el.src.endsWith('/kyivstar.svg'));
+  assert.equal(trustedIcon.src, 'https://babypark.ua/themes/babypark2/assets/contact/icons/kyivstar.svg',
+    'injected document <base> cannot redirect icon loads');
   const inline = harness(cfg, { inline: true });
   assert.equal(inline.get('bp-contact').hidden, false);
   const missingBase = harness({ channels: cfg.channels }, { inline: true });
@@ -217,6 +223,7 @@ test('missing stylesheet always hides floating widget, late CSS load can safely 
   h.window.getComputedStyle = () => ({ position: 'fixed' });
   h.window.dispatch('load');
   assert.equal(h.get('bp-contact').hidden, false);
+  assert.equal(h.get('bp-contact__menu').getAttribute('role'), 'group');
 });
 
 test('CSS provides mobile 22px inset, safe area, hidden/focus/mobile no-text and reduced motion', () => {
