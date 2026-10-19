@@ -274,3 +274,112 @@ test('brand palette: static orange rim, accessible white-on-teal text and no per
   assert.doesNotMatch(css, /\.bp-contact__trigger[^}]*animation\s*:/s);
   assert.doesNotMatch(css, /\b(infinite|pulse|marquee)\b/i);
 });
+
+
+// Sonnet R2 V1′: these six scenarios must kill the nine independent key-invariant
+// mutants described in PR #142 review #6275239378. They deliberately drive
+// state transitions between SDK.run() and Chatwoot's later ready event.
+const token = 'PUBLICWEBSITETOKEN123';
+const withChat = () => ({ websiteToken: token, channels: { chat: { enabled: true } } });
+
+test('V1prime T1: a re-sync between SDK run and later ready cannot expose chat', () => {
+  const h = harness(withChat());
+  const trigger = h.get('bp-contact__trigger');
+  const chat = h.get('bp-contact__channel--chat');
+  trigger.click();
+  h.window.chatwootSDK = {
+    run() { h.window.$chatwoot = { toggle() {} }; }
+  };
+  h.head.children[0].onload(); // SDK.run creates $chatwoot BEFORE ready.
+  assert.equal(chat.hidden, true);
+  trigger.click(); // closes menu
+  trigger.click(); // forces syncVisible in the ready gap
+  h.window.dispatch('load'); // late CSS/load refresh must not bypass ready.
+  assert.equal(chat.hidden, true, 'ready gate cannot be replaced by SDK availability');
+  h.window.dispatch('chatwoot:ready');
+  assert.equal(chat.hidden, false);
+});
+
+test('V1prime T2: lost/invalid $chatwoot after ready re-hides chat without throwing', () => {
+  const h = harness(withChat());
+  const trigger = h.get('bp-contact__trigger');
+  const chat = h.get('bp-contact__channel--chat');
+  trigger.click();
+  h.window.chatwootSDK = { run() { h.window.$chatwoot = { toggle() {} }; } };
+  h.head.children[0].onload();
+  h.window.dispatch('chatwoot:ready');
+  assert.equal(chat.hidden, false);
+  delete h.window.$chatwoot;
+  assert.doesNotThrow(() => chat.click(), 'vanished toggle must never throw');
+  assert.equal(chat.hidden, true, 'missing SDK action removes the advertised chat');
+  h.window.$chatwoot = {};
+  trigger.click(); // close, or open if failure path left menu shut.
+  h.window.dispatch('load'); // re-sync regardless of menu state
+  assert.equal(chat.hidden, true, 'non-callable toggle cannot advertise chat');
+  assert.doesNotThrow(() => chat.click());
+});
+
+test('V1prime T3: ready event without a callable SDK toggle does not authorize chat', () => {
+  const h = harness(withChat());
+  h.get('bp-contact__trigger').click();
+  h.window.chatwootSDK = { run() {} };
+  h.head.children[0].onload();
+  h.window.dispatch('chatwoot:ready');
+  assert.equal(h.get('bp-contact__channel--chat').hidden, true);
+  assert.match(h.get('bp-contact__chat-status').textContent, /недоступний/);
+  assert.equal(h.get('bp-contact__chat-status').hidden, false);
+});
+
+test('V1prime T4: disabled/absent/invalid Website chat never requests SDK on menu-open', () => {
+  const cases = [
+    { channels: { phone: { enabled: true, url: 'tel:+380982908838' } } },
+    { websiteToken: token, channels: { chat: { enabled: false },
+      phone: { enabled: true, url: 'tel:+380982908838' } } },
+    { websiteToken: '', channels: { chat: { enabled: true },
+      phone: { enabled: true, url: 'tel:+380982908838' } } },
+    { websiteToken: 'NOT A VALID TOKEN!', channels: { chat: { enabled: true },
+      phone: { enabled: true, url: 'tel:+380982908838' } } }
+  ];
+  for (const config of cases) {
+    const h = harness(config);
+    h.get('bp-contact__trigger').click();
+    h.window.dispatch('load');
+    assert.equal(h.head.children.length, 0, 'no configured chat, no SDK script');
+    assert.equal(h.window.chatwootSettings, undefined, 'no Chatwoot settings for disabled chat');
+    assert.equal(h.get('bp-contact__channel--chat').hidden, true);
+  }
+});
+
+test('V1prime T5: load, hover, keyboard and touch without menu-open never initialize Chatwoot', () => {
+  const h = harness(withChat());
+  const trigger = h.get('bp-contact__trigger');
+  h.window.dispatch('load');
+  h.document.dispatch('keydown', { key: 'Enter', target: trigger });
+  h.document.dispatch('keydown', { key: 'Escape', target: trigger });
+  h.document.dispatch('pointerdown', { target: trigger });
+  for (const event of ['pointerenter', 'mouseover', 'focus', 'touchstart']) {
+    for (const fn of trigger.listeners[event] || []) fn({ target: trigger });
+  }
+  h.window.dispatch('load');
+  assert.equal(h.head.children.length, 0, 'no SDK from passive or non-open gestures');
+  assert.equal(h.window.chatwootSettings, undefined);
+  assert.equal(h.get('bp-contact__channel--chat').hidden, true);
+  trigger.click();
+  assert.equal(h.head.children.length, 1, 'only explicit opening requests SDK once');
+});
+
+test('V1prime T6: host Chatwoot defaults cannot override required privacy/UX settings', () => {
+  const h = harness(withChat());
+  h.window.chatwootSettings = {
+    hideMessageBubble: false,
+    showUnreadMessagesDialog: true,
+    locale: 'en',
+    otherHostSetting: 'preserve'
+  };
+  h.get('bp-contact__trigger').click();
+  assert.equal(h.head.children.length, 1);
+  assert.equal(h.window.chatwootSettings.hideMessageBubble, true);
+  assert.equal(h.window.chatwootSettings.showUnreadMessagesDialog, false);
+  assert.equal(h.window.chatwootSettings.locale, 'uk');
+  assert.equal(h.window.chatwootSettings.otherHostSetting, 'preserve');
+});
