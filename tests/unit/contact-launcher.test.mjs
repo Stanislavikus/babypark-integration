@@ -57,7 +57,12 @@ function harness(config, opts = {}) {
     baseURI: opts.documentBase || 'https://babypark.ua/product/123',
     readyState: 'complete',
     body, head,
-    createElement: tag => new Element(tag),
+    createElement: tag => {
+      const el = new Element(tag);
+      el.focus = () => { el.focused = true; document.activeElement = el; };
+      return el;
+    },
+    activeElement: null,
     getElementById: id => traverse(body, node => node.id === id),
     addEventListener(name, fn) { (documentListeners[name] ||= []).push(fn); },
     dispatch(name, extra = {}) {
@@ -127,6 +132,8 @@ test('L1-B lazy Chatwoot: real ordering run() creates toggle BEFORE ready; only 
   assert.equal(h.head.children.length, 0, 'passive view MUST NOT inject Chatwoot SDK');
   assert.equal(h.window.chatwootSettings, undefined, 'passive view must not mutate Chatwoot');
   h.get('bp-contact__trigger').click();
+  assert.equal(h.document.activeElement, h.get('bp-contact__trigger'),
+    'chat-only pending SDK keeps focus on visible launcher');
   assert.equal(h.head.children.length, 1);
   assert.equal(h.head.children[0].src, 'https://chat.babypark.ua/packs/js/sdk.js');
   assert.equal(h.window.chatwootSettings.hideMessageBubble, true);
@@ -146,6 +153,8 @@ test('L1-B lazy Chatwoot: real ordering run() creates toggle BEFORE ready; only 
   h.window.dispatch('chatwoot:ready');
   assert.equal(row.hidden, false);
   assert.equal(h.get('bp-contact__chat-status').hidden, true);
+  assert.equal(h.document.activeElement, row,
+    'when chat becomes available, keyboard focus follows new option');
   row.click();
   assert.equal(toggleArg, 'open');
   assert.equal(h.get('bp-contact__trigger').focused, true);
@@ -193,6 +202,8 @@ test('Escape and outside pointerdown close menu, with keyboard focus restored on
   h.document.dispatch('pointerdown', { target: new Element('div') });
   assert.equal(h.get('bp-contact__menu').hidden, true);
   assert.equal(trigger.getAttribute('aria-expanded'), 'false');
+  assert.equal(h.document.activeElement, trigger,
+    'outside close restores focus from a hidden menu option');
   trigger.click();
   h.document.dispatch('pointerdown', { target: h.get('bp-contact__heading') });
   assert.equal(h.get('bp-contact__menu').hidden, false, 'inside click keeps menu open');
