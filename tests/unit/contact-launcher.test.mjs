@@ -310,12 +310,28 @@ test('V1prime T2: lost/invalid $chatwoot after ready re-hides chat without throw
   h.window.dispatch('chatwoot:ready');
   assert.equal(chat.hidden, false);
   delete h.window.$chatwoot;
+  // A background resize/load/reconciliation may re-render before any click.
+  // Test the actual lost-action window while state.ready is still true.
+  assert.doesNotThrow(() => h.window.dispatch('load'),
+    're-sync with vanished $chatwoot must not dereference it');
+  assert.equal(chat.hidden, true, 'missing SDK action is hidden by re-sync');
   assert.doesNotThrow(() => chat.click(), 'vanished toggle must never throw');
   assert.equal(chat.hidden, true, 'missing SDK action removes the advertised chat');
   h.window.$chatwoot = {};
-  trigger.click(); // close, or open if failure path left menu shut.
-  h.window.dispatch('load'); // re-sync regardless of menu state
-  assert.equal(chat.hidden, true, 'non-callable toggle cannot advertise chat');
+  // Fresh ready cycle restores state.ready, but the action remains non-callable.
+  // Emulate an SDK losing its method before a passive re-sync rather than
+  // relying on the click guard to set state.ready=false.
+  const h2 = harness(withChat());
+  h2.get('bp-contact__trigger').click();
+  h2.window.chatwootSDK = { run() { h2.window.$chatwoot = { toggle() {} }; } };
+  h2.head.children[0].onload();
+  h2.window.dispatch('chatwoot:ready');
+  const chat2 = h2.get('bp-contact__channel--chat');
+  assert.equal(chat2.hidden, false);
+  h2.window.$chatwoot = {};
+  assert.doesNotThrow(() => h2.window.dispatch('load'),
+    're-sync with non-callable toggle must be safe');
+  assert.equal(chat2.hidden, true, 'non-callable toggle must not advertise chat');
   assert.doesNotThrow(() => chat.click());
 });
 
