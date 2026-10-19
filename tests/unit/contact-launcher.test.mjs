@@ -234,6 +234,10 @@ test('CSS provides mobile 22px inset, safe area, hidden/focus/mobile no-text and
   assert.match(css, /outline: 3px solid #004b78/);
   assert.match(css, /--bp-compact-bottom:/);
   assert.match(css, /@media \(max-height: 450px\)\s*\{\s*\.bp-contact \{ bottom: var\(--bp-compact-bottom\)/);
+  assert.match(css, /max-height: calc\\(100dvh - var\\(--bp-compact-bottom\\) - 75px\\)/,
+    'landscape menu must subtract configured bottom inset plus trigger gap');
+  assert.doesNotMatch(css, /max-height:\\s*calc\\(100vh - 84px\\)/,
+    'unconditional landscape menu height clips when inset increases');
   assert.match(css, /@media print/);
   assert.match(css, /@media \(prefers-reduced-motion: reduce\)/);
   assert.match(css, /@media \(max-width: 640px\)/);
