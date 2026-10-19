@@ -174,6 +174,12 @@
       state.ready = !!(window.$chatwoot && typeof window.$chatwoot.toggle === 'function');
       state.sdkFailed = !state.ready;
       syncVisible();
+      // A chat-only menu has no actionable row while the SDK loads.
+      // Put keyboard users on the newly available option only if focus
+      // is still parked on the launcher after the original gesture.
+      if (state.expanded && !rows.chat.hidden && document.activeElement === trigger) {
+        rows.chat.focus();
+      }
     });
     window.chatwootSettings = Object.assign({}, window.chatwootSettings || {}, {
       hideMessageBubble: true, locale: 'uk', showUnreadMessagesDialog: false
@@ -240,12 +246,13 @@
       syncVisible();
       var first = Array.prototype.find.call(options.children, function (item) { return !item.hidden; });
       if (first) first.focus();
+      else trigger.focus(); // chat-only pending SDK: retain an accessible anchor
     });
     root.appendChild(menu);
     root.appendChild(trigger);
     document.body.appendChild(root);
     document.addEventListener('pointerdown', function (e) {
-      if (state.expanded && !root.contains(e.target)) closeMenu(false);
+      if (state.expanded && !root.contains(e.target)) closeMenu(true);
     });
     document.addEventListener('keydown', function (e) {
       if (e.key === 'Escape' && state.expanded) closeMenu(true);
