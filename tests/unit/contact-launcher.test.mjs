@@ -154,3 +154,23 @@ test('CSS provides mobile 22px inset, safe area, hidden/focus/mobile no-text and
   assert.match(css, /@media \(max-width: 640px\)/);
   assert.match(css, /\.bp-contact__trigger-label \{ display: none; \}/);
 });
+
+
+test('brand palette: static orange rim, accessible white-on-teal text and no periodic pulse', () => {
+  const bg = css.match(/--bp-accent:\s*(#[0-9a-fA-F]{6})/);
+  const hover = css.match(/\.bp-contact__trigger:hover\s*\{\s*background:\s*(#[0-9a-fA-F]{6})/);
+  assert.ok(bg);
+  assert.ok(hover);
+  function luminance(hex) {
+    const v = [1, 3, 5].map(pos => parseInt(hex.slice(pos, pos + 2), 16) / 255)
+      .map(x => (x <= 0.04045 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4));
+    return v[0] * 0.2126 + v[1] * 0.7152 + v[2] * 0.0722;
+  }
+  for (const color of [bg[1], hover[1]]) {
+    assert.ok((1.05 / (luminance(color) + 0.05)) >= 4.5,
+      `White text contrast on ${color} must be >= 4.5:1`);
+  }
+  assert.match(css, /\.bp-contact__trigger\s*\{[^}]*border:\s*1px solid #f47c20\s*;/s);
+  assert.doesNotMatch(css, /\.bp-contact__trigger[^}]*animation\s*:/s);
+  assert.doesNotMatch(css, /\b(infinite|pulse|marquee)\b/i);
+});
