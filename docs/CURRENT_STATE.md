@@ -2,10 +2,21 @@
 
 Status: EVIDENCE — operational/current-state record; not normative contract authority.
 Applies to: repository-wide operational and campaign state tracking.
-Supersedes: `docs/CURRENT_STATE.md` at canonical main `a45a8644e05df2584a2b75f2a3b47446811ae984`.
-Last updated: 2026-10-10
+Supersedes: `docs/CURRENT_STATE.md` at canonical main `f3d92325e6b4ef04f0137c4c49dde07c05731bbe`.
+Last updated: 2026-10-19 (L1-B addendum; carried C6 campaign snapshot remains dated 2026-10-10)
 Owner: BabyPark
 Source of truth for operational facts: production runtime + verified repository evidence.
+
+## Contact Launcher L1-B — distinct Draft PR #142, NOT deployed (2026-10-19)
+
+This addendum is operational evidence only, NOT authorization to merge, run customer-facing code, change the live Drupal theme or activate a Chatwoot Website channel.
+
+- Canonical repository `Stanislavikus/babypark-integration`; Draft PR #142, `feat/contact-launcher-l1-20261019`. Bounded change: static CMS-neutral contact launcher and use of official Chatwoot Website SDK; no Chatwoot core changes, no n8n/callback backend, no new durable BabyPark customer store.
+- **RISK CLASSIFICATION: HEAVY** because the browser opening the menu causes an external Website SDK to run with potential Chatwoot Contact + `cw_conversation` cookie/IP impact.
+- Owner L1-B pre-code GO on 2026-10-19 covers V1 / P1 lazy SDK / S1–S7 **only in PR #142**, bound to refreshed Scan SHA-256 `509c53e6891b270d5a6490e0e72c5951c089378c19d12d9ffdfcdfa518473302` and Fit SHA-256 `a94593eeac4c8b271a351ac480fdb5cba2417c7fa421a2d41e9bb5678bbeee85`.
+- Existing deployed Drupal7 `babypark2` Bitrix24 script and Chatwoot 4.18.0 runtime have **not been modified** by this branch. No real buyer↔seller channel roundtrips or real-site cart/checkout visual acceptance are proven yet.
+- Following complete implementation and test, exact tree review must be re-pinned to its new HEAD/tree/base, one full ZERO BLOCKERS verification and an independent isolated confirmation are required; a separate owner merge GO and subsequent owner production deploy GO are still required. WhatsApp and callback remain outside L1 activation.
+- Later L1 release will record actual channel and website-token configuration (no secrets), cookie/IP/retention facts, image/icon attribution, customer-contact privacy notice, site CSS/landscape offsets, rollback proof, and deployment identities in the infrastructure registry and current-state record. Missing proof ⇒ no production activation.
 
 ## Current campaign/navigation snapshot (2026-10-10)
 
