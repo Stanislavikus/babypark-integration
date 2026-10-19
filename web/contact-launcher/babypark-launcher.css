@@ -4,11 +4,14 @@
 .bp-contact {
   --bp-accent: #007cb6; /* white label WCAG contrast >= 4.5:1 */
   --bp-text: #203044;
-  --bp-mobile-right: 22px; /* Half of V4 preview's 44px; adjust after real-site measurement. */
+  --bp-desktop-right: 24px;
+  --bp-desktop-bottom: 24px;
+  --bp-mobile-right: 22px; /* Owner-approved V5 preview; verify real site overlap. */
   --bp-mobile-bottom: calc(76px + env(safe-area-inset-bottom, 0px));
+  --bp-compact-bottom: var(--bp-desktop-bottom);
   position: fixed;
-  right: 24px;
-  bottom: 24px;
+  right: var(--bp-desktop-right);
+  bottom: var(--bp-desktop-bottom);
   z-index: 2147483000;
   display: flex;
   align-items: flex-end;
@@ -25,7 +28,7 @@
 .bp-contact button,
 .bp-contact a { font: inherit; -webkit-tap-highlight-color: transparent; }
 .bp-contact button { cursor: pointer; }
-.bp-contact :focus-visible { outline: 3px solid #ffad35; outline-offset: 3px; }
+.bp-contact :focus-visible { outline: 3px solid #004b78; outline-offset: 3px; }
 .bp-contact__trigger {
   border: 1px solid #f47c20; /* brand accent; static, not animated */
   border-radius: 999px;
@@ -138,12 +141,24 @@
 .bp-contact__icon--phone { background: #ecf8ff; }
 .bp-contact__icon--phone img { width: 19px; height: 19px; } /* ~20% smaller than previous 24px. */
 .bp-contact__name { font-size: 13px; font-weight: 730; white-space: nowrap; }
-@media (max-width: 640px) {
+.bp-contact__chat-status {
+  margin: 3px 10px 9px;
+  padding: 8px 10px;
+  border-radius: 9px;
+  background: #eef6fa;
+  color: #24415a;
+  font-size: 12px;
+  line-height: 1.4;
+}
+@media (max-width: 767px) {
   .bp-contact {
     right: var(--bp-mobile-right);
     bottom: var(--bp-mobile-bottom);
+    --bp-compact-bottom: var(--bp-mobile-bottom);
     gap: 9px;
   }
+}
+@media (max-width: 640px) {
   .bp-contact__trigger {
     min-width: 54px;
     width: 54px;
@@ -155,9 +170,10 @@
   .bp-contact__channel { min-height: 48px; }
 }
 @media (max-height: 450px) {
-  .bp-contact { bottom: 12px; }
+  .bp-contact { bottom: var(--bp-compact-bottom); }
   .bp-contact__menu { max-height: calc(100vh - 84px); }
 }
+@media print { .bp-contact { display: none !important; } }
 @media (prefers-reduced-motion: reduce) {
   .bp-contact__menu { animation: none; }
 }
