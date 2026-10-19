@@ -2,7 +2,7 @@
 .bp-contact,
 .bp-contact * { box-sizing: border-box; }
 .bp-contact {
-  --bp-accent: #008fcf;
+  --bp-accent: #007cb6; /* white label WCAG contrast >= 4.5:1 */
   --bp-text: #203044;
   --bp-mobile-right: 22px; /* Half of V4 preview's 44px; adjust after real-site measurement. */
   --bp-mobile-bottom: calc(76px + env(safe-area-inset-bottom, 0px));
@@ -27,7 +27,7 @@
 .bp-contact button { cursor: pointer; }
 .bp-contact :focus-visible { outline: 3px solid #ffad35; outline-offset: 3px; }
 .bp-contact__trigger {
-  border: 0;
+  border: 1px solid #f47c20; /* brand accent; static, not animated */
   border-radius: 999px;
   height: 56px;
   padding: 0 19px;
@@ -42,7 +42,7 @@
   letter-spacing: -.1px;
   box-shadow: 0 9px 25px #006d9b37, 0 2px 6px #024d6e22;
 }
-.bp-contact__trigger:hover { background: #007fb9; }
+.bp-contact__trigger:hover { background: #006da3; }
 .bp-contact__trigger-symbol,
 .bp-contact__trigger-symbol svg { display: block; width: 24px; height: 24px; }
 .bp-contact__trigger-close {
