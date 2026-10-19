@@ -8,7 +8,8 @@
   var ownScript = document.currentScript;
   // Explicit same-origin assetBase survives Drupal JS aggregation/Magento bundling.
   function resolveAssetBase() {
-    var origin = document.baseURI || window.location.href;
+    // Never trust a document <base> element to define an icon origin.
+    var origin = window.location.href;
     var value = config && config.assetBase;
     var candidate = typeof value === 'string' && value ? value
       : ownScript && ownScript.src ? new URL('.', ownScript.src).href : null;
@@ -168,6 +169,8 @@
     state.sdkStarted = true;
     var token = config.websiteToken; // Public Website token, not API secret.
     window.addEventListener('chatwoot:ready', function () {
+      // A late event after an explicit SDK failure must not resurrect the chat.
+      if (state.sdkFailed) return;
       state.ready = !!(window.$chatwoot && typeof window.$chatwoot.toggle === 'function');
       state.sdkFailed = !state.ready;
       syncVisible();
