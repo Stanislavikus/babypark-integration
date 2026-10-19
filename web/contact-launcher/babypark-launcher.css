@@ -171,7 +171,12 @@
 }
 @media (max-height: 450px) {
   .bp-contact { bottom: var(--bp-compact-bottom); }
-  .bp-contact__menu { max-height: calc(100vh - 84px); }
+  /* Reserve: compact bottom inset + 54–56px trigger + 9–10px gap
+     + at least 9px viewport top margin. Otherwise landscape clips the menu. */
+  .bp-contact__menu {
+    max-height: calc(100vh - var(--bp-compact-bottom) - 75px);
+    max-height: calc(100dvh - var(--bp-compact-bottom) - 75px);
+  }
 }
 @media print { .bp-contact { display: none !important; } }
 @media (prefers-reduced-motion: reduce) {
