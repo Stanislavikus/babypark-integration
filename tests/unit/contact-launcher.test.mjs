@@ -542,3 +542,46 @@ test('L1-C SVG X geometry and double-contrast focus have no baseline glyph', () 
   assert.match(css, /@media \(forced-colors:\s*active\)/);
   assert.match(css, /\.bp-contact__trigger-close svg\s*\{[^}]*width:\s*24px;[^}]*height:\s*24px;/s);
 });
+
+test('L1-C S9 accessibility: persistent live region announces loading, slowness and recovery', () => {
+  const h = harness(withChat());
+  const status = h.get('bp-contact__chat-status');
+  assert.ok(status, 'a real aria-live node must exist before any chat transitions');
+  assert.equal(status.getAttribute('role'), 'status');
+  assert.equal(status.getAttribute('aria-live'), 'polite');
+  assert.equal(status.getAttribute('aria-atomic'), 'true');
+  assert.equal(status.hidden, false, 'permanent live region must not be conditionally hidden');
+  h.get('bp-contact__trigger').click();
+  assert.match(status.textContent, /підключається/);
+  h.advance(12000);
+  assert.match(status.textContent, /довше, ніж зазвичай/);
+  h.window.chatwootSDK = { run() { h.window.$chatwoot = { toggle() {} }; } };
+  h.head.children[0].onload();
+  h.window.dispatch('chatwoot:ready');
+  assert.match(status.textContent, /доступний/);
+  assert.equal(status.getAttribute('aria-live'), 'polite', 'live region survives state changes');
+  assert.equal(status.hidden, false);
+  const error = harness(withChat());
+  error.get('bp-contact__trigger').click();
+  error.head.children[0].onerror();
+  assert.match(error.get('bp-contact__chat-status').textContent, /недоступний/);
+  assert.equal(error.get('bp-contact__chat-status').getAttribute('role'), 'status');
+});
+
+test('L1-C S9: subdued informational note is still legible at small text size', () => {
+  const noteStyle = css.match(/\.bp-contact__chat-note\s*\{([^}]*)\}/)?.[1];
+  assert.ok(noteStyle);
+  const foreground = noteStyle.match(/\bcolor:\s*(#[0-9a-fA-F]{6})\s*;/)?.[1];
+  const bgStyle = css.match(/\.bp-contact__channel--chat:disabled,\s*\.bp-contact__channel--chat\[aria-disabled="true"\]\s*\{([^}]*)\}/)?.[1];
+  const background = bgStyle?.match(/background:\s*(#[0-9a-fA-F]{6})\s*;/)?.[1];
+  assert.ok(foreground && background, 'explicit disabled-note foreground and background required');
+  const luminance = hex => {
+    const rgb = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16) / 255)
+      .map(c => c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
+    return rgb[0] * 0.2126 + rgb[1] * 0.7152 + rgb[2] * 0.0722;
+  };
+  const fg = luminance(foreground), bg = luminance(background);
+  const contrast = (Math.max(fg, bg) + 0.05) / (Math.min(fg, bg) + 0.05);
+  assert.ok(contrast >= 4.5, `Disabled chat status text contrast ${contrast.toFixed(2)} must be >= 4.5:1`);
+  assert.match(noteStyle, /font-size:\s*10px/);
+});
