@@ -232,11 +232,14 @@
       syncVisible();
     }, 12000);
     var sdk = document.createElement('script');
+    var sdkRun = false;
     sdk.async = true;
     sdk.src = chatOrigin + '/packs/js/sdk.js';
     sdk.onerror = fail;
     sdk.onload = function () {
-      if (state.sdkFailed) return;
+      // Script.onload must not call the official SDK.run() more than once.
+      if (state.sdkFailed || sdkRun) return;
+      sdkRun = true;
       if (!window.chatwootSDK || typeof window.chatwootSDK.run !== 'function') return fail();
       try { window.chatwootSDK.run({ websiteToken: token, baseUrl: chatOrigin }); }
       catch (_) { fail(); }
