@@ -41,6 +41,10 @@ Live root: /home/babypark/sites/babypark.ua; active Drupal 7 theme babypark2. Ex
 ## Rollback
 If site UI regresses, remove new CSS/JS includes and restore pinned template, keeping defunct Bitrix24 loader OFF. For a failing channel disable only that channel, purge relevant static config cache, do not imply delivery succeeded. No changes to Chatwoot transcript authority.
 
+## L1-C V2 R4 minor accessibility closure
+
+The explicitly disabled Website chat row is subdued while unavailable. However, its informative 10px slow/error note uses its own dark gray `#5d6b78` over `#f6f7f8`, with at least 4.5:1 text contrast; it is not hidden by a muted parent color. The existing present-before-transition `role=status`, `aria-live=polite`, `aria-atomic=true` live region has explicit unit assertions for pending, delayed, genuine-ready and error states. R4 independent Chromium geometry, contrast ring and SVG alignment passed on the former HEAD; after any additional CSS/test/docs correction, revalidate on the new exact HEAD before merge. No Playwright dependency added. Screen-reader actual-device behavior and live-site/channel/privacy evidence remain unverified activation gates.
+
 ## Close icon provenance — L1-C V2
 Both close controls use the same static symmetric X icon geometry from Lucide/Feather (24×24 viewBox; two crossing diagonals `M18 6 6 18M6 6l12 12`), no package/network runtime dependency. Lucide: https://lucide.dev/icons/x, https://github.com/lucide-icons/lucide ; the Feather-derived X is MIT licensed (Copyright 2013–2023 Cole Bemis and Feather Contributors), reproduced under MIT terms (https://github.com/feathericons/feather/blob/main/LICENSE). Required original MIT copyright/license notices must accompany distribution where applicable; the existing runbook and inline source comment identify it. The icon is centred with CSS flex rather than independent pixel translations.
 
@@ -48,7 +52,7 @@ Feather MIT license notice retained with the icon distribution (https://github.c
 
 > MIT License
 >
-> Copyright (c) 2013-2023 Cole Bemis and Feather Contributors
+> Copyright (c) 2013-2023 Cole Bemis
 >
 > Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
 >
