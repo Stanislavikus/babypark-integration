@@ -477,6 +477,7 @@ test('L1-C readiness and failure races are settled once without auto-open', () =
   } };
   const sdk = h.head.children[0];
   sdk.onload();
+  sdk.onload(); // defensive: duplicated onload may not re-run official SDK.
   h.window.dispatch('chatwoot:ready');
   h.window.dispatch('chatwoot:ready');
   h.advance(24000);
