@@ -186,6 +186,8 @@
   gap: 1px;
 }
 .bp-contact__chat-note {
+  /* The note is real status information, even when its parent button is disabled. */
+  color: #5d6b78;
   display: -webkit-box;
   overflow: hidden;
   max-height: 26px;
