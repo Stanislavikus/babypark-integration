@@ -3,17 +3,18 @@
 Status: EVIDENCE — operational/current-state record; not normative contract authority.
 Applies to: repository-wide operational and campaign state tracking.
 Supersedes: `docs/CURRENT_STATE.md` at canonical main `f3d92325e6b4ef04f0137c4c49dde07c05731bbe`.
-Last updated: 2026-10-19 (L1-B addendum; carried C6 campaign snapshot remains dated 2026-10-10)
+Last updated: 2026-10-20 (L1-C V2 pre-code implementation in Draft PR #142; carried C6 campaign snapshot remains dated 2026-10-10)
 Owner: BabyPark
 Source of truth for operational facts: production runtime + verified repository evidence.
 
-## Contact Launcher L1-B — distinct Draft PR #142, NOT deployed (2026-10-19)
+## Contact Launcher L1-B + L1-C V2 — distinct Draft PR #142, NOT deployed (2026-10-20)
 
 This addendum is operational evidence only, NOT authorization to merge, run customer-facing code, change the live Drupal theme or activate a Chatwoot Website channel.
 
 - Canonical repository `Stanislavikus/babypark-integration`; Draft PR #142, `feat/contact-launcher-l1-20261019`. Bounded change: static CMS-neutral contact launcher and use of official Chatwoot Website SDK; no Chatwoot core changes, no n8n/callback backend, no new durable BabyPark customer store.
 - **RISK CLASSIFICATION: HEAVY** because the browser opening the menu causes an external Website SDK to run with potential Chatwoot Contact + `cw_conversation` cookie/IP impact.
 - Owner L1-B pre-code GO on 2026-10-19 covers V1 / P1 lazy SDK / S1–S7 **only in PR #142**, bound to refreshed Scan SHA-256 `509c53e6891b270d5a6490e0e72c5951c089378c19d12d9ffdfcdfa518473302` and Fit SHA-256 `a94593eeac4c8b271a351ac480fdb5cba2417c7fa421a2d41e9bb5678bbeee85`.
+- Owner L1-C V2 pre-code GO on 2026-10-20 permits ONLY fixed-height disabled Website chat row, 12-second informational deadline with late genuine-ready recovery, centred static SVG X, two-tone focus, and exact scoped test/docs changes: Scan SHA `74237eddbf8b0225b6728007eb0344b224f15ff8d5660ee705740ecc9472a4d0` and Fit SHA `75d9769eb3fbce563421a247cab81d2314319873930afdc39920f457bdb9dc6d`. No SDK prefetch/preconnect, auto-open or new runtime dependency. New exact HEAD/TREE/test/browser/review closure is NOT yet complete, so this row is implementation-in-progress, not deployment authority.
 - Existing deployed Drupal7 `babypark2` Bitrix24 script and Chatwoot 4.18.0 runtime have **not been modified** by this branch. No real buyer↔seller channel roundtrips or real-site cart/checkout visual acceptance are proven yet.
 - Following complete implementation and test, exact tree review must be re-pinned to its new HEAD/tree/base, one full ZERO BLOCKERS verification and an independent isolated confirmation are required; a separate owner merge GO and subsequent owner production deploy GO are still required. WhatsApp and callback remain outside L1 activation.
 - Later L1 release will record actual channel and website-token configuration (no secrets), cookie/IP/retention facts, image/icon attribution, customer-contact privacy notice, site CSS/landscape offsets, rollback proof, and deployment identities in the infrastructure registry and current-state record. Missing proof ⇒ no production activation.
