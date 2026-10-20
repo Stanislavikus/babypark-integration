@@ -28,7 +28,19 @@
 .bp-contact button,
 .bp-contact a { font: inherit; -webkit-tap-highlight-color: transparent; }
 .bp-contact button { cursor: pointer; }
-.bp-contact :focus-visible { outline: 3px solid #004b78; outline-offset: 3px; }
+.bp-contact :focus-visible {
+  outline: 3px solid #004b78;
+  outline-offset: 3px;
+  /* Outer light band stays visible when launcher floats over dark content. */
+  box-shadow: 0 0 0 6px #fff;
+}
+@media (forced-colors: active) {
+  .bp-contact :focus-visible {
+    outline: 3px solid Highlight;
+    outline-offset: 3px;
+    box-shadow: none;
+  }
+}
 .bp-contact__trigger {
   border: 1px solid #f47c20; /* brand accent; static, not animated */
   border-radius: 999px;
@@ -50,12 +62,15 @@
 .bp-contact__trigger-symbol svg { display: block; width: 24px; height: 24px; }
 .bp-contact__trigger-close {
   display: none;
-  font-size: 29px;
-  line-height: 1;
-  font-weight: 400;
+  width: 24px;
+  height: 24px;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 24px;
 }
+.bp-contact__trigger-close svg { display: block; width: 24px; height: 24px; }
 .bp-contact__trigger[aria-expanded="true"] .bp-contact__trigger-symbol { display: none; }
-.bp-contact__trigger[aria-expanded="true"] .bp-contact__trigger-close { display: block; }
+.bp-contact__trigger[aria-expanded="true"] .bp-contact__trigger-close { display: flex; }
 .bp-contact__trigger-label { white-space: nowrap; }
 .bp-contact__menu {
   width: 279px;
@@ -93,9 +108,11 @@
   border-radius: 9px;
   background: #f3f6f8;
   color: #6d7c88;
-  font-size: 21px !important;
-  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
+.bp-contact__menu-close svg { display: block; width: 19px; height: 19px; }
 .bp-contact__options { display: grid; gap: 2px; }
 .bp-contact__channel {
   width: 100%;
@@ -141,14 +158,56 @@
 .bp-contact__icon--phone { background: #ecf8ff; }
 .bp-contact__icon--phone img { width: 19px; height: 19px; } /* ~20% smaller than previous 24px. */
 .bp-contact__name { font-size: 13px; font-weight: 730; white-space: nowrap; }
+/* A configured chat always reserves the same final row box. A late SDK state
+   change must not move Telegram, Viber or the telephone under a pointer. */
+.bp-contact__channel--chat {
+  height: 64px;
+  min-height: 64px;
+  max-height: 64px;
+  overflow: hidden;
+}
+.bp-contact__channel--chat:disabled,
+.bp-contact__channel--chat[aria-disabled="true"] {
+  background: #f6f7f8;
+  color: #71808e !important;
+  cursor: default;
+}
+.bp-contact__channel--chat:disabled:hover { background: #f6f7f8; }
+.bp-contact__channel--chat:disabled .bp-contact__icon--chat {
+  background: #edf0f2;
+  color: #97a4ad;
+}
+.bp-contact__chat-copy {
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
+  flex-direction: column;
+  justify-content: center;
+  gap: 1px;
+}
+.bp-contact__chat-note {
+  display: -webkit-box;
+  overflow: hidden;
+  max-height: 26px;
+  font-size: 10px;
+  line-height: 12px;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+.bp-contact__chat-note[hidden] { display: none !important; }
+/* Persistent non-layout live region, not a second loading row. */
 .bp-contact__chat-status {
-  margin: 3px 10px 9px;
-  padding: 8px 10px;
-  border-radius: 9px;
-  background: #eef6fa;
-  color: #24415a;
-  font-size: 12px;
-  line-height: 1.4;
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  margin: -1px !important;
+  padding: 0 !important;
+  border: 0 !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
 }
 @media (max-width: 767px) {
   .bp-contact {
@@ -168,6 +227,7 @@
   .bp-contact__trigger-label { display: none; }
   .bp-contact__menu { width: min(280px, calc(100vw - 44px)); }
   .bp-contact__channel { min-height: 48px; }
+  .bp-contact__channel--chat { min-height: 64px; }
 }
 @media (max-height: 450px) {
   .bp-contact { bottom: var(--bp-compact-bottom); }
