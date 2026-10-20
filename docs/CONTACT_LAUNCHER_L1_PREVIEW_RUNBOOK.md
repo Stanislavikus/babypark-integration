@@ -44,5 +44,18 @@ If site UI regresses, remove new CSS/JS includes and restore pinned template, ke
 ## Close icon provenance — L1-C V2
 Both close controls use the same static symmetric X icon geometry from Lucide/Feather (24×24 viewBox; two crossing diagonals `M18 6 6 18M6 6l12 12`), no package/network runtime dependency. Lucide: https://lucide.dev/icons/x, https://github.com/lucide-icons/lucide ; the Feather-derived X is MIT licensed (Copyright 2013–2023 Cole Bemis and Feather Contributors), reproduced under MIT terms (https://github.com/feathericons/feather/blob/main/LICENSE). Required original MIT copyright/license notices must accompany distribution where applicable; the existing runbook and inline source comment identify it. The icon is centred with CSS flex rather than independent pixel translations.
 
+Feather MIT license notice retained with the icon distribution (https://github.com/feathericons/feather/blob/main/LICENSE):
+
+> MIT License
+>
+> Copyright (c) 2013-2023 Cole Bemis and Feather Contributors
+>
+> Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+>
+> The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+>
+> THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+
 ## Logo provenance and usage
 Local Telegram, WhatsApp and Viber icons are from Font Awesome Free 6.7.2, CC BY 4.0, https://fontawesome.com/license/free . Source GitHub blob IDs respectively: 29a1d267ebe1112bca2741f02f69411bf6e88dc1, 47544750d64bd4c06b6df25d660678eb8576d7e3, dca0b14dfb58f6889b28f82ac072b73aebfd69b1. Kyivstar is a **BabyPark compact whitespace/format derivative, NOT byte-identical copy**, of https://commons.wikimedia.org/wiki/File:Kyivstar_2015_logo_-_Brandmark.svg ; upstream source fetched independently via Wikimedia HTTP 200 2026-10-19, 421 bytes SHA-256 169cae268d33419168c096cf146fece2e780580ccb6b2a3d9d5c9b739c462357. Path data (all five rays) match exactly; checked-in condensed version is 388 bytes SHA-256 4cc950981fda2528cab34fa090e77e64abc68ff0668c222f8b176de23a000509. Public-domain-simple-logo rationale is not trademark permission; mark remains a Kyivstar trademark. No endorsement implied.
