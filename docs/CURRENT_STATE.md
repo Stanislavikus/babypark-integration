@@ -1,5 +1,16 @@
 # CURRENT_STATE
 
+## 2026-10-22 — BabyPark public Website contact launcher rollout (active)
+
+Operational truth as directly verified on production Drupal and publicly re-read from `https://babypark.ua/`:
+- Theme `babypark2` includes unchanged launcher JS/CSS from immutable Draft PR #142 HEAD `8e7f22a39c2c18a86ffa7e619c83c61b28b1c577`, TREE `6d22233141bbd34a6d186b9e7fbf256ed2967bcc`. No Git merge was performed.
+- `chat.enabled=true` activated 2026-10-22 at site-local asset `/sites/all/themes/babypark2/assets/contact/config.js?v=20261022-website-on1`; chat.babypark.ua Website widget/SDK returned HTTP 200; Chatwoot 4.18.0 web/worker services active; PHP lint PASS; Drupal full cache clear succeeded.
+- `telegram/viber/phone=true`; `whatsapp=false` awaiting Meta setup. Before chat activation, owner reported good actual Samsung Galaxy S25 Ultra display and functioning Telegram/Viber/dialer. Owner tested standalone Website widget and reported actual messaging working, but **embedded launcher Website chat on Samsung awaits owner confirmation**.
+- Old Bitrix24 site-button loader removed from HTML when launcher activated. Prior template and Website-only rollback preimages preserved at `/home/babypark/.babypark-launcher-rollback/20261022-pr142/` as detailed in `docs/INFRASTRUCTURE_REGISTRY.md`; no new Chatwoot inbox created.
+- Current residual work: verify embedded Website chat menu + seller reply, publish centralized privacy details, implement/check operational Chatwoot message deletion/retention, and perform **separate post-launch** cookie banner module work issue #147. Existing Chatwoot 4.18.0 has no confirmed built-in time-based auto-purge of normal conversations; native per-conversation delete is admin-only and asynchronous. Do not mark Agreement §2.0a compliance completed without evidence of actual live controls. Public site behavior and owner direction are factual deployment evidence only.
+- PR #142 evidence: GitHub comment #6337597005.
+
+
 Status: EVIDENCE — operational/current-state record; not normative contract authority.
 Applies to: repository-wide operational and campaign state tracking.
 Supersedes: `docs/CURRENT_STATE.md` at canonical main `a45a8644e05df2584a2b75f2a3b47446811ae984`.
