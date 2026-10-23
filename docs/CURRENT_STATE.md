@@ -3,13 +3,22 @@
 Status: EVIDENCE — operational/current-state record; not normative contract authority.
 Applies to: repository-wide operational and campaign state tracking.
 Supersedes: `docs/CURRENT_STATE.md` at canonical main `a45a8644e05df2584a2b75f2a3b47446811ae984`.
-Last updated: 2026-10-10
+Last updated: 2026-10-23
 Owner: BabyPark
 Source of truth for operational facts: production runtime + verified repository evidence.
 
-## Current campaign/navigation snapshot (2026-10-10)
+## Current campaign/navigation snapshot (2026-10-23)
 
 This top section is the current campaign/navigation snapshot. Exact implementation and merge truth remains canonical Git; normative process/governance authority remains `docs/AI_WORKING_AGREEMENT.md`. Runtime facts that are not restated here must be freshly verified from their authoritative runtime/source before use.
+
+### Current bounded campaign: AI Seller PoC-0 — PR #149 (proposal, not merged)
+
+- **Repository authority:** only `Stanislavikus/babypark-integration` canonical main and `docs/AI_WORKING_AGREEMENT.md`. PR #149 is a separate HEAVY docs-only proposal to reopen precisely the offline AI Seller PoC-0 research exception under Agreement §10; while unmerged it **authorizes nothing**.
+- **State if PR #149 merges after independent exact-tree HEAVY R1/R2, a new immutable final-gate bundle, and explicit owner approval:** its single bounded `AI_SELLER_POC0_SCOPE_CHANGE.md` becomes canonical scope authority for this research, **not** a deployed or activated experiment.
+- **Next intended PoC-0 step after a separately approved merge:** finish Fit-note SHA-bound EB0–EB6, owner OD-1–OD-10 including OD-3 cohort authorization, EB3 E22 verification, non-production provider key with enforceable OD-6 spend cap, exact input/token measures, live n8n configuration, and then obtain a distinct SHA-bound owner GO before any paid model call. No customer-facing Chatwoot path or production deployment is authorized by these docs.
+- **Unchanged production state:** PR #149 contains no runtime code, production deployment, verified live provider configuration or paid model run. Parallel C6 runtime/recovery work remains governed by its separate committed contracts and permissions.
+
+### Prior C6-B1 navigation snapshot (recorded 2026-10-10; historical, not current PoC activation)
 
 State expected after successful merge of C6-B1 PR #118:
 
