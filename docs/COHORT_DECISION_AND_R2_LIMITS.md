@@ -1,14 +1,18 @@
 # BabyPark AI Seller PoC-0 — 24-question / 32-product cohort proposal
 
-**Status: PROPOSED EVIDENCE / NOT APPROVED.** No live execution, no catalog copy, no production export, no change to canonical R4 documentation.
+Status: EVIDENCE — NON-NORMATIVE. Proposed sampling evidence for owner decision OD-3; not approved and not a GO.
+Applies to: AI Seller PoC-0 unscored 24-question pilot cohort selection only.
+Supersedes: none.
+
+No live execution, no catalog copy, no production export.
 Repository: `Stanislavikus/babypark-integration` only.
 Source generation: `g_3f82b2487806f6caaea95ad9aca94552f2eeb39844a2de87`.
 Retained snapshot: `full-g3f82b248-d946fe5d-20260930T2128Z.ready`.
-The source manifest hash was independently confirmed on the production catalog host as `6dac402a0f423cf2b77d82114c262df5565855233c78252718fd5d74f32b8883`.
+The operator confirmed the source manifest hash on the production catalog host (read-only) as `6dac402a0f423cf2b77d82114c262df5565855233c78252718fd5d74f32b8883`; it matches the snapshot record in `docs/CURRENT_STATE.md`. That generation is now the PREVIOUS generation, so this cohort is valid only if owner OD-2 selects the retained artifact.
 
 ## Decision recommended for owner approval
 
-For **24-question unscored pilot only**, use three frozen category-aligned *cohorts* rather than pass
+For **24-question unscored pilot only**, use three fixed category-aligned *cohorts* rather than pass
 an entire 361–461-product category into R2:
 
 | Cohort | Selected product IDs | Questions | Earlier single-language prepared projection size (measured or noted below) |
@@ -28,6 +32,8 @@ fully allowlisted projection with variants, brand fields, price, generation and 
 They do NOT measure Anthropic token counts, memory use, n8n Data Table bytes, or cost; do not
 use them as a pricing commitment. Before paid calls, use official/appropriate token-count
 and exact constructed model-input sizes and check the Haiku long-context price tier.
+The measurement is operator-attested: the projection script and its output are not committed,
+so the figures are non-binding orientation values only.
 
 ## Fair R1/R2 protocol — subject to updating R4 Plan / Fit-note
 
@@ -36,10 +42,11 @@ and exact constructed model-input sizes and check the Haiku long-context price t
 - Make **the exact same group of product IDs and same normalized factual content** available
   to both arms. R1 accesses the 10/10/12 cards via Data Table tool; R2 sees those same cards
   in the model context. Do not pass extra facts or hints to R2.
-- To reduce duplication, pass the snapshot text in the customer's request language; for
-  mixed-language inputs define and freeze the fallback beforehand, the same in both arms.
-- One generation only; commercial facts always historical with the verified `snapshot_as_of`
-  and SKU/variant disambiguation. Product ID/title does not establish safety or compatibility.
+- Pass only the snapshot text in the question's fixed `question_language` to both arms. There is
+  no fallback: a question whose required cards lack that language is NON-RUNNABLE before any paid call.
+- One generation only; commercial facts always historical with `snapshot_as_of` as defined in the
+  Plan (capture time of the commercial/stock layer, never the export `created_at`) and SKU/variant
+  disambiguation. Product ID/title does not establish safety or compatibility.
 - Document the **changed hypothesis**: this is a fixed-cohort *retrieval vs provided-context*
   test, not a full-subcategory retrieval test. The full-category feasibility limit is
   separately reported. Before any live pilot, rebind R4 Plan and Fit-note SHA and obtain

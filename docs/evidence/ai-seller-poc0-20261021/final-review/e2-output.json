@@ -1,0 +1,28 @@
+{
+  "experiment": "E2",
+  "node": "v22.22.2",
+  "sqlite": "3.51.2",
+  "upper_of_cyrillic": "коляска",
+  "results": [
+    {
+      "label": "same case Cyrillic",
+      "needle": "%коляска%",
+      "matches": 1
+    },
+    {
+      "label": "upper-case Cyrillic needle",
+      "needle": "%КОЛЯСКА%",
+      "matches": 0
+    },
+    {
+      "label": "lower-case first letter vs title-case row",
+      "needle": "%прогулочная%",
+      "matches": 0
+    },
+    {
+      "label": "ASCII lower vs ASCII title-case row",
+      "needle": "%cybex%",
+      "matches": 1
+    }
+  ]
+}

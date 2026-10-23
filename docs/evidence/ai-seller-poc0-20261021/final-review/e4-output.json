@@ -1,0 +1,71 @@
+{
+  "experiment": "E4",
+  "node": "v22.22.2",
+  "search": [
+    {
+      "label": "T1 exact tokens",
+      "query": "Cybex Eezy",
+      "match_mode": "FTS_WORD",
+      "count": 1
+    },
+    {
+      "label": "T2 word order swapped",
+      "query": "Eezy Cybex",
+      "match_mode": "FTS_WORD",
+      "count": 1
+    },
+    {
+      "label": "T3 infix substring (3+ chars)",
+      "query": "Eez",
+      "match_mode": "FTS_TRIGRAM",
+      "count": 1
+    },
+    {
+      "label": "T4 infix substring of two words",
+      "query": "bex Eez",
+      "match_mode": "FTS_TRIGRAM",
+      "count": 1
+    },
+    {
+      "label": "T5 doubled letter typo",
+      "query": "Eezzy",
+      "match_mode": "BROWSE",
+      "count": 0
+    },
+    {
+      "label": "T6 dropped letter typo",
+      "query": "Ezy",
+      "match_mode": "FTS_TRIGRAM",
+      "count": 1
+    },
+    {
+      "label": "T7 swapped letters typo",
+      "query": "Cybex Eeyz",
+      "match_mode": "BROWSE",
+      "count": 0
+    },
+    {
+      "label": "T8 diminutive form",
+      "query": "колясочка Cybex",
+      "match_mode": "BROWSE",
+      "count": 0
+    }
+  ],
+  "quote_check": [
+    {
+      "quote": "весом 6,9 кг",
+      "raw_html_contains": false,
+      "normalized_text_contains": true
+    },
+    {
+      "quote": "поворачивается на 360° От 6 месяцев",
+      "raw_html_contains": false,
+      "normalized_text_contains": true
+    },
+    {
+      "quote": "Складывается одной рукой",
+      "raw_html_contains": true,
+      "normalized_text_contains": true
+    }
+  ]
+}

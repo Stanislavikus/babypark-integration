@@ -1,6 +1,6 @@
 # BabyPark AI Seller PoC-0 — 120 synthetic buyer questions, seller draft v2
 
-Status: **EVIDENCE — NON-NORMATIVE, DRAFT ONLY**. Applies to: offline AI Seller PoC-0 evaluation. Supersedes: earlier `SELLER_GOLD_120_DRAFT.md` **only as a candidate working draft**; neither version is a frozen gold set.
+Status: **EVIDENCE — NON-NORMATIVE, DRAFT ONLY**. Applies to: offline AI Seller PoC-0 evaluation. Supersedes: none (an earlier working draft was never committed to this repository); this draft is not a frozen gold set.
 
 These 120 questions are newly written synthetic customer-style examples, **not copied from real customer chats**, and contain no PII. They must NOT enter the model's system prompt or be handed to the model together with answers. Placeholders `{{...}}` must be replaced with real names/SKUs/attributes checked against ONE verified BabyPark catalog snapshot; sellers must explicitly approve each question and its expected answers **before** gold SHA freeze. A catalog reference in a question is not evidence that a feature is present or safe.
 

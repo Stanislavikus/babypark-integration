@@ -15,14 +15,15 @@ This scan authorizes nothing. Any PoC activity still needs the merged scope chan
 - BASE OID: `f3d92325e6b4ef04f0137c4c49dde07c05731bbe`
 - BASE TREE: `ffb8953002feaeb5f417a09a832c86f24051afa2`
 - GOVERNANCE AGREEMENT BLOB: `e777fce4af8e8c3372f1f9de9ef7d00f786c2c89`
-- SCOPE BASIS: `docs/AI_SELLER_POC0_SCOPE_CHANGE.md` proposal, SHA-256 `ca41e04ac54e816b5b53e809de32c525d453d331df532af412d718f21864f36e` (not yet merged).
+- SCOPE BASIS: `docs/AI_SELLER_POC0_SCOPE_CHANGE.md` proposal, SHA-256 `e1add876ba11c6a1ef130e9830a8edc7a6b9b3c7528d7e904e7a3d9dce0f61bc` (not yet merged).
 - REVIEW BASIS: `FINAL_REVIEW.md`, SHA-256 `eb6bfac11efd2ff8fb84e6db502a8b515921a97e6ebca640027e850036cf35c0`.
 - PRODUCTION IMPLEMENTATION: NO
-- R2 REQUIREMENTS CLARIFICATION: 2026-10-21, single batch of seven safety/feasibility corrections; candidate/version/data boundary unchanged, but requirements and this scan digest are revised together with Plan/Fit. Original source snapshots are carried forward, not presented as a newly performed market scan. EB4 live capabilities and EB6 terms must still be independently verified before the PoC GO.
+- R2 REQUIREMENTS CLARIFICATION: 2026-10-21, single batch of seven safety/feasibility corrections; candidate/version/data boundary unchanged, but requirements and this scan digest are revised together with Plan/Fit. Original source snapshots are carried forward, not presented as a newly performed market scan; since the PR #149 batch fix they are committed under `docs/evidence/ai-seller-poc0-20261021/scan/` (see Snapshots). EB4 live capabilities and EB6 terms must still be independently verified before the PoC GO.
 - R4 SOURCE CHECK: originals of Scope Change and `FINAL_REVIEW.md` supplied as files and independently SHA-256 verified (`56f722c05cdbd8c8ec5debecf98266b7c9a7537433c3f28ff8acf042ab62b06c` and `eb6bfac11efd2ff8fb84e6db502a8b515921a97e6ebca640027e850036cf35c0`). This amended Scope Change is a new proposal with digest bound in SCOPE BASIS; neither it nor this alternatives scan is an implementation/merge authorization.
 - R4 SCOPE PROPOSAL (2026-10-21): compare **three named Claude API models on identical inputs within one bounded offline experiment** with synthetic smoke, a distinct unscored 24-question preview and a later frozen 120-question gold. One model per Agent invocation, no ensemble/fallback. Amended Scope Change bytes are now available and SHA-bound, but **unmerged**, with HEAVY confirmation and owner fit/budget GO outstanding. This evidence document does **not** authorize PoC activity.
-- R3 focused evidence refresh: Claude Platform official model IDs, adaptive defaults and Haiku 5.5 tiered pricing; no new product, orchestrator, search system, or code alternative selected.
-- R4 H2 FEASIBILITY CLARIFICATION (2026-10-22, read-only retained-snapshot measurements): the original whole-subcategory C2 candidate can exceed the effective context/budget limit: 461 stroller products occupy 5,746,577 bytes in a rough RU+UK projected form; crib/car-seat groups are also large. The unscored pilot therefore tests **identical fixed product-ID cohorts** for R1 and R2 (10 strollers, 10 cots, 12 car seats; 8 questions per group). This is a bounded change in test hypothesis, NOT a new search engine or fresh alternatives-market scan. A pilot H2 result cannot authorize an index. Exact n8n Markdown projection, token counts, Haiku 100k tier, corpus checksum/owner OD-3, and full-gold representativeness remain open.
+- R3 focused evidence refresh: Claude Platform official model IDs, adaptive defaults and Haiku 5.5 tiered pricing; no new product, orchestrator, search system, or code alternative selected. Haiku 5.5 tiers and all prices are in the committed pricing snapshot; model IDs and adaptive-effort defaults were not snapshotted, are non-decisive for the candidate order, and are revalidated at EB4/EB6.
+- R4 H2 FEASIBILITY CLARIFICATION (2026-10-22, read-only retained-snapshot measurements): the original whole-subcategory C2 candidate can exceed the effective context/budget limit: 461 stroller products occupy 5,746,577 bytes in a rough RU+UK projected form; crib/car-seat groups are also large. The unscored pilot therefore tests **identical fixed product-ID cohorts** for R1 and R2 (10 strollers, 10 cots, 12 car seats; 8 questions per group). This is a bounded change in test hypothesis, NOT a new search engine or fresh alternatives-market scan. A pilot H2 result cannot authorize an index. Exact n8n Markdown projection, token counts, Haiku 100k tier, corpus checksum/owner OD-3, and full-gold representativeness remain open. The byte figures are an operator-attested rough measurement on the production catalog host; the script and its output are not committed and the figures are non-binding.
+- PR #149 BATCH FIX (2026-10-23): evidence snapshots committed with digests; RQ7 states the owner constraint explicitly; RAGAS entry corrected to the snapshot. No candidate, candidate result, requirement meaning or recommendation changed.
 
 ### Bounded requirements / invariants
 
@@ -34,7 +35,7 @@ This scan authorizes nothing. Any PoC activity still needs the merged scope chan
 | RQ4 | Compare 2–4 products. |
 | RQ5 | Structured grounded output: claims with type `FACT / DESCRIPTION / INFERENCE / UNKNOWN / CONFLICT` and evidence. |
 | RQ6 | Deterministic checks of ID, FACT, DESCRIPTION, UNKNOWN and generation, against the same normalized text the model saw. Export for human labeling. |
-| RQ7 | One n8n AI Agent workflow and **one Claude model per individual Agent invocation**, with three predeclared model arms (`claude-haiku-5-5`, `claude-sonnet-5-5`, `claude-opus-5-5`) evaluating identical inputs in R1/R2. A separate exploratory 24-question pilot precedes formal evaluation and has no gold labels or PASS metric; only the 120-question formal comparison uses frozen gold questions. No ensemble, model-as-judge, dynamic failover, additional agent, PIM, vector DB, custom API or custom code. Expansion has been specified in the amended but **unmerged** Scope Change; full HEAVY review, owner-controlled merge, and separate SHA-bound PoC GO remain mandatory. |
+| RQ7 | Owner constraint (and H5 objective): the experiment runs as one workflow in the owner-named existing n8n test instance with stock nodes and **one Claude model per individual Agent invocation**, with three predeclared model arms (`claude-haiku-5-5`, `claude-sonnet-5-5`, `claude-opus-5-5`) evaluating identical inputs in R1/R2. A separate exploratory 24-question pilot precedes formal evaluation and has no gold labels or PASS metric; only the 120-question formal comparison uses frozen gold questions. No ensemble, model-as-judge, dynamic failover, additional agent, PIM, vector DB, custom API or custom code. Expansion has been specified in the amended but **unmerged** Scope Change; full HEAVY review, owner-controlled merge, and separate SHA-bound PoC GO remain mandatory. |
 | RQ8 | No customer data or PII. No production connectivity or writes from the PoC environment. Non-production credentials. Only projected catalog fields leave BabyPark (to the model provider). |
 | RQ9 | No BabyPark durable state changes. PoC state confined to the test environment and disposable. Execution-data saving controllable. |
 | RQ10 | License/terms allow internal business use without a paid tier gating the required capability. Model usage cost requires owner budget approval. |
@@ -75,7 +76,7 @@ This scan authorizes nothing. Any PoC activity still needs the merged scope chan
 - npm `@langchain/anthropic@1.5.6`.
 - Chatwoot tag `v4.18.0` — exclusion check only.
 - GitHub REST API repository/license/release snapshots.
-- Official Claude pricing page; Anthropic privacy article.
+- Official Claude pricing page (snapshot committed); Anthropic privacy article (not snapshotted; retention terms are revalidated at EB6/OD-7).
 - Anthropic API reference (`claude-api` skill, cached 2026-10-06).
 - Owner-attested facts (below).
 
@@ -88,7 +89,10 @@ This scan authorizes nothing. Any PoC activity still needs the merged scope chan
 - `https://privacy.claude.com/en/articles/7996866-how-long-do-you-store-my-organization-s-data`.
 - `https://github.com/bytebase/dbhub`.
 
-Snapshots: `evidence/github-candidates-20261021T142347Z.txt`, `evidence/github-licenses.txt`, `evidence/anthropic-pricing-extract.txt`.
+Snapshots (captured 2026-10-21, committed in the PR #149 batch fix; UTF-8, LF, exactly one final newline):
+- `evidence/ai-seller-poc0-20261021/scan/github-candidates-20261021T142347Z.txt`, SHA-256 `322a3c49812256232e689f4485c5e0c1c060dafa8dab2962bcfe60e82a402ebb`;
+- `evidence/ai-seller-poc0-20261021/scan/github-licenses.txt`, SHA-256 `778526320afe57742ebf41fd25e9642f1f47be442babfc9faa8a4e18204bc61e` (one trailing blank removed from line 2 so that `git diff --check` passes; the captured original bytes are SHA-256 `462498fb6d32cb3a93e6bc8b4ff59c494df885c82c013baf78d8bbcb966cd8dd`);
+- `evidence/ai-seller-poc0-20261021/scan/anthropic-pricing-extract.txt`, SHA-256 `37d27fdf8fe153ceabf4329562e0e6a768ffe165b26a8351ac6d8d6febb726dd`.
 
 **Owner-named candidates:**
 - n8n 2.43.7 ("штатный"; test container);
@@ -139,7 +143,7 @@ Order step = Agreement §1 decision order:
 | E1 | IF/Filter deterministic checks + Data Table result tables + export for seller labeling | 1 (in A1) | 2.43.7 | as A1 | RQ6 PARTIAL pending exact typed-field/prose safeguard smoke; S5 stop if unenforceable with stock nodes | config | **SELECTED only as PoC hypothesis** |
 | E2 | n8n Evaluation node (`.ee`) | 4 | 2.43.7 | Enterprise License for production use; dev/test allowed; quota default `?? 0` (container value unverified) | RQ6 PARTIAL (no claim-level metric); RQ10 PARTIAL | config | deferred / not needed |
 | E3 | LLM-as-judge (second call of the same model) | 4 | — | as D1 | RQ7 PARTIAL (extra call) | config | deferred until seller labels show need and judge accuracy is measured |
-| E4 | promptfoo / Langfuse / DeepEval / RAGAS | 3 | promptfoo (MIT); Langfuse v4.67.0 (MIT + EE dirs); DeepEval python-v4.2.4 (Apache-2.0); RAGAS (Apache-2.0, moved to vibrantlabsai, last push 2026-02-24) | as listed | RQ7/RQ11 FAIL (new tooling; Langfuse = new durable system) | new tooling | excluded |
+| E4 | promptfoo / Langfuse / DeepEval / RAGAS | 3 | promptfoo (MIT); Langfuse v4.67.0 (MIT + EE dirs); DeepEval python-v4.2.4 (Apache-2.0); RAGAS (the candidates snapshot found no repository at `explodinggradients/ragas` at scan time — moved; license and activity at the new location were not snapshotted) | as listed | RQ7/RQ11 FAIL (new tooling; Langfuse = new durable system) | new tooling | excluded |
 | E5 | Guardrails node | 1 (in A1) | 2.43.7 | as A1 | not needed (synthetic inputs, no PII); no grounding check | — | excluded |
 | F1 | Markdown node (`htmlToMarkdown`) for description normalization | 1 (in A1) | 2.43.7 | as A1 | RQ6 PASS (one normalized text for model and checks) | config | **SELECTED** |
 | F2 | NDJSON load: Read/Write Files → Extract From File (text) → Edit Fields (`split('\n')`, `JSON.parse`) → Split Out → Merge/Aggregate → Data Table | 1 (in A1) | 2.43.7 (`JSON` exposed to expressions, `expression.ts:554`) | as A1 | RQ3/RQ7 PASS; file dir restricted to `~/.n8n-files` | config | **SELECTED** |
@@ -198,8 +202,8 @@ Order step = Agreement §1 decision order:
 
 ## Frozen evidence
 
-- SCAN SHA-256: recorded outside this file in the accompanying `SHA256SUMS.txt` and bound in the fit-note; a file cannot contain its own digest. Normalization: UTF-8, LF, exactly one final newline.
-- Git blob/content identity: not committed. If committed later, the bytes must stay identical or the scan must be re-frozen and re-bound.
+- SCAN SHA-256: bound in the fit-note §0; a file cannot contain its own digest. Normalization: UTF-8, LF, exactly one final newline.
+- Git content identity: committed at `docs/AI_SELLER_POC0_ALTERNATIVES_SCAN_20261021.md`, with its evidence snapshots under `docs/evidence/ai-seller-poc0-20261021/scan/`. Any byte change requires a re-frozen, re-bound scan.
 - Owner pre-code authorization required: YES — the fit-note go-ahead under Agreement §3, after the scope change is merged.
 - Authorization reference: none yet.
 

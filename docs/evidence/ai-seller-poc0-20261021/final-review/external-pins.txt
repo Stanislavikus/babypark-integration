@@ -1,0 +1,5 @@
+babypark-integration  main=f3d92325e6b4ef04f0137c4c49dde07c05731bbe tree=ffb8953002feaeb5f417a09a832c86f24051afa2 agreement_blob=e777fce4af8e8c3372f1f9de9ef7d00f786c2c89
+n8n                   tag n8n@2.43.7 commit=b7c54308e4d782af48043acf6558926f2f1f8e3b (released 2026-10-16); newer upstream tags exist: 2.43.8, 2.44.0-2.44.5, 2.45.0
+@langchain/anthropic  1.5.6 (n8n pnpm catalog at 2.43.7)
+chatwoot              tag v4.18.0 peeled commit=9f920b549c14491a4e587687a3eed5d21c6ccc7d (VERSION_CW=4.18.0)
+public web sample     https://babypark.ua/avtokrisla/avtokrisla-vid-0-do-13-kg/maxi-cosi-avtokrislo-pebble-360 fetched 2026-10-21 via WebFetch summarizer (secondary evidence; re-verify from snapshot)

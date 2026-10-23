@@ -1,0 +1,58 @@
+{
+  "experiment": "E3",
+  "rows": [
+    {
+      "id": "C1 negation",
+      "claim": "Подходит для новорожденных",
+      "quote": "для новорожденных",
+      "naive_verifier": true,
+      "human_truth": false
+    },
+    {
+      "id": "C2 wrong quantity (packaging vs product)",
+      "claim": "Коляска весит 16 кг",
+      "quote": "16 кг",
+      "naive_verifier": true,
+      "human_truth": false
+    },
+    {
+      "id": "C3 variant scope",
+      "claim": "Dualfix 5Z поворачивается на 360°",
+      "quote": "поворот на 360°",
+      "naive_verifier": true,
+      "human_truth": false
+    },
+    {
+      "id": "C4 partial range",
+      "claim": "Підходить з народження до 4 років",
+      "quote": "до 4 років",
+      "naive_verifier": true,
+      "human_truth": false
+    },
+    {
+      "id": "C5 comparative across products",
+      "claim": "Cybex Eezy легче, чем Carrello Ultra",
+      "quote": "весом 6,9 кг",
+      "naive_verifier": true,
+      "human_truth": true,
+      "note": "true only after reading the OTHER product (7 кг) and comparing numbers; the single quote proves nothing about the comparison"
+    },
+    {
+      "id": "C6 absence inference",
+      "claim": "В комплекте нет дождевика",
+      "quote": null,
+      "naive_verifier": "cannot cite",
+      "human_truth": "unknown",
+      "note": "silence in a description is not evidence of absence; no quote can support it"
+    },
+    {
+      "id": "C7 correct, directly stated",
+      "claim": "Складывается одной рукой",
+      "quote": "складывается одной рукой",
+      "naive_verifier": true,
+      "human_truth": true
+    }
+  ],
+  "false_accepts": 4,
+  "cases": 7
+}
