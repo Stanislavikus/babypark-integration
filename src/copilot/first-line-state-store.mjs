@@ -2,6 +2,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { DatabaseSync } from 'node:sqlite';
+import { consumeFirstLineS2SendingProof } from './first-line-s2-preflight.mjs';
+import { sameFirstLineSourceEvent } from './first-line-source-integrity.mjs';
 
 const SCHEMA_VERSION = 4;
 const PREVIOUS_SCHEMA_VERSION = 3;
@@ -1790,7 +1792,16 @@ export class FirstLineStateError extends Error {
 function fail(code, message, details = {}) { throw new FirstLineStateError(code, message, details); }
 function tx(db, fn) {
   db.exec('BEGIN IMMEDIATE');
-  try { const out = fn(); db.exec('COMMIT'); return out; }
+  try {
+    const out = fn();
+    if (out != null && (typeof out === 'object' || typeof out === 'function') &&
+        typeof out.then === 'function') {
+      fail('FIRST_LINE_ASYNC_TRANSACTION_FORBIDDEN',
+        'a synchronous SQLite write transaction must not return a thenable');
+    }
+    db.exec('COMMIT');
+    return out;
+  }
   catch (error) { try { db.exec('ROLLBACK'); } catch {} throw error; }
 }
 function readTx(db, fn) {
@@ -1886,6 +1897,13 @@ function routingLedgerFingerprint(entries) {
       source_id: entry.event.source_id,
       accepted_at: entry.event.accepted_at,
     },
+    deferred_parent: entry.deferred_parent == null
+      ? null
+      : {
+          stream_id: entry.deferred_parent.stream_id,
+          event_seq: entry.deferred_parent.event_seq,
+          action_id: entry.deferred_parent.action_id,
+        },
     confirmed_babypark_action: entry.confirmed_babypark_action == null
       ? null
       : {
@@ -3111,6 +3129,36 @@ export class FirstLineStateStore {
     return readTx(this.db, () => this.#readStream(id));
   }
 
+
+  // S-8 synthetic-only discovery seam. This is NOT a scheduler/lease:
+  // the authoritative v4 CAS below decides whether any continuation is
+  // committed. Never infer missing ownership from webhook delivery timing.
+  // A caller supplies an explicit page size/cursor to avoid hidden budgets.
+  listOwnerlessCurrentStreams({ afterStreamId = null, limit } = {}) {
+    const after = afterStreamId === null
+      ? null : safeToken(afterStreamId, 'after_stream_id');
+    const pageSize = positiveInteger(limit, 'limit');
+    return readTx(this.db, () => {
+      const rows = this.db.prepare(
+        'SELECT s.stream_id, s.stream_revision FROM conversation_streams s ' +
+        'WHERE s.stream_revision > 0 AND (? IS NULL OR s.stream_id > ?) ' +
+        'AND NOT EXISTS (SELECT 1 FROM semantic_origins so ' +
+        'WHERE so.stream_id=s.stream_id AND so.stream_revision=s.stream_revision) ' +
+        'AND NOT EXISTS (SELECT 1 FROM continuation_owners co ' +
+        'WHERE co.stream_id=s.stream_id AND co.terminal_outcome IS NULL) ' +
+        'ORDER BY s.stream_id LIMIT ?'
+      ).all(after, after, pageSize);
+      // Discovery is only a cursor over candidate ids. Never validate an
+      // entire stream history here: one damaged row must not starve healthy
+      // conversations. The redriver proves each source inside its own
+      // fail-closed boundary before planning or committing any owner.
+      return Object.freeze(rows.map(row => Object.freeze({
+        streamId: row.stream_id,
+        streamRevision: row.stream_revision,
+      })));
+    });
+  }
+
   recordScanHighwater(streamId, sourceMessageId) {
     const id = safeToken(streamId, 'stream_id');
     const source = positiveInteger(sourceMessageId, 'source_message_id');
@@ -3127,97 +3175,212 @@ export class FirstLineStateStore {
     const id = safeToken(streamId, 'stream_id');
     const normalized = normalizeEvent(event);
     const at = this.now();
+    return tx(this.db, () => this.#ingestNormalizedEventWithinTx(id, normalized, at));
+  }
+
+  /**
+   * Chatwoot ingress single owning synchronous writer. The signed envelope
+   * and EXACT current REST row are checked by the caller before this method.
+   * Duplicate, conflicting source identity, stream creation, deferred parent
+   * and optional absorbing DIRECT_HUMAN are resolved in this transaction.
+   */
+  ingestVerifiedChatwootEvent({
+    sourceConversationId, event, humanReason = null,
+  } = {}) {
+    const conversation = positiveInteger(sourceConversationId, 'source_conversation_id');
+    const normalized = normalizeEvent(event);
+    const reason = humanReason === null ? null : safeToken(humanReason, 'human_reason');
+    const at = this.now();
     return tx(this.db, () => {
-      const stream = this.#requireStream(id);
-      const existing = this.db.prepare(
+      const found = this.db.prepare(
+        'SELECT stream_id FROM conversation_streams WHERE source_provider=? AND source_conversation_id=?'
+      ).get('chatwoot', conversation);
+      let id;
+      if (found) {
+        id = safeToken(found.stream_id, 'stream_id');
+      } else {
+        id = safeToken(this.streamIdFactory(), 'stream_id');
+        this.db.prepare(
+          'INSERT INTO conversation_streams ' +
+          '(stream_id,source_provider,source_conversation_id,stream_revision,last_event_seq,created_at,updated_at) ' +
+          "VALUES (?,'chatwoot',?,0,0,?,?)"
+        ).run(id, conversation, at, at);
+      }
+      const previous = this.db.prepare(
         'SELECT * FROM conversation_events WHERE stream_id=? AND source_message_id=?'
       ).get(id, normalized.sourceMessageId);
-      if (existing) {
-        this.#assertDeferredRelationsValid(id);
-        const deferredParent = this.#readDeferredParent(id, existing.event_seq);
-        return {
-          inserted: false,
-          event: this.#eventDto(existing),
-          stream: this.#readStream(id),
-          deferred_parent: deferredParent,
-        };
+      if (previous && !sameFirstLineSourceEvent(this.#eventDto(previous), event)) {
+        fail('FIRST_LINE_SOURCE_TOPOLOGY_CHANGED',
+          'already accepted source changed immutable authoritative topology');
       }
-      this.#assertAutonomousAllowed();
-      this.#assertDeferredRelationsValid(id);
-
-      let deferredAction = null;
-      if (normalized.eventKind === 'CUSTOMER_MESSAGE') {
+      const accepted = this.#ingestNormalizedEventWithinTx(id, normalized, at);
+      if (reason !== null) {
         const owner = this.#readUnresolvedOwner(id);
-        if (!owner || owner.owner_kind !== 'HUMAN') {
-          const sending = this.db.prepare(
-            "SELECT action_id,prepared_stream_revision,state FROM public_actions " +
-            "WHERE stream_id=? AND state IN ('SENDING','UNCERTAIN')"
-          ).all(id);
-          if (sending.length > 1) {
-            fail('FIRST_LINE_DB_CORRUPT',
-              'multiple same-stream SENDING/UNCERTAIN actions exist', { stream_id: id });
+        if (!owner) {
+          const revision = accepted.stream.stream_revision;
+          if (revision < 1) {
+            fail('FIRST_LINE_HUMAN_REVISION_UNAVAILABLE',
+              'cannot bind HUMAN continuation without a durable source revision');
           }
-          if (sending.length === 1) {
-            const action = sending[0];
-            if (!owner ||
-                owner.owner_kind !== 'PUBLIC_ACTION' ||
-                owner.action_id !== action.action_id ||
-                owner.stream_revision !== action.prepared_stream_revision) {
-              fail('FIRST_LINE_DB_CORRUPT',
-                'SENDING/UNCERTAIN action lacks matching continuation owner', {
-                  stream_id: id,
-                  action_id: action.action_id,
-                });
+          this.#commitDirectHumanOriginWithinTx({
+            stream: id, revision, humanReason: reason,
+            requestedEpisodeId: null, requestedEpisodeVersion: null, at,
+          });
+        } else if (owner.owner_kind === 'PUBLIC_ACTION') {
+          const action = this.#readAction(owner.action_id);
+          if (!action || action.stream_id !== id) {
+            fail('FIRST_LINE_HUMAN_ACTION_RECONCILIATION_REQUIRED',
+              'continuation action is missing or belongs to another stream');
+          }
+          if (['PREPARED', 'GATING'].includes(action.state)) {
+            if (accepted.stream.stream_revision > action.prepared_stream_revision) {
+              // A genuinely new source event advanced the ledger; supersede
+              // its previous action and use a new DIRECT_HUMAN semantic origin.
+              this.#supersedeUnsentAction(
+                action, 'ingress_human_interrupt', 'STALE', at, true
+              );
+              this.#commitDirectHumanOriginWithinTx({
+                stream: id, revision: accepted.stream.stream_revision,
+                humanReason: reason, requestedEpisodeId: null,
+                requestedEpisodeVersion: null, at,
+              });
+            } else if (accepted.stream.stream_revision === action.prepared_stream_revision &&
+                       !accepted.inserted) {
+              // The exact source already exists. V4 forbids inventing a
+              // second ledger event or incrementing stream_revision without
+              // one. Transfer the SAME continuation to HUMAN atomically,
+              // while terminalizing the unsent action and preserving CLARIFY.
+              this.#attachHumanOnRepeatedSourceWithinTx(action, reason, at);
+            } else {
+              fail('FIRST_LINE_HUMAN_ACTION_RECONCILIATION_REQUIRED',
+                'an unsent action has no proven newer or repeated source cut');
             }
-            deferredAction = action;
+          } else if (['SENDING', 'UNCERTAIN'].includes(action.state)) {
+            this.#escalatePublicActionToHumanWithinTx({
+              id: owner.action_id, humanReason: reason, suppliedLease: null, at,
+            });
+          } else {
+            fail('FIRST_LINE_HUMAN_ACTION_RECONCILIATION_REQUIRED',
+              'action state cannot acquire a HUMAN continuation');
           }
+        } else if (owner.owner_kind !== 'HUMAN') {
+          fail('FIRST_LINE_HUMAN_ACTION_RECONCILIATION_REQUIRED',
+            'unknown continuation owner class');
         }
       }
+      return accepted;
+    });
+  }
 
-      const seq = stream.last_event_seq + 1;
-      this.db.prepare(
-        'INSERT INTO conversation_events ' +
-        '(stream_id,event_seq,source_message_id,event_kind,message_type,sender_class,sender_id,content_type,' +
-        'deleted_flag,unsupported_flag,has_attachments,source_id,accepted_at) ' +
-        'VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)'
-      ).run(
-        id, seq, normalized.sourceMessageId, normalized.eventKind, normalized.messageType,
-        normalized.senderClass, normalized.senderId, normalized.contentType, normalized.deleted,
-        normalized.unsupported, normalized.hasAttachments, normalized.sourceId, at
-      );
-      const advancedStream = this.#readStream(id);
-      if (!advancedStream || advancedStream.last_event_seq !== seq ||
-          advancedStream.stream_revision !== stream.stream_revision + 1) {
-        fail('FIRST_LINE_DB_CORRUPT',
-          'event append did not atomically advance stream revision', {
-            stream_id: id,
-            event_seq: seq,
-          });
-      }
+  /**
+   * Exact proven INTERNAL rows never enter the public ledger. Check that a
+   * previously accepted PUBLIC source ID cannot be silently reclassified.
+   */
+  attestInternalChatwootSource({ sourceConversationId, sourceMessageId }) {
+    const conversation = positiveInteger(sourceConversationId, 'source_conversation_id');
+    const source = positiveInteger(sourceMessageId, 'source_message_id');
+    return readTx(this.db, () => {
+      const stream = this.db.prepare(
+        "SELECT stream_id FROM conversation_streams WHERE source_provider='chatwoot' AND source_conversation_id=?"
+      ).get(conversation);
+      if (!stream) return Object.freeze({ previouslyPublic: false });
+      const previous = this.db.prepare(
+        'SELECT event_seq FROM conversation_events WHERE stream_id=? AND source_message_id=?'
+      ).get(stream.stream_id, source);
+      return Object.freeze({ previouslyPublic: Boolean(previous) });
+    });
+  }
 
-      const deferredParent = this.#readDeferredParent(id, seq);
-      if ((deferredAction === null) !== (deferredParent === null) ||
-          (deferredAction !== null && deferredParent.action_id !== deferredAction.action_id)) {
-        fail('FIRST_LINE_DB_CORRUPT',
-          'deferred-parent trigger result differs from accepting transaction', {
-            stream_id: id,
-            event_seq: seq,
-            expected_action_id: deferredAction?.action_id ?? null,
-            actual_action_id: deferredParent?.action_id ?? null,
-          });
-      }
-
+  #ingestNormalizedEventWithinTx(id, normalized, at) {
+    const stream = this.#requireStream(id);
+    const existing = this.db.prepare(
+      'SELECT * FROM conversation_events WHERE stream_id=? AND source_message_id=?'
+    ).get(id, normalized.sourceMessageId);
+    if (existing) {
+      this.#assertDeferredRelationsValid(id);
+      const deferredParent = this.#readDeferredParent(id, existing.event_seq);
       return {
-        inserted: true,
-        event: this.#eventDto(
-          this.db.prepare(
-            'SELECT * FROM conversation_events WHERE stream_id=? AND event_seq=?'
-          ).get(id, seq)
-        ),
+        inserted: false,
+        event: this.#eventDto(existing),
         stream: this.#readStream(id),
         deferred_parent: deferredParent,
       };
-    });
+    }
+    this.#assertAutonomousAllowed();
+    this.#assertDeferredRelationsValid(id);
+
+    let deferredAction = null;
+    if (normalized.eventKind === 'CUSTOMER_MESSAGE') {
+      const owner = this.#readUnresolvedOwner(id);
+      if (!owner || owner.owner_kind !== 'HUMAN') {
+        const sending = this.db.prepare(
+          "SELECT action_id,prepared_stream_revision,state FROM public_actions " +
+          "WHERE stream_id=? AND state IN ('SENDING','UNCERTAIN')"
+        ).all(id);
+        if (sending.length > 1) {
+          fail('FIRST_LINE_DB_CORRUPT',
+            'multiple same-stream SENDING/UNCERTAIN actions exist', { stream_id: id });
+        }
+        if (sending.length === 1) {
+          const action = sending[0];
+          if (!owner ||
+              owner.owner_kind !== 'PUBLIC_ACTION' ||
+              owner.action_id !== action.action_id ||
+              owner.stream_revision !== action.prepared_stream_revision) {
+            fail('FIRST_LINE_DB_CORRUPT',
+              'SENDING/UNCERTAIN action lacks matching continuation owner', {
+                stream_id: id,
+                action_id: action.action_id,
+              });
+          }
+          deferredAction = action;
+        }
+      }
+    }
+
+    const seq = stream.last_event_seq + 1;
+    this.db.prepare(
+      'INSERT INTO conversation_events ' +
+      '(stream_id,event_seq,source_message_id,event_kind,message_type,sender_class,sender_id,content_type,' +
+      'deleted_flag,unsupported_flag,has_attachments,source_id,accepted_at) ' +
+      'VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)'
+    ).run(
+      id, seq, normalized.sourceMessageId, normalized.eventKind, normalized.messageType,
+      normalized.senderClass, normalized.senderId, normalized.contentType, normalized.deleted,
+      normalized.unsupported, normalized.hasAttachments, normalized.sourceId, at
+    );
+    const advancedStream = this.#readStream(id);
+    if (!advancedStream || advancedStream.last_event_seq !== seq ||
+        advancedStream.stream_revision !== stream.stream_revision + 1) {
+      fail('FIRST_LINE_DB_CORRUPT',
+        'event append did not atomically advance stream revision', {
+          stream_id: id,
+          event_seq: seq,
+        });
+    }
+
+    const deferredParent = this.#readDeferredParent(id, seq);
+    if ((deferredAction === null) !== (deferredParent === null) ||
+        (deferredAction !== null && deferredParent.action_id !== deferredAction.action_id)) {
+      fail('FIRST_LINE_DB_CORRUPT',
+        'deferred-parent trigger result differs from accepting transaction', {
+          stream_id: id,
+          event_seq: seq,
+          expected_action_id: deferredAction?.action_id ?? null,
+          actual_action_id: deferredParent?.action_id ?? null,
+        });
+    }
+
+    return {
+      inserted: true,
+      event: this.#eventDto(
+        this.db.prepare(
+          'SELECT * FROM conversation_events WHERE stream_id=? AND event_seq=?'
+        ).get(id, seq)
+      ),
+      stream: this.#readStream(id),
+      deferred_parent: deferredParent,
+    };
   }
 
   listConversationEvents(streamId) {
@@ -4686,7 +4849,9 @@ export class FirstLineStateStore {
     });
   }
 
-  markActionSending(actionId, leaseToken) {
+  commitFirstLineS2Sending({
+    actionId, leaseToken, proof, candidate, authorityReader, streamId,
+  } = {}) {
     const id = safeToken(actionId, 'action_id');
     const token = safeToken(leaseToken, 'lease_token');
     const at = this.now();
@@ -4696,6 +4861,10 @@ export class FirstLineStateStore {
       if (!action) {
         fail('FIRST_LINE_ACTION_NOT_FOUND',
           'public action not found', { action_id: id });
+      }
+      if (action.stream_id !== streamId ||
+          typeof authorityReader?.readCurrentConversationAuthority !== 'function') {
+        fail('FIRST_LINE_S2_PROOF_INVALID', 'S2 admission has wrong stream/reader');
       }
       this.#assertDeferredRelationsValid(action.stream_id);
       if (action.state !== 'GATING' || action.lease_token !== token) {
@@ -4776,6 +4945,15 @@ export class FirstLineStateStore {
         fail('FIRST_LINE_ACTION_STALE_EPISODE',
           'bound episode is no longer active before SENDING', { action_id: id });
       }
+      // Consume once *inside* the BEGIN IMMEDIATE transaction. If subsequent
+      // SQL rolls back, the ephemeral token remains consumed: fail closed.
+      if (!consumeFirstLineS2SendingProof(proof, {
+        candidate, store: this, streamId: action.stream_id, authorityReader,
+        actionId: id, leaseToken: token,
+      })) {
+        fail('FIRST_LINE_S2_PROOF_INVALID',
+          'one-shot action-bound S2 proof required', { action_id: id });
+      }
       const changed = this.#withMutationLeaseToken(token, () =>
         this.db.prepare(`UPDATE public_actions SET state='SENDING',send_started_at=?,updated_at=?
           WHERE action_id=? AND state='GATING' AND lease_token=? AND lease_expires_at>? AND deadline_at>?`)
@@ -4786,18 +4964,35 @@ export class FirstLineStateStore {
     });
   }
 
-  markActionUncertain(actionId, { reason = 'send_outcome_unknown' } = {}) {
+  markActionUncertain(actionId, {
+    reason = 'send_outcome_unknown', recoveryOnlyIfLeaseExpired = false,
+  } = {}) {
     const id = safeToken(actionId, 'action_id');
     const terminalReason = safeToken(reason, 'terminal_reason');
+    if (typeof recoveryOnlyIfLeaseExpired !== 'boolean') {
+      throw new TypeError('first_line_recovery_lease_option_invalid');
+    }
     return tx(this.db, () => {
       const action = this.#requireReadableAction(id);
+      // Re-attest within the same BEGIN IMMEDIATE as the irreversible write.
+      this.#assertDeferredRelationsValid(action.stream_id);
       if (action.state !== 'SENDING' && action.state !== 'UNCERTAIN') {
         fail('FIRST_LINE_ACTION_STATE_INVALID', 'only SENDING may become UNCERTAIN', { state: action.state });
       }
       if (action.state === 'SENDING') {
-        this.db.prepare(`UPDATE public_actions SET state='UNCERTAIN',terminal_reason=?,lease_token=NULL,
-          lease_expires_at=NULL,updated_at=? WHERE action_id=? AND state='SENDING'`)
-          .run(terminalReason, this.now(), id);
+        // Recovery must never preempt a still-live CP3 relay.
+        if (recoveryOnlyIfLeaseExpired && action.lease_expires_at !== null &&
+            action.lease_expires_at > this.now()) return action;
+        const changed = this.db.prepare(
+          "UPDATE public_actions SET state='UNCERTAIN',terminal_reason=?," +
+          "lease_token=NULL,lease_expires_at=NULL,updated_at=? " +
+          "WHERE action_id=? AND state='SENDING' " +
+          "AND (?=0 OR lease_expires_at IS NULL OR lease_expires_at<=?)"
+        ).run(terminalReason, this.now(), id,
+          recoveryOnlyIfLeaseExpired ? 1 : 0, this.now()).changes;
+        if (changed !== 1) {
+          fail('FIRST_LINE_STALE_WRITE', 'SENDING changed before UNCERTAIN');
+        }
       }
       return this.#readAction(id);
     });
@@ -4826,6 +5021,41 @@ export class FirstLineStateStore {
       reason,
       leaseToken
     );
+  }
+
+  // CP4 recovery discovery contains identifiers only. Inspect each action in
+  // its own read transaction so one corrupt stream never starves unrelated
+  // SENDING/UNCERTAIN recoveries. This scan cannot authorize any state change.
+  listRecoverablePublicActionIds() {
+    return readTx(this.db, () => Object.freeze(this.db.prepare(
+      "SELECT action_id FROM public_actions " +
+      "WHERE state IN ('PREPARED','GATING','SENDING','UNCERTAIN') " +
+      "ORDER BY created_at,action_id"
+    ).all().map(row => row.action_id)));
+  }
+
+  // Per-action equivalent of listRecoverablePublicActions' validation.
+  // A committed terminal transition by a concurrent worker is not an error.
+  getRecoverablePublicAction(actionId) {
+    const id = safeToken(actionId, 'action_id');
+    return readTx(this.db, () => {
+      const action = this.#readAction(id);
+      if (!action || !LIVE_ACTION_STATES.has(action.state)) return null;
+      this.#assertDeferredRelationsValid(action.stream_id);
+      // Advisory preflight: markActionUncertain repeats the lease condition
+      // inside its owning write transaction to close the TOCTOU race.
+      if (action.state === 'SENDING' && action.lease_expires_at !== null &&
+          action.lease_expires_at > this.now()) return null;
+      if (action.continuation_owner.owner_kind !== 'PUBLIC_ACTION' ||
+          action.continuation_owner.terminal_outcome !== null) return null;
+      if (action.descriptor === null) {
+        fail('FIRST_LINE_DB_CORRUPT',
+          'autonomous recoverable action lacks v4 descriptor', {
+            action_id: action.action_id,
+          });
+      }
+      return action;
+    });
   }
 
   listRecoverablePublicActions({ now = this.now() } = {}) {
@@ -4973,124 +5203,132 @@ export class FirstLineStateStore {
       : positiveInteger(expectedEpisodeVersion, 'expected_episode_version');
     const at = this.now();
 
-    return tx(this.db, () => {
-      const currentStream = this.#requireStream(stream);
-      this.#assertDeferredRelationsValid(stream);
-      const existing = this.#readSemanticOrigin(stream, revision);
-      if (existing) {
-        if (existing.origin_kind !== 'DIRECT_HUMAN') {
-          fail('FIRST_LINE_SEMANTIC_ORIGIN_CONFLICT',
-            'stream revision already has another semantic origin', {
-              stream_id: stream,
-              stream_revision: revision,
-              origin_kind: existing.origin_kind,
-            });
-        }
-        const owner = this.#readContinuationOwner(stream, revision);
-        if (!owner || owner.owner_kind !== 'HUMAN' || owner.action_id !== null) {
-          fail('FIRST_LINE_DB_CORRUPT',
-            'DIRECT_HUMAN origin lacks matching durable HUMAN owner', {
-              stream_id: stream,
-              stream_revision: revision,
-            });
-        }
-        if (owner.human_reason !== humanReason) {
-          fail('FIRST_LINE_SEMANTIC_ORIGIN_CONFLICT',
-            'DIRECT_HUMAN replay conflicts with immutable HUMAN reason', {
-              stream_id: stream,
-              stream_revision: revision,
-              human_reason: owner.human_reason,
-            });
-        }
-        if (requestedEpisodeId !== null &&
-            (owner.episode_id !== requestedEpisodeId ||
-             owner.episode_version !== requestedEpisodeVersion)) {
-          fail('FIRST_LINE_SEMANTIC_ORIGIN_CONFLICT',
-            'DIRECT_HUMAN replay conflicts with immutable episode binding', {
-              stream_id: stream,
-              stream_revision: revision,
-              episode_id: owner.episode_id,
-              episode_version: owner.episode_version,
-            });
-        }
-        return Object.freeze({ origin: existing, continuation_owner: owner });
-      }
+    return tx(this.db, () => this.#commitDirectHumanOriginWithinTx({
+      stream, revision, humanReason, requestedEpisodeId,
+      requestedEpisodeVersion, at,
+    }));
+  }
 
-      if (currentStream.stream_revision !== revision) {
-        fail('FIRST_LINE_ROUTING_PLAN_STALE',
-          'DIRECT_HUMAN origin requires the current stream revision', {
-            expected_stream_revision: revision,
-            current_stream_revision: currentStream.stream_revision,
-          });
-      }
-
-      const unresolved = this.#readUnresolvedOwner(stream);
-      if (unresolved) {
-        fail('FIRST_LINE_CONTINUATION_OWNER_CONFLICT',
-          'another continuation already owns the stream', {
-            stream_id: stream,
-            owner_revision: unresolved.stream_revision,
-            owner_kind: unresolved.owner_kind,
-          });
-      }
-      const action = this.db.prepare(
-        'SELECT action_id FROM public_actions WHERE stream_id=? AND prepared_stream_revision=?'
-      ).get(stream, revision);
-      if (action) {
-        fail('FIRST_LINE_DB_CORRUPT',
-          'same-revision action exists without semantic origin', {
+  #commitDirectHumanOriginWithinTx({
+    stream, revision, humanReason, requestedEpisodeId,
+    requestedEpisodeVersion, at,
+  }) {
+    const currentStream = this.#requireStream(stream);
+    this.#assertDeferredRelationsValid(stream);
+    const existing = this.#readSemanticOrigin(stream, revision);
+    if (existing) {
+      if (existing.origin_kind !== 'DIRECT_HUMAN') {
+        fail('FIRST_LINE_SEMANTIC_ORIGIN_CONFLICT',
+          'stream revision already has another semantic origin', {
             stream_id: stream,
             stream_revision: revision,
-            action_id: action.action_id,
+            origin_kind: existing.origin_kind,
           });
       }
+      const owner = this.#readContinuationOwner(stream, revision);
+      if (!owner || owner.owner_kind !== 'HUMAN' || owner.action_id !== null) {
+        fail('FIRST_LINE_DB_CORRUPT',
+          'DIRECT_HUMAN origin lacks matching durable HUMAN owner', {
+            stream_id: stream,
+            stream_revision: revision,
+          });
+      }
+      if (owner.human_reason !== humanReason) {
+        fail('FIRST_LINE_SEMANTIC_ORIGIN_CONFLICT',
+          'DIRECT_HUMAN replay conflicts with immutable HUMAN reason', {
+            stream_id: stream,
+            stream_revision: revision,
+            human_reason: owner.human_reason,
+          });
+      }
+      if (requestedEpisodeId !== null &&
+          (owner.episode_id !== requestedEpisodeId ||
+           owner.episode_version !== requestedEpisodeVersion)) {
+        fail('FIRST_LINE_SEMANTIC_ORIGIN_CONFLICT',
+          'DIRECT_HUMAN replay conflicts with immutable episode binding', {
+            stream_id: stream,
+            stream_revision: revision,
+            episode_id: owner.episode_id,
+            episode_version: owner.episode_version,
+          });
+      }
+      return Object.freeze({ origin: existing, continuation_owner: owner });
+    }
 
-      const activeHead = this.db.prepare(
-        "SELECT episode_id FROM episodes WHERE stream_id=? AND state='active'"
-      ).get(stream) ?? null;
-      let boundEpisode = null;
-      if (activeHead) {
-        boundEpisode = this.#readEpisode(activeHead.episode_id);
-        if (requestedEpisodeId !== null &&
-            (requestedEpisodeId !== boundEpisode.episode_id ||
-             requestedEpisodeVersion !== boundEpisode.version)) {
-          fail('FIRST_LINE_STALE_WRITE',
-            'active episode changed before DIRECT_HUMAN commit', {
-              stream_id: stream,
-              active_episode_id: boundEpisode.episode_id,
-              active_episode_version: boundEpisode.version,
-            });
-        }
-      } else if (requestedEpisodeId !== null) {
+    if (currentStream.stream_revision !== revision) {
+      fail('FIRST_LINE_ROUTING_PLAN_STALE',
+        'DIRECT_HUMAN origin requires the current stream revision', {
+          expected_stream_revision: revision,
+          current_stream_revision: currentStream.stream_revision,
+        });
+    }
+
+    const unresolved = this.#readUnresolvedOwner(stream);
+    if (unresolved) {
+      fail('FIRST_LINE_CONTINUATION_OWNER_CONFLICT',
+        'another continuation already owns the stream', {
+          stream_id: stream,
+          owner_revision: unresolved.stream_revision,
+          owner_kind: unresolved.owner_kind,
+        });
+    }
+    const action = this.db.prepare(
+      'SELECT action_id FROM public_actions WHERE stream_id=? AND prepared_stream_revision=?'
+    ).get(stream, revision);
+    if (action) {
+      fail('FIRST_LINE_DB_CORRUPT',
+        'same-revision action exists without semantic origin', {
+          stream_id: stream,
+          stream_revision: revision,
+          action_id: action.action_id,
+        });
+    }
+
+    const activeHead = this.db.prepare(
+      "SELECT episode_id FROM episodes WHERE stream_id=? AND state='active'"
+    ).get(stream) ?? null;
+    let boundEpisode = null;
+    if (activeHead) {
+      boundEpisode = this.#readEpisode(activeHead.episode_id);
+      if (requestedEpisodeId !== null &&
+          (requestedEpisodeId !== boundEpisode.episode_id ||
+           requestedEpisodeVersion !== boundEpisode.version)) {
         fail('FIRST_LINE_STALE_WRITE',
-          'requested DIRECT_HUMAN episode is no longer active', {
-            episode_id: requestedEpisodeId,
+          'active episode changed before DIRECT_HUMAN commit', {
+            stream_id: stream,
+            active_episode_id: boundEpisode.episode_id,
+            active_episode_version: boundEpisode.version,
           });
       }
+    } else if (requestedEpisodeId !== null) {
+      fail('FIRST_LINE_STALE_WRITE',
+        'requested DIRECT_HUMAN episode is no longer active', {
+          episode_id: requestedEpisodeId,
+        });
+    }
 
-      this.db.prepare(
-        "INSERT INTO semantic_origins " +
-        "(stream_id,stream_revision,origin_kind,action_id,created_at) " +
-        "VALUES (?,?,'DIRECT_HUMAN',NULL,?)"
-      ).run(stream, revision, at);
-      this.db.prepare(
-        "INSERT INTO continuation_owners " +
-        "(stream_id,stream_revision,owner_kind,action_id,episode_id,episode_version," +
-        "human_reason,terminal_outcome,created_at,updated_at,terminal_at) " +
-        "VALUES (?,?,'HUMAN',NULL,?,?,?,NULL,?,?,NULL)"
-      ).run(
-        stream,
-        revision,
-        boundEpisode?.episode_id ?? null,
-        boundEpisode?.version ?? null,
-        humanReason,
-        at,
-        at
-      );
-      return Object.freeze({
-        origin: this.#readSemanticOrigin(stream, revision),
-        continuation_owner: this.#readContinuationOwner(stream, revision),
-      });
+    this.db.prepare(
+      "INSERT INTO semantic_origins " +
+      "(stream_id,stream_revision,origin_kind,action_id,created_at) " +
+      "VALUES (?,?,'DIRECT_HUMAN',NULL,?)"
+    ).run(stream, revision, at);
+    this.db.prepare(
+      "INSERT INTO continuation_owners " +
+      "(stream_id,stream_revision,owner_kind,action_id,episode_id,episode_version," +
+      "human_reason,terminal_outcome,created_at,updated_at,terminal_at) " +
+      "VALUES (?,?,'HUMAN',NULL,?,?,?,NULL,?,?,NULL)"
+    ).run(
+      stream,
+      revision,
+      boundEpisode?.episode_id ?? null,
+      boundEpisode?.version ?? null,
+      humanReason,
+      at,
+      at
+    );
+    return Object.freeze({
+      origin: this.#readSemanticOrigin(stream, revision),
+      continuation_owner: this.#readContinuationOwner(stream, revision),
     });
   }
 
@@ -5277,6 +5515,91 @@ export class FirstLineStateStore {
     });
   }
 
+  /**
+   * Batch 2 S2 refusal: the existing pre-send HUMAN cut is committed
+   * synchronously in the owning SQLite transaction. Unlike a transient
+   * S2 failure return, the caller must receive a durable HUMAN owner.
+   *
+   * A stale prepared revision is superseded before a DIRECT_HUMAN origin
+   * is committed at the newly accepted source revision. For a same-revision
+   * refusal, reuse the signed-ingress lease-reclaim CAS, with CLARIFY
+   * reservation preserved. This method does not authorize a new send.
+   */
+  handoffDeniedFirstLineS2ToHuman(actionId, {
+    reason, leaseToken = null,
+  } = {}) {
+    const id = safeToken(actionId, 'action_id');
+    const humanReason = safeToken(reason, 'human_reason');
+    const token = leaseToken === null ? null : safeToken(leaseToken, 'lease_token');
+    const at = this.now();
+    return tx(this.db, () => {
+      const action = this.#requireReadableAction(id);
+      const existingOwner = this.#readContinuationOwner(
+        action.stream_id, action.prepared_stream_revision
+      );
+      if (existingOwner?.action_id === id &&
+          existingOwner.terminal_outcome === 'SUPERSEDED' &&
+          action.state === 'STALE') {
+        // A newly authenticated S2 source was already ingested in the same
+        // existing writer protocol. Its immutable newer DIRECT_HUMAN origin
+        // now owns continuation; do not reopen the superseded action.
+        const current = this.#readUnresolvedOwner(action.stream_id);
+        if (current?.owner_kind === 'HUMAN' &&
+            current.stream_revision >
+              action.prepared_stream_revision &&
+            current.terminal_outcome === null) {
+          return current;
+        }
+        fail('FIRST_LINE_HUMAN_ACTION_RECONCILIATION_REQUIRED',
+          'S2 superseded action has no newer absorbing HUMAN owner');
+      }
+      if (!existingOwner || existingOwner.action_id !== id ||
+          existingOwner.terminal_outcome !== null) {
+        fail('FIRST_LINE_HUMAN_ACTION_RECONCILIATION_REQUIRED',
+          'S2 refused action lacks live continuation ownership');
+      }
+      if (existingOwner.owner_kind === 'HUMAN') {
+        return existingOwner;
+      }
+      if (existingOwner.owner_kind !== 'PUBLIC_ACTION' ||
+          !['PREPARED', 'GATING'].includes(action.state)) {
+        fail('FIRST_LINE_HUMAN_ACTION_RECONCILIATION_REQUIRED',
+          'S2 refusal cannot terminalize a sent or unknown action');
+      }
+      if (action.state === 'GATING' && token !== action.lease_token) {
+        fail('FIRST_LINE_ACTION_CLAIM_INVALID',
+          'S2 refusal must prove the exact original GATING claim');
+      }
+      if (action.state === 'PREPARED' && token !== null) {
+        fail('FIRST_LINE_ACTION_CLAIM_INVALID',
+          'PREPARED S2 refusal may not claim a GATING token');
+      }
+      const stream = this.#requireStream(action.stream_id);
+      if (stream.stream_revision > action.prepared_stream_revision) {
+        this.#supersedeUnsentAction(
+          action, humanReason, 'STALE', at, true
+        );
+        this.#commitDirectHumanOriginWithinTx({
+          stream: action.stream_id,
+          revision: stream.stream_revision,
+          humanReason, requestedEpisodeId: null,
+          requestedEpisodeVersion: null, at,
+        });
+        return this.#readUnresolvedOwner(action.stream_id);
+      }
+      this.#attachHumanOnRepeatedSourceWithinTx(action, humanReason, at);
+      const owner = this.#readContinuationOwner(
+        action.stream_id, action.prepared_stream_revision
+      );
+      if (!owner || owner.owner_kind !== 'HUMAN' ||
+          owner.terminal_outcome !== null) {
+        fail('FIRST_LINE_HUMAN_ACTION_RECONCILIATION_REQUIRED',
+          'S2 refusal did not durably commit HUMAN');
+      }
+      return owner;
+    });
+  }
+
   escalatePublicActionToHuman(
     actionId,
     { reason, leaseToken = null }
@@ -5287,127 +5610,133 @@ export class FirstLineStateStore {
       ? null
       : safeToken(leaseToken, 'lease_token');
     const at = this.now();
-    return tx(this.db, () => {
-      const action = this.#requireReadableAction(id);
-      const origin = this.#readSemanticOrigin(
-        action.stream_id,
-        action.prepared_stream_revision
-      );
-      const owner = this.#readContinuationOwner(
-        action.stream_id,
-        action.prepared_stream_revision
-      );
-      if (!origin || origin.origin_kind !== 'PUBLIC_ACTION' ||
-          origin.action_id !== id || !owner || owner.action_id !== id) {
-        fail('FIRST_LINE_DB_CORRUPT',
-          'public action lacks immutable origin/continuation owner', {
-            action_id: id,
-          });
-      }
-      if (owner.terminal_outcome !== null) {
-        fail('FIRST_LINE_ACTION_STATE_INVALID',
-          'terminal continuation cannot escalate to HUMAN', {
-            action_id: id,
-            terminal_outcome: owner.terminal_outcome,
-          });
-      }
-      if (owner.owner_kind === 'HUMAN') {
-        if (owner.human_reason !== humanReason) {
-          fail('FIRST_LINE_HUMAN_CONTINUATION_ACTIVE',
-            'HUMAN continuation reason is immutable', {
-              action_id: id,
-              human_reason: owner.human_reason,
-            });
-        }
-        return owner;
-      }
+    return tx(this.db, () => this.#escalatePublicActionToHumanWithinTx({
+      id, humanReason, suppliedLease, at,
+    }));
+  }
 
-      if (action.state === 'PREPARED' || action.state === 'GATING') {
-        const currentStream = this.#requireStream(action.stream_id);
-        if (currentStream.stream_revision !== action.prepared_stream_revision) {
-          fail('FIRST_LINE_ACTION_STALE_REVISION',
-            'superseded unsent action cannot acquire HUMAN continuation', {
+  #escalatePublicActionToHumanWithinTx({
+    id, humanReason, suppliedLease, at,
+  }) {
+    const action = this.#requireReadableAction(id);
+    const origin = this.#readSemanticOrigin(
+      action.stream_id,
+      action.prepared_stream_revision
+    );
+    const owner = this.#readContinuationOwner(
+      action.stream_id,
+      action.prepared_stream_revision
+    );
+    if (!origin || origin.origin_kind !== 'PUBLIC_ACTION' ||
+        origin.action_id !== id || !owner || owner.action_id !== id) {
+      fail('FIRST_LINE_DB_CORRUPT',
+        'public action lacks immutable origin/continuation owner', {
+          action_id: id,
+        });
+    }
+    if (owner.terminal_outcome !== null) {
+      fail('FIRST_LINE_ACTION_STATE_INVALID',
+        'terminal continuation cannot escalate to HUMAN', {
+          action_id: id,
+          terminal_outcome: owner.terminal_outcome,
+        });
+    }
+    if (owner.owner_kind === 'HUMAN') {
+      if (owner.human_reason !== humanReason) {
+        fail('FIRST_LINE_HUMAN_CONTINUATION_ACTIVE',
+          'HUMAN continuation reason is immutable', {
+            action_id: id,
+            human_reason: owner.human_reason,
+          });
+      }
+      return owner;
+    }
+
+    if (action.state === 'PREPARED' || action.state === 'GATING') {
+      const currentStream = this.#requireStream(action.stream_id);
+      if (currentStream.stream_revision !== action.prepared_stream_revision) {
+        fail('FIRST_LINE_ACTION_STALE_REVISION',
+          'superseded unsent action cannot acquire HUMAN continuation', {
+            action_id: id,
+            action_revision: action.prepared_stream_revision,
+            current_stream_revision: currentStream.stream_revision,
+          });
+      }
+      if (action.state === 'GATING') {
+        if (suppliedLease === null || action.lease_token !== suppliedLease) {
+          fail('FIRST_LINE_ACTION_CLAIM_INVALID',
+            'current GATING action may escalate only under its live lease', {
               action_id: id,
-              action_revision: action.prepared_stream_revision,
-              current_stream_revision: currentStream.stream_revision,
             });
         }
-        if (action.state === 'GATING') {
-          if (suppliedLease === null || action.lease_token !== suppliedLease) {
-            fail('FIRST_LINE_ACTION_CLAIM_INVALID',
-              'current GATING action may escalate only under its live lease', {
-                action_id: id,
-              });
-          }
-          if (!Number.isSafeInteger(action.lease_expires_at) ||
-              action.lease_expires_at <= at) {
-            fail('FIRST_LINE_ACTION_CLAIM_EXPIRED',
-              'GATING claim expired before HUMAN escalation', {
-                action_id: id,
-              });
-          }
-        } else if (suppliedLease !== null) {
-          fail('FIRST_LINE_ACTION_CLAIM_INVALID',
-            'PREPARED HUMAN escalation does not accept a lease token', {
+        if (!Number.isSafeInteger(action.lease_expires_at) ||
+            action.lease_expires_at <= at) {
+          fail('FIRST_LINE_ACTION_CLAIM_EXPIRED',
+            'GATING claim expired before HUMAN escalation', {
               action_id: id,
             });
         }
       } else if (suppliedLease !== null) {
         fail('FIRST_LINE_ACTION_CLAIM_INVALID',
-          'post-SENDING HUMAN escalation does not use a GATING lease', {
+          'PREPARED HUMAN escalation does not accept a lease token', {
             action_id: id,
           });
       }
+    } else if (suppliedLease !== null) {
+      fail('FIRST_LINE_ACTION_CLAIM_INVALID',
+        'post-SENDING HUMAN escalation does not use a GATING lease', {
+          action_id: id,
+        });
+    }
 
-      this.#assertDeferredRelationsValid(action.stream_id);
-      if (Number.isSafeInteger(action.send_started_at)) {
-        const humanCutStream = this.#readStream(action.stream_id);
-        if (!humanCutStream) {
-          fail('FIRST_LINE_DB_CORRUPT',
-            'HUMAN escalation stream disappeared before durable cut', { action_id: id });
-        }
-        this.db.prepare(
-          'INSERT INTO public_action_human_cuts ' +
-          '(action_id,stream_id,human_through_event_seq,created_at) VALUES (?,?,?,?)'
-        ).run(id, action.stream_id, humanCutStream.last_event_seq, at);
+    this.#assertDeferredRelationsValid(action.stream_id);
+    if (Number.isSafeInteger(action.send_started_at)) {
+      const humanCutStream = this.#readStream(action.stream_id);
+      if (!humanCutStream) {
+        fail('FIRST_LINE_DB_CORRUPT',
+          'HUMAN escalation stream disappeared before durable cut', { action_id: id });
       }
+      this.db.prepare(
+        'INSERT INTO public_action_human_cuts ' +
+        '(action_id,stream_id,human_through_event_seq,created_at) VALUES (?,?,?,?)'
+      ).run(id, action.stream_id, humanCutStream.last_event_seq, at);
+    }
 
-      let humanEpisodeVersion = owner.episode_version;
-      if (owner.episode_id !== null) {
-        const currentEpisode = this.#readEpisode(owner.episode_id);
-        if (currentEpisode?.state === 'active' &&
-            currentEpisode.stream_id === action.stream_id &&
-            currentEpisode.version >= owner.episode_version) {
-          humanEpisodeVersion = currentEpisode.version;
-        }
+    let humanEpisodeVersion = owner.episode_version;
+    if (owner.episode_id !== null) {
+      const currentEpisode = this.#readEpisode(owner.episode_id);
+      if (currentEpisode?.state === 'active' &&
+          currentEpisode.stream_id === action.stream_id &&
+          currentEpisode.version >= owner.episode_version) {
+        humanEpisodeVersion = currentEpisode.version;
       }
-      const changeOwner = () => this.db.prepare(
-        "UPDATE continuation_owners SET owner_kind='HUMAN',human_reason=?," +
-        'episode_version=?,updated_at=? ' +
-        "WHERE stream_id=? AND stream_revision=? AND owner_kind='PUBLIC_ACTION' " +
-        'AND action_id=? AND terminal_outcome IS NULL'
-      ).run(
-        humanReason,
-        humanEpisodeVersion,
-        at,
-        action.stream_id,
-        action.prepared_stream_revision,
-        id
-      ).changes;
-      const changed = action.state === 'GATING'
-        ? this.#withMutationLeaseToken(suppliedLease, changeOwner)
-        : changeOwner();
-      if (changed !== 1) {
-        fail('FIRST_LINE_STALE_WRITE',
-          'continuation changed before HUMAN escalation', {
-            action_id: id,
-          });
-      }
-      return this.#readContinuationOwner(
-        action.stream_id,
-        action.prepared_stream_revision
-      );
-    });
+    }
+    const changeOwner = () => this.db.prepare(
+      "UPDATE continuation_owners SET owner_kind='HUMAN',human_reason=?," +
+      'episode_version=?,updated_at=? ' +
+      "WHERE stream_id=? AND stream_revision=? AND owner_kind='PUBLIC_ACTION' " +
+      'AND action_id=? AND terminal_outcome IS NULL'
+    ).run(
+      humanReason,
+      humanEpisodeVersion,
+      at,
+      action.stream_id,
+      action.prepared_stream_revision,
+      id
+    ).changes;
+    const changed = action.state === 'GATING'
+      ? this.#withMutationLeaseToken(suppliedLease, changeOwner)
+      : changeOwner();
+    if (changed !== 1) {
+      fail('FIRST_LINE_STALE_WRITE',
+        'continuation changed before HUMAN escalation', {
+          action_id: id,
+        });
+    }
+    return this.#readContinuationOwner(
+      action.stream_id,
+      action.prepared_stream_revision
+    );
   }
 
   terminalizeHumanContinuation(
@@ -5742,7 +6071,8 @@ export class FirstLineStateStore {
     action,
     reason,
     terminalState = 'CANCELLED',
-    at = this.now()
+    at = this.now(),
+    preserveClarificationReservation = false
   ) {
     if (action.state !== 'PREPARED' && action.state !== 'GATING') {
       fail('FIRST_LINE_ACTION_STATE_INVALID',
@@ -5792,7 +6122,8 @@ export class FirstLineStateStore {
         });
     }
 
-    if (action.action_type === 'CLARIFY' && action.episode_id) {
+    if (action.action_type === 'CLARIFY' && action.episode_id &&
+        !preserveClarificationReservation) {
       const episode = this.db.prepare(
         'SELECT * FROM episodes WHERE episode_id=?'
       ).get(action.episode_id);
@@ -5812,6 +6143,50 @@ export class FirstLineStateStore {
         }
       }
     }
+  }
+
+  #attachHumanOnRepeatedSourceWithinTx(action, reason, at) {
+    const stream = this.#requireStream(action.stream_id);
+    if (stream.stream_revision !== action.prepared_stream_revision ||
+        stream.last_event_seq !== stream.stream_revision) {
+      fail('FIRST_LINE_HUMAN_ACTION_RECONCILIATION_REQUIRED',
+        'same-revision HUMAN requires the immutable existing source cut');
+    }
+    if (action.state === 'PREPARED') {
+      this.#attachHumanToUnsentAction(action, reason, 'STALE', at);
+      return;
+    }
+    if (action.state !== 'GATING' ||
+        !Number.isSafeInteger(action.lease_expires_at) ||
+        typeof action.lease_token !== 'string') {
+      fail('FIRST_LINE_HUMAN_ACTION_RECONCILIATION_REQUIRED',
+        'GATING has no valid lease for same-revision HUMAN transition');
+    }
+    let claim = action.lease_token;
+    if (action.lease_expires_at <= at) {
+      // Reclaim an expired PRE-SEND lease using the existing v4 CAS
+      // protocol. A previous worker cannot enter SENDING on an expired
+      // token; the claim replacement and HUMAN transition share one tx.
+      claim = crypto.randomUUID();
+      const changed = this.#withMutationLeaseToken(claim, () =>
+        this.db.prepare(
+          "UPDATE public_actions SET state='GATING',lease_token=?," +
+          'lease_expires_at=?,attempts=attempts+1,updated_at=? ' +
+          "WHERE action_id=? AND state='GATING' AND lease_expires_at<=?"
+        ).run(claim, at + 30000, at, action.action_id, at).changes
+      );
+      if (changed !== 1) {
+        fail('FIRST_LINE_STALE_WRITE',
+          'expired GATING lease changed before safe HUMAN takeover');
+      }
+      action = this.#readAction(action.action_id);
+    }
+    // This transaction is the exact signed-event owner, not a deferred
+    // scheduler. The existing send-admission guard verifies PUBLIC_ACTION
+    // on every GATING->SENDING CAS; this state becomes HUMAN in the same tx.
+    this.#withMutationLeaseToken(claim, () =>
+      this.#attachHumanToUnsentAction(action, reason, 'STALE', at)
+    );
   }
 
   #attachHumanToUnsentAction(action, reason, terminalState, at = this.now()) {
@@ -5967,9 +6342,15 @@ export class FirstLineStateStore {
         };
       }
 
+      // Only validated immutable same-stream parent metadata can reorder
+      // a deferred incoming event relative to its later-confirmed bot echo.
+      const deferredParent = event.event_kind === 'CUSTOMER_MESSAGE'
+        ? this.#readDeferredParent(id, event.event_seq)
+        : null;
       return {
         event,
         confirmed_babypark_action: confirmedAction,
+        deferred_parent: deferredParent,
       };
     });
 

@@ -1,3 +1,5 @@
+import { decodeFirstLineCurrentConversation } from './first-line-current-conversation.mjs';
+import { isDeepStrictEqual } from 'node:util';
 function requireHttps(baseUrl) {
   if (!/^https:\/\//.test(baseUrl)) throw new Error('chatwoot_https_required');
 }
@@ -263,6 +265,47 @@ export function createFirstLineChatwootAuthorityReader({
     return { conversation, source, wireMessage: matches[0] };
   }
 
+  // Native Chatwoot v4.18.0 widget update routes mutate only
+  // submitted_email or submitted_values on controlled templates; the native
+  // delivery/read-status service mutates status, not content_attributes.
+  // AgentBot webhook_data omits previous_changes and status. This classifier
+  // is a conservative positive native-shape proof, NOT a comparison of text.
+  // Never retain submission values, customer text, email or derived digests.
+  function classifyNativeStatusUpdateShape(wireMessage, event) {
+    if (event.deleted || event.unsupported || event.hasAttachments ||
+        !['SYSTEM_TEMPLATE', 'BABYPARK_PUBLIC_REPLY'].includes(event.eventKind)) {
+      return 'UNKNOWN_OR_SEMANTIC';
+    }
+    const template =
+      event.eventKind === 'SYSTEM_TEMPLATE' && event.messageType === 'template' &&
+      event.senderClass === 'none' && event.senderId === null &&
+      ['text', 'input_email', 'input_csat'].includes(event.contentType);
+    const bot =
+      event.eventKind === 'BABYPARK_PUBLIC_REPLY' &&
+      event.messageType === 'outgoing' &&
+      event.senderClass === 'configured_agent_bot' &&
+      ['text', 'input_select'].includes(event.contentType);
+    if (!template && !bot) return 'UNKNOWN_OR_SEMANTIC';
+    const attrs = wireMessage?.content_attributes;
+    if (attrs === null || attrs === undefined) return 'NATIVE_STATUS_SHAPE';
+    if (typeof attrs !== 'object' || Array.isArray(attrs)) {
+      return 'UNKNOWN_OR_SEMANTIC';
+    }
+    const keys = Object.keys(attrs);
+    // items is a native option definition, never a submitted value;
+    // permitted only for the known bot input_select message.
+    if (!keys.every(key =>
+      (key === 'items' && bot && event.contentType === 'input_select' &&
+       Array.isArray(attrs.items)) ||
+      (key === 'display_type' && template &&
+       event.contentType === 'input_csat' &&
+       ['emoji', 'star'].includes(attrs.display_type))
+    )) {
+      return 'UNKNOWN_OR_SEMANTIC';
+    }
+    return 'NATIVE_STATUS_SHAPE';
+  }
+
   async function readExactSourceMessage(conversationId, sourceMessageId) {
     const exact = await readExactWireMessage(conversationId, sourceMessageId);
     const { conversation, source, wireMessage } = exact;
@@ -293,6 +336,7 @@ export function createFirstLineChatwootAuthorityReader({
       sourceMessageId: source,
       event: Object.freeze({ ...event }),
       transientContent: isSupportedCustomerText ? wireMessage.content : null,
+      transientUpdateShape: classifyNativeStatusUpdateShape(wireMessage, event),
     });
   }
 
@@ -384,6 +428,80 @@ export function createFirstLineChatwootAuthorityReader({
     });
   }
 
+  // The deployed Chatwoot 4.18 message view persists source_id and inbox_id.
+  // source_id is a NON-UNIQUE database index: it is only a correlation
+  // marker, never idempotency or permission to retry a public POST.
+  // A positive reply requires one current FULL snapshot + one exact message
+  // reread with same topology/content. No customer content leaves this helper.
+  async function readCorrelatedPublicReplyEvidence({
+    conversationId, inboxId, actionId, expectedContent,
+  } = {}) {
+    const conversation = strictPositiveId(conversationId, 'conversation_id');
+    const inbox = strictPositiveId(inboxId, 'configured_inbox_id');
+    if (typeof actionId !== 'string' || actionId.length < 1 ||
+        actionId.length > 160 || wireSourceId(actionId) !== actionId ||
+        typeof expectedContent !== 'string' || expectedContent.length === 0) {
+      authorityFail('CHATWOOT_AUTHORITY_VALUE_INVALID',
+        'action id and rendered content must be supplied for exact reply proof');
+    }
+
+    const full = await readAuthorizingConversationSnapshot(conversation);
+    if (!full.complete || full.code !== 'COMPLETE') {
+      return Object.freeze({ code: 'HISTORY_UNPROVABLE' });
+    }
+    const matches = full.events.filter(e => e.sourceId === actionId);
+    if (matches.length === 0) {
+      return Object.freeze({ code: 'NO_CORRELATED_REPLY' });
+    }
+    if (matches.length !== 1) {
+      return Object.freeze({ code: 'CORRELATED_REPLY_AMBIGUOUS' });
+    }
+    const matched = matches[0];
+    if (matched.eventKind !== 'BABYPARK_PUBLIC_REPLY' ||
+        matched.senderClass !== 'configured_agent_bot' ||
+        matched.senderId !== botId ||
+        matched.messageType !== 'outgoing' ||
+        matched.contentType !== 'text' ||
+        matched.deleted !== false || matched.unsupported !== false ||
+        matched.hasAttachments !== false) {
+      return Object.freeze({ code: 'CORRELATED_REPLY_TOPOLOGY_MISMATCH' });
+    }
+
+    const exact = await readExactWireMessage(conversation, matched.sourceMessageId);
+    const wire = exact.wireMessage;
+    if (!wire) return Object.freeze({ code: 'CORRELATED_REPLY_CHANGED' });
+    const current = classifyPublicWireMessage(wire, botId);
+    if (current.disposition !== 'PUBLIC' ||
+        !isDeepStrictEqual(current.ledgerEvent, matched) ||
+        wire.conversation_id !== conversation || wire.inbox_id !== inbox ||
+        wire.source_id !== actionId ||
+        wire.private !== false || wire.content !== expectedContent) {
+      return Object.freeze({ code: 'CORRELATED_REPLY_CHANGED' });
+    }
+    return Object.freeze({
+      code: 'CORRELATED_REPLY_PROVEN',
+      nonAuthorizing: true,
+      sourceMessageId: matched.sourceMessageId,
+      sourceConversationId: conversation,
+      inboxId: inbox,
+      actionId,
+    });
+  }
+
+  // Frozen C6 §43 current-owner decoder shared by S2 and post-HUMAN read-only
+  // reconciliation. Never infer ownership from webhook or message id ordering.
+  async function readCurrentConversationAuthority(conversationId, configuredInboxId) {
+    const conversation = strictPositiveId(conversationId, 'conversation_id');
+    const inbox = strictPositiveId(configuredInboxId, 'configured_inbox_id');
+    const wire = await get(
+      `/api/v1/accounts/${account}/conversations/${conversation}`
+    );
+    return decodeFirstLineCurrentConversation(wire, {
+      accountId: account, conversationId: conversation, inboxId: inbox,
+      agentBotId: botId,
+    });
+  }
+
   async function readAuthorizingConversationSnapshot(conversationId) {
     const conversation = strictPositiveId(conversationId, 'conversation_id');
     const wire = await get(
@@ -408,5 +526,7 @@ export function createFirstLineChatwootAuthorityReader({
     readExactClarificationSubmission,
     readPublicRange,
     readAuthorizingConversationSnapshot,
+    readCurrentConversationAuthority,
+    readCorrelatedPublicReplyEvidence,
   });
 }
