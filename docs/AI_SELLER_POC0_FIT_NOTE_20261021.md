@@ -19,6 +19,8 @@ Target repository path: `docs/AI_SELLER_POC0_FIT_NOTE_20261021.md`.
 
 SHA-256 normalization of every file bound in §0 and of every evidence attachment below: UTF-8, LF, exactly one final newline. The three pilot CSVs were converted from CRLF to LF in the PR #149 batch fix (2026-10-23); their parsed rows are unchanged apart from the E22/G05 label and rubric fields, and the earlier CRLF digests are historical only.
 
+**Raw capture bundle:** `evidence/ai-seller-poc0-20261021/README.md`, SHA-256 `88325b9687250268e0b00caa2739e999eb7afc1e8660b47d6c1da772de9277eb`. This **EVIDENCE — NON-NORMATIVE** in-directory index inventories all 10 immutable JSON/TXT raw captures and their exact SHA-256. Raw tool outputs are data fixtures, not independent governing documents; their bytes have not been modified. Do not use parent metadata to classify a true standalone documentation file: if that ambiguity arises, HALT under Agreement §§2/9. The index and checker must verify every path and raw byte before any gate relies on the captures.
+
 **Evidence attachments.** Status: EVIDENCE — NON-NORMATIVE data attachments of this fit-note. Applies to: AI Seller PoC-0. Supersedes: none. The pilot CSVs are unapproved sampling inputs for OD-3 and catalog evidence only, not normative authorization.
 
 | Attachment (path under `docs/`) | SHA-256 | Provenance and status |
