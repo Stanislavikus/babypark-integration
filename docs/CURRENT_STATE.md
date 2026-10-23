@@ -7,6 +7,18 @@ Last updated: 2026-10-10
 Owner: BabyPark
 Source of truth for operational facts: production runtime + verified repository evidence.
 
+## Operational checkpoint — Chatwoot staff SMTP (2026-10-23)
+
+Status: **SMTP ACTIVATED; AUTH PASS; employee email end-to-end PENDING**. This operational note is in Draft PR #150 (unmerged). Current authority still canonical Git; no repo runtime code deployed.
+
+- Owner's exact digest approval: employee-only scan `f4d088da7f7fb7607bee3adb875ed6ee182447a05c11a0d253cf0cc12ca3a7c1`, fit `cc61342e78c67967d7372567d82afa361cc65eeec9507e5630322c7d38c75778`. Permanent `support@babypark.ua` sender. Only user account invites and password resets addressed to `@babypark.ua`; no consent for buyer mail, Email Continuity, S3/SNS or merge.
+- AWS SES Frankfurt: sending enabled; Production access not enabled (Sandbox 200/day, 1/s); `babypark.ua` verified, DKIM SUCCESS. Existing SMTP IAM user `babypark-chatwoot-ses-smtp`: group policy modified to require `ses:Recipients` all match `*@babypark.ua`, with non-null check, From allowlisted to support@/contact@ only. Actual IAM policy and 5 positive/negative cases verified by API/simulator. No AWS receipt rule, S3 bucket or SNS topic created.
+- Host `chatwoot-fra1-01`: retained root-only byte-accurate pre-change `.env` rollback `/root/.babypark-chatwoot-smtp/pre-ses.env` and staged config `staged.env`; live `/home/chatwoot/chatwoot/.env` atomically updated with SMTP endpoint 2587, login, STARTTLS peer verify, permanent sender; secrets entered by owner using local masked terminal, never sent to chat or Git.
+- SMTP authentication test: **PASS, Emails sent: 0** per user's terminal confirmation. During deployment web+worker services restarted; both now `active`, Chatwoot HTTPS/local HTTP 200, live SMTP settings exactly match expected nonsecret values and credential field presence; file permissions `chatwoot:chatwoot` 0600.
+- AWS SES reported `SentLast24Hours=1` on readback after restart, same as before; do not infer delivery or absence of queued messages solely from that counter.
+- **Next acceptance**: use Chatwoot UI for *one* existing staff user with a verified real `@babypark.ua` mailbox; press native `Скинути пароль`, confirm delivery in Zoho and successful reset/login. UI success toast alone is not mail delivery proof. If failed: inspect systemd/Sidekiq/mail errors without leaking tokens/PII, keep IAM deny fence and rollback SMTP using existing snapshot if necessary. Support@ Zoho inbound routing still not verified.
+- Other website communications, Drupal launcher and marketing channels remain unchanged. Future outbound customer-facing email still BLOCKED by SES Sandbox and IAM recipient deny; SES/S3/SNS Website Email Continuity remains separate and unconfigured.
+
 ## Current campaign/navigation snapshot (2026-10-10)
 
 This top section is the current campaign/navigation snapshot. Exact implementation and merge truth remains canonical Git; normative process/governance authority remains `docs/AI_WORKING_AGREEMENT.md`. Runtime facts that are not restated here must be freshly verified from their authoritative runtime/source before use.
