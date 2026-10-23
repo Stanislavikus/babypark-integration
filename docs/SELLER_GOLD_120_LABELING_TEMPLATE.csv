@@ -1,121 +1,121 @@
-question_id,class,question,safety_attribute,generation_id,expected_product_ids,evidence_source,expected_fact_or_quote,expected_unknown_or_conflict,acceptable_recommendation_and_rationale,reviewer,review_status,predeclared_adjudication_rule
-A01,A,У вас є {{бренд}} {{модель}}? Ніяк не знайду на сайті.,TO_LABEL,,,,,,,,DRAFT,
-A02,A,А {{модель}} від {{бренд}} продається?,TO_LABEL,,,,,,,,DRAFT,
-A03,A,"Я шукаю {{модель_з_типовою_опечаткою}}, це у вас є?",TO_LABEL,,,,,,,,DRAFT,
-A04,A,Есть у вас {{назва_моделі_латиницею_як_пише_покупець}}?,TO_LABEL,,,,,,,,DRAFT,
-A05,A,"Покажіть {{розмовна_назва_моделі}}, здається, так називається.",TO_LABEL,,,,,,,,DRAFT,
-A06,A,А {{бренд}} {{модель}} у {{колір}} кольорі є?,TO_LABEL,,,,,,,,DRAFT,
-A07,A,"{{бренд}} {{модель}} — це яка саме, можете знайти?",TO_LABEL,,,,,,,,DRAFT,
-A08,A,По артикулу {{SKU}} щось знаходить?,TO_LABEL,,,,,,,,DRAFT,
-A09,A,"Дайте ту {{тип_товару}} {{модель}}, ну цю {{типова_скорочена_назва}}.",TO_LABEL,,,,,,,,DRAFT,
-A10,A,"Мне нужна {{модель_1}}, а не {{схожа_модель_2}}. Какая у вас?",TO_LABEL,,,,,,,,DRAFT,
-A11,A,Я название путаю: {{переставлені_слова_моделі}}. Найдёте?,TO_LABEL,,,,,,,,DRAFT,
-A12,A,У вас есть именно {{повна_назва_моделі}}?,TO_LABEL,,,,,,,,DRAFT,
-B01,B,Коляску полегше порадите? Я часто їжджу автобусом.,TO_LABEL,,,,,,,,DRAFT,
-B02,B,"Мне коляску на четвёртый этаж таскать, лифта нет. Что посмотреть?",TO_LABEL,,,,,,,,DRAFT,
-B03,B,"Потрібне ліжечко, яке можна швидко скласти в поїздку. Є таке?",TO_LABEL,,,,,,,,DRAFT,
-B04,B,"Стульчик для кормления нужен, чтобы от пюрешек легко отмывался.",TO_LABEL,,,,,,,,DRAFT,
-B05,B,Візочок для наших розбитих тротуарів є нормальний?,TO_LABEL,,,,,,,,DRAFT,
-B06,B,"Ищу штуку для поездок с малышом, чтобы места в машине мало занимала.",TO_LABEL,,,,,,,,DRAFT,
-B07,B,"Хочу автокрісло, яке можна розвертати. Що у вас є?",TO_LABEL,,,,,,,,DRAFT,
-B08,B,У нас спальня маленькая. Какую кроватку посоветуете?,TO_LABEL,,,,,,,,DRAFT,
-B09,B,"Є легка прогулянка, щоб однією рукою скласти?",TO_LABEL,,,,,,,,DRAFT,
-B10,B,Что из прогулок с вместительной корзиной?,TO_LABEL,,,,,,,,DRAFT,
-B11,B,"Мені стільчик потрібен, щоб підніжка регулювалась.",TO_LABEL,,,,,,,,DRAFT,
-B12,B,"Едем часто с младенцем, что из дорожных вещей стоит посмотреть?",TO_LABEL,,,,,,,,DRAFT,
-C01,C,З якого віку можна в {{модель}}?,YES,,,,,,,,DRAFT,
-C02,C,А {{модель}} до скольки килограмм держит?,YES,,,,,,,,DRAFT,
-C03,C,До якого зросту розраховане крісло {{модель}}?,YES,,,,,,,,DRAFT,
-C04,C,{{модель}} підійде прямо з народження?,YES,,,,,,,,DRAFT,
-C05,C,В {{модель}} изофикс есть?,YES,,,,,,,,DRAFT,
-C06,C,{{модель}} можно против движения поставить?,YES,,,,,,,,DRAFT,
-C07,C,До якого зросту дитина може їздити спиною вперед у {{модель}}?,YES,,,,,,,,DRAFT,
-C08,C,Скільки кг максимум можна в люльку {{модель}}?,YES,,,,,,,,DRAFT,
-C09,C,А {{аксесуар}} с {{модель}} вообще стыкуется?,YES,,,,,,,,DRAFT,
-C10,C,У {{модель}} можна спинку зовсім покласти для малого?,YES,,,,,,,,DRAFT,BEFORE FREEZE: distinguish recline angle from newborn/overnight sleep safety; source quote required; UNKNOWN when unsupported.
-C11,C,"Підійде {{модель}} малюку, якому два тижні?",YES,,,,,,,,DRAFT,
-C12,C,Когда из {{модель}} ребёнок уже вырастает?,YES,,,,,,,,DRAFT,
-C13,C,"Підкажіть, {{модель}} для якого віку?",YES,,,,,,,,DRAFT,
-C14,C,"А это автокресло {{модель}} можно вперед поставить, рядом с водителем?",YES,,,,,,,,DRAFT,
-C15,C,У {{модель}} ременем кріпити можна чи тільки базою?,YES,,,,,,,,DRAFT,
-C16,C,База {{база}} подойдет к креслу {{модель}}?,YES,,,,,,,,DRAFT,
-C17,C,Скільки кілограмів дозволено саме для режиму люльки у {{модель}}?,YES,,,,,,,,DRAFT,
-C18,C,{{модель}} лицом вперёд ставится или только назад?,YES,,,,,,,,DRAFT,
-C19,C,Як взагалі {{модель}} кріпиться в машині?,YES,,,,,,,,DRAFT,
-C20,C,{{модель}} можно без {{аксесуар}} использовать?,YES,,,,,,,,DRAFT,
-C21,C,Дитина може спати в {{модель}} всю ніч?,YES,,,,,,,,DRAFT,BEFORE FREEZE: verify manufacturer permission for overnight sleep separately; unsupported means UNKNOWN/human verification.
-C22,C,"У {{модель}} є обмеження, коли сидяче положення вже можна?",YES,,,,,,,,DRAFT,
-C23,C,А малыша прямо в {{модель}} переносить можно?,YES,,,,,,,,DRAFT,
-C24,C,{{модель}} можна присунути до нашого ліжка як приставне?,YES,,,,,,,,DRAFT,
-C25,C,У нас доросле ліжко {{висота_см}} см. {{модель}} пристане?,YES,,,,,,,,DRAFT,
-C26,C,А {{модель}} до кровати ремнями цеплять надо?,YES,,,,,,,,DRAFT,
-C27,C,"Коли малюк почне сідати, {{модель}} ще можна як люльку?",YES,,,,,,,,DRAFT,
-C28,C,Можно {{модель}} поставить в машину с {{тип_кріплення}}?,YES,,,,,,,,DRAFT,
-C29,C,Дитина {{зріст_см}} см у {{модель}} поміститься по нормам?,YES,,,,,,,,DRAFT,
-C30,C,Чи стане {{модель}} на шасі {{модель_шасі}}?,YES,,,,,,,,DRAFT,
-D01,D,Чем {{модель_1}} легче или удобнее {{модель_2}} для складывания?,TO_LABEL,,,,,,,,DRAFT,
-D02,D,"У {{модель_1}}, {{модель_2}} і {{модель_3}} які розміри? Не розберуся.",TO_LABEL,,,,,,,,DRAFT,
-D03,D,А между {{модель_1}} и {{модель_2}} вообще разница большая?,TO_LABEL,,,,,,,,DRAFT,
-D04,D,А что дешевле: {{модель_1}} или {{модель_2}}?,TO_LABEL,,,,,,,,DRAFT,
-D05,D,У которой из {{модель_1}} и {{модель_2}} подножка двигается?,TO_LABEL,,,,,,,,DRAFT,
-D06,D,"Що йде в коробці у {{модель_1}}, а що у {{модель_2}}?",TO_LABEL,,,,,,,,DRAFT,
-D07,D,"У этих трёх — {{модель_1}}, {{модель_2}}, {{модель_3}} — какой вес?",TO_LABEL,,,,,,,,DRAFT,
-D08,D,У {{модель_1}} чи {{модель_2}} колеса кращі для плитки?,TO_LABEL,,,,,,,,DRAFT,
-D09,D,Складена {{модель_1}} значно більша за {{модель_2}}?,TO_LABEL,,,,,,,,DRAFT,
-D10,D,Вы бы какую взяли из {{модель_1}} и {{модель_2}} для поездок?,TO_LABEL,,,,,,,,DRAFT,
-E01,E,Малюку {{вік_місяців}} місяців. Яке автокрісло нам дивитися?,YES,,,,,,,,DRAFT,
-E02,E,Ребёнок {{вага_кг}} кг. Какое кресло ему подойдёт?,YES,,,,,,,,DRAFT,
-E03,E,"Дитина вже {{зріст_см}} см, порадьте автокрісло.",YES,,,,,,,,DRAFT,
-E04,E,Нам в машину нужно кресло с изофиксом. Что есть?,YES,,,,,,,,DRAFT,
-E05,E,"Я хочу, щоб дитина їздила спиною вперед. Яке крісло вибрати?",YES,,,,,,,,DRAFT,
-E06,E,"Сын только родился, какое кресло взять?",YES,,,,,,,,DRAFT,
-E07,E,Шукаю приставне ліжечко до нашого ліжка {{висота_см}} см. Що підійде?,YES,,,,,,,,DRAFT,
-E08,E,"Есть кресло, чтобы на нашу базу {{база}} встало?",YES,,,,,,,,DRAFT,
-E09,E,Порадьте переноску для немовляти {{вік_тижнів}} тижнів.,YES,,,,,,,,DRAFT,
-E10,E,У нас малыш {{вага_кг}} кг. Какую переноску брать?,YES,,,,,,,,DRAFT,
-E11,E,"Мала вже {{зріст_см}} см, яке сидіння візочка їй підійде?",YES,,,,,,,,DRAFT,
-E12,E,У нас в машине крепление обычным ремнём. Какое автокресло взять?,YES,,,,,,,,DRAFT,
-E13,E,"Хочу люльку, щоб спинка не сильно піднімалась для немовляти. Є такі?",YES,,,,,,,,DRAFT,
-E14,E,Для новорождённого какая люлька лучше из ваших?,YES,,,,,,,,DRAFT,
-E15,E,"Дитина {{вага_кг}} кг, а хочеться, щоб крісло ще надовго було. Що дивитися?",YES,,,,,,,,DRAFT,
-E16,E,Ми маємо {{модель_товару}}. Який адаптер потрібен для {{аксесуар}}?,YES,,,,,,,,DRAFT,
-E17,E,"Нам {{вік_місяців}} місяців. Які варіанти вже можна, а з якими почекати?",YES,,,,,,,,DRAFT,
-E18,E,Что из ваших товаров подходит малышу для сна в поездке?,YES,,,,,,,,DRAFT,
-E19,E,Порадьте коляску для дитини {{вік_місяців}} місяців.,YES,,,,,,,,DRAFT,
-E20,E,Рост сейчас {{зріст_см}} см. Какое кресло подольше против хода позволит?,YES,,,,,,,,DRAFT,
-E21,E,"Потрібне автокрісло на {{зріст_см}} см, щоб не переросли за місяць.",YES,,,,,,,,DRAFT,
-E22,E,Подберите прогулку для трёхнедельного малыша.,YES,,,,,,,,DRAFT,
-E23,E,У мене {{модель}} і {{аксесуар}} — разом можна ними користуватись?,YES,,,,,,,,DRAFT,
-E24,E,"Мені важливо, щоб крісло мало ізофікс. Яке порадите?",YES,,,,,,,,DRAFT,
-E25,E,"Шукаю люльку, щоб вистачило дитині приблизно до {{вага_кг}} кг.",YES,,,,,,,,DRAFT,
-E26,E,"Ребёнок {{зріст_см}} см, посоветуйте автокресло из вашего ассортимента.",YES,,,,,,,,DRAFT,
-E27,E,Малому {{вік_місяців}} місяців і {{вага_кг}} кг. Які автокрісла варто подивитись?,YES,,,,,,,,DRAFT,
-E28,E,Какой адаптер нужен для коляски {{модель_шасі}} и кресла {{модель_автокрісла}}?,YES,,,,,,,,DRAFT,
-E29,E,"Хочу кресло для новорождённой, покажите несколько вариантов.",YES,,,,,,,,DRAFT,
-E30,E,"Дитині {{вік_місяців}} місяців, ми часто їздимо авто. Яке крісло їй вибрати?",YES,,,,,,,,DRAFT,
-F01,F,А скільки зараз коштує {{модель}}?,TO_LABEL,,,,,,,,DRAFT,
-F02,F,{{модель}} сьогодні є на {{магазин}}?,TO_LABEL,,,,,,,,DRAFT,
-F03,F,"Если сейчас заказать {{модель}}, завтра привезёте?",TO_LABEL,,,,,,,,DRAFT,
-F04,F,Скільки штук {{модель}} залишилося прямо зараз?,TO_LABEL,,,,,,,,DRAFT,
-F05,F,А какая гарантия на {{модель}}?,TO_LABEL,,,,,,,,DRAFT,
-F06,F,До {{модель}} пасує {{аксесуар_без_підтвердження}}?,TO_LABEL,,,,,,,,DRAFT,
-F07,F,Там в {{модель}} є {{функція_відсутня_в_описі}}?,TO_LABEL,,,,,,,,DRAFT,
-F08,F,У малыша {{особлива_умова_без_PII}}. {{модель}} ему точно можно?,TO_LABEL,,,,,,,,DRAFT,
-F09,F,Який сертифікат у {{модель}}?,TO_LABEL,,,,,,,,DRAFT,
-F10,F,В коробке с {{модель}} есть {{предмет_неописаний}}?,TO_LABEL,,,,,,,,DRAFT,
-F11,F,Можете {{модель}} до вечора за мною залишити?,TO_LABEL,,,,,,,,DRAFT,
-F12,F,"А цена, что на сайте была в сентябре, сейчас такая же?",TO_LABEL,,,,,,,,DRAFT,
-F13,F,Якого зросту дитині можна в {{модель}}? У картці не знайшов.,TO_LABEL,,,,,,,,DRAFT,
-G01,G,"Не хочу ізофікс, у нас стара машина. Які крісла є?",TO_LABEL,,,,,,,,DRAFT,
-G02,G,"Нам не від народження треба, дитині вже {{вік_років}} роки. Що краще?",TO_LABEL,,,,,,,,DRAFT,
-G03,G,А адаптер {{аксесуар}} с {{модель}} в комплекте идёт или покупать?,TO_LABEL,,,,,,,,DRAFT,
-G04,G,У синьому кольорі {{модель}} є {{опція}}? В зеленому наче бачив.,TO_LABEL,,,,,,,,DRAFT,
-G05,G,"На одній сторінці {{модель}} пишуть до {{вага_1}} кг, на іншій — до {{вага_2}}. То скільки?",TO_LABEL,,,,,,,,DRAFT,
-G06,G,Я бачив ціну {{історична_ціна_грн}} грн на {{модель}}. Це ще вона?,TO_LABEL,,,,,,,,DRAFT,
-G07,G,{{модель_1}} і {{модель_2}} — у якої нижча вага?,TO_LABEL,,,,,,,,DRAFT,
-G08,G,"Мне не важно, есть ли сейчас на складе. Какая из моделей удобнее?",TO_LABEL,,,,,,,,DRAFT,
-G09,G,"Я {{модель_1}} ищу, а вы всё время {{модель_2}} показываете. Они разные?",TO_LABEL,,,,,,,,DRAFT,
-G10,G,{{аксесуар}} ніби не йде з {{модель}}? Чи я помилився?,TO_LABEL,,,,,,,,DRAFT,
-G11,G,"Хочу автокрісло саме проти руху, а не те, що можна докупити потім. Які є?",TO_LABEL,,,,,,,,DRAFT,
-G12,G,"В описі {{модель}} написано «не підходить для {{умова}}». А продавець казав, що підійде. Як так?",TO_LABEL,,,,,,,,DRAFT,
-G13,G,"Виробник про {{модель}} пише одне, а магазин інше. То якому варіанту вірити?",TO_LABEL,,,,,,,,DRAFT,
+question_id,class,question,safety_attribute,generation_id,expected_product_ids,evidence_source,expected_fact_or_quote,expected_unknown_or_conflict,acceptable_recommendation_and_rationale,reviewer,review_status,predeclared_adjudication_rule,Status,Applies to,Supersedes
+A01,A,У вас є {{бренд}} {{модель}}? Ніяк не знайду на сайті.,TO_LABEL,,,,,,,,DRAFT,,EVIDENCE — NON-NORMATIVE,AI Seller PoC-0,none
+A02,A,А {{модель}} від {{бренд}} продається?,TO_LABEL,,,,,,,,DRAFT,,EVIDENCE — NON-NORMATIVE,AI Seller PoC-0,none
+A03,A,"Я шукаю {{модель_з_типовою_опечаткою}}, це у вас є?",TO_LABEL,,,,,,,,DRAFT,,EVIDENCE — NON-NORMATIVE,AI Seller PoC-0,none
+A04,A,Есть у вас {{назва_моделі_латиницею_як_пише_покупець}}?,TO_LABEL,,,,,,,,DRAFT,,EVIDENCE — NON-NORMATIVE,AI Seller PoC-0,none
+A05,A,"Покажіть {{розмовна_назва_моделі}}, здається, так називається.",TO_LABEL,,,,,,,,DRAFT,,EVIDENCE — NON-NORMATIVE,AI Seller PoC-0,none
+A06,A,А {{бренд}} {{модель}} у {{колір}} кольорі є?,TO_LABEL,,,,,,,,DRAFT,,EVIDENCE — NON-NORMATIVE,AI Seller PoC-0,none
+A07,A,"{{бренд}} {{модель}} — це яка саме, можете знайти?",TO_LABEL,,,,,,,,DRAFT,,EVIDENCE — NON-NORMATIVE,AI Seller PoC-0,none
+A08,A,По артикулу {{SKU}} щось знаходить?,TO_LABEL,,,,,,,,DRAFT,,EVIDENCE — NON-NORMATIVE,AI Seller PoC-0,none
+A09,A,"Дайте ту {{тип_товару}} {{модель}}, ну цю {{типова_скорочена_назва}}.",TO_LABEL,,,,,,,,DRAFT,,EVIDENCE — NON-NORMATIVE,AI Seller PoC-0,none
+A10,A,"Мне нужна {{модель_1}}, а не {{схожа_модель_2}}. Какая у вас?",TO_LABEL,,,,,,,,DRAFT,,EVIDENCE — NON-NORMATIVE,AI Seller PoC-0,none
+A11,A,Я название путаю: {{переставлені_слова_моделі}}. Найдёте?,TO_LABEL,,,,,,,,DRAFT,,EVIDENCE — NON-NORMATIVE,AI Seller PoC-0,none
+A12,A,У вас есть именно {{повна_назва_моделі}}?,TO_LABEL,,,,,,,,DRAFT,,EVIDENCE — NON-NORMATIVE,AI Seller PoC-0,none
+B01,B,Коляску полегше порадите? Я часто їжджу автобусом.,TO_LABEL,,,,,,,,DRAFT,,EVIDENCE — NON-NORMATIVE,AI Seller PoC-0,none
+B02,B,"Мне коляску на четвёртый этаж таскать, лифта нет. Что посмотреть?",TO_LABEL,,,,,,,,DRAFT,,EVIDENCE — NON-NORMATIVE,AI Seller PoC-0,none
+B03,B,"Потрібне ліжечко, яке можна швидко скласти в поїздку. Є таке?",TO_LABEL,,,,,,,,DRAFT,,EVIDENCE — NON-NORMATIVE,AI Seller PoC-0,none
+B04,B,"Стульчик для кормления нужен, чтобы от пюрешек легко отмывался.",TO_LABEL,,,,,,,,DRAFT,,EVIDENCE — NON-NORMATIVE,AI Seller PoC-0,none
+B05,B,Візочок для наших розбитих тротуарів є нормальний?,TO_LABEL,,,,,,,,DRAFT,,EVIDENCE — NON-NORMATIVE,AI Seller PoC-0,none
+B06,B,"Ищу штуку для поездок с малышом, чтобы места в машине мало занимала.",TO_LABEL,,,,,,,,DRAFT,,EVIDENCE — NON-NORMATIVE,AI Seller PoC-0,none
+B07,B,"Хочу автокрісло, яке можна розвертати. Що у вас є?",TO_LABEL,,,,,,,,DRAFT,,EVIDENCE — NON-NORMATIVE,AI Seller PoC-0,none
+B08,B,У нас спальня маленькая. Какую кроватку посоветуете?,TO_LABEL,,,,,,,,DRAFT,,EVIDENCE — NON-NORMATIVE,AI Seller PoC-0,none
+B09,B,"Є легка прогулянка, щоб однією рукою скласти?",TO_LABEL,,,,,,,,DRAFT,,EVIDENCE — NON-NORMATIVE,AI Seller PoC-0,none
+B10,B,Что из прогулок с вместительной корзиной?,TO_LABEL,,,,,,,,DRAFT,,EVIDENCE — NON-NORMATIVE,AI Seller PoC-0,none
+B11,B,"Мені стільчик потрібен, щоб підніжка регулювалась.",TO_LABEL,,,,,,,,DRAFT,,EVIDENCE — NON-NORMATIVE,AI Seller PoC-0,none
+B12,B,"Едем часто с младенцем, что из дорожных вещей стоит посмотреть?",TO_LABEL,,,,,,,,DRAFT,,EVIDENCE — NON-NORMATIVE,AI Seller PoC-0,none
+C01,C,З якого віку можна в {{модель}}?,YES,,,,,,,,DRAFT,,EVIDENCE — NON-NORMATIVE,AI Seller PoC-0,none
+C02,C,А {{модель}} до скольки килограмм держит?,YES,,,,,,,,DRAFT,,EVIDENCE — NON-NORMATIVE,AI Seller PoC-0,none
+C03,C,До якого зросту розраховане крісло {{модель}}?,YES,,,,,,,,DRAFT,,EVIDENCE — NON-NORMATIVE,AI Seller PoC-0,none
+C04,C,{{модель}} підійде прямо з народження?,YES,,,,,,,,DRAFT,,EVIDENCE — NON-NORMATIVE,AI Seller PoC-0,none
+C05,C,В {{модель}} изофикс есть?,YES,,,,,,,,DRAFT,,EVIDENCE — NON-NORMATIVE,AI Seller PoC-0,none
+C06,C,{{модель}} можно против движения поставить?,YES,,,,,,,,DRAFT,,EVIDENCE — NON-NORMATIVE,AI Seller PoC-0,none
+C07,C,До якого зросту дитина може їздити спиною вперед у {{модель}}?,YES,,,,,,,,DRAFT,,EVIDENCE — NON-NORMATIVE,AI Seller PoC-0,none
+C08,C,Скільки кг максимум можна в люльку {{модель}}?,YES,,,,,,,,DRAFT,,EVIDENCE — NON-NORMATIVE,AI Seller PoC-0,none
+C09,C,А {{аксесуар}} с {{модель}} вообще стыкуется?,YES,,,,,,,,DRAFT,,EVIDENCE — NON-NORMATIVE,AI Seller PoC-0,none
+C10,C,У {{модель}} можна спинку зовсім покласти для малого?,YES,,,,,,,,DRAFT,BEFORE FREEZE: distinguish recline angle from newborn/overnight sleep safety; source quote required; UNKNOWN when unsupported.,EVIDENCE — NON-NORMATIVE,AI Seller PoC-0,none
+C11,C,"Підійде {{модель}} малюку, якому два тижні?",YES,,,,,,,,DRAFT,,EVIDENCE — NON-NORMATIVE,AI Seller PoC-0,none
+C12,C,Когда из {{модель}} ребёнок уже вырастает?,YES,,,,,,,,DRAFT,,EVIDENCE — NON-NORMATIVE,AI Seller PoC-0,none
+C13,C,"Підкажіть, {{модель}} для якого віку?",YES,,,,,,,,DRAFT,,EVIDENCE — NON-NORMATIVE,AI Seller PoC-0,none
+C14,C,"А это автокресло {{модель}} можно вперед поставить, рядом с водителем?",YES,,,,,,,,DRAFT,,EVIDENCE — NON-NORMATIVE,AI Seller PoC-0,none
+C15,C,У {{модель}} ременем кріпити можна чи тільки базою?,YES,,,,,,,,DRAFT,,EVIDENCE — NON-NORMATIVE,AI Seller PoC-0,none
+C16,C,База {{база}} подойдет к креслу {{модель}}?,YES,,,,,,,,DRAFT,,EVIDENCE — NON-NORMATIVE,AI Seller PoC-0,none
+C17,C,Скільки кілограмів дозволено саме для режиму люльки у {{модель}}?,YES,,,,,,,,DRAFT,,EVIDENCE — NON-NORMATIVE,AI Seller PoC-0,none
+C18,C,{{модель}} лицом вперёд ставится или только назад?,YES,,,,,,,,DRAFT,,EVIDENCE — NON-NORMATIVE,AI Seller PoC-0,none
+C19,C,Як взагалі {{модель}} кріпиться в машині?,YES,,,,,,,,DRAFT,,EVIDENCE — NON-NORMATIVE,AI Seller PoC-0,none
+C20,C,{{модель}} можно без {{аксесуар}} использовать?,YES,,,,,,,,DRAFT,,EVIDENCE — NON-NORMATIVE,AI Seller PoC-0,none
+C21,C,Дитина може спати в {{модель}} всю ніч?,YES,,,,,,,,DRAFT,BEFORE FREEZE: verify manufacturer permission for overnight sleep separately; unsupported means UNKNOWN/human verification.,EVIDENCE — NON-NORMATIVE,AI Seller PoC-0,none
+C22,C,"У {{модель}} є обмеження, коли сидяче положення вже можна?",YES,,,,,,,,DRAFT,,EVIDENCE — NON-NORMATIVE,AI Seller PoC-0,none
+C23,C,А малыша прямо в {{модель}} переносить можно?,YES,,,,,,,,DRAFT,,EVIDENCE — NON-NORMATIVE,AI Seller PoC-0,none
+C24,C,{{модель}} можна присунути до нашого ліжка як приставне?,YES,,,,,,,,DRAFT,,EVIDENCE — NON-NORMATIVE,AI Seller PoC-0,none
+C25,C,У нас доросле ліжко {{висота_см}} см. {{модель}} пристане?,YES,,,,,,,,DRAFT,,EVIDENCE — NON-NORMATIVE,AI Seller PoC-0,none
+C26,C,А {{модель}} до кровати ремнями цеплять надо?,YES,,,,,,,,DRAFT,,EVIDENCE — NON-NORMATIVE,AI Seller PoC-0,none
+C27,C,"Коли малюк почне сідати, {{модель}} ще можна як люльку?",YES,,,,,,,,DRAFT,,EVIDENCE — NON-NORMATIVE,AI Seller PoC-0,none
+C28,C,Можно {{модель}} поставить в машину с {{тип_кріплення}}?,YES,,,,,,,,DRAFT,,EVIDENCE — NON-NORMATIVE,AI Seller PoC-0,none
+C29,C,Дитина {{зріст_см}} см у {{модель}} поміститься по нормам?,YES,,,,,,,,DRAFT,,EVIDENCE — NON-NORMATIVE,AI Seller PoC-0,none
+C30,C,Чи стане {{модель}} на шасі {{модель_шасі}}?,YES,,,,,,,,DRAFT,,EVIDENCE — NON-NORMATIVE,AI Seller PoC-0,none
+D01,D,Чем {{модель_1}} легче или удобнее {{модель_2}} для складывания?,TO_LABEL,,,,,,,,DRAFT,,EVIDENCE — NON-NORMATIVE,AI Seller PoC-0,none
+D02,D,"У {{модель_1}}, {{модель_2}} і {{модель_3}} які розміри? Не розберуся.",TO_LABEL,,,,,,,,DRAFT,,EVIDENCE — NON-NORMATIVE,AI Seller PoC-0,none
+D03,D,А между {{модель_1}} и {{модель_2}} вообще разница большая?,TO_LABEL,,,,,,,,DRAFT,,EVIDENCE — NON-NORMATIVE,AI Seller PoC-0,none
+D04,D,А что дешевле: {{модель_1}} или {{модель_2}}?,TO_LABEL,,,,,,,,DRAFT,,EVIDENCE — NON-NORMATIVE,AI Seller PoC-0,none
+D05,D,У которой из {{модель_1}} и {{модель_2}} подножка двигается?,TO_LABEL,,,,,,,,DRAFT,,EVIDENCE — NON-NORMATIVE,AI Seller PoC-0,none
+D06,D,"Що йде в коробці у {{модель_1}}, а що у {{модель_2}}?",TO_LABEL,,,,,,,,DRAFT,,EVIDENCE — NON-NORMATIVE,AI Seller PoC-0,none
+D07,D,"У этих трёх — {{модель_1}}, {{модель_2}}, {{модель_3}} — какой вес?",TO_LABEL,,,,,,,,DRAFT,,EVIDENCE — NON-NORMATIVE,AI Seller PoC-0,none
+D08,D,У {{модель_1}} чи {{модель_2}} колеса кращі для плитки?,TO_LABEL,,,,,,,,DRAFT,,EVIDENCE — NON-NORMATIVE,AI Seller PoC-0,none
+D09,D,Складена {{модель_1}} значно більша за {{модель_2}}?,TO_LABEL,,,,,,,,DRAFT,,EVIDENCE — NON-NORMATIVE,AI Seller PoC-0,none
+D10,D,Вы бы какую взяли из {{модель_1}} и {{модель_2}} для поездок?,TO_LABEL,,,,,,,,DRAFT,,EVIDENCE — NON-NORMATIVE,AI Seller PoC-0,none
+E01,E,Малюку {{вік_місяців}} місяців. Яке автокрісло нам дивитися?,YES,,,,,,,,DRAFT,,EVIDENCE — NON-NORMATIVE,AI Seller PoC-0,none
+E02,E,Ребёнок {{вага_кг}} кг. Какое кресло ему подойдёт?,YES,,,,,,,,DRAFT,,EVIDENCE — NON-NORMATIVE,AI Seller PoC-0,none
+E03,E,"Дитина вже {{зріст_см}} см, порадьте автокрісло.",YES,,,,,,,,DRAFT,,EVIDENCE — NON-NORMATIVE,AI Seller PoC-0,none
+E04,E,Нам в машину нужно кресло с изофиксом. Что есть?,YES,,,,,,,,DRAFT,,EVIDENCE — NON-NORMATIVE,AI Seller PoC-0,none
+E05,E,"Я хочу, щоб дитина їздила спиною вперед. Яке крісло вибрати?",YES,,,,,,,,DRAFT,,EVIDENCE — NON-NORMATIVE,AI Seller PoC-0,none
+E06,E,"Сын только родился, какое кресло взять?",YES,,,,,,,,DRAFT,,EVIDENCE — NON-NORMATIVE,AI Seller PoC-0,none
+E07,E,Шукаю приставне ліжечко до нашого ліжка {{висота_см}} см. Що підійде?,YES,,,,,,,,DRAFT,,EVIDENCE — NON-NORMATIVE,AI Seller PoC-0,none
+E08,E,"Есть кресло, чтобы на нашу базу {{база}} встало?",YES,,,,,,,,DRAFT,,EVIDENCE — NON-NORMATIVE,AI Seller PoC-0,none
+E09,E,Порадьте переноску для немовляти {{вік_тижнів}} тижнів.,YES,,,,,,,,DRAFT,,EVIDENCE — NON-NORMATIVE,AI Seller PoC-0,none
+E10,E,У нас малыш {{вага_кг}} кг. Какую переноску брать?,YES,,,,,,,,DRAFT,,EVIDENCE — NON-NORMATIVE,AI Seller PoC-0,none
+E11,E,"Мала вже {{зріст_см}} см, яке сидіння візочка їй підійде?",YES,,,,,,,,DRAFT,,EVIDENCE — NON-NORMATIVE,AI Seller PoC-0,none
+E12,E,У нас в машине крепление обычным ремнём. Какое автокресло взять?,YES,,,,,,,,DRAFT,,EVIDENCE — NON-NORMATIVE,AI Seller PoC-0,none
+E13,E,"Хочу люльку, щоб спинка не сильно піднімалась для немовляти. Є такі?",YES,,,,,,,,DRAFT,,EVIDENCE — NON-NORMATIVE,AI Seller PoC-0,none
+E14,E,Для новорождённого какая люлька лучше из ваших?,YES,,,,,,,,DRAFT,,EVIDENCE — NON-NORMATIVE,AI Seller PoC-0,none
+E15,E,"Дитина {{вага_кг}} кг, а хочеться, щоб крісло ще надовго було. Що дивитися?",YES,,,,,,,,DRAFT,,EVIDENCE — NON-NORMATIVE,AI Seller PoC-0,none
+E16,E,Ми маємо {{модель_товару}}. Який адаптер потрібен для {{аксесуар}}?,YES,,,,,,,,DRAFT,,EVIDENCE — NON-NORMATIVE,AI Seller PoC-0,none
+E17,E,"Нам {{вік_місяців}} місяців. Які варіанти вже можна, а з якими почекати?",YES,,,,,,,,DRAFT,,EVIDENCE — NON-NORMATIVE,AI Seller PoC-0,none
+E18,E,Что из ваших товаров подходит малышу для сна в поездке?,YES,,,,,,,,DRAFT,,EVIDENCE — NON-NORMATIVE,AI Seller PoC-0,none
+E19,E,Порадьте коляску для дитини {{вік_місяців}} місяців.,YES,,,,,,,,DRAFT,,EVIDENCE — NON-NORMATIVE,AI Seller PoC-0,none
+E20,E,Рост сейчас {{зріст_см}} см. Какое кресло подольше против хода позволит?,YES,,,,,,,,DRAFT,,EVIDENCE — NON-NORMATIVE,AI Seller PoC-0,none
+E21,E,"Потрібне автокрісло на {{зріст_см}} см, щоб не переросли за місяць.",YES,,,,,,,,DRAFT,,EVIDENCE — NON-NORMATIVE,AI Seller PoC-0,none
+E22,E,Подберите прогулку для трёхнедельного малыша.,YES,,,,,,,,DRAFT,,EVIDENCE — NON-NORMATIVE,AI Seller PoC-0,none
+E23,E,У мене {{модель}} і {{аксесуар}} — разом можна ними користуватись?,YES,,,,,,,,DRAFT,,EVIDENCE — NON-NORMATIVE,AI Seller PoC-0,none
+E24,E,"Мені важливо, щоб крісло мало ізофікс. Яке порадите?",YES,,,,,,,,DRAFT,,EVIDENCE — NON-NORMATIVE,AI Seller PoC-0,none
+E25,E,"Шукаю люльку, щоб вистачило дитині приблизно до {{вага_кг}} кг.",YES,,,,,,,,DRAFT,,EVIDENCE — NON-NORMATIVE,AI Seller PoC-0,none
+E26,E,"Ребёнок {{зріст_см}} см, посоветуйте автокресло из вашего ассортимента.",YES,,,,,,,,DRAFT,,EVIDENCE — NON-NORMATIVE,AI Seller PoC-0,none
+E27,E,Малому {{вік_місяців}} місяців і {{вага_кг}} кг. Які автокрісла варто подивитись?,YES,,,,,,,,DRAFT,,EVIDENCE — NON-NORMATIVE,AI Seller PoC-0,none
+E28,E,Какой адаптер нужен для коляски {{модель_шасі}} и кресла {{модель_автокрісла}}?,YES,,,,,,,,DRAFT,,EVIDENCE — NON-NORMATIVE,AI Seller PoC-0,none
+E29,E,"Хочу кресло для новорождённой, покажите несколько вариантов.",YES,,,,,,,,DRAFT,,EVIDENCE — NON-NORMATIVE,AI Seller PoC-0,none
+E30,E,"Дитині {{вік_місяців}} місяців, ми часто їздимо авто. Яке крісло їй вибрати?",YES,,,,,,,,DRAFT,,EVIDENCE — NON-NORMATIVE,AI Seller PoC-0,none
+F01,F,А скільки зараз коштує {{модель}}?,TO_LABEL,,,,,,,,DRAFT,,EVIDENCE — NON-NORMATIVE,AI Seller PoC-0,none
+F02,F,{{модель}} сьогодні є на {{магазин}}?,TO_LABEL,,,,,,,,DRAFT,,EVIDENCE — NON-NORMATIVE,AI Seller PoC-0,none
+F03,F,"Если сейчас заказать {{модель}}, завтра привезёте?",TO_LABEL,,,,,,,,DRAFT,,EVIDENCE — NON-NORMATIVE,AI Seller PoC-0,none
+F04,F,Скільки штук {{модель}} залишилося прямо зараз?,TO_LABEL,,,,,,,,DRAFT,,EVIDENCE — NON-NORMATIVE,AI Seller PoC-0,none
+F05,F,А какая гарантия на {{модель}}?,TO_LABEL,,,,,,,,DRAFT,,EVIDENCE — NON-NORMATIVE,AI Seller PoC-0,none
+F06,F,До {{модель}} пасує {{аксесуар_без_підтвердження}}?,TO_LABEL,,,,,,,,DRAFT,,EVIDENCE — NON-NORMATIVE,AI Seller PoC-0,none
+F07,F,Там в {{модель}} є {{функція_відсутня_в_описі}}?,TO_LABEL,,,,,,,,DRAFT,,EVIDENCE — NON-NORMATIVE,AI Seller PoC-0,none
+F08,F,У малыша {{особлива_умова_без_PII}}. {{модель}} ему точно можно?,TO_LABEL,,,,,,,,DRAFT,,EVIDENCE — NON-NORMATIVE,AI Seller PoC-0,none
+F09,F,Який сертифікат у {{модель}}?,TO_LABEL,,,,,,,,DRAFT,,EVIDENCE — NON-NORMATIVE,AI Seller PoC-0,none
+F10,F,В коробке с {{модель}} есть {{предмет_неописаний}}?,TO_LABEL,,,,,,,,DRAFT,,EVIDENCE — NON-NORMATIVE,AI Seller PoC-0,none
+F11,F,Можете {{модель}} до вечора за мною залишити?,TO_LABEL,,,,,,,,DRAFT,,EVIDENCE — NON-NORMATIVE,AI Seller PoC-0,none
+F12,F,"А цена, что на сайте была в сентябре, сейчас такая же?",TO_LABEL,,,,,,,,DRAFT,,EVIDENCE — NON-NORMATIVE,AI Seller PoC-0,none
+F13,F,Якого зросту дитині можна в {{модель}}? У картці не знайшов.,TO_LABEL,,,,,,,,DRAFT,,EVIDENCE — NON-NORMATIVE,AI Seller PoC-0,none
+G01,G,"Не хочу ізофікс, у нас стара машина. Які крісла є?",TO_LABEL,,,,,,,,DRAFT,,EVIDENCE — NON-NORMATIVE,AI Seller PoC-0,none
+G02,G,"Нам не від народження треба, дитині вже {{вік_років}} роки. Що краще?",TO_LABEL,,,,,,,,DRAFT,,EVIDENCE — NON-NORMATIVE,AI Seller PoC-0,none
+G03,G,А адаптер {{аксесуар}} с {{модель}} в комплекте идёт или покупать?,TO_LABEL,,,,,,,,DRAFT,,EVIDENCE — NON-NORMATIVE,AI Seller PoC-0,none
+G04,G,У синьому кольорі {{модель}} є {{опція}}? В зеленому наче бачив.,TO_LABEL,,,,,,,,DRAFT,,EVIDENCE — NON-NORMATIVE,AI Seller PoC-0,none
+G05,G,"На одній сторінці {{модель}} пишуть до {{вага_1}} кг, на іншій — до {{вага_2}}. То скільки?",TO_LABEL,,,,,,,,DRAFT,,EVIDENCE — NON-NORMATIVE,AI Seller PoC-0,none
+G06,G,Я бачив ціну {{історична_ціна_грн}} грн на {{модель}}. Це ще вона?,TO_LABEL,,,,,,,,DRAFT,,EVIDENCE — NON-NORMATIVE,AI Seller PoC-0,none
+G07,G,{{модель_1}} і {{модель_2}} — у якої нижча вага?,TO_LABEL,,,,,,,,DRAFT,,EVIDENCE — NON-NORMATIVE,AI Seller PoC-0,none
+G08,G,"Мне не важно, есть ли сейчас на складе. Какая из моделей удобнее?",TO_LABEL,,,,,,,,DRAFT,,EVIDENCE — NON-NORMATIVE,AI Seller PoC-0,none
+G09,G,"Я {{модель_1}} ищу, а вы всё время {{модель_2}} показываете. Они разные?",TO_LABEL,,,,,,,,DRAFT,,EVIDENCE — NON-NORMATIVE,AI Seller PoC-0,none
+G10,G,{{аксесуар}} ніби не йде з {{модель}}? Чи я помилився?,TO_LABEL,,,,,,,,DRAFT,,EVIDENCE — NON-NORMATIVE,AI Seller PoC-0,none
+G11,G,"Хочу автокрісло саме проти руху, а не те, що можна докупити потім. Які є?",TO_LABEL,,,,,,,,DRAFT,,EVIDENCE — NON-NORMATIVE,AI Seller PoC-0,none
+G12,G,"В описі {{модель}} написано «не підходить для {{умова}}». А продавець казав, що підійде. Як так?",TO_LABEL,,,,,,,,DRAFT,,EVIDENCE — NON-NORMATIVE,AI Seller PoC-0,none
+G13,G,"Виробник про {{модель}} пише одне, а магазин інше. То якому варіанту вірити?",TO_LABEL,,,,,,,,DRAFT,,EVIDENCE — NON-NORMATIVE,AI Seller PoC-0,none

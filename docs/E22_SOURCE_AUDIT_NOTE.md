@@ -16,7 +16,7 @@ Source path: `/var/lib/babypark-catalog/snapshots/full-g3f82b248-d946fe5d-202609
 - Snapshot created at `2026-09-30T21:26:38.787Z`. This is the export time, not the as-of time of any commercial fact.
 - All 20 RU/UK `product-text` JSONL records were read. The operator tested the 20 quoted spans as exact substrings of the same record's HTML-stripped, entity-decoded description, and each CSV row records the source JSONL record's SHA-256 (including its original newline).
 - For Balios S Lux 2023 a second quoted span was checked in both languages.
-- Evidence CSV `E22_STROLLER_10_EVIDENCE.csv` SHA-256 (UTF-8/LF): `7f2e13d849012fd2b6a5fa0e2fef13568a6ade11b9dacd8868fea54f48690d40`.
+- Evidence CSV `E22_STROLLER_10_EVIDENCE.csv` SHA-256 (UTF-8/LF): `0068c51562ca3d33d546aa07a2f0f862db810ccea606e7a95df40d7d7111b2ad`.
 
 ## What a reviewer can and cannot verify from Git
 

@@ -9,7 +9,7 @@ Bindings:
 - scope-change proposal `e1add876ba11c6a1ef130e9830a8edc7a6b9b3c7528d7e904e7a3d9dce0f61bc`;
 - alternatives scan `8b9a5ba6a6dfd8096c4a4c966b283d0ff9c844982c8d8969aea1ced78443f981` (R3 comparative-campaign requirements; original one-model evidence remains historical);
 - review `FINAL_REVIEW.md` `eb6bfac11efd2ff8fb84e6db502a8b515921a97e6ebca640027e850036cf35c0`.
-- **pilot cohort candidate evidence (not owner-frozen):** `R1_R2_IDENTICAL_COHORT_32_CANDIDATE.csv` SHA-256 `34ccb2fefe601b3f93e17c139929315024b779f932882a71903a8d8b93f6e53b`; `PILOT_24_REBOUND_CANDIDATE.csv` SHA-256 `df59c532612aaf2a3f571362812c1319905714e44bc31ad0d568e7cb3f776feb` (both UTF-8/LF since the PR #149 batch fix; parsed rows unchanged except the E22/G05 rubric fields). Both remain operator proposals until OD-3 and exact generation/source checks bind them at GO.
+- **pilot cohort candidate evidence (not owner-frozen):** `R1_R2_IDENTICAL_COHORT_32_CANDIDATE.csv` SHA-256 `2e9c3161b59ae1821eb77e8178112ffe333a4e95204b753c712535d587384647`; `PILOT_24_REBOUND_CANDIDATE.csv` SHA-256 `3102f52c3cbb607edbfa7d850cf89dcc8c6ed21425431a86014fa927bf89f766` (both UTF-8/LF since the PR #149 batch fix; parsed rows unchanged except the E22/G05 rubric fields). Both remain operator proposals until OD-3 and exact generation/source checks bind them at GO.
 
 This R4 review candidate approves no spend and starts nothing. Every number marked OD-n is an owner decision; suggested fast-start defaults in §10 are recommendations, **not approved choices**. The exact original **one-model** Scope Change and `FINAL_REVIEW.md` bytes have now been independently verified against their historical SHA-256. A proposed, three-model Scope Change is newly SHA-bound above; it is **not yet merged**, not a PoC authorization and still requires independent HEAVY review on one exact committed HEAD/tree/base. This plan and its scan/fit-note bindings also require that review; no owner GO has been given. The original one-model draft is not a file in this tree; its bytes are preserved as Git blob `c643ef5fed737adf60e2225ec76b615670d7273c` in commit `b0657db1183ffcb1e90cf694ed8af2f35692ba47`.
 
@@ -130,7 +130,7 @@ Zero observed failures in n trials bound the true failure rate at 95% by ≈ 0.2
 
 **6.1 Run validity — inherited, binary.** If any gate fails, the run is INVALID: neither PASS nor FAIL.
 - G1 no customer data or PII in any input (Agreement §3:130);
-- G2 zero `provenance` / provider-native IDs in any model input (fit-note projection; FINAL_REVIEW RC2);
+- G2 zero `provenance`, `metadata`, or provider-native IDs in any model input (fit-note projection; FINAL_REVIEW RC2);
 - G3 configuration identical to the fit-note;
 - G4 for `phase=gold`: gold set frozen by SHA before the first **scored gold** execution and unchanged. For `phase=smoke|pilot`: synthetic input set identified by run/phase and separately accounted for; previews are **not** eligible for formal PASS/FAIL even when safety and cost gates hold;
 - G5 one `generation_id` everywhere;
@@ -181,7 +181,7 @@ Index rule (not PASS/FAIL): **NO pilot-24 index decision is permitted**. Known c
 
 - S1 budget cap reached;
 - S2 customer data or PII detected;
-- S3 native ID or `provenance` detected in a model input;
+- S3 provider-native ID, `provenance` or `metadata` detected in a model input;
 - S4 any attempt to reach production, Chatwoot or DBHub;
 - S5 a Code node, custom code or a new service becomes necessary — stop and report; no automatic expansion (Agreement §3:130);
 - S6 test container failure or resource exhaustion;
