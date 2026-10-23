@@ -237,6 +237,7 @@ Authority/owner: BabyPark infrastructure administrator (external mail transport:
 
 Operational identity:
 - Live host: `chatwoot-fra1-01`, self-hosted Chatwoot application path `/home/chatwoot/chatwoot`.
+- Recovery/diagnostic runbook (Git authority): [`docs/CHATWOOT_SES_MAIL_OPERATIONS_20261023.md`](CHATWOOT_SES_MAIL_OPERATIONS_20261023.md). Installed independent server mirror: `/home/chatwoot/operations/CHATWOOT_SES_MAIL_OPERATIONS.md` (`chatwoot:chatwoot`, `0644`, parent `0750`), verified byte-for-byte via Git blob `afedbe71e55e9a63c70705e84e74fa3e782dea68`, SHA-256 `9cbd4ef2b3d3d92b07b74b428b393570d257563d6107d9ae2999498e1b1add44`. No secrets stored in the runbook.
 - Main Chatwoot config: `/home/chatwoot/chatwoot/.env`; owner `chatwoot:chatwoot`, mode `0600`; contains SMTP credential values: **never copy contents to Git/logs/diagnostics**.
 - Original env recovery snapshot: `/root/.babypark-chatwoot-smtp/pre-ses.env` (root-only `0600`) and root-only staged source `/root/.babypark-chatwoot-smtp/staged.env` (root-only `0600`). Directory `0700`. These are sensitive recovery objects, not removable merely because deployment is active.
 - Service units: `chatwoot-web.1.service`, `chatwoot-worker.1.service`; restart required after changing SMTP env.
@@ -247,7 +248,7 @@ Operational identity:
 - Recovery: copy `pre-ses.env` back to a secure temporary file under Chatwoot directory, retain `chatwoot:chatwoot` mode `0600`, atomically replace `.env`, restart both listed services, verify local/public Chatwoot HTTP and Sidekiq active. Rollback intentionally disables this SMTP transport; do not delete backup until an explicit recovery-lifecycle decision.
 - Do **not** weaken recipient IAM restriction or use SES for customer email based on this employee-only stage. Staff email recipient access is distinct from Website conversation continuity, SES S3/SNS ingress and team customer-coverage automation.
 
-Verified after cutover: SMTP endpoint authentication PASS via owner local TTY *without email send*; application configuration and both systemd units active; local Chatwoot HTTP 200 and public `https://chat.babypark.ua/` HTTP 200. **Actual employee-password-reset email delivery and employee login still require live acceptance**. The receiving side of `support@babypark.ua` in Zoho has not been proven.
+Verified after cutover: SMTP endpoint authentication PASS via owner local TTY *without email send*; application configuration and both systemd units active; local Chatwoot HTTP 200 and public `https://chat.babypark.ua/` HTTP 200. **First employee password reset reportedly succeeded** and SES aggregate send metrics corroborated one new delivery attempt with no bounce/reject/complaint; independent account-login confirmation was not collected. The receiving side of `support@babypark.ua` in Zoho has not been proven.
 
 ## Change discipline
 
