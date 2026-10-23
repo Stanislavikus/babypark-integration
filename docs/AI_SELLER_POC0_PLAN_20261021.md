@@ -130,7 +130,7 @@ Zero observed failures in n trials bound the true failure rate at 95% by ≈ 0.2
 
 **6.1 Run validity — inherited, binary.** If any gate fails, the run is INVALID: neither PASS nor FAIL.
 - G1 no customer data or PII in any input (Agreement §3:130);
-- G2 zero `provenance`, `metadata`, or provider-native IDs in any model input (fit-note projection; FINAL_REVIEW RC2);
+- G2 zero `provenance`, `metadata`, or provider-native IDs in the **entire final provider-bound payload** (system, synthetic question, every nested card/description/Markdown/link/string, including `url`); recursively scan all string values, not only known keys, for Drupal native routes such as `/node/123`, `?q=node/123` and URL-encoded equivalents; validate the pre-projection native-ID mapping and deny unknown provider-native ID patterns. The checked and actually sent bytes must match. No model call if an offending field is present (fit-note projection; FINAL_REVIEW RC2);
 - G3 configuration identical to the fit-note;
 - G4 for `phase=gold`: gold set frozen by SHA before the first **scored gold** execution and unchanged. For `phase=smoke|pilot`: synthetic input set identified by run/phase and separately accounted for; previews are **not** eligible for formal PASS/FAIL even when safety and cost gates hold;
 - G5 one `generation_id` everywhere;
@@ -163,7 +163,7 @@ Zero observed is interpreted with the bound in §3, not as proof of a zero rate.
 - T8 maximum cost per question;
 - T9 maximum p95 latency, only if the next stage needs one. No inherited value exists: Chatwoot's 5-second webhook timeout does not bind asynchronous processing.
 
-Comparison rule (OD-5): recommended is the lower 95% Wilson bound against T, so a pass cannot come from sampling luck. The alternative is the point estimate.
+Comparison rule (OD-5; scored gold only): **metric-type-specific and conservative**. **T1, T2, T4, T5, T6, T7** are minimum success proportions: use their lower 95% Wilson bound against each owner-set minimum; a point estimate alone never certifies PASS. **T3** is a paired R2−R1 difference and uses the separately predeclared paired interval/method in §6.4 below, never Wilson. **T8 (maximum USD cost per question)** is a maximum-valued money gate: use the **highest observed per-question billed cost** across all applicable model/branch/attempts, including failures and provider reconciliation, and require it to be at or below the cap. **T9 (maximum p95 latency)** uses the **highest observed per-question end-to-end latency** across the same scored run, a deliberately stricter conservative bound on its observed p95; require this maximum at or below the owner cap. Wilson is NEVER used for T8/T9. Missing/incomplete cost or latency evidence cannot PASS (G6/INCONCLUSIVE as applicable). For maximum metrics, **any observed exceedance means FAIL**, even if mean/p95 point estimates or an inapplicable lower bound are under the cap. The exact population, attempts, aggregation and missing-data handling are frozen before EB5-gold, not selected after seeing results.
 
 Gold-phase statistics are fixed before EB5-gold: T3 and any model or branch comparison use a predeclared paired method on identical questions (for example a paired-difference interval), because a single-proportion Wilson bound does not test a difference; claim-level metrics are aggregated per question or use a cluster bootstrap; M14 states its selection rule and multiplicity control in advance; threshold mode uses only thresholds measured or inherited from a frozen contract (Agreement §8), otherwise baseline mode applies. None of this applies to the unscored pilot.
 
@@ -173,7 +173,7 @@ Smoke and pilot may report technical outcomes/stop conditions and *illustrative*
 - INVALID — any G fails.
 - FAIL — any F or Z fails, or (threshold mode) any T not met. An unenforceable claimed deterministic commercial guard fails F5 / S5 rather than being assigned PASS.
 - PASS — all G, F, Z hold and (threshold mode) all T met. In baseline mode, PASS means "feasible and measured".
-- INCONCLUSIVE — an interval straddles a T. The owner chooses: extend the gold set (new SHA) or stop.
+- INCONCLUSIVE — a correctly oriented predeclared uncertainty interval straddles a minimum-share T or the paired T3, or cost/latency evidence needed for a conservative maximum bound is incomplete (no PASS). Any **observed T8/T9 cap exceedance is FAIL**, never INCONCLUSIVE or PASS. The owner chooses: extend the gold set (new SHA) or stop.
 
 Index rule (not PASS/FAIL): **NO pilot-24 index decision is permitted**. Known category routing and tiny R1/R2 identical cohorts make pilot gaps unrepresentative of a whole catalog. A new retrieval mechanism (FTS extension/vector) may be considered **only after** separately owner-approved representative scored gold proves a valid corpus/search task, class-B R1 trails R2 by more than owner-set T3, and an independent post-PoC alternatives scan is completed. Pilot results alone may motivate the design of gold tests, never implementation/merge.
 
@@ -181,7 +181,7 @@ Index rule (not PASS/FAIL): **NO pilot-24 index decision is permitted**. Known c
 
 - S1 budget cap reached;
 - S2 customer data or PII detected;
-- S3 provider-native ID, `provenance` or `metadata` detected in a model input;
+- S3 provider-native ID, `provenance` or `metadata` detected anywhere in the **final serialized provider-bound payload**, including nested Markdown and URL strings, or inability to prove the exact pre-send all-string native-ID scan; halt before any model call;
 - S4 any attempt to reach production, Chatwoot or DBHub;
 - S5 a Code node, custom code or a new service becomes necessary — stop and report; no automatic expansion (Agreement §3:130);
 - S6 test container failure or resource exhaustion;
