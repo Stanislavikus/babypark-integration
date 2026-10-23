@@ -1,0 +1,63 @@
+Source: https://platform.claude.com/docs/en/about-claude/pricing (WebFetch 2026-10-21T14:24:42Z)
+| Model                                                                                                                                | Base input tokens     | 5m cache writes | 1h cache writes | Cache hits and refreshes | Output tokens          |
+| :----------------------------------------------------------------------------------------------------------------------------------- | :-------------------- | :-------------- | :-------------- | :----------------------- | :--------------------- |
+| Claude Opus 5.5                                                                                                                      | $4 / MTok             | $5 / MTok       | $8 / MTok       | $0.20 / MTok<sup>2</sup> | $20 / MTok             |
+| Claude Sonnet 5.5                                                                                                                    | $2 / MTok             | $2.50 / MTok    | $4 / MTok       | $0.10 / MTok<sup>2</sup> | $10 / MTok             |
+| Claude Sonnet 5                                                                                                                      | $2 / MTok<sup>3</sup> | $2.50 / MTok    | $4 / MTok       | $0.20 / MTok             | $10 / MTok<sup>3</sup> |
+| Claude Haiku 5.5 (for prompts up to 100,000 tokens)                                                                                  | $0.10 / MTok          | $0.125 / MTok   | $0.20 / MTok    | $0.01 / MTok             | $0.50 / MTok           |
+| Claude Haiku 5.5 (for prompts over 100,000 tokens)                                                                                   | $0.50 / MTok          | $0.625 / MTok   | $1 / MTok       | $0.05 / MTok             | $2.50 / MTok           |
+*<sup>2 Cache hits and refreshes on Claude Opus 5.5 and Claude Sonnet 5.5 are priced at 0.05x the base input price.</sup>*
+
+*<sup>All other models use the standard 0.1x multiplier.</sup>*
+Prompt caching uses the following pricing multipliers relative to base input token rates:
+
+| Cache operation      | Multiplier                                                                                                               | Duration                             |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------ | ------------------------------------ |
+| 5-minute cache write | 1.25x base input price                                                                                                   | Cache valid for 5 minutes            |
+| 1-hour cache write   | 2x base input price                                                                                                      | Cache valid for 1 hour               |
+| Cache read (hit)     | 0.1x base input price (0.025x on Claude Fable 5.1 and Claude Mythos 5.1; 0.05x on Claude Opus 5.5 and Claude Sonnet 5.5) | Same duration as the preceding write |
+
+Cache write tokens are charged when content is first stored. Cache read tokens are charged when a subsequent request retrieves the cached content. A cache hit costs 10% of the standard input price, which means caching pays off after one cache read for the 5-minute duration (1.25x write), or after two cache reads for the 1-hour duration (2x write). On Claude Fable 5.1 and Claude Mythos 5.1, a cache
+### Batch processing
+
+The Batch API allows asynchronous processing of large volumes of requests with a 50% discount on both input and output tokens.
+
+| Model                                                                                                                                | Batch input  | Batch output  |
+| :----------------------------------------------------------------------------------------------------------------------------------- | :----------- | :------------ |
+| Claude Fable 5.1                                                                                                                     | $5 / MTok    | $25 / MTok    |
+| Claude Mythos 5.1 ([limited availability](https://support.claude.com/en/articles/14604842))                                          | $5 / MTok    | $25 / MTok    |
+| Claude Fable 5                                                                                                                       | $5 / MTok    | $25 / MTok    |
+| Claude Mythos 5 ([limited availability](https://support.claude.com/en/articles/14604842))                                            | $5 / MTok    | $25 / MTok    |
+| Claude Opus 5.5                                                                                                                      | $2 / MTok    | $10 / MTok    |
+| Claude Opus 5                                                                                                                        | $2.50 / MTok | $12.50 / MTok |
+| Claude Opus 4.8                                                                                                                      | $2.50 / MTok | $12.50 / MTok |
+| Claude Opus 4.7                                                                                                                      | $2.50 / MTok | $12.50 / MTok |
+| Claude Opus 4.6                                                                                                                      | $2.50 / MTok | $12.50 / MTok |
+| Claude Opus 4.5                                                                                                                      | $2.50 / MTok | $12.50 / MTok |
+| Claude Opus 4.1 ([retired, except on Bedrock and Google Cloud](https://platform.claude.com/docs/en/about-claude/model-deprecations)) | $7.50 / MTok | $37.50 / MTok |
+| Claude Opus 4 ([retired, except on Google Cloud](https://platform.claude.com/docs/en/about-claude/model-deprecations))               | $7.50 / MTok | $37.50 / MTok |
+| Claude Sonnet 5.5                                                                                                                    | $1 / MTok    | $5 / MTok     |
+| Claude Sonnet 5                                                                                                                      | $1 / MTok    | $5 / MTok     |
+### Long context pricing
+
+Claude 4.6 and later models (except Claude Haiku 5.5) and [Claude Mythos Preview](https://anthropic.com/glasswing) include the full [1M token context window](https://platform.claude.com/docs/en/build-with-claude/context-windows) at standard pricing. (A 900k-token request is billed at the same per-token rate as a 9k-token request.) Prompt caching and batch processing discounts apply at standard rat
+
+Claude Haiku 5.5 is priced by prompt length: a request whose prompt is over 100,000 tokens pays higher prices. A request's prompt length counts all of its input tokens, including cache reads and cache writes. Each request is priced on its own: a request over the threshold pays the higher prices even when part of its prompt is a cache hit, and earlier requests keep the prices they were billed at. [
+When you use `tools`, the API also automatically includes a special system prompt for the model that enables tool use. The number of tool use tokens required for each model is listed in the following table (excluding the additional tokens listed earlier). Note that the table assumes at least 1 tool is provided. If no `tools` are provided, then a tool choice of `none` uses 0 additional system promp
+
+| Model                                                                                                                                | Tool use system prompt tokens: auto, none | Tool use system prompt tokens: any, tool |
+| :----------------------------------------------------------------------------------------------------------------------------------- | :---------------------------------------- | :--------------------------------------- |
+| Claude Opus 5.5                                                                                                                      | 286 tokens                                |                                          |
+| Claude Opus 5                                                                                                                        | 286 tokens                                | 406 tokens                               |
+| Claude Opus 4.8                                                                                                                      | 290 tokens                                | 410 tokens                               |
+| Claude Opus 4.7                                                                                                                      | 675 tokens                                | 804 tokens                               |
+| Claude Opus 4.6                                                                                                                      | 497 tokens                                | 589 tokens                               |
+| Claude Opus 4.5                                                                                                                      | 496 tokens                                | 588 tokens                               |
+| Claude Opus 4.1 ([retired, except on Bedrock and Google Cloud](https://platform.claude.com/docs/en/about-claude/model-deprecations)) | 313 tokens                                | 315 tokens                               |
+| Claude Opus 4 ([retired, except on Google Cloud](https://platform.claude.com/docs/en/about-claude/model-deprecations))               | 313 tokens                                | 315 tokens                               |
+| Claude Sonnet 5.5                                                                                                                    | 286 tokens                                |                                          |
+| Claude Sonnet 5                                                                                                                      | 354 tokens                                | 474 tokens                               |
+| Claude Sonnet 4.6                                                                                                                    | 497 tokens                                | 589 tokens                               |
+| Claude Sonnet 4.5                                                                                                                    | 496 tokens                                | 588 tokens                               |
+| Claude Sonnet 4 ([retired, except on Bedrock and Google Cloud](https://platform.claude.com/docs/en/about-claude/model-deprecations)) | 313 tokens                                | 315 tokens                               |
+| Claude Haiku 5.5                                                                                                                     | 286 tokens                                | 406 tokens                               |

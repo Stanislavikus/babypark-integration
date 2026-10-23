@@ -1,0 +1,217 @@
+{
+  "experiment": "E1",
+  "node": "v22.22.2",
+  "fts_document_for_p_eezy_ru": {
+    "title": "Прогулочная коляска Cybex Eezy S Twist+ 2",
+    "brand": "Cybex",
+    "category": "Прогулочные коляски Коляски",
+    "attributes": "",
+    "sku": "CBX-EEZY-S2"
+  },
+  "trigram_document_for_p_eezy_ru": "Прогулочная коляска Cybex Eezy S Twist+ 2 Cybex Прогулочные коляски Коляски CBX-EEZY-S2",
+  "description_tokens_in_fts": false,
+  "search": [
+    {
+      "label": "Q01 exact SKU",
+      "query": "CBX-EEZY-S2",
+      "language": "ru",
+      "match_mode": "EXACT_SKU",
+      "count": 1,
+      "product_ids": [
+        "p-eezy"
+      ]
+    },
+    {
+      "label": "Q02 brand+model tokens",
+      "query": "Cybex Eezy",
+      "language": "ru",
+      "match_mode": "FTS_WORD",
+      "count": 1,
+      "product_ids": [
+        "p-eezy"
+      ]
+    },
+    {
+      "label": "Q03 lowercase brand",
+      "query": "cybex",
+      "language": "ru",
+      "match_mode": "FTS_WORD",
+      "count": 1,
+      "product_ids": [
+        "p-eezy"
+      ]
+    },
+    {
+      "label": "Q04 diacritics folded",
+      "query": "Britax Romer",
+      "language": "ru",
+      "match_mode": "FTS_WORD",
+      "count": 1,
+      "product_ids": [
+        "p-dualfix"
+      ]
+    },
+    {
+      "label": "Q05 category word (FTS category column)",
+      "query": "Автокресла",
+      "language": "ru",
+      "match_mode": "FTS_WORD",
+      "count": 1,
+      "product_ids": [
+        "p-dualfix"
+      ]
+    },
+    {
+      "label": "Q06 morphology: plural of title words",
+      "query": "прогулочные коляски",
+      "language": "ru",
+      "match_mode": "FTS_WORD",
+      "count": 2,
+      "product_ids": [
+        "p-ultra",
+        "p-eezy"
+      ]
+    },
+    {
+      "label": "Q07 morphology: inflected model phrase",
+      "query": "коляску Cybex",
+      "language": "ru",
+      "match_mode": "BROWSE",
+      "count": 0,
+      "product_ids": []
+    },
+    {
+      "label": "Q08 typo in brand",
+      "query": "Cybeks Eezy",
+      "language": "ru",
+      "match_mode": "BROWSE",
+      "count": 0,
+      "product_ids": []
+    },
+    {
+      "label": "Q09 typo in model",
+      "query": "Cybex Ezy",
+      "language": "ru",
+      "match_mode": "BROWSE",
+      "count": 0,
+      "product_ids": []
+    },
+    {
+      "label": "Q10 transliteration (Cyrillic brand)",
+      "query": "Сайбекс Изи",
+      "language": "ru",
+      "match_mode": "BROWSE",
+      "count": 0,
+      "product_ids": []
+    },
+    {
+      "label": "Q11 natural-language need",
+      "query": "легкая коляска для путешествий",
+      "language": "ru",
+      "match_mode": "BROWSE",
+      "count": 0,
+      "product_ids": []
+    },
+    {
+      "label": "Q12 description-only feature",
+      "query": "складывается одной рукой",
+      "language": "ru",
+      "match_mode": "BROWSE",
+      "count": 0,
+      "product_ids": []
+    },
+    {
+      "label": "Q13 description-only spec",
+      "query": "isofix 360",
+      "language": "ru",
+      "match_mode": "BROWSE",
+      "count": 0,
+      "product_ids": []
+    },
+    {
+      "label": "Q14 split model token",
+      "query": "Dual fix",
+      "language": "ru",
+      "match_mode": "BROWSE",
+      "count": 0,
+      "product_ids": []
+    },
+    {
+      "label": "Q15 RU query vs UK-only product",
+      "query": "Joie i-Spin",
+      "language": "ru",
+      "match_mode": "BROWSE",
+      "count": 0,
+      "product_ids": []
+    },
+    {
+      "label": "Q16 same query in UK",
+      "query": "Joie i-Spin",
+      "language": "uk",
+      "match_mode": "FTS_WORD",
+      "count": 1,
+      "product_ids": [
+        "p-ispin"
+      ]
+    },
+    {
+      "label": "Q17 extra polite word",
+      "query": "Cybex Eezy пожалуйста",
+      "language": "ru",
+      "match_mode": "BROWSE",
+      "count": 0,
+      "product_ids": []
+    }
+  ],
+  "exact_title_resolution": [
+    {
+      "label": "exact title, exact case",
+      "phrase": "Прогулочная коляска Cybex Eezy S Twist+ 2",
+      "status": "FOUND"
+    },
+    {
+      "label": "exact title, lower case",
+      "phrase": "прогулочная коляска cybex eezy s twist+ 2",
+      "status": "NOT_FOUND"
+    },
+    {
+      "label": "model only",
+      "phrase": "Cybex Eezy S Twist+ 2",
+      "status": "NOT_FOUND"
+    }
+  ],
+  "getProduct_keys": [
+    "catalog",
+    "product"
+  ],
+  "getProduct_ru_description": "<p>Легкая прогулочная коляска весом 6,9 кг. Складывается одной рукой.</p><ul><li>Сиденье поворачивается на 360°</li><li>От 6 месяцев до 22 кг</li></ul>",
+  "snapshot": {
+    "dir_mode": "0700",
+    "file_modes": {
+      "attribute-definitions.ndjson": "0600",
+      "attributes.ndjson": "0600",
+      "brands.ndjson": "0600",
+      "categories.ndjson": "0600",
+      "images.ndjson": "0600",
+      "kit-components.ndjson": "0600",
+      "manifest.json": "0600",
+      "offers.ndjson": "0600",
+      "product-categories.ndjson": "0600",
+      "product-text.ndjson": "0600",
+      "products.ndjson": "0600",
+      "store-stock.ndjson": "0600",
+      "stores.ndjson": "0600",
+      "variants.ndjson": "0600"
+    },
+    "product_text_row_example": {
+      "product_id": "p-eezy",
+      "language": "ru",
+      "title": "Прогулочная коляска Cybex Eezy S Twist+ 2",
+      "short_description": null,
+      "description": "<p>Легкая прогулочная коляска весом 6,9 кг. Складывается одной рукой.</p><ul><li>Сиденье поворачивается на 360°</li><li>От 6 месяцев до 22 кг</li></ul>",
+      "url": "https://babypark.ua/ru/p-eezy"
+    },
+    "attributes_records": 0,
+    "whole_file_json_parse": "JSON.parse(whole file) throws: Unexpected non-whitespace character after JSON at position 264 (line 2 column 1)"
+  }
+}
