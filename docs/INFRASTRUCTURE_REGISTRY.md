@@ -231,6 +231,24 @@ Viber/Chatwoot bridge:
 
 This runtime is independent from Knowledge and Catalog release symlinks.
 
+### Chatwoot employee system SMTP — AWS SES (2026-10-23)
+
+Authority/owner: BabyPark infrastructure administrator (external mail transport: AWS SES classic, `eu-central-1`); canonical Chatwoot platform v4.18.0. Source/provenance: owner-authorized staff-only SES fit in Draft PR #150; no Chatwoot core patch, no custom email connector, no new Chatwoot inbox.
+
+Operational identity:
+- Live host: `chatwoot-fra1-01`, self-hosted Chatwoot application path `/home/chatwoot/chatwoot`.
+- Main Chatwoot config: `/home/chatwoot/chatwoot/.env`; owner `chatwoot:chatwoot`, mode `0600`; contains SMTP credential values: **never copy contents to Git/logs/diagnostics**.
+- Original env recovery snapshot: `/root/.babypark-chatwoot-smtp/pre-ses.env` (root-only `0600`) and root-only staged source `/root/.babypark-chatwoot-smtp/staged.env` (root-only `0600`). Directory `0700`. These are sensitive recovery objects, not removable merely because deployment is active.
+- Service units: `chatwoot-web.1.service`, `chatwoot-worker.1.service`; restart required after changing SMTP env.
+- SES SMTP endpoint: `email-smtp.eu-central-1.amazonaws.com:2587`, STARTTLS, TLS peer verification; IAM SMTP user name `babypark-chatwoot-ses-smtp`. Its SMTP credentials are held only in server-protected secret location and owner's private AWS record; not in Git.
+- Application sender: `BabyPark <support@babypark.ua>`, global `MAILER_SENDER_EMAIL`. `contact@babypark.ua` remains Zoho group alias/public contact; technical `reply.babypark.ua` email ingress NOT implemented or activated.
+- IAM group `AWSSESSendingGroupDoNotRename`, inline policy `AmazonSesSendingAccess`: `ses:SendRawEmail`, From limited to `support@babypark.ua` or `contact@babypark.ua`; recipient `ForAllValues:StringLike ses:Recipients=[*@babypark.ua]` and `Null ses:Recipients=false`. AWS IAM policy simulation confirmed internal recipient ALLOW, outside or mixed recipients DENY, forbidden sender DENY.
+- SES `babypark.ua` verified, DKIM SUCCESS; domain/root MX remains Zoho; SES Production access not enabled, Sandbox 200/24h and 1/s. Bounce/complaint suppression enabled.
+- Recovery: copy `pre-ses.env` back to a secure temporary file under Chatwoot directory, retain `chatwoot:chatwoot` mode `0600`, atomically replace `.env`, restart both listed services, verify local/public Chatwoot HTTP and Sidekiq active. Rollback intentionally disables this SMTP transport; do not delete backup until an explicit recovery-lifecycle decision.
+- Do **not** weaken recipient IAM restriction or use SES for customer email based on this employee-only stage. Staff email recipient access is distinct from Website conversation continuity, SES S3/SNS ingress and team customer-coverage automation.
+
+Verified after cutover: SMTP endpoint authentication PASS via owner local TTY *without email send*; application configuration and both systemd units active; local Chatwoot HTTP 200 and public `https://chat.babypark.ua/` HTTP 200. **Actual employee-password-reset email delivery and employee login still require live acceptance**. The receiving side of `support@babypark.ua` in Zoho has not been proven.
+
 ## Change discipline
 
 Before changing any object in this registry:
