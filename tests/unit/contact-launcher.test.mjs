@@ -381,6 +381,17 @@ test('L2: 12-second notice is informational; late ready remains actionable', () 
   assert.equal(h.get('bp-contact__channel--chat').disabled, false);
 });
 
+test('L2: callback row has a larger phone handset with no surrounding ring', () => {
+  const h = harness(callbackConfig());
+  const icon = h.get('bp-contact__icon--callback');
+  assert.ok(icon, 'callback row icon exists');
+  assert.match(icon.innerHTML, /viewBox="0 0 24 24"/);
+  assert.match(icon.innerHTML, /stroke-width="2\.2"/, 'clear, heavier handset stroke');
+  assert.match(icon.innerHTML, /M22 16\.92v3/, 'phone handset geometry');
+  assert.doesNotMatch(icon.innerHTML, /M21 11\.5a8\.5|<circle\b/, 'no surrounding circular contour');
+  assert.match(css, /\.bp-contact__icon--callback svg\s*\{\s*width:\s*25px;\s*height:\s*25px;/, 'legible 25px icon in unchanged 35px row slot');
+});
+
 test('L2: callback option is in stable final row after direct call, panel has only phone required', () => {
   const h = harness(callbackConfig(),{cookie:'cw_conversation='+dummyJwt});
   const phone = h.get('bp-contact__channel--phone');
