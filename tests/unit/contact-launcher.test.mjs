@@ -456,14 +456,34 @@ test('L2: optional note preserved as text, never a Contact phone', async () => {
   assert.equal(Object.hasOwn(payload,'contact'),false);
 });
 
-test('L2: 403 and ambiguous network failure never claim success or retry automatically', async () => {
-  for(const fetchMock of [
-    async()=>({status:403,json:async()=>({})}),
-    async()=>{throw new Error('network timeout');},
-    async()=>({status:200,json:async()=>({id:'unknown'})})
-  ]){
-    let calls=0;
-    const h=harness(callbackConfig(),{
+test('L2: proven Widget 403/422/429 rejects allow explicit manual retry, never automatic retry', async () => {
+  for (const status of [403, 422, 429]) {
+    let calls = 0;
+    const h = harness(callbackConfig(), {
+      cookie: 'cw_conversation=' + dummyJwt,
+      fetchMock: async () => { calls++; return {status, json: async () => ({})}; }
+    });
+    visitCallback(h);
+    input(h, '0982908838');
+    submit(h);
+    await flushAsync();
+    assert.equal(calls, 1, 'no automatic retry for status ' + status);
+    assert.doesNotMatch(h.get('bp-contact__callback-status').textContent, /Заявку надіслано|Щоб уникнути дублювання/);
+    assert.equal(h.get('bp-contact__callback-submit').disabled, false, 'manual retry enabled after ' + status);
+    submit(h);
+    await flushAsync();
+    assert.equal(calls, 2, 'exactly one POST per deliberate attempt on ' + status);
+  }
+});
+
+test('L2: network failure, 500 and invalid-200 ACK remain uncertain and never resubmit', async () => {
+  for (const fetchMock of [
+    async () => { throw new Error('network timeout'); },
+    async () => ({status:500, json:async()=>({})}),
+    async () => ({status:200, json:async()=>({id:'unknown'})})
+  ]) {
+    let calls = 0;
+    const h = harness(callbackConfig(), {
       cookie:'cw_conversation='+dummyJwt,
       fetchMock:async (...args)=>{calls++;return fetchMock(...args);}
     });
@@ -474,6 +494,10 @@ test('L2: 403 and ambiguous network failure never claim success or retry automat
     assert.equal(calls,1);
     assert.doesNotMatch(h.get('bp-contact__callback-status').textContent,/Заявку надіслано/);
     assert.match(h.get('bp-contact__callback-status').textContent,/Щоб уникнути дублювання/);
+    assert.equal(h.get('bp-contact__callback-submit').disabled,true);
+    submit(h);
+    await flushAsync();
+    assert.equal(calls,1,'cannot resubmit uncertain ACK');
   }
 });
 
