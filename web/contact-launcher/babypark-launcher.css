@@ -246,48 +246,211 @@
   .bp-contact__menu { animation: none; }
 }
 
-/* L2 Callback: the existing anchored panel, not another third-party widget. */
+/* L2 Callback: keep the official Chatwoot Widget separate. This already
+   installed BabyPark launcher reuses its own header/close and stock Widget API,
+   with Chatwoot-like sizing and spacing. No iframe DOM/CSS injection. */
 .bp-contact__icon--callback { background: #eaf7fc; color: #007cb6; }
-.bp-contact__callback-form {
+.bp-contact__menu--callback {
+  width: min(400px, calc(100vw - var(--bp-desktop-right) - 12px));
+  max-width: none;
+  height: min(600px, calc(100dvh - var(--bp-compact-bottom) - 76px));
+  max-height: calc(100dvh - var(--bp-compact-bottom) - 76px);
   display: flex;
   flex-direction: column;
-  gap: 9px;
-  padding: 4px 9px 12px;
+  padding: 0;
+  overflow: hidden;
+  border-radius: 20px;
+  background: #fff;
 }
-.bp-contact__back {
-  align-self: flex-start;
-  border: 0;
-  background: transparent;
-  color: #005d90;
-  font-size: 13px !important;
-  font-weight: 700 !important;
-  padding: 6px;
+.bp-contact__menu--callback .bp-contact__heading {
+  flex: 0 0 auto;
+  min-height: 98px;
+  gap: 12px;
+  padding: 20px 22px;
+  background: #fff;
+  border-bottom: 1px solid #f1f2f5;
 }
-.bp-contact__callback-heading { font-size: 16px; font-weight: 800; margin: 0; }
-.bp-contact__callback-caption { font-size: 12px; color: #566477; margin: 0 0 3px; }
-.bp-contact__callback-label { display: flex; flex-direction: column; gap: 5px; font-size: 12px; font-weight: 700; }
+.bp-contact__menu--callback .bp-contact__menu-close {
+  flex-basis: 38px;
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+}
+.bp-contact__menu--callback .bp-contact__menu-close svg { width: 22px; height: 22px; }
+.bp-contact__brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.bp-contact__brand-avatar {
+  display: flex;
+  flex: 0 0 44px;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: #f57908;
+  color: #fff;
+  font-size: 8px;
+  font-weight: 750;
+  letter-spacing: -.35px;
+}
+.bp-contact__brand-copy { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.bp-contact__brand-name { color: #1d252c; font-size: 18px; font-weight: 700; line-height: 1.12; }
+.bp-contact__brand-status { color: #656c78; font-size: 14px; font-weight: 450; line-height: 1.2; }
+.bp-contact__callback-form {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 13px;
+  padding: 26px 24px 22px;
+  overflow-y: auto;
+  background: #fafafd;
+  scrollbar-width: thin;
+}
+.bp-contact__callback-heading { font-size: 23px; line-height: 1.25; font-weight: 750; margin: 0; color: #202a35; }
+.bp-contact__callback-caption { font-size: 14px; color: #646e7a; margin: 0 0 7px; line-height: 1.45; }
+.bp-contact__callback-label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 15px;
+  line-height: 1.3;
+  color: #263445;
+  font-weight: 700;
+}
+.bp-contact__callback-phone-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 55px;
+  padding: 0 13px;
+  border: 1px solid #bfcdda;
+  border-radius: 14px;
+  background: #fff;
+  transition: border-color .12s ease, box-shadow .12s ease;
+}
+.bp-contact__callback-phone-wrap:focus-within {
+  border-color: #008fc7;
+  box-shadow: 0 0 0 2px #009cde;
+}
+.bp-contact__callback-prefix {
+  flex: 0 0 auto;
+  padding-right: 12px;
+  border-right: 1px solid #d6dee8;
+  color: #263445;
+  font-size: 19px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
 .bp-contact__callback-input {
   width: 100%;
-  min-height: 41px;
-  border: 1px solid #a9bdcc;
-  border-radius: 9px;
-  padding: 9px 10px;
+  min-height: 52px;
+  border: 1px solid #bfcdda;
+  border-radius: 14px;
+  padding: 13px 14px;
   background: #fff;
-  color: #213445;
-  font-size: 14px !important;
+  color: #263445;
+  font-size: 16px !important;
   font-weight: 500 !important;
+  font-family: inherit;
+  line-height: 1.45;
 }
-.bp-contact__callback-textarea { min-height: 75px; max-height: 150px; resize: vertical; }
+.bp-contact__callback-input::placeholder { color: #8a939f; opacity: 1; }
+.bp-contact__callback-phone-input {
+  min-width: 0;
+  min-height: 52px;
+  flex: 1 1 auto;
+  padding: 7px 0;
+  border: 0;
+  border-radius: 0;
+  outline: none;
+  background: transparent;
+  font-size: 20px !important;
+  font-weight: 600 !important;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: .25px;
+}
+.bp-contact__callback-phone-input:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+.bp-contact__callback-phone-hint {
+  color: #606f7d;
+  font-size: 12px;
+  line-height: 1.4;
+  font-weight: 450;
+}
+.bp-contact__callback-textarea {
+  min-height: 104px;
+  max-height: 200px;
+  resize: vertical;
+}
 .bp-contact__callback-submit {
   width: 100%;
-  min-height: 43px;
-  padding: 9px;
+  min-height: 53px;
+  margin-top: auto;
+  padding: 11px 14px;
   border: 0;
-  border-radius: 10px;
+  border-radius: 13px;
   background: #007cb6;
   color: #fff;
-  font-size: 13px !important;
-  font-weight: 800 !important;
+  font-size: 16px !important;
+  font-weight: 750 !important;
+  line-height: 1.4;
 }
 .bp-contact__callback-submit:disabled { background: #b3c4cd; color: #263d4d; cursor: not-allowed; }
-.bp-contact__callback-status { min-height: 0; color: #334e62; font-size: 12px; margin: 0; overflow-wrap: anywhere; }
+.bp-contact__callback-status { min-height: 16px; color: #344e62; font-size: 13px; margin: 0; overflow-wrap: anywhere; }
+.bp-contact__callback-success {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 15px;
+  padding: 24px;
+  background: #fff;
+  text-align: center;
+}
+.bp-contact__callback-form--success > :not(.bp-contact__callback-success) { visibility: hidden; }
+.bp-contact__callback-success-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 62px;
+  height: 62px;
+  border-radius: 50%;
+  background: #e7f7f3;
+  color: #188d73;
+  font-size: 34px;
+  font-weight: 700;
+}
+.bp-contact__callback-success-title {
+  max-width: 290px;
+  margin: 0;
+  color: #263445;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.45;
+}
+.bp-contact__callback-success-caption { margin: 0; color: #657380; font-size: 13px; }
+@media (max-width: 767px) {
+  .bp-contact__menu--callback {
+    width: min(400px, calc(100vw - var(--bp-mobile-right) - 12px));
+  }
+}
+@media (max-width: 380px) {
+  .bp-contact__menu--callback .bp-contact__heading { min-height: 86px; padding: 15px 18px; }
+  .bp-contact__callback-form { padding: 20px 16px; gap: 11px; }
+  .bp-contact__brand-avatar { width: 40px; height: 40px; flex-basis: 40px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bp-contact__callback-phone-wrap { transition: none; }
+}
