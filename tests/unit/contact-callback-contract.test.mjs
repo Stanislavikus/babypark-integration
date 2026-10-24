@@ -22,3 +22,18 @@ test('there is no optimistic success, automatic retry, background prefetch or ra
   assert.match(source,/state\.callbackUncertain = true/);
   assert.doesNotMatch(source,/localStorage|sessionStorage|indexedDB|sendBeacon|setInterval/);
 });
+
+test('native automation fixture requires incoming enum and all three AND-scoped message predicates', () => {
+  const rule = JSON.parse(readFileSync(
+    new URL('../../config/chatwoot/callback-v1-automation.example.json', import.meta.url), 'utf8'));
+  assert.equal(rule.event_name, 'message_created');
+  assert.equal(rule.conditions.length, 3);
+  assert.deepEqual(rule.conditions.map(c => c.attribute_key), ['message_type', 'inbox_id', 'content']);
+  assert.deepEqual(rule.conditions[0].values, ['incoming']);
+  assert.equal(rule.conditions[0].query_operator, 'AND');
+  assert.equal(rule.conditions[1].query_operator, 'AND');
+  assert.equal(rule.conditions[2].query_operator, null);
+  assert.deepEqual(rule.actions.map(a => a.action_name), ['add_label', 'assign_team']);
+  assert.equal(rule.actions[0].action_params[0], 'callback');
+  assert.ok(rule.conditions[2].values.includes('BABYPARK_CALLBACK_V1'));
+});
