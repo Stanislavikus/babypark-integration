@@ -138,7 +138,9 @@
     var digits = String(raw || '').replace(/[^0-9]/g, '');
     if (digits.length === 12 && digits.slice(0, 3) === '380') return digits.slice(3);
     if (digits.length === 10 && digits.charAt(0) === '0') return digits.slice(1);
-    return digits.slice(0, 9);
+    // Reject ambiguous longer pasted numbers instead of silently truncating
+    // them into a possibly different customer phone number.
+    return digits.length > 9 ? '' : digits;
   }
 
   function normalizePhone(raw) {
