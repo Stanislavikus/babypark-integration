@@ -1,0 +1,36 @@
+{
+  "name": "BabyPark — Зворотний зв’язок",
+  "description": "Callback messages ONLY: incoming message in verified Website Inbox with fixed marker; no general chat tagging",
+  "event_name": "message_created",
+  "active": true,
+  "conditions": [
+    {
+      "attribute_key": "message_type",
+      "filter_operator": "equal_to",
+      "values": ["incoming"],
+      "query_operator": "AND"
+    },
+    {
+      "attribute_key": "inbox_id",
+      "filter_operator": "equal_to",
+      "values": ["REPLACE_WITH_VERIFIED_WEBSITE_INBOX_ID"],
+      "query_operator": "AND"
+    },
+    {
+      "attribute_key": "content",
+      "filter_operator": "contains",
+      "values": ["BABYPARK_CALLBACK_V1"],
+      "query_operator": null
+    }
+  ],
+  "actions": [
+    {
+      "action_name": "add_label",
+      "action_params": ["callback"]
+    },
+    {
+      "action_name": "assign_team",
+      "action_params": ["REPLACE_WITH_VERIFIED_SALES_TEAM_ID"]
+    }
+  ]
+}
