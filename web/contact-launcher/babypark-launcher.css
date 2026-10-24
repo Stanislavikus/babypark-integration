@@ -312,8 +312,7 @@
   background: #fafafd;
   scrollbar-width: thin;
 }
-.bp-contact__callback-heading { font-size: 23px; line-height: 1.25; font-weight: 750; margin: 0; color: #202a35; }
-.bp-contact__callback-caption { font-size: 14px; color: #646e7a; margin: 0 0 7px; line-height: 1.45; }
+.bp-contact__callback-caption { font-size: 16px; color: #4c5b68; margin: 0 0 9px; line-height: 1.45; }
 .bp-contact__callback-label {
   display: flex;
   flex-direction: column;
