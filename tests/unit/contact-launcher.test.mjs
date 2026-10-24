@@ -57,6 +57,7 @@ function harness(config, opts = {}) {
     currentScript: opts.inline ? null : { src: opts.scriptSrc || 'https://babypark.ua/themes/babypark2/assets/contact/babypark-launcher.js' },
     baseURI: opts.documentBase || 'https://babypark.ua/product/123',
     readyState: 'complete',
+    cookie: opts.cookie || '',
     body, head,
     createElement: tag => {
       const el = new Element(tag);
@@ -94,6 +95,7 @@ function harness(config, opts = {}) {
     },
     clearTimeout(id) { timers.delete(id); },
     BabyParkLauncherConfig: config,
+    fetch: opts.fetchMock,
     location: { href: 'https://babypark.ua/product/123' },
     getComputedStyle: () => ({ position: opts.cssMissing ? 'static' : 'fixed' }),
     addEventListener(name, fn) { (windowListeners[name] ||= []).push(fn); },
@@ -121,7 +123,7 @@ test('phone only: no unverified channel, no callback, no SDK', () => {
   assert.equal(h.get('bp-contact__channel--whatsapp').hidden, true);
   assert.equal(h.get('bp-contact__channel--chat').hidden, true);
   assert.equal(h.head.children.length, 0);
-  assert.equal(h.get('bp-contact__channel--callback'), null);
+  assert.equal(h.get('bp-contact__channel--callback').hidden, true);
   const launcher = h.get('bp-contact__trigger');
   launcher.click();
   assert.equal(launcher.getAttribute('aria-expanded'), 'true');
@@ -145,84 +147,6 @@ test('explicit channel flags and whitelisted protocols prevent unsafe links', ()
   assert.equal(h.get('bp-contact__channel--phone').hidden, true);
   assert.equal(h.get('bp-contact__channel--viber').hidden, false);
   assert.equal(h.get('bp-contact__channel--viber').href, 'viber://pa?chatURI=babypark');
-});
-
-test('L1-C stable disabled chat row: official run() creates toggle BEFORE actual ready', () => {
-  const h = harness({ websiteToken: 'PUBLICWEBSITETOKEN123', channels: { chat: { enabled: true } } });
-  const row = h.get('bp-contact__channel--chat');
-  const note = h.get('bp-contact__chat-note');
-  assert.equal(h.get('bp-contact').hidden, false);
-  assert.equal(row.hidden, false, 'configured chat slot is always reserved');
-  assert.equal(row.disabled, true, 'placeholder is non-actionable');
-  assert.equal(row.getAttribute('aria-disabled'), 'true');
-  assert.equal(note.hidden, true, 'no changing status text in first 12 seconds');
-  assert.equal(h.head.children.length, 0, 'passive view MUST NOT inject SDK');
-  assert.equal(h.pendingTimers(), 0);
-  h.get('bp-contact__trigger').click();
-  assert.equal(h.document.activeElement, h.get('bp-contact__trigger'),
-    'chat-only pending SDK keeps focus on the launcher');
-  assert.equal(h.head.children.length, 1);
-  assert.equal(h.pendingTimers(), 1);
-  assert.equal(h.head.children[0].src, 'https://chat.babypark.ua/packs/js/sdk.js');
-  assert.equal(h.window.chatwootSettings.hideMessageBubble, true);
-  assert.equal(h.window.chatwootSettings.showUnreadMessagesDialog, false);
-  assert.equal(h.window.chatwootSettings.locale, 'uk');
-  assert.equal(row.disabled, true);
-  assert.equal(note.hidden, true);
-  let runOptions, toggleArg;
-  h.window.chatwootSDK = { run: o => {
-    runOptions = o;
-    h.window.$chatwoot = { toggle: arg => { toggleArg = arg; } };
-  } };
-  h.head.children[0].onload();
-  assert.equal(runOptions.websiteToken, 'PUBLICWEBSITETOKEN123');
-  assert.equal(runOptions.baseUrl, 'https://chat.babypark.ua');
-  assert.equal(row.disabled, true, 'callable toggle alone must never authorize chat');
-  h.advance(11999);
-  assert.equal(note.hidden, true);
-  h.window.dispatch('chatwoot:ready');
-  assert.equal(row.hidden, false, 'chat row is the same element');
-  assert.equal(row.disabled, false);
-  assert.equal(row.getAttribute('aria-disabled'), 'false');
-  assert.equal(h.pendingTimers(), 0, 'ready cancels soft notice');
-  assert.equal(note.hidden, true);
-  assert.match(h.get('bp-contact__chat-status').textContent, /доступний/);
-  assert.equal(h.document.activeElement, row);
-  row.click();
-  assert.equal(toggleArg, 'open');
-  h.get('bp-contact__trigger').click();
-  assert.equal(h.head.children.length, 1, 'SDK must never be injected twice');
-});
-
-test('L1-C explicit SDK failure retains disabled row and cannot resurrect a fake chat', () => {
-  const withoutToken = harness({ websiteToken: '', channels: { chat: { enabled: true } } });
-  assert.equal(withoutToken.head.children.length, 0);
-  assert.equal(withoutToken.body.children[0].hidden, true);
-  const bad = harness(withChat());
-  bad.get('bp-contact__trigger').click();
-  const sdk = bad.head.children[0];
-  sdk.onerror();
-  const row = bad.get('bp-contact__channel--chat');
-  assert.equal(row.hidden, false);
-  assert.equal(row.disabled, true);
-  assert.equal(bad.pendingTimers(), 0);
-  assert.match(bad.get('bp-contact__chat-note').textContent, /недоступний/);
-  assert.equal(bad.get('bp-contact').hidden, false);
-  bad.window.$chatwoot = { toggle() {} };
-  bad.window.dispatch('chatwoot:ready');
-  assert.equal(row.disabled, true, 'late ready must not resurrect EXPLICIT failure');
-  const broken = harness(withChat());
-  broken.get('bp-contact__trigger').click();
-  broken.window.chatwootSDK = { run() { throw new Error('SDK failed'); } };
-  broken.head.children[0].onload();
-  assert.match(broken.get('bp-contact__chat-note').textContent, /недоступний/);
-  assert.equal(broken.get('bp-contact__channel--chat').disabled, true);
-  assert.equal(broken.pendingTimers(), 0);
-  const missing = harness(withChat());
-  missing.get('bp-contact__trigger').click();
-  missing.head.children[0].onload();
-  assert.match(missing.get('bp-contact__chat-note').textContent, /недоступний/);
-  assert.equal(missing.pendingTimers(), 0);
 });
 
 test('Escape and outside pointerdown close menu, with keyboard focus restored on Escape', () => {
@@ -291,7 +215,6 @@ test('CSS provides mobile 22px inset, safe area, hidden/focus/mobile no-text and
   assert.match(css, /\.bp-contact__trigger-label \{ display: none; \}/);
 });
 
-
 test('brand palette: static orange rim, accessible white-on-teal text and no periodic pulse', () => {
   const bg = css.match(/--bp-accent:\s*(#[0-9a-fA-F]{6})/);
   const hover = css.match(/\.bp-contact__trigger:hover\s*\{\s*background:\s*(#[0-9a-fA-F]{6})/);
@@ -318,70 +241,6 @@ test('brand palette: static orange rim, accessible white-on-teal text and no per
 const token = 'PUBLICWEBSITETOKEN123';
 const withChat = () => ({ websiteToken: token, channels: { chat: { enabled: true } } });
 
-test('V1prime T1: a re-sync between SDK run and later ready cannot expose chat', () => {
-  const h = harness(withChat());
-  const trigger = h.get('bp-contact__trigger');
-  const chat = h.get('bp-contact__channel--chat');
-  trigger.click();
-  h.window.chatwootSDK = {
-    run() { h.window.$chatwoot = { toggle() {} }; }
-  };
-  h.head.children[0].onload(); // SDK.run creates $chatwoot BEFORE ready.
-  assert.equal(chat.disabled, true);
-  trigger.click(); // closes menu
-  trigger.click(); // forces syncVisible in the ready gap
-  h.window.dispatch('load'); // late CSS/load refresh must not bypass ready.
-  assert.equal(chat.disabled, true, 'ready gate cannot be replaced by SDK availability');
-  h.window.dispatch('chatwoot:ready');
-  assert.equal(chat.disabled, false);
-});
-
-test('V1prime T2: lost/invalid $chatwoot after ready re-hides chat without throwing', () => {
-  const h = harness(withChat());
-  const trigger = h.get('bp-contact__trigger');
-  const chat = h.get('bp-contact__channel--chat');
-  trigger.click();
-  h.window.chatwootSDK = { run() { h.window.$chatwoot = { toggle() {} }; } };
-  h.head.children[0].onload();
-  h.window.dispatch('chatwoot:ready');
-  assert.equal(chat.disabled, false);
-  delete h.window.$chatwoot;
-  // A background resize/load/reconciliation may re-render before any click.
-  // Test the actual lost-action window while state.ready is still true.
-  assert.doesNotThrow(() => h.window.dispatch('load'),
-    're-sync with vanished $chatwoot must not dereference it');
-  assert.equal(chat.disabled, true, 'missing SDK action is disabled by re-sync');
-  assert.doesNotThrow(() => chat.click(), 'vanished toggle must never throw');
-  assert.equal(chat.disabled, true, 'missing SDK action removes the actionable chat');
-  h.window.$chatwoot = {};
-  // Fresh ready cycle restores state.ready, but the action remains non-callable.
-  // Emulate an SDK losing its method before a passive re-sync rather than
-  // relying on the click guard to set state.ready=false.
-  const h2 = harness(withChat());
-  h2.get('bp-contact__trigger').click();
-  h2.window.chatwootSDK = { run() { h2.window.$chatwoot = { toggle() {} }; } };
-  h2.head.children[0].onload();
-  h2.window.dispatch('chatwoot:ready');
-  const chat2 = h2.get('bp-contact__channel--chat');
-  assert.equal(chat2.disabled, false);
-  h2.window.$chatwoot = {};
-  assert.doesNotThrow(() => h2.window.dispatch('load'),
-    're-sync with non-callable toggle must be safe');
-  assert.equal(chat2.disabled, true, 'non-callable toggle must not advertise chat');
-  assert.doesNotThrow(() => chat2.click());
-});
-
-test('V1prime T3: ready event without a callable SDK toggle does not authorize chat', () => {
-  const h = harness(withChat());
-  h.get('bp-contact__trigger').click();
-  h.window.chatwootSDK = { run() {} };
-  h.head.children[0].onload();
-  h.window.dispatch('chatwoot:ready');
-  assert.equal(h.get('bp-contact__channel--chat').disabled, true);
-  assert.equal(h.get('bp-contact__channel--chat').hidden, false);
-  assert.match(h.get('bp-contact__chat-status').textContent, /недоступний/);
-});
-
 test('V1prime T4: disabled/absent/invalid Website chat never requests SDK on menu-open', () => {
   const cases = [
     { channels: { phone: { enabled: true, url: 'tel:+380982908838' } } },
@@ -402,134 +261,6 @@ test('V1prime T4: disabled/absent/invalid Website chat never requests SDK on men
   }
 });
 
-test('V1prime T5: load, hover, keyboard and touch without menu-open never initialize Chatwoot', () => {
-  const h = harness(withChat());
-  const trigger = h.get('bp-contact__trigger');
-  h.window.dispatch('load');
-  h.document.dispatch('keydown', { key: 'Enter', target: trigger });
-  h.document.dispatch('keydown', { key: 'Escape', target: trigger });
-  h.document.dispatch('pointerdown', { target: trigger });
-  for (const event of ['pointerenter', 'mouseover', 'focus', 'touchstart']) {
-    for (const fn of trigger.listeners[event] || []) fn({ target: trigger });
-  }
-  h.window.dispatch('load');
-  assert.equal(h.head.children.length, 0, 'no SDK from passive or non-open gestures');
-  assert.equal(h.window.chatwootSettings, undefined);
-  assert.equal(h.get('bp-contact__channel--chat').disabled, true);
-  assert.equal(h.get('bp-contact__channel--chat').hidden, false);
-  trigger.click();
-  assert.equal(h.head.children.length, 1, 'only explicit opening requests SDK once');
-});
-
-test('V1prime T6: host Chatwoot defaults cannot override required privacy/UX settings', () => {
-  const h = harness(withChat());
-  h.window.chatwootSettings = {
-    hideMessageBubble: false,
-    showUnreadMessagesDialog: true,
-    locale: 'en',
-    otherHostSetting: 'preserve'
-  };
-  h.get('bp-contact__trigger').click();
-  assert.equal(h.head.children.length, 1);
-  assert.equal(h.window.chatwootSettings.hideMessageBubble, true);
-  assert.equal(h.window.chatwootSettings.showUnreadMessagesDialog, false);
-  assert.equal(h.window.chatwootSettings.locale, 'uk');
-  assert.equal(h.window.chatwootSettings.otherHostSetting, 'preserve');
-});
-
-test('L1-C 12s notice is informational: 11,999ms quiet, 12,000ms slow, genuine late ready recovers', () => {
-  const h = harness(withChat());
-  const row = h.get('bp-contact__channel--chat');
-  const note = h.get('bp-contact__chat-note');
-  const close = h.get('bp-contact__trigger');
-  assert.equal(h.pendingTimers(), 0);
-  close.click();
-  assert.equal(h.pendingTimers(), 1);
-  h.window.chatwootSDK = { run() { h.window.$chatwoot = { toggle() {} }; } };
-  h.head.children[0].onload();
-  h.advance(11999);
-  assert.equal(row.disabled, true);
-  assert.equal(note.hidden, true);
-  h.advance(1);
-  assert.equal(h.pendingTimers(), 0, 'one-shot timeout settles');
-  assert.equal(row.disabled, true);
-  assert.equal(note.hidden, false);
-  assert.match(note.textContent, /довше, ніж зазвичай/);
-  assert.equal(row.hidden, false, 'reserved slot never disappears at threshold');
-  close.click();
-  close.click();
-  assert.equal(h.head.children.length, 1, 'no reinjection after timeout');
-  assert.equal(h.pendingTimers(), 0, 'no repeated timers on menu reopen');
-  h.window.dispatch('chatwoot:ready');
-  assert.equal(row.disabled, false, 'late valid SDK always recovers');
-  assert.equal(note.hidden, true, 'informational message clears on ready');
-  assert.equal(h.pendingTimers(), 0);
-});
-
-test('L1-C readiness and failure races are settled once without auto-open', () => {
-  const h = harness(withChat());
-  const row = h.get('bp-contact__channel--chat');
-  let opens = 0, runs = 0;
-  h.get('bp-contact__trigger').click();
-  h.window.chatwootSDK = { run() {
-    runs += 1;
-    h.window.$chatwoot = { toggle() { opens += 1; } };
-  } };
-  const sdk = h.head.children[0];
-  sdk.onload();
-  sdk.onload(); // defensive: duplicated onload may not re-run official SDK.
-  h.window.dispatch('chatwoot:ready');
-  h.window.dispatch('chatwoot:ready');
-  h.advance(24000);
-  assert.equal(row.disabled, false);
-  assert.equal(h.get('bp-contact__chat-note').hidden, true);
-  assert.equal(h.pendingTimers(), 0);
-  assert.equal(opens, 0, 'ready never automatically opens the chat');
-  assert.equal(runs, 1);
-  assert.equal(h.head.children.length, 1);
-  // An explicit script failure remains a hard error, even after an earlier
-  // spurious late ready event. Never show a fake clickable option.
-  const failed = harness(withChat());
-  failed.get('bp-contact__trigger').click();
-  failed.advance(12000);
-  assert.equal(failed.get('bp-contact__channel--chat').disabled, true);
-  failed.head.children[0].onerror();
-  failed.window.$chatwoot = { toggle() {} };
-  failed.window.dispatch('chatwoot:ready');
-  assert.equal(failed.get('bp-contact__channel--chat').disabled, true);
-  assert.match(failed.get('bp-contact__chat-note').textContent, /недоступний/);
-  assert.equal(failed.pendingTimers(), 0);
-});
-
-test('L1-C fixed chat slot precedes unchanged Telegram/Viber/phone rows and has no visual footer', () => {
-  const h = harness({ ...withChat(), channels: {
-    chat: { enabled: true },
-    telegram: { enabled: true, url: 'https://t.me/Babyparkua_bot' },
-    viber: { enabled: true, url: 'viber://pa?chatURI=babypark' },
-    phone: { enabled: true, url: 'tel:+380982908838' }
-  } });
-  const rows = ['chat', 'telegram', 'viber', 'phone'].map(name => h.get('bp-contact__channel--' + name));
-  const options = h.get('bp-contact__options');
-  assert.deepEqual(rows.map(r => options.children.indexOf(r)), [0, 1, 3, 4],
-    'configured channel order never changes when ready state changes');
-  assert.equal(rows[0].disabled, true);
-  assert.equal(rows[0].hidden, false);
-  h.get('bp-contact__trigger').click();
-  assert.equal(h.document.activeElement, rows[1], 'disabled chat never receives initial focus');
-  h.advance(12000);
-  assert.equal(rows[0].disabled, true);
-  assert.deepEqual(rows.map(r => options.children.indexOf(r)), [0, 1, 3, 4]);
-  h.window.chatwootSDK = { run() { h.window.$chatwoot = { toggle() {} }; } };
-  h.head.children[0].onload();
-  h.window.dispatch('chatwoot:ready');
-  assert.equal(rows[0].disabled, false);
-  assert.equal(h.document.activeElement, rows[1], 'late ready never steals focus from another channel');
-  assert.deepEqual(rows.map(r => options.children.indexOf(r)), [0, 1, 3, 4]);
-  assert.match(css, /\.bp-contact__channel--chat\s*\{[^}]*height:\s*64px;[^}]*min-height:\s*64px;[^}]*max-height:\s*64px/s);
-  assert.match(css, /\.bp-contact__chat-status\s*\{[^}]*position:\s*absolute !important;/s);
-  assert.match(css, /\.bp-contact__chat-note\s*\{[^}]*max-height:\s*26px;/s);
-});
-
 test('L1-C SVG X geometry and double-contrast focus have no baseline glyph', () => {
   const h = harness({ channels: { phone: { enabled: true, url: 'tel:+380982908838' } } });
   for (const name of ['bp-contact__trigger-close', 'bp-contact__menu-close']) {
@@ -541,31 +272,6 @@ test('L1-C SVG X geometry and double-contrast focus have no baseline glyph', () 
   assert.match(css, /\.bp-contact :focus-visible\s*\{[^}]*outline:\s*3px solid #004b78;[^}]*box-shadow:\s*0 0 0 6px #fff;/s);
   assert.match(css, /@media \(forced-colors:\s*active\)/);
   assert.match(css, /\.bp-contact__trigger-close svg\s*\{[^}]*width:\s*24px;[^}]*height:\s*24px;/s);
-});
-
-test('L1-C S9 accessibility: persistent live region announces loading, slowness and recovery', () => {
-  const h = harness(withChat());
-  const status = h.get('bp-contact__chat-status');
-  assert.ok(status, 'a real aria-live node must exist before any chat transitions');
-  assert.equal(status.getAttribute('role'), 'status');
-  assert.equal(status.getAttribute('aria-live'), 'polite');
-  assert.equal(status.getAttribute('aria-atomic'), 'true');
-  assert.equal(status.hidden, false, 'permanent live region must not be conditionally hidden');
-  h.get('bp-contact__trigger').click();
-  assert.match(status.textContent, /підключається/);
-  h.advance(12000);
-  assert.match(status.textContent, /довше, ніж зазвичай/);
-  h.window.chatwootSDK = { run() { h.window.$chatwoot = { toggle() {} }; } };
-  h.head.children[0].onload();
-  h.window.dispatch('chatwoot:ready');
-  assert.match(status.textContent, /доступний/);
-  assert.equal(status.getAttribute('aria-live'), 'polite', 'live region survives state changes');
-  assert.equal(status.hidden, false);
-  const error = harness(withChat());
-  error.get('bp-contact__trigger').click();
-  error.head.children[0].onerror();
-  assert.match(error.get('bp-contact__chat-status').textContent, /недоступний/);
-  assert.equal(error.get('bp-contact__chat-status').getAttribute('role'), 'status');
 });
 
 test('L1-C S9: subdued informational note is still legible at small text size', () => {
@@ -584,4 +290,355 @@ test('L1-C S9: subdued informational note is still legible at small text size', 
   const contrast = (Math.max(fg, bg) + 0.05) / (Math.min(fg, bg) + 0.05);
   assert.ok(contrast >= 4.5, `Disabled chat status text contrast ${contrast.toFixed(2)} must be >= 4.5:1`);
   assert.match(noteStyle, /font-size:\s*10px/);
+});
+
+
+const callbackConfig = () => ({
+  websiteToken: 'PUBLICWEBSITETOKEN123',
+  channels: { chat: { enabled: true }, callback: { enabled: true },
+    phone: { enabled: true, url: 'tel:+380982908838' } }
+});
+const dummyJwt = 'eyJhbGciOiJIUzI1NiJ9.eyJzb3VyY2VfaWQiOiJzeW50aGV0aWMifQ.SIGNATURE';
+function visitCallback(h) {
+  h.get('bp-contact__trigger').click();
+  assert.equal(h.head.children.length, 0, 'general menu must not load Chatwoot SDK');
+  h.get('bp-contact__channel--callback').click();
+  assert.equal(h.head.children.length, 1, 'explicit callback selection loads Chatwoot once');
+  h.window.chatwootSDK = { run() { h.window.$chatwoot = { toggle() {} }; } };
+  h.head.children[0].onload();
+  h.window.dispatch('chatwoot:ready');
+}
+function input(h, val) {
+  const field = h.get('bp-contact__callback-input');
+  field.value = val;
+  for (const handler of field.listeners.input || []) handler();
+}
+function submit(h) {
+  for (const handler of h.get('bp-contact__callback-form').listeners.submit || [])
+    handler({ preventDefault() {} });
+}
+async function flushAsync() {
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
+}
+
+test('L2: menu and messenger links never load SDK; explicit Chat click starts once and opens after ready', () => {
+  const h = harness(callbackConfig());
+  const launcher = h.get('bp-contact__trigger');
+  launcher.click();
+  h.window.dispatch('load');
+  assert.equal(h.head.children.length, 0);
+  assert.equal(h.get('bp-contact__channel--chat').disabled, false);
+  h.get('bp-contact__channel--chat').click();
+  assert.equal(h.head.children.length, 1);
+  let opens = 0, runs = 0;
+  h.window.chatwootSDK = { run() {
+    runs++;
+    h.window.$chatwoot = { toggle(state) { if (state === 'open') opens++; } };
+  } };
+  h.head.children[0].onload();
+  assert.equal(opens, 0, 'before ready, do not open fake chat');
+  h.window.dispatch('chatwoot:ready');
+  assert.equal(runs, 1);
+  assert.equal(opens, 1);
+  assert.equal(h.head.children.length, 1);
+});
+
+test('L2: closing menu before late ready cancels deferred chat open', () => {
+  const h = harness(callbackConfig());
+  h.get('bp-contact__trigger').click();
+  h.get('bp-contact__channel--chat').click();
+  h.get('bp-contact__trigger').click();
+  let opens=0;
+  h.window.chatwootSDK = { run() { h.window.$chatwoot={toggle(){opens++;}}; } };
+  h.head.children[0].onload();
+  h.window.dispatch('chatwoot:ready');
+  assert.equal(opens, 0);
+});
+
+test('L2: SDK failure remains disabled, no fake chat even if late ready arrives', () => {
+  const h = harness(callbackConfig());
+  h.get('bp-contact__trigger').click();
+  h.get('bp-contact__channel--chat').click();
+  h.head.children[0].onerror();
+  h.window.$chatwoot = { toggle() {} };
+  h.window.dispatch('chatwoot:ready');
+  assert.equal(h.get('bp-contact__channel--chat').disabled, true);
+  assert.match(h.get('bp-contact__chat-status').textContent, /недоступний/);
+});
+
+test('L2: 12-second notice is informational; late ready remains actionable', () => {
+  const h = harness(callbackConfig());
+  h.get('bp-contact__trigger').click();
+  h.get('bp-contact__channel--chat').click();
+  assert.equal(h.head.children.length, 1);
+  h.advance(12000);
+  assert.match(h.get('bp-contact__chat-note').textContent, /довше/);
+  h.window.chatwootSDK={run(){h.window.$chatwoot={toggle(){}};}};
+  h.head.children[0].onload();
+  h.window.dispatch('chatwoot:ready');
+  assert.equal(h.get('bp-contact__chat-note').hidden, true);
+  assert.equal(h.get('bp-contact__channel--chat').disabled, false);
+});
+
+test('L2: callback option is in stable final row after direct call, panel has only phone required', () => {
+  const h = harness(callbackConfig(),{cookie:'cw_conversation='+dummyJwt});
+  const phone = h.get('bp-contact__channel--phone');
+  const callback = h.get('bp-contact__channel--callback');
+  assert.equal(callback.hidden, false);
+  const options = h.get('bp-contact__options');
+  assert.equal(options.children.indexOf(callback), options.children.indexOf(phone)+1);
+  visitCallback(h);
+  assert.equal(h.get('bp-contact__options').hidden,true);
+  assert.equal(h.get('bp-contact__callback-form').hidden,false);
+  assert.equal(h.get('bp-contact__callback-submit').disabled,true);
+  assert.equal(h.get('bp-contact__callback-input').required,true);
+  assert.notEqual(h.get('bp-contact__callback-textarea').required,true);
+  assert.equal(h.get('bp-contact__callback-input').inputMode,'numeric');
+});
+
+test('L2: invalid phones and injected letters cannot enable submit', () => {
+  const h = harness(callbackConfig(),{cookie:'cw_conversation='+dummyJwt});
+  visitCallback(h);
+  for(const bad of ['123', '+380111', '+38066123456<script>', '+38O661234567', '+380 66123456😺']) {
+    input(h,bad);
+    assert.equal(h.get('bp-contact__callback-submit').disabled,true,bad);
+  }
+  input(h,'+380 66 123 45 67');
+  assert.equal(h.get('bp-contact__callback-submit').disabled,false);
+});
+
+test('L2: no visitor note sends exactly one stock Website Widget POST with conversation phone attribute', async () => {
+  const calls=[];
+  const h=harness(callbackConfig(),{
+    cookie:'cw_conversation='+dummyJwt,
+    fetchMock:async (url,init) => {
+      calls.push({url,init});
+      return {status:200,json:async()=>({id:35,conversation_id:2})};
+    }
+  });
+  visitCallback(h);
+  input(h,'0661234567');
+  submit(h);submit(h);
+  await flushAsync();
+  assert.equal(calls.length,1);
+  assert.equal(calls[0].url,'https://chat.babypark.ua/api/v1/widget/messages?website_token=PUBLICWEBSITETOKEN123');
+  assert.equal(calls[0].init.headers['X-Auth-Token'],dummyJwt);
+  assert.equal(calls[0].init.credentials,'omit');
+  assert.equal(calls[0].init.redirect,'error');
+  const body=JSON.parse(calls[0].init.body);
+  assert.equal(body.custom_attributes.callback_phone,'+380661234567');
+  assert.equal(body.labels[0],'callback');
+  assert.match(body.message.content,/BABYPARK_CALLBACK_V1/);
+  assert.match(body.message.content,/\+380661234567/);
+  assert.doesNotMatch(body.message.content,/Повідомлення:/);
+  assert.equal(Object.hasOwn(body,'contact'),false);
+  assert.match(h.get('bp-contact__callback-status').textContent,/надіслано/);
+  assert.equal(h.get('bp-contact__callback-submit').disabled,true);
+});
+
+test('L2: optional note preserved as text, never a Contact phone', async () => {
+  let payload;
+  const h=harness(callbackConfig(),{
+    cookie:'cw_conversation='+dummyJwt,
+    fetchMock:async (_u,request) => {
+      payload=JSON.parse(request.body);
+      return {status:200,json:async()=>({id:39,conversation_id:3})};
+    }
+  });
+  visitCallback(h);
+  input(h,'+380501234567');
+  h.get('bp-contact__callback-textarea').value='Потрібна консультація щодо коляски';
+  submit(h);
+  await flushAsync();
+  assert.match(payload.message.content,/Потрібна консультація щодо коляски/);
+  assert.equal(payload.custom_attributes.callback_phone,'+380501234567');
+  assert.equal(Object.hasOwn(payload,'contact'),false);
+});
+
+test('L2: 403 and ambiguous network failure never claim success or retry automatically', async () => {
+  for(const fetchMock of [
+    async()=>({status:403,json:async()=>({})}),
+    async()=>{throw new Error('network timeout');},
+    async()=>({status:200,json:async()=>({id:'unknown'})})
+  ]){
+    let calls=0;
+    const h=harness(callbackConfig(),{
+      cookie:'cw_conversation='+dummyJwt,
+      fetchMock:async (...args)=>{calls++;return fetchMock(...args);}
+    });
+    visitCallback(h);
+    input(h,'0982908838');
+    submit(h);
+    await flushAsync();
+    assert.equal(calls,1);
+    assert.doesNotMatch(h.get('bp-contact__callback-status').textContent,/Заявку надіслано/);
+    assert.match(h.get('bp-contact__callback-status').textContent,/Щоб уникнути дублювання/);
+  }
+});
+
+test('L2: missing visitor cookie keeps submit disabled even after Chatwoot ready', () => {
+  const h=harness(callbackConfig());
+  visitCallback(h);
+  input(h,'+380982908838');
+  assert.equal(h.get('bp-contact__callback-submit').disabled,true);
+});
+
+test('L2: disabled callback never appears or sends; chat-only still lazily loads', () => {
+  const h=harness({websiteToken:'PUBLICWEBSITETOKEN123',channels:{chat:{enabled:true},callback:{enabled:false}}});
+  assert.equal(h.get('bp-contact__channel--callback').hidden,true);
+  h.get('bp-contact__trigger').click();
+  assert.equal(h.head.children.length,0);
+});
+
+test('HEAVY B1: uncertain ACK stays terminal across Back/reopen and direct submit bypass', async () => {
+  let calls = 0;
+  const h = harness(callbackConfig(), {
+    cookie: 'cw_conversation=' + dummyJwt,
+    fetchMock: async () => { calls++; throw new Error('response lost after request'); },
+  });
+  visitCallback(h);
+  input(h, '0982908838');
+  submit(h);
+  await flushAsync();
+  assert.equal(calls, 1);
+  assert.match(h.get('bp-contact__callback-status').textContent, /Щоб уникнути дублювання/);
+  assert.equal(h.get('bp-contact__callback-submit').disabled, true);
+  h.get('bp-contact__back').click();
+  h.get('bp-contact__channel--callback').click();
+  assert.match(h.get('bp-contact__callback-status').textContent, /Щоб уникнути дублювання/);
+  assert.equal(h.get('bp-contact__callback-input').disabled, true);
+  input(h, '0501234567');
+  submit(h); // A raw form-submit event must be denied even with button disabled.
+  await flushAsync();
+  assert.equal(calls, 1);
+});
+
+test('HEAVY B1: server-accepted callback stays terminal across reopening same launcher', async () => {
+  let calls = 0;
+  const h = harness(callbackConfig(), {
+    cookie: 'cw_conversation=' + dummyJwt,
+    fetchMock: async () => { calls++; return { status: 200, json: async () => ({ id: 35, conversation_id: 2 }) }; },
+  });
+  visitCallback(h);
+  input(h, '0982908838');
+  submit(h);
+  await flushAsync();
+  assert.match(h.get('bp-contact__callback-status').textContent, /Заявку надіслано/);
+  h.get('bp-contact__back').click();
+  h.get('bp-contact__channel--callback').click();
+  assert.equal(h.get('bp-contact__callback-submit').disabled, true);
+  submit(h);
+  await flushAsync();
+  assert.equal(calls, 1);
+});
+
+test('HEAVY B2: hung fetch becomes bounded unknown ACK; caller may return to telephone options', async () => {
+  let calls = 0;
+  const h = harness(callbackConfig(), {
+    cookie: 'cw_conversation=' + dummyJwt,
+    fetchMock: () => { calls++; return new Promise(() => {}); },
+  });
+  visitCallback(h);
+  input(h, '0982908838');
+  submit(h);
+  await flushAsync();
+  assert.match(h.get('bp-contact__callback-status').textContent, /Надсилаємо/);
+  h.advance(14999);
+  await flushAsync();
+  assert.match(h.get('bp-contact__callback-status').textContent, /Надсилаємо/);
+  h.advance(1);
+  await flushAsync();
+  assert.match(h.get('bp-contact__callback-status').textContent, /Щоб уникнути дублювання/);
+  assert.equal(h.get('bp-contact__callback-submit').disabled, true);
+  h.get('bp-contact__back').click();
+  assert.equal(h.get('bp-contact__options').hidden, false);
+  assert.equal(h.get('bp-contact__channel--phone').hidden, false);
+  assert.equal(h.pendingTimers(), 0);
+  submit(h);
+  await flushAsync();
+  assert.equal(calls, 1);
+});
+
+test('HEAVY B2: hung JSON decode shares same bounded deadline and disables resend', async () => {
+  let calls = 0;
+  const h = harness(callbackConfig(), {
+    cookie: 'cw_conversation=' + dummyJwt,
+    fetchMock: async () => {
+      calls++;
+      return { status: 200, json: () => new Promise(() => {}) };
+    },
+  });
+  visitCallback(h);
+  input(h, '0982908838');
+  submit(h);
+  await flushAsync();
+  h.advance(15000);
+  await flushAsync();
+  assert.match(h.get('bp-contact__callback-status').textContent, /Щоб уникнути дублювання/);
+  submit(h);
+  assert.equal(calls, 1);
+  assert.equal(h.pendingTimers(), 0);
+});
+
+test('HEAVY B3: premature SDK toggle and broken ready event never simulate working Chat', () => {
+  const h = harness(callbackConfig());
+  h.get('bp-contact__trigger').click();
+  h.get('bp-contact__channel--chat').click();
+  let opens = 0;
+  h.window.chatwootSDK = { run() { h.window.$chatwoot = { toggle() { opens++; } }; } };
+  h.head.children[0].onload();
+  h.window.dispatch('load');
+  assert.equal(opens, 0, 'SDK.run may install toggle but not establish readiness');
+  h.window.$chatwoot = {};
+  h.window.dispatch('chatwoot:ready');
+  assert.equal(opens, 0);
+  assert.equal(h.get('bp-contact__channel--chat').disabled, true);
+  assert.match(h.get('bp-contact__chat-status').textContent, /недоступний/);
+  h.window.$chatwoot = { toggle() { opens++; } };
+  h.window.dispatch('chatwoot:ready');
+  assert.equal(opens, 0, 'late ready must never resurrect a failed initialization');
+});
+
+test('HEAVY B3: host settings cannot override mandatory privacy and Ukrainian chat UX', () => {
+  const h = harness(callbackConfig());
+  h.window.chatwootSettings = {
+    hideMessageBubble: false, locale: 'en', showUnreadMessagesDialog: true,
+    position: 'left',
+  };
+  h.get('bp-contact__trigger').click();
+  assert.equal(h.window.chatwootSettings.locale, 'en');
+  assert.equal(h.head.children.length, 0, 'ordinary menu still cannot start Website SDK');
+  h.get('bp-contact__channel--callback').click();
+  assert.equal(h.window.chatwootSettings.hideMessageBubble, true);
+  assert.equal(h.window.chatwootSettings.locale, 'uk');
+  assert.equal(h.window.chatwootSettings.showUnreadMessagesDialog, false);
+  assert.equal(h.window.chatwootSettings.position, 'left', 'unrelated supported host options preserved');
+});
+
+test('HEAVY B2: AbortController is attempted on request timeout, without a second POST', async () => {
+  let calls = 0;
+  let aborts = 0;
+  const h = harness(callbackConfig(), {
+    cookie: 'cw_conversation=' + dummyJwt,
+    fetchMock: async (_url, req) => {
+      calls++;
+      assert.ok(req.signal, 'supported native abort signal is attached');
+      return new Promise(() => {});
+    },
+  });
+  h.window.AbortController = class {
+    signal = {};
+    abort() { aborts++; }
+  };
+  visitCallback(h);
+  input(h, '+380982908838');
+  submit(h);
+  await flushAsync();
+  h.advance(15000);
+  await flushAsync();
+  assert.equal(calls, 1);
+  assert.equal(aborts, 1);
+  assert.equal(h.get('bp-contact__callback-submit').disabled, true);
+  assert.equal(h.pendingTimers(), 0);
 });

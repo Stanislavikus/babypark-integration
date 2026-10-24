@@ -1,0 +1,52 @@
+# BabyPark Callback V1 — bounded implementation evidence
+
+Status: EVIDENCE — NON-NORMATIVE, draft only. No merge, customer activation or production-deploy authorization.
+Applies to: existing BabyPark Drupal→Magento-portable contact launcher / Chatwoot Website Widget callback V1.
+Supersedes: none. Earlier L1 PR #142 and Website Widget research PR #152 remain separate proposed work.
+
+## Owner's exact bounded authorization — 2026-10-24
+
+One implementation campaign in repository `Stanislavikus/babypark-integration`, citing independent PR #152 evidence: alternatives Scan SHA-256 `60870aa7ba06d2aa6aef2e2efd1d4f25bebd42765c57bb79d312b5a1a385002b`, fit SHA-256 `110c186549a14f78378f793a928e831d39872a7a03879cd466d6c42d0d97affd`. Owner explicitly allowed last-resort external use of Chatwoot 4.18.0's internal Website Widget message route (no official SDK sendMessage) **only in a draft implementation** with an upgrade contract test, one bounded fake-data C6 PoC, no Chatwoot core fork, no new runtime dependencies, no extra server and no live configuration/site changes. Rails runner only for create/cleanup of owned synthetic test Account/Inbox/Team/Label/Automation; any actual test messages only via `http://127.0.0.1:3180`. No existing C6 account/rows/SMTP/Cloudflare/n8n/catalog changes, no merge/deploy.
+
+The L1 changes are based on PR #142 exact HEAD `8e7f22a39c2c18a86ffa7e619c83c61b28b1c577`; the campaign is **stacked atop L1** and does not re-pin or merge PR #142. Governance read from current canonical `main` (not from the stacked PR's old base).
+
+## Owner's later bounded staging permission — 2026-10-24
+
+The owner subsequently approved Callback staging and corrected the scope: **universal native Chatwoot callback for current/future eligible agents, teams, and inboxes**, not a rule pinned to the existing «продажі» team. With this permission, exactly one account-level callback label and `message_created` label-only automation were installed using the stock Chatwoot API. A narrow Nginx CORS location was staged and preflight-tested; the site Callback button was not enabled. See PR #153 operational checkpoint comment `6384307999`. The owner subsequently requested a visible synthetic Widget test and customer rollout. That request does not waive the current authoritative Agreement's mandatory exact-tree checks, independently isolated HEAVY review and exact-basis owner merge approval. **Authenticated synthetic Widget POST and agent-visible handoff remain unverified** because the remote executor blocked both scripted attempts before execution.
+
+## Explicit accepted requirements
+
+- Existing anchored launcher option directly after direct-call button: **«Зворотний зв’язок»**.
+- Single form: Ukrainian phone **required**, text «Повідомлення» **optional**, back/close, accessible numeric-oriented input; no mandatory full name/email, no time picker.
+- On deliberate selection of Chat or Callback only, initialize official Website SDK; **not** on menu-open, hover, click on Telegram/Viber/call.
+- Use signed `cw_conversation` widget JWT in memory only; send exactly one `POST /api/v1/widget/messages` via CORS; fixed marker `BABYPARK_CALLBACK_V1`, normalized phone in *message content* and `Conversation.custom_attributes.callback_phone` for new conversation only. **Never set Contact.phone_number**. Optional note included only if entered. This internal endpoint is not an official public SDK contract.
+- Never claim success until HTTP 200 with valid positive message AND conversation numeric IDs. A network error can have unknown commit status — show ambiguity and do not automatically retry; an in-flight/uncertain submission disables the button. The entire fetch plus response-body decoding uses a **15-second first-party deadline** (AbortController where available, Promise.race fallback); a timed-out response is **unknown commit**, not verified failure. A sent/uncertain outcome persists if the panel is closed and reopened in the same page lifetime; both the disabled UI and submit handler refuse a second POST. Page reload is not globally idempotent; do not claim an exactly-once guarantee.
+- No new PII/log/queue store outside existing Chatwoot. No identity merge by a supplied phone field. A Contact may still be created by normal widget session initiation.
+
+## SOURCE contract (v4.18.0 pinned)
+
+Upstream `chatwoot/chatwoot` tag `v4.18.0` commit `9f920b549c14491a4e587687a3eed5d21c6ccc7d`.
+
+- `app/controllers/api/v1/widget/messages_controller.rb` blob `c4fd9c82027a5a5fa9987a8af25a789c374d8b15`: POST creates message/new conversation; for an **existing conversation**, payload labels/custom_attributes are not re-applied.
+- `app/controllers/api/v1/widget/base_controller.rb` blob `90f3728fbf5ce6597a592935bd5d4f146f9ae434`: conversation creation and JWT-based inbox scoping.
+- `app/controllers/concerns/website_token_helper.rb`: signed `X-Auth-Token` and `Channel::WebWidget` inbox scoping.
+- `app/javascript/sdk/IFrameHelper.js` blob `e38f4e02fbdcf66c091c32af7f57cb27d91cd1a8`: stock widget JWT written into first-party `cw_conversation` cookie on ready.
+- `app/listeners/automation_rule_listener.rb` blob `e4d2da0b3fb4c233349d5394792ed3bf91627823`: `message_created` executes conditions on triggering incoming message, including in existing Conversation.
+- `app/services/automation_rules/conditions_filter_service.rb` blob `728174d378caf15eca6e810222023dbd648396fd`, `app/services/action_service.rb` blob `314d510a9c373f4cdb4ad346c218178a0461eef8`: message content predicate and stock `add_label` / `assign_team`.
+- `config/initializers/rack_attack.rb` blob `f5e5935caed0be564f906a78c71a9582ced7da05`: default Widget message throttle 60/min per IP+website token, does not ensure exactly-once.
+
+**Current native universal staging rule (installed/read-back 2026-10-24):** account-level `message_created`, AND: `message_type = incoming`, `message.content contains BABYPARK_CALLBACK_V1`; sole action `add_label callback`. **No fixed team/agent/inbox**: stock Chatwoot inbox membership and automatic assignment remain authoritative for all eligible current and future agents/teams. This does not guarantee proactive notification if no agent is available; the Unassigned queue still needs operational coverage. The marker is public, so a normal incoming message containing it can be labeled; it is not an authorization mechanism. On an already active conversation the phone remains in its new message; `callback_phone` may not refresh.
+
+## Integration gate and unresolved facts
+
+- This draft is **HEAVY**; code commit and synthetic PoC do not waive the full independent adversarial manifest/review on exact HEAD/tree/base.
+- Live Nginx CORS was staged 2026-10-24 for exact `/api/v1/widget/messages`: `https://babypark.ua` and `https://www.babypark.ua` OPTIONS returned HTTP 204 with matching allow-origin; untrusted origin received none; `nginx -t` and Chatwoot public GET passed. Actual authenticated browser Widget POST still requires positive synthetic verification. The repository's example remains reference-only; an additional future site requires explicit origin configuration.
+- Account-wide identity mutation risk on other Widget contact endpoints not eliminated by this one POST.
+- Previous isolated C6 PoC recorded fake phone/text in Rails/Sidekiq Docker INFO logs. Actual production runs under systemd/journald and separately owner-approved `LOG_LEVEL=warn` in both `.env` and Web/Worker systemd drop-ins; live Rails/ActiveJob loggers verified at level 2 (INFO disabled). Old logs remain; WARN/ERROR job failures may still contain PII and are **not** redacted by `warn`. The exact residual risk must be accepted or mitigated before customer activation, with no Chatwoot core patch.
+- Native universal account-level automation and label are installed/read-back verified; new/existing conversation label application, phone attribute on new conversations, and per-Inbox assignment are **not yet proven by a successful synthetic Widget POST**. No `assign_team` should occur.
+- Unit tests and the source-pinned contract are not a substitute for one real authenticated v4.18.0 Widget POST plus agent-visible verification. Two direct remote scripted synthetic POST attempts were blocked before execution by safety checks; no success must be claimed. Contract must be revalidated on every upgrade, including response shape, JWT, CORS and resolved behavior.
+- No customer-facing dynamic pricing/stock actions are part of Callback V1.
+
+## Operational acceptance before deployment
+
+Fresh exact-tree external HEAVY reviews with ZERO BLOCKERS; verify all mandatory tests, suite in a clean checkout, all independent blocker classes in one inventory. Verify CORS allows site origin, denies untrusted origins, normal chat unaffected, no inadvertent Chatwoot cookie on menu-open, valid phone, optional text, new/existing/resolved conversations, unknown ACK & duplicate-click. Verify seller agent Inbox access, callback label, and per-inbox native assignment; the global rule does not fix team/agent. Read current production 4.18.0 exact binary/config; pre- and post-cutover rollback; separate owner approval for **specific** merge/deploy. This document does not approve activation.

@@ -22,13 +22,14 @@
     } catch (_) { return null; }
   }
   var assetBase = resolveAssetBase();
-  var names = ['chat', 'telegram', 'whatsapp', 'viber', 'phone'];
+  var names = ['chat', 'telegram', 'whatsapp', 'viber', 'phone', 'callback'];
   var labels = {
     chat: 'Чат з продавцем',
     telegram: 'Telegram',
     whatsapp: 'WhatsApp',
     viber: 'Viber',
-    phone: 'Зателефонувати'
+    phone: 'Зателефонувати',
+    callback: 'Зворотний зв’язок'
   };
   var iconNames = {
     telegram: 'telegram.svg', whatsapp: 'whatsapp.svg',
@@ -42,9 +43,13 @@
   };
   var chatOrigin = 'https://chat.babypark.ua';
   var widgetId = 'bp-contact-launcher-l1';
-  var state = { ready: false, expanded: false, sdkStarted: false, sdkFailed: false, slow: false };
+  var state = {
+    ready: false, expanded: false, sdkStarted: false, sdkFailed: false, slow: false,
+    requestedChat: false, callbackView: false, callbackPending: false, callbackSent: false, callbackUncertain: false
+  };
   var readyTimer = null;
   var root, menu, trigger, chatStatus, chatNote, rows = {};
+  var options, formPanel, phoneField, messageField, callbackSubmit, callbackInfo;
   // Static Lucide/Feather X; Feather-derived glyph licensed MIT (see runbook).
   var closeSvg = '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>';
 
@@ -70,7 +75,9 @@
 
   function iconFor(name) {
     var span = node('span', 'bp-contact__icon bp-contact__icon--' + name);
-    if (name === 'chat') {
+    if (name === 'callback') {
+      span.innerHTML = '<svg width="24" height="24" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.5 8.5 0 1 1-17 0 8.5 8.5 0 0 1 17 0Z"/><path d="M9 8.5c0 3 2.5 5.5 5.5 5.5l1.5-1.5 2 1-1 2c-5.5 1-10.5-4-9.5-9.5l2-1 1 2Z"/></svg>';
+    } else if (name === 'chat') {
       // Static icon from approved BabyPark V4 mock; no customer-controlled markup.
       span.innerHTML = '<svg width="24" height="24" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11.4a7.8 7.8 0 0 1-8.2 7.7 9.6 9.6 0 0 1-3.3-.65L4 20l1.38-4.03A7.8 7.8 0 1 1 20 11.4Z"/><path d="M8.1 11.4h.01m3.89 0h.01m3.89 0h.01" stroke-width="2.5"/></svg>';
     } else if (assetBase) {
@@ -86,6 +93,11 @@
 
   function closeMenu(restoreFocus) {
     if (!menu) return;
+    if (state.callbackPending) return; // Never hide submission outcome behind an in-flight request.
+    state.callbackView = false;
+    state.requestedChat = false;
+    if (formPanel) formPanel.hidden = true;
+    if (options) options.hidden = false;
     state.expanded = false;
     menu.hidden = true;
     trigger.setAttribute('aria-expanded', 'false');
@@ -97,6 +109,148 @@
       /^[a-zA-Z0-9_-]{8,128}$/.test(config.websiteToken));
   }
 
+  function callbackConfigured() {
+    return !!(channelConfig('callback') && chatConfigured() && window.location &&
+      /^https:\/\/(?:www\.)?babypark\.ua$/.test(new URL(window.location.href).origin));
+  }
+
+  function normalizePhone(raw) {
+    if (typeof raw !== 'string' || raw.length > 30 || /[^0-9+ ()-]/.test(raw)) return null;
+    var compact = raw.replace(/[ ()-]/g, '');
+    var match = /^(?:\+380|380|0)([0-9]{9})$/.exec(compact);
+    return match ? '+380' + match[1] : null;
+  }
+
+  function getWidgetJwt() {
+    // The official Website SDK sets cw_conversation on the first-party site.
+    // The JWT is a visitor identity, NOT a server-side credential.
+    var parts = document.cookie ? document.cookie.split(';') : [];
+    var value = null;
+    parts.forEach(function (part) {
+      var kv = part.trim();
+      if (kv.indexOf('cw_conversation=') === 0) {
+        try { value = decodeURIComponent(kv.slice('cw_conversation='.length)); }
+        catch (_) { value = null; }
+      }
+    });
+    return value && value.length < 4096 && /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(value)
+      ? value : null;
+  }
+
+  function syncCallback() {
+    if (!formPanel) return;
+    var valid = !!(phoneField && normalizePhone(phoneField.value));
+    callbackSubmit.disabled = !valid || !state.ready || state.sdkFailed ||
+      state.callbackPending || state.callbackSent || state.callbackUncertain || !getWidgetJwt();
+    if (!state.callbackPending && !state.callbackSent && !state.callbackUncertain && callbackInfo) {
+      if (state.sdkFailed) callbackInfo.textContent = 'Зараз не вдається підключитися. Спробуйте зателефонувати.';
+      else if (!state.ready || !getWidgetJwt()) callbackInfo.textContent = 'Підключення до чату…';
+      else callbackInfo.textContent = '';
+    }
+  }
+
+  function openCallback() {
+    if (!callbackConfigured()) return;
+    state.callbackView = true;
+    formPanel.hidden = false;
+    options.hidden = true;
+    // Once submitted, a reply may have been committed even if its ACK was lost.
+    // Back/Close/reopen MUST NOT reset this page's terminal submit state.
+    if (state.callbackSent || state.callbackUncertain) {
+      phoneField.disabled = true;
+      messageField.disabled = true;
+      callbackInfo.textContent = state.callbackSent
+        ? 'Заявку надіслано. Ми зателефонуємо вам.'
+        : 'Не вдалося підтвердити надсилання. Щоб уникнути дублювання, зателефонуйте нам.';
+      syncCallback();
+      formPanel.children[0].focus(); // Focus the Back action, not a disabled telephone input.
+      return;
+    }
+    callbackInfo.textContent = '';
+    phoneField.disabled = false;
+    messageField.disabled = false;
+    phoneField.value = '';
+    messageField.value = '';
+    initializeChatwoot();
+    syncCallback();
+    phoneField.focus();
+  }
+
+  function returnToOptions() {
+    if (state.callbackPending) return;
+    state.callbackView = false;
+    formPanel.hidden = true;
+    options.hidden = false;
+    if (rows.callback) rows.callback.focus();
+  }
+
+  async function submitCallback() {
+    if (state.callbackPending || state.callbackSent || state.callbackUncertain || !callbackConfigured()) return;
+    var phone = normalizePhone(phoneField.value);
+    var comment = messageField.value.trim();
+    var jwt = getWidgetJwt();
+    if (!phone || comment.length > 500 || !state.ready || !jwt || typeof window.fetch !== 'function') {
+      callbackInfo.textContent = 'Перевірте номер телефону та з’єднання.';
+      return;
+    }
+    state.callbackPending = true;
+    syncCallback();
+    callbackInfo.textContent = 'Надсилаємо заявку…';
+    var marker = 'BABYPARK_CALLBACK_V1';
+    var content = marker + '\nЗворотний дзвінок: ' + phone +
+      (comment ? '\nПовідомлення: ' + comment : '');
+    var url = chatOrigin + '/api/v1/widget/messages?website_token=' +
+      encodeURIComponent(config.websiteToken);
+    var deadline = null;
+    var abortController = null;
+    try {
+      if (typeof window.AbortController === 'function') abortController = new window.AbortController();
+    } catch (_) { abortController = null; } // Timer still bounds failure when abort is unsupported.
+    try {
+      // Include the response body in the bounded 15s ACK deadline.
+      // Timeout and abort DO NOT prove server rollback: never retry automatically.
+      var timeLimit = new Promise(function (_resolve, reject) {
+        deadline = window.setTimeout(function () {
+          if (abortController) {
+            try { abortController.abort(); } catch (_) { /* Still reject as unknown commit. */ }
+          }
+          reject(new Error('callback-ack-timeout'));
+        }, 15000);
+      });
+      var attempt = (async function () {
+        var options = {
+          method: 'POST', mode: 'cors', credentials: 'omit', redirect: 'error',
+          headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-Auth-Token': jwt },
+          body: JSON.stringify({
+            message: { content: content },
+            custom_attributes: { callback_phone: phone }, labels: ['callback']
+          })
+        };
+        if (abortController) options.signal = abortController.signal;
+        var response = await window.fetch(url, options);
+        if (!response || response.status !== 200) throw new Error('not-accepted');
+        return response.json();
+      }());
+      var data = await Promise.race([attempt, timeLimit]);
+      if (!data || !Number.isSafeInteger(data.id) || data.id <= 0 ||
+          !Number.isSafeInteger(data.conversation_id) || data.conversation_id <= 0) {
+        throw new Error('ambiguous-ack');
+      }
+      state.callbackSent = true;
+      phoneField.disabled = true;
+      messageField.disabled = true;
+      callbackInfo.textContent = 'Заявку надіслано. Ми зателефонуємо вам.';
+    } catch (_) {
+      // ACK may be ambiguous: do not silently resend or claim failure to commit.
+      state.callbackUncertain = true;
+      callbackInfo.textContent = 'Не вдалося підтвердити надсилання. Щоб уникнути дублювання, зателефонуйте нам.';
+    } finally {
+      if (deadline !== null) window.clearTimeout(deadline);
+      state.callbackPending = false;
+      syncCallback();
+    }
+  }
+
   function styled() {
     return !!(window.getComputedStyle && window.getComputedStyle(root).position === 'fixed');
   }
@@ -105,10 +259,11 @@
     if (!root) return;
     var count = 0;
     names.forEach(function (name) {
-      var configured = name === 'chat' ? chatConfigured() : !!targetFor(name);
+      var configured = name === 'chat' ? chatConfigured()
+        : name === 'callback' ? callbackConfigured() : !!targetFor(name);
       var available = name === 'chat'
-        ? !!(configured && state.ready && !state.sdkFailed && window.$chatwoot &&
-             typeof window.$chatwoot.toggle === 'function')
+        ? !!(configured && !state.sdkFailed && (!state.ready ||
+            (window.$chatwoot && typeof window.$chatwoot.toggle === 'function')))
         : configured;
       // A configured Website row ALWAYS occupies its final slot, even while
       // loading, after 12s or after failure. It is never clickable before ready.
@@ -118,7 +273,7 @@
         rows.chat.setAttribute('aria-disabled', available ? 'false' : 'true');
         if (chatNote) {
           chatNote.textContent = state.sdkFailed ? 'Чат тимчасово недоступний'
-            : state.slow && !available ? 'Підключення триває довше, ніж зазвичай' : '';
+            : state.slow && !state.ready ? 'Підключення триває довше, ніж зазвичай' : '';
           chatNote.hidden = !chatNote.textContent;
         }
       }
@@ -136,16 +291,21 @@
     if (!count && !chatConfigured()) closeMenu(false);
     root.hidden = ((!count && !chatConfigured()) || !styled());
     if (root.hidden && state.expanded) closeMenu(false);
+    syncCallback();
   }
 
   function makeRow(name) {
     var isChat = name === 'chat';
-    var item = node(isChat ? 'button' : 'a', 'bp-contact__channel bp-contact__channel--' + name);
-    if (isChat) {
+    var isCallback = name === 'callback';
+    var item = node(isChat || isCallback ? 'button' : 'a', 'bp-contact__channel bp-contact__channel--' + name);
+    if (isChat || isCallback) {
       item.type = 'button';
       item.addEventListener('click', function () {
+        if (isCallback) { openCallback(); return; }
+        if (!chatConfigured() || state.sdkFailed) return;
         if (!state.ready || !window.$chatwoot || typeof window.$chatwoot.toggle !== 'function') {
-          state.ready = false;
+          state.requestedChat = true;
+          initializeChatwoot();
           syncVisible();
           return;
         }
@@ -190,7 +350,7 @@
   }
 
   function initializeChatwoot() {
-    // Variant B: first explicit menu-open only. No hover/prefetch/retries.
+    // L2: initialize ONLY after a deliberate chat or callback selection.
     if (state.sdkStarted || !chatConfigured()) return;
     state.sdkStarted = true;
     var token = config.websiteToken; // Public Website token, never an API secret.
@@ -217,8 +377,15 @@
       state.ready = true;
       state.slow = false;
       syncVisible();
-      if (state.expanded && !rows.chat.hidden && !rows.chat.disabled &&
-          document.activeElement === trigger) rows.chat.focus();
+      if (state.requestedChat) {
+        state.requestedChat = false;
+        if (window.$chatwoot && typeof window.$chatwoot.toggle === 'function') {
+          closeMenu(false);
+          window.$chatwoot.toggle('open');
+          trigger.focus();
+        }
+      }
+      syncCallback();
     });
     window.chatwootSettings = Object.assign({}, window.chatwootSettings || {}, {
       hideMessageBubble: true, locale: 'uk', showUnreadMessagesDialog: false
@@ -265,9 +432,50 @@
     menuClose.addEventListener('click', function () { closeMenu(true); });
     header.appendChild(menuClose);
     menu.appendChild(header);
-    var options = node('div', 'bp-contact__options');
+    options = node('div', 'bp-contact__options');
     names.forEach(function (name) { options.appendChild(makeRow(name)); });
     menu.appendChild(options);
+    formPanel = node('form', 'bp-contact__callback-form');
+    formPanel.hidden = true;
+    formPanel.setAttribute('aria-label', 'Зворотний зв’язок');
+    var back = node('button', 'bp-contact__back', '← Назад');
+    back.type = 'button';
+    back.addEventListener('click', returnToOptions);
+    formPanel.appendChild(back);
+    formPanel.appendChild(node('p', 'bp-contact__callback-heading', 'Зворотний зв’язок'));
+    formPanel.appendChild(node('p', 'bp-contact__callback-caption', 'Залиште номер для зв’язку'));
+    var phoneLabel = node('label', 'bp-contact__callback-label', 'Номер телефону *');
+    phoneField = node('input', 'bp-contact__callback-input');
+    phoneField.type = 'tel';
+    phoneField.inputMode = 'numeric';
+    phoneField.autocomplete = 'tel';
+    phoneField.maxLength = 30;
+    phoneField.placeholder = '+380 XX XXX XX XX';
+    phoneField.required = true;
+    phoneLabel.appendChild(phoneField);
+    formPanel.appendChild(phoneLabel);
+    var commentLabel = node('label', 'bp-contact__callback-label', 'Повідомлення (необов’язково)');
+    messageField = node('textarea', 'bp-contact__callback-input bp-contact__callback-textarea');
+    messageField.maxLength = 500;
+    messageField.rows = 3;
+    messageField.placeholder = 'За бажанням, напишіть причину звернення';
+    commentLabel.appendChild(messageField);
+    formPanel.appendChild(commentLabel);
+    callbackSubmit = node('button', 'bp-contact__callback-submit', 'Замовити дзвінок');
+    callbackSubmit.type = 'submit';
+    callbackSubmit.disabled = true;
+    formPanel.appendChild(callbackSubmit);
+    callbackInfo = node('p', 'bp-contact__callback-status');
+    callbackInfo.setAttribute('role', 'status');
+    callbackInfo.setAttribute('aria-live', 'polite');
+    formPanel.appendChild(callbackInfo);
+    phoneField.addEventListener('input', syncCallback);
+    messageField.addEventListener('input', syncCallback);
+    formPanel.addEventListener('submit', function (event) {
+      if (event && event.preventDefault) event.preventDefault();
+      submitCallback();
+    });
+    menu.appendChild(formPanel);
     chatStatus = node('p', 'bp-contact__chat-status');
     chatStatus.setAttribute('role', 'status');
     chatStatus.setAttribute('aria-live', 'polite');
@@ -293,7 +501,7 @@
       state.expanded = true;
       menu.hidden = false;
       trigger.setAttribute('aria-expanded', 'true');
-      initializeChatwoot();
+      // Opening the general menu never creates a Chatwoot contact/cookie.
       syncVisible();
       var first = Array.prototype.find.call(options.children, function (item) {
         return !item.hidden && !item.disabled;
@@ -308,7 +516,9 @@
       if (state.expanded && !root.contains(e.target)) closeMenu(true);
     });
     document.addEventListener('keydown', function (e) {
-      if (e.key === 'Escape' && state.expanded) closeMenu(true);
+      if (e.key === 'Escape' && state.expanded) {
+        if (state.callbackView) returnToOptions(); else closeMenu(true);
+      }
     });
     syncVisible();
     // CSS may load late; if missing entirely, remain hidden rather than unstyled.
