@@ -247,6 +247,7 @@
 
 /* L2 Callback: the existing anchored panel, not another third-party widget. */
 .bp-contact__icon--callback { background: #eaf7fc; color: #007cb6; }
+.bp-contact__icon--callback svg { width: 25px; height: 25px; } /* Clear handset at launcher row scale. */
 .bp-contact__callback-form {
   display: flex;
   flex-direction: column;
