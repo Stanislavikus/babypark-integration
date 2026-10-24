@@ -1,0 +1,30 @@
+[
+  {
+    "rev": "262f7a8999d797f4ceceb531004986cfd6667d73",
+    "path": "docs/AI_FIRST_LINE_DESIGN.md",
+    "bytes": 220171,
+    "sha256": "0d1614a741127d4a64190e5ee4bf845f36bb915b7fe172e127cef34adffda4ad",
+    "git_blob": "9fbca03b302fba4c575d4c97ad989e81091808d2"
+  },
+  {
+    "rev": "262f7a8999d797f4ceceb531004986cfd6667d73",
+    "path": "docs/AI_FIRST_LINE_ACCEPTANCE.md",
+    "bytes": 154852,
+    "sha256": "0f0f54136b2e940fcdd08ad8415ca85661503479f31b8c9c658278bd987f811b",
+    "git_blob": "14d0cd0cc8c459ed17b16dff2b3882128b4d88ff"
+  },
+  {
+    "rev": "0dfb9b0a1cfe23d455fd436ae9abeac626d0d729",
+    "path": "docs/AI_FIRST_LINE_DESIGN.md",
+    "bytes": 215100,
+    "sha256": "871a2e4b2edca293b340f314ca5ea103bf73498c8a833daa1d7999b7cbcf81d9",
+    "git_blob": "e3aebe803f8daa7fe401bde794f72e9d68c5a383"
+  },
+  {
+    "rev": "0dfb9b0a1cfe23d455fd436ae9abeac626d0d729",
+    "path": "docs/AI_FIRST_LINE_ACCEPTANCE.md",
+    "bytes": 152568,
+    "sha256": "4f5124c76666537d539cd144dbbba28deb69fa8c3d04050dce4a0ec1edfbc0a1",
+    "git_blob": "5c8a3efcf5cb9810f6cae2b4520dfce960080cde"
+  }
+]

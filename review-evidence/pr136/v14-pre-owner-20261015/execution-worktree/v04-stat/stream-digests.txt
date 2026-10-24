@@ -1,0 +1,2 @@
+9a9e3f4d640f75087c8ebebacc87f457680c0eb049a78dc2e8f5b22d800755e3  /tmp/v14-worktree-evidence/v04-stat/stdout.txt
+e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855  /tmp/v14-worktree-evidence/v04-stat/stderr.txt
