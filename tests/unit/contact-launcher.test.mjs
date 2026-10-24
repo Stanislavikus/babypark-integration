@@ -490,3 +490,155 @@ test('L2: disabled callback never appears or sends; chat-only still lazily loads
   h.get('bp-contact__trigger').click();
   assert.equal(h.head.children.length,0);
 });
+
+test('HEAVY B1: uncertain ACK stays terminal across Back/reopen and direct submit bypass', async () => {
+  let calls = 0;
+  const h = harness(callbackConfig(), {
+    cookie: 'cw_conversation=' + dummyJwt,
+    fetchMock: async () => { calls++; throw new Error('response lost after request'); },
+  });
+  visitCallback(h);
+  input(h, '0982908838');
+  submit(h);
+  await flushAsync();
+  assert.equal(calls, 1);
+  assert.match(h.get('bp-contact__callback-status').textContent, /Щоб уникнути дублювання/);
+  assert.equal(h.get('bp-contact__callback-submit').disabled, true);
+  h.get('bp-contact__back').click();
+  h.get('bp-contact__channel--callback').click();
+  assert.match(h.get('bp-contact__callback-status').textContent, /Щоб уникнути дублювання/);
+  assert.equal(h.get('bp-contact__callback-input').disabled, true);
+  input(h, '0501234567');
+  submit(h); // A raw form-submit event must be denied even with button disabled.
+  await flushAsync();
+  assert.equal(calls, 1);
+});
+
+test('HEAVY B1: server-accepted callback stays terminal across reopening same launcher', async () => {
+  let calls = 0;
+  const h = harness(callbackConfig(), {
+    cookie: 'cw_conversation=' + dummyJwt,
+    fetchMock: async () => { calls++; return { status: 200, json: async () => ({ id: 35, conversation_id: 2 }) }; },
+  });
+  visitCallback(h);
+  input(h, '0982908838');
+  submit(h);
+  await flushAsync();
+  assert.match(h.get('bp-contact__callback-status').textContent, /Заявку надіслано/);
+  h.get('bp-contact__back').click();
+  h.get('bp-contact__channel--callback').click();
+  assert.equal(h.get('bp-contact__callback-submit').disabled, true);
+  submit(h);
+  await flushAsync();
+  assert.equal(calls, 1);
+});
+
+test('HEAVY B2: hung fetch becomes bounded unknown ACK; caller may return to telephone options', async () => {
+  let calls = 0;
+  const h = harness(callbackConfig(), {
+    cookie: 'cw_conversation=' + dummyJwt,
+    fetchMock: () => { calls++; return new Promise(() => {}); },
+  });
+  visitCallback(h);
+  input(h, '0982908838');
+  submit(h);
+  await flushAsync();
+  assert.match(h.get('bp-contact__callback-status').textContent, /Надсилаємо/);
+  h.advance(14999);
+  await flushAsync();
+  assert.match(h.get('bp-contact__callback-status').textContent, /Надсилаємо/);
+  h.advance(1);
+  await flushAsync();
+  assert.match(h.get('bp-contact__callback-status').textContent, /Щоб уникнути дублювання/);
+  assert.equal(h.get('bp-contact__callback-submit').disabled, true);
+  h.get('bp-contact__back').click();
+  assert.equal(h.get('bp-contact__options').hidden, false);
+  assert.equal(h.get('bp-contact__channel--phone').hidden, false);
+  assert.equal(h.pendingTimers(), 0);
+  submit(h);
+  await flushAsync();
+  assert.equal(calls, 1);
+});
+
+test('HEAVY B2: hung JSON decode shares same bounded deadline and disables resend', async () => {
+  let calls = 0;
+  const h = harness(callbackConfig(), {
+    cookie: 'cw_conversation=' + dummyJwt,
+    fetchMock: async () => {
+      calls++;
+      return { status: 200, json: () => new Promise(() => {}) };
+    },
+  });
+  visitCallback(h);
+  input(h, '0982908838');
+  submit(h);
+  await flushAsync();
+  h.advance(15000);
+  await flushAsync();
+  assert.match(h.get('bp-contact__callback-status').textContent, /Щоб уникнути дублювання/);
+  submit(h);
+  assert.equal(calls, 1);
+  assert.equal(h.pendingTimers(), 0);
+});
+
+test('HEAVY B3: premature SDK toggle and broken ready event never simulate working Chat', () => {
+  const h = harness(callbackConfig());
+  h.get('bp-contact__trigger').click();
+  h.get('bp-contact__channel--chat').click();
+  let opens = 0;
+  h.window.chatwootSDK = { run() { h.window.$chatwoot = { toggle() { opens++; } }; } };
+  h.head.children[0].onload();
+  h.window.dispatch('load');
+  assert.equal(opens, 0, 'SDK.run may install toggle but not establish readiness');
+  h.window.$chatwoot = {};
+  h.window.dispatch('chatwoot:ready');
+  assert.equal(opens, 0);
+  assert.equal(h.get('bp-contact__channel--chat').disabled, true);
+  assert.match(h.get('bp-contact__chat-status').textContent, /недоступний/);
+  h.window.$chatwoot = { toggle() { opens++; } };
+  h.window.dispatch('chatwoot:ready');
+  assert.equal(opens, 0, 'late ready must never resurrect a failed initialization');
+});
+
+test('HEAVY B3: host settings cannot override mandatory privacy and Ukrainian chat UX', () => {
+  const h = harness(callbackConfig());
+  h.window.chatwootSettings = {
+    hideMessageBubble: false, locale: 'en', showUnreadMessagesDialog: true,
+    position: 'left',
+  };
+  h.get('bp-contact__trigger').click();
+  assert.equal(h.window.chatwootSettings.locale, 'en');
+  assert.equal(h.head.children.length, 0, 'ordinary menu still cannot start Website SDK');
+  h.get('bp-contact__channel--callback').click();
+  assert.equal(h.window.chatwootSettings.hideMessageBubble, true);
+  assert.equal(h.window.chatwootSettings.locale, 'uk');
+  assert.equal(h.window.chatwootSettings.showUnreadMessagesDialog, false);
+  assert.equal(h.window.chatwootSettings.position, 'left', 'unrelated supported host options preserved');
+});
+
+test('HEAVY B2: AbortController is attempted on request timeout, without a second POST', async () => {
+  let calls = 0;
+  let aborts = 0;
+  const h = harness(callbackConfig(), {
+    cookie: 'cw_conversation=' + dummyJwt,
+    fetchMock: async (_url, req) => {
+      calls++;
+      assert.ok(req.signal, 'supported native abort signal is attached');
+      return new Promise(() => {});
+    },
+  });
+  h.window.AbortController = class {
+    signal = {};
+    abort() { aborts++; }
+  };
+  visitCallback(h);
+  input(h, '+380982908838');
+  submit(h);
+  await flushAsync();
+  h.advance(15000);
+  await flushAsync();
+  assert.equal(calls, 1);
+  assert.equal(aborts, 1);
+  assert.equal(h.get('bp-contact__callback-submit').disabled, true);
+  assert.equal(h.pendingTimers(), 0);
+});
