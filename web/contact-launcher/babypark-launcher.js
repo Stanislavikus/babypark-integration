@@ -503,7 +503,7 @@
     brandAvatar.setAttribute('aria-hidden', 'true');
     var brandCopy = node('span', 'bp-contact__brand-copy');
     brandCopy.appendChild(node('span', 'bp-contact__brand-name', 'BabyPark'));
-    brandCopy.appendChild(node('span', 'bp-contact__brand-status', 'Замовлення дзвінка'));
+    brandCopy.appendChild(node('span', 'bp-contact__brand-status', labels.callback));
     brandHeader.appendChild(brandAvatar);
     brandHeader.appendChild(brandCopy);
     header.appendChild(brandHeader);
@@ -519,8 +519,7 @@
     menu.appendChild(options);
     formPanel = node('form', 'bp-contact__callback-form');
     formPanel.hidden = true;
-    formPanel.setAttribute('aria-label', 'Зворотний зв’язок');
-    formPanel.appendChild(node('h2', 'bp-contact__callback-heading', 'Зворотний зв’язок'));
+    formPanel.setAttribute('aria-label', labels.callback);
     formPanel.appendChild(node('p', 'bp-contact__callback-caption', 'Залиште номер для зв’язку'));
     var phoneLabel = node('label', 'bp-contact__callback-label', 'Номер телефону *');
     var phoneWrap = node('span', 'bp-contact__callback-phone-wrap');
