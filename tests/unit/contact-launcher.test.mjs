@@ -381,15 +381,34 @@ test('L2: 12-second notice is informational; late ready remains actionable', () 
   assert.equal(h.get('bp-contact__channel--chat').disabled, false);
 });
 
-test('L2: callback row has a larger phone handset with no surrounding ring', () => {
-  const h = harness(callbackConfig());
-  const icon = h.get('bp-contact__icon--callback');
-  assert.ok(icon, 'callback row icon exists');
-  assert.match(icon.innerHTML, /viewBox="0 0 24 24"/);
-  assert.match(icon.innerHTML, /stroke-width="2\.2"/, 'clear, heavier handset stroke');
-  assert.match(icon.innerHTML, /M22 16\.92v3/, 'phone handset geometry');
-  assert.doesNotMatch(icon.innerHTML, /M21 11\.5a8\.5|<circle\b/, 'no surrounding circular contour');
-  assert.match(css, /\.bp-contact__icon--callback svg\s*\{\s*width:\s*25px;\s*height:\s*25px;/, 'legible 25px icon in unchanged 35px row slot');
+test('L2: all launcher channels share one 24px icon grid inside unchanged 35px badges', () => {
+  const h = harness({ assetBase: '/themes/babypark2/assets/contact/',
+    websiteToken: 'PUBLICWEBSITETOKEN123',
+    channels: {
+      chat: { enabled: true },
+      callback: { enabled: true },
+      telegram: { enabled: true, url: 'https://t.me/Babyparkua_bot' },
+      whatsapp: { enabled: true, url: 'https://wa.me/380982908838' },
+      viber: { enabled: true, url: 'viber://pa?chatURI=babypark' },
+      phone: { enabled: true, url: 'tel:+380982908838' }
+    }
+  });
+  for (const name of ['chat', 'callback', 'telegram', 'whatsapp', 'viber', 'phone']) {
+    assert.ok(h.get('bp-contact__icon--' + name), 'icon for ' + name);
+  }
+  assert.match(css, /\.bp-contact__icon\s*\{[^}]*flex:\s*0\s+0\s+35px;[^}]*width:\s*35px;[^}]*height:\s*35px;/s);
+  assert.match(css, /\.bp-contact__icon img,\s*\.bp-contact__icon svg\s*\{[^}]*width:\s*24px;[^}]*height:\s*24px;/s);
+  assert.doesNotMatch(css, /\.bp-contact__icon--(?:chat|callback|telegram|whatsapp|viber|phone)\s+(?:img|svg)\s*\{[^}]*\b(?:width|height)\s*:/s,
+    'no per-channel icon size override');
+  assert.match(css, /\.bp-contact__channel\s*\{[^}]*min-height:\s*49px;/s,
+    'no change to existing clickable row height');
+
+  const handset = h.get('bp-contact__icon--callback');
+  assert.match(handset.innerHTML, /viewBox="0 0 24 24"/);
+  assert.match(handset.innerHTML, /stroke-width="2"/);
+  assert.match(handset.innerHTML, /M22 16\.92v3/);
+  assert.doesNotMatch(handset.innerHTML, /M21 11\.5a8\.5|<circle\b/,
+    'phone handset has no surrounding ring');
 });
 
 test('L2: callback option is in stable final row after direct call, panel has only phone required', () => {
