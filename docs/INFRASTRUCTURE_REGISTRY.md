@@ -1,5 +1,19 @@
 # BabyPark Infrastructure Registry
 
+## BabyPark website contact launcher — 2026-10-22 actual production switch
+
+- Production site: `https://babypark.ua/`; host `server2181.babypark.ua`, Drupal 7.102, active theme `babypark2`.
+- Installed immutable source: Draft PR #142, HEAD `8e7f22a39c2c18a86ffa7e619c83c61b28b1c577`, TREE `6d22233141bbd34a6d186b9e7fbf256ed2967bcc`; **source PR is not merged**.
+- Drupal attachment: `/home/babypark/sites/babypark.ua/sites/all/themes/babypark2/templates/html.tpl.php` includes launcher CSS, public config, JS in this order; old Bitrix24 contact-button loader is absent. Theme template SHA-256 after Website activation: `548a11ae318afa9cad7dde984b917b0ddb7357e68e30a74d2a0f3e2e5aecb464`.
+- Asset directory `/home/babypark/sites/babypark.ua/sites/all/themes/babypark2/assets/contact/` holds `babypark-launcher.js` SHA-256 `b763b3deeffddc42cc88b2d6589b500673a933685d24c224ef7eda8afbdc4f17`, CSS SHA-256 `133c212c33302a3e172a703fa429ac1b906b6e14f7c7ab76d1eea21d99718240`, `config.js` SHA-256 `2d31018517b2d15fc0073131bf91c806364c254ad766de7f636d017df761f078`, and local SVG icons.
+- Public config URL currently `/sites/all/themes/babypark2/assets/contact/config.js?v=20261022-website-on1`. Public Website token is in this public JavaScript file as part of the official Chatwoot SDK integration; it is **not** an administrator/API credential and is intentionally not reproduced in this registry.
+- Channel status at cutover: `chat:true` (Chatwoot 4.18.0 Website Inbox #2), `telegram:true`, `viber:true`, `phone:true`; `whatsapp:false` until official Meta onboarding. Owner already verified Viber, Telegram and dialer via Samsung Galaxy S25 Ultra, and tested standalone real Chatwoot Website widget roundtrip. New embedded menu Website row phone roundtrip **pending**.
+- Rollback from full launcher to legacy original theme: `/home/babypark/.babypark-launcher-rollback/20261022-pr142/html.tpl.php.before` SHA-256 `66dce07fe981e3f915c88573034bd36cc598f9e4d0f905367f868c600e2cb45a`; restoring this would restore OLD Bitrix24 loader, so prefer channel-only rollback below for Website failures.
+- **Website-only rollback** preimages `/home/babypark/.babypark-launcher-rollback/20261022-pr142/website-before-enable/{config.js.before,html.tpl.php.before}`: SHA-256 config `340beefc909c32c7f86a30c68c47ecb673d9ee46ba60a25502b42571e5f82697`, template `9c5bc5528a14e973a76cf934b4a522caccfd91741ff666a7073ef78b15cd6c30`. Restoring both and running `drush cc all` disables only Website chat while preserving launcher/Telegram/Viber/phone. Do not delete rollback copies routinely.
+- Runtime smoke after enabled cutover: PHP lint PASS, `drush cc all` SUCCESS, public home/JS/CSS/config and official Chatwoot Website widget HTTP 200, fresh config contains `chat.enabled=true`. No Chatwoot core patch. Evidence: PR #142 conversation comment #6337597005.
+- **Pending work / do not misstate completion:** owner actual-phone *embedded* Website roundtrip; central public chat-data notice, consent banner and retention procedure/verification remain outstanding. Cookie module + central policy recorded separately in GitHub issue #147; postponement is owner's sequencing choice, not documentary evidence of completion of Agreement §2.0a.
+
+
 Status: CURRENT
 Last verified: 2026-10-02
 Owner: BabyPark
