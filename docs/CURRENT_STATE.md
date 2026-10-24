@@ -3,9 +3,19 @@
 Status: EVIDENCE — operational/current-state record; not normative contract authority.
 Applies to: repository-wide operational and campaign state tracking.
 Supersedes: `docs/CURRENT_STATE.md` at canonical main `a45a8644e05df2584a2b75f2a3b47446811ae984`.
-Last updated: 2026-10-10
+Last updated: 2026-10-24
 Owner: BabyPark
 Source of truth for operational facts: production runtime + verified repository evidence.
+
+## Operational checkpoint — inactive Chatwoot SES Receiving AWS resources (2026-10-24)
+
+Status: **PREPARED BUT NOT ACTIVE**. Owner gave exact digest-bound permission for *empty/inactive* AWS S3+SNS+classic SES Receipt Rule Set only. This is a cloud-configuration operation (no application-code deployment, no external customer email).
+
+- Frozen scan `docs/CHATWOOT_SES_RECEIVING_INACTIVE_SCAN_20261024.md` SHA-256 `2928d8be42b508deaac4a036f869d538cc9c63ddb71a897840fb62138c1f4932`; fit `docs/CHATWOOT_SES_RECEIVING_INACTIVE_FIT_20261024.md` SHA-256 `6d9ddd3e7a2c608cabf1a09abe053fc0aeb8fa3f5cc8d4c5c17b9000b4b1318f`; explicit owner go-ahead limited to inactive resources. Canonical main on read `1d5d8c00b7fdcdb54f37418ea60931c4292fd600`, Agreement blob `e777fce4af8e8c3372f1f9de9ef7d00f786c2c89`.
+- AWS account `763345000395`, SES Frankfurt `eu-central-1`: created private empty `babypark-chatwoot-ses-receiving-763345000395-euc1` (AES256 SSE-S3, ownership enforced, four PublicAccessBlock flags, 14-day lifecycle for `website-replies/`, restricted source-ARN SES PutObject + S3 TLS enforcement); SNS `arn:aws:sns:eu-central-1:763345000395:babypark-chatwoot-website-inbound` (zero subscriptions, rule-scoped SES publish); receipt rule set `babypark-chatwoot-website-inbound-inactive` (NOT ACTIVE), `website-reply-uuid` (Enabled=false), sole S3Action with SNS TopicArn, recipient `reply@reply.babypark.ua`, ScanEnabled=true.
+- Exact post-create verification: all bucket controls PASS; SNS has 0 confirmed/pending subscriptions; no active SES receipt rules and explicitly disabled rule; original staff IAM `*@babypark.ua` restriction still intact, SES `ProductionAccessEnabled=false`. SES created a 645-byte `website-replies/AMAZON_SES_SETUP_NOTIFICATION` one-time setup probe; exact setup artifact was deleted after verified key/size; S3 now 0 objects. This was not a customer message.
+- No `reply.babypark.ua` MX published, no Zoho/DNS/Chatwoot `.env` change or agent/customer send, no getmail6/Docker/custom code. No S3 reader principal or HTTPS SNS subscription created. Separate future GO required for any active SES receiving, DNS, SNS/Chatwoot integration, processing/customer-data storage or external outbound authorization.
+- Recovery identities and deletion guard are in `docs/INFRASTRUCTURE_REGISTRY.md`. Before activation: measured privacy/storage retention, independent synthetic S3→SNS→ActionMailbox test with failure/retry cases, secure scoped read identity, queue behavior, staff coverage and SES Production sending gates.
 
 ## Operational checkpoint — Chatwoot staff SMTP (2026-10-23)
 
