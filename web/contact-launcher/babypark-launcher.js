@@ -49,7 +49,9 @@
   };
   var readyTimer = null;
   var root, menu, trigger, chatStatus, chatNote, rows = {};
-  var options, formPanel, phoneField, messageField, callbackSubmit, callbackInfo;
+  var options, formPanel, phoneField, phoneHint, messageField, callbackSubmit, callbackInfo;
+  var callbackSuccess, menuTitle, brandHeader, menuClose;
+  var successTimer = null;
   // Static Lucide/Feather X; Feather-derived glyph licensed MIT (see runbook).
   var closeSvg = '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>';
 
@@ -92,13 +94,28 @@
     return span;
   }
 
+  function cancelSuccessTimer() {
+    if (successTimer !== null) window.clearTimeout(successTimer);
+    successTimer = null;
+  }
+
+  function setCallbackAppearance(active) {
+    if (!menu) return;
+    menu.className = active ? 'bp-contact__menu bp-contact__menu--callback' : 'bp-contact__menu';
+    if (menuTitle) menuTitle.hidden = !!active;
+    if (brandHeader) brandHeader.hidden = !active;
+    if (menuClose) menuClose.setAttribute('aria-label', active ? 'Закрити вікно' : 'Закрити меню');
+  }
+
   function closeMenu(restoreFocus) {
     if (!menu) return;
-    if (state.callbackPending) return; // Never hide submission outcome behind an in-flight request.
+    if (state.callbackPending) return; // Never hide an in-flight request.
+    cancelSuccessTimer();
     state.callbackView = false;
     state.requestedChat = false;
     if (formPanel) formPanel.hidden = true;
     if (options) options.hidden = false;
+    setCallbackAppearance(false);
     state.expanded = false;
     menu.hidden = true;
     trigger.setAttribute('aria-expanded', 'false');
@@ -115,11 +132,19 @@
       /^https:\/\/(?:www\.)?babypark\.ua$/.test(new URL(window.location.href).origin));
   }
 
+  function localPhoneDigits(raw) {
+    // A fixed visible +380 prefix is the only country code; accept standard
+    // local/international clipboard/autofill values without keeping non-digits.
+    var digits = String(raw || '').replace(/[^0-9]/g, '');
+    if (digits.length === 12 && digits.slice(0, 3) === '380') return digits.slice(3);
+    if (digits.length === 10 && digits.charAt(0) === '0') return digits.slice(1);
+    return digits.slice(0, 9);
+  }
+
   function normalizePhone(raw) {
-    if (typeof raw !== 'string' || raw.length > 30 || /[^0-9+ ()-]/.test(raw)) return null;
-    var compact = raw.replace(/[ ()-]/g, '');
-    var match = /^(?:\+380|380|0)([0-9]{9})$/.exec(compact);
-    return match ? '+380' + match[1] : null;
+    if (typeof raw !== 'string' || raw.length > 30) return null;
+    var digits = localPhoneDigits(raw);
+    return digits.length === 9 ? '+380' + digits : null;
   }
 
   function getWidgetJwt() {
@@ -140,9 +165,17 @@
 
   function syncCallback() {
     if (!formPanel) return;
-    var valid = !!(phoneField && normalizePhone(phoneField.value));
+    var digits = phoneField ? localPhoneDigits(phoneField.value) : '';
+    var valid = digits.length === 9 && !!normalizePhone(phoneField.value);
     callbackSubmit.disabled = !valid || !state.ready || state.sdkFailed ||
       state.callbackPending || state.callbackSent || state.callbackUncertain || !getWidgetJwt();
+    if (phoneHint) {
+      var remaining = 9 - digits.length;
+      phoneHint.textContent = remaining === 0 ? 'Номер заповнено'
+        : remaining === 9 ? 'Введіть 9 цифр номера'
+        : 'Залишилося ввести ' + remaining + ' ' +
+          (remaining === 1 ? 'цифру' : remaining <= 4 ? 'цифри' : 'цифр');
+    }
     if (!state.callbackPending && !state.callbackSent && !state.callbackUncertain && !state.callbackRejected && callbackInfo) {
       if (state.sdkFailed) callbackInfo.textContent = 'Зараз не вдається підключитися. Спробуйте зателефонувати.';
       else if (!state.ready || !getWidgetJwt()) callbackInfo.textContent = 'Підключення до чату…';
@@ -150,21 +183,39 @@
     }
   }
 
+  function showCallbackSuccess() {
+    cancelSuccessTimer();
+    formPanel.className = 'bp-contact__callback-form bp-contact__callback-form--success';
+    callbackSuccess.hidden = false;
+    callbackSuccess.focus();
+    // Display a confirmed result long enough to read. A missing/uncertain
+    // acknowledgement NEVER starts this timer and NEVER permits a retry.
+    successTimer = window.setTimeout(function () {
+      successTimer = null;
+      if (state.callbackSent && state.callbackView && state.expanded && !state.callbackPending)
+        closeMenu(true);
+    }, 3500);
+  }
+
   function openCallback() {
     if (!callbackConfigured()) return;
     state.callbackView = true;
+    setCallbackAppearance(true);
     formPanel.hidden = false;
     options.hidden = true;
-    // Once submitted, a reply may have been committed even if its ACK was lost.
-    // Back/Close/reopen MUST NOT reset this page's terminal submit state.
+    formPanel.className = 'bp-contact__callback-form';
+    callbackSuccess.hidden = true;
+    // A successful or uncertain send is terminal for this browser page,
+    // even after Close/reopen. Never silently submit a duplicate.
     if (state.callbackSent || state.callbackUncertain) {
       phoneField.disabled = true;
       messageField.disabled = true;
       callbackInfo.textContent = state.callbackSent
-        ? 'Заявку надіслано. Ми зателефонуємо вам.'
+        ? 'Заявку успішно надіслано. Ми зателефонуємо Вам.'
         : 'Не вдалося підтвердити надсилання. Щоб уникнути дублювання, зателефонуйте нам.';
       syncCallback();
-      formPanel.children[0].focus(); // Focus the Back action, not a disabled telephone input.
+      if (state.callbackSent) showCallbackSuccess();
+      else menuClose.focus();
       return;
     }
     state.callbackRejected = false;
@@ -176,14 +227,6 @@
     initializeChatwoot();
     syncCallback();
     phoneField.focus();
-  }
-
-  function returnToOptions() {
-    if (state.callbackPending) return;
-    state.callbackView = false;
-    formPanel.hidden = true;
-    options.hidden = false;
-    if (rows.callback) rows.callback.focus();
   }
 
   async function submitCallback() {
@@ -252,7 +295,8 @@
       state.callbackSent = true;
       phoneField.disabled = true;
       messageField.disabled = true;
-      callbackInfo.textContent = 'Заявку надіслано. Ми зателефонуємо вам.';
+      callbackInfo.textContent = 'Заявку успішно надіслано. Ми зателефонуємо Вам.';
+      showCallbackSuccess();
     } catch (err) {
       if (err && err.definiteReject === true) {
         // No message was accepted; a deliberate later retry is allowed.
@@ -446,8 +490,20 @@
     menu.hidden = true;
     menu.setAttribute('role', 'group');
     menu.setAttribute('aria-label', 'Способи зв’язку');
-    var header = node('div', 'bp-contact__heading', 'Як Вам зручніше?');
-    var menuClose = node('button', 'bp-contact__menu-close');
+    var header = node('div', 'bp-contact__heading');
+    menuTitle = node('span', 'bp-contact__heading-title', 'Як Вам зручніше?');
+    header.appendChild(menuTitle);
+    brandHeader = node('div', 'bp-contact__brand');
+    brandHeader.hidden = true;
+    var brandAvatar = node('span', 'bp-contact__brand-avatar', 'babypark');
+    brandAvatar.setAttribute('aria-hidden', 'true');
+    var brandCopy = node('span', 'bp-contact__brand-copy');
+    brandCopy.appendChild(node('span', 'bp-contact__brand-name', 'BabyPark'));
+    brandCopy.appendChild(node('span', 'bp-contact__brand-status', 'Зворотний зв’язок'));
+    brandHeader.appendChild(brandAvatar);
+    brandHeader.appendChild(brandCopy);
+    header.appendChild(brandHeader);
+    menuClose = node('button', 'bp-contact__menu-close');
     menuClose.innerHTML = closeSvg;
     menuClose.type = 'button';
     menuClose.setAttribute('aria-label', 'Закрити меню');
@@ -460,21 +516,29 @@
     formPanel = node('form', 'bp-contact__callback-form');
     formPanel.hidden = true;
     formPanel.setAttribute('aria-label', 'Зворотний зв’язок');
-    var back = node('button', 'bp-contact__back', '← Назад');
-    back.type = 'button';
-    back.addEventListener('click', returnToOptions);
-    formPanel.appendChild(back);
-    formPanel.appendChild(node('p', 'bp-contact__callback-heading', 'Зворотний зв’язок'));
+    formPanel.appendChild(node('h2', 'bp-contact__callback-heading', 'Замовити дзвінок'));
     formPanel.appendChild(node('p', 'bp-contact__callback-caption', 'Залиште номер для зв’язку'));
     var phoneLabel = node('label', 'bp-contact__callback-label', 'Номер телефону *');
-    phoneField = node('input', 'bp-contact__callback-input');
+    var phoneWrap = node('span', 'bp-contact__callback-phone-wrap');
+    var countryPrefix = node('span', 'bp-contact__callback-prefix', '+380');
+    countryPrefix.setAttribute('aria-hidden', 'true');
+    phoneWrap.appendChild(countryPrefix);
+    phoneField = node('input', 'bp-contact__callback-input bp-contact__callback-phone-input');
     phoneField.type = 'tel';
     phoneField.inputMode = 'numeric';
-    phoneField.autocomplete = 'tel';
-    phoneField.maxLength = 30;
-    phoneField.placeholder = '+380 XX XXX XX XX';
+    phoneField.autocomplete = 'tel-national';
+    phoneField.maxLength = 9;
+    phoneField.pattern = '[0-9]{9}';
+    phoneField.placeholder = 'XX XXX XX XX';
     phoneField.required = true;
-    phoneLabel.appendChild(phoneField);
+    phoneField.setAttribute('aria-label', '9 цифр номера телефону після +380');
+    phoneHint = node('span', 'bp-contact__callback-phone-hint', 'Введіть 9 цифр номера');
+    phoneHint.id = widgetId + '-phone-hint';
+    phoneHint.setAttribute('aria-live', 'polite');
+    phoneField.setAttribute('aria-describedby', phoneHint.id);
+    phoneWrap.appendChild(phoneField);
+    phoneLabel.appendChild(phoneWrap);
+    phoneLabel.appendChild(phoneHint);
     formPanel.appendChild(phoneLabel);
     var commentLabel = node('label', 'bp-contact__callback-label', 'Повідомлення (необов’язково)');
     messageField = node('textarea', 'bp-contact__callback-input bp-contact__callback-textarea');
@@ -491,7 +555,21 @@
     callbackInfo.setAttribute('role', 'status');
     callbackInfo.setAttribute('aria-live', 'polite');
     formPanel.appendChild(callbackInfo);
-    phoneField.addEventListener('input', syncCallback);
+    callbackSuccess = node('div', 'bp-contact__callback-success');
+    callbackSuccess.hidden = true;
+    callbackSuccess.setAttribute('role', 'status');
+    callbackSuccess.setAttribute('aria-live', 'polite');
+    callbackSuccess.setAttribute('tabindex', '-1');
+    callbackSuccess.appendChild(node('span', 'bp-contact__callback-success-icon', '✓'));
+    callbackSuccess.appendChild(node('p', 'bp-contact__callback-success-title',
+      'Заявку успішно надіслано. Ми зателефонуємо Вам.'));
+    callbackSuccess.appendChild(node('p', 'bp-contact__callback-success-caption',
+      'Вікно закриється автоматично'));
+    formPanel.appendChild(callbackSuccess);
+    phoneField.addEventListener('input', function () {
+      phoneField.value = localPhoneDigits(phoneField.value);
+      syncCallback();
+    });
     messageField.addEventListener('input', syncCallback);
     formPanel.addEventListener('submit', function (event) {
       if (event && event.preventDefault) event.preventDefault();
@@ -538,9 +616,7 @@
       if (state.expanded && !root.contains(e.target)) closeMenu(true);
     });
     document.addEventListener('keydown', function (e) {
-      if (e.key === 'Escape' && state.expanded) {
-        if (state.callbackView) returnToOptions(); else closeMenu(true);
-      }
+      if (e.key === 'Escape' && state.expanded) closeMenu(true);
     });
     syncVisible();
     // CSS may load late; if missing entirely, remain hidden rather than unstyled.
