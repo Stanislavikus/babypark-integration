@@ -22,6 +22,20 @@ Created and AWS read back:
 
 **Isolated actual-adapter synthetic test 2026-10-24:** loaded installed gem `aws-actionmailbox-ses` `SNSNotification` class under standalone Ruby 3.4.4, stubbed S3 GetObject with exclusively synthetic in-memory MIME. PASS: decoded S3 pointer; raw MIME To `reply+12345678-1234-1234-1234-123456789012@reply.babypark.ua` kept; non-`Received` event rejected by `MessageContentError`. No customer email, AWS data write, app/DB write, SMTP or service restart. **This is NOT SES/SNS/ActionMailbox end-to-end or an SNS signature test.**
 
+## 1a. Additional non-production IAM simulation (2026-10-24)
+
+Executed AWS native `iam:SimulateCustomPolicy` from connected AWS account, **without IAM CreateUser, CreateAccessKey or production configuration change**, to preflight a prospective dedicated off-AWS Chatwoot S3 read principal. Proposed identity policy has exactly one allow statement: `s3:GetObject` of `arn:aws:s3:::babypark-chatwoot-ses-receiving-763345000395-euc1/website-replies/*`.
+
+Results (6/6 expected decisions):
+- `s3:GetObject`, matching `website-replies/synthetic.eml`: **allowed**.
+- `s3:PutObject`, matching object: **implicitDeny**.
+- `s3:DeleteObject`, matching object: **implicitDeny**.
+- `s3:GetObject`, unrelated prefix: **implicitDeny**.
+- `s3:ListBucket`, bucket itself: **implicitDeny**.
+- `s3:GetBucketPolicy`, bucket itself: **implicitDeny**.
+
+**Scope of this proof:** confirms the standalone proposed IAM *identity policy only*, not the combined existing bucket resource policy, session policy, trust semantics, credential placement or real Chatwoot SDK S3 access. No principal/key exists. Before creating one, evaluate maintained native AWS credential modes for external DigitalOcean workloads and (if applicable) source-IP restriction for the verified outbound host. Require a new digest-approved architecture fit before cloud writes.
+
 ## 2. Native components, official sources and fixed mechanism
 
 Installed `config/initializers/mailer.rb`: `RAILS_INBOUND_EMAIL_SERVICE=ses` selects SES ingress; `ACTION_MAILBOX_SES_SNS_TOPIC` must match exact SNS ARN. `MAILER_INBOUND_EMAIL_DOMAIN=reply.babypark.ua` is the reply address domain; also verify account-specific `Account#domain` and mailer From/Reply-To on a synthetic instance. Installed `aws-actionmailbox-ses 0.1.0` path `/rails/action_mailbox/ses/inbound_emails` uses SNS signed-request verification + exact topic, loads S3 `receipt.action.bucketName/objectKey` through stock Aws::S3::Client GetObject; incoming mail routes through ApplicationMailbox/ReceiverUuidStrategy to existing Website conversation. Outgoing SES SMTP config currently employees-only remains unchanged.
