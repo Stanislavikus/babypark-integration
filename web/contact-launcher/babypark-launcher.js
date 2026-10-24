@@ -154,8 +154,18 @@
     state.callbackView = true;
     formPanel.hidden = false;
     options.hidden = true;
-    state.callbackSent = false;
-    state.callbackUncertain = false;
+    // Once submitted, a reply may have been committed even if its ACK was lost.
+    // Back/Close/reopen MUST NOT reset this page's terminal submit state.
+    if (state.callbackSent || state.callbackUncertain) {
+      phoneField.disabled = true;
+      messageField.disabled = true;
+      callbackInfo.textContent = state.callbackSent
+        ? 'Заявку надіслано. Ми зателефонуємо вам.'
+        : 'Не вдалося підтвердити надсилання. Щоб уникнути дублювання, зателефонуйте нам.';
+      syncCallback();
+      formPanel.children[0].focus(); // Focus the Back action, not a disabled telephone input.
+      return;
+    }
     callbackInfo.textContent = '';
     phoneField.disabled = false;
     messageField.disabled = false;
@@ -175,7 +185,7 @@
   }
 
   async function submitCallback() {
-    if (state.callbackPending || state.callbackSent || !callbackConfigured()) return;
+    if (state.callbackPending || state.callbackSent || state.callbackUncertain || !callbackConfigured()) return;
     var phone = normalizePhone(phoneField.value);
     var comment = messageField.value.trim();
     var jwt = getWidgetJwt();
@@ -191,18 +201,37 @@
       (comment ? '\nПовідомлення: ' + comment : '');
     var url = chatOrigin + '/api/v1/widget/messages?website_token=' +
       encodeURIComponent(config.websiteToken);
+    var deadline = null;
+    var abortController = null;
     try {
-      // No automatic retry: a lost response may have committed a message.
-      var response = await window.fetch(url, {
-        method: 'POST', mode: 'cors', credentials: 'omit', redirect: 'error',
-        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-Auth-Token': jwt },
-        body: JSON.stringify({
-          message: { content: content },
-          custom_attributes: { callback_phone: phone }, labels: ['callback']
-        })
+      if (typeof window.AbortController === 'function') abortController = new window.AbortController();
+    } catch (_) { abortController = null; } // Timer still bounds failure when abort is unsupported.
+    try {
+      // Include the response body in the bounded 15s ACK deadline.
+      // Timeout and abort DO NOT prove server rollback: never retry automatically.
+      var timeLimit = new Promise(function (_resolve, reject) {
+        deadline = window.setTimeout(function () {
+          if (abortController) {
+            try { abortController.abort(); } catch (_) { /* Still reject as unknown commit. */ }
+          }
+          reject(new Error('callback-ack-timeout'));
+        }, 15000);
       });
-      if (!response || response.status !== 200) throw new Error('not-accepted');
-      var data = await response.json();
+      var attempt = (async function () {
+        var options = {
+          method: 'POST', mode: 'cors', credentials: 'omit', redirect: 'error',
+          headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-Auth-Token': jwt },
+          body: JSON.stringify({
+            message: { content: content },
+            custom_attributes: { callback_phone: phone }, labels: ['callback']
+          })
+        };
+        if (abortController) options.signal = abortController.signal;
+        var response = await window.fetch(url, options);
+        if (!response || response.status !== 200) throw new Error('not-accepted');
+        return response.json();
+      }());
+      var data = await Promise.race([attempt, timeLimit]);
       if (!data || !Number.isSafeInteger(data.id) || data.id <= 0 ||
           !Number.isSafeInteger(data.conversation_id) || data.conversation_id <= 0) {
         throw new Error('ambiguous-ack');
@@ -216,6 +245,7 @@
       state.callbackUncertain = true;
       callbackInfo.textContent = 'Не вдалося підтвердити надсилання. Щоб уникнути дублювання, зателефонуйте нам.';
     } finally {
+      if (deadline !== null) window.clearTimeout(deadline);
       state.callbackPending = false;
       syncCallback();
     }
