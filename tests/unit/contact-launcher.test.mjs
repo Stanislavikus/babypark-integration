@@ -407,8 +407,22 @@ test('L2: all launcher channels share one 24px icon grid inside unchanged 35px b
   assert.match(handset.innerHTML, /viewBox="0 0 24 24"/);
   assert.match(handset.innerHTML, /stroke-width="2"/);
   assert.match(handset.innerHTML, /M22 16\.92v3/);
+  assert.match(handset.innerHTML, /transform="translate\(12 12\) scale\(0\.95\) translate\(-12 -12\)"/,
+    'handset optical 5% inset, without CSS geometry overrides');
   assert.doesNotMatch(handset.innerHTML, /M21 11\.5a8\.5|<circle\b/,
     'phone handset has no surrounding ring');
+
+  const chatIcon = h.get('bp-contact__icon--chat');
+  assert.match(chatIcon.innerHTML, /viewBox="0 0 24 24"/);
+  assert.match(chatIcon.innerHTML, /<g transform="translate\(12 12\) scale\(1\.12\) translate\(-12 -12\)">/,
+    'chat bubble optical 12% enlargement inside the identical 24px viewport');
+  assert.match(chatIcon.innerHTML, /stroke-width="2\.5"\/><\/g><\/svg>/,
+    'bubble and ellipsis are scaled together');
+
+  const callbackRow = h.get('bp-contact__channel--callback');
+  const label = traverse(callbackRow, node => node.className.split(' ').includes('bp-contact__name'));
+  assert.equal(label?.textContent, 'Замовити дзвінок',
+    'clear callback action label matches form submit CTA');
 });
 
 test('L2: callback option is in stable final row after direct call, panel has only phone required', () => {
