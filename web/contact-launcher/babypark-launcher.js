@@ -52,6 +52,7 @@
   var options, formPanel, phoneField, phoneHint, messageField, callbackSubmit, callbackInfo;
   var callbackSuccess, menuTitle, brandHeader, menuClose;
   var successTimer = null;
+  var previousLocalPhone = '';
   // Static Lucide/Feather X; Feather-derived glyph licensed MIT (see runbook).
   var closeSvg = '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>';
 
@@ -225,6 +226,7 @@
     phoneField.disabled = false;
     messageField.disabled = false;
     phoneField.value = '';
+    previousLocalPhone = '';
     messageField.value = '';
     initializeChatwoot();
     syncCallback();
@@ -529,7 +531,10 @@
     phoneField.type = 'tel';
     phoneField.inputMode = 'numeric';
     phoneField.autocomplete = 'tel-national';
-    phoneField.maxLength = 9;
+    // Allow full international/local numbers to be pasted before normalizing
+    // them to nine visible digits. A 9-char HTML maxlength would truncate
+    // +380.../0... before the input handler sees the original country prefix.
+    phoneField.maxLength = 30;
     phoneField.pattern = '[0-9]{9}';
     phoneField.placeholder = 'XX XXX XX XX';
     phoneField.required = true;
@@ -569,7 +574,14 @@
       'Вікно закриється автоматично'));
     formPanel.appendChild(callbackSuccess);
     phoneField.addEventListener('input', function () {
-      phoneField.value = localPhoneDigits(phoneField.value);
+      var raw = phoneField.value;
+      var normalized = localPhoneDigits(raw);
+      // Reject an ambiguous overlong paste; do not clear a correctly typed
+      // nine-digit value when one extra digit is pressed.
+      if (!normalized && raw.replace(/[^0-9]/g, '').length > 9)
+        normalized = previousLocalPhone;
+      phoneField.value = normalized;
+      previousLocalPhone = normalized;
       syncCallback();
     });
     messageField.addEventListener('input', syncCallback);
