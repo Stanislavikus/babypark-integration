@@ -450,6 +450,12 @@ test('L2: Callback reuses menu close and has Chatwoot-like responsive header/win
   assert.equal(h.get('bp-contact__menu-close').getAttribute('aria-label'),'Закрити вікно');
   assert.equal(h.get('bp-contact__back'),null);
   assert.equal(h.get('bp-contact__brand-name').textContent,'BabyPark');
+  assert.equal(h.get('bp-contact__brand-status').textContent,'Замовити дзвінок');
+  assert.equal(h.get('bp-contact__callback-form').getAttribute('aria-label'),'Замовити дзвінок');
+  assert.equal(h.get('bp-contact__callback-heading'),null,'no duplicated category heading');
+  assert.equal(h.get('bp-contact__callback-caption').textContent,'Залиште номер для зв’язку');
+  assert.equal(h.get('bp-contact__callback-submit').textContent,'Замовити дзвінок');
+  assert.doesNotMatch(css,/\.bp-contact__callback-heading\s*\{/,'obsolete duplicate title styling removed');
   assert.match(css,/\.bp-contact__menu--callback\s*\{[^}]*width:\s*min\(400px,/s);
   assert.match(css,/height:\s*min\(600px,\s*calc\(100dvh/s);
   assert.match(css,/@media \(max-width: 767px\)/);
