@@ -39,3 +39,7 @@ Additional owner L1-C V2 pre-code GO 2026-10-20: Scan `74237eddbf8b0225b6728007e
 - Drupal production deployment and Bitrix24 removal are separate owner-gated activation, not a code change in PR #142. See frozen L1-B Fit; status DEFERRED until separate approved deploy.
 - Callback submission, n8n backend, WhatsApp registration, header links cleanup and Magento adapter are explicitly OUT OF SCOPE under frozen L1-B Scan/Fit; status DEFERRED.
 - None of these rows claim real-site correctness, cookie-policy signoff, merge authority or no open BLOCKERs. Continue exhaustive review after implementation is committed, and pin a **new** final-tree manifest for any changed HEAD.
+
+## Later release clarification (2026-10-24; not retroactive L1 scope)
+
+The rows above are **historical L1-only acceptance** for the 2026-10-19 approval, not claims about the combined L1+L2 release. Callback V1 was subsequently approved as a separate campaign and is implemented in Draft release PR #154: required Ukrainian phone, optional message, lazy Website SDK on deliberate Callback selection, native account-wide Chatwoot `message_created` callback label, and existing Inbox routing without a fixed Sales team. The current public site still runs the L1-only assets and **does not yet expose the Callback form**. See `docs/BP_CALLBACK_V1_IMPLEMENTATION_TRACEABILITY_20261024.md` and the new L2 extension in `docs/CONTACT_LAUNCHER_L1_PREVIEW_RUNBOOK.md`. No historical L1 approval or regression evidence is claimed to authorize L2 production.
