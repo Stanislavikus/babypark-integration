@@ -441,6 +441,56 @@ test('L2: callback option is in stable final row after direct call, panel has on
   assert.equal(h.get('bp-contact__callback-input').inputMode,'numeric');
 });
 
+test('L2: Callback reuses menu close and has Chatwoot-like responsive header/window', () => {
+  const h=harness(callbackConfig(), {cookie:'cw_conversation='+dummyJwt});
+  visitCallback(h);
+  assert.equal(h.get('bp-contact__brand').hidden,false);
+  assert.equal(h.get('bp-contact__heading-title').hidden,true);
+  assert.match(h.get('bp-contact__menu').className,/bp-contact__menu--callback/);
+  assert.equal(h.get('bp-contact__menu-close').getAttribute('aria-label'),'Закрити вікно');
+  assert.equal(h.get('bp-contact__back'),null);
+  assert.equal(h.get('bp-contact__brand-name').textContent,'BabyPark');
+  assert.match(css,/\.bp-contact__menu--callback\s*\{[^}]*width:\s*min\(400px,/s);
+  assert.match(css,/height:\s*min\(600px,\s*calc\(100dvh/s);
+  assert.match(css,/@media \(max-width: 767px\)/);
+  assert.match(css,/\.bp-contact__callback-phone-input\s*\{[^}]*font-size:\s*20px/s);
+  assert.doesNotMatch(h.get('bp-contact__brand-status').textContent,/онлайн|завтра/,
+    'do not invent live agent availability');
+  h.get('bp-contact__menu-close').click();
+  assert.equal(h.get('bp-contact__menu').hidden,true);
+  assert.equal(h.get('bp-contact__brand').hidden,true);
+  assert.equal(h.get('bp-contact__heading-title').hidden,false);
+  assert.equal(h.get('bp-contact__trigger').getAttribute('aria-expanded'),'false');
+});
+
+test('L2: fixed +380 prefix, nine visible digits and accessible missing-digit hints', () => {
+  const h=harness(callbackConfig(),{cookie:'cw_conversation='+dummyJwt});
+  visitCallback(h);
+  const prefix=h.get('bp-contact__callback-prefix');
+  const field=h.get('bp-contact__callback-phone-input');
+  assert.equal(prefix.textContent,'+380');
+  assert.equal(field.inputMode,'numeric');
+  assert.equal(field.pattern,'[0-9]{9}');
+  assert.equal(field.maxLength,30,'allow whole clipboard number before normalization');
+  assert.equal(field.getAttribute('aria-describedby'),h.get('bp-contact__callback-phone-hint').id);
+  assert.match(h.get('bp-contact__callback-phone-hint').textContent,/Введіть 9 цифр/);
+  input(h,'066 123 45 67');
+  assert.equal(field.value,'661234567');
+  assert.match(h.get('bp-contact__callback-phone-hint').textContent,/Номер заповнено/);
+  assert.equal(h.get('bp-contact__callback-submit').disabled,false);
+  input(h,'+380 50 123 45 67');
+  assert.equal(field.value,'501234567');
+  input(h,'1234');
+  assert.equal(field.value,'1234');
+  assert.match(h.get('bp-contact__callback-phone-hint').textContent,/5 цифр/);
+  assert.equal(h.get('bp-contact__callback-submit').disabled,true);
+  input(h,'123456789');
+  input(h,'1234567895');
+  assert.equal(field.value,'123456789','an extra typed digit is ignored');
+  input(h,'+420 777 123 456');
+  assert.equal(field.value,'123456789','reject an ambiguous foreign number');
+});
+
 test('L2: invalid phones and injected letters cannot enable submit', () => {
   const h = harness(callbackConfig(),{cookie:'cw_conversation='+dummyJwt});
   visitCallback(h);
@@ -477,8 +527,38 @@ test('L2: no visitor note sends exactly one stock Website Widget POST with conve
   assert.match(body.message.content,/\+380661234567/);
   assert.doesNotMatch(body.message.content,/Повідомлення:/);
   assert.equal(Object.hasOwn(body,'contact'),false);
-  assert.match(h.get('bp-contact__callback-status').textContent,/надіслано/);
+  assert.match(h.get('bp-contact__callback-success-title').textContent,/Заявку успішно надіслано/);
+  assert.match(h.get('bp-contact__callback-success-title').textContent,/Вам/);
+  assert.equal(h.get('bp-contact__callback-success').hidden,false);
   assert.equal(h.get('bp-contact__callback-submit').disabled,true);
+});
+
+test('L2: only confirmed success shows full-form confirmation then auto-closes', async () => {
+  let calls=0;
+  const h=harness(callbackConfig(),{
+    cookie:'cw_conversation='+dummyJwt,
+    fetchMock:async()=>{calls++;return {status:200,json:async()=>({id:123,conversation_id:42})};}
+  });
+  visitCallback(h);
+  input(h,'661234567');
+  submit(h);
+  await flushAsync();
+  assert.equal(calls,1);
+  assert.equal(h.get('bp-contact__menu').hidden,false);
+  assert.match(h.get('bp-contact__callback-form').className,/callback-form--success/);
+  h.advance(3499);
+  assert.equal(h.get('bp-contact__menu').hidden,false,'visible for 3.5s to read');
+  h.advance(1);
+  assert.equal(h.get('bp-contact__menu').hidden,true);
+  assert.equal(h.pendingTimers(),0);
+  h.get('bp-contact__trigger').click();
+  h.get('bp-contact__channel--callback').click();
+  assert.equal(h.get('bp-contact__callback-submit').disabled,true);
+  submit(h);
+  await flushAsync();
+  assert.equal(calls,1,'terminal success cannot be submitted twice');
+  h.get('bp-contact__menu-close').click();
+  assert.equal(h.pendingTimers(),0,'manual close cancels re-armed timer');
 });
 
 test('L2: optional note preserved as text, never a Contact phone', async () => {
@@ -572,7 +652,8 @@ test('HEAVY B1: uncertain ACK stays terminal across Back/reopen and direct submi
   assert.equal(calls, 1);
   assert.match(h.get('bp-contact__callback-status').textContent, /Щоб уникнути дублювання/);
   assert.equal(h.get('bp-contact__callback-submit').disabled, true);
-  h.get('bp-contact__back').click();
+  h.get('bp-contact__menu-close').click();
+  h.get('bp-contact__trigger').click();
   h.get('bp-contact__channel--callback').click();
   assert.match(h.get('bp-contact__callback-status').textContent, /Щоб уникнути дублювання/);
   assert.equal(h.get('bp-contact__callback-input').disabled, true);
@@ -592,8 +673,9 @@ test('HEAVY B1: server-accepted callback stays terminal across reopening same la
   input(h, '0982908838');
   submit(h);
   await flushAsync();
-  assert.match(h.get('bp-contact__callback-status').textContent, /Заявку надіслано/);
-  h.get('bp-contact__back').click();
+  assert.match(h.get('bp-contact__callback-success-title').textContent, /Заявку успішно надіслано/);
+  h.get('bp-contact__menu-close').click();
+  h.get('bp-contact__trigger').click();
   h.get('bp-contact__channel--callback').click();
   assert.equal(h.get('bp-contact__callback-submit').disabled, true);
   submit(h);
@@ -619,8 +701,9 @@ test('HEAVY B2: hung fetch becomes bounded unknown ACK; caller may return to tel
   await flushAsync();
   assert.match(h.get('bp-contact__callback-status').textContent, /Щоб уникнути дублювання/);
   assert.equal(h.get('bp-contact__callback-submit').disabled, true);
-  h.get('bp-contact__back').click();
+  h.get('bp-contact__menu-close').click();
   assert.equal(h.get('bp-contact__options').hidden, false);
+  assert.equal(h.get('bp-contact__menu').hidden, true);
   assert.equal(h.get('bp-contact__channel--phone').hidden, false);
   assert.equal(h.pendingTimers(), 0);
   submit(h);
