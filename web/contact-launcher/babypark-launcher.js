@@ -45,7 +45,7 @@
   var widgetId = 'bp-contact-launcher-l1';
   var state = {
     ready: false, expanded: false, sdkStarted: false, sdkFailed: false, slow: false,
-    requestedChat: false, callbackView: false, callbackPending: false, callbackSent: false, callbackUncertain: false
+    requestedChat: false, callbackView: false, callbackPending: false, callbackSent: false, callbackUncertain: false, callbackRejected: false
   };
   var readyTimer = null;
   var root, menu, trigger, chatStatus, chatNote, rows = {};
@@ -142,7 +142,7 @@
     var valid = !!(phoneField && normalizePhone(phoneField.value));
     callbackSubmit.disabled = !valid || !state.ready || state.sdkFailed ||
       state.callbackPending || state.callbackSent || state.callbackUncertain || !getWidgetJwt();
-    if (!state.callbackPending && !state.callbackSent && !state.callbackUncertain && callbackInfo) {
+    if (!state.callbackPending && !state.callbackSent && !state.callbackUncertain && !state.callbackRejected && callbackInfo) {
       if (state.sdkFailed) callbackInfo.textContent = 'Зараз не вдається підключитися. Спробуйте зателефонувати.';
       else if (!state.ready || !getWidgetJwt()) callbackInfo.textContent = 'Підключення до чату…';
       else callbackInfo.textContent = '';
@@ -166,6 +166,7 @@
       formPanel.children[0].focus(); // Focus the Back action, not a disabled telephone input.
       return;
     }
+    state.callbackRejected = false;
     callbackInfo.textContent = '';
     phoneField.disabled = false;
     messageField.disabled = false;
@@ -193,6 +194,7 @@
       callbackInfo.textContent = 'Перевірте номер телефону та з’єднання.';
       return;
     }
+    state.callbackRejected = false;
     state.callbackPending = true;
     syncCallback();
     callbackInfo.textContent = 'Надсилаємо заявку…';
@@ -228,7 +230,17 @@
         };
         if (abortController) options.signal = abortController.signal;
         var response = await window.fetch(url, options);
-        if (!response || response.status !== 200) throw new Error('not-accepted');
+        if (!response || response.status !== 200) {
+          // The v4.18.0 Widget route rejects these requests before message save.
+          // Do not retry automatically; allow an explicit new attempt only on proven 4xx rejects.
+          if (response && [403, 422, 429].indexOf(response.status) !== -1) {
+            var rejection = new Error('widget-rejected');
+            rejection.definiteReject = true;
+            rejection.status = response.status;
+            throw rejection;
+          }
+          throw new Error('not-accepted');
+        }
         return response.json();
       }());
       var data = await Promise.race([attempt, timeLimit]);
@@ -240,10 +252,19 @@
       phoneField.disabled = true;
       messageField.disabled = true;
       callbackInfo.textContent = 'Заявку надіслано. Ми зателефонуємо вам.';
-    } catch (_) {
-      // ACK may be ambiguous: do not silently resend or claim failure to commit.
-      state.callbackUncertain = true;
-      callbackInfo.textContent = 'Не вдалося підтвердити надсилання. Щоб уникнути дублювання, зателефонуйте нам.';
+    } catch (err) {
+      if (err && err.definiteReject === true) {
+        // No message was accepted; a deliberate later retry is allowed.
+        state.callbackRejected = true;
+        callbackInfo.textContent = err.status === 429
+          ? 'Забагато спроб. Спробуйте пізніше або зателефонуйте нам.'
+          : 'Заявку не прийнято. Спробуйте ще раз або зателефонуйте нам.';
+      } else {
+        // Network / timeout / server error / invalid ACK may mean committed send.
+        // Never retry automatically or enable another submit in this page session.
+        state.callbackUncertain = true;
+        callbackInfo.textContent = 'Не вдалося підтвердити надсилання. Щоб уникнути дублювання, зателефонуйте нам.';
+      }
     } finally {
       if (deadline !== null) window.clearTimeout(deadline);
       state.callbackPending = false;
