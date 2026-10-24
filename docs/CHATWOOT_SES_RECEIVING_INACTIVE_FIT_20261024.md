@@ -1,0 +1,32 @@
+# BabyPark Chatwoot — SES Receiving inactive AWS architecture-fit note (2026-10-24)
+
+Status: EVIDENCE — NON-NORMATIVE; not an authorization to create AWS resources by itself.
+Applies to: the **empty, disabled SES Receiving preparation** only, eu-central-1, AWS account 763345000395, existing Chatwoot 4.18.0. Does not authorize inbound message delivery or buyer-facing email.
+Supersedes: none.
+Canonical main 1d5d8c00b7fdcdb54f37418ea60931c4292fd600; Agreement blob e777fce4af8e8c3372f1f9de9ef7d00f786c2c89; Draft PR #150 old base f3d92325e6b4ef04f0137c4c49dde07c05731bbe.
+Bound scan: docs/CHATWOOT_SES_RECEIVING_INACTIVE_SCAN_20261024.md, SHA-256 2928d8be42b508deaac4a036f869d538cc9c63ddb71a897840fb62138c1f4932, normalized UTF-8/LF/final newline.
+**Recommendation: integrate** exactly the inactive cloud resource scaffolding **only after explicit owner authorization naming this note's SHA-256**; not authorize enabled/billable inbound customer processing. Recheck exact versions/credentials before write.
+
+## Fixed candidate tuple and scope
+
+AWS classic SES Receipt Rules, S3 Standard private bucket, SNS Standard Topic, all eu-central-1, current account Essentials plan; stock Rails ActionMailbox 7.2.3.1 + aws-actionmailbox-ses 0.1.0 in Chatwoot 4.18.0. AWS SES, S3 and SNS are commercial on-demand services; terms https://aws.amazon.com/ses/pricing/ and https://aws.amazon.com/sns/pricing/ . No new application code, container or extra plugin. Reactivation/release requires separate scope.
+
+Names to create **only if absent**:
+- S3 bucket babypark-chatwoot-ses-receiving-763345000395-euc1, region eu-central-1; prefix website-replies/.
+- SNS Standard topic babypark-chatwoot-website-inbound, same region; zero subscriptions, no SMS/HTTP/email endpoint.
+- SES classic receipt rule set babypark-chatwoot-website-inbound-inactive, NOT selected as active.
+- Within that rule set receipt rule website-reply-uuid, Enabled=false, ScanEnabled=true, Recipients=["reply@reply.babypark.ua"], TlsPolicy=Optional (not Require, so test future client compatibility); exactly one S3Action: BucketName, ObjectKeyPrefix="website-replies/", TopicArn for same-account topic, **no KmsKeyArn**, no SNSAction.
+
+S3 policy: allow ses.amazonaws.com only s3:PutObject into website-replies/* conditioned on aws:SourceAccount 763345000395 and exact AWS receipt-rule ARN, not unrestricted bucket access. Enforce TLS for S3 API when compatible with SES. Four bucket-level PublicAccessBlock flags true; ownership BucketOwnerEnforced; AES256 SSE-S3 default; no public ACL, object lock, replication, versioning or public bucket website. Lifecycle expire website-replies/ objects at owner-proposed **14 days** for initial staging. No SES client-side KMS; such S3 encryption is not decryptable by the bundled plain GetObject adapter without additional logic. No S3 GetObject IAM principal/SMTP key changes in this phase; later least-privilege reader must be explicitly reviewed.
+
+Data/connectivity **in this stage**: absolutely no customer data, messages, message IDs, email addresses, SMTP sends, HTTPS subscription, webhook, published MX, or enabled SES rule. All AWS objects are EMPTY and inert. Zoho MX for babypark.ua, Zoho mailboxes, verified domain/DKIM, Chatwoot web/worker/.env and employee SES SMTP/IAM stay unchanged. A stored S3 raw MIME is a future inbound temporary copy, not transcript authority; active-stage privacy/DPA, 14-day storage/recovery justification, account access, bucket logs, retention/backup and secure deletion require a new gate and are not waived by empty scaffold. Rails ActionMailbox automatically schedules incineration of processed raw copies (default 30 days), but S3 has its own lifecycle and may not be deleted by adapter.
+
+Failure isolation: rule set inactive AND rule disabled. No SES receiving without both a later explicit activation and MX cutover; even then must verify independently. Private empty S3/SNS cost is small under pay-per-use but AWS bill not guaranteed zero; no AWS Budgets exist currently and a budget is out of this scope. SNS topic subscription must stay empty; no SNS HTTP calls. Preserve preexisting AWS resources untouched. Stop on mismatched existing resource; no silent permission widening. IAM staff-only SMTP remains recipient-fenced.
+
+Rollback of this *inert* step: never activate/modify production or delete customer data; revoke staged SES write policy, remove disabled rule/rule set, topic (zero subscribers), and empty dedicated S3 bucket only upon separate owner approval and after fresh empty-object verification; no automatic garbage collection of any unknown resources. Document resource IDs and exact rollback target in docs/INFRASTRUCTURE_REGISTRY.md and resulting docs/CURRENT_STATE.md **in the same bounded operational slice** when the cloud resources are actually created.
+
+Verification before and after writing: canonical governance re-read, frozen scan SHA check, owner bound fit GO, unique-name collision recheck, AWS read-back: GetBucketLocation/GetPublicAccessBlock/GetBucketEncryption/GetBucketOwnershipControls/GetBucketLifecycleConfiguration/GetBucketPolicy/GetBucketVersioning/ListObjectsV2(empty), GetTopicAttributes/ListSubscriptionsByTopic(zero), DescribeReceiptRuleSet (disabled one S3Action only), DescribeActiveReceiptRuleSet (unchanged), SES account sandbox/staff IAM unchanged, Cloudflare root MX/reply MX unchanged, Chatwoot web/worker up, zero emails delivered. Preserve inactive until later independent synthetic suite and separate owner cutover.
+
+**Stop conditions:** wrong account/region; any existing resource/name collision; missing proof of required permissions or insecure bucket state; inability to fully document actual resource IDs; owner authorization does not name this fit note's frozen SHA-256; scan/fit basis changed; any message or SNS subscription present. No actual AWS writes until all gates and explicit owner digest-identified GO.
+
+**UNRESOLVED, explicitly OUTSIDE this disabled-only slice:** separate future production privacy and retention legality review; SNS signature delivery/retry/ack behavior; Chatwoot S3 GetObject IAM credentials; large-attachment and duplicate/unknown-recipient tests; eventual SNS HTTPS, technical MX, account.inbound_email_domain, customer-facing SES Production access, email collect UX, staff coverage; outbound customer IAM separate from staff principal. These are blockers for activation, not for recording this inert-only fit.
