@@ -7,6 +7,14 @@ Last updated: 2026-10-23
 Owner: BabyPark
 Source of truth for operational facts: production runtime + verified repository evidence.
 
+## 2026-10-24 — Callback V1 release preparation (real operational status)
+
+This is an operational snapshot, **not** an amendment to the authoritative Agreement or permission to merge/deploy. BabyPark Website launcher **L1 already runs on public Drupal** under the active `babypark2` theme since 2026-10-22, regardless of its unmerged Draft PR #142 status (see production evidence in Draft PR #148 and the infrastructure registry). Website chat, Telegram, Viber and phone are active; WhatsApp remains off. **The callback form is NOT active for customers**. Desired call time, business-hours rules and reminders remain future Callback V2 requirements. Channel expansion and native Assignment Policy priorities are later distinct work.
+
+Chatwoot 4.18.0 production account has a native `callback` label and exactly one active account-scoped `message_created` automation: incoming message content containing `BABYPARK_CALLBACK_V1` → `add_label callback`, no fixed team, inbox or assignee. Existing sellers handle Callback through the **same normal Inbox/Unassigned pool** as ordinary messages. Verified owner Widget message #131 in conversation #42 was marked `callback` and visible to an agent; this verifies the ordinary Chat Widget path, **not** the unpublished L2 form's POST/custom_attributes/ACK. Narrow Nginx CORS preflight is live for `babypark.ua` and `www.babypark.ua`; neither successful real L2 form submission nor WARN/ERROR PII safety was signed off. The site currently serves previous L1 JS/CSS.
+
+Owner-approved production log control: Web/Worker `LOG_LEVEL=warn` in shared `.env` and both external systemd unit drop-ins, effective Rails and ActiveJob logger level 2. This suppresses routine INFO parameters/job-argument entries; it does not scrub old logs or error-path message data. See `docs/INFRASTRUCTURE_REGISTRY.md` for object paths and rollback. Draft **release PR #154** is the sole combined launch candidate on current canonical main; it must pass Agreement §7.0a manifest and HEAVY R1/R2 and exact-basis owner approval before merge/publication. The owner's staged production settings are not proof of an active Callback form.
+
 ## Current campaign/navigation snapshot (2026-10-23)
 
 This top section is the current campaign/navigation snapshot. Exact implementation and merge truth remains canonical Git; normative process/governance authority remains `docs/AI_WORKING_AGREEMENT.md`. Runtime facts that are not restated here must be freshly verified from their authoritative runtime/source before use.
