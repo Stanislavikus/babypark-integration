@@ -244,3 +244,49 @@
 @media (prefers-reduced-motion: reduce) {
   .bp-contact__menu { animation: none; }
 }
+
+/* L2 Callback: the existing anchored panel, not another third-party widget. */
+.bp-contact__icon--callback { background: #eaf7fc; color: #007cb6; }
+.bp-contact__callback-form {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  padding: 4px 9px 12px;
+}
+.bp-contact__back {
+  align-self: flex-start;
+  border: 0;
+  background: transparent;
+  color: #005d90;
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  padding: 6px;
+}
+.bp-contact__callback-heading { font-size: 16px; font-weight: 800; margin: 0; }
+.bp-contact__callback-caption { font-size: 12px; color: #566477; margin: 0 0 3px; }
+.bp-contact__callback-label { display: flex; flex-direction: column; gap: 5px; font-size: 12px; font-weight: 700; }
+.bp-contact__callback-input {
+  width: 100%;
+  min-height: 41px;
+  border: 1px solid #a9bdcc;
+  border-radius: 9px;
+  padding: 9px 10px;
+  background: #fff;
+  color: #213445;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+}
+.bp-contact__callback-textarea { min-height: 75px; max-height: 150px; resize: vertical; }
+.bp-contact__callback-submit {
+  width: 100%;
+  min-height: 43px;
+  padding: 9px;
+  border: 0;
+  border-radius: 10px;
+  background: #007cb6;
+  color: #fff;
+  font-size: 13px !important;
+  font-weight: 800 !important;
+}
+.bp-contact__callback-submit:disabled { background: #b3c4cd; color: #263d4d; cursor: not-allowed; }
+.bp-contact__callback-status { min-height: 0; color: #334e62; font-size: 12px; margin: 0; overflow-wrap: anywhere; }
