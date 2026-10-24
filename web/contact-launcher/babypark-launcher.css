@@ -131,6 +131,8 @@
 }
 .bp-contact__channel:hover,
 .bp-contact__channel:focus-visible { background: #f4f9fc; }
+/* All six channel rows use the same 35px badge and 24px icon viewport.
+   Lucide's canonical 24x24 grid keeps optical scale consistent across SVG assets. */
 .bp-contact__icon {
   flex: 0 0 35px;
   width: 35px;
@@ -144,8 +146,8 @@
 .bp-contact__icon img,
 .bp-contact__icon svg {
   display: block;
-  width: 21px;
-  height: 21px;
+  width: 24px;
+  height: 24px;
   object-fit: contain;
 }
 .bp-contact__icon--chat { color: #009cde; background: #e5f7ff; }
@@ -156,7 +158,6 @@
 .bp-contact__icon--viber { background: #f3f0ff; }
 .bp-contact__icon--viber img { filter: invert(37%) sepia(77%) saturate(1918%) hue-rotate(230deg) brightness(103%) contrast(91%); }
 .bp-contact__icon--phone { background: #ecf8ff; }
-.bp-contact__icon--phone img { width: 19px; height: 19px; } /* ~20% smaller than previous 24px. */
 .bp-contact__name { font-size: 13px; font-weight: 730; white-space: nowrap; }
 /* A configured chat always reserves the same final row box. A late SDK state
    change must not move Telegram, Viber or the telephone under a pointer. */
@@ -247,7 +248,6 @@
 
 /* L2 Callback: the existing anchored panel, not another third-party widget. */
 .bp-contact__icon--callback { background: #eaf7fc; color: #007cb6; }
-.bp-contact__icon--callback svg { width: 25px; height: 25px; } /* Clear handset at launcher row scale. */
 .bp-contact__callback-form {
   display: flex;
   flex-direction: column;
