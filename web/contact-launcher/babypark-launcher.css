@@ -1,0 +1,292 @@
+/* BabyPark Contact Launcher L1: namespaced, CMS-neutral, no external stylesheets. */
+.bp-contact,
+.bp-contact * { box-sizing: border-box; }
+.bp-contact {
+  --bp-accent: #007cb6; /* white label WCAG contrast >= 4.5:1 */
+  --bp-text: #203044;
+  --bp-desktop-right: 24px;
+  --bp-desktop-bottom: 24px;
+  --bp-mobile-right: 22px; /* Owner-approved V5 preview; verify real site overlap. */
+  --bp-mobile-bottom: calc(76px + env(safe-area-inset-bottom, 0px));
+  --bp-compact-bottom: var(--bp-desktop-bottom);
+  position: fixed;
+  right: var(--bp-desktop-right);
+  bottom: var(--bp-desktop-bottom);
+  z-index: 2147483000;
+  display: flex;
+  align-items: flex-end;
+  flex-direction: column;
+  gap: 10px;
+  font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+  color: var(--bp-text);
+  font-size: 14px;
+  line-height: 1.4;
+  isolation: isolate;
+}
+.bp-contact[hidden],
+.bp-contact [hidden] { display: none !important; }
+.bp-contact button,
+.bp-contact a { font: inherit; -webkit-tap-highlight-color: transparent; }
+.bp-contact button { cursor: pointer; }
+.bp-contact :focus-visible {
+  outline: 3px solid #004b78;
+  outline-offset: 3px;
+  /* Outer light band stays visible when launcher floats over dark content. */
+  box-shadow: 0 0 0 6px #fff;
+}
+@media (forced-colors: active) {
+  .bp-contact :focus-visible {
+    outline: 3px solid Highlight;
+    outline-offset: 3px;
+    box-shadow: none;
+  }
+}
+.bp-contact__trigger {
+  border: 1px solid #f47c20; /* brand accent; static, not animated */
+  border-radius: 999px;
+  height: 56px;
+  padding: 0 19px;
+  display: inline-flex;
+  gap: 9px;
+  justify-content: center;
+  align-items: center;
+  background: var(--bp-accent);
+  color: #fff;
+  font-size: 13px !important;
+  font-weight: 800 !important;
+  letter-spacing: -.1px;
+  box-shadow: 0 9px 25px #006d9b37, 0 2px 6px #024d6e22;
+}
+.bp-contact__trigger:hover { background: #006da3; }
+.bp-contact__trigger-symbol,
+.bp-contact__trigger-symbol svg { display: block; width: 24px; height: 24px; }
+.bp-contact__trigger-close {
+  display: none;
+  width: 24px;
+  height: 24px;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 24px;
+}
+.bp-contact__trigger-close svg { display: block; width: 24px; height: 24px; }
+.bp-contact__trigger[aria-expanded="true"] .bp-contact__trigger-symbol { display: none; }
+.bp-contact__trigger[aria-expanded="true"] .bp-contact__trigger-close { display: flex; }
+.bp-contact__trigger-label { white-space: nowrap; }
+.bp-contact__menu {
+  width: 279px;
+  max-width: calc(100vw - 36px);
+  max-height: calc(100vh - 110px);
+  max-height: calc(100dvh - 110px);
+  overflow-y: auto;
+  border: 1px solid #e7edf2;
+  background: #fff;
+  border-radius: 18px;
+  box-shadow: 0 16px 52px #243c4a31, 0 2px 6px #1e3c4c14;
+  padding: 7px;
+  animation: bp-contact-enter .15s ease-out;
+}
+@keyframes bp-contact-enter {
+  from { opacity: 0; transform: translateY(8px) scale(.97); }
+  to { opacity: 1; transform: none; }
+}
+.bp-contact__heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 8px 9px 14px;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: -.3px;
+}
+.bp-contact__menu-close {
+  flex: 0 0 29px;
+  width: 29px;
+  height: 29px;
+  padding: 0;
+  border: 0;
+  border-radius: 9px;
+  background: #f3f6f8;
+  color: #6d7c88;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.bp-contact__menu-close svg { display: block; width: 19px; height: 19px; }
+.bp-contact__options { display: grid; gap: 2px; }
+.bp-contact__channel {
+  width: 100%;
+  min-height: 49px;
+  padding: 6px 10px;
+  border: 0;
+  border-radius: 11px;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-align: left;
+  text-decoration: none !important;
+  color: #2a3645 !important;
+  font-weight: 730 !important;
+}
+.bp-contact__channel:hover,
+.bp-contact__channel:focus-visible { background: #f4f9fc; }
+.bp-contact__icon {
+  flex: 0 0 35px;
+  width: 35px;
+  height: 35px;
+  border-radius: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f1f7fa;
+}
+.bp-contact__icon img,
+.bp-contact__icon svg {
+  display: block;
+  width: 21px;
+  height: 21px;
+  object-fit: contain;
+}
+.bp-contact__icon--chat { color: #009cde; background: #e5f7ff; }
+.bp-contact__icon--telegram { background: #eaf8ff; }
+.bp-contact__icon--telegram img { filter: invert(51%) sepia(93%) saturate(1871%) hue-rotate(163deg) brightness(101%) contrast(88%); }
+.bp-contact__icon--whatsapp { background: #eafaf0; }
+.bp-contact__icon--whatsapp img { filter: invert(56%) sepia(84%) saturate(1232%) hue-rotate(97deg) brightness(95%) contrast(91%); }
+.bp-contact__icon--viber { background: #f3f0ff; }
+.bp-contact__icon--viber img { filter: invert(37%) sepia(77%) saturate(1918%) hue-rotate(230deg) brightness(103%) contrast(91%); }
+.bp-contact__icon--phone { background: #ecf8ff; }
+.bp-contact__icon--phone img { width: 19px; height: 19px; } /* ~20% smaller than previous 24px. */
+.bp-contact__name { font-size: 13px; font-weight: 730; white-space: nowrap; }
+/* A configured chat always reserves the same final row box. A late SDK state
+   change must not move Telegram, Viber or the telephone under a pointer. */
+.bp-contact__channel--chat {
+  height: 64px;
+  min-height: 64px;
+  max-height: 64px;
+  overflow: hidden;
+}
+.bp-contact__channel--chat:disabled,
+.bp-contact__channel--chat[aria-disabled="true"] {
+  background: #f6f7f8;
+  color: #71808e !important;
+  cursor: default;
+}
+.bp-contact__channel--chat:disabled:hover { background: #f6f7f8; }
+.bp-contact__channel--chat:disabled .bp-contact__icon--chat {
+  background: #edf0f2;
+  color: #97a4ad;
+}
+.bp-contact__chat-copy {
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
+  flex-direction: column;
+  justify-content: center;
+  gap: 1px;
+}
+.bp-contact__chat-note {
+  /* The note is real status information, even when its parent button is disabled. */
+  color: #5d6b78;
+  display: -webkit-box;
+  overflow: hidden;
+  max-height: 26px;
+  font-size: 10px;
+  line-height: 12px;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+.bp-contact__chat-note[hidden] { display: none !important; }
+/* Persistent non-layout live region, not a second loading row. */
+.bp-contact__chat-status {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  margin: -1px !important;
+  padding: 0 !important;
+  border: 0 !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+}
+@media (max-width: 767px) {
+  .bp-contact {
+    right: var(--bp-mobile-right);
+    bottom: var(--bp-mobile-bottom);
+    --bp-compact-bottom: var(--bp-mobile-bottom);
+    gap: 9px;
+  }
+}
+@media (max-width: 640px) {
+  .bp-contact__trigger {
+    min-width: 54px;
+    width: 54px;
+    height: 54px;
+    padding: 0;
+  }
+  .bp-contact__trigger-label { display: none; }
+  .bp-contact__menu { width: min(280px, calc(100vw - 44px)); }
+  .bp-contact__channel { min-height: 48px; }
+  .bp-contact__channel--chat { min-height: 64px; }
+}
+@media (max-height: 450px) {
+  .bp-contact { bottom: var(--bp-compact-bottom); }
+  /* Reserve: compact bottom inset + 54–56px trigger + 9–10px gap
+     + at least 9px viewport top margin. Otherwise landscape clips the menu. */
+  .bp-contact__menu {
+    max-height: calc(100vh - var(--bp-compact-bottom) - 75px);
+    max-height: calc(100dvh - var(--bp-compact-bottom) - 75px);
+  }
+}
+@media print { .bp-contact { display: none !important; } }
+@media (prefers-reduced-motion: reduce) {
+  .bp-contact__menu { animation: none; }
+}
+
+/* L2 Callback: the existing anchored panel, not another third-party widget. */
+.bp-contact__icon--callback { background: #eaf7fc; color: #007cb6; }
+.bp-contact__callback-form {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  padding: 4px 9px 12px;
+}
+.bp-contact__back {
+  align-self: flex-start;
+  border: 0;
+  background: transparent;
+  color: #005d90;
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  padding: 6px;
+}
+.bp-contact__callback-heading { font-size: 16px; font-weight: 800; margin: 0; }
+.bp-contact__callback-caption { font-size: 12px; color: #566477; margin: 0 0 3px; }
+.bp-contact__callback-label { display: flex; flex-direction: column; gap: 5px; font-size: 12px; font-weight: 700; }
+.bp-contact__callback-input {
+  width: 100%;
+  min-height: 41px;
+  border: 1px solid #a9bdcc;
+  border-radius: 9px;
+  padding: 9px 10px;
+  background: #fff;
+  color: #213445;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+}
+.bp-contact__callback-textarea { min-height: 75px; max-height: 150px; resize: vertical; }
+.bp-contact__callback-submit {
+  width: 100%;
+  min-height: 43px;
+  padding: 9px;
+  border: 0;
+  border-radius: 10px;
+  background: #007cb6;
+  color: #fff;
+  font-size: 13px !important;
+  font-weight: 800 !important;
+}
+.bp-contact__callback-submit:disabled { background: #b3c4cd; color: #263d4d; cursor: not-allowed; }
+.bp-contact__callback-status { min-height: 0; color: #334e62; font-size: 12px; margin: 0; overflow-wrap: anywhere; }
