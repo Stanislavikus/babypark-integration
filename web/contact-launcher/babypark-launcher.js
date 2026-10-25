@@ -138,7 +138,11 @@
     // code (or national trunk 0) AS SOON AS THEY TYPE IT, rather than only
     // when all 12/10 digits are present. Otherwise the input freezes on
     // "380xxxxxx" at nine digits and silently sends the wrong recipient.
-    var digits = String(raw || '').replace(/[^0-9]/g, '');
+    var value = String(raw || '');
+    var digits = value.replace(/[^0-9]/g, '');
+    // When an international + is entered, never interpret an unknown country
+    // prefix as a Ukrainian local number while the visitor is still typing.
+    if (value.charAt(0) === '+' && digits.slice(0, 3) !== '380') return '';
     if (digits.slice(0, 3) === '380') digits = digits.slice(3);
     else if (digits.charAt(0) === '0') digits = digits.slice(1);
     // Never truncate an ambiguous foreign/overlong number into another one.
@@ -186,7 +190,10 @@
       state.callbackPending || state.callbackSent || state.callbackUncertain || !getWidgetJwt();
     if (phoneHint) {
       var remaining = 9 - digits.length;
-      phoneHint.textContent = remaining === 0
+      phoneHint.textContent = phoneField && /^\+/.test(phoneField.value) &&
+        !/^\+380/.test(phoneField.value)
+        ? 'Підтримуються лише номери України (+380)'
+        : remaining === 0
         ? (valid ? 'Номер заповнено' : 'Перевірте перші цифри номера')
         : remaining === 9 ? 'Введіть 9 цифр номера'
         : 'Залишилося ввести ' + remaining + ' ' +
@@ -601,6 +608,19 @@
     formPanel.appendChild(callbackSuccess);
     phoneField.addEventListener('input', function () {
       var raw = phoneField.value;
+      if (raw.charAt(0) === '+') {
+        // Keep a partial or foreign explicit +country prefix visibly invalid
+        // until +380 is fully entered or the visitor edits it. Otherwise
+        // dropping '+' permits an unrelated international number to appear
+        // to be an accepted Ukrainian nine-digit number mid-entry.
+        var entered = raw.replace(/[^0-9]/g, '');
+        if (!entered || entered.length < 3 || entered.slice(0, 3) !== '380') {
+          phoneField.value = '+' + entered;
+          previousLocalPhone = phoneField.value;
+          syncCallback();
+          return;
+        }
+      }
       var normalized = localPhoneDigits(raw);
       // Reject an ambiguous overlong paste; do not clear a correctly typed
       // nine-digit value when one extra digit is pressed.
