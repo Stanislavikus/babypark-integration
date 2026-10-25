@@ -630,7 +630,7 @@ test('L2 accessibility: ruby-11 error contrast and 100vh fallback are explicit',
 test('HEAVY R1: raw textarea maxlength is enforced before trim for direct submit', async () => {
   const overLimit = [
     ' ' + 'x'.repeat(500),
-    'x'.repeat(500) + '\\n',
+    'x'.repeat(500) + '\n',
     ' '.repeat(501)
   ];
   for (const raw of overLimit) {
