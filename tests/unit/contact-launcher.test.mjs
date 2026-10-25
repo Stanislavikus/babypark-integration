@@ -703,7 +703,9 @@ test('L2: no visitor note sends exactly one stock Website Widget POST with conve
   const body=JSON.parse(calls[0].init.body);
   assert.equal(body.custom_attributes.callback_phone,'+380661234567');
   assert.equal(body.labels[0],'callback');
-  assert.match(body.message.content,/BABYPARK_CALLBACK_V1/);
+  assert.match(body.message.content,/^Ви замовили дзвінок\nЗворотний дзвінок: \+380661234567/);
+  assert.doesNotMatch(body.message.content,/BABYPARK_CALLBACK_V1/,
+    'no technical marker should leak into buyer-visible Chatwoot message');
   assert.match(body.message.content,/\+380661234567/);
   assert.doesNotMatch(body.message.content,/Повідомлення:|Ім’я:/);
   assert.equal(Object.hasOwn(body,'contact'),false);
@@ -761,7 +763,7 @@ test('L2: optional name is transmitted only inside Chatwoot message with safe si
   h.get('bp-contact__callback-textarea').value='Уточнити розміри';
   submit(h);
   await flushAsync();
-  assert.match(payload.message.content,/Зворотний дзвінок: \+380661234567/);
+  assert.match(payload.message.content,/^Ви замовили дзвінок\nЗворотний дзвінок: \+380661234567/);
   assert.match(payload.message.content,/Ім’я: Марія-Анна О’Браєн Друга строка/);
   assert.match(payload.message.content,/Повідомлення: Уточнити розміри/);
   assert.equal(payload.message.content.split('Ім’я: ').length,2,
