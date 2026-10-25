@@ -3,9 +3,19 @@
 Status: EVIDENCE — operational/current-state record; not normative contract authority.
 Applies to: repository-wide operational and campaign state tracking.
 Supersedes: `docs/CURRENT_STATE.md` at canonical main `a45a8644e05df2584a2b75f2a3b47446811ae984`.
-Last updated: 2026-10-23
+Last updated: 2026-10-25
 Owner: BabyPark
 Source of truth for operational facts: production runtime + verified repository evidence.
+
+## 2026-10-25 — Callback V1 temporary live-origin staging (supersedes 24 Oct snapshot below)
+
+**Status: STAGING VERIFIED, NOT CUSTOMER ACTIVATED.** Owner authorized creating a temporary same-origin test page and a second stock Chatwoot automation on 2026-10-25; this is not explicit GO to merge PR #154 or turn on Callback in the public L1 launcher. Existing public L1 JS/CSS/config remain byte-identical to SHA256 `b763b3deeffddc42cc88b2d6589b500673a933685d24c224ef7eda8afbdc4f17` / `133c212c33302a3e172a703fa429ac1b906b6e14f7c7ab76d1eea21d99718240` / `2d31018517b2d15fc0073131bf91c806364c254ad766de7f636d017df761f078`. Homepage returns 200. Historical deleted previews remain 404. **The main site's Callback channel is OFF.**
+
+**Chatwoot v4.18.0 account #1 native automation:** rule #1 remains ACTIVE (`message_created` incoming content contains `BABYPARK_CALLBACK_V1` → sole `add_label callback`). A second owner-authorized rule **#2** is now ACTIVE, named `BabyPark — Callback (friendly confirmation V1, staging)`: incoming content contains the **actual newline** string `Ви замовили дзвінок\nЗворотний дзвінок: ` → sole `add_label callback`, no team/inbox/agent criteria, no execution delay. Legacy rule and Business Hours/auto-reply/Unassigned queue are unchanged. A rule fixture in the Draft PR is not itself a live installation; #2 was separately installed and verified by stock Chatwoot Rails model on the host.
+
+**Real browser and Chatwoot evidence:** from isolated Chromium at an owner-approved unlinked test page on the `babypark.ua` origin, exact candidate JS/CSS at PR #154 HEAD `14a7953931ae4a6e8f2f65255741b74555406006` (TREE `ce25ae2900672aa9028d1dd7b3420085f6edf6a7`), each new/open/resolved signed Widget POST returned HTTP 200, positive message/conversation IDs, one DevTools-exposed `Access-Control-Allow-Origin: https://babypark.ua`, successful UI and no page errors. Verified in DB: new message #140 / conversation #44; subsequent open message #141 / same conversation #44 with deliberately cleared synthetic label re-applied; after native test-only status `resolved` and another test-only label clear, message #148 / same conversation #44 re-applied `callback` and reopened the conversation. Independent earlier new message #139 / conversation #43 proved phone custom attribute on newly created conversation; optional name remained message-only, `Contact.name` not replaced. All tests used solely intentionally fictitious data with an explicit `не дзвонити` note. Temporary Chromium visitor profiles were deleted after tests. HTTP/2 browser DevTools did not expose the raw wire header block, so only **one browser-visible ACAO key**, not independently reconstructed raw-header multiplicity, is proven; authoritative nginx config plus `ENABLE_API_CORS` must remain single-writer and be rechecked at final release.
+
+**Pending before general rollout:** freeze updated exact HEAD/tree/base/manifest; independent exhaustive R1 then context-isolated R2 ZERO BLOCKERS, final evidence bundle and separate owner exact-go for merge and Drupal deployment, detailed post-release server documentation and future Chatwoot upgrade smoke. WARN/ERROR customer PII residual/privacy acceptance and final user-device verification remain release inputs. Do not change native Chatwoot rule #1, rule #2, global Business Hours or site config without separate explicit approval; remove the current temporary preview folder after owner test and record the cleanup. Operator instruction update is deferred until the owner supplies the actual published instruction.
 
 ## 2026-10-24 — Callback V1 release preparation (real operational status)
 
