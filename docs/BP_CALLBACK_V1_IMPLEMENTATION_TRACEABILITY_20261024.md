@@ -4,6 +4,20 @@ Status: EVIDENCE — NON-NORMATIVE, draft only. No merge, customer activation or
 Applies to: existing BabyPark Drupal→Magento-portable contact launcher / Chatwoot Website Widget callback V1.
 Supersedes: none. Earlier L1 PR #142 and Website Widget research PR #152 remain separate proposed work.
 
+## 2026-10-25 Sonnet review follow-up — bounded draft refinement, no customer activation
+
+Reproducible native-first §1/§3 scan precedes implementation: PR #154 issue comment #6400392706, normalized SHA256 2529d1726bd932a685d9843f8e5ff455ff93a69bb5aca17b30041d73c288755a. Recommendation KEEP-EXISTING browser HTML/DOM and stock Chatwoot 4.18.0. This addendum is a proposal until merge, NOT production authority or review closure.
+
+Traceability under Agreement §6:
+- S1 lost draft → `web/contact-launcher/babypark-launcher.js:openCallback` retains existing DOM values; focused close/reopen multi-path test, absent cross-page storage; no Chatwoot POST on close. DONE draft-only.
+- S4 origin/Unicode/500 script-bypass test gaps → focused Launcher tests deny disallowed origins, constrain single-line preferred-name and block raw direct overlength send; no new handling/durable state. DONE draft-only.
+- N-2/3/4 accessibility → CSS ruby-11 normal-text contrast, DOM hint outside label, native CSS vh before dvh fallback; static/accessibility tests. DONE draft-only; real screen-reader and mobile device proof still required for release.
+- S2 live-rule drift → runbook post-change synthetic callback smoke for changed first-line phrase, both rules old/new, fresh and existing open/resolved messages; `contact-callback-contract.test.mjs` runbook assertion. DONE as operational test contract; actual production cutover smoke OPEN.
+- S3 reliable vendor-native notifications for new and already-open Unassigned conversations → no speculative routing change; profile Email/Push/audio and collaborator restrictions require stock Chatwoot live proof plus explicit staffing policy. IN PROGRESS, **merge/release gate OPEN**; not waived.
+- WARN/ERROR PII, verified recoverable backup, in-place Drupal cutover, security/IP/consent/CSP and exact independent HEAVY R1 then isolated R2 remain IN PROGRESS (no merge). Do not treat an isolated manual UI success as release authorization.
+
+This changes customer-side local draft/display only; Chatwoot rule #1/#2, API transport, inbox/assignment and public production assets are untouched. All prior exact-tree test/manifests and review summaries become historical once HEAD moves; produce a new complete manifest, full immutable tests and independent review on the new exact HEAD/TREE/BASE.
+
 ## 2026-10-25 Native textarea-limit discovery and counter refinement (candidate, not launched)
 
 The owner verified the actual staged Callback: human-facing confirmation `Ви замовили дзвінок` present in common Chatwoot, native `callback` label persists, numeric preferred-name text and multi-line message delivered intact. Then asked whether there are any actual character limits, how Chatwoot validates its name field, and whether to visibly count remaining characters. The owner's final sentence in that message was cut off; do not infer unrelated restrictions.

@@ -9,6 +9,12 @@ test('pinned upstream Chatwoot v4.18.0 widget request contract is documented', (
   assert.match(doc,/90f3728fbf5ce6597a592935bd5d4f146f9ae434/);
   assert.match(doc,/message_created/);
 });
+test('native human phrase remains a bound account-level release smoke dependency', () => {
+  const runbook = readFileSync(new URL('../../docs/CONTACT_LAUNCHER_L1_PREVIEW_RUNBOOK.md', import.meta.url), 'utf8');
+  assert.match(runbook, /post-change synthetic callback smoke/i);
+  assert.match(runbook, /existing open and resolved/i);
+  assert.match(runbook, /Unassigned/i);
+});
 test('internal widget transport is narrow and is not the unsafe public Client API', () => {
   assert.match(source,/\/api\/v1\/widget\/messages\?website_token=/);
   assert.doesNotMatch(source,/\/public\/api\/v1\/inboxes/);

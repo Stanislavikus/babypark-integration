@@ -272,10 +272,9 @@
     phoneField.disabled = false;
     nameField.disabled = false;
     messageField.disabled = false;
-    phoneField.value = '';
-    previousLocalPhone = '';
-    nameField.value = '';
-    messageField.value = '';
+    // Preserve the draft in this page's existing DOM controls across outside
+    // tap, Escape and X. No storage or send occurs until deliberate submit.
+    // A fresh page starts with empty controls; terminal sends stay locked above.
     initializeChatwoot();
     syncCallback();
     phoneField.focus();
@@ -619,9 +618,13 @@
     // Static description updates on input, but is not an assertive live region
     // that would interrupt screen reader users with every typed character.
     messageField.setAttribute('aria-describedby', messageHint.id);
+    // Place the helper outside the label so assistive tech does not read it
+    // once as part of the label and again through aria-describedby.
+    var commentGroup = node('div', 'bp-contact__callback-message-group');
     commentLabel.appendChild(messageField);
-    commentLabel.appendChild(messageHint);
-    formPanel.appendChild(commentLabel);
+    commentGroup.appendChild(commentLabel);
+    commentGroup.appendChild(messageHint);
+    formPanel.appendChild(commentGroup);
     callbackSubmit = node('button', 'bp-contact__callback-submit', 'Замовити дзвінок');
     callbackSubmit.type = 'submit';
     callbackSubmit.disabled = true;

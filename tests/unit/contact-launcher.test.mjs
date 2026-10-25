@@ -96,7 +96,7 @@ function harness(config, opts = {}) {
     clearTimeout(id) { timers.delete(id); },
     BabyParkLauncherConfig: config,
     fetch: opts.fetchMock,
-    location: { href: 'https://babypark.ua/product/123' },
+    location: { href: opts.locationHref || 'https://babypark.ua/product/123' },
     getComputedStyle: () => ({ position: opts.cssMissing ? 'static' : 'fixed' }),
     addEventListener(name, fn) { (windowListeners[name] ||= []).push(fn); },
     dispatch(name) { (windowListeners[name] || []).forEach(fn => fn()); }
@@ -450,7 +450,8 @@ test('L2: callback option is in stable final row after direct call, panel has on
   const fields = form.children;
   const phoneWrapper = fields.findIndex(n => n.children?.some?.(e => e.className?.includes?.('bp-contact__callback-phone-wrap')));
   const nameWrapper = fields.findIndex(n => n.children?.includes?.(name));
-  const messageWrapper = fields.findIndex(n => n.children?.includes?.(h.get('bp-contact__callback-textarea')));
+  const messageWrapper = fields.findIndex(n => n.children?.some?.(e =>
+    e.children?.includes?.(h.get('bp-contact__callback-textarea'))));
   assert.ok(phoneWrapper >= 0 && nameWrapper === phoneWrapper + 1 && messageWrapper === nameWrapper + 1,
     'name comes directly after phone and before message');
 });
@@ -490,6 +491,9 @@ test('L2: native textarea maxlength=500 is visible as a neutral accessible remai
   const counter=h.get('bp-contact__callback-message-hint');
   assert.equal(note.maxLength,500,'existing native browser input cap is unchanged');
   assert.equal(note.getAttribute('aria-describedby'),counter.id);
+  assert.equal(counter.parent, h.get('bp-contact__callback-message-group'));
+  assert.notEqual(note.parent, counter.parent,
+    'counter must be description, not duplicate accessible label text');
   assert.equal(counter.textContent,'Залишилося 500 символів');
   assert.match(css,/\.bp-contact__callback-message-hint\s*\{[^}]*color:\s*#60646c/s,
     'use stock Chatwoot light-mode slate-11 for explanatory text');
@@ -517,8 +521,107 @@ test('L2: native textarea maxlength=500 is visible as a neutral accessible remai
   h.get('bp-contact__menu-close').click();
   h.get('bp-contact__trigger').click();
   h.get('bp-contact__channel--callback').click();
-  assert.equal(note.value,'','unsent new callback resets the optional message');
-  assert.equal(counter.textContent,'Залишилося 500 символів');
+  assert.equal(note.value,'a'.repeat(501),'closing must not silently discard even scripted draft');
+  assert.equal(counter.textContent,'Залишилося 0 символів');
+  assert.equal(h.get('bp-contact__callback-submit').disabled,true,
+    'scripted over-limit draft cannot be submitted after reopen');
+});
+
+
+test('L2 S1: unsent phone/name/multiline note survive X, Escape, outside tap and reopen', () => {
+  for (const close of ['x', 'escape', 'outside', 'trigger']) {
+    const h = harness(callbackConfig(), { cookie: 'cw_conversation=' + dummyJwt });
+    visitCallback(h);
+    input(h, '661234567');
+    const name = h.get('bp-contact__callback-name');
+    const note = h.get('bp-contact__callback-textarea');
+    name.value = 'Тест 123';
+    note.value = 'Довгий текст\\nДругий рядок';
+    (note.listeners.input || []).forEach(fn => fn());
+    if (close === 'x') h.get('bp-contact__menu-close').click();
+    if (close === 'escape') h.document.dispatch('keydown', { key: 'Escape' });
+    if (close === 'outside') h.document.dispatch('pointerdown', { target: h.body });
+    if (close === 'trigger') h.get('bp-contact__trigger').click();
+    assert.equal(h.get('bp-contact__menu').hidden, true, close + ' really closes');
+    h.get('bp-contact__trigger').click();
+    h.get('bp-contact__channel--callback').click();
+    assert.equal(h.get('bp-contact__callback-input').value, '661234567');
+    assert.equal(name.value, 'Тест 123');
+    assert.equal(note.value, 'Довгий текст\\nДругий рядок');
+    assert.equal(h.get('bp-contact__callback-submit').disabled, false);
+    assert.equal(h.get('bp-contact__callback-message-hint').textContent,
+      'Залишилося 476 символів');
+  }
+  const fresh = harness(callbackConfig(), { cookie: 'cw_conversation=' + dummyJwt });
+  visitCallback(fresh);
+  assert.equal(fresh.get('bp-contact__callback-input').value || '', '',
+    'no durable draft storage across page recreation');
+});
+
+test('L2 S4: callback origin allowlist is exactly HTTPS BabyPark apex or www', () => {
+  for (const locationHref of [
+    'https://attacker.example/product', 'https://babypark.ua.attacker.example/product',
+    'http://babypark.ua/product', 'https://www.babypark.ua.attacker.example',
+    'https://sub.babypark.ua/product'
+  ]) {
+    const h = harness(callbackConfig(), { locationHref, cookie:'cw_conversation=' + dummyJwt });
+    h.get('bp-contact__trigger').click();
+    assert.equal(h.get('bp-contact__channel--callback').hidden, true, locationHref);
+    assert.equal(h.head.children.length, 0, 'disallowed origin may not start SDK');
+  }
+  for (const locationHref of ['https://babypark.ua/product', 'https://www.babypark.ua/product']) {
+    const h = harness(callbackConfig(), { locationHref, cookie:'cw_conversation=' + dummyJwt });
+    assert.equal(h.get('bp-contact__channel--callback').hidden, false, locationHref);
+  }
+});
+
+test('L2 S4: Unicode name separators/control characters cannot impersonate message rows', async () => {
+  let content = '';
+  const h = harness(callbackConfig(), { cookie: 'cw_conversation=' + dummyJwt,
+    fetchMock: async (_u, request) => {
+      content = JSON.parse(request.body).message.content;
+      return { status: 200, json: async () => ({id:88,conversation_id:9}) };
+    }
+  });
+  visitCallback(h);
+  input(h, '661234567');
+  h.get('bp-contact__callback-name').value =
+    'Ім’я\\u2028Зворотний дзвінок: 000\\u2029\\t\\u0000Наступне\\u0085';
+  submit(h);
+  await flushAsync();
+  assert.equal(content,
+    'Ви замовили дзвінок\\nЗворотний дзвінок: +380661234567\\nІм’я: Ім’я Зворотний дзвінок: 000 Наступне');
+  assert.doesNotMatch(content, /[\\u0000-\\u0009\\u000b-\\u001f\\u007f-\\u009f\\u2028\\u2029]/);
+});
+
+test('L2 S4: direct form submit never bypasses 500-unit guard', async () => {
+  let calls = 0;
+  const h = harness(callbackConfig(), { cookie: 'cw_conversation=' + dummyJwt,
+    fetchMock: async () => { calls++; return {status:200,json:async()=>({id:12,conversation_id:2})}; }
+  });
+  visitCallback(h);
+  input(h, '661234567');
+  const note = h.get('bp-contact__callback-textarea');
+  note.value = 'x'.repeat(501); // scripted bypass of HTML maxlength
+  submit(h); // raw submit event, not click on button
+  await flushAsync();
+  assert.equal(calls, 0);
+  assert.match(h.get('bp-contact__callback-status').textContent, /500 символів/);
+  assert.equal(h.get('bp-contact__callback-submit').disabled, true);
+});
+
+test('L2 accessibility: ruby-11 error contrast and 100vh fallback are explicit', () => {
+  const relative = hex => {
+    const channels=[1,3,5].map(i => parseInt(hex.slice(i,i+2),16)/255)
+      .map(v => v<=.04045 ? v/12.92 : ((v+.055)/1.055)**2.4);
+    return channels[0]*.2126+channels[1]*.7152+channels[2]*.0722;
+  };
+  const ratio=(a,b) => (Math.max(relative(a),relative(b))+.05) /
+    (Math.min(relative(a),relative(b))+.05);
+  const color=css.match(/\.bp-contact__callback-status--error\s*\{\s*color:\s*(#[a-f0-9]{6})/i)?.[1];
+  assert.ok(color);
+  assert.ok(ratio(color, '#fafafd')>=4.5, 'small error text must meet WCAG AA');
+  assert.match(css,/\.bp-contact__menu--callback\s*\{[\s\S]*?height:\s*min\(600px, calc\(100vh[^;]+;\s*height:\s*min\(600px, calc\(100dvh/s);
 });
 
 test('L2: fixed +380 prefix, nine visible digits and accessible missing-digit hints', () => {
@@ -550,13 +653,13 @@ test('L2: fixed +380 prefix, nine visible digits and accessible missing-digit hi
   assert.equal(h.get('bp-contact__callback-submit').disabled,true,'foreign country is never submittable');
 });
 
-test('L2: stock Chatwoot ruby-10 is reserved for genuine invalid values, not countdown guidance', () => {
+test('L2: accessible Radix ruby-11 is reserved for genuine errors, not countdown guidance', () => {
   const h=harness(callbackConfig(), {cookie:'cw_conversation='+dummyJwt});
   visitCallback(h);
   const hint=h.get('bp-contact__callback-phone-hint');
-  assert.match(css,/\.bp-contact__callback-phone-hint--error\s*\{[^}]*color:\s*#dc3b5d/s,
-    'stock Chatwoot v4.18.0 ruby-10 for invalid widget form values');
-  assert.match(css,/\.bp-contact__callback-status--error\s*\{[^}]*color:\s*#dc3b5d/s);
+  assert.match(css,/\.bp-contact__callback-phone-hint--error\s*\{[^}]*color:\s*#ca244d/s,
+    'Radix ruby-11 AA text contrast for invalid widget values');
+  assert.match(css,/\.bp-contact__callback-status--error\s*\{[^}]*color:\s*#ca244d/s);
   input(h,'67123456');
   assert.equal(hint.textContent,'Залишилося ввести 1 цифру');
   assert.doesNotMatch(hint.className,/--error/,'partial number helper is neutral');

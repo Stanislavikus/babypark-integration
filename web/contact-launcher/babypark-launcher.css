@@ -253,7 +253,9 @@
 .bp-contact__menu--callback {
   width: min(400px, calc(100vw - var(--bp-desktop-right) - 12px));
   max-width: none;
+  height: min(600px, calc(100vh - var(--bp-compact-bottom) - 76px));
   height: min(600px, calc(100dvh - var(--bp-compact-bottom) - 76px));
+  max-height: calc(100vh - var(--bp-compact-bottom) - 76px);
   max-height: calc(100dvh - var(--bp-compact-bottom) - 76px);
   display: flex;
   flex-direction: column;
@@ -385,14 +387,20 @@
   line-height: 1.4;
   font-weight: 450;
 }
-/* Chatwoot v4.18.0 PreChat/Form.vue: ruby-10 is its invalid-field text. */
-.bp-contact__callback-phone-hint--error { color: #dc3b5d; }
+/* Radix ruby-11, also in Chatwoot's color scale: AA contrast on light panel.
+   ruby-10 #dc3b5d was below 4.5:1 for small error text. */
+.bp-contact__callback-phone-hint--error { color: #ca244d; }
 .bp-contact__callback-textarea {
   min-height: 104px;
   max-height: 200px;
   resize: vertical;
 }
 /* Neutral helper uses Chatwoot v4.18.0's slate-11 text color. */
+.bp-contact__callback-message-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
 .bp-contact__callback-message-hint {
   color: #60646c;
   font-size: 12px;
@@ -414,7 +422,7 @@
 }
 .bp-contact__callback-submit:disabled { background: #b3c4cd; color: #263d4d; cursor: not-allowed; }
 .bp-contact__callback-status { min-height: 16px; color: #344e62; font-size: 13px; margin: 0; overflow-wrap: anywhere; }
-.bp-contact__callback-status--error { color: #dc3b5d; }
+.bp-contact__callback-status--error { color: #ca244d; }
 .bp-contact__callback-success {
   position: absolute;
   inset: 0;
