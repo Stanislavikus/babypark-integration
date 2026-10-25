@@ -4,6 +4,17 @@ Status: EVIDENCE — NON-NORMATIVE, draft only. No merge, customer activation or
 Applies to: existing BabyPark Drupal→Magento-portable contact launcher / Chatwoot Website Widget callback V1.
 Supersedes: none. Earlier L1 PR #142 and Website Widget research PR #152 remain separate proposed work.
 
+## 2026-10-25 Codex 6.1 R1 complete known-code findings — one bounded batch
+
+Code review input: exact previous HEAD `431eb148d23bbd5a3a5a24f841065f77dccb1d72`, TREE `79492d1cecd6cd4b30ae7e959dbbf2d18305fa82`, V5 manifest #6400509213 SHA256 `03683842494a490a48a127cc635b32974350189131f6ea2425bc42a00b554009`; reviewer found one BLOCKER and two SHOULD FIX, explicitly not ZERO BLOCKERS. All are addressed as the same bounded batch in Draft PR. Mandatory refreshed pre-code native scan #6400777473 normalized SHA256 `992574e8d12ec37c0e597cf1a59247d26b2b025a9a3d435b3bed38f21fb876d0`. Recommendation KEEP-EXISTING browser native and current supported Chatwoot 4.18.0 Widget. Neither Chatwoot account nor production website changed.
+
+Traceability §6 (candidate code, not authorizing merge):
+- 500-character raw input control: `web/contact-launcher/babypark-launcher.js:submitCallback` validates `rawComment.length` BEFORE `trim`; UI `syncCallback` checks same raw length. Direct event for leading/trailing spaces or all 501 spaces yields zero POST/error/disabled; exactly 500 raw units allowed. Test `HEAVY R1: raw textarea maxlength...`. Fail closed. No added customer storage.
+- Interrupted Callback from delayed Chat ready: `openCallback` clears earlier `requestedChat`; ready event verifies current `!callbackView` and active menu. Test `HEAVY R1: stale pending Chat...`. No unsolicited Widget toggle. No persisted state.
+- Success timer focus: 3.5 second timer calls `closeMenu(restoreFocus)` only when `document.activeElement` remains within launcher menu. External page input never loses focus; success panel focus returns to trigger when still inside. Test `HEAVY R1: success auto-close...`. No new PII/queue.
+
+This changes exact HEAD/TREE and invalidates older manifest/review closure. New manifest, immutable focused/root tests, full independent exhaustive R1 and separately context-isolated R2 are mandatory; operational release blockers (Unassigned notifications, Chatwoot recoverable backup, WARN/ERROR PII, new/Open/Resolved exact live/CORS/IP/browser/Drupal) remain unresolved. No auto-merge or public site activation.
+
 ## 2026-10-25 Sonnet review follow-up — bounded draft refinement, no customer activation
 
 Reproducible native-first §1/§3 scan precedes implementation: PR #154 issue comment #6400392706, normalized SHA256 2529d1726bd932a685d9843f8e5ff455ff93a69bb5aca17b30041d73c288755a. Recommendation KEEP-EXISTING browser HTML/DOM and stock Chatwoot 4.18.0. This addendum is a proposal until merge, NOT production authority or review closure.

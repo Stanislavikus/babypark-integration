@@ -240,13 +240,18 @@
     // acknowledgement NEVER starts this timer and NEVER permits a retry.
     successTimer = window.setTimeout(function () {
       successTimer = null;
-      if (state.callbackSent && state.callbackView && state.expanded && !state.callbackPending)
-        closeMenu(true);
+      if (state.callbackSent && state.callbackView && state.expanded && !state.callbackPending) {
+        // Do not steal focus from a control the visitor has since selected
+        // elsewhere on the page; restore only from inside the closing panel.
+        closeMenu(!!(document.activeElement && menu.contains(document.activeElement)));
+      }
     }, 3500);
   }
 
   function openCallback() {
     if (!callbackConfigured()) return;
+    // Selecting Callback supersedes an older deferred Chat choice.
+    state.requestedChat = false;
     state.callbackView = true;
     setCallbackAppearance(true);
     formPanel.hidden = false;
@@ -284,13 +289,17 @@
     if (state.callbackPending || state.callbackSent || state.callbackUncertain || !callbackConfigured()) return;
     var phone = normalizePhone(phoneField.value);
     var preferredName = optionalCallbackName(nameField.value);
-    var comment = messageField.value.trim();
+    // UI and submit must enforce the same raw browser maxlength units.
+    // trim() is for payload presentation, not a validation bypass.
+    var rawComment = String(messageField.value || '');
+    var commentTooLong = rawComment.length > 500;
+    var comment = rawComment.trim();
     var jwt = getWidgetJwt();
-    if (!phone || comment.length > 500 || !state.ready || !jwt || typeof window.fetch !== 'function') {
+    if (!phone || commentTooLong || !state.ready || !jwt || typeof window.fetch !== 'function') {
       // A script can bypass native maxlength without firing input; keep
       // the visible submit state consistent with the blocked direct POST.
       syncCallback();
-      callbackInfo.textContent = comment.length > 500
+      callbackInfo.textContent = commentTooLong
         ? 'Повідомлення не може бути довшим за 500 символів.'
         : 'Перевірте номер телефону та з’єднання.';
       callbackInfo.className = 'bp-contact__callback-status bp-contact__callback-status--error';
@@ -504,7 +513,7 @@
       state.ready = true;
       state.slow = false;
       syncVisible();
-      if (state.requestedChat) {
+      if (state.requestedChat && !state.callbackView && state.expanded) {
         state.requestedChat = false;
         if (window.$chatwoot && typeof window.$chatwoot.toggle === 'function') {
           closeMenu(false);

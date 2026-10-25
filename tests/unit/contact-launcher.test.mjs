@@ -626,6 +626,95 @@ test('L2 accessibility: ruby-11 error contrast and 100vh fallback are explicit',
   assert.match(css,/\.bp-contact__menu--callback\s*\{[\s\S]*?height:\s*min\(600px, calc\(100vh[^;]+;\s*height:\s*min\(600px, calc\(100dvh/s);
 });
 
+
+test('HEAVY R1: raw textarea maxlength is enforced before trim for direct submit', async () => {
+  const overLimit = [
+    ' ' + 'x'.repeat(500),
+    'x'.repeat(500) + '\\n',
+    ' '.repeat(501)
+  ];
+  for (const raw of overLimit) {
+    let calls = 0;
+    const h = harness(callbackConfig(), { cookie: 'cw_conversation=' + dummyJwt,
+      fetchMock: async () => { calls++; return {status:200,json:async()=>({id:41,conversation_id:2})}; }
+    });
+    visitCallback(h);
+    input(h, '661234567');
+    const note = h.get('bp-contact__callback-textarea');
+    note.value = raw;
+    for (const listener of note.listeners.input || []) listener();
+    assert.equal(h.get('bp-contact__callback-submit').disabled, true,
+      'raw length 501 disables button even if trim would reduce it');
+    submit(h); // programmatic direct event bypasses disabled button
+    await flushAsync();
+    assert.equal(calls, 0, 'never POST beyond raw 500 UTF-16 units');
+    assert.match(h.get('bp-contact__callback-status').textContent, /500 символів/);
+    assert.equal(h.get('bp-contact__callback-submit').disabled, true);
+  }
+  for (const raw of ['x'.repeat(500), ' ' + 'x'.repeat(499)]) {
+    let calls = 0;
+    const h = harness(callbackConfig(), { cookie: 'cw_conversation=' + dummyJwt,
+      fetchMock: async () => { calls++; return {status:200,json:async()=>({id:42,conversation_id:3})}; }
+    });
+    visitCallback(h);
+    input(h, '661234567');
+    const note = h.get('bp-contact__callback-textarea');
+    note.value = raw;
+    for (const listener of note.listeners.input || []) listener();
+    assert.equal(h.get('bp-contact__callback-submit').disabled, false,
+      'exactly 500 raw units are allowed');
+    submit(h);
+    await flushAsync();
+    assert.equal(calls, 1, 'one confirmed Widget POST within raw 500 limit');
+    assert.equal(h.get('bp-contact__callback-submit').disabled, true);
+  }
+});
+
+test('HEAVY R1: stale pending Chat cannot replace selected Callback on late ready', () => {
+  const h = harness(callbackConfig(), { cookie:'cw_conversation='+dummyJwt });
+  let opens = 0;
+  h.get('bp-contact__trigger').click();
+  // Seed the late-chat intent through the existing click handler as a stale
+  // action from the pre-ready phase; current disabled visual row is unaffected.
+  for (const fn of h.get('bp-contact__channel--chat').listeners.click || []) fn();
+  assert.equal(h.head.children.length, 1, 'same lazy SDK requested once');
+  h.get('bp-contact__channel--callback').click();
+  input(h, '661234567');
+  const note = h.get('bp-contact__callback-textarea');
+  note.value = 'Перетелефонуйте пізніше';
+  h.window.chatwootSDK = { run() {
+    h.window.$chatwoot = { toggle() { opens++; } };
+  }};
+  h.head.children[0].onload();
+  h.window.dispatch('chatwoot:ready');
+  assert.equal(opens, 0, 'stale chat intent never opens Widget');
+  assert.equal(h.get('bp-contact__menu').hidden, false);
+  assert.equal(h.get('bp-contact__callback-form').hidden, false);
+  assert.equal(h.get('bp-contact__callback-input').value, '661234567');
+  assert.equal(note.value, 'Перетелефонуйте пізніше');
+});
+
+test('HEAVY R1: success auto-close does not steal focus from outside page input', async () => {
+  for (const moveOutside of [false,true]) {
+    const h = harness(callbackConfig(), { cookie:'cw_conversation='+dummyJwt,
+      fetchMock: async () => ({status:200,json:async()=>({id:43,conversation_id:3})})
+    });
+    visitCallback(h);
+    input(h, '661234567');
+    submit(h);
+    await flushAsync();
+    assert.equal(h.document.activeElement, h.get('bp-contact__callback-success'));
+    const external = h.document.createElement('input');
+    h.body.appendChild(external);
+    if (moveOutside) external.focus();
+    h.advance(3500);
+    assert.equal(h.get('bp-contact__menu').hidden, true);
+    assert.equal(h.document.activeElement,
+      moveOutside ? external : h.get('bp-contact__trigger'),
+      moveOutside ? 'external focus must not be stolen' : 'inside-panel focus safely returns to trigger');
+  }
+});
+
 test('L2: fixed +380 prefix, nine visible digits and accessible missing-digit hints', () => {
   const h=harness(callbackConfig(),{cookie:'cw_conversation='+dummyJwt});
   visitCallback(h);
