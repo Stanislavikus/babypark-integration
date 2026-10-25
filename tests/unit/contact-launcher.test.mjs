@@ -450,7 +450,7 @@ test('L2: callback option is in stable final row after direct call, panel has on
   assert.equal(name.spellcheck, false);
   const form = h.get('bp-contact__callback-form');
   const fields = form.children;
-  const phoneWrapper = fields.findIndex(n => n.children?.some?.(e => e.className?.includes?.('bp-contact__callback-phone-wrap')));
+  const phoneWrapper = fields.findIndex(n => n.className?.includes?.('bp-contact__callback-phone-group'));
   const nameWrapper = fields.findIndex(n => n.children?.includes?.(name));
   const messageWrapper = fields.findIndex(n => n.children?.some?.(e =>
     e.children?.includes?.(h.get('bp-contact__callback-textarea'))));
@@ -715,6 +715,102 @@ test('HEAVY R1: success auto-close does not steal focus from outside page input'
   }
 });
 
+
+test('HEAVY V7: formatted explicit foreign code is never reinterpreted as Ukrainian', async () => {
+  for (const foreign of [
+    '+687 20 00 00', ' +687 20 00 00', '(+687) 20 00 00',
+    '\u00a0+687 20 00 00', '\t(+687) 20 00 00',
+    '687+20 00 00', '++687200000', '+420777123456'
+  ]) {
+    let calls = 0;
+    const h = harness(callbackConfig(), {
+      cookie:'cw_conversation=' + dummyJwt,
+      fetchMock: async () => { calls++; return {status:200,json:async()=>({id:91,conversation_id:14})}; }
+    });
+    visitCallback(h);
+    input(h, '671234567');
+    assert.equal(h.get('bp-contact__callback-submit').disabled, false);
+    input(h, foreign);
+    assert.equal(h.get('bp-contact__callback-input').value, foreign,
+      'invalid international input remains visible, not replaced by old phone');
+    assert.equal(h.get('bp-contact__callback-submit').disabled, true,
+      'explicit foreign country signal disables Widget send');
+    assert.match(h.get('bp-contact__callback-phone-hint').textContent, /лише номери України/);
+    submit(h); // includes forced programmatic bypass
+    await flushAsync();
+    assert.equal(calls, 0, 'no POST and no silent new +380 recipient');
+  }
+});
+
+test('HEAVY V7: domestic +380 paste remains supported after anti-foreign guard', async () => {
+  for (const domestic of [
+    '+380 67 123 45 67',
+    ' (+380) 67 123 45 67',
+    '\u00a0+380671234567',
+    '0671234567',
+    '671234567'
+  ]) {
+    let captured, sends = 0;
+    const h = harness(callbackConfig(),{
+      cookie:'cw_conversation=' + dummyJwt,
+      fetchMock:async (_u,req) => {
+        sends++;
+        captured=JSON.parse(req.body);
+        return {status:200,json:async()=>({id:100,conversation_id:12})};
+      }
+    });
+    visitCallback(h);
+    input(h,domestic);
+    assert.equal(h.get('bp-contact__callback-input').value,'671234567',domestic);
+    assert.equal(h.get('bp-contact__callback-submit').disabled,false,domestic);
+    submit(h);
+    await flushAsync();
+    assert.equal(sends,1);
+    assert.equal(captured.custom_attributes.callback_phone,'+380671234567');
+  }
+});
+
+test('HEAVY V7: autocomplete phone shape cannot be silently vetoed by native pattern', async () => {
+  let calls=0, phone;
+  const h=harness(callbackConfig(),{
+    cookie:'cw_conversation='+dummyJwt,
+    fetchMock:async (_url,request) => {
+      calls++; phone=JSON.parse(request.body).custom_attributes.callback_phone;
+      return {status:200,json:async()=>({id:89,conversation_id:15})};
+    }
+  });
+  visitCallback(h);
+  const form=h.get('bp-contact__callback-form');
+  assert.equal(form.noValidate,true,'native constraint validation never vetoes JS normalization');
+  const number=h.get('bp-contact__callback-phone-input');
+  number.value='0671234567'; // simulates browser/autofill value that emitted no input
+  h.get('bp-contact__callback-textarea').value='Зателефонуйте';
+  for(const listener of h.get('bp-contact__callback-textarea').listeners.input||[]) listener();
+  assert.equal(h.get('bp-contact__callback-submit').disabled,false);
+  submit(h);
+  await flushAsync();
+  assert.equal(calls,1,'one normalized POST');
+  assert.equal(phone,'+380671234567');
+});
+
+test('HEAVY V7: phone accessibility and small landscape success remain scroll-safe', () => {
+  const h=harness(callbackConfig(),{cookie:'cw_conversation='+dummyJwt});
+  visitCallback(h);
+  const label=h.get('bp-contact__callback-label');
+  const group=h.get('bp-contact__callback-phone-group');
+  const phone=h.get('bp-contact__callback-phone-input');
+  const hint=h.get('bp-contact__callback-phone-hint');
+  assert.equal(hint.parent,group,'hint sits outside associated label');
+  assert.notEqual(phone.parent,hint.parent);
+  assert.equal(phone.getAttribute('aria-describedby'),hint.id);
+  assert.match(css,/@media \(forced-colors: active\)\s*\{[\s\S]*?\.bp-contact__callback-phone-input:focus-visible\s*\{[^}]*outline:\s*2px solid Highlight/);
+  const success = css.match(/\.bp-contact__callback-success\s*\{([\s\S]*?)\}/)?.[1]||'';
+  assert.match(success,/justify-content:\s*safe center/);
+  assert.match(success,/overflow-y:\s*auto/);
+  assert.match(css,/\.bp-contact__callback-success > \*\s*\{\s*flex:\s*0 0 auto;/);
+  assert.match(css,/\.bp-contact__brand-avatar\s*\{[\s\S]*?background:\s*#ae5100/);
+});
+
 test('L2: fixed +380 prefix, nine visible digits and accessible missing-digit hints', () => {
   const h=harness(callbackConfig(),{cookie:'cw_conversation='+dummyJwt});
   visitCallback(h);
@@ -740,7 +836,7 @@ test('L2: fixed +380 prefix, nine visible digits and accessible missing-digit hi
   input(h,'1234567895');
   assert.equal(field.value,'123456789','an extra typed digit is ignored');
   input(h,'+420 777 123 456');
-  assert.equal(field.value,'+420777123456','preserve explicit foreign code visibly without reinterpreting it');
+  assert.equal(field.value,'+420 777 123 456','preserve explicit foreign code visibly without reinterpreting it');
   assert.equal(h.get('bp-contact__callback-submit').disabled,true,'foreign country is never submittable');
 });
 
@@ -891,7 +987,7 @@ test('HEAVY B-2: paste, extra keys, edit-after-prefix and request payload retain
   assert.equal(button.disabled, false);
 
   input(h, '+420 777 123 456');
-  assert.equal(field.value, '+420777123456', 'foreign code stays visible and fails closed');
+  assert.equal(field.value, '+420 777 123 456', 'foreign code stays visible and fails closed');
   assert.equal(button.disabled, true, 'cannot send to a foreign country as Ukrainian recipient');
   input(h, '671234567');
   assert.equal(button.disabled, false, 'manual correction recovers valid Ukrainian phone');

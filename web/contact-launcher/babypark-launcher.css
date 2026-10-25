@@ -293,7 +293,7 @@
   width: 44px;
   height: 44px;
   border-radius: 50%;
-  background: #f57908;
+  background: #ae5100;
   color: #fff;
   font-size: 8px;
   font-weight: 750;
@@ -362,7 +362,8 @@
   font-family: inherit;
   line-height: 1.45;
 }
-.bp-contact__callback-input::placeholder { color: #8a939f; opacity: 1; }
+.bp-contact__callback-input::placeholder { color: #677381; opacity: 1; }
+.bp-contact__callback-phone-group { display: flex; flex-direction: column; gap: 8px; }
 .bp-contact__callback-phone-input {
   min-width: 0;
   min-height: 52px;
@@ -380,6 +381,12 @@
 .bp-contact__callback-phone-input:focus-visible {
   outline: none;
   box-shadow: none;
+}
+@media (forced-colors: active) {
+  .bp-contact__callback-phone-input:focus-visible {
+    outline: 2px solid Highlight;
+    outline-offset: 2px;
+  }
 }
 .bp-contact__callback-phone-hint {
   color: #606f7d;
@@ -430,12 +437,16 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
+  justify-content: safe center;
   gap: 15px;
   padding: 24px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   background: #fff;
   text-align: center;
 }
+.bp-contact__callback-success > * { flex: 0 0 auto; }
 .bp-contact__callback-form--success > :not(.bp-contact__callback-success) { visibility: hidden; }
 .bp-contact__callback-success-icon {
   display: flex;

@@ -8,7 +8,7 @@
  * Chatwoot Website SDK loads only when the buyer selects Chat or Callback.
  * L2 callback uses stock Widget API with signed visitor cookie and a separately
  * approved Nginx origin-specific CORS rule. NEVER enable callback before
- * verifying v4.18 contract, Chatwoot label+team automation and log policy.
+ * verifying v4.18 contract, Chatwoot label-only automation and log policy.
  */
 window.BabyParkLauncherConfig = {
   assetBase: '', // e.g. '/sites/all/themes/babypark2/assets/contact/' — CMS-specific

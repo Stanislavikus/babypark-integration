@@ -133,6 +133,18 @@
       /^https:\/\/(?:www\.)?babypark\.ua$/.test(new URL(window.location.href).origin));
   }
 
+  function explicitCountryCode(raw) {
+    // A pasted number can carry an international '+' after whitespace and
+    // punctuation. Never discard the explicit foreign-country signal.
+    var value = String(raw || '');
+    if (value.indexOf('+') === -1) return 'none';
+    if (value.indexOf('+') !== value.lastIndexOf('+')) return 'foreign';
+    var prefix = value.match(/^\s*[([{]*\s*\+([0-9]*)/);
+    if (!prefix) return 'foreign';
+    if (prefix[1].length < 3 && '380'.indexOf(prefix[1]) === 0) return 'partial';
+    return prefix[1].slice(0, 3) === '380' ? 'ukraine' : 'foreign';
+  }
+
   function localPhoneDigits(raw) {
     // +380 is already fixed on screen. Strip a visitor's repeated country
     // code (or national trunk 0) AS SOON AS THEY TYPE IT, rather than only
@@ -142,7 +154,8 @@
     var digits = value.replace(/[^0-9]/g, '');
     // When an international + is entered, never interpret an unknown country
     // prefix as a Ukrainian local number while the visitor is still typing.
-    if (value.charAt(0) === '+' && digits.slice(0, 3) !== '380') return '';
+    var country = explicitCountryCode(value);
+    if (country === 'foreign' || country === 'partial') return '';
     if (digits.slice(0, 3) === '380') digits = digits.slice(3);
     else if (digits.charAt(0) === '0') digits = digits.slice(1);
     // Never truncate an ambiguous foreign/overlong number into another one.
@@ -203,10 +216,9 @@
     if (phoneHint) {
       var remaining = 9 - digits.length;
       var rawPhone = phoneField ? String(phoneField.value || '') : '';
-      var partialCountry = rawPhone.charAt(0) === '+' &&
-        '+380'.indexOf(rawPhone) === 0 && rawPhone.length < 4;
-      var foreignCountry = rawPhone.charAt(0) === '+' &&
-        !/^\+380/.test(rawPhone) && !partialCountry;
+      var international = explicitCountryCode(rawPhone);
+      var partialCountry = international === 'partial';
+      var foreignCountry = international === 'foreign';
       var badNumber = foreignCountry || (remaining === 0 && !valid);
       // Stock Chatwoot PreChat/Form.vue uses ruby-10 for a true error;
       // short/in-progress guidance keeps the neutral Chatwoot slate tone.
@@ -584,6 +596,10 @@
     names.forEach(function (name) { options.appendChild(makeRow(name)); });
     menu.appendChild(options);
     formPanel = node('form', 'bp-contact__callback-form');
+    // Autocomplete can fill a full national phone without firing input.
+    // The JS submit guard validates normalized phone, JWT and raw note;
+    // native pattern on the unnormalized value must not silently veto submit.
+    formPanel.noValidate = true;
     formPanel.hidden = true;
     formPanel.setAttribute('aria-label', labels.callback);
     formPanel.appendChild(node('p', 'bp-contact__callback-caption', 'Залиште номер для зв’язку'));
@@ -610,8 +626,12 @@
     phoneField.setAttribute('aria-describedby', phoneHint.id);
     phoneWrap.appendChild(phoneField);
     phoneLabel.appendChild(phoneWrap);
-    phoneLabel.appendChild(phoneHint);
-    formPanel.appendChild(phoneLabel);
+    // Keep the dynamic hint outside the label (description only, not duplicate
+    // accessible-name content), as is already done for the message counter.
+    var phoneGroup = node('div', 'bp-contact__callback-phone-group');
+    phoneGroup.appendChild(phoneLabel);
+    phoneGroup.appendChild(phoneHint);
+    formPanel.appendChild(phoneGroup);
     var nameLabel = node('label', 'bp-contact__callback-label', 'Ім’я (необов’язково)');
     nameField = node('input', 'bp-contact__callback-input bp-contact__callback-name');
     nameField.type = 'text';
@@ -658,7 +678,15 @@
     formPanel.appendChild(callbackSuccess);
     phoneField.addEventListener('input', function () {
       var raw = phoneField.value;
-      if (raw.charAt(0) === '+') {
+      var international = explicitCountryCode(raw);
+      if (international === 'foreign' || international === 'partial') {
+        // Preserve this visible invalid international input until corrected;
+        // never convert it to a different +380 recipient or restore an old one.
+        previousLocalPhone = '';
+        syncCallback();
+        return;
+      }
+      if (international === 'ukraine') {
         // Keep a partial or foreign explicit +country prefix visibly invalid
         // until +380 is fully entered or the visitor edits it. Otherwise
         // dropping '+' permits an unrelated international number to appear
@@ -674,7 +702,8 @@
       var normalized = localPhoneDigits(raw);
       // Reject an ambiguous overlong paste; do not clear a correctly typed
       // nine-digit value when one extra digit is pressed.
-      if (!normalized && raw.replace(/[^0-9]/g, '').length > 9)
+      if (!normalized && /^[0-9]{10}$/.test(raw) && previousLocalPhone.length === 9 &&
+          raw.slice(0, 9) === previousLocalPhone)
         normalized = previousLocalPhone;
       phoneField.value = normalized;
       previousLocalPhone = normalized;

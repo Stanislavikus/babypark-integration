@@ -52,3 +52,16 @@ test('native automation fixture is account-scoped and does not hard-code inbox o
   assert.equal(rule.conditions.some(c => c.attribute_key === 'inbox_id' || c.attribute_key === 'team_id'), false);
   assert.equal(rule.actions.some(a => a.action_name === 'assign_team' || a.action_name === 'assign_agent'), false);
 });
+
+test('V7 native-only scan and operational headers have an explicit release fence', () => {
+  const scan=readFileSync(new URL('../../docs/BP_CALLBACK_V1_V7_NATIVE_OPTIONS_SCAN_20261025.md',import.meta.url),'utf8');
+  const runbook=readFileSync(new URL('../../docs/CONTACT_LAUNCHER_L1_PREVIEW_RUNBOOK.md',import.meta.url),'utf8');
+  const nginx=readFileSync(new URL('../../deploy/contact-launcher/chatwoot-widget-cors.nginx.example',import.meta.url),'utf8');
+  const example=readFileSync(new URL('../../web/contact-launcher/config.example.js',import.meta.url),'utf8');
+  assert.match(scan,/no new customer PII storage/i);
+  assert.match(runbook,/HSTS\/CSP/);
+  assert.match(nginx,/add_header at location replaces server\/http inheritance/);
+  assert.doesNotMatch(example,/label\+team automation/);
+  assert.equal((doc.match(/# BabyPark Callback V1 — bounded implementation evidence/g)||[]).length,1,
+    'single authoritative document rather than corrupted concatenated copies');
+});

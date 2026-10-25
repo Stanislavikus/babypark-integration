@@ -13,6 +13,12 @@ map $http_origin $bp_callback_cors_origin {
 # verified current upstream and proxy_* directives. This exact-path location
 # preserves other widget endpoints and regular Chatwoot UI unchanged.
 location = /api/v1/widget/messages {
+    # IMPORTANT: nginx add_header at location replaces server/http inheritance
+    # on standard nginx versions. Before cutover, inspect nginx -T and repeat
+    # EVERY active server-level security header here with the exact deployed
+    # values (e.g. HSTS, X-Content-Type-Options, Referrer-Policy, CSP).
+    # HALT until read-back proves the protected endpoint retains them.
+    # Never paste guessed security header values from this example.
     add_header Vary "Origin" always;
     add_header Access-Control-Allow-Origin $bp_callback_cors_origin always;
     add_header Access-Control-Allow-Methods "POST, OPTIONS" always;
