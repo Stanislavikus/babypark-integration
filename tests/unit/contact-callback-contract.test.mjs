@@ -37,9 +37,9 @@ test('native automation fixture is account-scoped and does not hard-code inbox o
   assert.deepEqual(rule.actions.map(a => a.action_name), ['add_label']);
   assert.equal(rule.actions[0].action_params[0], 'callback');
   assert.equal(rule.conditions[1].filter_operator, 'contains');
-  const expectedPrefix = 'Ви замовили дзвінок\\nЗворотний дзвінок: ';
+  const expectedPrefix = 'Ви замовили дзвінок\nЗворотний дзвінок: ';
   assert.deepEqual(rule.conditions[1].values, [expectedPrefix]);
-  assert.ok(source.includes("Ви замовили дзвінок\\\\nЗворотний дзвінок: "),
+  assert.ok(source.includes("Ви замовили дзвінок\\nЗворотний дзвінок: "),
     'exact customer-facing two-line prefix must be in Widget payload and rule');
   assert.equal(expectedPrefix.includes('BABYPARK_CALLBACK_V1'), false,
     'native rule no longer depends on user-visible machine marker');
