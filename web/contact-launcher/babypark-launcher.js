@@ -186,7 +186,8 @@
       state.callbackPending || state.callbackSent || state.callbackUncertain || !getWidgetJwt();
     if (phoneHint) {
       var remaining = 9 - digits.length;
-      phoneHint.textContent = remaining === 0 ? 'Номер заповнено'
+      phoneHint.textContent = remaining === 0
+        ? (valid ? 'Номер заповнено' : 'Перевірте перші цифри номера')
         : remaining === 9 ? 'Введіть 9 цифр номера'
         : 'Залишилося ввести ' + remaining + ' ' +
           (remaining === 1 ? 'цифру' : remaining <= 4 ? 'цифри' : 'цифр');
