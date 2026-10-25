@@ -392,6 +392,13 @@
   max-height: 200px;
   resize: vertical;
 }
+/* Neutral helper uses Chatwoot v4.18.0's slate-11 text color. */
+.bp-contact__callback-message-hint {
+  color: #60646c;
+  font-size: 12px;
+  line-height: 1.4;
+  font-weight: 450;
+}
 .bp-contact__callback-submit {
   width: 100%;
   min-height: 53px;
