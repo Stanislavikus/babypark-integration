@@ -490,7 +490,7 @@ test('L2: fixed +380 prefix, nine visible digits and accessible missing-digit hi
   const field=h.get('bp-contact__callback-phone-input');
   assert.equal(prefix.textContent,'+380');
   assert.equal(field.inputMode,'numeric');
-  assert.equal(field.pattern,'[0-9]{9}');
+  assert.equal(field.pattern,'[3-9][0-9]{8}');
   assert.equal(field.maxLength,30,'allow whole clipboard number before normalization');
   assert.equal(field.getAttribute('aria-describedby'),h.get('bp-contact__callback-phone-hint').id);
   assert.match(h.get('bp-contact__callback-phone-hint').textContent,/Введіть 9 цифр/);
@@ -559,7 +559,11 @@ test('HEAVY B-2: incomplete, reserved-prefix and all-zero numbers fail closed ac
       assert.equal(button.disabled, true, 'never enable invalid phone: ' + typed);
     }
     assert.notEqual(h.get('bp-contact__callback-phone-hint').textContent, 'Номер заповнено',
-      'hint must not say complete for incomplete prefix: ' + typed);
+      'hint must not say complete for incomplete or invalid prefix: ' + typed);
+    if (field.value.length === 9) {
+      assert.equal(h.get('bp-contact__callback-phone-hint').textContent,
+        'Перевірте перші цифри номера', 'bad 9-digit prefix has an actionable hint');
+    }
   }
 });
 
