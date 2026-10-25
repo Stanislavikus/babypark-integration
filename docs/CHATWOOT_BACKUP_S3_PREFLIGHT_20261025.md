@@ -1,6 +1,6 @@
 # Chatwoot backup — AWS S3 independent custody preflight, 2026-10-25
 
-Status: EVIDENCE — NON-NORMATIVE. Read-only research checkpoint, NOT approval to transfer customer data or incur costs.
+Status: EVIDENCE — NON-NORMATIVE. HISTORICAL candidate comparison; subsequent owner preference prioritizes single-provider DO Spaces. NOT approval to transfer customer data or incur costs.
 Applies to: BabyPark production Chatwoot 4.18.0 backup/recovery research, Draft PR #155; separate from SES PR #150.
 Supersedes: none.
 Repository: `Stanislavikus/babypark-integration`; canonical base `1d5d8c00b7fdcdb54f37418ea60931c4292fd600`; Agreement `e777fce4af8e8c3372f1f9de9ef7d00f786c2c89`.
@@ -23,7 +23,7 @@ PRODUCTION IMPLEMENTATION: NONE. No backup export, S3 creation/change, config ch
 | Guard against malicious deletion / retention correctness | PARTIAL: separate principals/delete authority, tested recovery and lifecycle; Object Lock not a drop-in substitute | PARTIAL: server admin, append-only/write separation and restore rights need evidence | FAIL as sole independent custody |
 | Legal/customer-data policy | UNVERIFIED: dedicated EU bucket, access logging, DPA, retention, controller/operator approval needed | UNVERIFIED: region/owner/hosting/data control | UNVERIFIED, AND wrong failure domain |
 | Cost/operations | PARTIAL: metered GB, requests, restore/egress, access and recovery drills; no minimum storage commitment | PARTIAL: server cost, disks, patching, monitoring, SSH access | Paid and tied to original DO account |
-| Provisional research priority | **Preferred investigation candidate**, not integration GO | Remains viable if cheaper/safer or more independently recoverable | NOT FIT as the only second layer |
+| Provisional research priority at *this historical AWS-focused scan* | Previously preferred; superseded by owner simplicity preference, now optional hardening | Remains viable only if owner wants independent provider | **Current preferred operational-simplicity research candidate**; same-account loss is an explicit residual risk, not an undisclosed PASS |
 
 Additional plausible candidate: a separately administered S3-compatible provider other than AWS/DO, with verified official restic compatibility and lawful data residency. Not assessed sufficiently to claim exclusion. Existing `server2181.babypark.ua` already holds *other* backups, but independent account/custody and customer-conversation PII approval are not proven and cannot be assumed.
 
@@ -33,7 +33,7 @@ Additional plausible candidate: a separately administered S3-compatible provider
 2. **S3 Object Lock != compatible native rotation.** `restic forget` and `prune` delete or repack repository objects; S3 Object Lock/version retention can block physical deletion, retain accumulating versions and disrupt/pricily complicate prune. No blanket WORM on a mutable restic repo without complete non-production compatibility, restore and lifecycle tests. Option for separately sealed immutable completed checkpoint is an *alternative for research*, not an already proven design.
 3. **Backup writer != deletion/recovery administrator.** Least-privilege production upload scope and separately controlled destructive/restore access; owner can decrypt and restore even after entire DO account loss. Test genuine restore using independently recovered password, not only a key present on production.
 4. **Recovery test:** isolated environment with public routing, outbound SMTP/webhooks and Sidekiq workers disabled; PostgreSQL, contacts, conversations and local `/home/chatwoot/chatwoot/storage` attachments successfully readable from archive; ensure no accidental external messages, duplicate job execution or leaked private data. Redis RDB/AOF/Sidekiq queue reconciliation remains an independent proof obligation.
-5. **Provider Daily backup != proven restore.** Confirm actual image after first DO window and test isolated restoration only with separately approved resources. Layer B must remain separately encrypted and geographically/account independent.
+5. **Provider Daily backup != proven restore.** Confirm actual image after first DO window and test isolated restoration only with separately approved resources. Layer B must remain off the live Droplet and independently encrypted; same-account loss remains uncovered by DO-only design and requires transparent owner risk acceptance, not an invented mandatory external-provider policy.
 
 ## D. Reproducible reference paths and remaining STOP gates
 
@@ -41,4 +41,12 @@ Sources: AWS Pricing API `GetProducts`, S3 `ListBuckets`, metadata `GetBucketLoc
 
 OPEN: exact target/account independence + credentials access; S3 user/IAM separation (no backup IAM role or bucket yet); realistic size and billed requests; region/privacy/legal retention; isolated restore key custody; preservation of last verified recovery generation and protection from writer compromise; compatibility with scheduled/pruned restic repositories; reproducible restore proof; exact frozen scan+fit digests, owner-bound fit GO, exact-tree HEAVY verification. No source supports declaring a production fit.
 
-**Recommendation: reference.** Research points toward a dedicated AWS S3 bucket and stock restic/pg_dump tooling, not deploying it. The owner approved continuing research, not an exact billed storage/IAM/PII configuration. Continue the bounded architecture-fit under Agreement §§1–3 and keep production untouched.
+**Recommendation: reference.** This document captures why AWS S3 was investigated. **Subsequent owner feedback explicitly prioritizes operational simplicity and reuse of DigitalOcean.** The new research priority is DO Spaces Standard plus stock restic/pg_dump; AWS S3 becomes an optional future account-failure-domain resilience upgrade. Neither choice has final paid/PII configuration permission. Continue bounded architecture-fit under Agreement §§1–3 and keep production untouched.
+
+## E. Owner simplification correction — retain evidence, reverse preference
+
+The initial assessment overweighted total loss of a DigitalOcean account compared with the owner's stated constraint: reducing operational load and the number of accounts/services to monitor. The initial AWS recommendation was **not** a normative or owner-approved requirement. No separate AWS S3 backup bucket should be created under this research decision. Existing AWS work for SES remains separate.
+
+The preferred **research-only** option is DigitalOcean Spaces Standard (official quoted base $5/month including 250 GiB, capacity/egress policy still to be verified) alongside the already-enabled DO Daily Droplet Backup. Official documentation: https://docs.digitalocean.com/products/spaces/details/pricing/ and https://docs.digitalocean.com/products/spaces/reference/s3-compatibility/ . Client-side restic encryption protects copied data, but the backup and provider image remain subject to the same DO account suspension/compromise risk. This limitation must not be obscured by terminology such as 'off-host' or 'two backups'. Restore password should be held away from the live Droplet, and restoration must be proven independently, using only approved isolated resources.
+
+Remaining questions (no production GO): ensure Spaces can support chosen stock restic backend, assess object deletion privileges and rotation, verify backup contents, legal/PII/data-region scope, actual charge and available capacity, demonstrate safe Sidekiq reconciliation and Chatwoot restore, then obtain Agreement-bound owner approval. This research checkpoint adds **zero new resources or infrastructure costs**.
