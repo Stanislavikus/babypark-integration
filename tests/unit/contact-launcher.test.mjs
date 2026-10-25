@@ -483,6 +483,44 @@ test('L2: Callback reuses menu close and has Chatwoot-like responsive header/win
   assert.equal(h.get('bp-contact__trigger').getAttribute('aria-expanded'),'false');
 });
 
+test('L2: native textarea maxlength=500 is visible as a neutral accessible remaining counter', () => {
+  const h=harness(callbackConfig(), {cookie:'cw_conversation='+dummyJwt});
+  visitCallback(h);
+  const note=h.get('bp-contact__callback-textarea');
+  const counter=h.get('bp-contact__callback-message-hint');
+  assert.equal(note.maxLength,500,'existing native browser input cap is unchanged');
+  assert.equal(note.getAttribute('aria-describedby'),counter.id);
+  assert.equal(counter.textContent,'Залишилося 500 символів');
+  assert.match(css,/\.bp-contact__callback-message-hint\s*\{[^}]*color:\s*#60646c/s,
+    'use stock Chatwoot light-mode slate-11 for explanatory text');
+  assert.equal(counter.getAttribute('aria-live'),undefined,
+    'per-keystroke counter must not interrupt screen-reader speech');
+  const update = value => {
+    note.value=value;
+    for(const fn of note.listeners.input || []) fn();
+    return counter.textContent;
+  };
+  assert.equal(update('a'.repeat(498)),'Залишилося 2 символи');
+  assert.equal(update('a'.repeat(499)),'Залишилося 1 символ');
+  assert.equal(update('a'.repeat(500)),'Залишилося 0 символів');
+  assert.equal(update('a'.repeat(489)),'Залишилося 11 символів');
+  assert.equal(update('a'.repeat(488)),'Залишилося 12 символів');
+  assert.equal(update('a'.repeat(496)),'Залишилося 4 символи');
+  assert.equal(update('Рядок 1\nРядок 2'),'Залишилося 485 символів');
+  input(h,'671234567');
+  assert.equal(h.get('bp-contact__callback-submit').disabled,false,
+    'comment at exactly 500 units remains valid with a valid phone');
+  note.value='a'.repeat(501);for(const fn of note.listeners.input || []) fn();
+  assert.equal(counter.textContent,'Залишилося 0 символів');
+  assert.equal(h.get('bp-contact__callback-submit').disabled,true,
+    'programmatic bypass of native browser maxlength fails closed');
+  h.get('bp-contact__menu-close').click();
+  h.get('bp-contact__trigger').click();
+  h.get('bp-contact__channel--callback').click();
+  assert.equal(note.value,'','unsent new callback resets the optional message');
+  assert.equal(counter.textContent,'Залишилося 500 символів');
+});
+
 test('L2: fixed +380 prefix, nine visible digits and accessible missing-digit hints', () => {
   const h=harness(callbackConfig(),{cookie:'cw_conversation='+dummyJwt});
   visitCallback(h);
