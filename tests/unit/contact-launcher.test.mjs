@@ -15,6 +15,8 @@ class Element {
     this.hidden = false;
     this.className = '';
     this.textContent = '';
+    // Native input and textarea controls start with an empty string value.
+    this.value = '';
     this.href = '';
     this.parent = null;
     this.disabled = false;
