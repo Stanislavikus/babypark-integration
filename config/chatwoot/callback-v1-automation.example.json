@@ -16,7 +16,7 @@
       "attribute_key": "content",
       "filter_operator": "contains",
       "values": [
-        "BABYPARK_CALLBACK_V1"
+        "Ви замовили дзвінок\nЗворотний дзвінок: "
       ],
       "query_operator": null
     }
