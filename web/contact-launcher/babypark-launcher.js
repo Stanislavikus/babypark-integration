@@ -134,20 +134,23 @@
   }
 
   function localPhoneDigits(raw) {
-    // A fixed visible +380 prefix is the only country code; accept standard
-    // local/international clipboard/autofill values without keeping non-digits.
+    // +380 is already fixed on screen. Strip a visitor's repeated country
+    // code (or national trunk 0) AS SOON AS THEY TYPE IT, rather than only
+    // when all 12/10 digits are present. Otherwise the input freezes on
+    // "380xxxxxx" at nine digits and silently sends the wrong recipient.
     var digits = String(raw || '').replace(/[^0-9]/g, '');
-    if (digits.length === 12 && digits.slice(0, 3) === '380') return digits.slice(3);
-    if (digits.length === 10 && digits.charAt(0) === '0') return digits.slice(1);
-    // Reject ambiguous longer pasted numbers instead of silently truncating
-    // them into a possibly different customer phone number.
-    return digits.length > 9 ? '' : digits;
+    if (digits.slice(0, 3) === '380') digits = digits.slice(3);
+    else if (digits.charAt(0) === '0') digits = digits.slice(1);
+    // Never truncate an ambiguous foreign/overlong number into another one.
+    return digits.length <= 9 ? digits : '';
   }
 
   function normalizePhone(raw) {
     if (typeof raw !== 'string' || raw.length > 30) return null;
     var digits = localPhoneDigits(raw);
-    return digits.length === 9 ? '+380' + digits : null;
+    // A valid Ukrainian NSN cannot begin with the trunk prefix 0, nor
+    // 1/2; this validates number shape, not carrier allocation/ownership.
+    return /^[3-9][0-9]{8}$/.test(digits) ? '+380' + digits : null;
   }
 
   function optionalCallbackName(raw) {
