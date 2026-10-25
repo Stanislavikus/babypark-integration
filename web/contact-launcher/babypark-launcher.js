@@ -284,8 +284,9 @@
     state.callbackPending = true;
     syncCallback();
     callbackInfo.textContent = 'Надсилаємо заявку…';
-    var marker = 'BABYPARK_CALLBACK_V1';
-    var content = marker + '\nЗворотний дзвінок: ' + phone +
+    // Customer-facing first line doubles as the stock Chatwoot automation
+    // classifier. Do not expose an internal marker in the public transcript.
+    var content = 'Ви замовили дзвінок\nЗворотний дзвінок: ' + phone +
       (preferredName ? '\nІм’я: ' + preferredName : '') +
       (comment ? '\nПовідомлення: ' + comment : '');
     var url = chatOrigin + '/api/v1/widget/messages?website_token=' +
