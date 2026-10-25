@@ -287,6 +287,9 @@
     var comment = messageField.value.trim();
     var jwt = getWidgetJwt();
     if (!phone || comment.length > 500 || !state.ready || !jwt || typeof window.fetch !== 'function') {
+      // A script can bypass native maxlength without firing input; keep
+      // the visible submit state consistent with the blocked direct POST.
+      syncCallback();
       callbackInfo.textContent = comment.length > 500
         ? 'Повідомлення не може бути довшим за 500 символів.'
         : 'Перевірте номер телефону та з’єднання.';
