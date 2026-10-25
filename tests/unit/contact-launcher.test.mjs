@@ -511,6 +511,94 @@ test('L2: fixed +380 prefix, nine visible digits and accessible missing-digit hi
   assert.equal(field.value,'123456789','reject an ambiguous foreign number');
 });
 
+test('HEAVY B-2: incremental Ukrainian full-country/trunk dialing cannot silently change recipient', () => {
+  // Model actual keyboard events: the browser emits input after every key,
+  // while our listener sanitizes the displayed value after every event.
+  const good = [
+    '0671234567',
+    '380671234567',
+    '+380671234567',
+    '38 067 123 45 67',
+    '671234567'
+  ];
+  for (const typed of good) {
+    const h = harness(callbackConfig(), { cookie: 'cw_conversation=' + dummyJwt });
+    visitCallback(h);
+    const field = h.get('bp-contact__callback-phone-input');
+    const submitButton = h.get('bp-contact__callback-submit');
+    for (const char of typed) {
+      input(h, field.value + char);
+      // Never show a false complete state for unstripped "380"/trunk "0".
+      if (!submitButton.disabled)
+        assert.equal(field.value, '671234567',
+          'the only accepted visible number is the intended nine NSN digits: ' + typed);
+      assert.ok(!/^380[0-9]{6}$/.test(field.value),
+        'country prefix must not masquerade as a complete local number');
+    }
+    assert.equal(field.value, '671234567', 'normalized key-by-key: ' + typed);
+    assert.equal(submitButton.disabled, false, 'valid full number enables submit: ' + typed);
+    assert.equal(h.get('bp-contact__callback-phone-hint').textContent, 'Номер заповнено');
+  }
+});
+
+test('HEAVY B-2: incomplete, reserved-prefix and all-zero numbers fail closed across key events', () => {
+  const badInputs = [
+    '067123456',   // trunk zero + only eight NSN digits
+    '380671234',   // country code + only six NSN digits
+    '0000000000',  // never a real NSN
+    '100000000', '200000000', '012345678',
+    '111111111', '222222222'
+  ];
+  for (const typed of badInputs) {
+    const h = harness(callbackConfig(), { cookie: 'cw_conversation=' + dummyJwt });
+    visitCallback(h);
+    const field = h.get('bp-contact__callback-phone-input');
+    const button = h.get('bp-contact__callback-submit');
+    for (const char of typed) {
+      input(h, field.value + char);
+      assert.equal(button.disabled, true, 'never enable invalid phone: ' + typed);
+    }
+    assert.notEqual(h.get('bp-contact__callback-phone-hint').textContent, 'Номер заповнено',
+      'hint must not say complete for incomplete prefix: ' + typed);
+  }
+});
+
+test('HEAVY B-2: paste, extra keys, edit-after-prefix and request payload retain exactly intended phone', async () => {
+  const calls = [];
+  const h = harness(callbackConfig(), {
+    cookie: 'cw_conversation=' + dummyJwt,
+    fetchMock: async (_url, opts) => {
+      calls.push(JSON.parse(opts.body));
+      return {status: 200, json: async () => ({id: 735, conversation_id: 103})};
+    }
+  });
+  visitCallback(h);
+  const field = h.get('bp-contact__callback-phone-input');
+  const button = h.get('bp-contact__callback-submit');
+
+  input(h, '+380 (67) 123-45-67');
+  assert.equal(field.value, '671234567');
+  assert.equal(button.disabled, false);
+
+  input(h, field.value + '1');
+  assert.equal(field.value, '671234567', 'extra key cannot overwrite recipient');
+  input(h, field.value.slice(0, -1));
+  assert.equal(field.value, '67123456');
+  assert.equal(button.disabled, true, 'backspace must re-disable until complete');
+  input(h, field.value + '7');
+  assert.equal(field.value, '671234567');
+  assert.equal(button.disabled, false);
+
+  input(h, '+420 777 123 456');
+  assert.equal(field.value, '671234567', 'foreign overlong paste is rejected without truncation');
+  submit(h);
+  await flushAsync();
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].custom_attributes.callback_phone, '+380671234567');
+  assert.match(calls[0].message.content, /Зворотний дзвінок: \+380671234567/);
+  assert.doesNotMatch(calls[0].message.content, /\+380380|\+380067/);
+});
+
 test('L2: invalid phones and injected letters cannot enable submit', () => {
   const h = harness(callbackConfig(),{cookie:'cw_conversation='+dummyJwt});
   visitCallback(h);
