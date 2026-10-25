@@ -190,15 +190,28 @@
       state.callbackPending || state.callbackSent || state.callbackUncertain || !getWidgetJwt();
     if (phoneHint) {
       var remaining = 9 - digits.length;
-      phoneHint.textContent = phoneField && /^\+/.test(phoneField.value) &&
-        !/^\+380/.test(phoneField.value)
+      var rawPhone = phoneField ? String(phoneField.value || '') : '';
+      var partialCountry = rawPhone.charAt(0) === '+' &&
+        '+380'.indexOf(rawPhone) === 0 && rawPhone.length < 4;
+      var foreignCountry = rawPhone.charAt(0) === '+' &&
+        !/^\+380/.test(rawPhone) && !partialCountry;
+      var badNumber = foreignCountry || (remaining === 0 && !valid);
+      // Stock Chatwoot PreChat/Form.vue uses ruby-10 for a true error;
+      // short/in-progress guidance keeps the neutral Chatwoot slate tone.
+      phoneHint.className = 'bp-contact__callback-phone-hint' +
+        (badNumber ? ' bp-contact__callback-phone-hint--error' : '');
+      phoneHint.textContent = foreignCountry
         ? 'Підтримуються лише номери України (+380)'
+        : partialCountry ? 'Введіть +380 та 9 цифр номера'
         : remaining === 0
         ? (valid ? 'Номер заповнено' : 'Перевірте перші цифри номера')
         : remaining === 9 ? 'Введіть 9 цифр номера'
         : 'Залишилося ввести ' + remaining + ' ' +
           (remaining === 1 ? 'цифру' : remaining <= 4 ? 'цифри' : 'цифр');
     }
+    if (callbackInfo) callbackInfo.className = 'bp-contact__callback-status' +
+      ((state.sdkFailed || state.callbackRejected || state.callbackUncertain)
+        ? ' bp-contact__callback-status--error' : '');
     if (!state.callbackPending && !state.callbackSent && !state.callbackUncertain && !state.callbackRejected && callbackInfo) {
       if (state.sdkFailed) callbackInfo.textContent = 'Зараз не вдається підключитися. Спробуйте зателефонувати.';
       else if (!state.ready || !getWidgetJwt()) callbackInfo.textContent = 'Підключення до чату…';
@@ -264,6 +277,7 @@
     var jwt = getWidgetJwt();
     if (!phone || comment.length > 500 || !state.ready || !jwt || typeof window.fetch !== 'function') {
       callbackInfo.textContent = 'Перевірте номер телефону та з’єднання.';
+      callbackInfo.className = 'bp-contact__callback-status bp-contact__callback-status--error';
       return;
     }
     state.callbackRejected = false;
