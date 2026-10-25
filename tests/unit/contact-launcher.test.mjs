@@ -508,7 +508,8 @@ test('L2: fixed +380 prefix, nine visible digits and accessible missing-digit hi
   input(h,'1234567895');
   assert.equal(field.value,'123456789','an extra typed digit is ignored');
   input(h,'+420 777 123 456');
-  assert.equal(field.value,'123456789','reject an ambiguous foreign number');
+  assert.equal(field.value,'+420777123456','preserve explicit foreign code visibly without reinterpreting it');
+  assert.equal(h.get('bp-contact__callback-submit').disabled,true,'foreign country is never submittable');
 });
 
 test('HEAVY B-2: incremental Ukrainian full-country/trunk dialing cannot silently change recipient', () => {
@@ -613,7 +614,10 @@ test('HEAVY B-2: paste, extra keys, edit-after-prefix and request payload retain
   assert.equal(button.disabled, false);
 
   input(h, '+420 777 123 456');
-  assert.equal(field.value, '671234567', 'foreign overlong paste is rejected without truncation');
+  assert.equal(field.value, '+420777123456', 'foreign code stays visible and fails closed');
+  assert.equal(button.disabled, true, 'cannot send to a foreign country as Ukrainian recipient');
+  input(h, '671234567');
+  assert.equal(button.disabled, false, 'manual correction recovers valid Ukrainian phone');
   submit(h);
   await flushAsync();
   assert.equal(calls.length, 1);
