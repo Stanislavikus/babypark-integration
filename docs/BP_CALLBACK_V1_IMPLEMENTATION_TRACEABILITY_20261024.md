@@ -4,6 +4,28 @@ Status: EVIDENCE — NON-NORMATIVE, draft only. No merge, customer activation or
 Applies to: existing BabyPark Drupal→Magento-portable contact launcher / Chatwoot Website Widget callback V1.
 Supersedes: none. Earlier L1 PR #142 and Website Widget research PR #152 remain separate proposed work.
 
+## Current release candidate supersedes historical marker (2026-10-25)
+
+**This new section is the authoritative current candidate.** Repeated older material below records the original staging flow when the live automation matched `BABYPARK_CALLBACK_V1`; keep that material as historical evidence, not as instructions for the new customer-facing release. Do not edit, delete or rewrite earlier real customer transcripts.
+
+Owner explicitly chose the **same normal Website chat conversation**, including the buyer-visible callback request and standard out-of-office reply. This enables the seller to explain failed calls or answer the buyer later in the same channel; no second Inbox, Chatwoot core modification, callback-only agent routing or automatic dialing.
+
+**New customer message** (omitting name/note if empty):
+```text
+Ви замовили дзвінок
+Зворотний дзвінок: +380XXXXXXXXX
+Ім’я: [необов'язково]
+Повідомлення: [необов'язково]
+```
+
+Customer-first “Ви замовили дзвінок” confirms a completed action; “Послуга «Замовити дзвінок»” was rejected as a less natural label for a sent request. The seller sees the same first line and native `callback` label. The dashboard «Всі» shows the **last non-activity message preview**, not a persistent subject: the stock Business Hours auto-reply or seller reply can subsequently replace this preview. Neither is a duplicate callback request.
+
+**Stock automation contract:** `message_created`, `message_type=incoming`, `content contains` the exact multiline prefix `Ви замовили дзвінок\\nЗворотний дзвінок: ` (JSON escape notation; in Chatwoot the stored value has an actual newline); sole action `add_label callback`. Use the versioned native rule fixture `config/chatwoot/callback-v1-automation.example.json`. The stock Widget API accepts `labels: ['callback']` for **new** conversations, but only native AutomationRule labels messages in **existing** threads; confirmed in the installed Chatwoot v4.18.0 Widget controller. The two-line predicate avoids matching an ordinary mention of just the first phrase. It is routing metadata, not an authorization mechanism.
+
+**Release boundary:** As of this draft, the live account-wide AutomationRule #1 still matches the OLD marker. The proposed new fixture is NOT installed. Do not deploy only the new JS or only the rule; to support cached clients and pre-existing conversations, stage a second native label-only rule on owner-approved cutover, verify matching on fresh/new/open/resolved conversations, update approved public site assets, preserve the old rule during browser-cache transition, retire only after verification and never change Inbox/team assignment. A rollback must retain the old rule and restore the approved old public assets; customer messages remain intact. After production launch, record actual rule IDs/contents, exact deployed asset digests, effective Chatwoot configuration, owner test and rollback on server and in repo. Operator instructions wait until the owner provides the existing published guide.
+
+**Gate:** This is HEAVY customer transcript/classifier behavior. Changes invalidate older manifest/reviewer findings; strict immutable full tests, exhaustive independent R1 and isolated R2, real successful POST/CORS proof, and separate owner exact-GO for merge and Drupal production cutover remain mandatory.
+
 ## Owner's exact bounded authorization — 2026-10-24
 
 One implementation campaign in repository `Stanislavikus/babypark-integration`, citing independent PR #152 evidence: alternatives Scan SHA-256 `60870aa7ba06d2aa6aef2e2efd1d4f25bebd42765c57bb79d312b5a1a385002b`, fit SHA-256 `110c186549a14f78378f793a928e831d39872a7a03879cd466d6c42d0d97affd`. Owner explicitly allowed last-resort external use of Chatwoot 4.18.0's internal Website Widget message route (no official SDK sendMessage) **only in a draft implementation** with an upgrade contract test, one bounded fake-data C6 PoC, no Chatwoot core fork, no new runtime dependencies, no extra server and no live configuration/site changes. Rails runner only for create/cleanup of owned synthetic test Account/Inbox/Team/Label/Automation; any actual test messages only via `http://127.0.0.1:3180`. No existing C6 account/rows/SMTP/Cloudflare/n8n/catalog changes, no merge/deploy.
