@@ -512,6 +512,51 @@ test('L2: fixed +380 prefix, nine visible digits and accessible missing-digit hi
   assert.equal(h.get('bp-contact__callback-submit').disabled,true,'foreign country is never submittable');
 });
 
+test('L2: stock Chatwoot ruby-10 is reserved for genuine invalid values, not countdown guidance', () => {
+  const h=harness(callbackConfig(), {cookie:'cw_conversation='+dummyJwt});
+  visitCallback(h);
+  const hint=h.get('bp-contact__callback-phone-hint');
+  assert.match(css,/\.bp-contact__callback-phone-hint--error\s*\{[^}]*color:\s*#dc3b5d/s,
+    'stock Chatwoot v4.18.0 ruby-10 for invalid widget form values');
+  assert.match(css,/\.bp-contact__callback-status--error\s*\{[^}]*color:\s*#dc3b5d/s);
+  input(h,'67123456');
+  assert.equal(hint.textContent,'Залишилося ввести 1 цифру');
+  assert.doesNotMatch(hint.className,/--error/,'partial number helper is neutral');
+  input(h,'+3');
+  assert.equal(hint.textContent,'Введіть +380 та 9 цифр номера');
+  assert.doesNotMatch(hint.className,/--error/,'partial valid international prefix is not an error');
+  input(h,'+48');
+  assert.match(hint.textContent,/лише номери України/);
+  assert.match(hint.className,/bp-contact__callback-phone-hint--error/);
+  input(h,'111111111');
+  assert.equal(hint.textContent,'Перевірте перші цифри номера');
+  assert.match(hint.className,/bp-contact__callback-phone-hint--error/);
+  input(h,'671234567');
+  assert.equal(hint.textContent,'Номер заповнено');
+  assert.doesNotMatch(hint.className,/--error/);
+});
+
+test('L2: stock Chatwoot ruby semantic on rejected/uncertain Widget responses, neutral on success', async () => {
+  for(const status of [429,500,200]) {
+    const h=harness(callbackConfig(),{
+      cookie:'cw_conversation='+dummyJwt,
+      fetchMock:async()=>({status,json:async()=>({id:20,conversation_id:2})})
+    });
+    visitCallback(h);
+    input(h,'671234567');
+    submit(h);
+    await flushAsync();
+    const info=h.get('bp-contact__callback-status');
+    if(status===200) {
+      assert.doesNotMatch(info.className,/--error/,'successful callback not visually erroneous');
+    } else {
+      assert.match(info.className,/bp-contact__callback-status--error/,
+        'a rejected/uncertain request must have an accessible message and standard error color');
+      assert.ok(info.textContent.length>0,'not color-only feedback');
+    }
+  }
+});
+
 test('HEAVY B-2: incremental Ukrainian full-country/trunk dialing cannot silently change recipient', () => {
   // Model actual keyboard events: the browser emits input after every key,
   // while our listener sanitizes the displayed value after every event.
