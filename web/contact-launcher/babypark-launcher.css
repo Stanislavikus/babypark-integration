@@ -385,6 +385,8 @@
   line-height: 1.4;
   font-weight: 450;
 }
+/* Chatwoot v4.18.0 PreChat/Form.vue: ruby-10 is its invalid-field text. */
+.bp-contact__callback-phone-hint--error { color: #dc3b5d; }
 .bp-contact__callback-textarea {
   min-height: 104px;
   max-height: 200px;
@@ -405,6 +407,7 @@
 }
 .bp-contact__callback-submit:disabled { background: #b3c4cd; color: #263d4d; cursor: not-allowed; }
 .bp-contact__callback-status { min-height: 16px; color: #344e62; font-size: 13px; margin: 0; overflow-wrap: anywhere; }
+.bp-contact__callback-status--error { color: #dc3b5d; }
 .bp-contact__callback-success {
   position: absolute;
   inset: 0;
