@@ -439,6 +439,20 @@ test('L2: callback option is in stable final row after direct call, panel has on
   assert.equal(h.get('bp-contact__callback-input').required,true);
   assert.notEqual(h.get('bp-contact__callback-textarea').required,true);
   assert.equal(h.get('bp-contact__callback-input').inputMode,'numeric');
+  const name = h.get('bp-contact__callback-name');
+  assert.ok(name, 'optional name field between phone and message');
+  assert.equal(name.type, 'text');
+  assert.notEqual(name.required, true);
+  assert.equal(name.maxLength, 80);
+  assert.equal(name.autocomplete, 'given-name');
+  assert.equal(name.spellcheck, false);
+  const form = h.get('bp-contact__callback-form');
+  const fields = form.children;
+  const phoneWrapper = fields.findIndex(n => n.children?.some?.(e => e.className?.includes?.('bp-contact__callback-phone-wrap')));
+  const nameWrapper = fields.findIndex(n => n.children?.includes?.(name));
+  const messageWrapper = fields.findIndex(n => n.children?.includes?.(h.get('bp-contact__callback-textarea')));
+  assert.ok(phoneWrapper >= 0 && nameWrapper === phoneWrapper + 1 && messageWrapper === nameWrapper + 1,
+    'name comes directly after phone and before message');
 });
 
 test('L2: Callback reuses menu close and has Chatwoot-like responsive header/window', () => {
@@ -531,8 +545,10 @@ test('L2: no visitor note sends exactly one stock Website Widget POST with conve
   assert.equal(body.labels[0],'callback');
   assert.match(body.message.content,/BABYPARK_CALLBACK_V1/);
   assert.match(body.message.content,/\+380661234567/);
-  assert.doesNotMatch(body.message.content,/Повідомлення:/);
+  assert.doesNotMatch(body.message.content,/Повідомлення:|Ім’я:/);
   assert.equal(Object.hasOwn(body,'contact'),false);
+  assert.deepEqual(Object.keys(body.custom_attributes), ['callback_phone'],
+    'no persistent Contact.name or extra conversation attribute');
   assert.match(h.get('bp-contact__callback-success-title').textContent,/Заявку успішно надіслано/);
   assert.match(h.get('bp-contact__callback-success-title').textContent,/Вам/);
   assert.equal(h.get('bp-contact__callback-success').hidden,false);
@@ -565,6 +581,53 @@ test('L2: only confirmed success shows full-form confirmation then auto-closes',
   assert.equal(calls,1,'terminal success cannot be submitted twice');
   h.get('bp-contact__menu-close').click();
   assert.equal(h.pendingTimers(),0,'manual close cancels re-armed timer');
+});
+
+test('L2: optional name is transmitted only inside Chatwoot message with safe single-line Unicode text', async () => {
+  let payload;
+  const h = harness(callbackConfig(),{
+    cookie:'cw_conversation='+dummyJwt,
+    fetchMock:async (_url,request) => {
+      payload=JSON.parse(request.body);
+      return {status:200,json:async()=>({id:55,conversation_id:8})};
+    }
+  });
+  visitCallback(h);
+  input(h,'661234567');
+  assert.equal(h.get('bp-contact__callback-submit').disabled,false,
+    'required phone only: name stays optional');
+  const name = h.get('bp-contact__callback-name');
+  name.value = "  Марія-Анна  О’Браєн\nДруга строка\t";
+  h.get('bp-contact__callback-textarea').value='Уточнити розміри';
+  submit(h);
+  await flushAsync();
+  assert.match(payload.message.content,/Зворотний дзвінок: \+380661234567/);
+  assert.match(payload.message.content,/Ім’я: Марія-Анна О’Браєн Друга строка/);
+  assert.match(payload.message.content,/Повідомлення: Уточнити розміри/);
+  assert.equal(payload.message.content.split('Ім’я: ').length,2,
+    'a visitor cannot add a second message row from the name field');
+  assert.deepEqual(Object.keys(payload.custom_attributes),['callback_phone']);
+  assert.equal(Object.hasOwn(payload,'contact'),false);
+  assert.equal(name.disabled,true,'terminal success freezes optional PII field');
+});
+
+test('L2: blank optional name omitted, unusual Unicode spelling kept, no identity mutation', async () => {
+  const sent=[];
+  const h=harness(callbackConfig(),{
+    cookie:'cw_conversation='+dummyJwt,
+    fetchMock:async (_url,rq) => {
+      sent.push(JSON.parse(rq.body));
+      return {status:200,json:async()=>({id:85,conversation_id:11})};
+    }
+  });
+  visitCallback(h);
+  input(h,'661234567');
+  h.get('bp-contact__callback-name').value='   ';
+  submit(h);
+  await flushAsync();
+  assert.equal(sent.length,1);
+  assert.doesNotMatch(sent[0].message.content,/Ім’я:/,'whitespace-only optional name omitted');
+  assert.equal(Object.hasOwn(sent[0],'contact'),false);
 });
 
 test('L2: optional note preserved as text, never a Contact phone', async () => {
