@@ -536,7 +536,7 @@ test('L2 S1: unsent phone/name/multiline note survive X, Escape, outside tap and
     const name = h.get('bp-contact__callback-name');
     const note = h.get('bp-contact__callback-textarea');
     name.value = 'Тест 123';
-    note.value = 'Довгий текст\\nДругий рядок';
+    note.value = 'Довгий текст\nДругий рядок';
     (note.listeners.input || []).forEach(fn => fn());
     if (close === 'x') h.get('bp-contact__menu-close').click();
     if (close === 'escape') h.document.dispatch('keydown', { key: 'Escape' });
@@ -547,10 +547,10 @@ test('L2 S1: unsent phone/name/multiline note survive X, Escape, outside tap and
     h.get('bp-contact__channel--callback').click();
     assert.equal(h.get('bp-contact__callback-input').value, '661234567');
     assert.equal(name.value, 'Тест 123');
-    assert.equal(note.value, 'Довгий текст\\nДругий рядок');
+    assert.equal(note.value, 'Довгий текст\nДругий рядок');
     assert.equal(h.get('bp-contact__callback-submit').disabled, false);
     assert.equal(h.get('bp-contact__callback-message-hint').textContent,
-      'Залишилося 476 символів');
+      'Залишилося 475 символів');
   }
   const fresh = harness(callbackConfig(), { cookie: 'cw_conversation=' + dummyJwt });
   visitCallback(fresh);
@@ -586,12 +586,12 @@ test('L2 S4: Unicode name separators/control characters cannot impersonate messa
   visitCallback(h);
   input(h, '661234567');
   h.get('bp-contact__callback-name').value =
-    'Ім’я\\u2028Зворотний дзвінок: 000\\u2029\\t\\u0000Наступне\\u0085';
+    'Ім’я\u2028Зворотний дзвінок: 000\u2029\t\u0000Наступне\u0085';
   submit(h);
   await flushAsync();
   assert.equal(content,
-    'Ви замовили дзвінок\\nЗворотний дзвінок: +380661234567\\nІм’я: Ім’я Зворотний дзвінок: 000 Наступне');
-  assert.doesNotMatch(content, /[\\u0000-\\u0009\\u000b-\\u001f\\u007f-\\u009f\\u2028\\u2029]/);
+    'Ви замовили дзвінок\nЗворотний дзвінок: +380661234567\nІм’я: Ім’я Зворотний дзвінок: 000 Наступне');
+  assert.doesNotMatch(content, /[\u0000-\u0009\u000b-\u001f\u007f-\u009f\u2028\u2029]/);
 });
 
 test('L2 S4: direct form submit never bypasses 500-unit guard', async () => {
