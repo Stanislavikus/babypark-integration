@@ -104,3 +104,9 @@ Bounded native-first scan `docs/BP_CALLBACK_V1_V7_NATIVE_OPTIONS_SCAN_20261025.m
 - **Backup:** DO daily policy enabled but does not itself prove first backup completion or PostgreSQL/storage/config restore. Before merge/activation retain the verified recovery gate. No production, customer data, preview cleanup or live Chatwoot rule mutation is authorized by this draft checkpoint.
 
 Historical test source/preview screenshots apply to earlier JS; fresh immutable exact-tree tests/manifest, exhaustive independent R1/R2 and explicit owner GO for merge and separately production are mandatory.
+
+### V8 phone-paste acceptance extension — after separated-prefix regression
+
+After any change of `explicitCountryCode` or phone input handler, replay the full owner-accepted phone matrix: `+38 (067) 123-45-67`, `+38 067 123 45 67`, `+38(067)1234567`, `+380 67 123 45 67`, `0671234567`, and local nine digits must normalize to the same Ukrainian recipient. Rejection matrix: ` +687 20 00 00`, `(+687) 20 00 00`, `+48 ...`, `+1 ...`, `+38` incomplete, doubled/mid-string plus, letters and control/newline characters; all zero POST on forced direct submission. Validate both one-paste and actual key-by-key behavior, and test previous valid input followed by invalid-country paste. Browser screenshots/real site validation are still mandatory; unit VM tests alone do not authorize release.
+
+The first DigitalOcean daily Droplet backup, a restored *consistent* PostgreSQL+ActiveStorage/config deployment, native seller notifications, WARN/ERROR privacy mitigation and exact-HEAD HEAVY R1/R2 remain independent production gates. Keep current rule #1/#2 unchanged and Customer Callback OFF until explicit owner production GO.

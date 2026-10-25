@@ -139,10 +139,18 @@
     var value = String(raw || '');
     if (value.indexOf('+') === -1) return 'none';
     if (value.indexOf('+') !== value.lastIndexOf('+')) return 'foreign';
-    var prefix = value.match(/^\s*[([{]*\s*\+([0-9]*)/);
+    var prefix = value.match(/^\s*[([{]*\s*\+/);
     if (!prefix) return 'foreign';
-    if (prefix[1].length < 3 && '380'.indexOf(prefix[1]) === 0) return 'partial';
-    return prefix[1].slice(0, 3) === '380' ? 'ukraine' : 'foreign';
+    // Control characters are never legitimate formatting, even if they are
+    // accepted by JavaScript's general whitespace character class.
+    if (/[\u0000-\u001f\u007f-\u009f\u2028\u2029]/.test(value)) return 'foreign';
+    // Ukraine's +380 may be written +38 (067)... or +3 8 0 ...
+    // Classify only after gathering ALL digits, without losing the explicit
+    // + marker or treating letters/unknown punctuation as phone formatting.
+    if (!/^[0-9\s().\[\]{}-]*$/.test(value.slice(prefix[0].length))) return 'foreign';
+    var digits = value.replace(/[^0-9]/g, '');
+    if (digits.length < 3 && '380'.indexOf(digits) === 0) return 'partial';
+    return digits.slice(0, 3) === '380' ? 'ukraine' : 'foreign';
   }
 
   function localPhoneDigits(raw) {

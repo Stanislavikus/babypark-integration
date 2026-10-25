@@ -716,6 +716,92 @@ test('HEAVY R1: success auto-close does not steal focus from outside page input'
 });
 
 
+test('HEAVY V8: segmented Ukraine +38 (067) paste keeps intended recipient and ACK', async () => {
+  const accepted = [
+    '+38 (067) 123-45-67',
+    '+38 067 123 45 67',
+    '+38(067)1234567',
+    '+3 80 (67) 123-45-67',
+    '+3 8 0 67 123 45 67',
+    '(+38) (067) 123 45 67',
+    '\u00a0+38\u00a0(067) 123-45-67',
+    '+380 67 123 45 67',
+    '(+380) 67 123-45-67'
+  ];
+  for (const raw of accepted) {
+    let sends = 0, data;
+    const h = harness(callbackConfig(), {
+      cookie: 'cw_conversation=' + dummyJwt,
+      fetchMock: async (_u, req) => {
+        sends++;
+        data = JSON.parse(req.body);
+        return {status:200,json:async()=>({id:97,conversation_id:15})};
+      }
+    });
+    visitCallback(h);
+    input(h, raw);
+    assert.equal(h.get('bp-contact__callback-phone-input').value, '671234567', raw);
+    assert.equal(h.get('bp-contact__callback-submit').disabled, false, raw);
+    submit(h);
+    await flushAsync();
+    assert.equal(sends, 1, 'one accepted Widget post for ' + raw);
+    assert.equal(data.custom_attributes.callback_phone, '+380671234567', raw);
+    assert.match(data.message.content, /Зворотний дзвінок: \+380671234567/);
+  }
+});
+
+test('HEAVY V8: segmented +38 country code works key-by-key without foreign bypass', async () => {
+  const typedCases = ['+38 (067) 123-45-67', '+38 067 123 45 67', '+38(067)1234567'];
+  for (const raw of typedCases) {
+    const h = harness(callbackConfig(), {cookie:'cw_conversation=' + dummyJwt});
+    visitCallback(h);
+    const field = h.get('bp-contact__callback-phone-input');
+    const button = h.get('bp-contact__callback-submit');
+    for (const key of raw) {
+      input(h, field.value + key);
+      if (!button.disabled)
+        assert.equal(field.value, '671234567',
+          'only intended complete national number can enable submit: ' + raw);
+    }
+    assert.equal(field.value, '671234567', raw);
+    assert.equal(button.disabled, false, raw);
+  }
+
+  for (const foreign of [
+    ' +687 20 00 00', '(+687) 20 00 00',
+    '+48 602 333 333', '+1 (202) 555-0143',
+    '+38 1 671234567', '++380671234567',
+    '067+1234567', '+38x(067)1234567',
+    '+38\n(067)1234567'
+  ]) {
+    let calls = 0;
+    const h = harness(callbackConfig(), {
+      cookie: 'cw_conversation=' + dummyJwt,
+      fetchMock: async () => {
+        calls++;
+        return {status:200,json:async()=>({id:9,conversation_id:1})};
+      }
+    });
+    visitCallback(h);
+    input(h, '671234567');
+    assert.equal(h.get('bp-contact__callback-submit').disabled, false);
+    input(h, foreign);
+    assert.equal(h.get('bp-contact__callback-submit').disabled, true, foreign);
+    assert.equal(h.get('bp-contact__callback-phone-input').value, foreign,
+      'foreign or malformed signal stays visible, not rewritten');
+    submit(h);
+    await flushAsync();
+    assert.equal(calls, 0, 'foreign/malformed country code cannot POST: ' + foreign);
+  }
+
+  for (const partial of ['+', '+3', '+38', '+38 ', '+38 (']) {
+    const h=harness(callbackConfig(),{cookie:'cw_conversation='+dummyJwt});
+    visitCallback(h);
+    input(h,partial);
+    assert.equal(h.get('bp-contact__callback-submit').disabled, true, partial);
+  }
+});
+
 test('HEAVY V7: formatted explicit foreign code is never reinterpreted as Ukrainian', async () => {
   for (const foreign of [
     '+687 20 00 00', ' +687 20 00 00', '(+687) 20 00 00',
