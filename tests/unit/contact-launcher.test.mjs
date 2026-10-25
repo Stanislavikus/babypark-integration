@@ -567,6 +567,25 @@ test('HEAVY B-2: incomplete, reserved-prefix and all-zero numbers fail closed ac
   }
 });
 
+test('HEAVY B-2: explicitly typed foreign +country can never masquerade as a Ukrainian NSN', () => {
+  for (const foreign of ['+420777123456', '+4917612345678', '+447700900123']) {
+    const h = harness(callbackConfig(), { cookie: 'cw_conversation=' + dummyJwt });
+    visitCallback(h);
+    const field = h.get('bp-contact__callback-phone-input');
+    const button = h.get('bp-contact__callback-submit');
+    for (const char of foreign) {
+      input(h, field.value + char);
+      assert.equal(button.disabled, true, 'foreign international entry disabled at every key: ' + foreign);
+    }
+    assert.match(field.value, /^\+/);
+    assert.match(h.get('bp-contact__callback-phone-hint').textContent,
+      /лише номери України/, 'show helpful invalid-country hint');
+    input(h, '0671234567');
+    assert.equal(field.value, '671234567', 'manual replacement with Ukrainian phone recovers');
+    assert.equal(button.disabled, false);
+  }
+});
+
 test('HEAVY B-2: paste, extra keys, edit-after-prefix and request payload retain exactly intended phone', async () => {
   const calls = [];
   const h = harness(callbackConfig(), {
