@@ -49,7 +49,7 @@
   };
   var readyTimer = null;
   var root, menu, trigger, chatStatus, chatNote, rows = {};
-  var options, formPanel, phoneField, phoneHint, nameField, messageField, callbackSubmit, callbackInfo;
+  var options, formPanel, phoneField, phoneHint, nameField, messageField, messageHint, callbackSubmit, callbackInfo;
   var callbackSuccess, menuTitle, brandHeader, menuClose;
   var successTimer = null;
   var previousLocalPhone = '';
@@ -186,7 +186,19 @@
     if (!formPanel) return;
     var digits = phoneField ? localPhoneDigits(phoneField.value) : '';
     var valid = digits.length === 9 && !!normalizePhone(phoneField.value);
-    callbackSubmit.disabled = !valid || !state.ready || state.sdkFailed ||
+    // The native textarea maxlength (500) is the actual browser input cap.
+    // Keep this helper in sync with that exact cap; do not invent a Chatwoot limit.
+    if (messageHint && messageField) {
+      var charsLeft = Math.max(0, 500 - String(messageField.value || '').length);
+      var lastTwo = charsLeft % 100;
+      var lastOne = charsLeft % 10;
+      var noun = lastTwo >= 11 && lastTwo <= 14 ? 'символів'
+        : lastOne === 1 ? 'символ'
+        : lastOne >= 2 && lastOne <= 4 ? 'символи' : 'символів';
+      messageHint.textContent = 'Залишилося ' + charsLeft + ' ' + noun;
+    }
+    callbackSubmit.disabled = !valid || (messageField && messageField.value.length > 500) ||
+      !state.ready || state.sdkFailed ||
       state.callbackPending || state.callbackSent || state.callbackUncertain || !getWidgetJwt();
     if (phoneHint) {
       var remaining = 9 - digits.length;
@@ -276,7 +288,9 @@
     var comment = messageField.value.trim();
     var jwt = getWidgetJwt();
     if (!phone || comment.length > 500 || !state.ready || !jwt || typeof window.fetch !== 'function') {
-      callbackInfo.textContent = 'Перевірте номер телефону та з’єднання.';
+      callbackInfo.textContent = comment.length > 500
+        ? 'Повідомлення не може бути довшим за 500 символів.'
+        : 'Перевірте номер телефону та з’єднання.';
       callbackInfo.className = 'bp-contact__callback-status bp-contact__callback-status--error';
       return;
     }
@@ -600,7 +614,13 @@
     messageField.maxLength = 500;
     messageField.rows = 3;
     messageField.placeholder = 'За бажанням, напишіть причину звернення';
+    messageHint = node('span', 'bp-contact__callback-message-hint', 'Залишилося 500 символів');
+    messageHint.id = widgetId + '-message-hint';
+    // Static description updates on input, but is not an assertive live region
+    // that would interrupt screen reader users with every typed character.
+    messageField.setAttribute('aria-describedby', messageHint.id);
     commentLabel.appendChild(messageField);
+    commentLabel.appendChild(messageHint);
     formPanel.appendChild(commentLabel);
     callbackSubmit = node('button', 'bp-contact__callback-submit', 'Замовити дзвінок');
     callbackSubmit.type = 'submit';
