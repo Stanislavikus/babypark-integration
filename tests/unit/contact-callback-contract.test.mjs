@@ -12,7 +12,9 @@ test('pinned upstream Chatwoot v4.18.0 widget request contract is documented', (
 test('internal widget transport is narrow and is not the unsafe public Client API', () => {
   assert.match(source,/\/api\/v1\/widget\/messages\?website_token=/);
   assert.doesNotMatch(source,/\/public\/api\/v1\/inboxes/);
-  assert.match(source,/BABYPARK_CALLBACK_V1/);
+  assert.match(source,/Ви замовили дзвінок/);
+  assert.doesNotMatch(source,/BABYPARK_CALLBACK_V1/,
+    'technical marker must not be exposed in public message source');
   assert.match(source,/custom_attributes:\s*\{ callback_phone: phone \}/);
   assert.doesNotMatch(source,/contact:\s*\{\s*phone_number/);
 });
@@ -34,7 +36,13 @@ test('native automation fixture is account-scoped and does not hard-code inbox o
   assert.equal(rule.conditions[1].query_operator, null);
   assert.deepEqual(rule.actions.map(a => a.action_name), ['add_label']);
   assert.equal(rule.actions[0].action_params[0], 'callback');
-  assert.ok(rule.conditions[1].values.includes('BABYPARK_CALLBACK_V1'));
+  assert.equal(rule.conditions[1].filter_operator, 'contains');
+  const expectedPrefix = 'Ви замовили дзвінок\\nЗворотний дзвінок: ';
+  assert.deepEqual(rule.conditions[1].values, [expectedPrefix]);
+  assert.ok(source.includes("Ви замовили дзвінок\\\\nЗворотний дзвінок: "),
+    'exact customer-facing two-line prefix must be in Widget payload and rule');
+  assert.equal(expectedPrefix.includes('BABYPARK_CALLBACK_V1'), false,
+    'native rule no longer depends on user-visible machine marker');
   assert.equal(rule.conditions.some(c => c.attribute_key === 'inbox_id' || c.attribute_key === 'team_id'), false);
   assert.equal(rule.actions.some(a => a.action_name === 'assign_team' || a.action_name === 'assign_agent'), false);
 });
