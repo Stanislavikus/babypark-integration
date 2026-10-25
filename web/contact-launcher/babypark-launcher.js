@@ -49,7 +49,7 @@
   };
   var readyTimer = null;
   var root, menu, trigger, chatStatus, chatNote, rows = {};
-  var options, formPanel, phoneField, phoneHint, messageField, callbackSubmit, callbackInfo;
+  var options, formPanel, phoneField, phoneHint, nameField, messageField, callbackSubmit, callbackInfo;
   var callbackSuccess, menuTitle, brandHeader, menuClose;
   var successTimer = null;
   var previousLocalPhone = '';
@@ -150,6 +150,15 @@
     return digits.length === 9 ? '+380' + digits : null;
   }
 
+  function optionalCallbackName(raw) {
+    // A name is plain single-line text, not a verified identity. Preserve
+    // international letters, apostrophes, hyphens, and preferred spelling.
+    // Normalize line/control characters so input cannot forge message rows.
+    if (typeof raw !== 'string') return '';
+    return raw.replace(/[\u0000-\u001f\u007f-\u009f\u2028\u2029]/g, ' ')
+      .replace(/\s+/g, ' ').trim().slice(0, 80);
+  }
+
   function getWidgetJwt() {
     // The official Website SDK sets cw_conversation on the first-party site.
     // The JWT is a visitor identity, NOT a server-side credential.
@@ -212,6 +221,7 @@
     // even after Close/reopen. Never silently submit a duplicate.
     if (state.callbackSent || state.callbackUncertain) {
       phoneField.disabled = true;
+      nameField.disabled = true;
       messageField.disabled = true;
       callbackInfo.textContent = state.callbackSent
         ? 'Заявку успішно надіслано. Ми зателефонуємо Вам.'
@@ -224,9 +234,11 @@
     state.callbackRejected = false;
     callbackInfo.textContent = '';
     phoneField.disabled = false;
+    nameField.disabled = false;
     messageField.disabled = false;
     phoneField.value = '';
     previousLocalPhone = '';
+    nameField.value = '';
     messageField.value = '';
     initializeChatwoot();
     syncCallback();
@@ -236,6 +248,7 @@
   async function submitCallback() {
     if (state.callbackPending || state.callbackSent || state.callbackUncertain || !callbackConfigured()) return;
     var phone = normalizePhone(phoneField.value);
+    var preferredName = optionalCallbackName(nameField.value);
     var comment = messageField.value.trim();
     var jwt = getWidgetJwt();
     if (!phone || comment.length > 500 || !state.ready || !jwt || typeof window.fetch !== 'function') {
@@ -248,6 +261,7 @@
     callbackInfo.textContent = 'Надсилаємо заявку…';
     var marker = 'BABYPARK_CALLBACK_V1';
     var content = marker + '\nЗворотний дзвінок: ' + phone +
+      (preferredName ? '\nІм’я: ' + preferredName : '') +
       (comment ? '\nПовідомлення: ' + comment : '');
     var url = chatOrigin + '/api/v1/widget/messages?website_token=' +
       encodeURIComponent(config.websiteToken);
@@ -298,6 +312,7 @@
       }
       state.callbackSent = true;
       phoneField.disabled = true;
+      nameField.disabled = true;
       messageField.disabled = true;
       callbackInfo.textContent = 'Заявку успішно надіслано. Ми зателефонуємо Вам.';
       showCallbackSuccess();
@@ -546,6 +561,14 @@
     phoneLabel.appendChild(phoneWrap);
     phoneLabel.appendChild(phoneHint);
     formPanel.appendChild(phoneLabel);
+    var nameLabel = node('label', 'bp-contact__callback-label', 'Ім’я (необов’язково)');
+    nameField = node('input', 'bp-contact__callback-input bp-contact__callback-name');
+    nameField.type = 'text';
+    nameField.maxLength = 80;
+    nameField.autocomplete = 'given-name';
+    nameField.spellcheck = false;
+    nameLabel.appendChild(nameField);
+    formPanel.appendChild(nameLabel);
     var commentLabel = node('label', 'bp-contact__callback-label', 'Повідомлення (необов’язково)');
     messageField = node('textarea', 'bp-contact__callback-input bp-contact__callback-textarea');
     messageField.maxLength = 500;
