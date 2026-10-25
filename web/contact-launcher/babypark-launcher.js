@@ -553,7 +553,7 @@
     // them to nine visible digits. A 9-char HTML maxlength would truncate
     // +380.../0... before the input handler sees the original country prefix.
     phoneField.maxLength = 30;
-    phoneField.pattern = '[0-9]{9}';
+    phoneField.pattern = '[3-9][0-9]{8}';
     phoneField.placeholder = 'XX XXX XX XX';
     phoneField.required = true;
     phoneField.setAttribute('aria-label', '9 цифр номера телефону після +380');
