@@ -52,7 +52,12 @@
   var options, formPanel, phoneField, phoneHint, nameField, messageField, messageHint, callbackSubmit, callbackInfo;
   var callbackSuccess, menuTitle, brandHeader, menuClose;
   var successTimer = null;
-  var previousLocalPhone = '';
+  // Keep the actual edit history on this page, separate from the compact
+  // nine-digit visual display. Never infer raw provenance from rewritten DOM.
+  var phoneRaw = '';
+  var phoneRendered = '';
+  var phoneInputRejected = false;
+  var phoneInputKind = '';
   // Static Lucide/Feather X; Feather-derived glyph licensed MIT (see runbook).
   var closeSvg = '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>';
 
@@ -153,7 +158,16 @@
     return digits.slice(0, 3) === '380' ? 'ukraine' : 'foreign';
   }
 
+  function allowedPhoneRaw(raw) {
+    // 'tel' sanitizes CR/LF and native maxlength truncates before 'input'.
+    // Reject every unknown/control/Unicode numeral before stripping anything.
+    return typeof raw === 'string' && raw.length <= 30 &&
+      !/[\u0000-\u001f\u007f-\u009f\u2028\u2029]/.test(raw) &&
+      /^[0-9+ ()\[\]{}\.\-\u00a0]*$/.test(raw);
+  }
+
   function localPhoneDigits(raw) {
+    if (!allowedPhoneRaw(raw)) return '';
     // +380 is already fixed on screen. Strip a visitor's repeated country
     // code (or national trunk 0) AS SOON AS THEY TYPE IT, rather than only
     // when all 12/10 digits are present. Otherwise the input freezes on
@@ -164,6 +178,9 @@
     // prefix as a Ukrainian local number while the visitor is still typing.
     var country = explicitCountryCode(value);
     if (country === 'foreign' || country === 'partial') return '';
+    // An explicit +380 is unambiguous. For no-plus raw input, a leading
+    // country/trunk prefix belongs to the ORIGINAL input only; never parse
+    // the compact displayed NSN as a fresh international number.
     if (digits.slice(0, 3) === '380') digits = digits.slice(3);
     else if (digits.charAt(0) === '0') digits = digits.slice(1);
     // Never truncate an ambiguous foreign/overlong number into another one.
@@ -171,7 +188,7 @@
   }
 
   function normalizePhone(raw) {
-    if (typeof raw !== 'string' || raw.length > 30) return null;
+    if (!allowedPhoneRaw(raw)) return null;
     var digits = localPhoneDigits(raw);
     // A valid Ukrainian NSN cannot begin with the trunk prefix 0, nor
     // 1/2; this validates number shape, not carrier allocation/ownership.
@@ -188,25 +205,58 @@
   }
 
   function getWidgetJwt() {
-    // The official Website SDK sets cw_conversation on the first-party site.
-    // The JWT is a visitor identity, NOT a server-side credential.
+    // The SDK uses the first matching cw_conversation (js-cookie). Reject
+    // distinct same-name cookies instead of choosing a different visitor.
     var parts = document.cookie ? document.cookie.split(';') : [];
     var value = null;
+    var ambiguous = false;
     parts.forEach(function (part) {
       var kv = part.trim();
-      if (kv.indexOf('cw_conversation=') === 0) {
-        try { value = decodeURIComponent(kv.slice('cw_conversation='.length)); }
-        catch (_) { value = null; }
+      if (kv.indexOf('cw_conversation=') !== 0) return;
+      var candidate = null;
+      try { candidate = decodeURIComponent(kv.slice('cw_conversation='.length)); }
+      catch (_) { ambiguous = true; return; }
+      if (!candidate || candidate.length >= 4096 ||
+          !/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(candidate)) {
+        ambiguous = true;
+        return;
       }
+      if (value === null) value = candidate;
+      else if (value !== candidate) ambiguous = true;
     });
-    return value && value.length < 4096 && /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(value)
-      ? value : null;
+    return ambiguous ? null : value;
+  }
+
+  function currentPhoneRaw() {
+    if (phoneInputRejected) return null;
+    return phoneField.value === phoneRendered ? phoneRaw : phoneField.value;
+  }
+
+  function renderPhoneRaw() {
+    // The original source remains in memory on this page for submit. The
+    // visual input is condensed only when its *whole source* is acceptable.
+    var parsed = localPhoneDigits(phoneRaw);
+    var validPrefix = allowedPhoneRaw(phoneRaw) && explicitCountryCode(phoneRaw) !== 'foreign';
+    var value = validPrefix && parsed ? parsed : phoneRaw;
+    if (!validPrefix && /[\r\n]/.test(value)) value = value.replace(/[\r\n]/g, '?');
+    phoneField.value = value;
+    phoneRendered = phoneField.value;
+    syncCallback();
+  }
+
+  function rejectRawPhone(raw) {
+    phoneRaw = String(raw || '');
+    phoneInputRejected = true;
+    phoneField.value = phoneRaw.replace(/[\r\n]/g, '?');
+    phoneRendered = phoneField.value;
+    syncCallback();
   }
 
   function syncCallback() {
     if (!formPanel) return;
-    var digits = phoneField ? localPhoneDigits(phoneField.value) : '';
-    var valid = digits.length === 9 && !!normalizePhone(phoneField.value);
+    var rawPhone = phoneField ? currentPhoneRaw() : null;
+    var digits = rawPhone === null ? '' : localPhoneDigits(rawPhone);
+    var valid = !phoneInputRejected && digits.length === 9 && !!normalizePhone(rawPhone);
     // The native textarea maxlength (500) is the actual browser input cap.
     // Keep this helper in sync with that exact cap; do not invent a Chatwoot limit.
     if (messageHint && messageField) {
@@ -223,8 +273,8 @@
       state.callbackPending || state.callbackSent || state.callbackUncertain || !getWidgetJwt();
     if (phoneHint) {
       var remaining = 9 - digits.length;
-      var rawPhone = phoneField ? String(phoneField.value || '') : '';
-      var international = explicitCountryCode(rawPhone);
+      var hintRaw = rawPhone === null ? String(phoneField.value || '') : rawPhone;
+      var international = explicitCountryCode(hintRaw);
       var partialCountry = international === 'partial';
       var foreignCountry = international === 'foreign';
       var badNumber = foreignCountry || (remaining === 0 && !valid);
@@ -307,7 +357,7 @@
 
   async function submitCallback() {
     if (state.callbackPending || state.callbackSent || state.callbackUncertain || !callbackConfigured()) return;
-    var phone = normalizePhone(phoneField.value);
+    var phone = phoneInputRejected ? null : normalizePhone(currentPhoneRaw());
     var preferredName = optionalCallbackName(nameField.value);
     // UI and submit must enforce the same raw browser maxlength units.
     // trim() is for payload presentation, not a validation bypass.
@@ -366,7 +416,9 @@
         if (!response || response.status !== 200) {
           // The v4.18.0 Widget route rejects these requests before message save.
           // Do not retry automatically; allow an explicit new attempt only on proven 4xx rejects.
-          if (response && [403, 422, 429].indexOf(response.status) !== -1) {
+          // 422 can occur AFTER a message commit via Chatwoot after_commit
+          // callback errors: never permit a second customer request on 422.
+          if (response && [403, 429].indexOf(response.status) !== -1) {
             var rejection = new Error('widget-rejected');
             rejection.definiteReject = true;
             rejection.status = response.status;
@@ -623,7 +675,9 @@
     // Allow full international/local numbers to be pasted before normalizing
     // them to nine visible digits. A 9-char HTML maxlength would truncate
     // +380.../0... before the input handler sees the original country prefix.
-    phoneField.maxLength = 30;
+    // No native maxlength: a 31-unit clipboard value would be truncated
+    // before our source-length guard and could become a different recipient.
+    // JS rejects raw values >30 both on input and direct submit.
     phoneField.pattern = '[3-9][0-9]{8}';
     phoneField.placeholder = 'XX XXX XX XX';
     phoneField.required = true;
@@ -684,38 +738,57 @@
     callbackSuccess.appendChild(node('p', 'bp-contact__callback-success-caption',
       'Вікно закриється автоматично'));
     formPanel.appendChild(callbackSuccess);
-    phoneField.addEventListener('input', function () {
-      var raw = phoneField.value;
-      var international = explicitCountryCode(raw);
-      if (international === 'foreign' || international === 'partial') {
-        // Preserve this visible invalid international input until corrected;
-        // never convert it to a different +380 recipient or restore an old one.
-        previousLocalPhone = '';
-        syncCallback();
+    phoneField.addEventListener('paste', function (event) {
+      // Capture literal clipboard text BEFORE the browser sanitizes CR/LF.
+      if (event && event.preventDefault) event.preventDefault();
+      var incoming = event && event.clipboardData &&
+        typeof event.clipboardData.getData === 'function'
+          ? event.clipboardData.getData('text/plain') : null;
+      if (typeof incoming !== 'string') {
+        rejectRawPhone('Невірний формат');
         return;
       }
-      if (international === 'ukraine') {
-        // Keep a partial or foreign explicit +country prefix visibly invalid
-        // until +380 is fully entered or the visitor edits it. Otherwise
-        // dropping '+' permits an unrelated international number to appear
-        // to be an accepted Ukrainian nine-digit number mid-entry.
-        var entered = raw.replace(/[^0-9]/g, '');
-        if (!entered || entered.length < 3 || entered.slice(0, 3) !== '380') {
-          phoneField.value = '+' + entered;
-          previousLocalPhone = phoneField.value;
-          syncCallback();
-          return;
-        }
+      phoneInputKind = '';
+      if (!allowedPhoneRaw(incoming)) rejectRawPhone(incoming);
+      else {
+        phoneInputRejected = false;
+        // A paste replaces the whole draft phone; no previous-value fallback.
+        phoneRaw = incoming;
+        renderPhoneRaw();
       }
-      var normalized = localPhoneDigits(raw);
-      // Reject an ambiguous overlong paste; do not clear a correctly typed
-      // nine-digit value when one extra digit is pressed.
-      if (!normalized && /^[0-9]{10}$/.test(raw) && previousLocalPhone.length === 9 &&
-          raw.slice(0, 9) === previousLocalPhone)
-        normalized = previousLocalPhone;
-      phoneField.value = normalized;
-      previousLocalPhone = normalized;
-      syncCallback();
+    });
+    phoneField.addEventListener('beforeinput', function (event) {
+      phoneInputKind = event && event.inputType || '';
+      if (!event) return;
+      var insertion = typeof event.data === 'string' ? event.data : null;
+      if (phoneInputKind === 'insertFromPaste' && event.dataTransfer &&
+          typeof event.dataTransfer.getData === 'function') {
+        insertion = event.dataTransfer.getData('text/plain');
+      }
+      // Not every autofill/IME change fires beforeinput; the input and submit
+      // validators remain authoritative for values that bypass this event.
+      if (insertion !== null && (!allowedPhoneRaw(insertion) ||
+          insertion.length + phoneRaw.length > 30)) {
+        if (event.preventDefault) event.preventDefault();
+        rejectRawPhone(insertion);
+      }
+    });
+    phoneField.addEventListener('input', function () {
+      var now = String(phoneField.value || '');
+      // Event changes to the compact display can extend the original raw
+      // input. This retains one-time prefix provenance through every key.
+      // Replacement paste never extends the previous value.
+      if (phoneInputKind === 'insertFromPaste' || phoneInputKind === 'insertReplacementText') {
+        phoneRaw = now;
+      } else if (now.indexOf(phoneRendered) === 0 &&
+          now.length === phoneRendered.length + 1 && !phoneInputRejected) {
+        phoneRaw += now.slice(phoneRendered.length);
+      } else {
+        phoneRaw = now;
+      }
+      phoneInputKind = '';
+      phoneInputRejected = false;
+      renderPhoneRaw();
     });
     messageField.addEventListener('input', syncCallback);
     formPanel.addEventListener('submit', function (event) {

@@ -787,8 +787,8 @@ test('HEAVY V8: segmented +38 country code works key-by-key without foreign bypa
     assert.equal(h.get('bp-contact__callback-submit').disabled, false);
     input(h, foreign);
     assert.equal(h.get('bp-contact__callback-submit').disabled, true, foreign);
-    assert.equal(h.get('bp-contact__callback-phone-input').value, foreign,
-      'foreign or malformed signal stays visible, not rewritten');
+    assert.equal(h.get('bp-contact__callback-phone-input').value, foreign.replace(/[\r\n]/g, '?'),
+      'foreign or malformed signal remains visibly invalid; tel control cannot show newline');
     submit(h);
     await flushAsync();
     assert.equal(calls, 0, 'foreign/malformed country code cannot POST: ' + foreign);
@@ -905,7 +905,7 @@ test('L2: fixed +380 prefix, nine visible digits and accessible missing-digit hi
   assert.equal(prefix.textContent,'+380');
   assert.equal(field.inputMode,'numeric');
   assert.equal(field.pattern,'[3-9][0-9]{8}');
-  assert.equal(field.maxLength,30,'allow whole clipboard number before normalization');
+  assert.equal(field.maxLength,undefined,'native maxlength must not truncate a pasted source before validation');
   assert.equal(field.getAttribute('aria-describedby'),h.get('bp-contact__callback-phone-hint').id);
   assert.match(h.get('bp-contact__callback-phone-hint').textContent,/Введіть 9 цифр/);
   input(h,'066 123 45 67');
@@ -920,7 +920,8 @@ test('L2: fixed +380 prefix, nine visible digits and accessible missing-digit hi
   assert.equal(h.get('bp-contact__callback-submit').disabled,true);
   input(h,'123456789');
   input(h,'1234567895');
-  assert.equal(field.value,'123456789','an extra typed digit is ignored');
+  assert.equal(field.value,'1234567895','extra digits remain visibly invalid, never silently restore old phone');
+  assert.equal(h.get('bp-contact__callback-submit').disabled,true);
   input(h,'+420 777 123 456');
   assert.equal(field.value,'+420 777 123 456','preserve explicit foreign code visibly without reinterpreting it');
   assert.equal(h.get('bp-contact__callback-submit').disabled,true,'foreign country is never submittable');
@@ -1064,8 +1065,8 @@ test('HEAVY B-2: paste, extra keys, edit-after-prefix and request payload retain
   assert.equal(button.disabled, false);
 
   input(h, field.value + '1');
-  assert.equal(field.value, '671234567', 'extra key cannot overwrite recipient');
-  input(h, field.value.slice(0, -1));
+  assert.equal(button.disabled, true, 'extra key disables rather than restoring a potentially wrong recipient');
+  input(h, '67123456');
   assert.equal(field.value, '67123456');
   assert.equal(button.disabled, true, 'backspace must re-disable until complete');
   input(h, field.value + '7');
@@ -1225,8 +1226,8 @@ test('L2: optional note preserved as text, never a Contact phone', async () => {
   assert.equal(Object.hasOwn(payload,'contact'),false);
 });
 
-test('L2: proven Widget 403/422/429 rejects allow explicit manual retry, never automatic retry', async () => {
-  for (const status of [403, 422, 429]) {
+test('L2: only proven precommit 403/429 allow deliberate retry, never automatic retry', async () => {
+  for (const status of [403, 429]) {
     let calls = 0;
     const h = harness(callbackConfig(), {
       cookie: 'cw_conversation=' + dummyJwt,
@@ -1243,6 +1244,157 @@ test('L2: proven Widget 403/422/429 rejects allow explicit manual retry, never a
     await flushAsync();
     assert.equal(calls, 2, 'exactly one POST per deliberate attempt on ' + status);
   }
+});
+
+
+test('HEAVY R1 A1: unsupported domestic characters and Unicode digits never become a different recipient', async () => {
+  for (const malformed of [
+    '67x1234567', '671234567\u0085', '671234567😺',
+    '6６71234567', '6é71234567', '671234567\u0000',
+    '0\t671234567', '+38067\t1234567'
+  ]) {
+    let calls=0;
+    const h=harness(callbackConfig(),{
+      cookie:'cw_conversation='+dummyJwt,
+      fetchMock: async()=>{calls++;return {status:200,json:async()=>({id:70,conversation_id:5})};}
+    });
+    visitCallback(h);
+    input(h,'671234567');
+    assert.equal(h.get('bp-contact__callback-submit').disabled,false);
+    input(h,malformed);
+    assert.equal(h.get('bp-contact__callback-submit').disabled,true,'reject malformed '+JSON.stringify(malformed));
+    submit(h);await flushAsync();
+    assert.equal(calls,0,'no POST on direct submit for '+JSON.stringify(malformed));
+  }
+});
+
+test('HEAVY R1 A1: capture raw clipboard data before native tel strips newline/truncates >30', async () => {
+  const pasted = [
+    '+38067\n1234567', '+38067\r1234567',
+    '+380671234567' + ' '.repeat(17) + '8',
+    '671234567\u0085'
+  ];
+  for (const raw of pasted) {
+    let calls=0;
+    const h=harness(callbackConfig(),{cookie:'cw_conversation='+dummyJwt,
+      fetchMock:async()=>{calls++;return {status:200,json:async()=>({id:71,conversation_id:6})};}});
+    visitCallback(h);
+    input(h,'671234567');
+    const f=h.get('bp-contact__callback-phone-input');
+    let prevented=false;
+    for (const handler of f.listeners.paste||[])
+      handler({clipboardData:{getData:(type)=>type==='text/plain'?raw:''},
+        preventDefault(){prevented=true;}});
+    assert.equal(prevented,true,'raw paste intercepted before tel browser sanitization');
+    assert.equal(h.get('bp-contact__callback-submit').disabled,true,'reject unsafe clipboard '+JSON.stringify(raw));
+    submit(h);await flushAsync();assert.equal(calls,0);
+  }
+});
+
+test('HEAVY R1 A1: beforeinput rejects native-sanitized clipboard data and leaves form invalid', async () => {
+  let sends=0;
+  const h=harness(callbackConfig(),{cookie:'cw_conversation='+dummyJwt,
+    fetchMock:async()=>{sends++;return {status:200,json:async()=>({id:1,conversation_id:2})};}});
+  visitCallback(h); input(h,'671234567');
+  const f=h.get('bp-contact__callback-phone-input');
+  let canceled=false;
+  for(const fn of f.listeners.beforeinput||[])fn({
+    inputType:'insertFromPaste',dataTransfer:{getData:()=>'+38067\n1234567'},
+    preventDefault(){canceled=true;}
+  });
+  assert.equal(canceled,true);
+  assert.equal(h.get('bp-contact__callback-submit').disabled,true);
+  submit(h);await flushAsync();assert.equal(sends,0);
+});
+
+test('HEAVY R1 A2: typed repeated prefixes never re-strip and submit a changed recipient', async () => {
+  const unsafe=['+380380671234567','380380671234567','+3800671234567'];
+  for (const typed of unsafe) {
+    let calls=0;
+    const h=harness(callbackConfig(),{cookie:'cw_conversation='+dummyJwt,
+      fetchMock:async()=>{calls++;return {status:200,json:async()=>({id:77,conversation_id:3})};}});
+    visitCallback(h);
+    const f=h.get('bp-contact__callback-phone-input');
+    for(const c of typed) input(h,f.value+c);
+    assert.equal(h.get('bp-contact__callback-submit').disabled,true,typed);
+    submit(h);await flushAsync(); assert.equal(calls,0,'cannot send repeated prefix '+typed);
+  }
+});
+
+test('HEAVY R1 A2: accepted +380 number whose actual NSN begins 380 is not re-parsed as a second prefix', async () => {
+  for (const given of ['+380380123456', '380380123456']) {
+    for (const keyboard of [false, true]) {
+      let calls=0, recipient;
+      const h=harness(callbackConfig(), {cookie:'cw_conversation='+dummyJwt,
+        fetchMock:async(_u,req)=>{calls++;recipient=JSON.parse(req.body).custom_attributes.callback_phone;
+          return {status:200,json:async()=>({id:53,conversation_id:3})};}});
+      visitCallback(h);
+      const f=h.get('bp-contact__callback-phone-input');
+      if (keyboard) for(const c of given) input(h,f.value+c);
+      else input(h,given);
+      assert.equal(f.value,'380123456','nine-digit NSN starts with 380, not another country code');
+      assert.equal(h.get('bp-contact__callback-submit').disabled,false,given);
+      submit(h);await flushAsync();
+      assert.equal(calls,1,given);
+      assert.equal(recipient,'+380380123456',given);
+    }
+  }
+});
+
+test('HEAVY R1 A3: overlong replace-paste never restores previous nine-digit phone', async () => {
+  let calls=0;
+  const h=harness(callbackConfig(),{cookie:'cw_conversation='+dummyJwt,
+    fetchMock:async()=>{calls++;return {status:200,json:async()=>({id:75,conversation_id:2})};}});
+  visitCallback(h);
+  input(h,'671234567');
+  assert.equal(h.get('bp-contact__callback-submit').disabled,false);
+  const f=h.get('bp-contact__callback-phone-input');
+  for(const handler of f.listeners.paste||[])
+    handler({clipboardData:{getData:()=> '6712345678'},preventDefault(){}});
+  assert.equal(h.get('bp-contact__callback-submit').disabled,true);
+  assert.equal(f.value,'6712345678');
+  submit(h);await flushAsync();assert.equal(calls,0);
+  input(h,'671234567'); // explicit manual correction
+  assert.equal(h.get('bp-contact__callback-submit').disabled,false);
+});
+
+test('HEAVY R1 A4: a committed-then-422 response is unknown and cannot be resent', async () => {
+  let posts=0;
+  const h=harness(callbackConfig(),{cookie:'cw_conversation='+dummyJwt,
+    fetchMock:async()=>{posts++;return {status:422,json:async()=>({error:'postcommit'})};}});
+  visitCallback(h);input(h,'671234567');
+  submit(h);await flushAsync();
+  assert.equal(posts,1,'server may have already committed');
+  assert.match(h.get('bp-contact__callback-status').textContent,/Щоб уникнути дублювання/);
+  assert.equal(h.get('bp-contact__callback-submit').disabled,true);
+  submit(h);await flushAsync();
+  assert.equal(posts,1);
+  h.get('bp-contact__menu-close').click();
+  h.get('bp-contact__trigger').click();
+  assert.equal(h.get('bp-contact__callback-submit').disabled,true);
+});
+
+test('HEAVY R1 A5: distinct same-name visitor JWT cookies deny, equal cookies are safe', async () => {
+  const another='eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJkaWZmZXJlbnQifQ.SIGNATURE2';
+  for(const cookie of [
+    'cw_conversation='+dummyJwt+'; cw_conversation='+another,
+    'cw_conversation='+another+'; cw_conversation='+dummyJwt,
+    'cw_conversation='+dummyJwt+'; cw_conversation=not-a-jwt',
+    'cw_conversation='+dummyJwt+'; cw_conversation=%ZZ'
+  ]) {
+    let posts=0;
+    const h=harness(callbackConfig(),{cookie,fetchMock:async()=>{posts++;return {status:200,json:async()=>({id:1,conversation_id:2})};}});
+    visitCallback(h);input(h,'671234567');
+    assert.equal(h.get('bp-contact__callback-submit').disabled,true,'ambiguous visitor: '+cookie);
+    submit(h);await flushAsync();assert.equal(posts,0);
+  }
+  let sent=0,token;
+  const h=harness(callbackConfig(),{
+    cookie:'cw_conversation='+dummyJwt+'; cw_conversation='+dummyJwt,
+    fetchMock:async(_u,req)=>{sent++;token=req.headers['X-Auth-Token'];return {status:200,json:async()=>({id:1,conversation_id:2})};}
+  });
+  visitCallback(h);input(h,'671234567');submit(h);await flushAsync();
+  assert.equal(sent,1);assert.equal(token,dummyJwt);
 });
 
 test('L2: network failure, 500 and invalid-200 ACK remain uncertain and never resubmit', async () => {

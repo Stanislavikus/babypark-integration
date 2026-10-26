@@ -469,6 +469,17 @@
   line-height: 1.45;
 }
 .bp-contact__callback-success-caption { margin: 0; color: #657380; font-size: 13px; }
+/* Short landscape: essential confirmed text is visible before auto-dismiss. */
+@media (max-height: 450px) {
+  .bp-contact__menu--callback .bp-contact__heading { min-height: 58px; padding: 8px 12px; gap: 8px; }
+  .bp-contact__menu--callback .bp-contact__brand-avatar { width: 32px; height: 32px; flex-basis: 32px; }
+  .bp-contact__menu--callback .bp-contact__brand-name { font-size: 14px; }
+  .bp-contact__menu--callback .bp-contact__brand-status { font-size: 12px; }
+  .bp-contact__callback-form--success .bp-contact__callback-success { gap: 4px; padding: 8px 10px; }
+  .bp-contact__callback-form--success .bp-contact__callback-success-icon { width: 24px; height: 24px; font-size: 17px; }
+  .bp-contact__callback-form--success .bp-contact__callback-success-title { font-size: 14px; line-height: 1.2; max-width: 100%; }
+  .bp-contact__callback-form--success .bp-contact__callback-success-caption { font-size: 11px; }
+}
 @media (max-width: 767px) {
   .bp-contact__menu--callback {
     width: min(400px, calc(100vw - var(--bp-mobile-right) - 12px));
