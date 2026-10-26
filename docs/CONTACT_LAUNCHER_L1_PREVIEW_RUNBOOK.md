@@ -4,6 +4,26 @@ Status: RUNBOOK
 Applies to: web/contact-launcher/**, Drupal 7 active babypark2 theme, existing Chatwoot Website Inbox.
 Supersedes: none.
 
+## 2026-10-26 current owner scope correction (supersedes earlier operational alert gates)
+
+Callback V1 deliberately uses the **existing, unchanged Chatwoot Website
+Inbox/Unassigned queue, agent access, auto-assignment and stock notifications**.
+No Callback-specific team-email notification rule, duty roster, guaranteed
+notification to all four sellers or reassign-when-offline behavior is required
+before releasing the form. Prior paragraphs below proposing these as
+Callback production/merge gates are historical, **superseded**, not a new
+condition of release. Native operator notification preferences may be
+configured independently after launch without a new Callback implementation.
+
+Reuse the proven real Widget staging new/Open/Resolved flow and existing
+restored DigitalOcean Chatwoot snapshot proof. No additional restore server,
+repeat full snapshot-restore drill or new app data store is required for the
+form's frontend-only changes. For actual cutover, verify the final loaded
+assets, existing native rule and scoped CORS/security/PII prerequisites,
+and preserve normal versioned asset rollback; never claim unperformed
+production activation as completed. PR #156 is a **separate** governance
+proposal and not a new Callback dependency.
+
 ## Fixed approval and scope
 RISK CLASSIFICATION: HEAVY — customer-facing website SDK initialization and Chatwoot privacy/contact boundary.
 Original L1 owner pre-code GO (2026-10-19) binds Scan SHA-256 8f1c0dc9562bd2c7e4383f3dc8972c329061bac04f5ae8e068d416a0dfe5f7eb and Fit SHA-256 4f930276a7db2b1907a5f94e058df32b590ee29673693af4dcca2d1aff958cc6.
@@ -80,7 +100,7 @@ The previous L1 scope/approvals above are historical and do not govern the later
 
 **Post-change synthetic Callback smoke is mandatory:** after *any* change to the customer-visible first two lines of the Callback payload, deployed JS/CSS/config, active Chatwoot native rule #2, or Chatwoot upgrade, verify the exact literal `Ви замовили дзвінок\nЗворотний дзвінок: ` against both source and **live** active `message_created`/incoming/add_label rule (including the literal newline). Send one approved fictional-number synthetic callback on the final actually loaded customer origin and verify incoming message / `callback` label, 200 + positive message and conversation IDs, exactly one allowed successful-response ACAO, and the Unassigned queue/operator UI. Check both a new conversation and **existing open and resolved** states when the change could affect those. Preserve old rule #1 for old cached client messages until explicitly retired after a measured cache transition. Failure/missing evidence stops customer cutover; never infer from fixture alone.
 
-**Native notifications are a separate operational gate, not a property of the `callback` label.** Per-profile `New conversation` alerts require appropriate Inbox collaboration and generally do not cover every incoming message on an already Open unassigned conversation. Verify actual Email/Push/browser-audio receipt for new and existing callbacks by the staff responsible for Unassigned queue coverage; do not silently add `send_email_to_team`, pick a specific team/agent, or claim account-wide delivery. Owner must accept an explicit staff shift/queue coverage policy or approve a verified native alternative before rollout. A successful staging label alone does not satisfy reliable alerting.
+**Native notifications are stock Chatwoot behavior, not a Callback release gate.** Per-profile `New conversation` alerts require appropriate Inbox collaboration and do not guarantee a notification to every seller for every message in an already Open unassigned conversation. The owner accepts this unchanged platform behavior for Callback V1 and will consider stock per-user notifications independently later. Do not add `send_email_to_team`, a fixed team/agent, a duty schedule, or an invented alert-coverage merge prerequisite. A successful staging label alone does not satisfy reliable alerting.
 
 **Draft preservation:** accidental outside click, Escape or X closes the panel but leaves unsent phone/name/note only in existing in-memory DOM for the life of that page, never in local/session storage; open again to resume. After accepted or uncertain send the existing terminal no-retry behavior remains. No guarantee across a full reload. Error text uses Radix ruby-11 (contrast >= 4.5:1), counter description is outside the enclosing label, and 100vh fallback precedes 100dvh.
 

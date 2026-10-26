@@ -38,7 +38,7 @@ performed. The same evidence confirms active live L1 JS/CSS unchanged.
 
 Next step: new exact-basis focused/root/native-browser evidence and independent
 HEAVY R1, followed only after ZERO BLOCKERS by separate context-isolated R2.
-§6 production notification, privacy, recovery and cutover rows remain open
+§6 privacy/security and cutover rows remain open; the owner-frozen stock Chatwoot routing does not require new alerting or a second full-server restore
 unless supported by new evidence or an applicable frozen non-goal. No such
 proof is inferred from visual approval. No merge, production deploy or real
 Chatwoot POST is authorized by this correction.

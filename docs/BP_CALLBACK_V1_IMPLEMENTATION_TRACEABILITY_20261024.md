@@ -4,6 +4,36 @@ Status: EVIDENCE — NON-NORMATIVE, draft only. No merge, customer activation or
 Applies to: existing BabyPark Drupal→Magento-portable contact launcher / Chatwoot Website Widget callback V1.
 Supersedes: none. Earlier L1 PR #142 and Website Widget research PR #152 remain separate proposed work.
 
+## 2026-10-26 owner-frozen scope correction — stock Chatwoot routing
+
+The owner explicitly confirms that Callback V1 uses **unchanged stock Chatwoot
+Website Inbox routing, auto-assignment and native notifications**. The form
+adds a normal incoming Widget message to the existing visitor conversation
+and uses the existing native account-level automation solely to add the
+`callback` label. No custom callback queue, guaranteed off-browser staff
+fanout, team-email automation, new team/assignee policy, duty roster or
+offline-agent reassignment is a release requirement. These were assistant-added
+operational expectations, **not owner-approved Callback requirements**. Their
+absence must not be reported as an implementation/merge BLOCKER for Callback.
+Staff may change native Chatwoot notification settings later, independently
+of this release. Existing stock limitations remain explicit and are not
+misrepresented as guaranteed delivery.
+
+Existing real Website Widget new/Open/Resolved staging evidence (#139–#150)
+covers the unchanged signed Widget delivery/routing contract; no second
+server restore is required for the V12 frontend-only presentation/phone-editor
+changes. The already successful separate DigitalOcean snapshot restore
+(PR #155, image 251542648; PostgreSQL, Rails, attachments) is reused for
+the existing Chatwoot durable-state recovery boundary. Callback adds no
+independent database/storage system or Chatwoot core patch. The normal
+pre-cutover asset rollback and security/privacy obligations still apply;
+neither an unperformed final cutover nor a privacy/security proof is invented.
+
+The separate governance proposal PR #156 is not a Callback V1 implementation
+dependency or a substitute for the **currently merged** Agreement §7 review.
+This scope correction does not claim an R1/R2 review result or authorize merge
+or live activation.
+
 ## Current V12 §6 traceability — R2 blocker batch (2026-10-26)
 
 This section supersedes earlier name-policy and UI statements below for the
@@ -34,21 +64,21 @@ never a production deployment or formal review certificate.
 | V12-GEOMETRY-EMBLEM: compact 490px-or-viewport form, native font, white avatar/inset owner emblem | CSS `.bp-contact__menu--callback`, `.bp-contact__brand-avatar`, image rules; JS `init` brandAvatar/brandImage | `APPROVED V12: emblem inset, compact mobile size, name and phone state styling`; existing compact-success tests; broader device checks remain external below | Missing configured callback cannot send; R2 S3/S5 limitations retained separately | Static asset only, owner PNG SHA-256 fa5a882453439306686df1e4c97387e601de6f9075e519082619fd29aa628d02 | DONE |
 | V12-SEND: existing identity, SDK selective load, ACK/idempotency, native label fixture and no Contact mutation | JS `getWidgetJwt`, `initializeChatwoot`, `submitCallback`; `config/chatwoot/callback-v1-automation.example.json` | Focused `HEAVY R1 A4/A5`, `HEAVY V10 B2`, ACK/timeout/terminal tests; `tests/unit/contact-callback-contract.test.mjs` | Uncertain ACK terminal; only proven 403/429 deliberate retry; missing/ambiguous JWT blocks | Existing Chatwoot transcript authority only | DONE |
 | V12-PREVIEW-G2: all five observed preview identities and current name policy | `docs/INFRASTRUCTURE_REGISTRY.md` 2026-10-26 inventory; `docs/CURRENT_STATE.md` current V12 section | `V12 G2: all documented callback previews have exact observed registry identities`; source comment #6423267053 | Unknown auxiliary assets/path drift stops future cleanup; no deletion claimed | Evidence only, production unchanged | DONE |
-| OPS-NOTIFY: staffed native alerts for new and already Open Unassigned conversations | Preview runbook notification gate; no speculative assignment change | Exact-runtime proof not supplied for this stage | No merge/activation on an unproved operational row | Existing native Chatwoot state, no changes made | IN PROGRESS |
 | OPS-PRIVACY: WARN/ERROR/Sidekiq PII, security/IP/consent/CSP and header inheritance | Preview runbook production safety/security gates | No new live verification; historical staging does not establish current V12 safety | No production activation; no unverified fact marked DONE | Existing infrastructure only | IN PROGRESS |
 | OPS-RECOVERY-SNAPSHOT: accurately record the existing snapshot-specific restore proof | PR #155 comment #6412156326, independently re-read 2026-10-26; DO image 251542648 / temporary restored Droplet 612711769 | Restored PostgreSQL SQL reads and full pg_dump exit 0, local Rails HTTP 200, 3/3 nonempty attachment blobs; temporary Droplet/key deletion recorded | Evidence is limited to this overnight image; no assertion of future continuity or full integration/point-in-time crash consistency | Existing backup image only; no new production action | DONE |
-| OPS-RECOVERY: complete applicability of consistent PostgreSQL/ActiveStorage/config recovery gate | Preview runbook recovery gate; snapshot-specific proof above | Existing drill proves local recovery of one image, not all integration/config/crash-consistency obligations; complete gate applicability remains unproved | No merge/cutover while remaining required proof absent | Existing production durable stores | IN PROGRESS |
 | OPS-CUTOVER: current runtime, Drupal/CORS/IP, approved in-place deployment and devices | Preview runbook live-cutover and device gates | No deploy/real Widget POST authorized in this batch; mock browser results prove local editing only | Customer Callback remains off until separate GO and actual evidence | No production mutation in this batch | IN PROGRESS |
 | GATE-HEAVY: new manifest, immutable required checks, independent R1 then isolated R2 | Agreement §7/§7.0a/§7.1; new exact-basis PR evidence | Old R1/R2/manifest invalid after changes; new cycle required | NOT CLOSED until complete exact-basis evidence and owner approval | No runtime state | IN PROGRESS |
 
-G1 disposition: the missing V12 requirement mapping is corrected, but the
-terminal §6 blocker is **not closed** by this document. The existing record
-explicitly makes operational proof a merge prerequisite. No applicable
-frozen non-goal removing those requirements has been established; none is
-labelled DEFERRED or DONE. The owner's request forbids inventing production
-facts. Supply current evidence or a legitimate frozen scope decision before
-claiming terminal traceability. No live tests or production changes are
-silently authorized by this evidence update.
+G1 scope disposition: the owner has now explicitly frozen the stock
+Chatwoot routing contract and excluded invented Callback-specific duty and
+alert-delivery guarantees. The historical OPS-NOTIFY merge gate is removed;
+no new Team, seller routing, staff notification service or staff-coverage
+policy is introduced. The redundant second full-server restore requirement
+is likewise removed: the existing successful Chatwoot restore is the
+applicable recovery proof, with any frontend rollback handled by the
+existing launcher deployment runbook. Remaining privacy/security, actual
+cutover and final §7 review rows retain their honest state; this document
+does not manufacture missing evidence or authorize an unperformed deploy.
 
 R2 SHOULD FIX remain a separate inventory, not automatically BLOCKERs:
 S1 invalid-key draft loss; S2 malformed-source neutral hint; S3 eager emblem
