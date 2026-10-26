@@ -842,7 +842,8 @@
       var appended = now.indexOf(phoneRendered) === 0 &&
         now.length === phoneRendered.length + 1 && !phoneInputRejected;
       var nationalMidEdit = (phoneNextNationalEdit && /^[0-9]{0,30}$/.test(now)) ||
-        (phoneRendered !== phoneRaw && /^[0-9]{1,9}$/.test(phoneRendered) &&
+        (!phoneWholeReplacement && phoneRendered !== phoneRaw &&
+         /^[0-9]{1,9}$/.test(phoneRendered) &&
          !appended && /^[0-9]{0,10}$/.test(now) &&
          now !== phoneRendered && !/^(?:0|380)[0-9]{9}$/.test(now));
       if (nationalMidEdit || phoneNationalEdit) {

@@ -1401,6 +1401,43 @@ test('HEAVY V10 B1: select-all full replacement permits new Ukrainian source aft
   assert.equal(recipient,'+380671234567');
 });
 
+test('HEAVY V10 B-R1-1: select-all replacement typed key by key equals a fresh source', async () => {
+  for (const replacement of ['0671234567', '380671234567', '+380671234567']) {
+    let calls=0,recipient;
+    const h=harness(callbackConfig(), {cookie:'cw_conversation='+dummyJwt,
+      fetchMock:async(_u,options)=>{
+        calls++;
+        recipient=JSON.parse(options.body).custom_attributes.callback_phone;
+        return {status:200,json:async()=>({id:21,conversation_id:8})};
+      }});
+    visitCallback(h);
+    input(h,'+380380123456');
+    const f=h.get('bp-contact__callback-phone-input');
+    const button=h.get('bp-contact__callback-submit');
+    assert.equal(f.value,'380123456');
+    for (let i=0;i<replacement.length;i++) {
+      const key=replacement[i];
+      const replaceAll=i===0;
+      f.selectionStart=replaceAll?0:f.value.length;
+      f.selectionEnd=replaceAll?f.value.length:f.value.length;
+      for (const listener of f.listeners.beforeinput||[]) listener({
+        inputType:'insertText',data:key,cancelable:true,preventDefault(){}
+      });
+      input(h,replaceAll?key:f.value+key);
+      if (replacement==='380671234567' && i===8) {
+        assert.equal(button.disabled,true,'national prefix without full 9-digit NSN must remain incomplete');
+        submit(h);await flushAsync();
+        assert.equal(calls,0,'must not submit a different number after nine keyboard keys');
+      }
+    }
+    assert.equal(f.value,'671234567','display must normalize to the correct nine-digit NSN');
+    assert.equal(button.disabled,false,'typed replacement is complete: '+replacement);
+    submit(h);await flushAsync();
+    assert.equal(calls,1,'one POST for '+replacement);
+    assert.equal(recipient,'+380671234567','recipient must match new number');
+  }
+});
+
 test('HEAVY V10 B2: decoded cookie-name aliases must use same visitor JWT as stock SDK', async () => {
   const another='eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJkaWZmZXJlbnQifQ.SIGNATURE2';
   const ambiguous=[
