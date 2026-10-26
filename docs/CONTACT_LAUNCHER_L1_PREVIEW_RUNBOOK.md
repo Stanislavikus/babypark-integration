@@ -110,3 +110,48 @@ Historical test source/preview screenshots apply to earlier JS; fresh immutable 
 After any change of `explicitCountryCode` or phone input handler, replay the full owner-accepted phone matrix: `+38 (067) 123-45-67`, `+38 067 123 45 67`, `+38(067)1234567`, `+380 67 123 45 67`, `0671234567`, and local nine digits must normalize to the same Ukrainian recipient. Rejection matrix: ` +687 20 00 00`, `(+687) 20 00 00`, `+48 ...`, `+1 ...`, `+38` incomplete, doubled/mid-string plus, letters and control/newline characters; all zero POST on forced direct submission. Validate both one-paste and actual key-by-key behavior, and test previous valid input followed by invalid-country paste. Browser screenshots/real site validation are still mandatory; unit VM tests alone do not authorize release.
 
 The first DigitalOcean daily Droplet backup, a restored *consistent* PostgreSQL+ActiveStorage/config deployment, native seller notifications, WARN/ERROR privacy mitigation and exact-HEAD HEAVY R1/R2 remain independent production gates. Keep current rule #1/#2 unchanged and Customer Callback OFF until explicit owner production GO.
+
+## Callback V12 R2 — maintained native keyboard regression (2026-10-26)
+
+Status: RUNBOOK — NON-NORMATIVE; local synthetic verification, not live-send
+or deployment permission. Applies to PR #154 B1 and the preserved Ukrainian
+phone-source contract; supersedes no production approval.
+
+Use the existing isolated checkout; do not create a Git worktree unless the
+owner requests one. Keep application dependencies/lockfiles unchanged. The
+browser driver is development-only, outside the checkout:
+
+```sh
+npm_config_cache=/workspace/.npm-cache npm install --prefix /workspace/.browser-tools --save-exact --no-audit --no-fund playwright@1.58.2
+cd /workspace/babypark-integration
+BABYPARK_PLAYWRIGHT_PATH=/workspace/.browser-tools/node_modules/playwright BABYPARK_CHROMIUM=/usr/bin/chromium node --test tests/browser/contact-callback-keyboard.test.mjs
+```
+
+Chromium must actually be installed; a missing driver/browser is a failed or
+unrun check, never a skip/pass. The suite intercepts every browser request,
+serves exact checkout JS/CSS/emblem, substitutes an SDK stub, and captures
+synthetic Widget POSTs without contacting any live service. It uses trusted
+keyboard/caret/Backspace/range events and the real asynchronous clipboard.
+It verifies the three B1 counterexamples, source-mode end Backspace, full
+0/380/+380/formatted typing/paste, select-all after national edit, tenth-key
+blocking and foreign/overlong forced-submit denial. Captured recipient must
+match the visible nine-digit NSN plus +380. This is not real SDK/CORS/agent
+notification or mobile-device proof.
+
+For formal §7.0a evidence, first commit the candidate, freeze a new manifest
+outside the reviewed tree, bind Node/npm/browser/driver versions and content
+hashes, and run each check in a fresh detached verification clone (not a
+linked worktree) with fresh npm ci and read-only source/dependencies/toolchain.
+Use separate writable HOME/cache/TMP/output and capture exit status, full logs
+and pre/post identities. Use `umask 022`: this machine starts with 0077, which
+otherwise changes mkdir(mode:0755) into 0700 and invalidates the existing
+unsafe-backup-directory test fixture. Do not change that test or weaken the
+0700 recovery guard. The focused root command does not automatically discover
+`tests/browser`; run the browser command explicitly in the manifest.
+
+If terminal production traceability cannot be proven from available evidence,
+record the missing obligations and halt the merge gate under Agreement §9;
+do not turn them into DONE/DEFERRED merely to obtain green contract tests.
+The owner-supplied restore drill PR #155 comment #6412156326 is evidence for
+one specified overnight backup only. No production cleanup, deploy or real
+Chatwoot POST is part of this procedure.

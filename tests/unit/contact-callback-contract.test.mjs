@@ -1,8 +1,59 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 const source = readFileSync(new URL('../../web/contact-launcher/babypark-launcher.js', import.meta.url), 'utf8');
 const doc = readFileSync(new URL('../../docs/BP_CALLBACK_V1_IMPLEMENTATION_TRACEABILITY_20261024.md', import.meta.url), 'utf8');
+test('V12 G1: every current requirement has a six-column mapping without invented production completion', () => {
+  const current = doc.split('## Current V12 §6 traceability')[1].split('## 2026-10-26 V9')[0];
+  for (const id of ['V12-PHONE-DISPLAY', 'V12-PHONE-SOURCE', 'V12-PHONE-EDIT-B1',
+    'V12-NAME-LETTERS', 'V12-NAME-80', 'V12-COMMENT-500', 'V12-HINT',
+    'V12-GEOMETRY-EMBLEM', 'V12-SEND', 'V12-PREVIEW-G2']) {
+    const rows = current.split('\n').filter(line => line.startsWith('| ' + id + ':'));
+    assert.equal(rows.length, 1, 'one mapping for ' + id);
+    const cells = rows[0].split('|').slice(1, -1).map(cell => cell.trim());
+    assert.equal(cells.length, 6);
+    assert.ok(cells.every(Boolean), 'no missing implementation/test/fail-closed/durable/status cell');
+    assert.equal(cells[5], 'DONE', 'candidate implementation/evidence complete for ' + id);
+  }
+  // These production facts were not verified by this code-only correction.
+  // Passing this regression must never be mistaken for terminal §6 closure.
+  for (const id of ['OPS-NOTIFY', 'OPS-PRIVACY', 'OPS-RECOVERY', 'OPS-CUTOVER', 'GATE-HEAVY']) {
+    const row = current.split('\n').find(line => line.startsWith('| ' + id + ':'));
+    assert.ok(row, 'unproved gate remains visible: ' + id);
+    assert.ok(row.endsWith('| IN PROGRESS |'), 'no invented DONE/DEFERRED for ' + id);
+  }
+  assert.match(current, /terminal §6 blocker is \*\*not closed\*\*/);
+});
+
+test('V12 G2: all documented callback previews have exact observed registry identities', () => {
+  const root = new URL('../../docs/', import.meta.url);
+  const registry = readFileSync(new URL('INFRASTRUCTURE_REGISTRY.md', root), 'utf8');
+  const current = registry.split('## 2026-10-26 — five existing Callback previews')[1].split('## Historical')[0];
+  const expected = new Map([
+    ['preview-callback-v11-5c6586d9', 'c9a79677de52238abe451c1b64a4d8546ec3794cb216fd79d35cf0de6dbf9c8c'],
+    ['preview-callback-v1-4432d4a895546c29ce630503675da359', '121ae5d84a3436c6d0f99aedb1b881c6222bd40390013e9cdb8322cf6c96ae7b'],
+    ['preview-callback-visual-approved-20261026', '060f378586899a75d38550343809599e554da07a1c9063aa00cbcbdced031714'],
+    ['preview-callback-visual-chatwoot-font-20261026', '53c1eb1a8b092cb092eefb8a065f10488532aadaec7f9b8dec2e57717020d186'],
+    ['preview-callback-visual-chatwoot-emblem-20261026', '772420cfc6914c1c03c15f1435900674b3aa597a3d39615bb47257ed49697cd0']
+  ]);
+  const mentioned = new Set();
+  for (const entry of readdirSync(root, { recursive: true })) {
+    if (!entry.endsWith('.md')) continue;
+    for (const name of readFileSync(new URL(entry, root), 'utf8').matchAll(/preview-callback-[A-Za-z0-9-]+/g)) mentioned.add(name[0]);
+  }
+  assert.deepEqual([...mentioned].sort(), [...expected.keys()].sort());
+  for (const [name, sha] of expected) {
+    const row = current.split('\n').find(line => line.includes('/' + name + '/index.html'));
+    assert.ok(row?.includes('/home/babypark/sites/babypark.ua/sites/all/themes/babypark2/assets/contact/'), name);
+    assert.ok(row.includes(sha), 'owner-observed index hash: ' + name);
+  }
+  assert.match(current, /6423267053/);
+  assert.match(current, /No cleanup or deletion was performed/);
+  const state = readFileSync(new URL('CURRENT_STATE.md', root), 'utf8');
+  const active = state.split('## 2026-10-26 — Callback V12')[1].split('## Historical')[0];
+  assert.match(active, /digits are removed on input and before POST/);
+  assert.doesNotMatch(active, /allowing digits|latest.*c87e6b3/i);
+});
 test('pinned upstream Chatwoot v4.18.0 widget request contract is documented', () => {
   assert.match(doc,/9f920b549c14491a4e587687a3eed5d21c6ccc7d/);
   assert.match(doc,/c4fd9c82027a5a5fa9987a8af25a789c374d8b15/);

@@ -1,7 +1,9 @@
 # BabyPark Infrastructure Registry
 
-Status: CURRENT
-Last verified: 2026-10-02
+Status: EVIDENCE — NON-NORMATIVE production object inventory.
+Applies to: BabyPark integration-owned infrastructure and recovery identities.
+Supersedes: earlier snapshots of this registry; historical entries retained below.
+Last verified: 2026-10-26 for the preview observations below; other dates remain entry-specific.
 Owner: BabyPark
 Purpose: human-readable inventory of production objects that exist outside Git or whose runtime identity/path must remain recoverable from Git.
 
@@ -13,11 +15,52 @@ Never store passwords, API secrets, private keys, session cookies or recovery pl
 
 `docs/CURRENT_STATE.md` records current system truth and acceptance state. This file answers a different question: **what objects exist, where are they, and why do they exist?**
 
-## 2026-10-25 — current temporary Callback preview asset refresh (latest bounded staging)
+## 2026-10-26 — five existing Callback previews (R2 G2 current inventory)
+
+Source: owner-supplied independent read-only filesystem inspection on host
+`server2181.babypark.ua`, PR #154 [comment #6423267053](https://github.com/Stanislavikus/babypark-integration/pull/154#issuecomment-6423267053).
+These are observed existing manually placed production-webroot artifacts,
+classified as unlinked testing/visual previews, **not production Callback
+activation**. Owner: BabyPark. The originating owner-approved staging/visual
+work is recorded in the PR; this inventory authorizes no new files or actions.
+No cleanup or deletion was performed. Unlinked/noindex is not access control;
+use synthetic data only. Filesystem UID/mode and a complete listing of every
+folder's auxiliary assets were not supplied; no such measurements are claimed.
+
+| Purpose / classification | Confirmed exact file path | Observed index.html SHA-256 |
+| --- | --- | --- |
+| V11 candidate, retained testing preview | `/home/babypark/sites/babypark.ua/sites/all/themes/babypark2/assets/contact/preview-callback-v11-5c6586d9/index.html` | `c9a79677de52238abe451c1b64a4d8546ec3794cb216fd79d35cf0de6dbf9c8c` |
+| Earlier V1 candidate, retained historical staging preview | `/home/babypark/sites/babypark.ua/sites/all/themes/babypark2/assets/contact/preview-callback-v1-4432d4a895546c29ce630503675da359/index.html` | `121ae5d84a3436c6d0f99aedb1b881c6222bd40390013e9cdb8322cf6c96ae7b` |
+| Owner-approved visual iteration, retained visual preview | `/home/babypark/sites/babypark.ua/sites/all/themes/babypark2/assets/contact/preview-callback-visual-approved-20261026/index.html` | `060f378586899a75d38550343809599e554da07a1c9063aa00cbcbdced031714` |
+| Font iteration, retained visual preview | `/home/babypark/sites/babypark.ua/sites/all/themes/babypark2/assets/contact/preview-callback-visual-chatwoot-font-20261026/index.html` | `53c1eb1a8b092cb092eefb8a065f10488532aadaec7f9b8dec2e57717020d186` |
+| Emblem iteration, owner-approved V12 visual reference (synthetic success, not V12 send proof) | `/home/babypark/sites/babypark.ua/sites/all/themes/babypark2/assets/contact/preview-callback-visual-chatwoot-emblem-20261026/index.html` | `772420cfc6914c1c03c15f1435900674b3aa597a3d39615bb47257ed49697cd0` |
+
+The same inspection reports `bp-emblem-avatar-64.png` for the emblem preview:
+SHA-256 `fa5a882453439306686df1e4c97387e601de6f9075e519082619fd29aa628d02`,
+URL GET 200. Its exact on-host asset path was not provided; do not infer one.
+The separately active live launcher remained JS SHA-256
+`b763b3deeffddc42cc88b2d6589b500673a933685d24c224ef7eda8afbdc4f17`,
+CSS `133c212c33302a3e172a703fa429ac1b906b6e14f7c7ab76d1eea21d99718240`.
+Those live hashes do not identify any preview JS/CSS or certify V12 deployment.
+
+Owner/recovery/cleanup strategy applies individually to **each of the five**:
+retain unchanged under BabyPark ownership until explicit owner cleanup GO.
+Before any separately authorized removal, resolve and confirm the exact named
+directory beneath the contact asset root, inventory all contained files and
+symlinks, check current hashes against fresh approved evidence, and preserve a
+verified recoverable copy outside the webroot. Unexpected contents/hash drift
+must stop cleanup. Delete only specifically approved files, never parent assets,
+live config, sibling previews or rollback copies; remove the named directory
+only when empty. Then verify both index and directory URLs return 404 and live
+L1 assets remain unchanged. **No recovery archive, removal, or 404 check for
+these five is claimed here.** Existing historical three-file guards below are
+not sufficient authority for deleting any currently observed folder.
+
+## Historical 2026-10-25 — temporary Callback preview asset refresh
 
 **Current isolated preview assets, updated after user asked about visible comment limit and name validation:** exact folder remains `/home/babypark/sites/babypark.ua/sites/all/themes/babypark2/assets/contact/preview-callback-v1-4432d4a895546c29ce630503675da359/`; there are still exactly three owned files. As of this entry the temporarily staged JS is SHA256 `f46526e052bfbea0ff03c054f702246ef078e3c5f5360b6c045e9b694a688ba3`, CSS `7b2e9f96cd1a08f47faa7a3a51202ba58fc98ca22dd811d1e95c6ee8e2ec4b52`, and index.html `121ae5d84a3436c6d0f99aedb1b881c6222bd40390013e9cdb8322cf6c96ae7b`. Exact source at Draft PR #154 commit `c87e6b3c3e872d2fda23ef4e41140f1e64a4be96`, tree `7e6f6ef9c9a4149c350669e92b02babecb82c861`; page references version-busted `?v=c87e6b3c`, loads only the existing public `../config.js` and enables Callback only inside that isolated document. **These SHA values supersede the older 14a795 stage asset digests immediately below; historical browser POST IDs there were observed only with the older JS and must not be attributed to the new commit.** Current CSS/JS URL HTTPS 200 and served SHA256 exact-match confirmed, public main launcher and config hashes still unchanged. The new counter is an interface-only change retaining native textarea maxlength=500. When owner completes acceptance, delete the isolated preview with the existing specific realpath/single-directory/three-file hash guards updated for these current hashes; both URL variants must return 404. No owner exact release/merge GO has been received.
 
-## 2026-10-25 — owner-approved Callback testing objects (current; old section below historical)
+## Historical 2026-10-25 — owner-approved Callback testing objects
 
 **Host `chatwoot-fra1-01`; stock Chatwoot 4.18.0; account #1:** a new active native `AutomationRule` **ID #2**, name `BabyPark — Callback (friendly confirmation V1, staging)`, event `message_created`, no execution delay; two conditions `message_type = incoming` AND `content contains` **two-line string** `Ви замовили дзвінок\nЗворотний дзвінок: ` (literal newline stored, not a backslash+n string), only action `add_label callback`. Scope account-wide, no fixed team/inbox/assignee. Rule #2 was created under owner-approved staging on 2026-10-25 with native Chatwoot model validation. Existing native **rule #1** remains active and unchanged, matching legacy `BABYPARK_CALLBACK_V1`; the `callback` label and Website Inbox #2 stay unchanged. Active rule #2 must be retained while new cached clients may submit the friendly first line; do not remove or disable #1 while old clients may submit its legacy marker. **Staging rollback, only if separately authorized:** confirm exact object IDs/conditions and disable **only #2** using the native Automation UI/API, leaving #1 active; reverting site customer activation is NOT required because public Callback remains off. Native DB object is not a Chatwoot source patch and persists across app upgrades, but re-run precise installed-version Widget + automation smoke after upgrades.
 

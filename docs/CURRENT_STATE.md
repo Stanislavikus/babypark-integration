@@ -3,13 +3,49 @@
 Status: EVIDENCE — operational/current-state record; not normative contract authority.
 Applies to: repository-wide operational and campaign state tracking.
 Supersedes: `docs/CURRENT_STATE.md` at canonical main `a45a8644e05df2584a2b75f2a3b47446811ae984`.
-Last updated: 2026-10-25
+Last updated: 2026-10-26
 Owner: BabyPark
 Source of truth for operational facts: production runtime + verified repository evidence.
 
-## 2026-10-25 — Latest Callback V1 preview amendment (after owner visual feedback)
+## 2026-10-26 — Callback V12 R2 correction candidate (Draft PR #154, NOT CLOSED)
 
-The user confirmed the real two-line callback note, human message title and native `callback` label in Chatwoot, then asked about name digits and hidden textarea limits. Verified stock Chatwoot 4.18.0 Widget pre-chat `fullName` is a normal text field with no letters-only regex; Contact.name model also does not require letters-only. Keep BabyPark optional preferred name allowing digits/nicknames; not a Contact identity mutation. Stock Chatwoot Message model maximum is 150,000 characters, whereas BabyPark Callback already had a distinct 500-unit native HTML maxlength and submit guard. The Draft PR now shows a neutral Chatwoot `slate-11` counter under that same 500-limited textarea, with no runtime package. Earlier 14a79539 real-signed Widget POSTs remain historical proof for that exact source and are NOT full end-to-end proof for the refreshed counter source. **Latest testing-only preview source** is JS/CSS from `c87e6b3c3e872d2fda23ef4e41140f1e64a4be96`, with verified served JS SHA256 `f46526e052bfbea0ff03c054f702246ef078e3c5f5360b6c045e9b694a688ba3`, CSS `7b2e9f96cd1a08f47faa7a3a51202ba58fc98ca22dd811d1e95c6ee8e2ec4b52`, same unlinked preview folder recorded in `docs/INFRASTRUCTURE_REGISTRY.md`. This was not a public L1 change or an approval to merge/deploy. The new implementation code/JS/CSS had full immutable tests on its exact `c87e6b3c` tree (root 1239+13+13, focused 47, all PASS), but adding the latest inventory/current-state docs afterward changes the overall PR HEAD; a release gate must re-pin and repeat as dictated by the git Agreement and freeze a fresh exact manifest. Independent R1/R2 ZERO and separate owner production GO are still missing.
+Starting reviewed source: HEAD `dd6aa6577e66117c0fb6b95e2f2f60a9969fe06d`,
+TREE `8c6a4ec6b2c9ecbba726c49429bfef2ecbb2f635`, BASE canonical main
+`1d5d8c00b7fdcdb54f37418ea60931c4292fd600`. This correction is not a
+deployed source or a claim of future merge identity. Its final committed
+HEAD/TREE, manifest and verification results belong in the PR evidence.
+
+V12 optional preferred name allows Unicode letters/combining marks, spaces,
+apostrophes and hyphens; **digits are removed on input and before POST**.
+The cap is 80 UTF-16 units with a remaining counter. It does not mutate
+Contact.name. Comment remains capped at 500 units. B1 correction preserves
+the national prefix 380 on plain-typed mid-caret/Backspace/range edits while
+retaining full Ukrainian source typing and wrong-recipient guards.
+
+Five previews were confirmed present by the owner's independent read-only
+production filesystem check, PR #154 comment #6423267053:
+`preview-callback-v11-5c6586d9`,
+`preview-callback-v1-4432d4a895546c29ce630503675da359`,
+`preview-callback-visual-approved-20261026`,
+`preview-callback-visual-chatwoot-font-20261026`, and
+`preview-callback-visual-chatwoot-emblem-20261026`.
+The emblem preview is the approved **visual reference**, not production
+send-path proof. Exact paths, observed SHA-256, provenance and guarded future
+cleanup/recovery strategy are in `docs/INFRASTRUCTURE_REGISTRY.md`.
+The c87e6b3c V1 preview below is historical, not the latest V12 source.
+All five folders remain retained; no cleanup/deletion or new deployment was
+performed. The same evidence confirms active live L1 JS/CSS unchanged.
+
+Next step: new exact-basis focused/root/native-browser evidence and independent
+HEAVY R1, followed only after ZERO BLOCKERS by separate context-isolated R2.
+§6 production notification, privacy, recovery and cutover rows remain open
+unless supported by new evidence or an applicable frozen non-goal. No such
+proof is inferred from visual approval. No merge, production deploy or real
+Chatwoot POST is authorized by this correction.
+
+## Historical 2026-10-25 — Callback V1 preview amendment (superseded by V12 above)
+
+The user confirmed the real two-line callback note, human message title and native `callback` label in Chatwoot, then asked about name digits and hidden textarea limits. Verified stock Chatwoot 4.18.0 Widget pre-chat `fullName` is a normal text field with no letters-only regex; Contact.name model also does not require letters-only. At that historical stage the optional preferred name accepted digits/nicknames; V12 supersedes that rule as recorded above, still without a Contact identity mutation. Stock Chatwoot Message model maximum is 150,000 characters, whereas BabyPark Callback already had a distinct 500-unit native HTML maxlength and submit guard. The Draft PR now shows a neutral Chatwoot `slate-11` counter under that same 500-limited textarea, with no runtime package. Earlier 14a79539 real-signed Widget POSTs remain historical proof for that exact source and are NOT full end-to-end proof for the refreshed counter source. **Historical testing-only preview source** was JS/CSS from `c87e6b3c3e872d2fda23ef4e41140f1e64a4be96`, with verified served JS SHA256 `f46526e052bfbea0ff03c054f702246ef078e3c5f5360b6c045e9b694a688ba3`, CSS `7b2e9f96cd1a08f47faa7a3a51202ba58fc98ca22dd811d1e95c6ee8e2ec4b52`, same unlinked preview folder recorded in `docs/INFRASTRUCTURE_REGISTRY.md`. This was not a public L1 change or an approval to merge/deploy. The new implementation code/JS/CSS had full immutable tests on its exact `c87e6b3c` tree (root 1239+13+13, focused 47, all PASS), but adding the latest inventory/current-state docs afterward changes the overall PR HEAD; a release gate must re-pin and repeat as dictated by the git Agreement and freeze a fresh exact manifest. Independent R1/R2 ZERO and separate owner production GO are still missing.
 
 ## 2026-10-25 — Callback V1 temporary live-origin staging (supersedes 24 Oct snapshot below)
 

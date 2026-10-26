@@ -315,6 +315,23 @@ function input(h, val) {
   field.value = val;
   for (const handler of field.listeners.input || []) handler();
 }
+// Model the native default edit after beforeinput, including cancellation and
+// selection/caret updates. Real trusted keyboard coverage lives in tests/browser.
+function keyboardEdit(h, { start, end = start, data = null, type = 'insertText', before = true }) {
+  const field = h.get('bp-contact__callback-phone-input');
+  field.selectionStart = start;
+  field.selectionEnd = end;
+  let cancelled = false;
+  if (before) for (const handler of field.listeners.beforeinput || []) handler({
+    inputType: type, data, cancelable: true, preventDefault() { cancelled = true; }
+  });
+  if (cancelled) return;
+  if (type === 'deleteContentBackward' && start === end) start = Math.max(0, start - 1);
+  const inserted = data || '';
+  const value = field.value.slice(0, start) + inserted + field.value.slice(end);
+  field.selectionStart = field.selectionEnd = start + inserted.length;
+  input(h, value);
+}
 function submit(h) {
   for (const handler of h.get('bp-contact__callback-form').listeners.submit || [])
     handler({ preventDefault() {} });
@@ -1391,6 +1408,59 @@ test('HEAVY R1 A2: typed repeated prefixes never re-strip and submit a changed r
   }
 });
 
+
+test('HEAVY V12 R2 B1: plain typed middle edits preserve national 380 with and without beforeinput', async () => {
+  for (const before of [true, false]) for (const scenario of [
+    { source: '381023456', edit: { start: 3, type: 'deleteContentBackward' }, result: '38023456', append: '7', recipient: '+380380234567' },
+    { source: '38123456', edit: { start: 2, data: '0' }, result: '380123456', recipient: '+380380123456' },
+    { source: '391234567', edit: { start: 1, end: 3, data: '80' }, result: '380234567', recipient: '+380380234567' }
+  ]) {
+    const posts = [];
+    const h = harness(callbackConfig(), { cookie: 'cw_conversation=' + dummyJwt,
+      fetchMock: async (_url, req) => { posts.push(JSON.parse(req.body)); return { status: 200, json: async () => ({ id: 55, conversation_id: 13 }) }; } });
+    visitCallback(h);
+    const f = h.get('bp-contact__callback-phone-input');
+    for (const data of scenario.source) keyboardEdit(h, { start: f.value.length, data, before });
+    keyboardEdit(h, { ...scenario.edit, before });
+    assert.equal(f.value, scenario.result, JSON.stringify({ before, scenario }));
+    if (scenario.append) keyboardEdit(h, { start: f.value.length, data: scenario.append, before });
+    submit(h); await flushAsync();
+    assert.equal(posts.length, 1);
+    assert.equal(posts[0].custom_attributes.callback_phone, scenario.recipient);
+  }
+});
+
+test('HEAVY V12 R2 B1: source end Backspace keeps full Ukrainian typing in source mode', async () => {
+  for (const before of [true, false]) {
+    const posts = [];
+    const h = harness(callbackConfig(), { cookie: 'cw_conversation=' + dummyJwt,
+      fetchMock: async (_url, req) => { posts.push(JSON.parse(req.body)); return { status: 200, json: async () => ({ id: 55, conversation_id: 13 }) }; } });
+    visitCallback(h);
+    const f = h.get('bp-contact__callback-phone-input');
+    for (const data of '38') keyboardEdit(h, { start: f.value.length, data, before });
+    keyboardEdit(h, { start: 2, type: 'deleteContentBackward', before });
+    for (const data of '80671234567') keyboardEdit(h, { start: f.value.length, data, before });
+    assert.equal(f.value, '671234567');
+    submit(h); await flushAsync();
+    assert.equal(posts.length, 1);
+    assert.equal(posts[0].custom_attributes.callback_phone, '+380671234567');
+  }
+});
+
+test('HEAVY V12 R2 B1: generated plain NSN middle deletions and range edits stay literal', () => {
+  for (const before of [true, false]) for (const source of ['381023456', '391234567', '580380123', '780123456', '980380380']) {
+    for (let caret = 1; caret < 9; caret++) {
+      const h = harness(callbackConfig(), { cookie: 'cw_conversation=' + dummyJwt });
+      visitCallback(h);
+      const f = h.get('bp-contact__callback-phone-input');
+      for (const data of source) keyboardEdit(h, { start: f.value.length, data, before });
+      keyboardEdit(h, { start: caret, type: 'deleteContentBackward', before });
+      assert.equal(f.value, source.slice(0, caret - 1) + source.slice(caret));
+      keyboardEdit(h, { start: caret - 1, data: source[caret - 1], before });
+      assert.equal(f.value, source);
+    }
+  }
+});
 
 test('HEAVY V10 B1: caret insertion, Backspace, selection replace preserve NSN 380 provenance', async () => {
   for (const source of ['+380380123456','380380123456']) {

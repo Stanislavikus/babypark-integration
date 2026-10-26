@@ -847,9 +847,9 @@
         selectionEnd === phoneRendered.length && /^insert/.test(phoneInputKind);
       phoneWholeReplacement = wholeReplacement;
       phoneNextNationalEdit = !wholeReplacement && (phoneNationalEdit ||
-        (phoneRendered !== phoneRaw && /^[0-9]{1,9}$/.test(phoneRendered) &&
-        (selection < phoneRendered.length || selectionEnd < phoneRendered.length ||
-         /^delete/.test(phoneInputKind))));
+        (/^[0-9]{1,9}$/.test(phoneRendered) &&
+        (selection < phoneRendered.length || selectionEnd > selection ||
+         (phoneRendered !== phoneRaw && /^delete/.test(phoneInputKind)))));
       if (phoneInputKind === 'insertFromPaste' && event.dataTransfer &&
           typeof event.dataTransfer.getData === 'function') {
         insertion = event.dataTransfer.getData('text/plain');
@@ -879,8 +879,12 @@
       var appended = now.indexOf(phoneRendered) === 0 &&
         now.length === phoneRendered.length + 1 && !phoneInputRejected;
       var nationalMidEdit = (phoneNextNationalEdit && /^[0-9]{0,30}$/.test(now)) ||
-        (!phoneWholeReplacement && phoneRendered !== phoneRaw &&
+        (!phoneWholeReplacement &&
          /^[0-9]{1,9}$/.test(phoneRendered) &&
+         // Without beforeinput, a literal middle edit must still preserve
+         // national digits. A plain-source end Backspace remains source mode:
+         // 3,8,Backspace,8,0,... must still parse the full country prefix.
+         (phoneRendered !== phoneRaw || phoneRendered.indexOf(now) !== 0) &&
          !appended && /^[0-9]{0,10}$/.test(now) &&
          now !== phoneRendered && !/^(?:0|380)[0-9]{9}$/.test(now));
       if (nationalMidEdit || phoneNationalEdit) {

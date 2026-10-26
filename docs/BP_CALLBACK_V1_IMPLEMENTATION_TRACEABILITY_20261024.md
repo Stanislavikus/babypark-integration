@@ -4,6 +4,63 @@ Status: EVIDENCE — NON-NORMATIVE, draft only. No merge, customer activation or
 Applies to: existing BabyPark Drupal→Magento-portable contact launcher / Chatwoot Website Widget callback V1.
 Supersedes: none. Earlier L1 PR #142 and Website Widget research PR #152 remain separate proposed work.
 
+## Current V12 §6 traceability — R2 blocker batch (2026-10-26)
+
+This section supersedes earlier name-policy and UI statements below for the
+current V12 candidate. Earlier dated sections are historical development
+evidence, including historical tests and operational gates, not proof on the
+new HEAD. R2 #6423235397 identified B1/G1/G2; read-only owner evidence
+#6423267053 supplies the five-preview observations. Options scan for this
+batch: `docs/BP_CALLBACK_V12_R2_BATCH_OPTIONS_SCAN_20261026.md`, frozen SHA-256
+`aa60046bcd1e4d5d4a393fb3e577481bf64345ca766f890dc928c442a941ef02`.
+The exact final HEAD/TREE/BASE and result digests are recorded in the new PR
+manifest/report after commit, not inferred from this candidate document.
+
+`JS` below means `web/contact-launcher/babypark-launcher.js`; `CSS` means
+`web/contact-launcher/babypark-launcher.css`. Focused tests are in
+`tests/unit/contact-launcher.test.mjs` unless another path is given. DONE
+denotes implemented candidate code/documentation with the named regression,
+never a production deployment or formal review certificate.
+
+| Requirement ID / current requirement | Exact implementation/artifact | Focused test / verification | Fail-closed behavior | Durable-state impact | Status |
+| --- | --- | --- | --- | --- | --- |
+| V12-PHONE-DISPLAY: fixed +380, nine visible NSN digits, cancelable tenth key blocked | JS `init` phoneField beforeinput handler, `renderPhoneRaw`, `normalizeCurrentPhone` | `APPROVED V12: tenth keyboard digit blocked, full selection remains possible`; native browser full-source cases | Invalid/overlong/direct-submit values cannot POST | Memory-only draft; unchanged Chatwoot transcript | DONE |
+| V12-PHONE-SOURCE: full 0/380/+380/formatted keyboard, paste, select-all replacement; foreign/Unicode/controls cannot become another recipient | JS `allowedPhoneRaw`, `localPhoneDigits`, paste/beforeinput/input handlers, `submitCallback` | `HEAVY V10 B-R1-1: select-all replacement typed key by key equals a fresh source`; `HEAVY R1 A1` source/clipboard tests; `tests/browser/contact-callback-keyboard.test.mjs` keyboard/clipboard/rejection cases | Explicit invalid source retained/rejected; no previous recipient fallback | No new storage or API fields | DONE |
+| V12-PHONE-EDIT-B1: plain typed mid-caret/Backspace/range edits preserve literal NSN 380; end Backspace retains source-mode full typing | JS `init` phoneField beforeinput `phoneNextNationalEdit` and input `nationalMidEdit` | `HEAVY V12 R2 B1: plain typed middle edits preserve national 380 with and without beforeinput`; source end Backspace and generated literal-edit tests; native keyboard/caret/range browser test | Overlength national edit stays non-sendable; posted phone equals visible NSN +380 | Memory-only provenance flag | DONE |
+| V12-NAME-LETTERS: optional Unicode letters/marks, spaces, hyphens/apostrophes; no digits even on direct POST; single-line only | JS `cleanCallbackName`, `optionalCallbackName`, nameField input, `submitCallback` | `APPROVED V12: optional Unicode name rejects numbers, counts characters, guards direct POST`; optional-name Unicode/single-line tests | Same cleaner at input and submit; no forged message row or Contact mutation | Optional line in existing Widget transcript only | DONE |
+| V12-NAME-80: 80 UTF-16 units and remaining counter/description | JS `cleanCallbackName`, `syncCallback`, `init` nameField/nameHint | `APPROVED V12: optional Unicode name rejects numbers, counts characters, guards direct POST` | Submit cleaner caps direct-script value too; name optional | No extra identity store | DONE |
+| V12-COMMENT-500: unchanged raw 500-unit cap and counter | JS `syncCallback`, `submitCallback`, commentField maxlength | `HEAVY R1: raw textarea maxlength` and comment counter/overlength tests | Raw >500 blocked before trim, including direct submit | Existing Widget message only | DONE |
+| V12-HINT: complete valid green Номер заповнено; first-digit 1/2 complete invalid bold red Перевірте номер; incomplete remaining count | JS `syncCallback`; CSS `.bp-contact__callback-phone-hint--valid`, `--error` | `APPROVED V12: emblem inset, compact mobile size, name and phone state styling` | Invalid phone cannot enable submit; malformed-source neutral hint is separate R2 S2 | None | DONE |
+| V12-GEOMETRY-EMBLEM: compact 490px-or-viewport form, native font, white avatar/inset owner emblem | CSS `.bp-contact__menu--callback`, `.bp-contact__brand-avatar`, image rules; JS `init` brandAvatar/brandImage | `APPROVED V12: emblem inset, compact mobile size, name and phone state styling`; existing compact-success tests; broader device checks remain external below | Missing configured callback cannot send; R2 S3/S5 limitations retained separately | Static asset only, owner PNG SHA-256 fa5a882453439306686df1e4c97387e601de6f9075e519082619fd29aa628d02 | DONE |
+| V12-SEND: existing identity, SDK selective load, ACK/idempotency, native label fixture and no Contact mutation | JS `getWidgetJwt`, `initializeChatwoot`, `submitCallback`; `config/chatwoot/callback-v1-automation.example.json` | Focused `HEAVY R1 A4/A5`, `HEAVY V10 B2`, ACK/timeout/terminal tests; `tests/unit/contact-callback-contract.test.mjs` | Uncertain ACK terminal; only proven 403/429 deliberate retry; missing/ambiguous JWT blocks | Existing Chatwoot transcript authority only | DONE |
+| V12-PREVIEW-G2: all five observed preview identities and current name policy | `docs/INFRASTRUCTURE_REGISTRY.md` 2026-10-26 inventory; `docs/CURRENT_STATE.md` current V12 section | `V12 G2: all documented callback previews have exact observed registry identities`; source comment #6423267053 | Unknown auxiliary assets/path drift stops future cleanup; no deletion claimed | Evidence only, production unchanged | DONE |
+| OPS-NOTIFY: staffed native alerts for new and already Open Unassigned conversations | Preview runbook notification gate; no speculative assignment change | Exact-runtime proof not supplied for this stage | No merge/activation on an unproved operational row | Existing native Chatwoot state, no changes made | IN PROGRESS |
+| OPS-PRIVACY: WARN/ERROR/Sidekiq PII, security/IP/consent/CSP and header inheritance | Preview runbook production safety/security gates | No new live verification; historical staging does not establish current V12 safety | No production activation; no unverified fact marked DONE | Existing infrastructure only | IN PROGRESS |
+| OPS-RECOVERY-SNAPSHOT: accurately record the existing snapshot-specific restore proof | PR #155 comment #6412156326, independently re-read 2026-10-26; DO image 251542648 / temporary restored Droplet 612711769 | Restored PostgreSQL SQL reads and full pg_dump exit 0, local Rails HTTP 200, 3/3 nonempty attachment blobs; temporary Droplet/key deletion recorded | Evidence is limited to this overnight image; no assertion of future continuity or full integration/point-in-time crash consistency | Existing backup image only; no new production action | DONE |
+| OPS-RECOVERY: complete applicability of consistent PostgreSQL/ActiveStorage/config recovery gate | Preview runbook recovery gate; snapshot-specific proof above | Existing drill proves local recovery of one image, not all integration/config/crash-consistency obligations; complete gate applicability remains unproved | No merge/cutover while remaining required proof absent | Existing production durable stores | IN PROGRESS |
+| OPS-CUTOVER: current runtime, Drupal/CORS/IP, approved in-place deployment and devices | Preview runbook live-cutover and device gates | No deploy/real Widget POST authorized in this batch; mock browser results prove local editing only | Customer Callback remains off until separate GO and actual evidence | No production mutation in this batch | IN PROGRESS |
+| GATE-HEAVY: new manifest, immutable required checks, independent R1 then isolated R2 | Agreement §7/§7.0a/§7.1; new exact-basis PR evidence | Old R1/R2/manifest invalid after changes; new cycle required | NOT CLOSED until complete exact-basis evidence and owner approval | No runtime state | IN PROGRESS |
+
+G1 disposition: the missing V12 requirement mapping is corrected, but the
+terminal §6 blocker is **not closed** by this document. The existing record
+explicitly makes operational proof a merge prerequisite. No applicable
+frozen non-goal removing those requirements has been established; none is
+labelled DEFERRED or DONE. The owner's request forbids inventing production
+facts. Supply current evidence or a legitimate frozen scope decision before
+claiming terminal traceability. No live tests or production changes are
+silently authorized by this evidence update.
+
+R2 SHOULD FIX remain a separate inventory, not automatically BLOCKERs:
+S1 invalid-key draft loss; S2 malformed-source neutral hint; S3 eager emblem
+request/invalid assetBase; S4 owner-approved hint contrast; S5 short-height
+geometry/avatar discrepancy; S6 historical document classification; S7 old
+scan unpinned excluded candidates; S8 VM-only native-device gap. This batch
+adds maintained Chromium coverage for S8 and classifies the touched registry
+for G2; historical V7 scan and other SHOULD FIX are not silently declared
+resolved. Real Android/iOS, screen readers and broad device evidence remain
+unverified. N1 surrogate cap, N2 self-authored note prefix and N3 hypothetical
+post-ready cookie remain NON-BLOCKING as classified by R2.
+
 ## 2026-10-26 V9 residual R1 follow-up — bounded correction candidate (NOT CLOSED)
 
 The owner supplied another independent exhaustive V9 review of published HEAD f14c5f57fb6674e050c8ef47b21a598e6743f0e4, tree 9e51a5124a0fa7437c27ea7a8e7b2b461765fd3b. R1 NOT CLOSED: B1 compact-NSN mid-edit/Backspace incorrectly re-parsed the NSN's own 380 prefix; B2 SDK js-cookie 3.x URI-decodes %63w_conversation cookie names that launcher skipped; A1 noncancelable invalid beforeinput rejection was cleared by ensuing sanitized input (synthetic counterexample only, native autofill reachability unknown). Additionally, runbook erroneously described pre-ready Chat row as unclickable although user click must initialize SDK. Pre-code frozen native scan PR #154 comment #6411826763 selected existing browser event model and SDK-aligned cookie name decoding, no new runtime library or Chatwoot core patch.
