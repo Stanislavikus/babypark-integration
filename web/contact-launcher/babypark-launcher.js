@@ -58,6 +58,14 @@
   var phoneRendered = '';
   var phoneInputRejected = false;
   var phoneInputKind = '';
+  // If the displayed number is an edited NSN, NEVER re-interpret its leading
+  // 380/0 as another pasted country/trunk prefix.
+  var phoneNationalEdit = false;
+  var phoneNextNationalEdit = false;
+  var phoneWholeReplacement = false;
+  // A noncancelable beforeinput can already lose C0 characters to type=tel
+  // before input fires. Keep the rejection across that particular transaction.
+  var phoneRejectNextInput = false;
   // Static Lucide/Feather X; Feather-derived glyph licensed MIT (see runbook).
   var closeSvg = '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>';
 
@@ -212,9 +220,20 @@
     var ambiguous = false;
     parts.forEach(function (part) {
       var kv = part.trim();
-      if (kv.indexOf('cw_conversation=') !== 0) return;
+      var split = kv.indexOf('=');
+      if (split < 0) return;
+      var rawName = kv.slice(0, split);
+      var cookieName;
+      try { cookieName = decodeURIComponent(rawName); }
+      catch (_) {
+        // Unknown encoded-name syntax cannot be proven harmless to the
+        // stock SDK's own cookie accessor. Refuse ambiguous identity.
+        if (rawName.indexOf('%') !== -1) ambiguous = true;
+        return;
+      }
+      if (cookieName !== 'cw_conversation') return;
       var candidate = null;
-      try { candidate = decodeURIComponent(kv.slice('cw_conversation='.length)); }
+      try { candidate = decodeURIComponent(kv.slice(split + 1)); }
       catch (_) { ambiguous = true; return; }
       if (!candidate || candidate.length >= 4096 ||
           !/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(candidate)) {
@@ -232,11 +251,24 @@
     return phoneField.value === phoneRendered ? phoneRaw : phoneField.value;
   }
 
+  function normalizeCurrentPhone() {
+    var source = currentPhoneRaw();
+    if (source === null) return null;
+    // The fixed, non-editable +380 already identifies a nationally edited
+    // nine-digit field; country/trunk parsing here would strip valid NSN 380.
+    if (phoneNationalEdit) {
+      return /^[3-9][0-9]{8}$/.test(source) ? '+380' + source : null;
+    }
+    return normalizePhone(source);
+  }
+
   function renderPhoneRaw() {
     // The original source remains in memory on this page for submit. The
     // visual input is condensed only when its *whole source* is acceptable.
-    var parsed = localPhoneDigits(phoneRaw);
-    var validPrefix = allowedPhoneRaw(phoneRaw) && explicitCountryCode(phoneRaw) !== 'foreign';
+    var parsed = phoneNationalEdit ? phoneRaw : localPhoneDigits(phoneRaw);
+    var validPrefix = phoneNationalEdit
+      ? /^[0-9]{0,9}$/.test(phoneRaw)
+      : allowedPhoneRaw(phoneRaw) && explicitCountryCode(phoneRaw) !== 'foreign';
     var value = validPrefix && parsed ? parsed : phoneRaw;
     if (!validPrefix && /[\r\n]/.test(value)) value = value.replace(/[\r\n]/g, '?');
     phoneField.value = value;
@@ -255,8 +287,8 @@
   function syncCallback() {
     if (!formPanel) return;
     var rawPhone = phoneField ? currentPhoneRaw() : null;
-    var digits = rawPhone === null ? '' : localPhoneDigits(rawPhone);
-    var valid = !phoneInputRejected && digits.length === 9 && !!normalizePhone(rawPhone);
+    var digits = rawPhone === null ? '' : (phoneNationalEdit ? rawPhone : localPhoneDigits(rawPhone));
+    var valid = !phoneInputRejected && digits.length === 9 && !!normalizeCurrentPhone();
     // The native textarea maxlength (500) is the actual browser input cap.
     // Keep this helper in sync with that exact cap; do not invent a Chatwoot limit.
     if (messageHint && messageField) {
@@ -357,7 +389,7 @@
 
   async function submitCallback() {
     if (state.callbackPending || state.callbackSent || state.callbackUncertain || !callbackConfigured()) return;
-    var phone = phoneInputRejected ? null : normalizePhone(currentPhoneRaw());
+    var phone = phoneInputRejected ? null : normalizeCurrentPhone();
     var preferredName = optionalCallbackName(nameField.value);
     // UI and submit must enforce the same raw browser maxlength units.
     // trim() is for payload presentation, not a validation bypass.
@@ -473,8 +505,8 @@
         ? !!(configured && !state.sdkFailed && (!state.ready ||
             (window.$chatwoot && typeof window.$chatwoot.toggle === 'function')))
         : configured;
-      // A configured Website row ALWAYS occupies its final slot, even while
-      // loading, after 12s or after failure. It is never clickable before ready.
+      // A configured Website row ALWAYS occupies its final slot. The first
+      // deliberate click initiates SDK loading; only actual ready can OPEN chat.
       rows[name].hidden = !configured;
       if (name === 'chat') {
         rows.chat.disabled = !available;
@@ -749,6 +781,10 @@
         return;
       }
       phoneInputKind = '';
+      phoneRejectNextInput = false;
+      phoneNextNationalEdit = false;
+      phoneWholeReplacement = false;
+      phoneNationalEdit = false;
       if (!allowedPhoneRaw(incoming)) rejectRawPhone(incoming);
       else {
         phoneInputRejected = false;
@@ -760,7 +796,23 @@
     phoneField.addEventListener('beforeinput', function (event) {
       phoneInputKind = event && event.inputType || '';
       if (!event) return;
+      // This is a NEW event transaction. The previous invalid edit, if any,
+      // cannot be silently unlocked by its own sanitized input event.
+      phoneRejectNextInput = false;
       var insertion = typeof event.data === 'string' ? event.data : null;
+      var selection = typeof phoneField.selectionStart === 'number' ?
+        phoneField.selectionStart : phoneRendered.length;
+      var selectionEnd = typeof phoneField.selectionEnd === 'number' ?
+        phoneField.selectionEnd : selection;
+      // Any middle/backspace/selection edit of an already compact NSN is an
+      // edit of national digits, not a new full international source.
+      var wholeReplacement = selection === 0 &&
+        selectionEnd === phoneRendered.length && /^insert/.test(phoneInputKind);
+      phoneWholeReplacement = wholeReplacement;
+      phoneNextNationalEdit = !wholeReplacement && (phoneNationalEdit ||
+        (phoneRendered !== phoneRaw && /^[0-9]{1,9}$/.test(phoneRendered) &&
+        (selection < phoneRendered.length || selectionEnd < phoneRendered.length ||
+         /^delete/.test(phoneInputKind))));
       if (phoneInputKind === 'insertFromPaste' && event.dataTransfer &&
           typeof event.dataTransfer.getData === 'function') {
         insertion = event.dataTransfer.getData('text/plain');
@@ -770,23 +822,45 @@
       if (insertion !== null && (!allowedPhoneRaw(insertion) ||
           insertion.length + phoneRaw.length > 30)) {
         if (event.preventDefault) event.preventDefault();
+        phoneRejectNextInput = true;
         rejectRawPhone(insertion);
       }
     });
     phoneField.addEventListener('input', function () {
       var now = String(phoneField.value || '');
-      // Event changes to the compact display can extend the original raw
-      // input. This retains one-time prefix provenance through every key.
-      // Replacement paste never extends the previous value.
-      if (phoneInputKind === 'insertFromPaste' || phoneInputKind === 'insertReplacementText') {
+      if (phoneRejectNextInput) {
+        // If beforeinput could not cancel a replacement, the browser may have
+        // sanitized the invalid original text. Preserve the rejected source
+        // and display until a distinct, explicitly valid editing transaction.
+        phoneRejectNextInput = false;
+        phoneInputKind = '';
+        phoneNextNationalEdit = false;
+        rejectRawPhone(phoneRaw);
+        return;
+      }
+      if (phoneWholeReplacement) phoneNationalEdit = false;
+      var appended = now.indexOf(phoneRendered) === 0 &&
+        now.length === phoneRendered.length + 1 && !phoneInputRejected;
+      var nationalMidEdit = (phoneNextNationalEdit && /^[0-9]{0,30}$/.test(now)) ||
+        (phoneRendered !== phoneRaw && /^[0-9]{1,9}$/.test(phoneRendered) &&
+         !appended && /^[0-9]{0,10}$/.test(now) &&
+         now !== phoneRendered && !/^(?:0|380)[0-9]{9}$/.test(now));
+      if (nationalMidEdit || phoneNationalEdit) {
+        phoneNationalEdit = true;
         phoneRaw = now;
-      } else if (now.indexOf(phoneRendered) === 0 &&
-          now.length === phoneRendered.length + 1 && !phoneInputRejected) {
+      } else if (phoneInputKind === 'insertFromPaste' ||
+          phoneInputKind === 'insertReplacementText') {
+        phoneNationalEdit = false;
+        phoneRaw = now;
+      } else if (appended) {
         phoneRaw += now.slice(phoneRendered.length);
       } else {
+        phoneNationalEdit = false;
         phoneRaw = now;
       }
       phoneInputKind = '';
+      phoneNextNationalEdit = false;
+      phoneWholeReplacement = false;
       phoneInputRejected = false;
       renderPhoneRaw();
     });

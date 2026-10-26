@@ -1321,6 +1321,147 @@ test('HEAVY R1 A2: typed repeated prefixes never re-strip and submit a changed r
   }
 });
 
+
+test('HEAVY V10 B1: caret insertion, Backspace, selection replace preserve NSN 380 provenance', async () => {
+  for (const source of ['+380380123456','380380123456']) {
+    let calls=0, recipient;
+    const h=harness(callbackConfig(),{cookie:'cw_conversation='+dummyJwt,
+      fetchMock:async (_u,opts)=>{
+        calls++;recipient=JSON.parse(opts.body).custom_attributes.callback_phone;
+        return {status:200,json:async()=>({id:55,conversation_id:13})};
+      }});
+    visitCallback(h);
+    input(h,source);
+    const f=h.get('bp-contact__callback-phone-input');
+    const button=h.get('bp-contact__callback-submit');
+    assert.equal(f.value,'380123456');
+    assert.equal(button.disabled,false);
+    f.selectionStart=3;f.selectionEnd=3;
+    for(const fn of f.listeners.beforeinput||[])fn({inputType:'insertText',data:'6',cancelable:true,preventDefault(){}});
+    input(h,'3806123456'); // native inserted digit after 380
+    assert.equal(f.value,'3806123456','do not re-strip 380 on mid-edit');
+    assert.equal(button.disabled,true);
+    submit(h);await flushAsync();assert.equal(calls,0,'overlong edit zero POST');
+    f.selectionStart=10;f.selectionEnd=10;
+    for(const fn of f.listeners.beforeinput||[])fn({inputType:'insertText',data:'7',cancelable:true,preventDefault(){}});
+    input(h,'38061234567');
+    assert.equal(button.disabled,true,'subsequent keys cannot silently change recipient');
+    submit(h);await flushAsync();assert.equal(calls,0);
+    f.selectionStart=11;f.selectionEnd=11;
+    for(const fn of f.listeners.beforeinput||[])fn({inputType:'deleteContentBackward',data:null,cancelable:true,preventDefault(){}});
+    input(h,'3806123456');
+    assert.equal(f.value,'3806123456');
+    f.selectionStart=3;f.selectionEnd=4;
+    for(const fn of f.listeners.beforeinput||[])fn({inputType:'insertReplacementText',data:'',cancelable:true,preventDefault(){}});
+    input(h,'380123456');
+    assert.equal(f.value,'380123456');
+    assert.equal(button.disabled,false,'valid restored national digits are accepted');
+    submit(h);await flushAsync();
+    assert.equal(calls,1);
+    assert.equal(recipient,'+380380123456');
+  }
+});
+
+test('HEAVY V10 B1: bare Backspace after full country code keeps national prefix visible', async () => {
+  const h=harness(callbackConfig(),{cookie:'cw_conversation='+dummyJwt});
+  visitCallback(h);
+  input(h,'+380380123456');
+  const f=h.get('bp-contact__callback-phone-input');
+  f.selectionStart=9;f.selectionEnd=9;
+  for(const fn of f.listeners.beforeinput||[])fn({inputType:'deleteContentBackward',data:null,cancelable:true,preventDefault(){}});
+  input(h,'38012345');
+  assert.equal(f.value,'38012345');
+  assert.equal(h.get('bp-contact__callback-submit').disabled,true);
+  input(h,'380123456');
+  assert.equal(f.value,'380123456');
+  assert.equal(h.get('bp-contact__callback-submit').disabled,false);
+});
+
+test('HEAVY V10 B1: select-all full replacement permits new Ukrainian source after national edit', async () => {
+  let calls=0,recipient;
+  const h=harness(callbackConfig(),{cookie:'cw_conversation='+dummyJwt,
+    fetchMock:async(_u,opts)=>{
+      calls++;recipient=JSON.parse(opts.body).custom_attributes.callback_phone;
+      return {status:200,json:async()=>({id:7,conversation_id:4})};
+    }});
+  visitCallback(h);
+  input(h,'+380380123456');
+  const f=h.get('bp-contact__callback-phone-input');
+  f.selectionStart=3;f.selectionEnd=3;
+  for(const fn of f.listeners.beforeinput||[])fn({inputType:'insertText',data:'9',cancelable:true,preventDefault(){}});
+  input(h,'3809123456');
+  assert.equal(h.get('bp-contact__callback-submit').disabled,true);
+  f.selectionStart=0;f.selectionEnd=f.value.length;
+  for(const fn of f.listeners.beforeinput||[])fn({inputType:'insertReplacementText',data:'0671234567',cancelable:true,preventDefault(){}});
+  input(h,'0671234567');
+  assert.equal(f.value,'671234567');
+  assert.equal(h.get('bp-contact__callback-submit').disabled,false);
+  submit(h);await flushAsync();
+  assert.equal(calls,1);
+  assert.equal(recipient,'+380671234567');
+});
+
+test('HEAVY V10 B2: decoded cookie-name aliases must use same visitor JWT as stock SDK', async () => {
+  const another='eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJkaWZmZXJlbnQifQ.SIGNATURE2';
+  const ambiguous=[
+    '%63w_conversation='+dummyJwt+'; cw_conversation='+another,
+    'cw_conversation='+another+'; %63w_conversation='+dummyJwt,
+    'cw_conversation='+another+'; cw%5Fconversation='+dummyJwt,
+    '%63%77_conversation='+another+'; cw_conversation='+dummyJwt,
+    'cw_conversation='+dummyJwt+'; %63w_conversation=%ZZ',
+    '%63w_conversation='+dummyJwt+'; cw_conversation=broken'
+  ];
+  for(const cookie of ambiguous){
+    let calls=0;
+    const h=harness(callbackConfig(),{cookie,fetchMock:async()=>{calls++;return {status:200,json:async()=>({id:1,conversation_id:2})};}});
+    visitCallback(h);
+    input(h,'671234567');
+    assert.equal(h.get('bp-contact__callback-submit').disabled,true,cookie);
+    submit(h);await flushAsync();assert.equal(calls,0,cookie);
+  }
+  for(const cookie of [
+    '%63w_conversation='+dummyJwt,
+    'cw_conversation='+dummyJwt+'; %63w_conversation='+dummyJwt
+  ]){
+    let calls=0,token;
+    const h=harness(callbackConfig(),{cookie,fetchMock:async(_url,opts)=>{
+      calls++;token=opts.headers['X-Auth-Token'];
+      return {status:200,json:async()=>({id:1,conversation_id:2})};
+    }});
+    visitCallback(h);
+    input(h,'671234567');submit(h);await flushAsync();
+    assert.equal(calls,1);
+    assert.equal(token,dummyJwt,'all URI-decoded equivalent cookie names select same JWT');
+  }
+});
+
+test('HEAVY V10 A1: noncancelable beforeinput invalid replacement cannot be unlocked by sanitized input', async () => {
+  let calls=0;
+  const h=harness(callbackConfig(),{cookie:'cw_conversation='+dummyJwt,
+    fetchMock:async()=>{calls++;return {status:200,json:async()=>({id:1,conversation_id:2})};}});
+  visitCallback(h);input(h,'671234567');
+  const f=h.get('bp-contact__callback-phone-input');
+  let canceled=false;
+  for (const fn of f.listeners.beforeinput||[])fn({
+    inputType:'insertReplacementText',data:'06712\n34567',cancelable:false,
+    preventDefault(){canceled=true;}
+  });
+  assert.equal(canceled,true,'attempted preventDefault but native may not cancel');
+  // Native tel sanitization removes CR/LF prior to notifying input listeners.
+  input(h,'0671234567');
+  assert.equal(h.get('bp-contact__callback-submit').disabled,true);
+  submit(h);await flushAsync();assert.equal(calls,0);
+  assert.notEqual(f.value,'671234567','must not silently appear accepted');
+  // Only a NEW explicit user edit transaction may recover the form.
+  f.selectionStart=0;f.selectionEnd=f.value.length;
+  for (const fn of f.listeners.beforeinput||[])fn({
+    inputType:'insertReplacementText',data:'671234567',cancelable:true,preventDefault(){}
+  });
+  input(h,'671234567');
+  assert.equal(h.get('bp-contact__callback-submit').disabled,false);
+  submit(h);await flushAsync();assert.equal(calls,1);
+});
+
 test('HEAVY R1 A2: accepted +380 number whose actual NSN begins 380 is not re-parsed as a second prefix', async () => {
   for (const given of ['+380380123456', '380380123456']) {
     for (const keyboard of [false, true]) {
