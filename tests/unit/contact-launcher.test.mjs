@@ -451,7 +451,12 @@ test('L2: callback option is in stable final row after direct call, panel has on
   const form = h.get('bp-contact__callback-form');
   const fields = form.children;
   const phoneWrapper = fields.findIndex(n => n.className?.includes?.('bp-contact__callback-phone-group'));
-  const nameWrapper = fields.findIndex(n => n.children?.includes?.(name));
+  const nameWrapper = fields.findIndex(n => n.className?.includes?.('bp-contact__callback-name-group') &&
+    n.children?.some?.(label => label.children?.includes?.(name)));
+  const nameHint = h.get('bp-contact__callback-name-hint');
+  assert.equal(nameHint.parent, fields[nameWrapper]);
+  assert.equal(name.getAttribute('aria-describedby'), nameHint.id);
+  assert.equal(nameHint.textContent, 'Залишилося 80 символів');
   const messageWrapper = fields.findIndex(n => n.children?.some?.(e =>
     e.children?.includes?.(h.get('bp-contact__callback-textarea'))));
   assert.ok(phoneWrapper >= 0 && nameWrapper === phoneWrapper + 1 && messageWrapper === nameWrapper + 1,
@@ -592,7 +597,7 @@ test('L2 S4: Unicode name separators/control characters cannot impersonate messa
   submit(h);
   await flushAsync();
   assert.equal(content,
-    'Ви замовили дзвінок\nЗворотний дзвінок: +380661234567\nІм’я: Ім’я Зворотний дзвінок: 000 Наступне');
+    'Ви замовили дзвінок\nЗворотний дзвінок: +380661234567\nІм’я: Ім’я Зворотний дзвінок Наступне');
   assert.doesNotMatch(content, /[\u0000-\u0009\u000b-\u001f\u007f-\u009f\u2028\u2029]/);
 });
 
@@ -944,7 +949,7 @@ test('L2: accessible Radix ruby-11 is reserved for genuine errors, not countdown
   assert.match(hint.textContent,/лише номери України/);
   assert.match(hint.className,/bp-contact__callback-phone-hint--error/);
   input(h,'111111111');
-  assert.equal(hint.textContent,'Перевірте перші цифри номера');
+  assert.equal(hint.textContent,'Перевірте номер');
   assert.match(hint.className,/bp-contact__callback-phone-hint--error/);
   input(h,'671234567');
   assert.equal(hint.textContent,'Номер заповнено');
@@ -1023,7 +1028,7 @@ test('HEAVY B-2: incomplete, reserved-prefix and all-zero numbers fail closed ac
       'hint must not say complete for incomplete or invalid prefix: ' + typed);
     if (field.value.length === 9) {
       assert.equal(h.get('bp-contact__callback-phone-hint').textContent,
-        'Перевірте перші цифри номера', 'bad 9-digit prefix has an actionable hint');
+        'Перевірте номер', 'bad 9-digit prefix has an actionable hint');
     }
   }
 });
@@ -1158,6 +1163,71 @@ test('L2: only confirmed success shows full-form confirmation then auto-closes',
   assert.equal(calls,1,'terminal success cannot be submitted twice');
   h.get('bp-contact__menu-close').click();
   assert.equal(h.pendingTimers(),0,'manual close cancels re-armed timer');
+});
+
+test('APPROVED V12: optional Unicode name rejects numbers, counts characters, guards direct POST', async () => {
+  let content='',sends=0;
+  const h=harness(callbackConfig(),{cookie:'cw_conversation='+dummyJwt,
+    fetchMock:async(_u,req)=>{sends++;content=JSON.parse(req.body).message.content;
+      return {status:200,json:async()=>({id:101,conversation_id:202})};}});
+  visitCallback(h);input(h,'671234567');
+  const name=h.get('bp-contact__callback-name');
+  const hint=h.get('bp-contact__callback-name-hint');
+  assert.equal(hint.textContent,'Залишилося 80 символів');
+  let prevented=false;
+  for(const fn of name.listeners.beforeinput||[])fn({
+    inputType:'insertText',data:'3',cancelable:true,
+    preventDefault(){prevented=true;}
+  });
+  assert.equal(prevented,true,'digits must be blocked by key events');
+  name.value='Марія-Анна О’Браєн 123';
+  for(const fn of name.listeners.input||[])fn();
+  assert.equal(name.value,'Марія-Анна О’Браєн ');
+  assert.equal(hint.textContent,'Залишилося 61 символ');
+  // A direct submit must sanitize autofill even without events.
+  name.value=' Софія 54 О’Браєн\u000aДруга 00 ';
+  submit(h);await flushAsync();
+  assert.equal(sends,1);
+  assert.match(content,/Ім’я: Софія О’Браєн Друга$/);
+  assert.equal(content.split('\n').length,3,'name cannot forge another message line');
+  assert.doesNotMatch(content.split('\n')[2],/54|00|[\u000a\u000d]/);
+});
+
+test('APPROVED V12: emblem inset, compact mobile size, name and phone state styling', () => {
+  const h=harness(callbackConfig(),{cookie:'cw_conversation='+dummyJwt});
+  visitCallback(h);
+  const img=traverse(h.body,e=>e.tagName==='IMG' &&
+    e.src?.endsWith('/icons/bp-emblem-avatar-64.png'));
+  assert.ok(img);
+  assert.equal(img.parent.className,'bp-contact__brand-avatar');
+  assert.match(css,/\.bp-contact__brand-avatar-image\s*\{[^}]*width:\s*32px;[^}]*height:\s*32px;/s);
+  assert.match(css,/\.bp-contact__menu--callback\s*\{[^}]*height:\s*min\(490px/s);
+  assert.match(css,/\.bp-contact__callback-name-hint[^}]*\{[^}]*color:\s*#60646c/s);
+  assert.match(css,/\.bp-contact__callback-phone-hint--valid\s*\{[^}]*color:\s*#008573/s);
+  assert.match(css,/\.bp-contact__callback-phone-hint--error\s*\{[^}]*color:\s*#dc3b5d/s);
+  const hint=h.get('bp-contact__callback-phone-hint');
+  input(h,'671234567');
+  assert.match(hint.className,/--valid/);
+  input(h,'111111111');
+  assert.match(hint.className,/--error/);
+  input(h,'67123456');
+  assert.doesNotMatch(hint.className,/--valid|--error/);
+});
+
+test('APPROVED V12: tenth keyboard digit blocked, full selection remains possible', () => {
+  const h=harness(callbackConfig(),{cookie:'cw_conversation='+dummyJwt});
+  visitCallback(h);
+  const f=h.get('bp-contact__callback-phone-input');
+  input(h,'671234567');assert.equal(f.value,'671234567');
+  f.selectionStart=9;f.selectionEnd=9;let prevented=false;
+  for(const fn of f.listeners.beforeinput||[])fn({inputType:'insertText',data:'8',
+    cancelable:true,preventDefault(){prevented=true;}});
+  assert.equal(prevented,true);
+  assert.equal(f.value,'671234567');
+  f.selectionStart=0;f.selectionEnd=f.value.length;prevented=false;
+  for(const fn of f.listeners.beforeinput||[])fn({inputType:'insertText',data:'6',
+    cancelable:true,preventDefault(){prevented=true;}});
+  assert.equal(prevented,false);
 });
 
 test('L2: optional name is transmitted only inside Chatwoot message with safe single-line Unicode text', async () => {

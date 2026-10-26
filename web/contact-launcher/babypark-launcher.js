@@ -49,7 +49,7 @@
   };
   var readyTimer = null;
   var root, menu, trigger, chatStatus, chatNote, rows = {};
-  var options, formPanel, phoneField, phoneHint, nameField, messageField, messageHint, callbackSubmit, callbackInfo;
+  var options, formPanel, phoneField, phoneHint, nameField, nameHint, messageField, messageHint, callbackSubmit, callbackInfo;
   var callbackSuccess, menuTitle, brandHeader, menuClose;
   var successTimer = null;
   // Keep the actual edit history on this page, separate from the compact
@@ -203,13 +203,20 @@
     return /^[3-9][0-9]{8}$/.test(digits) ? '+380' + digits : null;
   }
 
+  function cleanCallbackName(raw) {
+    if (typeof raw !== 'string') return '';
+    // Accept letters of all scripts, combining marks, apostrophes, hyphens,
+    // spaces. Apply both at input and direct POST; do not trust key events.
+    return raw.replace(/[^\p{L}\p{M} '\u2019\u02bc-]/gu, '')
+      .replace(/ {2,}/g, ' ').slice(0, 80);
+  }
+
   function optionalCallbackName(raw) {
     // A name is plain single-line text, not a verified identity. Preserve
     // international letters, apostrophes, hyphens, and preferred spelling.
     // Normalize line/control characters so input cannot forge message rows.
     if (typeof raw !== 'string') return '';
-    return raw.replace(/[\u0000-\u001f\u007f-\u009f\u2028\u2029]/g, ' ')
-      .replace(/\s+/g, ' ').trim().slice(0, 80);
+    return cleanCallbackName(raw.replace(/[\u0000-\u001f\u007f-\u009f\u2028\u2029]/g, ' ')).trim();
   }
 
   function getWidgetJwt() {
@@ -291,6 +298,14 @@
     var valid = !phoneInputRejected && digits.length === 9 && !!normalizeCurrentPhone();
     // The native textarea maxlength (500) is the actual browser input cap.
     // Keep this helper in sync with that exact cap; do not invent a Chatwoot limit.
+    if (nameHint && nameField) {
+      var nameLeft = Math.max(0, 80 - String(nameField.value || '').length);
+      var nameLastTwo = nameLeft % 100, nameLastOne = nameLeft % 10;
+      var nameNoun = nameLastTwo >= 11 && nameLastTwo <= 14 ? 'символів'
+        : nameLastOne === 1 ? 'символ'
+        : nameLastOne >= 2 && nameLastOne <= 4 ? 'символи' : 'символів';
+      nameHint.textContent = 'Залишилося ' + nameLeft + ' ' + nameNoun;
+    }
     if (messageHint && messageField) {
       var charsLeft = Math.max(0, 500 - String(messageField.value || '').length);
       var lastTwo = charsLeft % 100;
@@ -313,12 +328,13 @@
       // Stock Chatwoot PreChat/Form.vue uses ruby-10 for a true error;
       // short/in-progress guidance keeps the neutral Chatwoot slate tone.
       phoneHint.className = 'bp-contact__callback-phone-hint' +
-        (badNumber ? ' bp-contact__callback-phone-hint--error' : '');
+        (badNumber ? ' bp-contact__callback-phone-hint--error' :
+          valid ? ' bp-contact__callback-phone-hint--valid' : '');
       phoneHint.textContent = foreignCountry
         ? 'Підтримуються лише номери України (+380)'
         : partialCountry ? 'Введіть +380 та 9 цифр номера'
         : remaining === 0
-        ? (valid ? 'Номер заповнено' : 'Перевірте перші цифри номера')
+        ? (valid ? 'Номер заповнено' : 'Перевірте номер')
         : remaining === 9 ? 'Введіть 9 цифр номера'
         : 'Залишилося ввести ' + remaining + ' ' +
           (remaining === 1 ? 'цифру' : remaining <= 4 ? 'цифри' : 'цифр');
@@ -669,8 +685,12 @@
     header.appendChild(menuTitle);
     brandHeader = node('div', 'bp-contact__brand');
     brandHeader.hidden = true;
-    var brandAvatar = node('span', 'bp-contact__brand-avatar', 'babypark');
+    var brandAvatar = node('span', 'bp-contact__brand-avatar');
     brandAvatar.setAttribute('aria-hidden', 'true');
+    var brandImage = node('img', 'bp-contact__brand-avatar-image');
+    brandImage.src = assetBase + 'icons/bp-emblem-avatar-64.png';
+    brandImage.alt = '';
+    if (callbackConfigured()) brandAvatar.appendChild(brandImage);
     var brandCopy = node('span', 'bp-contact__brand-copy');
     brandCopy.appendChild(node('span', 'bp-contact__brand-name', 'BabyPark'));
     brandCopy.appendChild(node('span', 'bp-contact__brand-status', labels.callback));
@@ -733,7 +753,13 @@
     nameField.autocomplete = 'given-name';
     nameField.spellcheck = false;
     nameLabel.appendChild(nameField);
-    formPanel.appendChild(nameLabel);
+    nameHint = node('span', 'bp-contact__callback-name-hint', 'Залишилося 80 символів');
+    nameHint.id = widgetId + '-name-hint';
+    nameField.setAttribute('aria-describedby', nameHint.id);
+    var nameGroup = node('div', 'bp-contact__callback-name-group');
+    nameGroup.appendChild(nameLabel);
+    nameGroup.appendChild(nameHint);
+    formPanel.appendChild(nameGroup);
     var commentLabel = node('label', 'bp-contact__callback-label', 'Повідомлення (необов’язково)');
     messageField = node('textarea', 'bp-contact__callback-input bp-contact__callback-textarea');
     messageField.maxLength = 500;
@@ -806,6 +832,17 @@
         phoneField.selectionEnd : selection;
       // Any middle/backspace/selection edit of an already compact NSN is an
       // edit of national digits, not a new full international source.
+      // A tenth manually typed digit is ignored; full-source replacements
+      // and complete formatted pastes still pass through existing normalization.
+      if (event.cancelable !== false && insertion !== null &&
+          /^[0-9]+$/.test(insertion) && selection === selectionEnd &&
+          phoneRendered.length === 9 && phoneField.value === phoneRendered) {
+        if (event.preventDefault) event.preventDefault();
+        phoneInputKind = '';
+        phoneNextNationalEdit = false;
+        phoneWholeReplacement = false;
+        return;
+      }
       var wholeReplacement = selection === 0 &&
         selectionEnd === phoneRendered.length && /^insert/.test(phoneInputKind);
       phoneWholeReplacement = wholeReplacement;
@@ -864,6 +901,18 @@
       phoneWholeReplacement = false;
       phoneInputRejected = false;
       renderPhoneRaw();
+    });
+    nameField.addEventListener('beforeinput', function (event) {
+      if (!event || !event.cancelable || event.inputType !== 'insertText' ||
+          typeof event.data !== 'string' || event.data.length !== 1) return;
+      if (cleanCallbackName(event.data) !== event.data && event.preventDefault) {
+        event.preventDefault();
+      }
+    });
+    nameField.addEventListener('input', function () {
+      var cleaned = cleanCallbackName(nameField.value);
+      if (nameField.value !== cleaned) nameField.value = cleaned;
+      syncCallback();
     });
     messageField.addEventListener('input', syncCallback);
     formPanel.addEventListener('submit', function (event) {

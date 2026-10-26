@@ -224,3 +224,46 @@ Older raw/duplicated evidence content (including concatenated Markdown copies an
 - No production merge or deploy or Preview cleanup without explicit owner exact basis GO. Update operator manual only when the owner supplies its current version and production activation is real.
 
 This is traceability evidence, NOT permission to merge, activate Callback on babypark.ua, or change a customer transcript.
+
+
+## Owner-approved Callback V12 visual transfer (2026-10-26)
+
+Status: Draft PR only; visual acceptance is not production approval, nor
+is it proof of a real Chatwoot POST. Exact current-base Agreement governs.
+
+Owner reviewed an isolated visual demo on a Samsung mobile and approved:
+compact 490px-or-viewport height with closed keyboard, Chatwoot-like system
+font, circular BP emblem on white, fixed +380 and nine visible national digits
+with full-number paste, Unicode-letter optional name (80 with remaining
+counter), comment (500 with remaining counter), green valid
+"Номер заповнено" (Chatwoot light teal-11), and bold red invalid
+"Перевірте номер" (Chatwoot light ruby-10) for complete invalid numbers.
+Source visual demo:
+https://babypark.ua/sites/all/themes/babypark2/assets/contact/preview-callback-visual-chatwoot-emblem-20261026/index.html?hint-v=3
+The logo slightly overflows the avatar in that demo on mobile; the PR CSS
+keeps an internal four-pixel margin (40px circle, 32px image; 31/25px on
+short landscape) so its ring cannot protrude. No art asset modification.
+
+Refreshed pre-code native-first fit scan frozen in this PR comment 6420208747:
+UTF8/LF scan SHA256
+1dccfa76db5f2111b4783b4aede97a9f87ddebce73792c76b633e7fb8225c326
+Existing site-owned DOM/CSS, official Chatwoot Widget SDK and native browser
+InputEvent were selected over stock Chatwoot pre-chat form (insufficient
+external callback menu semantics) and extra runtime OSS phone validators.
+No new external runtime, Chatwoot patch, or persistent customer PII storage.
+
+Safety distinction: approved visual demo used a simpler parser and synthetic
+success, whereas actual launcher preserves V11 raw phone provenance, native
+visitor JWT, fail-closed uncertain POST and never-resend invariants. Invalid
+foreign and overlong pasted values may remain visibly rejected rather than
+being silently truncated into another customer's number. Tenth manually
+typed digit is prevented on cancelable keyboard events. Native phone
+maxlength=9 would corrupt a full +380 clipboard paste and is not used.
+Noncancelable, IME and programmatic input remain guarded on submit.
+
+Verification before release: focused callback suites plus npm test, a new
+manifest binding exact committed HEAD/tree/base and this frozen scan,
+independent exhaustive HEAVY R1 then context-isolated R2, and live
+Website inbox label/agent notification smoke after owner authorizes
+a controlled test. No automatic merge/deploy. Exact-pin owner merge GO
+and separate production cutover GO are required.

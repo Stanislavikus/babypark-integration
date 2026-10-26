@@ -17,7 +17,7 @@
   align-items: flex-end;
   flex-direction: column;
   gap: 10px;
-  font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+  font-family: -apple-system, system-ui, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Tahoma, Arial, sans-serif;
   color: var(--bp-text);
   font-size: 14px;
   line-height: 1.4;
@@ -492,4 +492,110 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .bp-contact__callback-phone-wrap { transition: none; }
+}
+
+/* Owner-approved Callback V12; preserves ordinary launcher layout. */
+.bp-contact__menu--callback {
+  height: min(490px, calc(100dvh - 88px));
+  max-height: calc(100dvh - 88px);
+  border-radius: 18px;
+}
+.bp-contact__menu--callback .bp-contact__heading {
+  flex: 0 0 64px;
+  min-height: 64px;
+  padding: 11px 14px;
+  border-color: #edf0f3;
+}
+.bp-contact__menu--callback .bp-contact__menu-close {
+  width: 37px; height: 37px; flex-basis: 37px; border-radius: 10px;
+}
+.bp-contact__brand-avatar {
+  width: 40px; height: 40px; flex-basis: 40px;
+  background: #fff; border-radius: 50%; overflow: hidden;
+}
+.bp-contact__brand-avatar-image {
+  display: block; width: 32px; height: 32px; object-fit: contain;
+}
+.bp-contact__brand-copy { gap: 1px; }
+.bp-contact__brand-name { font-size: 17px; line-height: 1.15; }
+.bp-contact__brand-status { font-size: 13px; font-weight: 400; }
+.bp-contact__callback-form {
+  gap: 9px;
+  padding: 12px 17px;
+}
+.bp-contact__callback-caption {
+  font-size: 14px; line-height: 1.25; margin: 0;
+}
+.bp-contact__callback-label {
+  font-size: 14px; line-height: 1.25; font-weight: 500; gap: 4px;
+}
+.bp-contact__callback-phone-group,
+.bp-contact__callback-name-group,
+.bp-contact__callback-message-group { gap: 4px; min-width: 0; }
+.bp-contact__callback-phone-wrap {
+  height: 43px; min-height: 43px;
+  border-radius: 12px; padding: 0; gap: 0;
+}
+.bp-contact__callback-prefix {
+  font-size: 18px; padding: 0 13px;
+}
+.bp-contact__callback-input {
+  height: 43px; min-height: 43px;
+  border-radius: 12px;
+  padding: 9px 12px;
+  font-size: 16px !important; font-weight: 400 !important;
+  line-height: 1.5;
+}
+.bp-contact__callback-phone-input {
+  min-height: 41px; height: 41px;
+  padding: 8px 12px;
+  font-size: 18px !important; font-weight: 600 !important;
+  line-height: 1.25; letter-spacing: .2px;
+}
+.bp-contact__callback-phone-hint,
+.bp-contact__callback-name-hint,
+.bp-contact__callback-message-hint {
+  color: #60646c; font-size: 11px; line-height: 1.2;
+  min-height: 13px; font-weight: 400;
+}
+.bp-contact__callback-phone-hint--error {
+  color: #dc3b5d; font-weight: 700;
+}
+.bp-contact__callback-phone-hint--valid {
+  color: #008573; font-weight: 700;
+}
+.bp-contact__callback-textarea {
+  height: 73px; min-height: 73px; max-height: 94px;
+  resize: vertical; line-height: 1.3;
+}
+.bp-contact__callback-submit {
+  min-height: 44px; flex: 0 0 44px;
+  border-radius: 12px; padding: 8px 12px;
+  margin-top: 1px;
+  font-size: 15px !important; font-weight: 600 !important;
+}
+.bp-contact__callback-status {
+  min-height: 0; font-size: 11px; line-height: 1.2;
+}
+.bp-contact__callback-success {
+  gap: 12px; padding: 16px;
+}
+.bp-contact__callback-success-icon { width: 56px; height: 56px; font-size: 29px; }
+.bp-contact__callback-success-title { line-height: 1.35; }
+.bp-contact__callback-success-caption { font-size: 12px; }
+@media (max-height: 630px) {
+  .bp-contact__menu--callback {
+    height: calc(100dvh - var(--bp-compact-bottom) - 58px);
+  }
+  .bp-contact__menu--callback .bp-contact__heading {
+    flex-basis: 48px; min-height: 48px; padding: 7px 11px;
+  }
+  .bp-contact__brand-avatar { width: 31px; height: 31px; flex-basis: 31px; }
+  .bp-contact__brand-avatar-image { width: 25px; height: 25px; }
+  .bp-contact__callback-form { gap: 5px; padding: 7px 11px; }
+  .bp-contact__callback-input,
+  .bp-contact__callback-phone-wrap { min-height: 38px; height: 38px; }
+  .bp-contact__callback-phone-input { min-height: 36px; height: 36px; }
+  .bp-contact__callback-textarea { height: 54px; min-height: 54px; max-height: 66px; }
+  .bp-contact__callback-submit { flex-basis: 39px; min-height: 39px; }
 }
