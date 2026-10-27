@@ -1,7 +1,7 @@
 # BabyPark Infrastructure Registry
 
 Status: CURRENT
-Last verified: 2026-10-02
+Last verified: 2026-10-27 for this worker operational entry (other entries remain date-specific).
 Owner: BabyPark
 Purpose: human-readable inventory of production objects that exist outside Git or whose runtime identity/path must remain recoverable from Git.
 
@@ -13,9 +13,9 @@ Never store passwords, API secrets, private keys, session cookies or recovery pl
 
 `docs/CURRENT_STATE.md` records current system truth and acceptance state. This file answers a different question: **what objects exist, where are they, and why do they exist?**
 
-## 2026-10-27 — Chatwoot worker-only LOG_LEVEL fallback ATTEMPT / PROTECTED ROLLBACK (NOT APPLIED)
+## HISTORICAL 2026-10-27 — first worker LOG_LEVEL attempt FAILED, auto-rollback PASS (now superseded)
 
-**Status: BLOCKED; production remains at `LOG_LEVEL=warn`.** A bounded native-only correction to the upstream Sidekiq WARN job-context logging exposure was conditionally authorized by the owner ("if no better native solution found, apply worker-only setting") and Opus 5.5's independently sourced research concluded that no better permitted native solution was proven. Verified published research: Draft PR #154 comment `6444683330`, frozen normalized author report SHA-256 `f7b12e02860d593d9d4239bba6c4f6b7bb673d2bb449dc36ddecf39b0f851b7b`. **A single guarded production application was attempted, failed its required effective-process-level check, and was automatically rolled back. A later attempt to edit the existing drop-in was blocked by the execution host's safety checks and NOT performed. No alternative mutation method was attempted.**
+**Historical status at the time of first attempt: BLOCKED; production was restored to `LOG_LEVEL=warn`.** A bounded native-only correction to the upstream Sidekiq WARN job-context logging exposure was conditionally authorized by the owner ("if no better native solution found, apply worker-only setting") and Opus 5.5's independently sourced research concluded that no better permitted native solution was proven. Verified published research: Draft PR #154 comment `6444683330`, frozen normalized author report SHA-256 `f7b12e02860d593d9d4239bba6c4f6b7bb673d2bb449dc36ddecf39b0f851b7b`. **A single guarded production application was attempted, failed its required effective-process-level check, and was automatically rolled back. A later attempt to edit the existing drop-in was blocked by the execution host's safety checks and NOT performed. No alternative mutation method was attempted.**
 
 - Host: `chatwoot-fra1-01`, installed upstream Chatwoot HEAD `9f920b549c14491a4e587687a3eed5d21c6ccc7d`, tree `16432eeeef9153f7aff66be382e04a20e6f5683a`, clean tracked worktree; Sidekiq 7.3.10, systemd 255.
 - **Original effective web/worker**: both `LOG_LEVEL=warn`, service health active, SidekiqAlive HTTP 200. Before attempt queues `critical/default/low` all 0; Sidekiq processes: one, concurrency 12, busy 0, heartbeat age 2 seconds; RetrySet 0, DeadSet 20, ScheduledSet 1; dead-job types 19 `ActionMailer::MailDeliveryJob/Errno::ENOENT` and 1 `ActionMailer::MailDeliveryJob/Net::SMTPFatalError` (no payloads inspected). This is an instant snapshot.
@@ -28,6 +28,28 @@ Never store passwords, API secrets, private keys, session cookies or recovery pl
 **Rollback/recovery:** No rollback is pending: live state already equals protected preimage. To recover original guard after any *future separately permitted* change, restore only the protected exact `log-level.conf`, `systemctl daemon-reload`, restart only `chatwoot-worker.1.service`, verify worker and web `LOG_LEVEL=warn` and SidekiqAlive HTTP 200. Do not touch the web process, `.env`, Sidekiq Dead/Retry sets, or parent logs as part of this object. Retain protected snapshot/manifest. Future rollouts must use an authorized change mechanism and prove `/proc/<actual worker PID>/environ` after restart; do not assume an extra drop-in is sufficient.
 
 **Gate:** Native Sidekiq WARN exposure mechanism remains reachable; B1 remains **NOT CLOSED** and PR #154 remains Draft; R1/R2/final owner GO absent. This ops record is documentation of a safe but ineffective application/rollback, **not a successful mitigation**.
+
+## 2026-10-27 — CURRENT: worker-only native WARN suppression APPLIED and verified
+
+**Status: Production applied successfully; unrelated B1/PR #154 gates remain OPEN.** On `chatwoot-fra1-01`, a second owner-authorized bounded operational attempt used only **one new native systemd worker drop-in**. This followed Opus 5.5's independent native-options study (PR #154 comment `6444683330`) and Grok 4.7's independent concurrence (PR #154 comment `6444899424`). It supersedes the **historical rolled-back attempt documented below** without erasing that incident.
+
+**Precise objects, no code patches:**
+- Existing worker drop-in `/etc/systemd/system/chatwoot-worker.1.service.d/log-level.conf` remains **byte-for-byte unchanged**, SHA-256 `4020d27a099bd301e41d1049abd38f06fa1dccd2665035fc15ab91152ad41524` (sets `warn`; earlier sorting position).
+- New worker-only, later-sorting drop-in `/etc/systemd/system/chatwoot-worker.1.service.d/zz-babypark-log-level-error.conf` contains exactly `[Service]\nEnvironment=LOG_LEVEL=error\n`, SHA-256 `96a4fe460f06c36307815e193972accd06ba62c01b093f83db3c3e3fb75443d1`; mode `0644`, root-owned. `systemctl daemon-reload` and restart of **only** `chatwoot-worker.1.service` completed.
+- A **separate root-only protected recovery/preimage directory** was created: `/root/babypark-ops-backups/20261027-chatwoot-worker-loglevel-verified-application/` (mode `0700`; recorded files `0600`). It stores prior worker unit, unchanged original drop-in, worker/web `systemctl cat` snapshots and `manifest.json` SHA-256 `3c595a70211266a66c90f88dfbe10d634212b274418a773ce69109bd3061784e`. The earlier aborted attempt's independent protected preimage remains retained separately and must not be auto-deleted.
+
+**Read-only preflight and postchecks:**
+1. Installed Chatwoot Git HEAD `9f920b549c14491a4e587687a3eed5d21c6ccc7d`, tree `16432eeeef9153f7aff66be382e04a20e6f5683a`, clean worktree. Systemd 255, native Sidekiq 7.3.10. No `EnvironmentFile` or `UnsetEnvironment`. Three **fictional** `LOG_LEVEL` probes (pre-login P0, after `bash -l` P1, after dotenv P2) each preserved the same sentinel; no secrets or customer data were printed.
+2. Before modification, both effective worker and web processes were `warn`, SidekiqAlive 200. New unit Environment showed one effective `LOG_LEVEL=error`, web stayed `warn`. After worker-only restart and **waiting until the actual worker's Sidekiq process completed boot**, every worker process in its systemd cgroup exposed `LOG_LEVEL=error`; web PID unchanged and `LOG_LEVEL=warn`. SidekiqAlive returned HTTP 200.
+3. **Six successive ten-second checks**: worker remained active, unchanged new PID, environment `error`, SidekiqAlive HTTP 200. Website Chatwoot HTTPS returned HTTP 200; Redis and Nginx active. Fresh independent Rails metadata query: Sidekiq 1 process, concurrency 12, busy 0, heartbeat age 4 seconds; all monitored queues (including `critical/default/low`) length 0 and latency 0; RetrySet 0, DeadSet 20, Scheduled 1, **unchanged from immediately before**. No Dead/Retry message payload was viewed or deleted.
+4. A *bounded* journal metadata scan since 14:45 UTC counted 7 worker records and 0 recognizable Sidekiq argument/context dump candidates. This passive observation does **not** prove zero historical disclosures or prevent future ERROR/FATAL payloads. The native installed-gem synthetic Sidekiq default-handler experiment separately proved that its WARN job-context output is suppressed by effective `error`.
+5. No web restart, shared `.env` change, Chatwoot core patch, Callback change, consumer conversation, synthetic live job/fault injection, customer deletion, Redis queue purge, or merge.
+
+**Cause of the earlier attempt:** not proven beyond the failed anonymous assertion. The successful run differs in that it waits until the real Sidekiq process is fully booted before asserting its effective environment; this is **consistent with**, not conclusive proof of, an earlier premature verification race.
+
+**Rollback identity and native procedure — only upon separately authorized rollback:** first confirm the new `zz-babypark-log-level-error.conf` SHA-256 exactly matches `96a4fe46...` and that the original `log-level.conf` matches the protected preimage. Remove **only the new exact worker drop-in**, `systemctl daemon-reload`, restart **only** `chatwoot-worker.1.service`, wait until native Sidekiq finishes boot, confirm all worker-process `LOG_LEVEL=warn`, web unchanged `warn`, SidekiqAlive 200, and queue/heartbeat health. Never alter `.env`, web config, customer transcripts, Redis jobs, or retained recovery images automatically.
+
+**Residual privacy boundary:** The default Sidekiq WARN job-context sink is now suppressed on the worker; the stock job still serializes full content and routing tokens into Redis queues/Dead Set. Existing journals/backups and ERROR/FATAL paths remain outside this particular mitigation and require the owner-approved native access/retention disposition. This operational success does **not** grant `B1 — ZERO BLOCKERS`, R1/R2 closure, merge authorization, or Callback go-live GO.
 
 ## Public DNS and Cloudflare
 
