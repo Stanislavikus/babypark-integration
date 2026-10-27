@@ -7,6 +7,18 @@ Last updated: 2026-10-23
 Owner: BabyPark
 Source of truth for operational facts: production runtime + verified repository evidence.
 
+## Historical Contact Launcher L1-B draft proposal (recorded 2026-10-19)
+
+Historical 2026-10-19 draft-only proposal evidence; this text does not assert current deployment state and grants no merge or production authorization.
+
+- Canonical repository `Stanislavikus/babypark-integration`; Draft PR #142, `feat/contact-launcher-l1-20261019`. Bounded change: static CMS-neutral contact launcher and use of official Chatwoot Website SDK; no Chatwoot core changes, no n8n/callback backend, no new durable BabyPark customer store.
+- **RISK CLASSIFICATION: HEAVY** because the browser opening the menu causes an external Website SDK to run with potential Chatwoot Contact + `cw_conversation` cookie/IP impact.
+- Owner L1-B pre-code GO on 2026-10-19 covers V1 / P1 lazy SDK / S1–S7 **only in PR #142**, bound to refreshed Scan SHA-256 `509c53e6891b270d5a6490e0e72c5951c089378c19d12d9ffdfcdfa518473302` and Fit SHA-256 `a94593eeac4c8b271a351ac480fdb5cba2417c7fa421a2d41e9bb5678bbeee85`.
+- Owner L1-C V2 pre-code GO on 2026-10-20 permits ONLY fixed-height disabled Website chat row, 12-second informational deadline with late genuine-ready recovery, centred static SVG X, two-tone focus, and exact scoped test/docs changes: Scan SHA `74237eddbf8b0225b6728007eb0344b224f15ff8d5660ee705740ecc9472a4d0` and Fit SHA `75d9769eb3fbce563421a247cab81d2314319873930afdc39920f457bdb9dc6d`. No SDK prefetch/preconnect, auto-open or new runtime dependency. New exact HEAD/TREE/test/browser/review closure is NOT yet complete, so this row is implementation-in-progress, not deployment authority.
+- As of the original 2026-10-19 proposal, no Drupal7 theme change or real buyer↔seller roundtrip had been proven. These historical observations are not current operational truth; verify production separately.
+- Following complete implementation and test, exact tree review must be re-pinned to its new HEAD/tree/base, one full ZERO BLOCKERS verification and an independent isolated confirmation are required; a separate owner merge GO and subsequent owner production deploy GO are still required. WhatsApp and callback were outside the original L1 scope.
+- Later L1 release will record actual channel and website-token configuration (no secrets), cookie/IP/retention facts, image/icon attribution, customer-contact privacy notice, site CSS/landscape offsets, rollback proof, and deployment identities in the infrastructure registry and current-state record. Missing proof ⇒ no production activation.
+
 ## Current campaign/navigation snapshot (2026-10-23)
 
 This top section is the current campaign/navigation snapshot. Exact implementation and merge truth remains canonical Git; normative process/governance authority remains `docs/AI_WORKING_AGREEMENT.md`. Runtime facts that are not restated here must be freshly verified from their authoritative runtime/source before use.
