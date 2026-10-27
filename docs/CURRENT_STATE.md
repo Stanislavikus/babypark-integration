@@ -7,6 +7,14 @@ Last updated: 2026-10-23
 Owner: BabyPark
 Source of truth for operational facts: production runtime + verified repository evidence.
 
+## 2026-10-27 — five historical Callback previews safely unpublished (owner requested)
+
+**Verified actual production action, separate from Callback draft development:** The owner requested removal of nine test page browser URLs; they corresponded to five real directories in `server2181.babypark.ua` Drupal theme's `assets/contact/`. Fresh read-only checks established that all five URLs were HTTP 200 prior to change, the live `html.tpl.php` references only the parent `babypark-launcher.js`, `babypark-launcher.css` and `config.js`, and no live theme source referenced these preview directories. The five exact paths, ten existing file hashes, and live launcher preimage were independently checked against PR #154's prior infrastructure preview inventory.
+
+Each of the **five exact preview directories** was removed from the public webroot by guarded same-filesystem rename into root-only `/root/babypark-ops-backups/20261027-callback-previews-unpublish/`, not destroyed. Protected manifest `inventory.json` SHA-256 `9f347d6c1dac84b6d8af39013c0bc6afe0cc3a971e4c2a931a8c35ad42083eb2`. Post-move hashes verified all ten files in their protected recovery locations. All eight distinct source URLs supplied by the owner returned **HTTP 404**; homepage, `/privacy-policy` and live launcher JS returned **200**. Live JS/CSS/config content remained unchanged. Full object/file list, content hashes, scope guard, and explicit rollback are in `docs/INFRASTRUCTURE_REGISTRY.md` in this same documentation campaign.
+
+**No new Callback behavior:** Draft PR #154 remains separately owned and its exact HEAD/tree/base unchanged; the technical B1 audit does not depend on these browser previews. No Chatwoot user data, automation, Nginx configuration, source code, Drupal live assets, or customer Widget message path was modified. The previews' historic Git links still appear in PR #154's unmerged documentation; they are now **archival evidence pointers returning 404**, and that older inventory must be reconciled before any future merge so it cannot represent the previews as live. This docs-only operational evidence branch is **not approved for auto-merge**.
+
 ## Current campaign/navigation snapshot (2026-10-23)
 
 This top section is the current campaign/navigation snapshot. Exact implementation and merge truth remains canonical Git; normative process/governance authority remains `docs/AI_WORKING_AGREEMENT.md`. Runtime facts that are not restated here must be freshly verified from their authoritative runtime/source before use.
