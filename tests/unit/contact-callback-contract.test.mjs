@@ -15,14 +15,20 @@ test('V12 G1: every current requirement has a six-column mapping without invente
     assert.ok(cells.every(Boolean), 'no missing implementation/test/fail-closed/durable/status cell');
     assert.equal(cells[5], 'DONE', 'candidate implementation/evidence complete for ' + id);
   }
-  // These production facts were not verified by this code-only correction.
-  // Passing this regression must never be mistaken for terminal §6 closure.
-  for (const id of ['OPS-NOTIFY', 'OPS-PRIVACY', 'OPS-RECOVERY', 'OPS-CUTOVER', 'GATE-HEAVY']) {
+  // Owner-frozen stock Chatwoot routing has no Callback-only duty/alert gate.
+  // The successful Chatwoot snapshot restore must not be demanded again.
+  assert.doesNotMatch(current, /^\| OPS-NOTIFY:/m);
+  assert.doesNotMatch(current, /^\| OPS-RECOVERY:/m);
+  const restoreRow = current.split('\n').find(line => line.startsWith('| OPS-RECOVERY-SNAPSHOT:'));
+  assert.ok(restoreRow?.endsWith('| DONE |'), 'existing snapshot restore evidence is reused');
+  // Security, real cutover and the existing Agreement review are not waived.
+  for (const id of ['OPS-PRIVACY', 'OPS-CUTOVER', 'GATE-HEAVY']) {
     const row = current.split('\n').find(line => line.startsWith('| ' + id + ':'));
-    assert.ok(row, 'unproved gate remains visible: ' + id);
+    assert.ok(row, 'unproved hard-safety/review gate remains visible: ' + id);
     assert.ok(row.endsWith('| IN PROGRESS |'), 'no invented DONE/DEFERRED for ' + id);
   }
-  assert.match(current, /terminal §6 blocker is \*\*not closed\*\*/);
+  assert.match(current, /G1 scope disposition:/);
+  assert.match(doc, /owner-frozen scope correction/i);
 });
 
 test('V12 G2: all documented callback previews have exact observed registry identities', () => {
