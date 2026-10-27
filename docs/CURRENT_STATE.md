@@ -3,9 +3,23 @@
 Status: EVIDENCE — operational/current-state record; not normative contract authority.
 Applies to: repository-wide operational and campaign state tracking.
 Supersedes: `docs/CURRENT_STATE.md` at canonical main `a45a8644e05df2584a2b75f2a3b47446811ae984`.
-Last updated: 2026-10-23
+Last updated: 2026-10-27 (bounded operational B2/privacy evidence; historical sections retain their dates)
 Owner: BabyPark
 Source of truth for operational facts: production runtime + verified repository evidence.
+
+## 2026-10-27 — production Chatwoot proxy hardening; Callback B1 remains pending
+
+**Operational evidence only, not a Callback merge/activation approval.** Owner authorized elimination of the existing Chatwoot proxy IP trust issue independently of draft Callback V1. Canonical repo `Stanislavikus/babypark-integration`, main `1d5d8c00b7fdcdb54f37418ea60931c4292fd600`, main Agreement blob `e777fce4af8e8c3372f1f9de9ef7d00f786c2c89`, Callback Draft PR #154 retained at `8ab5dd5c51a6fc2b6863323839ba9f5674b6bfba` throughout this bounded operational change.
+
+**B2 operational correction applied:** On `chatwoot-fra1-01`, the already-running native Nginx vhost's two Chatwoot-bound locations now suppress untrusted `Forwarded` with `proxy_set_header Forwarded "";`. The untouched native `X-Real-IP`/`X-Forwarded-For` forwarding remains. The prior condition was reproduced with the installed Rack 3.2.6 and synthetic documentation-only IP addresses: a forged `Forwarded` changed `Rack::Attack::Request#ip`, whereas the real client peer was present in Nginx-managed `X-Forwarded-For`. This was a pre-existing Chatwoot reverse-proxy configuration weakness, not caused by the Callback form. The precise SHA-bound vhost, protected rollback image, affected routes, successful `nginx -t`/graceful reload/health/CORS checks are inventoried in `docs/INFRASTRUCTURE_REGISTRY.md`. No production customer Widget POST, Drupal asset activation or Chatwoot application code modification.
+
+**B1 privacy/retention read-only facts (NOT CLOSED):** Installed Chatwoot v4.18.0 retains normal website conversation/message data in Chatwoot; candidate Callback adds no independent durable PII store. Callback customer phone is intended inside the Chatwoot message, with `callback_phone` conversation attribute only on new conversation; Contact.phone is not overwritten. Production Rails and Sidekiq use `LOG_LEVEL=warn` (INFO suppressed), standard parameter filters redact secrets but do not establish universal redaction of customer content inside exceptions; `LOGRAGE_ENABLED` and additional Sidekiq dequeued logging were not enabled in the inspected environment. Nginx HTTPS logs are mode 0640, daily rotation with 14 archives. Journald has no explicit `MaxRetentionSec` override in the inspected config; no complete calendar time-based journal retention commitment was verified. Default Chatwoot schedule did not demonstrate an approved finite message retention term. No retention period is invented by this evidence.
+
+A bounded **sanitized**, read-only journal pattern count for 2026-10-24 onward found zero lines with the Callback human marker and one line matching a complete Ukrainian phone format in a stock **WhatsApp WARN worker event**. The matching phone/body was not displayed, copied or stored here; it is **not evidence that Callback logs a customer phone**, and it highlights why blanket `LOG_LEVEL=warn` cannot itself certify all channels/error paths free of PII. The generic WARN issue must not be silently relabelled a Callback code defect or patched in Chatwoot core. Further privacy/legal/access/retention disposition remains necessary.
+
+BabyPark is preparing universal `https://babypark.ua/privacy-policy` to describe the **actually enabled** Chatwoot Website, Callback and later email-continuity flows; do not state that unfinished email continuity or not-yet-published policy is operational. The appropriate authorized owner/legal review must decide applicable disclosure, retention, access and log-error controls before marking the customer-data activation gate complete.
+
+**Scope limits:** B2 native proxy hardening is applied and functionally smoke-checked; there is no claim of independent final R1 ZERO/R2 ZERO, published privacy/legal sign-off or new Callback GO. Callback PR #154 stays Draft/unmerged, with production Callback OFF. This section records factual operational evidence, not new requirements concerning staff notifications, repeat Chatwoot backup restoration or separate governance PR #156.
 
 ## Current campaign/navigation snapshot (2026-10-23)
 
