@@ -13,6 +13,16 @@ Never store passwords, API secrets, private keys, session cookies or recovery pl
 
 `docs/CURRENT_STATE.md` records current system truth and acceptance state. This file answers a different question: **what objects exist, where are they, and why do they exist?**
 
+## 2026-10-27 — Existing native retention/recovery inventory confirmed for B1 (no objects created)
+
+No destructive action or new data-storage object was introduced during this read-only residual-copies check. See the detailed 2026-10-27 B1 lifecycle section of `docs/CURRENT_STATE.md` on this same Draft branch for full runtime evidence and data-category-specific erasure limitations.
+
+- **Droplet recovery identity:** DigitalOcean `chatwoot-fra1-01`, Droplet ID `597177915`; native backups enabled, **daily** and **7-day** provider retention. This day's existing private recovery images for this droplet: backup IDs `251542648` (2026-10-26 00:26:36 UTC) and `251684286` (2026-10-27 00:18:19 UTC). These are **pre-existing recoverable assets, not newly made backups**; do not delete them merely due to a later image. Provider manages rotation; snapshot restore can reintroduce old customer data and must be followed by human verification of pending lawful erasure obligations.
+- **Redis local persistence:** `/var/lib/redis/dump.rdb` under root-controlled/Redis-owned host storage; `appendonly=no`, RDB `save=3600 1 300 100 60 10000`. This stores operational job data from existing Sidekiq queues and Dead Set. It is part of host recovery; do not equate conversation deletion with removal from this asset or the host snapshots. Redis binds loopback.
+- **Operational logs:** journald persisted at `/var/log/journal` (no explicit calendar `MaxRetentionSec`), additionally forwarded by native journald/rsyslog to `/var/log/syslog` (mode 0640, weekly/rotate4). Chatwoot Nginx access logs rotate daily/14. These are existing shared host logging/recovery resources. Do not indiscriminately vacuum/delete logs, which would destroy cross-service diagnostics and may defeat legal/operational holds.
+- **Native erasure authority:** Chatwoot Contact/Conversation deletion via authorized administrators and asynchronous completion; outstanding data rights requests `contact@babypark.ua` and lawful retention exceptions handled manually. The authorized procedure (PR #154 comment `6442060681`) does not imply historical backups/journals have been selectively scrubbed.
+- **Important boundary:** existing worker `LOG_LEVEL=error` stops the specific native Sidekiq WARN job-context dump, not Redis job serialization or historical and ERROR/FATAL sinks. This is a risk inventory, **not a B1 legal sign-off or an approval to activate Callback**.
+
 ## 2026-10-27 — CURRENT: worker-only native WARN suppression APPLIED and verified
 
 **Status: Production applied successfully; unrelated B1/PR #154 gates remain OPEN.** On `chatwoot-fra1-01`, a second owner-authorized bounded operational attempt used only **one new native systemd worker drop-in**. This followed Opus 5.5's independent native-options study (PR #154 comment `6444683330`) and Grok 4.7's independent concurrence (PR #154 comment `6444899424`). It supersedes the **historical rolled-back attempt documented below** without erasing that incident.
