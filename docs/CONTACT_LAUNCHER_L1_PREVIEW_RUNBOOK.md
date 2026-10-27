@@ -1,0 +1,177 @@
+# BabyPark Contact Launcher L1 — preview and site runbook
+
+Status: RUNBOOK
+Applies to: web/contact-launcher/**, Drupal 7 active babypark2 theme, existing Chatwoot Website Inbox.
+Supersedes: none.
+
+## 2026-10-26 current owner scope correction (supersedes earlier operational alert gates)
+
+Callback V1 deliberately uses the **existing, unchanged Chatwoot Website
+Inbox/Unassigned queue, agent access, auto-assignment and stock notifications**.
+No Callback-specific team-email notification rule, duty roster, guaranteed
+notification to all four sellers or reassign-when-offline behavior is required
+before releasing the form. Prior paragraphs below proposing these as
+Callback production/merge gates are historical, **superseded**, not a new
+condition of release. Native operator notification preferences may be
+configured independently after launch without a new Callback implementation.
+
+Reuse the proven real Widget staging new/Open/Resolved flow and existing
+restored DigitalOcean Chatwoot snapshot proof. No additional restore server,
+repeat full snapshot-restore drill or new app data store is required for the
+form's frontend-only changes. For actual cutover, verify the final loaded
+assets, existing native rule and scoped CORS/security/PII prerequisites,
+and preserve normal versioned asset rollback; never claim unperformed
+production activation as completed. PR #156 is a **separate** governance
+proposal and not a new Callback dependency.
+
+## Fixed approval and scope
+RISK CLASSIFICATION: HEAVY — customer-facing website SDK initialization and Chatwoot privacy/contact boundary.
+Original L1 owner pre-code GO (2026-10-19) binds Scan SHA-256 8f1c0dc9562bd2c7e4383f3dc8972c329061bac04f5ae8e068d416a0dfe5f7eb and Fit SHA-256 4f930276a7db2b1907a5f94e058df32b590ee29673693af4dcca2d1aff958cc6.
+**Owner L1-B pre-code GO (2026-10-19):** bounded V1/P1/S1–S7 batch inside Draft PR #142, refreshed Scan SHA-256 509c53e6891b270d5a6490e0e72c5951c089378c19d12d9ffdfcdfa518473302 and Fit SHA-256 a94593eeac4c8b271a351ac480fdb5cba2417c7fa421a2d41e9bb5678bbeee85. L1-B refreshed Scan/Fit published as PR #142 comments 6273732298 and 6274015249; original L1 evidence lives in comments 6273467945 / 6273469598. This authorizes branch implementation only; not merge, deployment, data activation or site modifications.
+Canonical main when GO approved: f3d92325e6b4ef04f0137c4c49dde07c05731bbe; Agreement blob e777fce4af8e8c3372f1f9de9ef7d00f786c2c89.
+
+**Owner L1-C V2 pre-code GO (2026-10-20):** exact Scan SHA-256 `74237eddbf8b0225b6728007eb0344b224f15ff8d5660ee705740ecc9472a4d0` (comment #6295431838) and bound Fit SHA-256 `75d9769eb3fbce563421a247cab81d2314319873930afdc39920f457bdb9dc6d` (comment #6295473828). Allowed only stable disabled chat row, informational one-shot 12s notice with late-ready recovery, symmetrical X SVG, accessible two-tone focus and scoped tests/docs in Draft PR #142. No runtime dependency, prefetch/preconnect, auto-open, callback/L2, merge or live deployment. Previous L1-C V1 Scan/Fit/GO superseded for this behavior.
+
+These approvals cover preparatory L1 branch code only. They are NOT merge, live site deployment, header editing, callback collection or n8n authorization.
+
+## Solution
+Pure static, CMS-neutral JS/CSS; local SVGs. The existing official Chatwoot 4.18.0 Website SDK at https://chat.babypark.ua/packs/js/sdk.js is **not requested on passive page load**. Historical first-menu-open concept (SUPERSEDED by current selective lazy loading): selecting Chat or Callback loads SDK, but opening the contact menu alone never does. For historical context only: an enabled/configured Website channel loaded the SDK with hideMessageBubble=true, showUnreadMessagesDialog=false and locale=uk. The current L1+L2 Chat row is present at its fixed 64px height and may be deliberately clicked before SDK readiness to request/initialize the stock SDK, but Chatwoot opens only after genuine chatwoot:ready and callable window.$chatwoot.toggle; no fake successful chat. A permanently failed SDK disables the Chat row. A single 12,000ms browser timer changes a compact in-row note to `Підключення триває довше, ніж зазвичай`, but does not abort the SDK or block legitimate late readiness, which clears the note and enables the row. Explicit errors (SDK onerror, missing/throwing SDK.run, ready without toggle) stay disabled with in-row unavailable text. No SDK retry, prefetch/preconnect, hover initiation or automatic open. The existing `aria-live` status exists in a visually hidden region that **never moves other menu options**. Chat-only enabled config must keep launcher trigger available before SDK readiness. No API bearer tokens in JS. External messengers open customer apps directly, existing Chatwoot inboxes handle seller traffic. No callback form in L1; callback delivery/PII and n8n belong to separately approved L2. **Historical privacy risk of the old, superseded menu-open concept:** the first menu-open event loaded a Website iframe, and Chatwoot can create an anonymous Contact/ContactInbox and first-party cw_conversation cookie even when the visitor then selects Telegram, Viber or phone. Depending on deployed ip_lookup setting, Chatwoot may store the visitor IP on that Contact. This is not a passive-pageview effect after L1-B lazy integration; audit actual cookie domain/lifetime, contact retention and disclosures before production activation. Chatwoot remains the sole transcript/customer identity authority; BabyPark launcher stores no new PII. Verify no campaigns active on Website Inbox id 2 to prevent unsolicited popups; showUnreadMessagesDialog=false is not a general server-side campaign disable.
+
+## Explicit per-channel operator switches
+See web/contact-launcher/config.example.js: each channel enabled is strict true/false, unverified states default false. This is NOT automatic uptime monitoring. Actual fresh buyer-device inbound message + seller reply must be proven before enabling; liveness HTTP 200 or existence of Chatwoot Inbox is insufficient.
+- Website chat: initially false, requires public website token and real browser/inbox test.
+- Telegram: initially false, https://t.me/Babyparkua_bot, inbox 4.
+- Viber: initially false, viber://pa?chatURI=babypark, inbox 5 (Viber get_account_info status=0/uri=babypark only validates bot identity).
+- WhatsApp: false, missing active Chatwoot inbox and verified wa.me destination.
+- Phone: true, tel:+380982908838, test actual dialer link.
+- Callback: **not included in the original L1-only rollout**. The separately approved L2 Callback V1 release adds a phone-required form to the same launcher. It remains disabled on the live Drupal site until the separately authorized release; never fake a success response.
+
+## Production site attachment point (READ ONLY until separate GO)
+Live root: /home/babypark/sites/babypark.ua; active Drupal 7 theme babypark2. Existing Bitrix24 loader is in sites/all/themes/babypark2/templates/html.tpl.php after page_bottom and points to cdn.bitrix24.eu/b25684245/crm/site_button/loader_1_sfkqzu.js. This is a script inclusion point, NOT a reusable DOM container. In an approved deployment, replace ONLY that stale loader with versioned CSS + config + JS, in deterministic load order. No header cleanup until the launcher actually works.
+
+## Staging preview and release checks
+1. Reconfirm canonical main and fresh git agreement. Revalidate frozen scan/fit, deployed Chatwoot version, privacy and provider conditions.
+2. Use a test copy of Drupal theme. Record live target html.tpl.php SHA-256 and backup before writing, and a restore plan. Do not use production customer conversations for staging tests.
+3. Place babypark-launcher.js, babypark-launcher.css and icons/ under a static, versioned theme asset directory; copy config.example.js to local deployment config. Set explicit **same-origin assetBase** ending with a slash (mandatory if JS aggregation/bundling rewrites script URL), PUBLIC Chatwoot Website token and only independently verified channel enabled flags. Never embed Chatwoot API token or Viber token. Verify config comes **before** JS and CSS loads before JS; if CSS is absent the JS leaves the launcher hidden, never in normal document flow.
+4. Check 320/375/390/430px, 600x360/800x360 landscape and desktop pages for product/cart/checkout overlays, consent banner, payment modal, CSP, cache, script order, duplicate default Chatwoot bubble, chat panel opening and closing, no clipping, actual deep links/dialer; keyboard tab/Escape/outside click, focus after chat. Check no Chatwoot SDK request, Contact or cw_conversation cookie on page load OR menu-only open/close; only deliberate Chat or Callback selection can trigger native SDK and browser identity initialization. Test missing/late CSS, SDK failure, and aggregated/inline JS with explicit assetBase. Use actual Chromium getBoundingClientRect() for Telegram/Viber/phone at initial, ready, 12s informational and explicit-error transitions: require unchanged row top coordinates within 1 CSS px across desktop and 320/375/390/430 mobile and short landscape. Verify clickable configured Chat row before ready starts the lazy SDK once but cannot open fake chat; actual chat opens only on genuine ready, including late ready after 12 seconds, live announcements, symmetric centered X on mobile/desktop and two-tone keyboard focus on dark/white surfaces including forced-colors. Synthetic browser tests do not replace the Drupal-site/real-inbox consent/device checks.
+5. CSS 22px mobile right and 76px+safe-area bottom are approved **preview defaults**, NOT site-specific measured values. Tune --bp-desktop-right, --bp-desktop-bottom, --bp-mobile-right, --bp-mobile-bottom and --bp-compact-bottom via theme CSS against actual sticky/footer navigation (including landscape, checkout and tablet widths to 767px). Disabled/missing CSS or unsafe icon origin must fail closed. Avoid making unmeasured CSS values authoritative.
+6. Run exact immutable HEAD/tree/base root npm test, diff --check and all applicable normative verification/review requirements. Obtain a separate owner merge GO and a separate production deployment GO. No automatic merge.
+7. Record deployed assets, actual version, rollback reference, health/channel activation and manually created objects in docs/INFRASTRUCTURE_REGISTRY.md and docs/CURRENT_STATE.md during the approved production release.
+
+## Rollback
+If site UI regresses, remove new CSS/JS includes and restore pinned template, keeping defunct Bitrix24 loader OFF. For a failing channel disable only that channel, purge relevant static config cache, do not imply delivery succeeded. No changes to Chatwoot transcript authority.
+
+## L1-C V2 R4 minor accessibility closure
+
+The explicitly disabled Website chat row is subdued while unavailable. However, its informative 10px slow/error note uses its own dark gray `#5d6b78` over `#f6f7f8`, with at least 4.5:1 text contrast; it is not hidden by a muted parent color. The existing present-before-transition `role=status`, `aria-live=polite`, `aria-atomic=true` live region has explicit unit assertions for pending, delayed, genuine-ready and error states. R4 independent Chromium geometry, contrast ring and SVG alignment passed on the former HEAD; after any additional CSS/test/docs correction, revalidate on the new exact HEAD before merge. No Playwright dependency added. Screen-reader actual-device behavior and live-site/channel/privacy evidence remain unverified activation gates.
+
+## Close icon provenance — L1-C V2
+Both close controls use the same static symmetric X icon geometry from Lucide/Feather (24×24 viewBox; two crossing diagonals `M18 6 6 18M6 6l12 12`), no package/network runtime dependency. Lucide: https://lucide.dev/icons/x, https://github.com/lucide-icons/lucide ; the Feather-derived X is MIT licensed (Copyright 2013–2023 Cole Bemis), reproduced under MIT terms (https://github.com/feathericons/feather/blob/main/LICENSE). Required original MIT copyright/license notices must accompany distribution where applicable; the existing runbook and inline source comment identify it. The icon is centred with CSS flex rather than independent pixel translations.
+
+Feather MIT license notice retained with the icon distribution (https://github.com/feathericons/feather/blob/main/LICENSE):
+
+> MIT License
+>
+> Copyright (c) 2013-2023 Cole Bemis
+>
+> Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+>
+> The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+>
+> THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+
+## Logo provenance and usage
+Local Telegram, WhatsApp and Viber icons are from Font Awesome Free 6.7.2, CC BY 4.0, https://fontawesome.com/license/free . Source GitHub blob IDs respectively: 29a1d267ebe1112bca2741f02f69411bf6e88dc1, 47544750d64bd4c06b6df25d660678eb8576d7e3, dca0b14dfb58f6889b28f82ac072b73aebfd69b1. Kyivstar is a **BabyPark compact whitespace/format derivative, NOT byte-identical copy**, of https://commons.wikimedia.org/wiki/File:Kyivstar_2015_logo_-_Brandmark.svg ; upstream source fetched independently via Wikimedia HTTP 200 2026-10-19, 421 bytes SHA-256 169cae268d33419168c096cf146fece2e780580ccb6b2a3d9d5c9b739c462357. Path data (all five rays) match exactly; checked-in condensed version is 388 bytes SHA-256 4cc950981fda2528cab34fa090e77e64abc68ff0668c222f8b176de23a000509. Public-domain-simple-logo rationale is not trademark permission; mark remains a Kyivstar trademark. No endorsement implied.
+
+## Callback L2 release extension — 2026-10-24
+
+The previous L1 scope/approvals above are historical and do not govern the later owner-approved L2 implementation. For L2, use the **stock Chatwoot Website Widget message endpoint** pinned to the running release, the existing site Chatwoot Inbox and native account-level `message_created` / `add_label callback` rule; never assign a fixed team or agent. The seller uses the ordinary Inbox/Unassigned queue, just as for any incoming chat. **Historical version boundary at L2 proposal time:** The original native rule #1 matched the *historic* visible string `BABYPARK_CALLBACK_V1`. Later on owner-approved staging, native rule #2 was already installed and verified with the human-readable two-line prefix. The proposed new, human-facing PR #154 message begins `Ви замовили дзвінок\nЗворотний дзвінок: `; its native rule fixture `config/chatwoot/callback-v1-automation.example.json` matches that entire two-line prefix instead. Do not cut over only the JS or only the rule; in existing conversations the Widget API's `labels` array does not apply labels automatically.
+
+**Before customer activation:** verify on an owner-controlled browser at the real authorized site origin, with a fictional Ukrainian-format test number, that the actual form's browser request produces one HTTP 200 acknowledgement with a positive message id and conversation display id, exactly one `Access-Control-Allow-Origin` matching the requesting site, a persisted new-message `callback` label, phone attribute on **new** conversations and phone in message content on **existing** ones; check Open and Resolved conversations, normal chat regression, console/mobile layout, only lazy SDK initiation, and stock site rollback. Only proven precommit 403/429 may be retried by a new deliberate user action; 422 is UNKNOWN COMMIT and blocks resubmission; network timeout, HTTP 5xx and ambiguous HTTP 200 are **unknown commit**, block in-page resend. A customer request must never use invented positive test results. Verify `ENABLE_API_CORS` and `CW_API_ONLY_SERVER` are disabled or absent; verify Nginx forward headers and effective client IP attribution at Rack::Attack; verify limits and no unintended INFO logs before activation. Existing historical WARN/ERROR retention and future AI HUMAN marker handling remain separate risk/operations requirements.
+
+**Upgrade smoke:** first read installed Chatwoot version/tag and confirm it matches the source-pinned Widget controller and output model; then exercise an *actual* owner-controlled browser's signed Widget POST, preflight and POST ACAO, positive IDs and seller-visible label; preserve request/response **status and header names/counts only**, not full JWT or phone-text payload in a routine evidence document. Do not treat static regex contract tests as a substitute. All browser tests must use synthetic test data and an approved run.
+
+**Customer-friendly text cutover (native-only, owner GO required):** (1) Recheck current Chatwoot v4.18.0/runtime and active automation #1 read-only, exact PR/head/tree/base/governance/manifest and immutable R1/R2 ZERO results. (2) On explicit owner approval, create/enable a **second temporary native** `message_created` rule with `incoming AND content contains "Ви замовили дзвінок\\nЗворотний дзвінок: "` and sole `add_label callback`, leaving historic rule active to handle cached older clients; ensure the actual rule value contains a newline, not a backslash followed by n. No inbox/team/agent condition. (3) Deploy approved versioned launcher assets/config from the same exact commit, cache-bust the Drupal references, verify Browser positive POST/ACAO + agent label for new, open and resolved conversation, and ordinary chat/after-hours unchanged; capture sanitized evidence only. (4) Keep legacy matcher during bounded browser-cache transition, then deactivate it only after proving no older cached widget clients are sending it, using stock automation UI/API (or keep benign compatibility with an explicit review date); do not delete old Chatwoot transcripts. (5) Record active rule IDs/filters, production asset digests, rollback paths, Business Hours native behavior, exact in-browser callback proof and privacy residuals in `docs/` / `docs/INFRASTRUCTURE_REGISTRY.md` and server runbook following verified release. Updating operator instructions is deferred until the owner supplies their published instruction file. No Chatwoot core patch is required; revalidate Widget API and native automation after every Chatwoot upgrade.
+
+**Rollback of L2 only:** restore the approved pre-L2 launcher JS/CSS/config asset snapshot and cache-bust those assets or set `callback.enabled=false`; preserve normal Website chat, Telegram, Viber and phone. Native account label and automation may remain inactive/harmless if the button is off. Do not delete customer conversations or other teams' messages.
+
+### 2026-10-25 Sonnet adversarial review follow-up — bounded draft hardening
+
+**Post-change synthetic Callback smoke is mandatory:** after *any* change to the customer-visible first two lines of the Callback payload, deployed JS/CSS/config, active Chatwoot native rule #2, or Chatwoot upgrade, verify the exact literal `Ви замовили дзвінок\nЗворотний дзвінок: ` against both source and **live** active `message_created`/incoming/add_label rule (including the literal newline). Send one approved fictional-number synthetic callback on the final actually loaded customer origin and verify incoming message / `callback` label, 200 + positive message and conversation IDs, exactly one allowed successful-response ACAO, and the Unassigned queue/operator UI. Check both a new conversation and **existing open and resolved** states when the change could affect those. Preserve old rule #1 for old cached client messages until explicitly retired after a measured cache transition. Failure/missing evidence stops customer cutover; never infer from fixture alone.
+
+**Native notifications are stock Chatwoot behavior, not a Callback release gate.** Per-profile `New conversation` alerts require appropriate Inbox collaboration and do not guarantee a notification to every seller for every message in an already Open unassigned conversation. The owner accepts this unchanged platform behavior for Callback V1 and will consider stock per-user notifications independently later. Do not add `send_email_to_team`, a fixed team/agent, a duty schedule, or an invented alert-coverage merge prerequisite. A successful staging label alone does not satisfy reliable alerting.
+
+**Draft preservation:** accidental outside click, Escape or X closes the panel but leaves unsent phone/name/note only in existing in-memory DOM for the life of that page, never in local/session storage; open again to resume. After accepted or uncertain send the existing terminal no-retry behavior remains. No guarantee across a full reload. Error text uses Radix ruby-11 (contrast >= 4.5:1), counter description is outside the enclosing label, and 100vh fallback precedes 100dvh.
+
+**Separate production safety gates:** obtain proven recoverable Chatwoot backup (not merely a crash-inconsistent Droplet snapshot), privacy/legal/PII WARN/ERROR logs + retention, strict effective client-IP throttling and CORS, exact source/documentation immutable suite + independently isolated HEAVY R1/R2 on same final manifest, owner exact merge GO and distinct real Drupal cutover GO. Delete the randomized staging preview only after safely recording its exact path/hash and the owner's completion; do not remove either native rule during cache overlap without verification.
+
+### Codex R1 follow-up — 2026-10-25, not deployed
+
+Native Widget unchanged. On every new exact code tree, test `raw textarea length >500` before trimming, especially leading and trailing whitespace and 501 spaces with forced form submit, ensuring zero POST and explanatory error while 500 raw units remain accepted. A deferred Chat action superseded by Callback must not open the Widget at late `chatwoot:ready`; draft phone/note must remain. Confirmed Callback success still closes automatically after 3.5 seconds, but must restore focus only if focus remains inside the launcher; external focused page controls must not lose it.
+
+The reviewer found these scenarios on old V5 HEAD; this fix does not itself close R1/R2 or release gates. Re-pin source and all tests/manifest before review. Do not change the production launcher, Chatwoot automations, or seller handbook without separate owner authorization.
+
+
+## Callback V7 draft hardening checkpoint — 2026-10-25 (NOT DEPLOYED)
+
+Bounded native-first scan `docs/BP_CALLBACK_V1_V7_NATIVE_OPTIONS_SCAN_20261025.md`, normalized UTF8/LF final newline SHA256 `a96f72cf3a43040cf54a38d32d3b869fa2466c61f89fb0064e45bcd27d80a927`; no new external form library or Chatwoot core patch. This scan belongs to the hardening work before any remote publication or source activation.
+
+- **Explicit international prefix:** do not silently reassign foreign `+` country codes pasted with leading whitespace, NBSP or wrapping parentheses. ` +687 20 00 00` and `(+687) 20 00 00` MUST remain invalid/unsent; `(+380) 67 123 45 67` should normalize to `+380671234567`. Previously entered valid phone must not be restored on a foreign-country paste. Browser `noValidate` prevents native `pattern` from silently vetoing autofill, but full JS validation/500-char raw-limit/JWT/ACK guard must remain enforced.
+- **Accessibility/landscape:** verify actual focused phone outline with Windows forced colors (box shadow is removed), meaningful label/hint only once, and complete checkmark, success sentence, auto-close caption visible by scrolling on 600×360 viewport; keyboard inside/outside focus behavior and timer remain stable. CSS static tests are not substitute for a real browser screenshot/assistive-tech test.
+- **Nginx production CORS example:** any exact-path `location` with `add_header` can suppress server-inherited HSTS/CSP/other security headers on regular nginx. Inspect `nginx -T`, mirror existing header values and prove them at the effective location; never paste unverified headers from the example. Current production Nginx untouched.
+- **401/404 retry:** keep UNKNOWN/blocked for now. Only convert a code to definite precommit reject after inspection and proof against the *running* pinned Chatwoot route and exact response semantics, including no success-after-save exception.
+- **Backup:** DO daily policy enabled but does not itself prove first backup completion or PostgreSQL/storage/config restore. Before merge/activation retain the verified recovery gate. No production, customer data, preview cleanup or live Chatwoot rule mutation is authorized by this draft checkpoint.
+
+Historical test source/preview screenshots apply to earlier JS; fresh immutable exact-tree tests/manifest, exhaustive independent R1/R2 and explicit owner GO for merge and separately production are mandatory.
+
+### V8 phone-paste acceptance extension — after separated-prefix regression
+
+After any change of `explicitCountryCode` or phone input handler, replay the full owner-accepted phone matrix: `+38 (067) 123-45-67`, `+38 067 123 45 67`, `+38(067)1234567`, `+380 67 123 45 67`, `0671234567`, and local nine digits must normalize to the same Ukrainian recipient. Rejection matrix: ` +687 20 00 00`, `(+687) 20 00 00`, `+48 ...`, `+1 ...`, `+38` incomplete, doubled/mid-string plus, letters and control/newline characters; all zero POST on forced direct submission. Validate both one-paste and actual key-by-key behavior, and test previous valid input followed by invalid-country paste. Browser screenshots/real site validation are still mandatory; unit VM tests alone do not authorize release.
+
+The first DigitalOcean daily Droplet backup, a restored *consistent* PostgreSQL+ActiveStorage/config deployment, native seller notifications, WARN/ERROR privacy mitigation and exact-HEAD HEAVY R1/R2 remain independent production gates. Keep current rule #1/#2 unchanged and Customer Callback OFF until explicit owner production GO.
+
+## Callback V12 R2 — maintained native keyboard regression (2026-10-26)
+
+Status: RUNBOOK — NON-NORMATIVE; local synthetic verification, not live-send
+or deployment permission. Applies to PR #154 B1 and the preserved Ukrainian
+phone-source contract; supersedes no production approval.
+
+Use the existing isolated checkout; do not create a Git worktree unless the
+owner requests one. Keep application dependencies/lockfiles unchanged. The
+browser driver is development-only, outside the checkout:
+
+```sh
+npm_config_cache=/workspace/.npm-cache npm install --prefix /workspace/.browser-tools --save-exact --no-audit --no-fund playwright@1.58.2
+cd /workspace/babypark-integration
+BABYPARK_PLAYWRIGHT_PATH=/workspace/.browser-tools/node_modules/playwright BABYPARK_CHROMIUM=/usr/bin/chromium node --test tests/browser/contact-callback-keyboard.test.mjs
+```
+
+Chromium must actually be installed; a missing driver/browser is a failed or
+unrun check, never a skip/pass. The suite intercepts every browser request,
+serves exact checkout JS/CSS/emblem, substitutes an SDK stub, and captures
+synthetic Widget POSTs without contacting any live service. It uses trusted
+keyboard/caret/Backspace/range events and the real asynchronous clipboard.
+It verifies the three B1 counterexamples, source-mode end Backspace, full
+0/380/+380/formatted typing/paste, select-all after national edit, tenth-key
+blocking and foreign/overlong forced-submit denial. Captured recipient must
+match the visible nine-digit NSN plus +380. This is not real SDK/CORS/agent
+notification or mobile-device proof.
+
+For formal §7.0a evidence, first commit the candidate, freeze a new manifest
+outside the reviewed tree, bind Node/npm/browser/driver versions and content
+hashes, and run each check in a fresh detached verification clone (not a
+linked worktree) with fresh npm ci and read-only source/dependencies/toolchain.
+Use separate writable HOME/cache/TMP/output and capture exit status, full logs
+and pre/post identities. Use `umask 022`: this machine starts with 0077, which
+otherwise changes mkdir(mode:0755) into 0700 and invalidates the existing
+unsafe-backup-directory test fixture. Do not change that test or weaken the
+0700 recovery guard. The focused root command does not automatically discover
+`tests/browser`; run the browser command explicitly in the manifest.
+
+If terminal production traceability cannot be proven from available evidence,
+record the missing obligations and halt the merge gate under Agreement §9;
+do not turn them into DONE/DEFERRED merely to obtain green contract tests.
+The owner-supplied restore drill PR #155 comment #6412156326 is evidence for
+one specified overnight backup only. No production cleanup, deploy or real
+Chatwoot POST is part of this procedure.

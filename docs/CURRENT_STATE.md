@@ -3,9 +3,67 @@
 Status: EVIDENCE — operational/current-state record; not normative contract authority.
 Applies to: repository-wide operational and campaign state tracking.
 Supersedes: `docs/CURRENT_STATE.md` at canonical main `a45a8644e05df2584a2b75f2a3b47446811ae984`.
-Last updated: 2026-10-23
+Last updated: 2026-10-26
 Owner: BabyPark
 Source of truth for operational facts: production runtime + verified repository evidence.
+
+## 2026-10-26 — Callback V12 R2 correction candidate (Draft PR #154, NOT CLOSED)
+
+Starting reviewed source: HEAD `dd6aa6577e66117c0fb6b95e2f2f60a9969fe06d`,
+TREE `8c6a4ec6b2c9ecbba726c49429bfef2ecbb2f635`, BASE canonical main
+`1d5d8c00b7fdcdb54f37418ea60931c4292fd600`. This correction is not a
+deployed source or a claim of future merge identity. Its final committed
+HEAD/TREE, manifest and verification results belong in the PR evidence.
+
+V12 optional preferred name allows Unicode letters/combining marks, spaces,
+apostrophes and hyphens; **digits are removed on input and before POST**.
+The cap is 80 UTF-16 units with a remaining counter. It does not mutate
+Contact.name. Comment remains capped at 500 units. B1 correction preserves
+the national prefix 380 on plain-typed mid-caret/Backspace/range edits while
+retaining full Ukrainian source typing and wrong-recipient guards.
+
+Five previews were confirmed present by the owner's independent read-only
+production filesystem check, PR #154 comment #6423267053:
+`preview-callback-v11-5c6586d9`,
+`preview-callback-v1-4432d4a895546c29ce630503675da359`,
+`preview-callback-visual-approved-20261026`,
+`preview-callback-visual-chatwoot-font-20261026`, and
+`preview-callback-visual-chatwoot-emblem-20261026`.
+The emblem preview is the approved **visual reference**, not production
+send-path proof. Exact paths, observed SHA-256, provenance and guarded future
+cleanup/recovery strategy are in `docs/INFRASTRUCTURE_REGISTRY.md`.
+The c87e6b3c V1 preview below is historical, not the latest V12 source.
+All five folders remain retained; no cleanup/deletion or new deployment was
+performed. The same evidence confirms active live L1 JS/CSS unchanged.
+
+Next step: new exact-basis focused/root/native-browser evidence and independent
+HEAVY R1, followed only after ZERO BLOCKERS by separate context-isolated R2.
+§6 privacy/security and cutover rows remain open; the owner-frozen stock Chatwoot routing does not require new alerting or a second full-server restore
+unless supported by new evidence or an applicable frozen non-goal. No such
+proof is inferred from visual approval. No merge, production deploy or real
+Chatwoot POST is authorized by this correction.
+
+## Historical 2026-10-25 — Callback V1 preview amendment (superseded by V12 above)
+
+The user confirmed the real two-line callback note, human message title and native `callback` label in Chatwoot, then asked about name digits and hidden textarea limits. Verified stock Chatwoot 4.18.0 Widget pre-chat `fullName` is a normal text field with no letters-only regex; Contact.name model also does not require letters-only. At that historical stage the optional preferred name accepted digits/nicknames; V12 supersedes that rule as recorded above, still without a Contact identity mutation. Stock Chatwoot Message model maximum is 150,000 characters, whereas BabyPark Callback already had a distinct 500-unit native HTML maxlength and submit guard. The Draft PR now shows a neutral Chatwoot `slate-11` counter under that same 500-limited textarea, with no runtime package. Earlier 14a79539 real-signed Widget POSTs remain historical proof for that exact source and are NOT full end-to-end proof for the refreshed counter source. **Historical testing-only preview source** was JS/CSS from `c87e6b3c3e872d2fda23ef4e41140f1e64a4be96`, with verified served JS SHA256 `f46526e052bfbea0ff03c054f702246ef078e3c5f5360b6c045e9b694a688ba3`, CSS `7b2e9f96cd1a08f47faa7a3a51202ba58fc98ca22dd811d1e95c6ee8e2ec4b52`, same unlinked preview folder recorded in `docs/INFRASTRUCTURE_REGISTRY.md`. This was not a public L1 change or an approval to merge/deploy. The new implementation code/JS/CSS had full immutable tests on its exact `c87e6b3c` tree (root 1239+13+13, focused 47, all PASS), but adding the latest inventory/current-state docs afterward changes the overall PR HEAD; a release gate must re-pin and repeat as dictated by the git Agreement and freeze a fresh exact manifest. Independent R1/R2 ZERO and separate owner production GO are still missing.
+
+## 2026-10-25 — Callback V1 temporary live-origin staging (supersedes 24 Oct snapshot below)
+
+**Status: STAGING VERIFIED, NOT CUSTOMER ACTIVATED.** Owner authorized creating a temporary same-origin test page and a second stock Chatwoot automation on 2026-10-25; this is not explicit GO to merge PR #154 or turn on Callback in the public L1 launcher. Existing public L1 JS/CSS/config remain byte-identical to SHA256 `b763b3deeffddc42cc88b2d6589b500673a933685d24c224ef7eda8afbdc4f17` / `133c212c33302a3e172a703fa429ac1b906b6e14f7c7ab76d1eea21d99718240` / `2d31018517b2d15fc0073131bf91c806364c254ad766de7f636d017df761f078`. Homepage returns 200. Historical deleted previews remain 404. **The main site's Callback channel is OFF.**
+
+**Chatwoot v4.18.0 account #1 native automation:** rule #1 remains ACTIVE (`message_created` incoming content contains `BABYPARK_CALLBACK_V1` → sole `add_label callback`). A second owner-authorized rule **#2** is now ACTIVE, named `BabyPark — Callback (friendly confirmation V1, staging)`: incoming content contains the **actual newline** string `Ви замовили дзвінок\nЗворотний дзвінок: ` → sole `add_label callback`, no team/inbox/agent criteria, no execution delay. Legacy rule and Business Hours/auto-reply/Unassigned queue are unchanged. A rule fixture in the Draft PR is not itself a live installation; #2 was separately installed and verified by stock Chatwoot Rails model on the host.
+
+**Real browser and Chatwoot evidence:** from isolated Chromium at an owner-approved unlinked test page on the `babypark.ua` origin, exact candidate JS/CSS at PR #154 HEAD `14a7953931ae4a6e8f2f65255741b74555406006` (TREE `ce25ae2900672aa9028d1dd7b3420085f6edf6a7`), each new/open/resolved signed Widget POST returned HTTP 200, positive message/conversation IDs, one DevTools-exposed `Access-Control-Allow-Origin: https://babypark.ua`, successful UI and no page errors. Verified in DB: new message #140 / conversation #44; subsequent open message #141 / same conversation #44 with deliberately cleared synthetic label re-applied; after native test-only status `resolved` and another test-only label clear, message #148 / same conversation #44 re-applied `callback` and reopened the conversation. Independent earlier new message #139 / conversation #43 proved phone custom attribute on newly created conversation; optional name remained message-only, `Contact.name` not replaced. All tests used solely intentionally fictitious data with an explicit `не дзвонити` note. Temporary Chromium visitor profiles were deleted after tests. HTTP/2 browser DevTools showed one visible ACAO key without the raw wire block. A subsequent **actual authenticated synthetic HTTP/1.1 POST** to the same Widget endpoint (message #150 / conversation #45, using a fresh stock SDK visitor JWT in memory, deleted after the test) returned HTTP 200, positive IDs and **exactly one raw `Access-Control-Allow-Origin` header** with value `https://babypark.ua` (counted from HTTP client's unmerged `rawHeaders`). The Nginx one-writer rule and absent Rails `ENABLE_API_CORS` must still be retested after an upgrade.
+
+**Pending before general rollout:** freeze updated exact HEAD/tree/base/manifest; independent exhaustive R1 then context-isolated R2 ZERO BLOCKERS, final evidence bundle and separate owner exact-go for merge and Drupal deployment, detailed post-release server documentation and future Chatwoot upgrade smoke. WARN/ERROR customer PII residual/privacy acceptance and final user-device verification remain release inputs. Do not change native Chatwoot rule #1, rule #2, global Business Hours or site config without separate explicit approval; remove the current temporary preview folder after owner test and record the cleanup. Operator instruction update is deferred until the owner supplies the actual published instruction.
+
+## 2026-10-24 — Callback V1 release preparation (real operational status)
+
+This is an operational snapshot, **not** an amendment to the authoritative Agreement or permission to merge/deploy. BabyPark Website launcher **L1 already runs on public Drupal** under the active `babypark2` theme since 2026-10-22, regardless of its unmerged Draft PR #142 status (see production evidence in Draft PR #148 and the infrastructure registry). Website chat, Telegram, Viber and phone are active; WhatsApp remains off. **The callback form is NOT active for customers**. Desired call time, business-hours rules and reminders remain future Callback V2 requirements. Channel expansion and native Assignment Policy priorities are later distinct work.
+
+Chatwoot 4.18.0 production account has a native `callback` label and exactly one active account-scoped `message_created` automation: incoming message content containing `BABYPARK_CALLBACK_V1` → `add_label callback`, no fixed team, inbox or assignee. Existing sellers handle Callback through the **same normal Inbox/Unassigned pool** as ordinary messages. Verified owner Widget message #131 in conversation #42 was marked `callback` and visible to an agent; this verifies the ordinary Chat Widget path, **not** the unpublished L2 form's POST/custom_attributes/ACK. Narrow Nginx CORS preflight is live for `babypark.ua` and `www.babypark.ua`; neither successful real L2 form submission nor WARN/ERROR PII safety was signed off. The site currently serves previous L1 JS/CSS.
+
+Owner-approved production log control: Web/Worker `LOG_LEVEL=warn` in shared `.env` and both external systemd unit drop-ins, effective Rails and ActiveJob logger level 2. This suppresses routine INFO parameters/job-argument entries; it does not scrub old logs or error-path message data. See `docs/INFRASTRUCTURE_REGISTRY.md` for object paths and rollback. Draft **release PR #154** is the sole combined launch candidate on current canonical main; it must pass Agreement §7.0a manifest and HEAVY R1/R2 and exact-basis owner approval before merge/publication. The owner's staged production settings are not proof of an active Callback form.
 
 ## Current campaign/navigation snapshot (2026-10-23)
 

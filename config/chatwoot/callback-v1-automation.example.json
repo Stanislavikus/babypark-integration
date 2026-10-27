@@ -1,0 +1,32 @@
+{
+  "name": "BabyPark — Callback (all inboxes)",
+  "description": "Shared account-level Callback label. Native per-inbox assignment and agent permissions remain authoritative; no fixed team, inbox or agent.",
+  "event_name": "message_created",
+  "active": true,
+  "conditions": [
+    {
+      "attribute_key": "message_type",
+      "filter_operator": "equal_to",
+      "values": [
+        "incoming"
+      ],
+      "query_operator": "AND"
+    },
+    {
+      "attribute_key": "content",
+      "filter_operator": "contains",
+      "values": [
+        "Ви замовили дзвінок\nЗворотний дзвінок: "
+      ],
+      "query_operator": null
+    }
+  ],
+  "actions": [
+    {
+      "action_name": "add_label",
+      "action_params": [
+        "callback"
+      ]
+    }
+  ]
+}

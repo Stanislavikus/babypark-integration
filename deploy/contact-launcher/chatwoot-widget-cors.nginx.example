@@ -1,0 +1,34 @@
+# REFERENCE ONLY — NEVER load this file unchanged.
+# Chatwoot 4.18.0 internal Website Widget message endpoint; production activation
+# requires an independent security/upgrade gate and owner's exact deploy GO.
+#
+# HTTP context (e.g. a separate included file under nginx http {}):
+map $http_origin $bp_callback_cors_origin {
+    default "";
+    "https://babypark.ua"      "https://babypark.ua";
+    "https://www.babypark.ua"  "https://www.babypark.ua";
+}
+#
+# Insert into chat.babypark.ua's HTTPS server block ONLY AFTER copying its
+# verified current upstream and proxy_* directives. This exact-path location
+# preserves other widget endpoints and regular Chatwoot UI unchanged.
+location = /api/v1/widget/messages {
+    # IMPORTANT: nginx add_header at location replaces server/http inheritance
+    # on standard nginx versions. Before cutover, inspect nginx -T and repeat
+    # EVERY active server-level security header here with the exact deployed
+    # values (e.g. HSTS, X-Content-Type-Options, Referrer-Policy, CSP).
+    # HALT until read-back proves the protected endpoint retains them.
+    # Never paste guessed security header values from this example.
+    add_header Vary "Origin" always;
+    add_header Access-Control-Allow-Origin $bp_callback_cors_origin always;
+    add_header Access-Control-Allow-Methods "POST, OPTIONS" always;
+    add_header Access-Control-Allow-Headers "Content-Type, X-Auth-Token" always;
+    add_header Access-Control-Max-Age "600" always;
+    if ($request_method = OPTIONS) {
+        return 204;
+    }
+    # Identical to the current verified Chatwoot HTTPS location / upstream
+    # directives (proxy_pass, Host, X-Forwarded-* and timeouts) — insert here
+    # only in a separately reviewed production cutover. No wildcard CORS,
+    # no global ENABLE_API_CORS, no token/body access logs.
+}
