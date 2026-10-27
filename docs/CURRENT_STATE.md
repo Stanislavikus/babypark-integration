@@ -3,11 +3,11 @@
 Status: EVIDENCE — operational/current-state record; not normative contract authority.
 Applies to: repository-wide operational and campaign state tracking.
 Supersedes: `docs/CURRENT_STATE.md` at canonical main `a45a8644e05df2584a2b75f2a3b47446811ae984`.
-Last updated: 2026-10-23
+Last updated: 2026-10-27
 Owner: BabyPark
 Source of truth for operational facts: production runtime + verified repository evidence.
 
-## 2026-10-27 — worker-only Sidekiq PII WARN mitigation: guarded first application FAILED / rollback PASS
+## HISTORICAL 2026-10-27 — first Sidekiq worker attempt FAILED / rollback PASS (superseded by successful application above)
 
 **Current state, not authorization:** Opus 5.5 independently concluded no permitted, better native logging fix was proven; on the installed Sidekiq 7.3.10, stock `ActionCableBroadcastJob` carries message/phone data, and the default Sidekiq exception handler can dump full job context at WARN. This affects ordinary Chatwoot channels too; Callback is not the origin of that native behavior. The owner conditionally approved the worker-only native fallback in the event that research found no better solution. Opus report PR #154 comment `6444683330`, normalized SHA-256 `f7b12e02860d593d9d4239bba6c4f6b7bb673d2bb449dc36ddecf39b0f851b7b`.
 
@@ -16,6 +16,18 @@ Source of truth for operational facts: production runtime + verified repository 
 **Post-rollback observed production:** active web `warn`, active worker `warn`, active Redis/Nginx, SidekiqAlive HTTP 200. Native default WARN payload-risk remains. At baseline: `critical` queue 0, worker busy 0/concurrency 12/heartbeat age 2 seconds; Retry 0, Dead 20 (sanitized dead-class aggregation only; no customer payload inspected), Scheduled 1. No Callback production activation, code change, Chatwoot core patch, real customer data deletion, web restart or merge occurred. Current evidence does not prove whether the initial ineffective change arose from dotenv/environment precedence or from the unit override evaluation — only that the resulting process ENV was `warn`.
 
 **Protected rollback identity and exact actions:** See this same branch's `docs/INFRASTRUCTURE_REGISTRY.md`: original worker drop-in SHA-256 `4020d27a099bd301e41d1049abd38f06fa1dccd2665035fc15ab91152ad41524`, protected preimage manifest `fc65a89df0a580946c2b1938432b21bbb4d6de993be67b224e99ab1a356dfb2f` at root-only `/root/babypark-ops-backups/20261027-chatwoot-worker-loglevel-preimage/`; restored state verified. **No further production mutation is permitted through a blocked execution pathway.** A future authorized native fix must prove worker process-level `LOG_LEVEL=error` after restart, maintain web `warn`, and health checks; B1 remains **NOT CLOSED**, as does PR #154's independent review gate.
+
+## 2026-10-27 — Current production: Sidekiq worker-only LOG_LEVEL=error VERIFIED
+
+**Current applied operational state (independently re-read after startup and 60 seconds stable):** `chatwoot-worker.1.service` runs with effective **`LOG_LEVEL=error`** in the actual Ruby/Sidekiq process, web remains running under the same PID with **`LOG_LEVEL=warn`**. Systemd 255 accepted an additional worker-only native drop-in sorted *after* the unchanged original `log-level.conf`; no `.env` edits or Chatwoot patch. Worker was the only restarted service. The original attempt described in the next historical section was rolled back; its conclusions about the *then-current* `warn` state are **superseded** by this successful later action.
+
+**Why the corrected procedure worked:** fresh production read-only checks found no systemd `EnvironmentFile`/`UnsetEnvironment`, and three fictional probes independently verified that systemd-like ENV, login `bash -l`, and dotenv each preserve preset `LOG_LEVEL`. The successful guarded procedure allowed full Sidekiq boot before checking the real new worker cgroup processes. That is compatible with the original attempt failing due to a premature check, although the precise original `AssertionError` remains unattributed. No security-tool rejection was circumvented: the successful method uses the same separately approved **additional native drop-in** approach as the first permitted attempt, not the blocked direct edit of the existing file.
+
+**Verification evidence:** exact installed Chatwoot HEAD `9f920b549c14491a4e587687a3eed5d21c6ccc7d` clean; worker systemd `Environment` unique `error`, Sidekiq live-process `error` across all cgroup processes, web `warn`, original file hash preserved; native SidekiqAlive HTTP 200 before and after; worker remained active and the same PID for six checks at 10-second intervals; `https://chat.babypark.ua/` HTTP 200; Redis/Nginx active. Post-change **all observed queues 0/0 latency**, worker concurrency 12/busy 0/heartbeat age 4 sec, RetrySet 0/DeadSet 20/Scheduled 1 (same numbers as baseline). A bounded journal scan since 14:45 UTC found no recognizable Sidekiq context dumps (not proof of historic absence). No customer messages/queued content inspected or changed, production error/failure injection, web restart, source modifications, or deployment of Callback.
+
+**Immutable recovery identity:** `/root/babypark-ops-backups/20261027-chatwoot-worker-loglevel-verified-application/` protected backup manifest SHA-256 `3c595a70211266a66c90f88dfbe10d634212b274418a773ce69109bd3061784e`. Active *new* worker-only systemd file `/etc/systemd/system/chatwoot-worker.1.service.d/zz-babypark-log-level-error.conf` SHA-256 `96a4fe460f06c36307815e193972accd06ba62c01b093f83db3c3e3fb75443d1`; original unchanged `log-level.conf` SHA-256 `4020d27a099bd301e41d1049abd38f06fa1dccd2665035fc15ab91152ad41524`. Full secure rollback instructions are in this branch's `docs/INFRASTRUCTURE_REGISTRY.md`. Never auto-delete recovery objects.
+
+**Scope of success:** This closes the *operational worker-WARN job-context mitigation* only. Sidekiq continues to serialize customer content and routing tokens into Redis, with residual Dead Set, ERROR/FATAL, historical journal/backup, native erasure-completion and policy/legal-disposition boundaries. It does **not** close the independent B1 evidence/review gate, full HEAVY R1/R2, or authorize merging/activating Callback. Draft PR #154 exact source HEAD/tree remains unchanged.
 
 ## Current campaign/navigation snapshot (2026-10-23)
 
