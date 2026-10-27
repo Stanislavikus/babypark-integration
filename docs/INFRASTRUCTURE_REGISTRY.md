@@ -59,6 +59,17 @@ Do not repoint or reuse this hostname for Knowledge Authority.
 
 ## Integration host: `chatwoot-fra1-01`
 
+### 2026-10-27 — existing Chatwoot Nginx Forwarded trust (observed production object)
+
+- **Object/owner:** existing Nginx vhost `/etc/nginx/sites-available/nginx_chatwoot.conf` on `chatwoot-fra1-01`, owned by BabyPark. Active symlink: `/etc/nginx/sites-enabled/nginx_chatwoot.conf`.
+- **Bounded operational change:** keep existing native proxy routes and limits. In exactly two Chatwoot-bound routes, `location = /api/v1/widget/messages` and `location /`, add `proxy_set_header Forwarded "";` immediately after the existing Nginx-managed `X-Forwarded-For` header. This drops untrusted client-supplied RFC7239 `Forwarded` headers before Rack 3.2.6/stock Rack::Attack. No change to Viber bridge, AI, catalog ingress, Chatwoot application files, Drupal, automations, channels, customer transcripts or rate-limit numbers.
+- **Exact preimage SHA-256:** `ea37c37c35778746630bd3c7868c24bb0a66dc451184fbbf5703ea1a71d0abf1`.
+- **Exact observed installed SHA-256:** `7486b927888cb0428009011920cffe8ac7dd34e73b2df89f1d7301b3be7f68ac`.
+- **Rollback preimage:** `/root/babypark-ops-backups/20261027-chatwoot-forwarded-preimage.conf`, root-only mode 0600, content SHA matches old file. Recovery: restore that exact file to the vhost atomically, verify `nginx -t`, then `nginx -s reload` if explicit rollback is needed. Do not erase this recovery object automatically.
+- **Observed activation:** `nginx -t` PASS, `nginx -s reload` acknowledged on 2026-10-27 08:55:44 UTC, new Nginx worker processes running; `nginx -T` confirms both header clears. Direct TLS `GET /api` HTTP 200, allowed-origin Widget OPTIONS 204 with ACAO, denied-origin OPTIONS 204 without ACAO; web/worker/nginx/PostgreSQL/Redis active. No customer Widget POST or test message sent.
+- **Security reproduction/evidence:** installed Rack 3.2.6 has `forwarded_priority = [:forwarded, :x_forwarded]`; before change synthetic-only `Rack::Attack::Request#ip` accepted spoofed `Forwarded` values even when Nginx supplied the real peer in `X-Forwarded-For`. Native Nginx empty-header omission removes that undesired precedence. This is existing edge-proxy hardening, **not** a Callback JavaScript defect or a claim of exhaustive end-to-end abuse testing.
+- **Release separation:** Callback V1 Draft PR #154 remains independently pinned; this operational hardening did not modify its HEAD or authorize merge/Drupal cutover. B1 privacy/legal/retention review remains open while BabyPark prepares `https://babypark.ua/privacy-policy`.
+
 Current public/origin IPv4 used by `ai.babypark.ua`: `161.35.78.167`.
 
 ### Nginx — BabyPark AI
