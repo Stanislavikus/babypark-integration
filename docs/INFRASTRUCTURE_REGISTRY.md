@@ -13,6 +13,28 @@ Never store passwords, API secrets, private keys, session cookies or recovery pl
 
 `docs/CURRENT_STATE.md` records current system truth and acceptance state. This file answers a different question: **what objects exist, where are they, and why do they exist?**
 
+## 2026-10-27 — Owner-approved unpublishing of five Callback preview directories (operational)
+
+**Status: APPLIED on production web host and verified; no Callback release.** Owner explicitly asked that nine browser bookmarks for temporary Callback visual/testing pages be removed. Those URLs resolve to **five distinct directories**, all below the live Drupal theme's `/sites/all/themes/babypark2/assets/contact/` on `server2181.babypark.ua`. The complete existing historical preview inventory is present in unmerged Callback Draft PR #154 `docs/INFRASTRUCTURE_REGISTRY.md` (HEAD `8ab5dd5c51a6fc2b6863323839ba9f5674b6bfba`); it was freshly cross-checked before unpublishing. This separate documentation campaign did not modify PR #154 or its pinned review basis.
+
+**Precisely scoped target set** (each source directory removed from public webroot by guarded same-filesystem rename; not deleted from backup):
+
+| Preview directory (relative to contact asset root) | Number of files | Expected `index.html` SHA-256 |
+|---|---:|---|
+| `preview-callback-visual-chatwoot-emblem-20261026` | 2 | `772420cfc6914c1c03c15f1435900674b3aa597a3d39615bb47257ed49697cd0` |
+| `preview-callback-visual-approved-20261026` | 1 | `060f378586899a75d38550343809599e554da07a1c9063aa00cbcbdced031714` |
+| `preview-callback-visual-chatwoot-font-20261026` | 1 | `53c1eb1a8b092cb092eefb8a065f10488532aadaec7f9b8dec2e57717020d186` |
+| `preview-callback-v11-5c6586d9` | 3 | `c9a79677de52238abe451c1b64a4d8546ec3794cb216fd79d35cf0de6dbf9c8c` |
+| `preview-callback-v1-4432d4a895546c29ce630503675da359` | 3 | `121ae5d84a3436c6d0f99aedb1b881c6222bd40390013e9cdb8322cf6c96ae7b` |
+
+**Guard and recovery object:** Immediately before mutation, inventoried all **10** files, verified *each* SHA-256 against the frozen observed/historical sources, verified exactly named realpaths under `/home/babypark/sites/babypark.ua/sites/all/themes/babypark2/assets/contact` without directory or nested symlinks, and verified the active site's JS/CSS/config SHA-256 preimage. Only these five directories were atomically **renamed** into protected `/root/babypark-ops-backups/20261027-callback-previews-unpublish/` on the **same host**. Parent and backup directory mode 0700; inventory `inventory.json` mode 0600. Manifest SHA-256 `9f347d6c1dac84b6d8af39013c0bc6afe0cc3a971e4c2a931a8c35ad42083eb2`. The full file-hash manifest and exact copied bytes remain **outside the public webroot**, root-controlled. Hashes of all moved files verified again at recovery destination.
+
+**External post-check:** all **8 unique full query variants** in owner's supplied list (one identical V11 URL was repeated) returned **HTTP 404** after removal, Cloudflare `CF-Cache-Status: DYNAMIC`; homepage, privacy page and active `babypark-launcher.js` all returned **HTTP 200**. Active production L1 assets remain byte-identical: JS `b763b3deeffddc42cc88b2d6589b500673a933685d24c224ef7eda8afbdc4f17`, CSS `133c212c33302a3e172a703fa429ac1b906b6e14f7c7ab76d1eea21d99718240`, `config.js` `2d31018517b2d15fc0073131bf91c806364c254ad766de7f636d017df761f078`. No Drupal theme template, parent launcher files, production Chatwoot config/data, Git implementation files, or Callback draft branch changed.
+
+**Rollback (only upon new explicit owner authorization):** verify protected `inventory.json` SHA and the hashes of all ten backed-up files; independently confirm none of the five exact target paths already exists; for each directory, same-filesystem rename from `/root/babypark-ops-backups/20261027-callback-previews-unpublish/<directory>` back to the original exact `/home/babypark/sites/babypark.ua/sites/all/themes/babypark2/assets/contact/<directory>`; post-verify file hashes and HTTP 200. Do not restore by silently overwriting a new preview or modify active L1. **Do not auto-delete recovery objects.**
+
+**Boundary:** These are public **staging/visual preview pages only**. Their removal is safe for the already verified design/source audit but does not declare the final Callback V12 code merged or activated. Codex B1 privacy review is ongoing on unchanged PR #154 exact tree; retrospective historical references to former preview URLs should now be read as **404**, not current test endpoints.
+
 ## Public DNS and Cloudflare
 
 ### `ai.babypark.ua`
