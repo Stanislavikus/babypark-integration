@@ -15,7 +15,7 @@ New docs/ops/ is a source-bound integration manual: agent entrypoint, machine in
 
 A restricted DRAFT operations package was staged on 2026-10-28 at chatwoot-fra1-01:/var/backups/babypark-integration/operations/customizations/ under the already declared config/storage-policy.yaml objects.operations_packages. It remains DRAFT and noncanonical until exact-governed Git merge and mirror digest re-approval; staging does not alter Chatwoot services. Its initial staged source HEAD 18bf4e8555b2ba29976bb5a93c588cf502a8fdb7 had 15 docs files, SHA256 manifest 0d21ef3c4fd415b7ac1ee072dcc94d8b94b7ad3d4cb98d9913e4391c5689c6c9, tree digest ee903c776ab24fc15a21513e11e05e2eada79457790a8cdd828e67e709f7959e. The initial snapshot was preserved as /var/backups/babypark-integration/operations/customizations-draft-18bf4e8/; Git merges and host promotion remain unauthorized.
 
-**Latest verified staged protected DRAFT host copy (2026-10-28):** 
+**Latest verified staged protected DRAFT host copy (2026-10-28):**
 - Host: chatwoot-fra1-01.
 - Stable human/AI start: /var/backups/babypark-integration/operations/customizations/README.md and AGENTS.md, machine index INDEX.yaml; file SOURCE_MANIFEST.json records per-file digest and status.
 - Content source branch commit **7a37ad92aa817e2a54bdbd975f4e3d4de205fb0a** (15 docs files beneath docs/ops/), no runtime service hooks; Git branch may later move for registry-only updates without changing these 15 file blobs.
