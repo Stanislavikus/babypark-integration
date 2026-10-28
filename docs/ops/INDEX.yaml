@@ -26,13 +26,13 @@ integrations:
     state: LIVE_VERIFIED
   - id: viber
     home: integrations/viber/README.md
-    state: GATEWAY_HEALTH_VERIFIED
+    state: LIVE_OWNER_CONFIRMED_GATEWAY_HEALTH_VERIFIED
   - id: telegram
     home: integrations/telegram/README.md
-    state: LAUNCHER_ENABLED_AND_HISTORICAL_CHAT_PROOF
+    state: LIVE_OWNER_CONFIRMED_LAUNCHER_ENABLED
   - id: whatsapp
     home: integrations/whatsapp/README.md
-    state: LAUNCHER_ENABLED_OWNER_REPORTED_CONNECTED
+    state: LIVE_OWNER_CONFIRMED_LAUNCHER_ENABLED
   - id: email-continuity
     keywords: [ses, smtp, mailgun, inbound-email]
     home: integrations/email-continuity/README.md
