@@ -1,6 +1,8 @@
 # Viber — separately owned BabyPark gateway
 
-Status: EVIDENCE / live gateway liveness observed 2026-10-28, provider roundtrip needs separate live verification. Applies to: Viber public account ↔ Chatwoot bridge. Supersedes: none.
+Status: EVIDENCE / LIVE PRODUCTION (owner-confirmed 2026-10-28); gateway liveness independently observed 2026-10-28. Applies to: Viber public account ↔ Chatwoot bridge. Supersedes: none.
+
+**Production status: ACTIVE.** BabyPark's owner confirmed that Viber is already launched and used as an operational channel. The 2026-10-28 read-only host probe separately confirmed the native bridge active and HTTP 200 health; this probe alone is not a new end-to-end delivery test. **Do not describe Viber as awaiting launch or connection.**
 
 This is a **separate BabyPark executable**, NOT Chatwoot Website SDK and not a Chatwoot core patch. It runs on chatwoot-fra1-01 but has its own release, service, port, SQLite and external signatures. Changing Chatwoot may change webhook interaction, but must not blindly redeploy the bridge.
 
