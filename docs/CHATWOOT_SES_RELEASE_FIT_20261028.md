@@ -27,11 +27,11 @@ Verified **one synthetic-only real bidirectional test** on 2026-10-28: account #
 
 **Independent upstream website contact identity risk:** open [Chatwoot #16186](https://github.com/chatwoot/chatwoot/issues/16186) concerns unverified widget visitor merging with another CRM contact by supplied email, with modification/conversation attribution risk under `hmac_mandatory=false`. This is separate from B01/B02, exists independently of SES and may remain reachable when the visible Email Collect form is off. Turning on HMAC alone is NOT assumed sufficient across all widget routes; isolate/independently validate concrete native mitigation and its effect on anonymous visitors/Callback before authorising broader contact-based email or claiming fail-closed identity.
 
-**Boundary for any future owner risk acceptance:** 
+**Boundary for any future owner risk acceptance:**
 - Incoming email, Reply-To, MIME From, website visitor claims, display name and existing Chatwoot CRM association are **unverified identity claims**, not authorisation; no AgentBot/AI/automatic customer-sensitive action on these messages.
 - Human agents must independently confirm identity via an already trusted order-linked channel before modifying order, delivery, contact fields, payments/refunds, or sending confidential/previous correspondence to a new address.
 - Never merge contacts by unverified email. Email Collect stays OFF unless separately owner-approved after vendor/identity validation.
-- New webhook, AgentBot, Captain or AI First Line integration into Inbox #2 invalidates this human-only fit until a separately proven fail-closed email gate. 
+- New webhook, AgentBot, Captain or AI First Line integration into Inbox #2 invalidates this human-only fit until a separately proven fail-closed email gate.
 - Owner must explicitly accept/reject the residual B01/B02 sender-integrity and #16186 cross-contact impact after independent review. Owner preference alone is not evidence of satisfying the Agreement §4 unknown-sender fail-closed invariant; if no native safe fit is demonstrable, **HALT and escalate to Chatwoot** rather than invent a waiver/custom patch.
 
 ## Privacy, retention and limits
