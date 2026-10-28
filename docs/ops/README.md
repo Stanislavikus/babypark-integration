@@ -34,7 +34,7 @@ Every document must have Status, Applies to, Supersedes, verified-as-of date, so
 
 **Do not place this handbook inside /home/chatwoot/chatwoot/docs, a Chatwoot app checkout, a versioned BabyPark gateway release, a Drupal public directory or a customer transcript store.** Application upgrades/release cleanup could overwrite or expose it.
 
-Protected host document package (to be staged as a DRAFT snapshot, not canonical until owner-approved Git merge): **/var/backups/babypark-integration/operations/customizations/**.
+Protected host documentation package (staged on 2026-10-28 as a restricted DRAFT snapshot; NOT canonical until owner-approved Git merge): **/var/backups/babypark-integration/operations/customizations/**.
 
 No routine storage in these docs of real phone numbers, emails, buyer text, Chatwoot transcript, cookie/JWT, auth header, private keys, provider secrets, .env contents, sensitive logs or content-derived hashes. Use fictional placeholders. Chatwoot remains transcript authority.
 
@@ -54,3 +54,5 @@ No routine storage in these docs of real phone numbers, emails, buyer text, Chat
 - [Draft #150 email continuity](https://github.com/Stanislavikus/babypark-integration/pull/150)
 
 Status of Drafts must always be revalidated against GitHub; they never silently become current authority.
+
+**Snapshot discovery:** on chatwoot-fra1-01, read /var/backups/babypark-integration/operations/customizations/SOURCE_MANIFEST.json first to see the pinned DRAFT Git commit and individual file digests. This location is private and is NOT a replacement for canonical main.
