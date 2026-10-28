@@ -1,6 +1,8 @@
 # Telegram — website link + stock Chatwoot channel
 
-Status: EVIDENCE / partial live verification. Applies to: Telegram launcher and native Chatwoot/Telegram configuration. Supersedes: none. Observed 2026-10-28.
+Status: EVIDENCE / LIVE PRODUCTION, owner-confirmed 2026-10-28; no new live end-to-end message sent during documentation. Applies to: Telegram launcher and native Chatwoot/Telegram configuration. Supersedes: none. Observed 2026-10-28.
+
+**Production status: ACTIVE.** BabyPark's owner confirmed Telegram is already launched and integrated with Chatwoot. The documentation must treat this as an **existing working channel**, not a proposed or pending integration. Its operation was established before this documentation task; after a future upgrade, a fresh authorized end-to-end regression test may still be needed.
 
 The live Drupal launcher config has **telegram enabled=true** as of 2026-10-28; the link is URL-pattern validated as https://t.me/<username>. The repository example config contains an example bot destination, NOT proof of the active bot or its token. A previous owner check established working Telegram conversations, but no new current provider-to-agent roundtrip was performed in this documentation session.
 
