@@ -16,4 +16,4 @@ Callback shortest path:
 - integrations/callback/RELEASES.md — hashes/recoverable assets and owner release basis.
 - integrations/launcher/README.md — Drupal implementation separate from Chatwoot.
 
-Do not take old staging comments as currently deployed truth. Current identity and first-party provider state must be re-read for every new change. Host mirror is planned; once approved it will be read-only versioned copy of canonical Git.
+Do not take old staging comments as currently deployed truth. Current identity and first-party provider state must be re-read for every new change. Host package can be staged as a non-runtime DRAFT; once approved it will be read-only versioned copy of canonical Git.
