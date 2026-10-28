@@ -34,7 +34,7 @@ Every document must have Status, Applies to, Supersedes, verified-as-of date, so
 
 **Do not place this handbook inside /home/chatwoot/chatwoot/docs, a Chatwoot app checkout, a versioned BabyPark gateway release, a Drupal public directory or a customer transcript store.** Application upgrades/release cleanup could overwrite or expose it.
 
-Proposed protected host mirror: **chatwoot-fra1-01:/opt/babypark-ops-docs/**. This remains **PLANNED, NOT INSTALLED**, until the storage class in config/storage-policy.yaml is merged and exact owner-gated deployment, path permissions and content-hash verification are completed. The authoritative source is **approved canonical Git**, not a diverging host copy. DigitalOcean backups are supporting evidence, but an unverified copy is not a recovery guarantee. Rebuild a mirror only from the approved exact Git commit, record content digests and keep prior approved copy until validated.
+Protected host document package (to be staged as a DRAFT snapshot, not canonical until owner-approved Git merge): **/var/backups/babypark-integration/operations/customizations/**.
 
 No routine storage in these docs of real phone numbers, emails, buyer text, Chatwoot transcript, cookie/JWT, auth header, private keys, provider secrets, .env contents, sensitive logs or content-derived hashes. Use fictional placeholders. Chatwoot remains transcript authority.
 
