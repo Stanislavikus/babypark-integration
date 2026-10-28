@@ -840,44 +840,6 @@
         "status": "SOURCE_IS_GIT"
       },
       "pii": "none"
-    },
-    {
-      "id": "babypark_ops_docs_mirror",
-      "host_role": "chatwoot",
-      "status": "PLANNED",
-      "scope": "directory",
-      "location": "/opt/babypark-ops-docs",
-      "owner": "root:root",
-      "permissions": {
-        "directory_mode": "0750",
-        "file_mode": "0640"
-      },
-      "purpose": "Protected non-runtime, read-only-to-operators version-bound mirror of approved canonical-Git docs/ops handbook, NOT a second governance source.",
-      "state_class": "rebuildable",
-      "thresholds": {
-        "metric": "count",
-        "basis": "inherited already-declared operations_packages small versioned documentation set thresholds; snapshots, not file count",
-        "expected": 3,
-        "warning": 5,
-        "critical": 10
-      },
-      "retention": {
-        "mode": "keep_current_and_prior_approved",
-        "ttl_days": null
-      },
-      "cleanup": {
-        "automatic": false,
-        "mechanism": "Only manual owner-approved after exact approved Git commit/mirror digest/recovery verified.",
-        "dry_run_required": true,
-        "delete_guard": "No current/only verified mirror deletion; no automatic cleanup."
-      },
-      "recovery": "Rebuild from owner-approved canonical Git commit and verify each file digest; retain prior verified snapshot until acceptance.",
-      "backup": {
-        "required": false,
-        "off_host": false,
-        "status": "SOURCE_IS_GIT_AFTER_MERGE"
-      },
-      "pii": "none; never copy transcripts, phones, JWT, token, cookies, secret data to ops docs"
     }
   ],
   "shared_or_legacy": [
