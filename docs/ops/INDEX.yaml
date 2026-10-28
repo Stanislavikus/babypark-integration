@@ -8,8 +8,8 @@ canonical_governance: docs/AI_WORKING_AGREEMENT.md
 entrypoint: README.md
 agent_entrypoint: AGENTS.md
 upgrade_precheck: UPGRADE_PRECHECK.md
-host_mirror_candidate: /opt/babypark-ops-docs
-host_mirror_status: PLANNED_NOT_ACTIVE
+host_mirror_candidate: /var/backups/babypark-integration/operations/customizations
+host_mirror_status: DRAFT_OPERATIONS_PACKAGE_NOT_YET_CANONICAL
 integrations:
   - id: launcher
     keywords: [contact-launcher, universal-launcher, лаунчер]
