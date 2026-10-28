@@ -15,6 +15,14 @@ Never store passwords, API secrets, private keys, session cookies or recovery pl
 
 `docs/CURRENT_STATE.md` records current system truth and acceptance state. This file answers a different question: **what objects exist, where are they, and why do they exist?**
 
+## 2026-10-28 — Proposed protected Chatwoot-ecosystem operations docs mirror (NOT ACTIVE)
+
+- Git source candidate: docs/ops/ in Draft documentation PR; contains README.md, AGENTS.md, INDEX.yaml, cross-integration UPGRADE_PRECHECK.md, version-bound Callback V1 and channel guides. These are non-normative evidence/runbooks, not a new engineering agreement.
+- Proposed host location: chatwoot-fra1-01:/opt/babypark-ops-docs/, owner root:root, dirs 0750, files 0640, outside /home/chatwoot/chatwoot (app checkout), /opt/babypark-integration/releases, and Drupal public webroot. No link served by Nginx, no application service depends on it.
+- Proposed storage classification: config/storage-policy.yaml object babypark_ops_docs_mirror (PLANNED). Source of truth: owner-approved canonical Git commit. No host directory or exact backup is claimed installed/verified by this Draft change.
+- Activation gate: exact Git tree reviewed/merged only under explicit owner go-ahead; separately approved host mirror copy with digest checks; install immutable content and recorded Git source SHA; validate permissions/protection and backup/copy recreation before relying on it. Record actual mirror identity, timestamps/hash, recovery/rollback and current state in approved change. Do not automatically remove prior copy.
+- Security: no customer text, phone/email, tokens, cookies, JWT, secrets, sensitive log args or customer-derived hashes.
+
 ## 2026-10-26 — five existing Callback previews (R2 G2 current inventory)
 
 Source: owner-supplied independent read-only filesystem inspection on host
