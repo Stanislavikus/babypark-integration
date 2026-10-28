@@ -293,4 +293,3 @@ r[:on_schedules_delayed_job]=r.dig(:on,:after)>r.dig(:on,:before)
 r[:off_does_not_cancel_previously_scheduled]=r[:scheduled_after_turning_off]==r.dig(:on,:after)
 puts 'S6_FLAG_EVIDENCE_JSON '+JSON.generate(r)
 ```
-

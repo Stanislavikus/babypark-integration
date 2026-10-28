@@ -37,4 +37,3 @@ Harness and Compose SHA-256 values verified on the rehearsal host are recorded n
 - `S5 = PARTIAL PASS / open remaining crash/race and full signed-HTTP-204 coverage.`
 - `S6 = PARTIAL PASS / confirmed queue-stage hazard; open runtime drain, SMTP ambiguity, staff mail and all Sidekiq state coverage.`
 - `Customer release = HALT` pending owner-approved privacy/access/retention, existing Website identity risk disposition, all applicable R1 blocker classes and independent exact-tree HEAVY R1/R2. No core patch, bespoke production code, OTP service or provider switch was introduced.
-
