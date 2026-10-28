@@ -22,6 +22,8 @@ Open **AGENTS.md**, then **INDEX.yaml**, then the relevant integration README an
 | WhatsApp | Launcher deep link + official Chatwoot/Meta integration | [whatsapp/README.md](integrations/whatsapp/README.md) |
 | Email Continuity | Separate SES/SMTP/inbound work; **not yet certified released** | [email-continuity/README.md](integrations/email-continuity/README.md) |
 
+**Existing live channels (owner-confirmed 2026-10-28): Viber, Telegram and WhatsApp are already in production.** A post-upgrade regression test is not a prerequisite to claiming that they were launched. Read-only host probes additionally verified the Viber v2 gateway running with HTTP 200 health and all three launcher channel flags true. No new end-to-end provider message was sent in this documentation session; distinguish owner acceptance from a new synthetic roundtrip.
+
 The Viber bridge has its own executable and durable store; the Chatwoot upgrade need not replace it. The Callback frontend is on the **Drupal** server; it is not a patch to Chatwoot. Provider settings may change even when source hashes do not.
 
 ## Documentation architecture
