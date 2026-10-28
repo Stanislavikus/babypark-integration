@@ -3,11 +3,19 @@
 Status: EVIDENCE — operational/current-state record; not normative contract authority.
 Applies to: repository-wide operational and campaign state tracking.
 Supersedes: `docs/CURRENT_STATE.md` at canonical main `a45a8644e05df2584a2b75f2a3b47446811ae984`.
-Last updated: 2026-10-26
+Last updated: 2026-10-28
 Owner: BabyPark
 Source of truth for operational facts: production runtime + verified repository evidence.
 
-## 2026-10-26 — Callback V12 R2 correction candidate (Draft PR #154, NOT CLOSED)
+## 2026-10-28 — Proposed integrated operations handbook (DRAFT, NOT SERVER ACTIVATED)
+
+Status: EVIDENCE — NON-NORMATIVE, docs-only proposal. Applies to: operational documentation, not runtime behavior.
+
+New docs/ops/ is a source-bound integration manual: agent entrypoint, machine index, full released Callback V1 reference/known defect classes/diagnostics/upgrade checks/asset hashes, and separate Launcher, Viber, Telegram, WhatsApp and RESERVED Email Continuity folders. Base of this docs campaign: canonical main bd1202ae614afcf59bc83e3c733e7e73db4e32ad and Agreement blob e777fce4af8e8c3372f1f9de9ef7d00f786c2c89. The historical Callback sections below predate 27 Oct final merge; current merged PR #154 and its exact release manifest govern factual release identity. Observed data are date-stamped; no new customer message, PII or runtime code was created.
+
+A separate durable mirror at chatwoot-fra1-01:/opt/babypark-ops-docs/ is PROPOSED ONLY. config/storage-policy.yaml has proposed registration babypark_ops_docs_mirror (PLANNED). **No live mirror is claimed installed until explicit operator activation and digest verification after exact-governed Git merge.** Not to be installed inside Chatwoot checkout, Viber versioned releases or Drupal public site. Do not claim automatic future sync/backup coverage. Canonical Git remains source of truth for governance and documentation.
+
+## Historical 2026-10-26 — Callback V12 R2 correction candidate (Draft PR #154, NOT CLOSED)
 
 Starting reviewed source: HEAD `dd6aa6577e66117c0fb6b95e2f2f60a9969fe06d`,
 TREE `8c6a4ec6b2c9ecbba726c49429bfef2ecbb2f635`, BASE canonical main
