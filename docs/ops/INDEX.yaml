@@ -1,0 +1,39 @@
+# Searchable, non-executable machine index. No secrets or customer data.
+status: EVIDENCE
+applies_to: BabyPark integrations documentation
+owner: BabyPark
+verified_date: 2026-10-28
+repository: Stanislavikus/babypark-integration
+canonical_governance: docs/AI_WORKING_AGREEMENT.md
+entrypoint: README.md
+agent_entrypoint: AGENTS.md
+upgrade_precheck: UPGRADE_PRECHECK.md
+host_mirror_candidate: /opt/babypark-ops-docs
+host_mirror_status: PLANNED_NOT_ACTIVE
+integrations:
+  - id: launcher
+    keywords: [contact-launcher, universal-launcher, лаунчер]
+    home: integrations/launcher/README.md
+    host: server2181.babypark.ua
+    state: LIVE_VERIFIED
+  - id: callback
+    keywords: [callback-v1, зворотний-дзвінок, замовити-дзвінок, callback]
+    home: integrations/callback/README.md
+    reference: integrations/callback/REFERENCE.md
+    troubleshoot: integrations/callback/TROUBLESHOOTING.md
+    upgrade: integrations/callback/UPGRADE_RUNBOOK.md
+    release_manifest: integrations/callback/RELEASES.md
+    state: LIVE_VERIFIED
+  - id: viber
+    home: integrations/viber/README.md
+    state: GATEWAY_HEALTH_VERIFIED
+  - id: telegram
+    home: integrations/telegram/README.md
+    state: LAUNCHER_ENABLED_AND_HISTORICAL_CHAT_PROOF
+  - id: whatsapp
+    home: integrations/whatsapp/README.md
+    state: LAUNCHER_ENABLED_OWNER_REPORTED_CONNECTED
+  - id: email-continuity
+    keywords: [ses, smtp, mailgun, inbound-email]
+    home: integrations/email-continuity/README.md
+    state: IN_PROGRESS_NOT_CERTIFIED_LIVE
