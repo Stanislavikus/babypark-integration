@@ -21,7 +21,7 @@ Never store passwords, API secrets, private keys, session cookies or recovery pl
 - Host DRAFT package initially staged 2026-10-28 (not canonical yet): chatwoot-fra1-01:/var/backups/babypark-integration/operations/customizations/, under canonical declared operations_packages (root:root, private /var/backups/babypark-integration), outside all runtime and public release trees. No link served by Nginx, no application service depends on it.
 - Storage class already declared in canonical main: config/storage-policy.yaml object operations_packages (PLANNED, purpose portable owner manual/checksum packages). This campaign does not add an unregistered writable class. Protected DRAFT package must be content-addressed and marked noncanonical.
 - Initial stage identity (protected private files, no service hook): source HEAD 18bf4e8555b2ba29976bb5a93c588cf502a8fdb7, 15 docs files, SOURCE_MANIFEST.json SHA256 0d21ef3c4fd415b7ac1ee072dcc94d8b94b7ad3d4cb98d9913e4391c5689c6c9, sorted file path/hash digest ee903c776ab24fc15a21513e11e05e2eada79457790a8cdd828e67e709f7959e. Will retain as prior copy when refreshed. The staged package is *not* a merged copy or guarantee of backup/restore.
-**Latest verified staged protected DRAFT host copy (2026-10-28):** 
+**Latest verified staged protected DRAFT host copy (2026-10-28):**
 - Host: chatwoot-fra1-01.
 - Stable human/AI start: /var/backups/babypark-integration/operations/customizations/README.md and AGENTS.md, machine index INDEX.yaml; file SOURCE_MANIFEST.json records per-file digest and status.
 - Content source branch commit **7a37ad92aa817e2a54bdbd975f4e3d4de205fb0a** (15 docs files beneath docs/ops/), no runtime service hooks; Git branch may later move for registry-only updates without changing these 15 file blobs.
