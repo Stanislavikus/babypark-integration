@@ -45,6 +45,12 @@ No new BabyPark text store or content digest. Source-verified installed Rails `a
 - Independent read-only AWS attributes checked against the same account and Frankfurt region: SES rule set inactive, sole prepared SNSAction rule disabled, confirmed SNS HTTPS subscription has 63 configured retries with matching SQS DLQ, four-day retention and zero queued messages at the observation. **No customer ingress was enabled.**
 - Owner scope: no custom email verification/OTP, no bespoke code, no Chatwoot core patch and no blanket Chatwoot upgrade. This is **not** waiver of the merged privacy/fail-closed or independent release evidence gates.
 
+## Executed isolated S5/S6 evidence — bounded, not customer authorization
+
+On 2026-10-28 a distinct internal-only Docker Chatwoot v4.18.0 lab was used to test preserved synthetic `ActionMailbox::InboundEmail` + native `RoutingJob` after injected processing failure, sequential replay, attachment replay and one parallel run, as well as continuity OFF/ON scheduling and both asynchronous mailer stages. Those **specific cases passed**, but no new signed SES HTTPS 204, real external SMTP outcome, full Retry/Dead/Scheduled/busy drain, staff service mail or privacy/legal gate was tested. The installed image enqueued both `ActionMailbox::RoutingJob` and `ActionMailer::MailDeliveryJob` to Sidekiq **`default`**, not `action_mailbox_routing`/`mailers` — future operators must inspect by class+target, not queue labels. Non-unique `messages.source_id` means one successful concurrent retry does not prove absence of all duplicate interleavings.
+
+Full evidence and preserved synthetic harness: `docs/CHATWOOT_SES_S5_S6_ISOLATED_RESULT_20261028.md` and `docs/evidence/CHATWOOT_SES_S5_S6_HARNESS_20261028.md`. R5/R6 remain **PARTIAL/OPEN** and the customer release gate remains HALT.
+
 ## Operational states and transitions
 
 | State | Website continuity | SES receipt set | What happens |

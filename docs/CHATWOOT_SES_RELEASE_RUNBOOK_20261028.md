@@ -67,14 +67,20 @@ For Chatwoot temporary outage: leave receiving on; SNS native retries are bounde
 3. Inject controlled failure after acceptance, then at each checkpoint read `InboundEmail.status`, linked blob, Sidekiq job state and target conversation/source-id. Re-run *only* the exact native routing job for that fixture under a permitted operator procedure. Inspect message/attachment counts after first completion, retry and deliberate duplicate/parallel retry.
 4. Expected: one correct conversation message with its expected attachments and no extra deliveries. Report every divergence, particularly a missing raw blob or reprocess of already delivered record. Keep only synthetic counts/IDs and source references in the Git evidence; destroy the throwaway environment after capturing non-PII results. No bulk/resend, forced status edits, customer mail, or production retry during this drill.
 
+## Isolated S5/S6 evidence checkpoint — executed, bounded (2026-10-28)
+
+A disposable stock Chatwoot 4.18.0 lab with synthetic Postgres/Redis/ActiveStorage reproduced S5 transaction rollback, preserved raw MIME after failure, native replay without duplicate in the tested sequential scenario, an attachment with idempotent replay and one simultaneous double routing. S6 showed that `continuity_via_email=false` prevents **new** notification scheduling but does not remove a queued first-stage job; first stage can queue `ActionMailer::MailDeliveryJob` after flag OFF, and the second stage successfully produces a synthetic message through Rails `:test` transport. In this installed image, both `ActionMailbox::RoutingJob` and `ActionMailer::MailDeliveryJob` were observed in Sidekiq **`default`**, not the nominally configured dedicated queues. Always examine actual payload classes and arguments, across all queues/sets and busy workers. No live SMTP delivery, staff invites/password reset, real signed SNS HTTP 204, deliberate process crash or exhaustive concurrency schedule was tested.
+
+Full output, precise PASS/PARTIAL/OPEN boundaries, official image SHA and complete test harness: `docs/CHATWOOT_SES_S5_S6_ISOLATED_RESULT_20261028.md` and `docs/evidence/CHATWOOT_SES_S5_S6_HARNESS_20261028.md`. These results inform the stock procedure but are **not ZERO BLOCKERS, not privacy approval and not owner GO**.
+
 ## Final acceptance ledger
 
 R1 same Website conversation: synthetic PASS only.
 R2 both ways: synthetic PASS only; operator's successful matching-From UI screenshot stored in user chat, not in Git.
 R3 no core patch / preserve channels: native path PASS, final production smoke pending.
 R4 trusted sender + Widget contact integrity (#16186): **OPEN**; B01/B02 are native email trust boundaries, while #16186 is a separately tracked Website contact-identity concern. Source-reviewed; isolated runtime reproduction/mitigation and final owner-compliant scope decision remain outstanding.
-R5 active receiving after outgoing OFF: **OPEN**; two-stage drain includes both mailer jobs and must be validated without disabling staff SMTP.
-R6 post-204/Sidekiq recovery: **OPEN**; source reviewed, isolated exactly-once recovery still untested, DLQ not a solution.
+R5 active receiving after outgoing OFF: **PARTIAL** synthetic native flag gate + stage-2 post-OFF mailer execution PASS; actual all-queue/Retry/Dead/busy drain, staff SMTP and external send reconciliation OPEN.
+R6 post-204/Sidekiq recovery: **PARTIAL** isolated transaction rollback, sequential replay, one attachment replay and one parallel replay PASS; actual signed-HTTP-204 lab ingress, worker crash, arbitrary interleavings, missing-blob recovery and supervised incident procedures OPEN. DLQ cannot help after 204.
 R7 privacy/retention and exact owner release gate: **OPEN**; 30-day processed-only default and 4-day DLQ confirmed, end-to-end lifecycle/access/legal review not complete.
 R8 150KB/incident mode proof and operational monitoring: **OPEN**.
 R9 Staff SOP approval: **OPEN**.
