@@ -9,6 +9,10 @@ Source of truth for operational facts: production runtime + verified repository 
 
 ## 2026-10-28 — Proposed integrated operations handbook (DRAFT, NOT SERVER ACTIVATED)
 
+**2026-10-28 channel status correction and updated protected DRAFT host snapshot:** Owner directly confirmed Viber, Telegram and WhatsApp are all already LIVE. Independent read-only observation: all three website launcher flags true; Viber v2 gateway service active, `/health` HTTP 200; Chatwoot web/worker active, HTTPS 200. No real/synthetic provider transcript POST performed during status correction; no claim of a fresh end-to-end roundtrip. Protected host documentation package `/var/backups/babypark-integration/operations/customizations/` updated from exact docs/ops Git source HEAD `736189b5fdc17a34f33722066313a223a9e8ea3c`, 15 docs files, manifest SHA-256 `66efbb364aed0162c89c0ebfda0b08cc7227fc67eb7cd449226ef0cc7fdcc7d0`, sorted content digest `23a9289d31bc9d41d1089ebb72f950354ba94569eb343fba8df0e7b7b5c752e7`. Previous snapshot kept at `/var/backups/babypark-integration/operations/customizations-draft-7a37ad9/`. The later Git HEAD for this registry edit changes metadata only, not the 15 copied `docs/ops/` contents. This is still a noncanonical Draft and never replaces main governance.
+
+
+
 Status: EVIDENCE — NON-NORMATIVE, docs-only proposal. Applies to: operational documentation, not runtime behavior.
 
 Owner operational correction on 2026-10-28: **WhatsApp, Telegram, and Viber already launched in production**. This is owner-confirmed, not deferred activation. Independent read-only checks: all three Drupal launcher enabled flags true; Chatwoot web and worker running and HTTPS 200; Viber v2 service active with localhost /health HTTP 200. No new synthetic provider roundtrip was run. The previous partial-evidence status in documentation was a wording error; any future upgrade must revalidate channel functionality, not infer they are pending setup. Email Continuity remains an IN PROGRESS separate workstream.
