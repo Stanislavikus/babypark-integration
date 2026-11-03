@@ -1127,3 +1127,12 @@ PR #35 sender/control closure evidence:
   21 objects / 6 durable all passed on the reviewed tree;
 - no production deployment, production spool, CatalogService mutation, FULL, Link A
   or acceptance package occurred as part of PR #35.
+
+
+### 2026-11-03 — Website email collection and official SES S3 read preflight
+
+**Observed live configuration:** Chatwoot v4.18.0 Website Inbox #2 has stock Email Collect **ON**, Pre-chat form **OFF**, Email Continuity **OFF**. Stock email-collect prompt is triggered on an incoming Website message from a contact without email and is generated from localized Chatwoot templates; it is not a browser-exit trigger or custom BabyPark template.
+
+**AWS S3 stock preparation (verified):** Dedicated read-only IAM user `babypark-chatwoot-ses-s3-reader` has one owner-issued active key. On `chatwoot-fra1-01`, stock Ruby AWS SDK credentials live outside Git in restricted `/home/chatwoot/.aws/credentials` (0600), region in `/home/chatwoot/.aws/config` (0600), both owned by `chatwoot`. The installed `aws-actionmailbox-ses 0.1.0` read an actual synthetic object using its native S3 client; test object deleted; no code edit or service restart. AWS bucket `babypark-chatwoot-ses-receiving-763345000395-euc1` has Lifecycle expiration 30 days for `website-replies/`. Full resource identities, permissions, rollback and backup cautions are in `docs/INFRASTRUCTURE_REGISTRY.md` and the protected server runbook.
+
+**Still OFF / not certified as inbound S3 email:** SES has no active receipt ruleset; retained Website UUID rule disabled and contains only SNSAction. No SES S3Action or real email attachment routing verified. No general Email Continuity activation authorization inferred from this S3 read PASS. No customer transcript, email, private key or secret digest stored in this state document.
