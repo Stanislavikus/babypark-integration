@@ -309,3 +309,16 @@ Before changing any object in this registry:
 7. never put secrets into Git.
 
 For future automation, this registry should become machine-readable in addition to this human document, but the first implementation must preserve the same explicit ownership and authority boundaries.
+
+
+### 2026-11-03 — Chatwoot stock SES S3 reader credentials (owner-authorized configuration; not Email Continuity activation)
+
+**Runtime:** `chatwoot-fra1-01` (DigitalOcean), existing Chatwoot v4.18.0, Unix service account `chatwoot`, Website Inbox #2. **AWS:** eu-central-1, existing bucket `babypark-chatwoot-ses-receiving-763345000395-euc1`, objects under `website-replies/`. The owner created one active access key for pre-existing IAM user `babypark-chatwoot-ses-s3-reader`; its only inline permission `ChatwootInboundS3GetObjectOnly` grants `s3:GetObject` on that exact prefix. Key values and customer mail content must never appear in Git, logs or this registry.
+
+**On-host recoverable configuration identity (not its secret bytes):** `/home/chatwoot/.aws/credentials` — stock AWS shared credentials for the `chatwoot` Unix account, owner `chatwoot`, mode `0600`; parent `/home/chatwoot/.aws` mode `0700`. `/home/chatwoot/.aws/config` — stock AWS config with region `eu-central-1`, owner `chatwoot`, mode `0600`. No application source patch, new runtime, Ruby custom adapter or service restart. The existing `aws-actionmailbox-ses 0.1.0` `Aws::ActionMailbox::SES::S3Client` read back one synthetic prefixed S3 object and matched expected bytes; the object was deleted and absence verified. Stock `Aws::S3::Client` also passed. **S3 reader functional result: PASS.**
+
+**Rollback/recovery:** Before any rollback, independently confirm SES receipt ruleset state and whether inbound S3 depends on the reader. With owner authorization and SES inbound still inactive, remove/replace only the two `/home/chatwoot/.aws` configuration files; deactivate IAM key if no longer required; do not affect SES SMTP credentials, SNS, Zoho MX or other channels. On restore use an approved protected copy/new IAM key (AWS secret cannot be re-downloaded), reinstate restrictive owner/modes and exact region, then repeat synthetic GetObject using the deployed vendor S3 client. The owner keeps responsibility for encrypted off-host secret backup/rotation. Existing bucket Lifecycle expires `website-replies/` objects after 30 days.
+
+**Activation boundary remains CLOSED:** SES active receipt rule set is **none**; retained `website-reply-uuid` rule is disabled and still SNS-only. Chatwoot `enable_email_collect=true`, `pre_chat_form_enabled=false`, `continuity_via_email=false`. No full SES S3Action inbound-mail roundtrip, attachment test or general buyer mail release was performed by this configuration operation.
+
+**Durable operational runbook:** `/var/backups/babypark-integration/operations/customizations/integrations/email-continuity/CONFIG_UPDATE_20261103.md` (host-local, protected, non-normative). The 2026-11-01 owner-only two-thread Email Continuity PASS used the older SNS raw-content path, not the new S3Action.
