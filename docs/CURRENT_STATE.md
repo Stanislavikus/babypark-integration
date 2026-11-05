@@ -3,11 +3,21 @@
 Status: EVIDENCE — operational/current-state record; not normative contract authority.
 Applies to: repository-wide operational and campaign state tracking.
 Supersedes: `docs/CURRENT_STATE.md` at canonical main `a45a8644e05df2584a2b75f2a3b47446811ae984`.
-Last updated: 2026-10-26
+Last updated: 2026-10-28
 Owner: BabyPark
 Source of truth for operational facts: production runtime + verified repository evidence.
 
-## 2026-10-26 — Callback V12 R2 correction candidate (Draft PR #154, NOT CLOSED)
+## 2026-10-28 — production test-query URL cleanup (LIVE, verified)
+
+**Owner scope:** explicit GO in authenticated BabyPark chat, 2026-10-28 09:22:52 UTC, for two permanent 301 redirects only, after confirming production Callback V1. This is an **operational native Apache configuration change**, not new Callback/Chatwoot/Drupal application code.
+
+**Runtime:** production `server2181.babypark.ua`, BrainyCP Nginx 1.20.1 → Apache 2.4.58 → Drupal 7. Apache `mod_rewrite` was loaded, vhost `AllowOverride All`, and existing root `.htaccess` was active. The two exact homepage query parameters `bpwa=20261027-live` and `callback-release-check=8ab5dd5c` now produce HTTP **301** to `https://babypark.ua/` with the old query dropped. No other path is redirected by the new rule; extra parameters on those two test links are intentionally stripped together. Existing unrelated UTM and product/content URLs are unchanged.
+
+**Observed real traffic probes (both direct to origin and public via Cloudflare):** both named test links: 301 to clean homepage; variant with `utm_source=chatgpt.com`: 301; reversed query-order variant: 301; `www` test variant: 301; `https://babypark.ua/`: HTTP 200; `/?utm_source=chatgpt.com`: HTTP 200; `/privacy-policy`: HTTP 200; unrelated `bpwa` value: HTTP 200; `/privacy-policy?bpwa=20261027-live`: HTTP 200. Public `curl -L` reaches HTTP 200 at `https://babypark.ua/` in exactly one redirect. The public homepage still references all three versioned `assets/contact/releases/callback-v1-8ab5dd5c/` CSS/config/JS assets. No Chatwoot endpoint/POST or Callback runtime send-path re-test was conducted in this cleanup.
+
+**Recovery:** exact original `.htaccess` and immutable pre/post checksums, bounded native alternatives-scan digest, test results and restore identity are in `docs/INFRASTRUCTURE_REGISTRY.md`. No Nginx generated vhost was changed; no service reload, Drupal cache purge or customer-data change was performed. Site is live; owner must explicitly authorize any subsequent rollback or edits.
+
+## Historical 2026-10-26 — Callback V12 R2 correction candidate (Draft PR #154, NOT CLOSED)
 
 Starting reviewed source: HEAD `dd6aa6577e66117c0fb6b95e2f2f60a9969fe06d`,
 TREE `8c6a4ec6b2c9ecbba726c49429bfef2ecbb2f635`, BASE canonical main

@@ -3,7 +3,7 @@
 Status: EVIDENCE — NON-NORMATIVE production object inventory.
 Applies to: BabyPark integration-owned infrastructure and recovery identities.
 Supersedes: earlier snapshots of this registry; historical entries retained below.
-Last verified: 2026-10-26 for the preview observations below; other dates remain entry-specific.
+Last verified: 2026-10-28 for test-query redirects; other observations remain entry-specific.
 Owner: BabyPark
 Purpose: human-readable inventory of production objects that exist outside Git or whose runtime identity/path must remain recoverable from Git.
 
@@ -15,7 +15,20 @@ Never store passwords, API secrets, private keys, session cookies or recovery pl
 
 `docs/CURRENT_STATE.md` records current system truth and acceptance state. This file answers a different question: **what objects exist, where are they, and why do they exist?**
 
-## 2026-10-26 — five existing Callback previews (R2 G2 current inventory)
+## 2026-10-28 — production homepage test-query redirects (LIVE)
+
+- **Owner approval:** BabyPark authenticated project chat GO 2026-10-28 09:22:52 UTC, exactly two retired root-query URLs; production verified same date.
+- **Host/server:** `server2181.babypark.ua`; native Apache 2.4.58 `mod_rewrite` under Nginx 1.20.1 / BrainyCP.
+- **Modified managed object:** `/home/babypark/sites/babypark.ua/.htaccess` (existing Drupal-owned file, owner `babypark`, Apache `AllowOverride All`); append-only rule inserted immediately after the sole existing `RewriteEngine on` line, before older rules. No modified Nginx vhost, PHP, JavaScript, Chatwoot or data.
+- **Behavior:** only root `/` with exact `bpwa=20261027-live` or `callback-release-check=8ab5dd5c` query parameter anywhere in its query string gives **301** to `https://babypark.ua/` without query. Other query keys/values and non-root paths remain normal.
+- **Original SHA-256:** `14f8220bd8bb2731d9e82eb9fe670373f4c11fbc72b2362565b327d0d7f71b1c`.
+- **Installed SHA-256:** `a116402ed491cf4ebbd9e74f4880d4fcc31d760375a0b9bf1060b7fa61d795c1`.
+- **Native/OSS alternatives scan SHA-256:** `57f81556157dc93c418b954f42b1bf52a538801621be7aa522e794df38b3a34c`, persisted as a protected file before the live edit. Native Apache was selected over BrainyCP-generated Nginx vhost edits, uncertain Drupal UI query matching, external Cloudflare rule and custom scripts.
+- **Protected rollback/preimage:** directory `/home/babypark/.babypark-release-backups/query-check-url-redirects-20261028T092707Z/` (0700). Files `htaccess.preimage`, `alternatives-scan.txt`, `manifest.json` are 0600; original bytes independently hashed before installation; no secrets are recorded in Git.
+- **Restore guard:** before any rollback, compare current file SHA with installed SHA above and recovered preimage SHA with original SHA; unexpected differences must HALT. Restore only the preimage file atomically to its original owner/group/mode, then require full origin/public 301/200 and HTML asset checks. Never remove the rollback directory until separately approved.
+- **Verified post-activation:** Apache config syntax OK; origin checks: nine targeted positive/negative probes PASS; public Cloudflare checks: both 301, homepage and unrelated query 200, privacy policy 200, full redirect chain one hop to clean URL, three versioned Callback assets still linked.
+
+## Historical 2026-10-26 — five existing Callback previews (R2 G2 current inventory)
 
 Source: owner-supplied independent read-only filesystem inspection on host
 `server2181.babypark.ua`, PR #154 [comment #6423267053](https://github.com/Stanislavikus/babypark-integration/pull/154#issuecomment-6423267053).
