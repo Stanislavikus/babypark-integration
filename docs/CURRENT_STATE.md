@@ -3,11 +3,35 @@
 Status: EVIDENCE — operational/current-state record; not normative contract authority.
 Applies to: repository-wide operational and campaign state tracking.
 Supersedes: `docs/CURRENT_STATE.md` at canonical main `a45a8644e05df2584a2b75f2a3b47446811ae984`.
-Last updated: 2026-10-26
+Last updated: 2026-10-28
 Owner: BabyPark
 Source of truth for operational facts: production runtime + verified repository evidence.
 
-## 2026-10-26 — Callback V12 R2 correction candidate (Draft PR #154, NOT CLOSED)
+## 2026-10-28 — Proposed integrated operations handbook (DRAFT, NOT SERVER ACTIVATED)
+
+**2026-10-28 channel status correction and updated protected DRAFT host snapshot:** Owner directly confirmed Viber, Telegram and WhatsApp are all already LIVE. Independent read-only observation: all three website launcher flags true; Viber v2 gateway service active, `/health` HTTP 200; Chatwoot web/worker active, HTTPS 200. No real/synthetic provider transcript POST performed during status correction; no claim of a fresh end-to-end roundtrip. Protected host documentation package `/var/backups/babypark-integration/operations/customizations/` updated from exact docs/ops Git source HEAD `736189b5fdc17a34f33722066313a223a9e8ea3c`, 15 docs files, manifest SHA-256 `66efbb364aed0162c89c0ebfda0b08cc7227fc67eb7cd449226ef0cc7fdcc7d0`, sorted content digest `23a9289d31bc9d41d1089ebb72f950354ba94569eb343fba8df0e7b7b5c752e7`. Previous snapshot kept at `/var/backups/babypark-integration/operations/customizations-draft-7a37ad9/`. The later Git HEAD for this registry edit changes metadata only, not the 15 copied `docs/ops/` contents. This is still a noncanonical Draft and never replaces main governance.
+
+
+
+Status: EVIDENCE — NON-NORMATIVE, docs-only proposal. Applies to: operational documentation, not runtime behavior.
+
+Owner operational correction on 2026-10-28: **WhatsApp, Telegram, and Viber already launched in production**. This is owner-confirmed, not deferred activation. Independent read-only checks: all three Drupal launcher enabled flags true; Chatwoot web and worker running and HTTPS 200; Viber v2 service active with localhost /health HTTP 200. No new synthetic provider roundtrip was run. The previous partial-evidence status in documentation was a wording error; any future upgrade must revalidate channel functionality, not infer they are pending setup. Email Continuity remains an IN PROGRESS separate workstream.
+
+New docs/ops/ is a source-bound integration manual: agent entrypoint, machine index, full released Callback V1 reference/known defect classes/diagnostics/upgrade checks/asset hashes, and separate Launcher, Viber, Telegram, WhatsApp and RESERVED Email Continuity folders. Base of this docs campaign: canonical main bd1202ae614afcf59bc83e3c733e7e73db4e32ad and Agreement blob e777fce4af8e8c3372f1f9de9ef7d00f786c2c89. The historical Callback sections below predate 27 Oct final merge; current merged PR #154 and its exact release manifest govern factual release identity. Observed data are date-stamped; no new customer message, PII or runtime code was created.
+
+A restricted DRAFT operations package was staged on 2026-10-28 at chatwoot-fra1-01:/var/backups/babypark-integration/operations/customizations/ under the already declared config/storage-policy.yaml objects.operations_packages. It remains DRAFT and noncanonical until exact-governed Git merge and mirror digest re-approval; staging does not alter Chatwoot services. Its initial staged source HEAD 18bf4e8555b2ba29976bb5a93c588cf502a8fdb7 had 15 docs files, SHA256 manifest 0d21ef3c4fd415b7ac1ee072dcc94d8b94b7ad3d4cb98d9913e4391c5689c6c9, tree digest ee903c776ab24fc15a21513e11e05e2eada79457790a8cdd828e67e709f7959e. The initial snapshot was preserved as /var/backups/babypark-integration/operations/customizations-draft-18bf4e8/; Git merges and host promotion remain unauthorized.
+
+**Latest verified staged protected DRAFT host copy (2026-10-28):**
+- Host: chatwoot-fra1-01.
+- Stable human/AI start: /var/backups/babypark-integration/operations/customizations/README.md and AGENTS.md, machine index INDEX.yaml; file SOURCE_MANIFEST.json records per-file digest and status.
+- Content source branch commit **7a37ad92aa817e2a54bdbd975f4e3d4de205fb0a** (15 docs files beneath docs/ops/), no runtime service hooks; Git branch may later move for registry-only updates without changing these 15 file blobs.
+- SOURCE_MANIFEST.json SHA256 **c3ac5c35bcf9e1fdaadc185efffcd5231706ac6278d542eb1bb6dea5ba70836c**, sorted path/hash content digest **1df060052da747271d4aa52917b6171b37c8ff0590329f4db2a79c1551c5c979**, source-to-host per-file match **15/15**.
+- Host package dir 0700, files 0600, root-owned. Original DRAFT staging retained separately at /var/backups/babypark-integration/operations/customizations-draft-18bf4e8/ for protected rollback/reference; **no automatic delete**.
+- **NOT approved canonical main, NOT a live service dependency, NOT validated post-merge mirror, NOT claimed covered by independent backup drill.** Read current Git Agreement and reviewed merged docs when available, not this DRAFT as governance. A subsequent authorized promotion must compare file digest and source version and record recovered/approved identity.
+
+ Not to be installed inside Chatwoot checkout, Viber versioned releases or Drupal public site. Do not claim automatic future sync/backup coverage. Canonical Git remains source of truth for governance and documentation.
+
+## Historical 2026-10-26 — Callback V12 R2 correction candidate (Draft PR #154, NOT CLOSED)
 
 Starting reviewed source: HEAD `dd6aa6577e66117c0fb6b95e2f2f60a9969fe06d`,
 TREE `8c6a4ec6b2c9ecbba726c49429bfef2ecbb2f635`, BASE canonical main

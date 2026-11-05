@@ -71,3 +71,7 @@ That future activation campaign must carry the following checks into its own fro
 Once carried into the activation campaign, failure to prove either applicable item blocks that campaign's operational go-live. If enforcing either item would require changing or conflict with the normative Agreement, HALT and amend the Agreement rather than treating this RUNBOOK as governance.
 
 Implementation of the validator is intentionally outside the initial documentation/templates campaign and must receive its own bounded risk classification before executable/CI changes are made.
+
+## 7. BabyPark customizations / integration upgrade handbook (discovery only)
+
+For Callback V1, the Drupal Contact Launcher, Viber, WhatsApp, Telegram, or Email Continuity **after this runbook's canonical Agreement bootstrap**, read [docs/ops/AGENTS.md](docs/ops/AGENTS.md), [docs/ops/INDEX.yaml](docs/ops/INDEX.yaml) and the relevant versioned integration reference/runbook. These are NON-NORMATIVE documentation/evidence and cannot authorize service/production changes. Canonical Git remains source of truth; any copy on chatwoot-fra1-01 under /var/backups/babypark-integration/operations/customizations/ is only a versioned protected operations package with explicit DRAFT/merged identity. Do not rely on stale host bytes as a replacement for canonical current-main Agreement.

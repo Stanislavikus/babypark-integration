@@ -15,6 +15,27 @@ Never store passwords, API secrets, private keys, session cookies or recovery pl
 
 `docs/CURRENT_STATE.md` records current system truth and acceptance state. This file answers a different question: **what objects exist, where are they, and why do they exist?**
 
+## 2026-10-28 — protected Chatwoot-ecosystem operations documentation package (DRAFT until Git merge)
+
+**2026-10-28 channel status correction and updated protected DRAFT host snapshot:** Owner directly confirmed Viber, Telegram and WhatsApp are all already LIVE. Independent read-only observation: all three website launcher flags true; Viber v2 gateway service active, `/health` HTTP 200; Chatwoot web/worker active, HTTPS 200. No real/synthetic provider transcript POST performed during status correction; no claim of a fresh end-to-end roundtrip. Protected host documentation package `/var/backups/babypark-integration/operations/customizations/` updated from exact docs/ops Git source HEAD `736189b5fdc17a34f33722066313a223a9e8ea3c`, 15 docs files, manifest SHA-256 `66efbb364aed0162c89c0ebfda0b08cc7227fc67eb7cd449226ef0cc7fdcc7d0`, sorted content digest `23a9289d31bc9d41d1089ebb72f950354ba94569eb343fba8df0e7b7b5c752e7`. Previous snapshot kept at `/var/backups/babypark-integration/operations/customizations-draft-7a37ad9/`. The later Git HEAD for this registry edit changes metadata only, not the 15 copied `docs/ops/` contents. This is still a noncanonical Draft and never replaces main governance.
+
+
+
+- Git source candidate: docs/ops/ in Draft documentation PR; contains README.md, AGENTS.md, INDEX.yaml, cross-integration UPGRADE_PRECHECK.md, version-bound Callback V1 and channel guides. These are non-normative evidence/runbooks, not a new engineering agreement.
+- Host DRAFT package initially staged 2026-10-28 (not canonical yet): chatwoot-fra1-01:/var/backups/babypark-integration/operations/customizations/, under canonical declared operations_packages (root:root, private /var/backups/babypark-integration), outside all runtime and public release trees. No link served by Nginx, no application service depends on it.
+- Storage class already declared in canonical main: config/storage-policy.yaml object operations_packages (PLANNED, purpose portable owner manual/checksum packages). This campaign does not add an unregistered writable class. Protected DRAFT package must be content-addressed and marked noncanonical.
+- Initial stage identity (protected private files, no service hook): source HEAD 18bf4e8555b2ba29976bb5a93c588cf502a8fdb7, 15 docs files, SOURCE_MANIFEST.json SHA256 0d21ef3c4fd415b7ac1ee072dcc94d8b94b7ad3d4cb98d9913e4391c5689c6c9, sorted file path/hash digest ee903c776ab24fc15a21513e11e05e2eada79457790a8cdd828e67e709f7959e. Will retain as prior copy when refreshed. The staged package is *not* a merged copy or guarantee of backup/restore.
+**Latest verified staged protected DRAFT host copy (2026-10-28):**
+- Host: chatwoot-fra1-01.
+- Stable human/AI start: /var/backups/babypark-integration/operations/customizations/README.md and AGENTS.md, machine index INDEX.yaml; file SOURCE_MANIFEST.json records per-file digest and status.
+- Content source branch commit **7a37ad92aa817e2a54bdbd975f4e3d4de205fb0a** (15 docs files beneath docs/ops/), no runtime service hooks; Git branch may later move for registry-only updates without changing these 15 file blobs.
+- SOURCE_MANIFEST.json SHA256 **c3ac5c35bcf9e1fdaadc185efffcd5231706ac6278d542eb1bb6dea5ba70836c**, sorted path/hash content digest **1df060052da747271d4aa52917b6171b37c8ff0590329f4db2a79c1551c5c979**, source-to-host per-file match **15/15**.
+- Host package dir 0700, files 0600, root-owned. Original DRAFT staging retained separately at /var/backups/babypark-integration/operations/customizations-draft-18bf4e8/ for protected rollback/reference; **no automatic delete**.
+- **NOT approved canonical main, NOT a live service dependency, NOT validated post-merge mirror, NOT claimed covered by independent backup drill.** Read current Git Agreement and reviewed merged docs when available, not this DRAFT as governance. A subsequent authorized promotion must compare file digest and source version and record recovered/approved identity.
+
+- Activation gate: exact Git tree reviewed/merged only under explicit owner go-ahead; separately approved host mirror copy with digest checks; install immutable content and recorded Git source SHA; validate permissions/protection and backup/copy recreation before relying on it. Record actual mirror identity, timestamps/hash, recovery/rollback and current state in approved change. Do not automatically remove prior copy.
+- Security: no customer text, phone/email, tokens, cookies, JWT, secrets, sensitive log args or customer-derived hashes.
+
 ## 2026-10-26 — five existing Callback previews (R2 G2 current inventory)
 
 Source: owner-supplied independent read-only filesystem inspection on host
