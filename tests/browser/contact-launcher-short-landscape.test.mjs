@@ -45,7 +45,7 @@ test('64px launcher preserves Callback close in short landscape: UA/RU, portrait
               (url.pathname === '/test/' || url.pathname === '/ru/test/')) {
             const html = '<!doctype html><html lang="' + locale +
               '" xml:lang="' + locale + '"><head><meta charset="utf-8">' +
-              '<link rel="stylesheet" href="/assets/babypark-launcher.css"></head><body>' +
+              '<link rel="icon" href="data:,"><link rel="stylesheet" href="/assets/babypark-launcher.css"></head><body>' +
               '<script>window.BabyParkLauncherConfig=' + JSON.stringify(config) + '</script>' +
               '<script src="/assets/babypark-launcher.js"></script></body></html>';
             return route.fulfill({ contentType: 'text/html', body: html });
