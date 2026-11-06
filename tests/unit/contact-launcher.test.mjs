@@ -298,7 +298,7 @@ test('L1-C SVG X geometry and double-contrast focus have no baseline glyph', () 
   }
   assert.match(css, /\.bp-contact :focus-visible\s*\{[^}]*outline:\s*3px solid #004b78;[^}]*box-shadow:\s*0 0 0 6px #fff;/s);
   assert.match(css, /@media \(forced-colors:\s*active\)/);
-  assert.match(css, /\.bp-contact__trigger-close svg\s*\{[^}]*width:\s*24px;[^}]*height:\s*24px;/s);
+  assert.match(css, /\.bp-contact__trigger-close svg\s*\{[^}]*width:\s*var\(--bp-trigger-icon-size\);[^}]*height:\s*var\(--bp-trigger-icon-size\);/s);
 });
 
 test('L1-C S9: subdued informational note is still legible at small text size', () => {
