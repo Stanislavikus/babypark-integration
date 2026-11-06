@@ -56,6 +56,11 @@ function harness(config, opts = {}) {
   const documentListeners = {};
   const windowListeners = {};
   const document = {
+    documentElement: {
+      getAttribute(name) {
+        return name === 'xml:lang' ? (opts.siteLanguage ?? 'uk') : null;
+      }
+    },
     currentScript: opts.inline ? null : { src: opts.scriptSrc || 'https://babypark.ua/themes/babypark2/assets/contact/babypark-launcher.js' },
     baseURI: opts.documentBase || 'https://babypark.ua/product/123',
     readyState: 'complete',
@@ -114,6 +119,22 @@ test('missing config fails closed without adding a launcher or SDK', () => {
   const h = harness(undefined);
   assert.equal(h.body.children.length, 0);
   assert.equal(h.head.children.length, 0);
+});
+
+test('trigger label and accessible name follow Drupal-selected site language, not browser locale', () => {
+  const config = { channels: { phone: { enabled: true, url: 'tel:+380982908838' } } };
+  for (const [siteLanguage, label, accessible] of [
+    ['uk', 'Зв’язатися', 'Зв’язатися з BabyPark'],
+    ['ru', 'Связаться', 'Связаться с BabyPark'],
+  ]) {
+    const h = harness(config, { siteLanguage });
+    assert.equal(h.get('bp-contact__trigger-label').textContent, label);
+    assert.equal(h.get('bp-contact__trigger').getAttribute('aria-label'), accessible);
+    h.get('bp-contact__trigger').click();
+    assert.equal(h.get('bp-contact__menu').hidden, false);
+    h.get('bp-contact__menu-close').click();
+    assert.equal(h.get('bp-contact__menu').hidden, true);
+  }
 });
 
 test('phone only: no unverified channel, no callback, no SDK', () => {
@@ -201,13 +222,17 @@ test('missing stylesheet always hides floating widget, late CSS load can safely 
 
 test('CSS provides mobile 22px inset, safe area, hidden/focus/mobile no-text and reduced motion', () => {
   assert.match(css, /--bp-mobile-right:\s*22px/);
+  assert.match(css, /--bp-trigger-size:\s*64px/);
+  assert.match(css, /--bp-trigger-icon-size:\s*28px/);
+  assert.match(css, /height:\s*var\(--bp-trigger-size\)/);
+  assert.match(css, /width:\s*var\(--bp-trigger-size\)/);
   assert.match(css, /safe-area-inset-bottom/);
   assert.match(css, /\.bp-contact\[hidden\]/);
   assert.match(css, /:focus-visible/);
   assert.match(css, /outline: 3px solid #004b78/);
   assert.match(css, /--bp-compact-bottom:/);
   assert.match(css, /@media \(max-height: 450px\)\s*\{\s*\.bp-contact \{ bottom: var\(--bp-compact-bottom\)/);
-  assert.ok(css.includes('max-height: calc(100dvh - var(--bp-compact-bottom) - 75px)'),
+  assert.ok(css.includes('max-height: calc(100dvh - var(--bp-compact-bottom) - 85px)'),
     'landscape menu must subtract configured bottom inset plus trigger gap');
   assert.ok(!css.includes('max-height: calc(100vh - 84px)'),
     'unconditional landscape menu height clips when inset increases');
