@@ -9,7 +9,7 @@ const require = createRequire(import.meta.url);
 const { chromium } = require(process.env.BABYPARK_PLAYWRIGHT_PATH || '/workspace/.browser-tools/node_modules/playwright');
 const assets = new URL('../../web/contact-launcher/', import.meta.url);
 const config = {
-  websiteToken: 'SYNTHETIC_PUBLIC_TOKEN',
+  websiteToken: 'PUBLICWEBSITETOKEN123',
   channels: { chat: { enabled: true }, callback: { enabled: true } },
 };
 
