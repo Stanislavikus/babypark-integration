@@ -4,6 +4,8 @@
 .bp-contact {
   --bp-accent: #007cb6; /* white label WCAG contrast >= 4.5:1 */
   --bp-text: #203044;
+  --bp-trigger-size: 64px; /* mobile diameter and desktop pill height; original offsets unchanged */
+  --bp-trigger-icon-size: 28px;
   --bp-desktop-right: 24px;
   --bp-desktop-bottom: 24px;
   --bp-mobile-right: 22px; /* Owner-approved V5 preview; verify real site overlap. */
@@ -44,7 +46,7 @@
 .bp-contact__trigger {
   border: 1px solid #f47c20; /* brand accent; static, not animated */
   border-radius: 999px;
-  height: 56px;
+  height: var(--bp-trigger-size);
   padding: 0 19px;
   display: inline-flex;
   gap: 9px;
@@ -59,16 +61,16 @@
 }
 .bp-contact__trigger:hover { background: #006da3; }
 .bp-contact__trigger-symbol,
-.bp-contact__trigger-symbol svg { display: block; width: 24px; height: 24px; }
+.bp-contact__trigger-symbol svg { display: block; width: var(--bp-trigger-icon-size); height: var(--bp-trigger-icon-size); }
 .bp-contact__trigger-close {
   display: none;
-  width: 24px;
-  height: 24px;
+  width: var(--bp-trigger-icon-size);
+  height: var(--bp-trigger-icon-size);
   align-items: center;
   justify-content: center;
-  flex: 0 0 24px;
+  flex: 0 0 var(--bp-trigger-icon-size);
 }
-.bp-contact__trigger-close svg { display: block; width: 24px; height: 24px; }
+.bp-contact__trigger-close svg { display: block; width: var(--bp-trigger-icon-size); height: var(--bp-trigger-icon-size); }
 .bp-contact__trigger[aria-expanded="true"] .bp-contact__trigger-symbol { display: none; }
 .bp-contact__trigger[aria-expanded="true"] .bp-contact__trigger-close { display: flex; }
 .bp-contact__trigger-label { white-space: nowrap; }
@@ -222,9 +224,9 @@
 }
 @media (max-width: 640px) {
   .bp-contact__trigger {
-    min-width: 54px;
-    width: 54px;
-    height: 54px;
+    min-width: var(--bp-trigger-size);
+    width: var(--bp-trigger-size);
+    height: var(--bp-trigger-size);
     padding: 0;
   }
   .bp-contact__trigger-label { display: none; }
@@ -240,6 +242,13 @@
     max-height: calc(100vh - var(--bp-compact-bottom) - 75px);
     max-height: calc(100dvh - var(--bp-compact-bottom) - 75px);
   }
+}
+/* Compact viewports: preserve the menu-to-trigger gap and Callback height.
+   Lower the larger trigger in either orientation, including low desktop windows.
+   Keep --bp-compact-bottom unchanged so the panel does not grow with this move.
+   At 640px and above, retain the original mobile/desktop bottom offsets. */
+@media (max-height: 639px) {
+  .bp-contact { bottom: max(12px, env(safe-area-inset-bottom, 0px)); }
 }
 @media print { .bp-contact { display: none !important; } }
 @media (prefers-reduced-motion: reduce) {

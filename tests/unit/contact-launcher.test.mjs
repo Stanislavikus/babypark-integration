@@ -201,12 +201,28 @@ test('missing stylesheet always hides floating widget, late CSS load can safely 
 
 test('CSS provides mobile 22px inset, safe area, hidden/focus/mobile no-text and reduced motion', () => {
   assert.match(css, /--bp-mobile-right:\s*22px/);
+  assert.match(css, /--bp-trigger-size:\s*64px/);
+  assert.match(css, /--bp-trigger-icon-size:\s*28px/);
+  assert.match(css, /height:\s*var\(--bp-trigger-size\)/);
+  assert.match(css, /width:\s*var\(--bp-trigger-size\)/);
+  // Size-only invariant: typography, menu geometry, and Ukrainian text remain unchanged.
+  assert.match(css, /padding:\s*0 19px/);
+  assert.match(css, /font-size:\s*13px !important/);
+  assert.ok(css.includes('max-height: calc(100dvh - var(--bp-compact-bottom) - 75px)'));
+  assert.doesNotMatch(script, /triggerRu|Связаться/);
   assert.match(css, /safe-area-inset-bottom/);
   assert.match(css, /\.bp-contact\[hidden\]/);
   assert.match(css, /:focus-visible/);
   assert.match(css, /outline: 3px solid #004b78/);
   assert.match(css, /--bp-compact-bottom:/);
   assert.match(css, /@media \(max-height: 450px\)\s*\{\s*\.bp-contact \{ bottom: var\(--bp-compact-bottom\)/);
+  // The taller trigger needs room in low portrait and desktop windows too.
+  // Preserve panel height and switch back to original positioning at 640px.
+  assert.match(css, /@media \(max-height: 639px\)\s*\{\s*\.bp-contact \{ bottom: max\(12px, env\(safe-area-inset-bottom, 0px\)\)/);
+  assert.doesNotMatch(css, /@media \(max-height: 450px\) and \(orientation: landscape\)/);
+  assert.match(css, /bottom: max\(12px, env\(safe-area-inset-bottom, 0px\)\)/);
+  assert.match(css, /--bp-mobile-bottom:\s*calc\(76px \+ env\(safe-area-inset-bottom, 0px\)\)/);
+  assert.match(css, /--bp-desktop-bottom:\s*24px/);
   assert.ok(css.includes('max-height: calc(100dvh - var(--bp-compact-bottom) - 75px)'),
     'landscape menu must subtract configured bottom inset plus trigger gap');
   assert.ok(!css.includes('max-height: calc(100vh - 84px)'),
@@ -273,7 +289,7 @@ test('L1-C SVG X geometry and double-contrast focus have no baseline glyph', () 
   }
   assert.match(css, /\.bp-contact :focus-visible\s*\{[^}]*outline:\s*3px solid #004b78;[^}]*box-shadow:\s*0 0 0 6px #fff;/s);
   assert.match(css, /@media \(forced-colors:\s*active\)/);
-  assert.match(css, /\.bp-contact__trigger-close svg\s*\{[^}]*width:\s*24px;[^}]*height:\s*24px;/s);
+  assert.match(css, /\.bp-contact__trigger-close svg\s*\{[^}]*width:\s*var\(--bp-trigger-icon-size\);[^}]*height:\s*var\(--bp-trigger-icon-size\);/s);
 });
 
 test('L1-C S9: subdued informational note is still legible at small text size', () => {
