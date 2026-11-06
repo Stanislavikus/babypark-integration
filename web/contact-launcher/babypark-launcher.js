@@ -931,7 +931,11 @@
     menu.appendChild(chatStatus);
     trigger = node('button', 'bp-contact__trigger');
     trigger.type = 'button';
-    trigger.setAttribute('aria-label', 'Зв’язатися з BabyPark');
+    // Drupal's selected site language, never navigator/browser language.
+    var html = document.documentElement;
+    var pageLocale = html && (html.getAttribute('xml:lang') || html.getAttribute('lang'));
+    var triggerRu = pageLocale === 'ru';
+    trigger.setAttribute('aria-label', triggerRu ? 'Связаться с BabyPark' : 'Зв’язатися з BabyPark');
     trigger.setAttribute('aria-controls', menu.id);
     trigger.setAttribute('aria-expanded', 'false');
     var openIcon = node('span', 'bp-contact__trigger-symbol');
@@ -941,7 +945,8 @@
     closeIcon.setAttribute('aria-hidden', 'true');
     trigger.appendChild(openIcon);
     trigger.appendChild(closeIcon);
-    trigger.appendChild(node('span', 'bp-contact__trigger-label', 'Зв’язатися'));
+    trigger.appendChild(node('span', 'bp-contact__trigger-label',
+      triggerRu ? 'Связаться' : 'Зв’язатися'));
     trigger.addEventListener('click', function () {
       if (state.expanded) return closeMenu(true);
       syncVisible();
