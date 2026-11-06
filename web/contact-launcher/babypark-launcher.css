@@ -243,11 +243,11 @@
     max-height: calc(100dvh - var(--bp-compact-bottom) - 75px);
   }
 }
-/* Short landscape only: keep the original menu-to-trigger gap and compact
-   Callback height, but seat the larger trigger nearer the bottom safe area.
-   Changing --bp-compact-bottom here would expand the Callback and reclip
-   its close control on 600x360 and 800x360. Portrait remains unchanged. */
-@media (max-height: 450px) and (orientation: landscape) {
+/* Compact viewports: preserve the menu-to-trigger gap and Callback height.
+   Lower the larger trigger in either orientation, including low desktop windows.
+   Keep --bp-compact-bottom unchanged so the panel does not grow with this move.
+   At 640px and above, retain the original mobile/desktop bottom offsets. */
+@media (max-height: 639px) {
   .bp-contact { bottom: max(12px, env(safe-area-inset-bottom, 0px)); }
 }
 @media print { .bp-contact { display: none !important; } }

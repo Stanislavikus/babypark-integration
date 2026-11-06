@@ -3,9 +3,28 @@
 Status: EVIDENCE — operational/current-state record; not normative contract authority.
 Applies to: repository-wide operational and campaign state tracking.
 Supersedes: `docs/CURRENT_STATE.md` at canonical main `a45a8644e05df2584a2b75f2a3b47446811ae984`.
-Last updated: 2026-10-26
+Last updated: 2026-11-06
 Owner: BabyPark
 Source of truth for operational facts: production runtime + verified repository evidence.
+
+## 2026-11-06 — PR #166 compact-viewport launcher candidate (NOT DEPLOYED)
+
+The owner approved a 64px mobile trigger / 64px pill height and 28px trigger
+icons, plus lower positioning at viewport height <=639px in either orientation.
+At height >=640px the original bottom offsets return; right offsets, text,
+typography, JS, channels, Callback dimensions and `--bp-compact-bottom` remain
+unchanged. This replaces the incomplete <=450px landscape exception behind
+the independent B001 clipping finding at451px and in low portrait windows.
+
+Source/decision evidence is
+`docs/CONTACT_LAUNCHER_SIZE_LOCALE_V1_OPTIONS_20261106.md`; maintained regressions
+include low desktop, portrait,639/640 boundaries and both motion preferences.
+Exact final HEAD/tree, immutable check results, traceability and independent
+STANDARD review belong to the campaign evidence bundle after source freeze.
+This entry is candidate state, not a merge or production claim. Draft PR #166
+still needs completed exact-basis closure and separate owner merge approval;
+production deployment and its device/backup/rollback checks are separate.
+No production files, Chatwoot settings or customer data were changed here.
 
 ## 2026-10-26 — Callback V12 R2 correction candidate (Draft PR #154, NOT CLOSED)
 

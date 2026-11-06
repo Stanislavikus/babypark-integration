@@ -216,9 +216,10 @@ test('CSS provides mobile 22px inset, safe area, hidden/focus/mobile no-text and
   assert.match(css, /outline: 3px solid #004b78/);
   assert.match(css, /--bp-compact-bottom:/);
   assert.match(css, /@media \(max-height: 450px\)\s*\{\s*\.bp-contact \{ bottom: var\(--bp-compact-bottom\)/);
-  // Callback close must remain visible after 64px trigger grows: shift the
-  // whole launcher down only in short landscape, without changing panel height.
-  assert.match(css, /@media \(max-height: 450px\) and \(orientation: landscape\)/);
+  // The taller trigger needs room in low portrait and desktop windows too.
+  // Preserve panel height and switch back to original positioning at 640px.
+  assert.match(css, /@media \(max-height: 639px\)\s*\{\s*\.bp-contact \{ bottom: max\(12px, env\(safe-area-inset-bottom, 0px\)\)/);
+  assert.doesNotMatch(css, /@media \(max-height: 450px\) and \(orientation: landscape\)/);
   assert.match(css, /bottom: max\(12px, env\(safe-area-inset-bottom, 0px\)\)/);
   assert.match(css, /--bp-mobile-bottom:\s*calc\(76px \+ env\(safe-area-inset-bottom, 0px\)\)/);
   assert.match(css, /--bp-desktop-bottom:\s*24px/);
