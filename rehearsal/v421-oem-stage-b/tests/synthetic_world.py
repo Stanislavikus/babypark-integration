@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from oem_stage import canon
 from oem_stage import conditions as cd
 from oem_stage import o1_evidence as o1
 from oem_stage.o2_identity import IdentityRegistry
@@ -93,7 +94,9 @@ def adapter_ends(seat, chassis, adapter="ADP-200", extension=None):
 
 
 class World:
-    pass
+    def derive(self) -> list:
+        from oem_stage.o4_relations import derive_relations
+        return derive_relations(self.claims, self.store, self.registry, self.articles, self.vocab, self.policy)
 
 
 def build(tmp) -> World:
@@ -170,7 +173,8 @@ def build(tmp) -> World:
           "RS-100 rain shield fits Zeta Alpha 5 only outside the vehicle (second statement).")               # conditions_disagree
     claim(compat_afm("Alpha 3", "RS-300"), "RS-300 fits Alpha 3 (page 3).", doc=w.doc_pdf,
           locator={"kind": "pdf_page", "page": 3}, attestation="human_attested")
-    w.registry = IdentityRegistry(MAKERS, _models(), ALIASES)
+    w.models_raw = _models()
+    w.registry = IdentityRegistry(MAKERS, w.models_raw, ALIASES)
     w.vocab = cd.load_vocab(ROOT / "data" / "conditions_vocab.json")
     w.policy = dict(POLICY)
     accepted = {c["claim_id"]: c for c in w.claims if o1.check_claim(c, w.store, w.policy)["accepted"]}
@@ -190,3 +194,40 @@ def build(tmp) -> World:
     w.articles = ArticleBindings(bindings, w.unjoined_raw, accepted, catalog_skus={"RS-100", "ADP-200", "EXT-1",
                                                                                    "RS-300-X", "ORG-9", "RS-770"})
     return w
+
+
+# ------------------------------------------------------------------------------------------ integration extensions
+HTML_ADDENDUM = """<html><body>
+<h1>Acme addendum (synthetic fixture, fictional makers)</h1>
+<p>RS-100 rain shield is not recommended for Zeta Alpha 6.</p>
+</body></html>
+""".encode("utf-8")
+ALPHA6 = {"model_id": "zeta:alpha-6", "maker_id": "zeta", "display": "Alpha 6", "kind": "seat"}
+
+
+def extend_for_catalog(w) -> None:
+    """Second synthetic document + one fictional model: an explicit OEM no-recommendation (RS-100 / Alpha 6) for a pair
+    that the *current* engine does recommend (mini catalog title names Alpha 1 and Alpha 6). Test fixture only."""
+    meta = dict(issuer="acme", url="https://synthetic.invalid/acme/addendum", market="GB", language="en",
+                document_date="2026-10-02", retrieved_utc=UTC, captured_by="human:SYNTHETIC-capturer", synthetic=True)
+    doc = w.store.put_bytes(HTML_ADDENDUM, media_type="text/html", document_version="addendum-1", **meta)
+    w.claim({"type": "not_recommended", "relation_type": "accessory_for_model",
+             "ends": {"accessory": end_art("RS-100"), "model": end_model("Alpha 6")}},
+            "RS-100 rain shield is not recommended for Zeta Alpha 6.", doc=doc)
+    w.models_raw = _models() + [ALPHA6]
+    w.registry = IdentityRegistry(MAKERS, w.models_raw, ALIASES)
+    w.accepted = {c["claim_id"]: c for c in w.claims if o1.check_claim(c, w.store, w.policy)["accepted"]}
+    w.articles = ArticleBindings(w.bindings_raw, w.unjoined_raw, w.accepted,
+                                 catalog_skus={"RS-100", "ADP-200", "EXT-1", "RS-300-X", "ORG-9", "RS-770"})
+
+
+def dump(w, data_dir) -> None:
+    """Write the world as a typed data directory (the same shapes as data/seeds) for tools/build_outputs.py."""
+    out = Path(data_dir)
+    canon.write_json(out / "documents.json", {"schema": "bp-oem-documents-v1", "documents": w.store.registry()})
+    canon.write_json(out / "claims.json", {"schema": "bp-oem-claims-v1", "claims": w.claims})
+    canon.write_json(out / "makers.json", {"schema": "bp-oem-makers-v1", "makers": MAKERS})
+    canon.write_json(out / "models.json", {"schema": "bp-oem-models-v1", "models": w.models_raw})
+    canon.write_json(out / "aliases.json", {"schema": "bp-oem-aliases-v1", "aliases": ALIASES})
+    canon.write_json(out / "articles.json", {"schema": "bp-oem-articles-v1", "bindings": w.bindings_raw,
+                                             "unjoined": w.unjoined_raw})

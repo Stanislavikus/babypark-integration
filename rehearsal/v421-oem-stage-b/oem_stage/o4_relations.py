@@ -201,6 +201,8 @@ def _build_relation(key, slot, checks, store, vocab, policy, as_of) -> dict:
     blockers = []
     if effective != "LISTED":
         blockers.append(_STATE_BLOCKER[effective])
+    if "LISTED_CONDITIONAL" in (proposed_state, effective):
+        blockers.append("od4_conditional_held")  # still held after verification until OD4 copy/policy is approved
     if slot["relation_type"] == "adapter_between":
         blockers.append("od5_one_ended_adapter_abstain")
     if slot["relation_type"] == "vehicle_general":

@@ -1,0 +1,20 @@
+# TEST-ONLY dependency for the property tests (tests/test_properties.py). The OEM stage itself is stdlib-only.
+# Hypothesis 6.170.15 needs Python >= 3.11 (released 2026-11-06, MPL-2.0; sortedcontainers is Apache-2.0).
+# Install:  python3 -m pip install --require-hashes -r requirements-test.txt
+# Hashes were taken from the PyPI release metadata (https://pypi.org/pypi/hypothesis/6.170.15/json); the list covers
+# the sdist and the linux x86_64 wheels for CPython 3.11-3.14. Add the hash of your platform file if it is missing.
+hypothesis==6.170.15 \
+    --hash=sha256:a4a57e5fb106ecb29cad37e22e411d957e20d933bfb9fb029e1999b1deb8a0b6 \
+    --hash=sha256:99a1a4711b5276e5bfc3aa0cca034d0e45f8696a46ac8dce008308f580c18234 \
+    --hash=sha256:ecbd6294a636594580689debc3011a0ca3eb76577770f661224314202f107e14 \
+    --hash=sha256:e9e20ec17d2095e9314ea232b4e34b5510def0d9e7a7e764cc70cae88fe4b0c4 \
+    --hash=sha256:f25261d1656f830a78863844be5fb55cd0208154dc9ddec85d44fe691488c557 \
+    --hash=sha256:f91f27a89e8d55c7f043cb1e10705096236d4f7bcb35f3ac4f821e0c9b9bcd05 \
+    --hash=sha256:124b0b9962ff6b25786692b7b6cb0065f8bb7870081ddd9baf4745b0ff4a5c7a \
+    --hash=sha256:4af2d31c00306707166b4f39e5208d2585f9ef4accb10586534101eb32f243fb \
+    --hash=sha256:eecdcd38395facf6ea3af90320a574f5e63c310c194d2a0eb75f121223942386 \
+    --hash=sha256:b829dc3cbd73fe08c02151afc438448180907da62c154cfa68abd178eafd4d48 \
+    --hash=sha256:b01d130c103fdf78a4a748cae7d095edfe5d37534828413a509936fb3567db61
+sortedcontainers==2.4.0 \
+    --hash=sha256:a163dcaede0f1c021485e957a39245190e74249897e2ae4b2aa38595db237ee0 \
+    --hash=sha256:25caa5a06cc30b6b83d11423433f65d1f9d76c4c6a0c90e3379eaa43b9bfdb88
