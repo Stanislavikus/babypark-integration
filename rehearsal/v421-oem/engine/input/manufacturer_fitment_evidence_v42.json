@@ -1,0 +1,384 @@
+{
+  "schema": "bp-v42-manufacturer-fitment-rules-v1",
+  "source": "Existing adjudicated manufacturer proofs; no source or target NID allowlists",
+  "rules": [
+    {
+      "evidence_key": "espiro-noble-frame-adapter",
+      "manufacturer": "Espiro",
+      "brand_tid": 737,
+      "source_head": "stroller",
+      "source_type": "kol",
+      "source_model": "Noble",
+      "source_variant": {
+        "travel_config": "2"
+      },
+      "target_head": "stroller",
+      "target_type": "kol",
+      "target_role": "adapter",
+      "target_title_pattern": "(?i)(?:адаптер|adapter).*(?:коляску|коляски|stroller).*(?:Noble|Нобл)|(?:Noble|Нобл).*(?:адаптер|adapter)",
+      "variant_policy": {
+        "source_class": "color",
+        "target": "no_options"
+      },
+      "evidence": {
+        "issuer": "Espiro manufacturer",
+        "url": "https://espiro.pl/en/car-seat-adapters-for-the-espiro-noble-stroller%2Cid206.html",
+        "claim": "Adapters designed to attach a car seat to the Espiro Noble stroller frame."
+      },
+      "target_model": "Noble"
+    },
+    {
+      "evidence_key": "abc-design-lily-root-isofix-base",
+      "manufacturer": "ABC Design",
+      "brand_tid": 43,
+      "source_head": "car_seat",
+      "source_type": "kreslo",
+      "source_model": "Lily i-Size",
+      "source_variant": {
+        "weight_range": [
+          0,
+          18
+        ]
+      },
+      "target_head": "car_seat",
+      "target_type": "kreslo",
+      "target_role": "car_seat_base",
+      "target_title_pattern": "(?i)Root.*(?:баз|платформ|base)|(?:баз|платформ|base).*Root",
+      "variant_policy": {
+        "source_class": "color",
+        "target_class": "color",
+        "option_sets": "independent_color"
+      },
+      "evidence": {
+        "issuer": "ABC Design manufacturer",
+        "url": "https://www.abc-design.de/isofix-base-root/",
+        "claim": "Root ISOFIX base explicitly lists Lily i-Size compatibility; manufacturer page also describes Tulip compatibility."
+      },
+      "target_model": "Root",
+      "target_excluded_suffixes": [
+        "Next"
+      ]
+    },
+    {
+      "evidence_key": "abc-design-bayamo-double-carrycot",
+      "manufacturer": "ABC Design",
+      "brand_tid": 43,
+      "source_head": "stroller",
+      "source_type": "kol",
+      "source_model": "Bayamo",
+      "source_variant": {
+        "child_capacity": "double"
+      },
+      "target_head": "stroller",
+      "target_type": "kol",
+      "target_role": "bassinet",
+      "target_title_pattern": "(?i)(?:люльк|carrycot|bassinet).*(?:двойн|двійн|twin|double).*Bayamo|Bayamo.*(?:люльк|carrycot|bassinet)",
+      "variant_policy": {
+        "source_class": "color",
+        "target_class": "color",
+        "option_sets": "identical"
+      },
+      "evidence": {
+        "issuer": "ABC Design manufacturer",
+        "url": "https://www.abc-design.de/en/carrycot-for-bayamo-double-strollers-pea",
+        "claim": "Carrycot is an accessory for Bayamo double/twin strollers."
+      },
+      "target_model": "Bayamo"
+    }
+  ],
+  "oem_evidence_schema": "bp-v421-oem-evidence-v1",
+  "oem_evidence_note": "OEM records are article evidence, not NID exceptions. manufacturer_fitment_match() reads them only when they are passed in the rules list. The catalog builder still loads rules alone, so these records do not become A/B links.",
+  "oem_evidence": [
+    {
+      "record_type": "oem_evidence",
+      "evidence_key": "britax-comfort-insert-2000030111",
+      "manufacturer": "Britax-Römer",
+      "oem_article": "2000030111",
+      "catalog_skus": [
+        "2000030111"
+      ],
+      "accessory_type": "comfort_insert",
+      "accessory_class": "A",
+      "completeness_state": "confirmed_subset_plus_named_absences",
+      "completeness_note": "The 2026-11-17 manufacturer page lists 21 models. This handoff names 11 confirmed models and 2 named absences. Other models stay unknown.",
+      "confirmed_models": [
+        "DUALFIX M PLUS",
+        "DUALFIX PLUS",
+        "EVOLVAFIX",
+        "DUALFIX PRO",
+        "DUALFIX PRO M",
+        "DUALFIX 5Z",
+        "MAX-SAFE PRO",
+        "KING PRO",
+        "ADVANSAFIX PRO",
+        "SAFE-WAY M",
+        "SWIVEL 2"
+      ],
+      "explicit_absent_models": [
+        "KIDFIX PRO",
+        "SWIVEL"
+      ],
+      "catalog_newborn_wording_is_not_evidence": true,
+      "use_limits": {
+        "kind": "britax_comfort_insert"
+      },
+      "document": {
+        "url": "https://www.britax-roemer.com/accessories/car-seat-accessories/comfort-insert/2000030111.html",
+        "version": "retrieved-2026-11-17",
+        "region": "manufacturer-com",
+        "language": "en",
+        "retrieved_at": "2026-11-17",
+        "content_sha256": null
+      }
+    },
+    {
+      "record_type": "oem_evidence",
+      "evidence_key": "besafe-rain-shield-11006001",
+      "manufacturer": "BeSafe",
+      "oem_article": "11006001",
+      "catalog_skus": [
+        "11006001",
+        "11006001par"
+      ],
+      "accessory_type": "rain_shield",
+      "accessory_class": "A",
+      "completeness_state": "manual_named_models",
+      "confirmed_models": [
+        "iZi Go Modular X1 i-Size",
+        "iZi Go Modular X1"
+      ],
+      "explicit_absent_models": [
+        "iZi Go Modular X2"
+      ],
+      "use_limits": {
+        "kind": "outdoor_only",
+        "in_vehicle": false
+      },
+      "document": {
+        "url": "https://www.besafe.com/4a4457/globalassets/inriverimages/commerce-besafe/2019_01_10_instruction_manual_rain_shield_-_web-manual-601.pdf",
+        "version": "retrieved-2026-11-17",
+        "region": "manufacturer-manual",
+        "language": "en",
+        "retrieved_at": "2026-11-17",
+        "content_sha256": null
+      },
+      "sku_proof_url": "https://besafe.hr/proizvod/besafe-kisna-zastita/"
+    },
+    {
+      "record_type": "oem_evidence",
+      "evidence_key": "maxi-cosi-carrier-adapter-1166057110",
+      "manufacturer": "Maxi-Cosi",
+      "oem_article": "1166057110",
+      "catalog_skus": [
+        "1166057110"
+      ],
+      "accessory_type": "mechanical_adapter",
+      "accessory_class": "B",
+      "interface": {
+        "seat_models": [
+          "Coral Slide Pro"
+        ],
+        "required_component": "soft_carrier",
+        "rejected_components": [
+          "safety_shell",
+          "complete_shell"
+        ],
+        "explicit_absent_models": [
+          "Coral 360"
+        ],
+        "chassis": [
+          {
+            "model": "Fame Cabin",
+            "attachment": "direct"
+          },
+          {
+            "model": "Fame",
+            "attachment": "extension_adapter_required"
+          }
+        ]
+      },
+      "document": {
+        "url": "https://www.maxi-cosi.co.uk/pushchairs/coral-slide-pro-carrier-adapter",
+        "version": "retrieved-2026-11-17",
+        "region": "GB",
+        "language": "en",
+        "retrieved_at": "2026-11-17",
+        "content_sha256": null
+      }
+    },
+    {
+      "record_type": "oem_evidence",
+      "evidence_key": "bugaboo-dragonfly-adapter-400003001",
+      "manufacturer": "Bugaboo",
+      "oem_article": "400003001",
+      "catalog_skus": [
+        "400003001"
+      ],
+      "accessory_type": "mechanical_adapter",
+      "accessory_class": "B",
+      "interface": {
+        "mode": "chassis_specific_lists",
+        "rejected_components": [
+          "safety_shell",
+          "complete_shell"
+        ],
+        "lists": [
+          {
+            "chassis_models": [
+              "Dragonfly",
+              "Dragonfly Plus"
+            ],
+            "confirmed_models": [
+              "Pebble 360 Pro"
+            ],
+            "explicit_absent_models": [
+              "Pebble 360 Pro 2"
+            ],
+            "explicit_reject_models": [
+              "CabrioFix"
+            ]
+          }
+        ]
+      },
+      "document": {
+        "url": "https://www.bugaboo.com/gb-en/outlet/bugaboo-dragonfly-car-seat-adapters-400003001.html",
+        "version": "retrieved-2026-11-17",
+        "region": "GB",
+        "language": "en",
+        "retrieved_at": "2026-11-17",
+        "content_sha256": null
+      }
+    },
+    {
+      "record_type": "oem_evidence",
+      "evidence_key": "bugaboo-fox-adapter-400019001",
+      "manufacturer": "Bugaboo",
+      "oem_article": "400019001",
+      "catalog_skus": [
+        "400019001"
+      ],
+      "accessory_type": "mechanical_adapter",
+      "accessory_class": "B",
+      "interface": {
+        "mode": "chassis_specific_lists",
+        "rejected_components": [
+          "safety_shell",
+          "complete_shell"
+        ],
+        "lists": [
+          {
+            "chassis_models": [
+              "Fox 5",
+              "Fox 5 Renew"
+            ],
+            "confirmed_models": [
+              "Pebble 360 Pro 2",
+              "iZi Go Modular X1 i-Size",
+              "iZi Go Modular X1",
+              "Coral Slide Pro"
+            ],
+            "component_confirmation_required_models": [
+              "Coral Slide Pro"
+            ],
+            "confirmed_component": "soft_carrier"
+          },
+          {
+            "chassis_models": [
+              "Fox 2"
+            ],
+            "confirmed_models": [],
+            "explicit_absent_models": [
+              "Pebble 360 Pro 2"
+            ]
+          }
+        ]
+      },
+      "document": {
+        "url": "https://www.bugaboo.com/gb-en/accessories/adapters/bugaboo-fox-kangaroo-car-seat-adapters-black-400019001.html",
+        "version": "retrieved-2026-11-17",
+        "region": "GB",
+        "language": "en",
+        "retrieved_at": "2026-11-17",
+        "content_sha256": null
+      }
+    },
+    {
+      "record_type": "oem_evidence",
+      "evidence_key": "britax-relax-insert-ACCSFCC207",
+      "manufacturer": "Britax-Römer",
+      "oem_article": "ACCSFCC207",
+      "catalog_skus": [],
+      "unjoined_seller_skus": [
+        "2000040775"
+      ],
+      "accessory_type": "relax_insert",
+      "accessory_class": "A",
+      "completeness_state": "article_known_catalog_join_unproven",
+      "confirmed_models": [
+        "DUALFIX 5Z",
+        "DUALFIX PRO",
+        "DUALFIX PRO M",
+        "DUALFIX PLUS",
+        "DUALFIX M PLUS",
+        "SWINGFIX M PLUS"
+      ],
+      "use_limits": {
+        "kind": "height_band",
+        "height_cm": [
+          61,
+          87
+        ],
+        "forbid_other_insert": true
+      },
+      "document": {
+        "url": "https://www.britax-roemer.com/accessories/car-seat-accessories/relax-insert/ACCSFCC207.html",
+        "version": "retrieved-2026-11-17",
+        "region": "manufacturer-com",
+        "language": "en",
+        "retrieved_at": "2026-11-17",
+        "content_sha256": null
+      }
+    },
+    {
+      "record_type": "oem_evidence",
+      "evidence_key": "vehicle-organiser-6900000016817",
+      "manufacturer": "unspecified",
+      "oem_article": "6900000016817",
+      "catalog_skus": [
+        "6900000016817"
+      ],
+      "accessory_type": "vehicle_organiser",
+      "accessory_class": "C",
+      "never_ab": true,
+      "document": {
+        "url": "negative-control:NEGATIVE_AND_CONDITIONAL_CONTROLS.csv",
+        "version": "retrieved-2026-11-17",
+        "region": "catalog-control",
+        "language": "ru",
+        "retrieved_at": "2026-11-17",
+        "content_sha256": null
+      }
+    },
+    {
+      "record_type": "oem_evidence",
+      "evidence_key": "maxi-cosi-pocket-74203550",
+      "manufacturer": "Maxi-Cosi",
+      "oem_article": "74203550",
+      "catalog_skus": [
+        "74203550"
+      ],
+      "accessory_type": "pocket",
+      "accessory_class": "A",
+      "completeness_state": "partial_no_generalization",
+      "confirmed_models": [],
+      "document": {
+        "url": "negative-control:NEGATIVE_AND_CONDITIONAL_CONTROLS.csv",
+        "version": "retrieved-2026-11-17",
+        "region": "catalog-control",
+        "language": "ru",
+        "retrieved_at": "2026-11-17",
+        "content_sha256": null
+      }
+    }
+  ]
+}
