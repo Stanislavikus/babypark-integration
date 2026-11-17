@@ -1,0 +1,38 @@
+{
+  "kinds": {
+    "britax_comfort_insert": {"kind": "britax_comfort_insert"},
+    "relax_insert": {"use_limits": {"height_cm": [61, 87], "forbid_other_insert": true}}
+  },
+  "provenance": "C01-C15 of PR #167 HOLDOUT_RESULTS.csv re-expressed as typed contexts. C14 (unlisted model) is a relation-level case, not a condition: see tests/test_seed_classification.py.",
+  "schema": "bp-oem-seed-condition-vectors-v1",
+  "vectors": [
+    {"case_id": "C01_BRITAX_R129_59CM_REAR", "conditions": "britax_comfort_insert", "expected": "FAIL",
+     "context": {"restraint_standard": "ECE R129", "harness_type": "integrated", "seat_kind": "car_seat", "facing": "rearward", "child_height_cm": 59}},
+    {"case_id": "C02_BRITAX_R129_60CM_REAR", "conditions": "britax_comfort_insert", "expected": "PASS",
+     "context": {"restraint_standard": "ECE R129", "harness_type": "integrated", "seat_kind": "car_seat", "facing": "rearward", "child_height_cm": 60}},
+    {"case_id": "C03_BRITAX_R129_75CM_FORWARD", "conditions": "britax_comfort_insert", "expected": "FAIL",
+     "context": {"restraint_standard": "ECE R129", "harness_type": "integrated", "seat_kind": "car_seat", "facing": "forward", "child_height_cm": 75}},
+    {"case_id": "C04_BRITAX_R129_76CM_FORWARD", "conditions": "britax_comfort_insert", "expected": "PASS",
+     "context": {"restraint_standard": "ECE R129", "harness_type": "integrated", "seat_kind": "car_seat", "facing": "forward", "child_height_cm": 76}},
+    {"case_id": "C05_BRITAX_R129_60CM_FORWARD", "conditions": "britax_comfort_insert", "expected": "FAIL",
+     "context": {"restraint_standard": "ECE R129", "harness_type": "integrated", "seat_kind": "car_seat", "facing": "forward", "child_height_cm": 60}},
+    {"case_id": "C06_BRITAX_R129_NO_HARNESS", "conditions": "britax_comfort_insert", "expected": "FAIL",
+     "context": {"restraint_standard": "ECE R129", "harness_type": "none", "seat_kind": "car_seat", "facing": "rearward", "child_height_cm": 60}},
+    {"case_id": "C07_BRITAX_R44_8_9KG", "conditions": "britax_comfort_insert", "expected": "FAIL",
+     "context": {"restraint_standard": "ECE R44", "harness_type": "integrated", "seat_kind": "car_seat", "child_weight_kg": 8.9}},
+    {"case_id": "C08_BRITAX_R44_9KG", "conditions": "britax_comfort_insert", "expected": "PASS",
+     "context": {"restraint_standard": "ECE R44", "harness_type": "integrated", "seat_kind": "car_seat", "child_weight_kg": 9}},
+    {"case_id": "C09_BRITAX_INFANT_CARRIER", "conditions": "britax_comfort_insert", "expected": "FAIL",
+     "context": {"restraint_standard": "ECE R44", "harness_type": "integrated", "seat_kind": "infant_carrier", "child_weight_kg": 9}},
+    {"case_id": "C10_RELAX_INSERT_60CM", "conditions": "relax_insert", "expected": "FAIL",
+     "context": {"child_height_cm": 60, "has_other_insert": false}},
+    {"case_id": "C11_RELAX_INSERT_61CM", "conditions": "relax_insert", "expected": "PASS",
+     "context": {"child_height_cm": 61, "has_other_insert": false}},
+    {"case_id": "C12_RELAX_INSERT_87CM", "conditions": "relax_insert", "expected": "PASS",
+     "context": {"child_height_cm": 87, "has_other_insert": false}},
+    {"case_id": "C13_RELAX_INSERT_88CM", "conditions": "relax_insert", "expected": "FAIL",
+     "context": {"child_height_cm": 88, "has_other_insert": false}},
+    {"case_id": "C15_RELAX_INSERT_DOUBLE_INSERT", "conditions": "relax_insert", "expected": "FAIL",
+     "context": {"child_height_cm": 70, "has_other_insert": true}}
+  ]
+}

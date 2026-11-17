@@ -1,0 +1,30 @@
+{
+  "kinds": {
+    "britax_comfort_insert": [
+      {"not": {"attr": "seat_kind", "op": "eq", "value": "infant_carrier"}},
+      {"any_of": [
+        {"all_of": [
+          {"attr": "restraint_standard", "op": "eq", "value": "ECE R44"},
+          {"attr": "harness_type", "op": "eq", "value": "integrated"},
+          {"attr": "child_weight_kg", "op": "gte", "value": 9}
+        ]},
+        {"all_of": [
+          {"attr": "restraint_standard", "op": "eq", "value": "ECE R129"},
+          {"attr": "harness_type", "op": "eq", "value": "integrated"},
+          {"any_of": [
+            {"all_of": [
+              {"attr": "facing", "op": "eq", "value": "rearward"},
+              {"attr": "child_height_cm", "op": "gte", "value": 60}
+            ]},
+            {"all_of": [
+              {"attr": "facing", "op": "eq", "value": "forward"},
+              {"attr": "child_height_cm", "op": "gte", "value": 76}
+            ]}
+          ]}
+        ]}
+      ]}
+    ]
+  },
+  "provenance": "AI-assisted transcription (PROPOSED) of the PR #167 required_conditions text for article 2000030111 into the typed condition language. A human reviewer must confirm it before any claim carrying it can be VERIFIED. Source text: 'ECE R44 integrated harness from 9kg; ECE R129 integrated harness >=60cm rearward-facing OR >=76cm forward-facing; never for infant carrier; not a newborn insert'.",
+  "schema": "bp-oem-seed-typed-conditions-v1"
+}

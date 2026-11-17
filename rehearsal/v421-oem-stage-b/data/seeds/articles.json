@@ -1,0 +1,106 @@
+{
+  "bindings": [
+    {
+      "binding_id": "bnd:besafe:11006001",
+      "catalog_sku": "11006001par",
+      "evidence_claim_ids": [
+        "clm:cc3279303c9b05d3"
+      ],
+      "manufacturer_id": "besafe",
+      "mpn": "11006001",
+      "notes": "PR #167 joined this OEM article to the catalog SKU without document bytes",
+      "proposed_by": "parser:migrate_pr167@stage-b-1",
+      "review": null,
+      "status": "PROPOSED"
+    },
+    {
+      "binding_id": "bnd:britax-romer:2000030111",
+      "catalog_sku": "2000030111",
+      "evidence_claim_ids": [
+        "clm:3b321c43ee8ff318"
+      ],
+      "manufacturer_id": "britax-romer",
+      "mpn": "2000030111",
+      "notes": "PR #167 joined this OEM article to the catalog SKU without document bytes",
+      "proposed_by": "parser:migrate_pr167@stage-b-1",
+      "review": null,
+      "status": "PROPOSED"
+    },
+    {
+      "binding_id": "bnd:bugaboo:400003001",
+      "catalog_sku": "400003001",
+      "evidence_claim_ids": [
+        "clm:164f71eb56b3d7c0"
+      ],
+      "manufacturer_id": "bugaboo",
+      "mpn": "400003001",
+      "notes": "PR #167 joined this OEM article to the catalog SKU without document bytes",
+      "proposed_by": "parser:migrate_pr167@stage-b-1",
+      "review": null,
+      "status": "PROPOSED"
+    },
+    {
+      "binding_id": "bnd:bugaboo:400019001",
+      "catalog_sku": "400019001",
+      "evidence_claim_ids": [
+        "clm:d5696c476f1f8442"
+      ],
+      "manufacturer_id": "bugaboo",
+      "mpn": "400019001",
+      "notes": "PR #167 joined this OEM article to the catalog SKU without document bytes",
+      "proposed_by": "parser:migrate_pr167@stage-b-1",
+      "review": null,
+      "status": "PROPOSED"
+    },
+    {
+      "binding_id": "bnd:maxi-cosi:1166057110",
+      "catalog_sku": "1166057110",
+      "evidence_claim_ids": [
+        "clm:10cea0f6bc1b71bc"
+      ],
+      "manufacturer_id": "maxi-cosi",
+      "mpn": "1166057110",
+      "notes": "PR #167 joined this OEM article to the catalog SKU without document bytes",
+      "proposed_by": "parser:migrate_pr167@stage-b-1",
+      "review": null,
+      "status": "PROPOSED"
+    },
+    {
+      "binding_id": "bnd:maxi-cosi:74203550",
+      "catalog_sku": "74203550",
+      "evidence_claim_ids": [
+        "clm:696cd8bdf49d2f76"
+      ],
+      "manufacturer_id": "maxi-cosi",
+      "mpn": "74203550",
+      "notes": "PR #167 joined this OEM article to the catalog SKU without document bytes",
+      "proposed_by": "parser:migrate_pr167@stage-b-1",
+      "review": null,
+      "status": "PROPOSED"
+    },
+    {
+      "binding_id": "bnd:unspecified:6900000016817",
+      "catalog_sku": "6900000016817",
+      "evidence_claim_ids": [
+        "clm:f3fa158296cfbceb"
+      ],
+      "manufacturer_id": "unspecified",
+      "mpn": "6900000016817",
+      "notes": "PR #167 joined this OEM article to the catalog SKU without document bytes",
+      "proposed_by": "parser:migrate_pr167@stage-b-1",
+      "review": null,
+      "status": "PROPOSED"
+    }
+  ],
+  "schema": "bp-oem-articles-v1",
+  "unjoined": [
+    {
+      "manufacturer_id": "britax-romer",
+      "mpn": "ACCSFCC207",
+      "reason": "PR #167: no audited OEM-article mapping; name similarity is insufficient",
+      "seller_skus": [
+        "2000040775"
+      ]
+    }
+  ]
+}

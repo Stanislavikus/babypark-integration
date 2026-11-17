@@ -1,0 +1,11 @@
+{
+  "files": {
+    "HOLDOUT_RESULTS.csv": "a41258c5e2eb046db47459eaeacaf08e0924bb8c7a1816e2af57f58c391026a1",
+    "NEGATIVE_AND_CONDITIONAL_CONTROLS.csv": "0ff8a7c88c70802a6763889ee0ff16cc0001732d79b32aa3c5d926a904632f70",
+    "OEM_VERIFIED_MISSED_PAIRS.csv": "01bdfe66f3faf2b4672bbf570fa02ced8c18b0238d90bd420c093bba4593db3c",
+    "manufacturer_fitment_evidence_v42.json": "c8fd930cb30fb4ccfae93ed40096d50a5250660cc188ddcea4b14ae3b686e89e"
+  },
+  "note": "Unchanged copies of the PR #167 evidence file and fixtures, used as historical seed/fixture sources only. PR #167 is an unmerged experimental source and is not merged by Stage B.",
+  "pr167_head": "706f292c419cac7ec88b68a1393259dc3af8e402",
+  "schema": "bp-oem-seed-provenance-v1"
+}

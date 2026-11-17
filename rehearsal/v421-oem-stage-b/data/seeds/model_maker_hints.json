@@ -1,0 +1,22 @@
+{
+  "models": {
+    "CabrioFix": ["maxi-cosi", "car_seat"],
+    "Coral 360": ["maxi-cosi", "car_seat"],
+    "Coral Slide Pro": ["maxi-cosi", "car_seat"],
+    "Dragonfly": ["bugaboo", "chassis"],
+    "Dragonfly Plus": ["bugaboo", "chassis"],
+    "Fame": ["maxi-cosi", "chassis"],
+    "Fame Cabin": ["maxi-cosi", "chassis"],
+    "Fox 2": ["bugaboo", "chassis"],
+    "Fox 5": ["bugaboo", "chassis"],
+    "Fox 5 Renew": ["bugaboo", "chassis"],
+    "Pebble 360 Pro": ["maxi-cosi", "car_seat"],
+    "Pebble 360 Pro 2": ["maxi-cosi", "car_seat"],
+    "RodiFix Air Protect": ["maxi-cosi", "car_seat"],
+    "iZi Go Modular X1": ["besafe", "car_seat"],
+    "iZi Go Modular X1 i-Size": ["besafe", "car_seat"],
+    "iZi Go Modular X2": ["besafe", "car_seat"]
+  },
+  "provenance": "Hand-written seed table: which maker owns each model string that PR #167 names without a maker (adapter lists, Pocket control). A name without an entry makes the converter fail closed. Models named inside an accessory_for_model record default to that record's manufacturer.",
+  "schema": "bp-oem-seed-model-makers-v1"
+}

@@ -1,0 +1,12 @@
+{
+  "files": {
+    "aliases.json": "2360612cfc098871351df7de8889bafb56533497b84485cd32069559d8b710f6",
+    "articles.json": "70bfbfc8908a8973c478cd9aa4b33966d2b0fa31be8a7c90cff5b8e41ff595ac",
+    "claims.json": "2080968671f6fa1faee53ef24655bd18f9dbe84402736a9650b3dcd50e803e23",
+    "documents.json": "675f84bcda8609f1d1b43c9a2719da3aba6a35d83b50a999ab9d38bcfc1ff059",
+    "makers.json": "2ca51aa198de57c7b741bc1a6f22fd9e0fd80fe0bbc22d3a05c38472785a0481",
+    "models.json": "e2eef9f918bdd00363d7e5a1176a681a7d84aa4729e03cca66eabc77434faf5c",
+    "seed_cases.json": "9c51d19c4fa1ed7ca4e328f15a23b0d189276add90d191bf1ca09100d92e9799"
+  },
+  "schema": "bp-oem-seeds-manifest-v1"
+}

@@ -1,0 +1,21 @@
+{
+  "attributes": {
+    "carrier_component": {"type": "enum", "values": ["complete_shell", "safety_shell", "soft_carrier"]},
+    "child_age_months": {"type": "number"},
+    "child_height_cm": {"type": "number"},
+    "child_weight_kg": {"type": "number"},
+    "facing": {"type": "enum", "values": ["forward", "rearward"]},
+    "harness_type": {"type": "enum", "values": ["impact_shield", "integrated", "none"]},
+    "has_other_insert": {"type": "bool"},
+    "restraint_standard": {"type": "enum", "values": ["ECE R129", "ECE R44"]},
+    "seat_kind": {"type": "enum", "values": ["booster", "car_seat", "infant_carrier"]},
+    "usage_context": {"type": "enum", "values": ["in_vehicle", "on_stroller", "outside_vehicle"]}
+  },
+  "limits": {"max_depth": 6, "max_nodes": 64},
+  "ops": {
+    "bool": ["eq"],
+    "enum": ["eq", "in", "neq", "not_in"],
+    "number": ["eq", "gt", "gte", "lt", "lte", "neq"]
+  },
+  "schema": "bp-oem-conditions-vocab-v1"
+}

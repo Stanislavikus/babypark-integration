@@ -1,0 +1,428 @@
+{
+ "cases": {
+  "H01": {
+   "adapter": [
+    "bugaboo",
+    "400003001"
+   ],
+   "chassis": [
+    [
+     "bugaboo",
+     "Dragonfly"
+    ],
+    [
+     "bugaboo",
+     "Dragonfly Plus"
+    ]
+   ],
+   "lock_expected_proposed_state": [
+    "LISTED",
+    "LISTED_CONDITIONAL"
+   ],
+   "relation_type": "adapter_between",
+   "seat": [
+    "maxi-cosi",
+    "Pebble 360 Pro"
+   ]
+  },
+  "H02": {
+   "adapter": [
+    "bugaboo",
+    "400019001"
+   ],
+   "chassis": [
+    [
+     "bugaboo",
+     "Fox 5"
+    ],
+    [
+     "bugaboo",
+     "Fox 5 Renew"
+    ]
+   ],
+   "lock_expected_proposed_state": [
+    "LISTED",
+    "LISTED_CONDITIONAL"
+   ],
+   "relation_type": "adapter_between",
+   "seat": [
+    "maxi-cosi",
+    "Pebble 360 Pro 2"
+   ]
+  },
+  "H03": {
+   "adapter": [
+    "bugaboo",
+    "400019001"
+   ],
+   "chassis": [
+    [
+     "bugaboo",
+     "Fox 5"
+    ],
+    [
+     "bugaboo",
+     "Fox 5 Renew"
+    ]
+   ],
+   "lock_expected_proposed_state": [
+    "LISTED",
+    "LISTED_CONDITIONAL"
+   ],
+   "relation_type": "adapter_between",
+   "seat": [
+    "besafe",
+    "iZi Go Modular X1 i-Size"
+   ]
+  },
+  "H04": {
+   "adapter": [
+    "bugaboo",
+    "400019001"
+   ],
+   "chassis": [
+    [
+     "bugaboo",
+     "Fox 5"
+    ],
+    [
+     "bugaboo",
+     "Fox 5 Renew"
+    ]
+   ],
+   "lock_expected_proposed_state": [
+    "LISTED",
+    "LISTED_CONDITIONAL"
+   ],
+   "relation_type": "adapter_between",
+   "seat": [
+    "maxi-cosi",
+    "Coral Slide Pro"
+   ]
+  },
+  "N01": {
+   "adapter": [
+    "bugaboo",
+    "400003001"
+   ],
+   "chassis": [
+    [
+     "bugaboo",
+     "Dragonfly"
+    ],
+    [
+     "bugaboo",
+     "Dragonfly Plus"
+    ]
+   ],
+   "lock_expected_proposed_state": [
+    "CONFLICT_HOLD"
+   ],
+   "relation_type": "adapter_between",
+   "seat": [
+    "maxi-cosi",
+    "Pebble 360 Pro 2"
+   ]
+  },
+  "N02": {
+   "adapter": [
+    "bugaboo",
+    "400019001"
+   ],
+   "chassis": [
+    [
+     "bugaboo",
+     "Fox 2"
+    ]
+   ],
+   "lock_expected_proposed_state": [
+    "UNKNOWN"
+   ],
+   "relation_type": "adapter_between",
+   "seat": [
+    "maxi-cosi",
+    "Pebble 360 Pro 2"
+   ]
+  },
+  "N03": {
+   "adapter": [
+    "bugaboo",
+    "400003001"
+   ],
+   "chassis": [
+    [
+     "bugaboo",
+     "Dragonfly"
+    ],
+    [
+     "bugaboo",
+     "Dragonfly Plus"
+    ]
+   ],
+   "lock_expected_proposed_state": [
+    "EXCLUDED"
+   ],
+   "relation_type": "adapter_between",
+   "seat": [
+    "maxi-cosi",
+    "CabrioFix"
+   ]
+  },
+  "N04": {
+   "accessory": [
+    "britax-romer",
+    "ACCSFCC207"
+   ],
+   "lock_expected_proposed_state": [
+    "LISTED",
+    "LISTED_CONDITIONAL"
+   ],
+   "model": [
+    "britax-romer",
+    "DUALFIX PLUS"
+   ],
+   "relation_type": "accessory_for_model"
+  }
+ },
+ "controls": [
+  {
+   "control": "BeSafe Rain Shield",
+   "relations": [
+    {
+     "accessory": [
+      "besafe",
+      "11006001"
+     ],
+     "model": [
+      "besafe",
+      "iZi Go Modular X1 i-Size"
+     ],
+     "relation_type": "accessory_for_model"
+    }
+   ],
+   "source_model": "iZi Go Modular X-1",
+   "target_sku": "11006001"
+  },
+  {
+   "control": "Britax Comfort Insert",
+   "relations": [
+    {
+     "accessory": [
+      "britax-romer",
+      "2000030111"
+     ],
+     "model": [
+      "britax-romer",
+      "DUALFIX PRO"
+     ],
+     "relation_type": "accessory_for_model"
+    }
+   ],
+   "source_model": "DUALFIX PRO",
+   "target_sku": "2000030111"
+  },
+  {
+   "control": "Britax Comfort Insert",
+   "relations": [
+    {
+     "accessory": [
+      "britax-romer",
+      "2000030111"
+     ],
+     "model": [
+      "britax-romer",
+      "KIDFIX PRO"
+     ],
+     "relation_type": "accessory_for_model"
+    }
+   ],
+   "source_model": "KIDFIX PRO",
+   "target_sku": "2000030111"
+  },
+  {
+   "control": "Britax Comfort Insert",
+   "relations": [
+    {
+     "accessory": [
+      "britax-romer",
+      "2000030111"
+     ],
+     "model": [
+      "britax-romer",
+      "SWIVEL"
+     ],
+     "relation_type": "accessory_for_model"
+    }
+   ],
+   "source_model": "SWIVEL",
+   "target_sku": "2000030111"
+  },
+  {
+   "control": "Maxi-Cosi adapter",
+   "relations": [
+    {
+     "adapter": [
+      "maxi-cosi",
+      "1166057110"
+     ],
+     "chassis": [
+      "maxi-cosi",
+      "Fame"
+     ],
+     "relation_type": "adapter_between",
+     "seat": [
+      "maxi-cosi",
+      "Coral Slide Pro"
+     ]
+    },
+    {
+     "adapter": [
+      "maxi-cosi",
+      "1166057110"
+     ],
+     "chassis": [
+      "maxi-cosi",
+      "Fame Cabin"
+     ],
+     "relation_type": "adapter_between",
+     "seat": [
+      "maxi-cosi",
+      "Coral Slide Pro"
+     ]
+    }
+   ],
+   "source_model": "Coral Slide Pro",
+   "target_sku": "1166057110"
+  },
+  {
+   "control": "Maxi-Cosi adapter",
+   "relations": [
+    {
+     "adapter": [
+      "maxi-cosi",
+      "1166057110"
+     ],
+     "chassis": [
+      "maxi-cosi",
+      "Fame"
+     ],
+     "relation_type": "adapter_between",
+     "seat": [
+      "maxi-cosi",
+      "Coral 360"
+     ]
+    },
+    {
+     "adapter": [
+      "maxi-cosi",
+      "1166057110"
+     ],
+     "chassis": [
+      "maxi-cosi",
+      "Fame Cabin"
+     ],
+     "relation_type": "adapter_between",
+     "seat": [
+      "maxi-cosi",
+      "Coral 360"
+     ]
+    }
+   ],
+   "source_model": "Coral 360",
+   "target_sku": "1166057110"
+  },
+  {
+   "control": "Car organiser C",
+   "relations": [
+    {
+     "accessory": [
+      "unspecified",
+      "6900000016817"
+     ],
+     "relation_type": "vehicle_general"
+    }
+   ],
+   "source_model": "any car seat / stand-alone ISOFIX base",
+   "target_sku": "6900000016817"
+  },
+  {
+   "control": "Maxi Cosi Pocket",
+   "relations": [
+    {
+     "accessory": [
+      "maxi-cosi",
+      "74203550"
+     ],
+     "model": [
+      "maxi-cosi",
+      "RodiFix Air Protect"
+     ],
+     "relation_type": "accessory_for_model"
+    }
+   ],
+   "source_model": "RodiFix Air Protect",
+   "target_sku": "74203550"
+  }
+ ],
+ "lock_expectation_source": "H*/N04: PR #167 recorded OEM_EXPLICIT_POSITIVE / unproven SKU mapping (Stage B proposed state is a positive relation held by evidence/conditions/binding). N01-N03: STAGE_B_EXECUTION_LOCK_20261117 'Veto and negative semantics': Dragonfly/Pebble 360 Pro 2 = CONFLICT_HOLD; Fox 2/Pebble Pro 2 = UNKNOWN; Dragonfly/CabrioFix = scoped explicit no-recommendation (report-only veto candidate).",
+ "normalization": {
+  "M01": {
+   "context": "catalog",
+   "distinct_from": [
+    "besafe:izi-go-modular-x1",
+    "besafe:izi-go-modular-x2"
+   ],
+   "maker": "besafe",
+   "pr167_equal_to": "besafe:izi-go-modular-x1-i-size"
+  },
+  "M02": {
+   "context": "catalog",
+   "distinct_from": [
+    "britax-romer:dualfix-plus"
+   ],
+   "maker": "britax-romer",
+   "pr167_equal_to": "britax-romer:dualfix-m-plus"
+  },
+  "M03": {
+   "context": "catalog",
+   "distinct_from": [
+    "britax-romer:swivel-2"
+   ],
+   "maker": "britax-romer",
+   "pr167_equal_to": "britax-romer:swivel"
+  },
+  "M04": {
+   "context": "catalog",
+   "distinct_from": [
+    "maxi-cosi:pebble-360-pro-2"
+   ],
+   "maker": "maxi-cosi",
+   "pr167_equal_to": "maxi-cosi:pebble-360-pro"
+  },
+  "M05": {
+   "context": "catalog",
+   "distinct_from": [
+    "maxi-cosi:coral-360"
+   ],
+   "maker": "maxi-cosi",
+   "pr167_equal_to": "maxi-cosi:coral-slide-pro"
+  },
+  "M06": {
+   "context": "catalog",
+   "distinct_from": [
+    "besafe:izi-go-modular-x1",
+    "besafe:izi-go-modular-x1-i-size",
+    "besafe:izi-go-modular-x2"
+   ],
+   "maker": "besafe",
+   "pr167_equal_to": null
+  }
+ },
+ "positive_groups": {
+  "P01_OEM_ENUM_CONDITIONAL": "accessory_for_model",
+  "P02_OEM_FAMILY_ALIAS_OUTDOOR": "accessory_for_model",
+  "P03_OEM_TWO_SIDED_ADAPTER": "adapter_between"
+ },
+ "provenance": "Hand-transcribed relation endpoints for the PR #167 Bugaboo/Relax holdout cases (HOLDOUT_RESULTS.csv H01-H04, N01-N04). NIDs, SKUs and PR expectations are read from the CSV by the converter. 'positive_groups', 'normalization', 'controls' and 'lock_expected_proposed_state' were added for Stage B classification.",
+ "schema": "bp-oem-seed-holdout-endpoints-v1"
+}
