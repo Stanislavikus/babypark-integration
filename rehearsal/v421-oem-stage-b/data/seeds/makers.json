@@ -1,0 +1,50 @@
+{
+  "makers": [
+    {
+      "catalog_brands": [
+        "BeSafe (Норвегия)"
+      ],
+      "maker_id": "besafe",
+      "names": [
+        "BeSafe",
+        "besafe"
+      ]
+    },
+    {
+      "catalog_brands": [
+        "Britax-Romer (Великобритания/Германия)"
+      ],
+      "maker_id": "britax-romer",
+      "names": [
+        "Britax-Römer",
+        "britax-romer"
+      ]
+    },
+    {
+      "catalog_brands": [],
+      "maker_id": "bugaboo",
+      "names": [
+        "Bugaboo",
+        "bugaboo"
+      ]
+    },
+    {
+      "catalog_brands": [
+        "Maxi-Cosi (Нидерланды)"
+      ],
+      "maker_id": "maxi-cosi",
+      "names": [
+        "Maxi-Cosi",
+        "maxi-cosi"
+      ]
+    },
+    {
+      "catalog_brands": [],
+      "maker_id": "unspecified",
+      "names": [
+        "unspecified"
+      ]
+    }
+  ],
+  "schema": "bp-oem-makers-v1"
+}

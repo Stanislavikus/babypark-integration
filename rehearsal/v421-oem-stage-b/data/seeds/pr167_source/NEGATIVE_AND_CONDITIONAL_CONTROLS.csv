@@ -1,0 +1,9 @@
+﻿control,source_model,target_sku,expected,purpose
+BeSafe Rain Shield,iZi Go Modular X-1,11006001,conditional outdoor compatibility; NOT inside car,positive + safety negative
+Britax Comfort Insert,DUALFIX PRO,2000030111,OEM model allowed with child height/harness constraints; never newborn claim,positive conditional
+Britax Comfort Insert,KIDFIX PRO,2000030111,not inferred; absent from OEM list,negative generation/model
+Britax Comfort Insert,SWIVEL,2000030111,do not conflate with SWIVEL 2,negative model alias
+Maxi-Cosi adapter,Coral Slide Pro,1166057110,only soft carrier + Fame/Fame Cabin stroller frame,positive three-sided conditional
+Maxi-Cosi adapter,Coral 360,1166057110,no fitment inferred,negative model generation
+Car organiser C,any car seat / stand-alone ISOFIX base,6900000016817,never counted as A/B,negative C vs A/B
+Maxi Cosi Pocket,RodiFix Air Protect,74203550,manual lists old models but not RodiFix Air Protect; no generalization,negative unseen seat

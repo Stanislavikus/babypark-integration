@@ -1,0 +1,185 @@
+{
+  "models": [
+    {
+      "display": "iZi Go Modular X1",
+      "kind": "car_seat",
+      "maker_id": "besafe",
+      "model_id": "besafe:izi-go-modular-x1"
+    },
+    {
+      "display": "iZi Go Modular X1 i-Size",
+      "kind": "car_seat",
+      "maker_id": "besafe",
+      "model_id": "besafe:izi-go-modular-x1-i-size"
+    },
+    {
+      "display": "iZi Go Modular X2",
+      "kind": "car_seat",
+      "maker_id": "besafe",
+      "model_id": "besafe:izi-go-modular-x2"
+    },
+    {
+      "display": "ADVANSAFIX PRO",
+      "kind": "car_seat",
+      "maker_id": "britax-romer",
+      "model_id": "britax-romer:advansafix-pro"
+    },
+    {
+      "display": "DUALFIX 5Z",
+      "kind": "car_seat",
+      "maker_id": "britax-romer",
+      "model_id": "britax-romer:dualfix-5z"
+    },
+    {
+      "display": "DUALFIX M PLUS",
+      "kind": "car_seat",
+      "maker_id": "britax-romer",
+      "model_id": "britax-romer:dualfix-m-plus"
+    },
+    {
+      "display": "DUALFIX PLUS",
+      "kind": "car_seat",
+      "maker_id": "britax-romer",
+      "model_id": "britax-romer:dualfix-plus"
+    },
+    {
+      "display": "DUALFIX PRO",
+      "kind": "car_seat",
+      "maker_id": "britax-romer",
+      "model_id": "britax-romer:dualfix-pro"
+    },
+    {
+      "display": "DUALFIX PRO M",
+      "kind": "car_seat",
+      "maker_id": "britax-romer",
+      "model_id": "britax-romer:dualfix-pro-m"
+    },
+    {
+      "display": "EVOLVAFIX",
+      "kind": "car_seat",
+      "maker_id": "britax-romer",
+      "model_id": "britax-romer:evolvafix"
+    },
+    {
+      "display": "KIDFIX PRO",
+      "kind": "car_seat",
+      "maker_id": "britax-romer",
+      "model_id": "britax-romer:kidfix-pro"
+    },
+    {
+      "display": "KING PRO",
+      "kind": "car_seat",
+      "maker_id": "britax-romer",
+      "model_id": "britax-romer:king-pro"
+    },
+    {
+      "display": "MAX-SAFE PRO",
+      "kind": "car_seat",
+      "maker_id": "britax-romer",
+      "model_id": "britax-romer:max-safe-pro"
+    },
+    {
+      "display": "SAFE-WAY M",
+      "kind": "car_seat",
+      "maker_id": "britax-romer",
+      "model_id": "britax-romer:safe-way-m"
+    },
+    {
+      "display": "SWINGFIX M PLUS",
+      "kind": "car_seat",
+      "maker_id": "britax-romer",
+      "model_id": "britax-romer:swingfix-m-plus"
+    },
+    {
+      "display": "SWIVEL",
+      "kind": "car_seat",
+      "maker_id": "britax-romer",
+      "model_id": "britax-romer:swivel"
+    },
+    {
+      "display": "SWIVEL 2",
+      "kind": "car_seat",
+      "maker_id": "britax-romer",
+      "model_id": "britax-romer:swivel-2"
+    },
+    {
+      "display": "Dragonfly",
+      "kind": "chassis",
+      "maker_id": "bugaboo",
+      "model_id": "bugaboo:dragonfly"
+    },
+    {
+      "display": "Dragonfly Plus",
+      "kind": "chassis",
+      "maker_id": "bugaboo",
+      "model_id": "bugaboo:dragonfly-plus"
+    },
+    {
+      "display": "Fox 2",
+      "kind": "chassis",
+      "maker_id": "bugaboo",
+      "model_id": "bugaboo:fox-2"
+    },
+    {
+      "display": "Fox 5",
+      "kind": "chassis",
+      "maker_id": "bugaboo",
+      "model_id": "bugaboo:fox-5"
+    },
+    {
+      "display": "Fox 5 Renew",
+      "kind": "chassis",
+      "maker_id": "bugaboo",
+      "model_id": "bugaboo:fox-5-renew"
+    },
+    {
+      "display": "CabrioFix",
+      "kind": "car_seat",
+      "maker_id": "maxi-cosi",
+      "model_id": "maxi-cosi:cabriofix"
+    },
+    {
+      "display": "Coral 360",
+      "kind": "car_seat",
+      "maker_id": "maxi-cosi",
+      "model_id": "maxi-cosi:coral-360"
+    },
+    {
+      "display": "Coral Slide Pro",
+      "kind": "car_seat",
+      "maker_id": "maxi-cosi",
+      "model_id": "maxi-cosi:coral-slide-pro"
+    },
+    {
+      "display": "Fame",
+      "kind": "chassis",
+      "maker_id": "maxi-cosi",
+      "model_id": "maxi-cosi:fame"
+    },
+    {
+      "display": "Fame Cabin",
+      "kind": "chassis",
+      "maker_id": "maxi-cosi",
+      "model_id": "maxi-cosi:fame-cabin"
+    },
+    {
+      "display": "Pebble 360 Pro",
+      "kind": "car_seat",
+      "maker_id": "maxi-cosi",
+      "model_id": "maxi-cosi:pebble-360-pro"
+    },
+    {
+      "display": "Pebble 360 Pro 2",
+      "kind": "car_seat",
+      "maker_id": "maxi-cosi",
+      "model_id": "maxi-cosi:pebble-360-pro-2"
+    },
+    {
+      "display": "RodiFix Air Protect",
+      "kind": "car_seat",
+      "maker_id": "maxi-cosi",
+      "model_id": "maxi-cosi:rodifix-air-protect"
+    }
+  ],
+  "schema": "bp-oem-models-v1"
+}

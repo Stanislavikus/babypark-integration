@@ -1,0 +1,23 @@
+{
+  "files": {
+    "claim_status_matrix.json": "92563d8a0d7140964f513de833886f5bb36c2058c734d56afc73cb28fda2632b",
+    "oem_relations.json": "7c606903c1861d1399457be812bcdf76e2f81951838d18275d69e6cc0691f44e",
+    "oem_vs_current_report.json": "baf9352a1e9d34bd14bfd736e0228b16ce4f7059c73cfa9a1afb55699811dffd",
+    "review_queue.json": "fc9992b4b5787e305e18984d0d177691e473497c0e397b223064e57a0a9e1215"
+  },
+  "inputs": {
+    "aliases.json": "2360612cfc098871351df7de8889bafb56533497b84485cd32069559d8b710f6",
+    "articles.json": "70bfbfc8908a8973c478cd9aa4b33966d2b0fa31be8a7c90cff5b8e41ff595ac",
+    "claims.json": "2080968671f6fa1faee53ef24655bd18f9dbe84402736a9650b3dcd50e803e23",
+    "conditions_vocab.json": "c72a7b3cf1b55ecfd1362133a773af43ec6b8e19671a5c8a63f2930e7994f4ce",
+    "documents.json": "675f84bcda8609f1d1b43c9a2719da3aba6a35d83b50a999ab9d38bcfc1ff059",
+    "engine:work/accessories/src/accessory_auto_v39.py": "7f313b47f7f94efd797527737d32761bd3670a2cbe236cefc1827a84692beb04",
+    "engine:work/accessories/src/accessory_v4.py": "20c12303543fa7c4a522cc28ea5f4dc698098b0093ccf14fa066f9d67f7be2e8",
+    "engine:work/accessories/src/canonical_models.py": "eb54e4bef88158af896ad54ebe5f6c27b3886c1b831fee91166877e9ccabdda3",
+    "engine:work/accessories/src/v32_pipeline.py": "9c4cd8788aadc7d8a1422bd941c2a1032b36319f13daeaf58bb60b8ce32eafdc",
+    "engine:work/accessories/src/v3_rules_v421.py": "42c4fa835d25f3ed027df25f01fdd29790da20af75bfcf5b68fc2ee420141a35",
+    "makers.json": "2ca51aa198de57c7b741bc1a6f22fd9e0fd80fe0bbc22d3a05c38472785a0481",
+    "models.json": "e2eef9f918bdd00363d7e5a1176a681a7d84aa4729e03cca66eabc77434faf5c"
+  },
+  "schema": "bp-oem-hashes-v1"
+}

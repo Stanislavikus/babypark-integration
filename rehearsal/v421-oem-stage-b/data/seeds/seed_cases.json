@@ -1,0 +1,1672 @@
+{
+  "condition_cases": [
+    {
+      "case_id": "C01_BRITAX_R129_59CM_REAR",
+      "pr167": {
+        "accessory_field_status": "",
+        "counterfactual_current_t2": "NOT_APPLICABLE",
+        "expected_oem_state": "CONDITION_FAIL",
+        "rejection_reason": "Condition predicate only; no SKU-specific recommendation was evaluated.",
+        "rule": "BRITAX_R129",
+        "shadow_output": "REJECT",
+        "stage1_status": "NOT_APPLICABLE_RULE_PREDICATE_TEST",
+        "test_result": "PASS_EXECUTED_PREDICATE"
+      }
+    },
+    {
+      "case_id": "C02_BRITAX_R129_60CM_REAR",
+      "pr167": {
+        "accessory_field_status": "",
+        "counterfactual_current_t2": "NOT_APPLICABLE",
+        "expected_oem_state": "CONDITION_PASS",
+        "rejection_reason": "Condition predicate only; no SKU-specific recommendation was evaluated.",
+        "rule": "BRITAX_R129",
+        "shadow_output": "CONDITIONAL_FITMENT_ONLY",
+        "stage1_status": "NOT_APPLICABLE_RULE_PREDICATE_TEST",
+        "test_result": "PASS_EXECUTED_PREDICATE"
+      }
+    },
+    {
+      "case_id": "C03_BRITAX_R129_75CM_FORWARD",
+      "pr167": {
+        "accessory_field_status": "",
+        "counterfactual_current_t2": "NOT_APPLICABLE",
+        "expected_oem_state": "CONDITION_FAIL",
+        "rejection_reason": "Condition predicate only; no SKU-specific recommendation was evaluated.",
+        "rule": "BRITAX_R129",
+        "shadow_output": "REJECT",
+        "stage1_status": "NOT_APPLICABLE_RULE_PREDICATE_TEST",
+        "test_result": "PASS_EXECUTED_PREDICATE"
+      }
+    },
+    {
+      "case_id": "C04_BRITAX_R129_76CM_FORWARD",
+      "pr167": {
+        "accessory_field_status": "",
+        "counterfactual_current_t2": "NOT_APPLICABLE",
+        "expected_oem_state": "CONDITION_PASS",
+        "rejection_reason": "Condition predicate only; no SKU-specific recommendation was evaluated.",
+        "rule": "BRITAX_R129",
+        "shadow_output": "CONDITIONAL_FITMENT_ONLY",
+        "stage1_status": "NOT_APPLICABLE_RULE_PREDICATE_TEST",
+        "test_result": "PASS_EXECUTED_PREDICATE"
+      }
+    },
+    {
+      "case_id": "C05_BRITAX_R129_60CM_FORWARD",
+      "pr167": {
+        "accessory_field_status": "",
+        "counterfactual_current_t2": "NOT_APPLICABLE",
+        "expected_oem_state": "CONDITION_FAIL",
+        "rejection_reason": "Condition predicate only; no SKU-specific recommendation was evaluated.",
+        "rule": "BRITAX_R129",
+        "shadow_output": "REJECT",
+        "stage1_status": "NOT_APPLICABLE_RULE_PREDICATE_TEST",
+        "test_result": "PASS_EXECUTED_PREDICATE"
+      }
+    },
+    {
+      "case_id": "C06_BRITAX_R129_NO_HARNESS",
+      "pr167": {
+        "accessory_field_status": "",
+        "counterfactual_current_t2": "NOT_APPLICABLE",
+        "expected_oem_state": "CONDITION_FAIL",
+        "rejection_reason": "Condition predicate only; no SKU-specific recommendation was evaluated.",
+        "rule": "BRITAX_R129",
+        "shadow_output": "REJECT",
+        "stage1_status": "NOT_APPLICABLE_RULE_PREDICATE_TEST",
+        "test_result": "PASS_EXECUTED_PREDICATE"
+      }
+    },
+    {
+      "case_id": "C07_BRITAX_R44_8_9KG",
+      "pr167": {
+        "accessory_field_status": "",
+        "counterfactual_current_t2": "NOT_APPLICABLE",
+        "expected_oem_state": "CONDITION_FAIL",
+        "rejection_reason": "Condition predicate only; no SKU-specific recommendation was evaluated.",
+        "rule": "BRITAX_R44",
+        "shadow_output": "REJECT",
+        "stage1_status": "NOT_APPLICABLE_RULE_PREDICATE_TEST",
+        "test_result": "PASS_EXECUTED_PREDICATE"
+      }
+    },
+    {
+      "case_id": "C08_BRITAX_R44_9KG",
+      "pr167": {
+        "accessory_field_status": "",
+        "counterfactual_current_t2": "NOT_APPLICABLE",
+        "expected_oem_state": "CONDITION_PASS",
+        "rejection_reason": "Condition predicate only; no SKU-specific recommendation was evaluated.",
+        "rule": "BRITAX_R44",
+        "shadow_output": "CONDITIONAL_FITMENT_ONLY",
+        "stage1_status": "NOT_APPLICABLE_RULE_PREDICATE_TEST",
+        "test_result": "PASS_EXECUTED_PREDICATE"
+      }
+    },
+    {
+      "case_id": "C09_BRITAX_INFANT_CARRIER",
+      "pr167": {
+        "accessory_field_status": "",
+        "counterfactual_current_t2": "NOT_APPLICABLE",
+        "expected_oem_state": "CONDITION_FAIL",
+        "rejection_reason": "Condition predicate only; no SKU-specific recommendation was evaluated.",
+        "rule": "BRITAX_R44",
+        "shadow_output": "REJECT",
+        "stage1_status": "NOT_APPLICABLE_RULE_PREDICATE_TEST",
+        "test_result": "PASS_EXECUTED_PREDICATE"
+      }
+    },
+    {
+      "case_id": "C10_RELAX_INSERT_60CM",
+      "pr167": {
+        "accessory_field_status": "",
+        "counterfactual_current_t2": "NOT_APPLICABLE",
+        "expected_oem_state": "CONDITION_FAIL",
+        "rejection_reason": "Condition predicate only; no SKU-specific recommendation was evaluated.",
+        "rule": "BRITAX_RELAX_INSERT",
+        "shadow_output": "REJECT",
+        "stage1_status": "NOT_APPLICABLE_RULE_PREDICATE_TEST",
+        "test_result": "PASS_EXECUTED_PREDICATE"
+      }
+    },
+    {
+      "case_id": "C11_RELAX_INSERT_61CM",
+      "pr167": {
+        "accessory_field_status": "",
+        "counterfactual_current_t2": "NOT_APPLICABLE",
+        "expected_oem_state": "CONDITION_PASS",
+        "rejection_reason": "Condition predicate only; no SKU-specific recommendation was evaluated.",
+        "rule": "BRITAX_RELAX_INSERT",
+        "shadow_output": "CONDITIONAL_FITMENT_ONLY",
+        "stage1_status": "NOT_APPLICABLE_RULE_PREDICATE_TEST",
+        "test_result": "PASS_EXECUTED_PREDICATE"
+      }
+    },
+    {
+      "case_id": "C12_RELAX_INSERT_87CM",
+      "pr167": {
+        "accessory_field_status": "",
+        "counterfactual_current_t2": "NOT_APPLICABLE",
+        "expected_oem_state": "CONDITION_PASS",
+        "rejection_reason": "Condition predicate only; no SKU-specific recommendation was evaluated.",
+        "rule": "BRITAX_RELAX_INSERT",
+        "shadow_output": "CONDITIONAL_FITMENT_ONLY",
+        "stage1_status": "NOT_APPLICABLE_RULE_PREDICATE_TEST",
+        "test_result": "PASS_EXECUTED_PREDICATE"
+      }
+    },
+    {
+      "case_id": "C13_RELAX_INSERT_88CM",
+      "pr167": {
+        "accessory_field_status": "",
+        "counterfactual_current_t2": "NOT_APPLICABLE",
+        "expected_oem_state": "CONDITION_FAIL",
+        "rejection_reason": "Condition predicate only; no SKU-specific recommendation was evaluated.",
+        "rule": "BRITAX_RELAX_INSERT",
+        "shadow_output": "REJECT",
+        "stage1_status": "NOT_APPLICABLE_RULE_PREDICATE_TEST",
+        "test_result": "PASS_EXECUTED_PREDICATE"
+      }
+    },
+    {
+      "case_id": "C14_RELAX_INSERT_UNLISTED_MODEL",
+      "pr167": {
+        "accessory_field_status": "",
+        "counterfactual_current_t2": "NOT_APPLICABLE",
+        "expected_oem_state": "CONDITION_FAIL",
+        "rejection_reason": "Condition predicate only; no SKU-specific recommendation was evaluated.",
+        "rule": "BRITAX_RELAX_INSERT",
+        "shadow_output": "REJECT",
+        "stage1_status": "NOT_APPLICABLE_RULE_PREDICATE_TEST",
+        "test_result": "PASS_EXECUTED_PREDICATE"
+      }
+    },
+    {
+      "case_id": "C15_RELAX_INSERT_DOUBLE_INSERT",
+      "pr167": {
+        "accessory_field_status": "",
+        "counterfactual_current_t2": "NOT_APPLICABLE",
+        "expected_oem_state": "CONDITION_FAIL",
+        "rejection_reason": "Condition predicate only; no SKU-specific recommendation was evaluated.",
+        "rule": "BRITAX_RELAX_INSERT",
+        "shadow_output": "REJECT",
+        "stage1_status": "NOT_APPLICABLE_RULE_PREDICATE_TEST",
+        "test_result": "PASS_EXECUTED_PREDICATE"
+      }
+    }
+  ],
+  "controls": [
+    {
+      "control": "BeSafe Rain Shield",
+      "expected": "conditional outdoor compatibility; NOT inside car",
+      "purpose": "positive + safety negative",
+      "source_model": "iZi Go Modular X-1",
+      "target_sku": "11006001"
+    },
+    {
+      "control": "Britax Comfort Insert",
+      "expected": "OEM model allowed with child height/harness constraints; never newborn claim",
+      "purpose": "positive conditional",
+      "source_model": "DUALFIX PRO",
+      "target_sku": "2000030111"
+    },
+    {
+      "control": "Britax Comfort Insert",
+      "expected": "not inferred; absent from OEM list",
+      "purpose": "negative generation/model",
+      "source_model": "KIDFIX PRO",
+      "target_sku": "2000030111"
+    },
+    {
+      "control": "Britax Comfort Insert",
+      "expected": "do not conflate with SWIVEL 2",
+      "purpose": "negative model alias",
+      "source_model": "SWIVEL",
+      "target_sku": "2000030111"
+    },
+    {
+      "control": "Maxi-Cosi adapter",
+      "expected": "only soft carrier + Fame/Fame Cabin stroller frame",
+      "purpose": "positive three-sided conditional",
+      "source_model": "Coral Slide Pro",
+      "target_sku": "1166057110"
+    },
+    {
+      "control": "Maxi-Cosi adapter",
+      "expected": "no fitment inferred",
+      "purpose": "negative model generation",
+      "source_model": "Coral 360",
+      "target_sku": "1166057110"
+    },
+    {
+      "control": "Car organiser C",
+      "expected": "never counted as A/B",
+      "purpose": "negative C vs A/B",
+      "source_model": "any car seat / stand-alone ISOFIX base",
+      "target_sku": "6900000016817"
+    },
+    {
+      "control": "Maxi Cosi Pocket",
+      "expected": "manual lists old models but not RodiFix Air Protect; no generalization",
+      "purpose": "negative unseen seat",
+      "source_model": "RodiFix Air Protect",
+      "target_sku": "74203550"
+    }
+  ],
+  "engine_pins": {
+    "work/accessories/src/accessory_auto_v39.py": "7f313b47f7f94efd797527737d32761bd3670a2cbe236cefc1827a84692beb04",
+    "work/accessories/src/accessory_v4.py": "20c12303543fa7c4a522cc28ea5f4dc698098b0093ccf14fa066f9d67f7be2e8",
+    "work/accessories/src/canonical_models.py": "eb54e4bef88158af896ad54ebe5f6c27b3886c1b831fee91166877e9ccabdda3",
+    "work/accessories/src/v32_pipeline.py": "9c4cd8788aadc7d8a1422bd941c2a1032b36319f13daeaf58bb60b8ce32eafdc",
+    "work/accessories/src/v3_rules_v421.py": "42c4fa835d25f3ed027df25f01fdd29790da20af75bfcf5b68fc2ee420141a35"
+  },
+  "holdouts": [
+    {
+      "accessory_nids": {
+        "ru": 138671,
+        "uk": 138672
+      },
+      "accessory_sku": "400003001",
+      "case_id": "H01_PEBBLE_PRO_DRAGONFLY",
+      "endpoints": {
+        "adapter": [
+          "bugaboo",
+          "400003001"
+        ],
+        "chassis": [
+          [
+            "bugaboo",
+            "Dragonfly"
+          ],
+          [
+            "bugaboo",
+            "Dragonfly Plus"
+          ]
+        ],
+        "lock_expected_proposed_state": [
+          "LISTED",
+          "LISTED_CONDITIONAL"
+        ],
+        "relation_type": "adapter_between",
+        "seat": [
+          "maxi-cosi",
+          "Pebble 360 Pro"
+        ]
+      },
+      "pr167": {
+        "accessory_field_status": "3",
+        "counterfactual_current_t2": "NO",
+        "expected_oem_state": "OEM_EXPLICIT_POSITIVE",
+        "rejection_reason": "OEM relation confirmed, but source/adapter field_status=3 and new-pair Stage1 was not run.",
+        "rule": "OEM allow-list + exact 3-node interface",
+        "shadow_output": "CONDITIONAL_MATCH",
+        "stage1_status": "NOT RUN FOR THIS NEW PAIR",
+        "test_result": "TRUE_OEM_RELATION; NOT_A_STAGE1_APPROVED_RECOMMENDATION"
+      },
+      "prefix": "H01",
+      "source_brand_assumed": "Maxi-Cosi (Нидерланды)",
+      "source_catalog_model_string": "Pebble 360 Pro",
+      "source_extract_status": "indexed",
+      "source_nids": {
+        "ru": 137405,
+        "uk": 137407
+      },
+      "source_title": "Maxi-Cosi автокресло Pebble 360 Pro",
+      "source_tnid": 137405
+    },
+    {
+      "accessory_nids": {
+        "ru": 144145,
+        "uk": 144146
+      },
+      "accessory_sku": "400019001",
+      "case_id": "H02_PEBBLE_PRO2_FOX5",
+      "endpoints": {
+        "adapter": [
+          "bugaboo",
+          "400019001"
+        ],
+        "chassis": [
+          [
+            "bugaboo",
+            "Fox 5"
+          ],
+          [
+            "bugaboo",
+            "Fox 5 Renew"
+          ]
+        ],
+        "lock_expected_proposed_state": [
+          "LISTED",
+          "LISTED_CONDITIONAL"
+        ],
+        "relation_type": "adapter_between",
+        "seat": [
+          "maxi-cosi",
+          "Pebble 360 Pro 2"
+        ]
+      },
+      "pr167": {
+        "accessory_field_status": "1",
+        "counterfactual_current_t2": "NO",
+        "expected_oem_state": "OEM_EXPLICIT_POSITIVE",
+        "rejection_reason": "OEM relation confirmed, but frame products are not purchasable in the frozen snapshot and pair Stage1 was not run.",
+        "rule": "OEM allow-list + exact 3-node interface",
+        "shadow_output": "CONDITIONAL_MATCH",
+        "stage1_status": "NOT RUN FOR THIS NEW PAIR",
+        "test_result": "TRUE_OEM_RELATION; NOT_A_STAGE1_APPROVED_RECOMMENDATION"
+      },
+      "prefix": "H02",
+      "source_brand_assumed": "Maxi-Cosi (Нидерланды)",
+      "source_catalog_model_string": "Pebble 360 Pro 2",
+      "source_extract_status": "indexed",
+      "source_nids": {
+        "ru": 139524,
+        "uk": 139663
+      },
+      "source_title": "Maxi-Cosi автокресло Pebble 360 Pro 2",
+      "source_tnid": 139524
+    },
+    {
+      "accessory_nids": {
+        "ru": 144145,
+        "uk": 144146
+      },
+      "accessory_sku": "400019001",
+      "case_id": "H03_BESAFE_X1_FOX5_SKU_HOLDOUT",
+      "endpoints": {
+        "adapter": [
+          "bugaboo",
+          "400019001"
+        ],
+        "chassis": [
+          [
+            "bugaboo",
+            "Fox 5"
+          ],
+          [
+            "bugaboo",
+            "Fox 5 Renew"
+          ]
+        ],
+        "lock_expected_proposed_state": [
+          "LISTED",
+          "LISTED_CONDITIONAL"
+        ],
+        "relation_type": "adapter_between",
+        "seat": [
+          "besafe",
+          "iZi Go Modular X1 i-Size"
+        ]
+      },
+      "pr167": {
+        "accessory_field_status": "1",
+        "counterfactual_current_t2": "NO",
+        "expected_oem_state": "OEM_EXPLICIT_POSITIVE",
+        "rejection_reason": "OEM relation confirmed for a new accessory SKU, but source model repeats P02 and is not independent-model validation.",
+        "rule": "OEM allow-list + punctuation-only model normalization",
+        "shadow_output": "CONDITIONAL_MATCH",
+        "stage1_status": "NOT RUN FOR THIS NEW PAIR",
+        "test_result": "TRUE_OEM_RELATION; NOT_A_STAGE1_APPROVED_RECOMMENDATION"
+      },
+      "prefix": "H03",
+      "source_brand_assumed": "BeSafe (Норвегия)",
+      "source_catalog_model_string": "iZi Go Modular X-1 iSize",
+      "source_extract_status": "indexed",
+      "source_nids": {
+        "ru": 133428,
+        "uk": 133778
+      },
+      "source_title": "BeSafe автокресло iZi Go Modular X-1 iSize",
+      "source_tnid": 133428
+    },
+    {
+      "accessory_nids": {
+        "ru": 144145,
+        "uk": 144146
+      },
+      "accessory_sku": "400019001",
+      "case_id": "H04_CORAL_SLIDE_PRO_FOX5_SKU_HOLDOUT",
+      "endpoints": {
+        "adapter": [
+          "bugaboo",
+          "400019001"
+        ],
+        "chassis": [
+          [
+            "bugaboo",
+            "Fox 5"
+          ],
+          [
+            "bugaboo",
+            "Fox 5 Renew"
+          ]
+        ],
+        "lock_expected_proposed_state": [
+          "LISTED",
+          "LISTED_CONDITIONAL"
+        ],
+        "relation_type": "adapter_between",
+        "seat": [
+          "maxi-cosi",
+          "Coral Slide Pro"
+        ]
+      },
+      "pr167": {
+        "accessory_field_status": "1",
+        "counterfactual_current_t2": "NO",
+        "expected_oem_state": "OEM_EXPLICIT_POSITIVE",
+        "rejection_reason": "OEM model-list relation observed for a new adapter SKU, but Coral Slide Pro repeats P03 source model and the exact carrying component must be checked in both manuals.",
+        "rule": "OEM allow-list + exact 3-node interface",
+        "shadow_output": "CONDITIONAL_MATCH",
+        "stage1_status": "NOT RUN FOR THIS NEW PAIR",
+        "test_result": "TRUE_OEM_RELATION; NOT_A_STAGE1_APPROVED_RECOMMENDATION"
+      },
+      "prefix": "H04",
+      "source_brand_assumed": "Maxi-Cosi (Нидерланды)",
+      "source_catalog_model_string": "Coral Slide Pro",
+      "source_extract_status": "indexed",
+      "source_nids": {
+        "ru": 144473,
+        "uk": 144474
+      },
+      "source_title": "Maxi-Cosi автокресло Coral Slide Pro",
+      "source_tnid": 144473
+    },
+    {
+      "accessory_nids": {
+        "ru": 138671,
+        "uk": 138672
+      },
+      "accessory_sku": "400003001",
+      "case_id": "N01_PEBBLE_PRO2_DRAGONFLY",
+      "endpoints": {
+        "adapter": [
+          "bugaboo",
+          "400003001"
+        ],
+        "chassis": [
+          [
+            "bugaboo",
+            "Dragonfly"
+          ],
+          [
+            "bugaboo",
+            "Dragonfly Plus"
+          ]
+        ],
+        "lock_expected_proposed_state": [
+          "CONFLICT_HOLD"
+        ],
+        "relation_type": "adapter_between",
+        "seat": [
+          "maxi-cosi",
+          "Pebble 360 Pro 2"
+        ]
+      },
+      "pr167": {
+        "accessory_field_status": "3",
+        "counterfactual_current_t2": "NO",
+        "expected_oem_state": "NOT_LISTED_UNTESTED",
+        "rejection_reason": "No current OEM positive proof for this exact car seat + adapter + Dragonfly combination; abstain.",
+        "rule": "exact OEM list; retain Pro vs Pro 2",
+        "shadow_output": "ABSTAIN_NO_RECOMMENDATION",
+        "stage1_status": "NOT RUN FOR THIS NEW PAIR",
+        "test_result": "CORRECT_ABSTENTION_NOT_A_PHYSICAL_NEGATIVE"
+      },
+      "prefix": "N01",
+      "source_brand_assumed": "Maxi-Cosi (Нидерланды)",
+      "source_catalog_model_string": "Pebble 360 Pro 2",
+      "source_extract_status": "indexed",
+      "source_nids": {
+        "ru": 139524,
+        "uk": 139663
+      },
+      "source_title": "Maxi-Cosi автокресло Pebble 360 Pro 2",
+      "source_tnid": 139524
+    },
+    {
+      "accessory_nids": {
+        "ru": 144145,
+        "uk": 144146
+      },
+      "accessory_sku": "400019001",
+      "case_id": "N02_PEBBLE_PRO2_FOX2",
+      "endpoints": {
+        "adapter": [
+          "bugaboo",
+          "400019001"
+        ],
+        "chassis": [
+          [
+            "bugaboo",
+            "Fox 2"
+          ]
+        ],
+        "lock_expected_proposed_state": [
+          "UNKNOWN"
+        ],
+        "relation_type": "adapter_between",
+        "seat": [
+          "maxi-cosi",
+          "Pebble 360 Pro 2"
+        ]
+      },
+      "pr167": {
+        "accessory_field_status": "1",
+        "counterfactual_current_t2": "NO",
+        "expected_oem_state": "NOT_LISTED_FOR_THIS_CHASSIS",
+        "rejection_reason": "No OEM positive proof for Pebble 360 Pro 2 + Fox 2; abstain, without asserting physical incompatibility.",
+        "rule": "exact chassis-specific allow-list",
+        "shadow_output": "ABSTAIN_NO_RECOMMENDATION",
+        "stage1_status": "NOT RUN FOR THIS NEW PAIR",
+        "test_result": "CORRECT_ABSTENTION_NOT_A_PHYSICAL_NEGATIVE"
+      },
+      "prefix": "N02",
+      "source_brand_assumed": "Maxi-Cosi (Нидерланды)",
+      "source_catalog_model_string": "Pebble 360 Pro 2",
+      "source_extract_status": "indexed",
+      "source_nids": {
+        "ru": 139524,
+        "uk": 139663
+      },
+      "source_title": "Maxi-Cosi автокресло Pebble 360 Pro 2",
+      "source_tnid": 139524
+    },
+    {
+      "accessory_nids": {
+        "ru": 138671,
+        "uk": 138672
+      },
+      "accessory_sku": "400003001",
+      "case_id": "N03_CABRIOFIX_DRAGONFLY",
+      "endpoints": {
+        "adapter": [
+          "bugaboo",
+          "400003001"
+        ],
+        "chassis": [
+          [
+            "bugaboo",
+            "Dragonfly"
+          ],
+          [
+            "bugaboo",
+            "Dragonfly Plus"
+          ]
+        ],
+        "lock_expected_proposed_state": [
+          "EXCLUDED"
+        ],
+        "relation_type": "adapter_between",
+        "seat": [
+          "maxi-cosi",
+          "CabrioFix"
+        ]
+      },
+      "pr167": {
+        "accessory_field_status": "3",
+        "counterfactual_current_t2": "NO",
+        "expected_oem_state": "OEM_SAYS_NOT_COMPATIBLE_OR_TESTED",
+        "rejection_reason": "Explicit manufacturer no-recommendation for this configuration.",
+        "rule": "OEM explicit no recommendation",
+        "shadow_output": "REJECT",
+        "stage1_status": "NOT RUN FOR THIS NEW PAIR",
+        "test_result": "CORRECT_REJECTION"
+      },
+      "prefix": "N03",
+      "source_brand_assumed": "Maxi-Cosi (Нидерланды)",
+      "source_catalog_model_string": "Cabriofix",
+      "source_extract_status": "indexed",
+      "source_nids": {
+        "ru": 14139,
+        "uk": 15227
+      },
+      "source_title": "Maxi-Cosi автокресло Cabriofix",
+      "source_tnid": 14139
+    },
+    {
+      "accessory_nids": {
+        "ru": 139830,
+        "uk": 139831
+      },
+      "accessory_sku": "2000040775",
+      "case_id": "N04_RELAX_INSERT_IDENTITY",
+      "endpoints": {
+        "accessory": [
+          "britax-romer",
+          "ACCSFCC207"
+        ],
+        "lock_expected_proposed_state": [
+          "LISTED",
+          "LISTED_CONDITIONAL"
+        ],
+        "model": [
+          "britax-romer",
+          "DUALFIX PLUS"
+        ],
+        "relation_type": "accessory_for_model"
+      },
+      "pr167": {
+        "accessory_field_status": "1",
+        "counterfactual_current_t2": "NO",
+        "expected_oem_state": "OEM_TARGET_SKU_MAPPING_UNPROVEN",
+        "rejection_reason": "Accessory article identity is unproven for catalogue SKU 2000040775; abstain.",
+        "rule": "accessory OEM article identity join",
+        "shadow_output": "ABSTAIN_IDENTITY_UNVERIFIED",
+        "stage1_status": "NOT RUN FOR THIS NEW PAIR",
+        "test_result": "CORRECT_ABSTENTION"
+      },
+      "prefix": "N04",
+      "source_brand_assumed": "Britax-Romer (Великобритания/Германия)",
+      "source_catalog_model_string": "Dualfix Plus",
+      "source_extract_status": "indexed",
+      "source_nids": {
+        "ru": 134912,
+        "uk": 136278
+      },
+      "source_title": "Britax-Romer автокресло Dualfix Plus",
+      "source_tnid": 134912
+    }
+  ],
+  "normalization": [
+    {
+      "case_id": "M01_BESAFE_X1_PUNCTUATION",
+      "pr167": {
+        "accessory_field_status": "",
+        "counterfactual_current_t2": "NOT_APPLICABLE",
+        "expected_oem_state": "NORMALIZES_EQUAL",
+        "rejection_reason": "Normalization test only; it creates no product relation.",
+        "rule": "casefold + NFKC + punctuation/whitespace normalization; preserve tokens and digits",
+        "shadow_output": "NORMALIZES_EQUAL",
+        "stage1_status": "NOT_APPLICABLE_RULE_PREDICATE_TEST",
+        "test_result": "PASS_EXECUTED_NORMALIZATION"
+      },
+      "source_model": "iZi Go Modular X-1 iSize"
+    },
+    {
+      "case_id": "M02_CASE_AND_SPACING",
+      "pr167": {
+        "accessory_field_status": "",
+        "counterfactual_current_t2": "NOT_APPLICABLE",
+        "expected_oem_state": "NORMALIZES_EQUAL",
+        "rejection_reason": "Normalization test only; it creates no product relation.",
+        "rule": "casefold + NFKC + punctuation/whitespace normalization; preserve tokens and digits",
+        "shadow_output": "NORMALIZES_EQUAL",
+        "stage1_status": "NOT_APPLICABLE_RULE_PREDICATE_TEST",
+        "test_result": "PASS_EXECUTED_NORMALIZATION"
+      },
+      "source_model": "DUALFIX   M PLUS"
+    },
+    {
+      "case_id": "M03_SWIVEL_GENERATION",
+      "pr167": {
+        "accessory_field_status": "",
+        "counterfactual_current_t2": "NOT_APPLICABLE",
+        "expected_oem_state": "NORMALIZES_DISTINCT",
+        "rejection_reason": "Normalization test only; it creates no product relation.",
+        "rule": "casefold + NFKC + punctuation/whitespace normalization; preserve tokens and digits",
+        "shadow_output": "ABSTAIN_DISTINCT_MODEL",
+        "stage1_status": "NOT_APPLICABLE_RULE_PREDICATE_TEST",
+        "test_result": "PASS_EXECUTED_NORMALIZATION"
+      },
+      "source_model": "SWIVEL"
+    },
+    {
+      "case_id": "M04_PEBBLE_PRO_GENERATION",
+      "pr167": {
+        "accessory_field_status": "",
+        "counterfactual_current_t2": "NOT_APPLICABLE",
+        "expected_oem_state": "NORMALIZES_DISTINCT",
+        "rejection_reason": "Normalization test only; it creates no product relation.",
+        "rule": "casefold + NFKC + punctuation/whitespace normalization; preserve tokens and digits",
+        "shadow_output": "ABSTAIN_DISTINCT_MODEL",
+        "stage1_status": "NOT_APPLICABLE_RULE_PREDICATE_TEST",
+        "test_result": "PASS_EXECUTED_NORMALIZATION"
+      },
+      "source_model": "Pebble 360 Pro"
+    },
+    {
+      "case_id": "M05_CORAL_MODEL",
+      "pr167": {
+        "accessory_field_status": "",
+        "counterfactual_current_t2": "NOT_APPLICABLE",
+        "expected_oem_state": "NORMALIZES_DISTINCT",
+        "rejection_reason": "Normalization test only; it creates no product relation.",
+        "rule": "casefold + NFKC + punctuation/whitespace normalization; preserve tokens and digits",
+        "shadow_output": "ABSTAIN_DISTINCT_MODEL",
+        "stage1_status": "NOT_APPLICABLE_RULE_PREDICATE_TEST",
+        "test_result": "PASS_EXECUTED_NORMALIZATION"
+      },
+      "source_model": "Coral Slide Pro"
+    },
+    {
+      "case_id": "M06_CYRILLIC_LATIN_CONFUSABLE",
+      "pr167": {
+        "accessory_field_status": "",
+        "counterfactual_current_t2": "NOT_APPLICABLE",
+        "expected_oem_state": "NORMALIZES_DISTINCT",
+        "rejection_reason": "Normalization test only; it creates no product relation.",
+        "rule": "casefold + NFKC + punctuation/whitespace normalization; preserve tokens and digits",
+        "shadow_output": "ABSTAIN_DISTINCT_MODEL",
+        "stage1_status": "NOT_APPLICABLE_RULE_PREDICATE_TEST",
+        "test_result": "PASS_EXECUTED_NORMALIZATION"
+      },
+      "source_model": "iZi Go X1"
+    }
+  ],
+  "positives": [
+    {
+      "case_id": "P01:134907:ru",
+      "group_id": "P01_OEM_ENUM_CONDITIONAL",
+      "lang": "ru",
+      "oem_compatible_model": "DUALFIX M PLUS",
+      "pr167": {
+        "already_in_corrected_AB": "no",
+        "evidence_status": "MODEL_COMPATIBLE_ONLY__CHILD_USE_REQUIRES_DYNAMIC_CONDITIONS",
+        "manual_T1_pair": "no",
+        "ready_for_publication": "NO — rules + individual Stage1 + conditions require separate validation",
+        "required_conditions": "ECE R44 integrated harness from 9kg; ECE R129 integrated harness >=60cm rearward-facing OR >=76cm forward-facing; never for infant carrier; not a newborn insert",
+        "stage1_new_pair_checked": "no"
+      },
+      "source": {
+        "brand": "Britax-Romer (Великобритания/Германия)",
+        "catalog_model_string": "Dualfix M Plus",
+        "extract_status": "indexed",
+        "maker_id": "britax-romer",
+        "nid": 134907,
+        "sku": "2000036889",
+        "title": "Britax-Romer автокресло Dualfix M Plus",
+        "tnid": 134907
+      },
+      "target": {
+        "field_status": 1,
+        "nid": 82597,
+        "oem_base_sku": "2000030111",
+        "price": 1260.0,
+        "published": 1,
+        "role": "comfort_insert",
+        "sku": "2000030111",
+        "title": "BRITAX-ROMER вкладыш для новорожденных (авто group 1)",
+        "tnid": 82597
+      }
+    },
+    {
+      "case_id": "P01:135892:uk",
+      "group_id": "P01_OEM_ENUM_CONDITIONAL",
+      "lang": "uk",
+      "oem_compatible_model": "DUALFIX M PLUS",
+      "pr167": {
+        "already_in_corrected_AB": "no",
+        "evidence_status": "MODEL_COMPATIBLE_ONLY__CHILD_USE_REQUIRES_DYNAMIC_CONDITIONS",
+        "manual_T1_pair": "no",
+        "ready_for_publication": "NO — rules + individual Stage1 + conditions require separate validation",
+        "required_conditions": "ECE R44 integrated harness from 9kg; ECE R129 integrated harness >=60cm rearward-facing OR >=76cm forward-facing; never for infant carrier; not a newborn insert",
+        "stage1_new_pair_checked": "no"
+      },
+      "source": {
+        "brand": "Britax-Romer (Великобритания/Германия)",
+        "catalog_model_string": "Dualfix M Plus",
+        "extract_status": "indexed",
+        "maker_id": "britax-romer",
+        "nid": 135892,
+        "sku": "2000036889",
+        "title": "Britax-Romer автокрісло Dualfix M Plus",
+        "tnid": 134907
+      },
+      "target": {
+        "field_status": 1,
+        "nid": 82608,
+        "oem_base_sku": "2000030111",
+        "price": 1260.0,
+        "published": 1,
+        "role": "comfort_insert",
+        "sku": "2000030111",
+        "title": "BRITAX-ROMER вкладиш для новонароджених (авто group 1)",
+        "tnid": 82597
+      }
+    },
+    {
+      "case_id": "P01:134912:ru",
+      "group_id": "P01_OEM_ENUM_CONDITIONAL",
+      "lang": "ru",
+      "oem_compatible_model": "DUALFIX PLUS",
+      "pr167": {
+        "already_in_corrected_AB": "no",
+        "evidence_status": "MODEL_COMPATIBLE_ONLY__CHILD_USE_REQUIRES_DYNAMIC_CONDITIONS",
+        "manual_T1_pair": "no",
+        "ready_for_publication": "NO — rules + individual Stage1 + conditions require separate validation",
+        "required_conditions": "ECE R44 integrated harness from 9kg; ECE R129 integrated harness >=60cm rearward-facing OR >=76cm forward-facing; never for infant carrier; not a newborn insert",
+        "stage1_new_pair_checked": "no"
+      },
+      "source": {
+        "brand": "Britax-Romer (Великобритания/Германия)",
+        "catalog_model_string": "Dualfix Plus",
+        "extract_status": "indexed",
+        "maker_id": "britax-romer",
+        "nid": 134912,
+        "sku": "2000036277",
+        "title": "Britax-Romer автокресло Dualfix Plus",
+        "tnid": 134912
+      },
+      "target": {
+        "field_status": 1,
+        "nid": 82597,
+        "oem_base_sku": "2000030111",
+        "price": 1260.0,
+        "published": 1,
+        "role": "comfort_insert",
+        "sku": "2000030111",
+        "title": "BRITAX-ROMER вкладыш для новорожденных (авто group 1)",
+        "tnid": 82597
+      }
+    },
+    {
+      "case_id": "P01:136278:uk",
+      "group_id": "P01_OEM_ENUM_CONDITIONAL",
+      "lang": "uk",
+      "oem_compatible_model": "DUALFIX PLUS",
+      "pr167": {
+        "already_in_corrected_AB": "no",
+        "evidence_status": "MODEL_COMPATIBLE_ONLY__CHILD_USE_REQUIRES_DYNAMIC_CONDITIONS",
+        "manual_T1_pair": "no",
+        "ready_for_publication": "NO — rules + individual Stage1 + conditions require separate validation",
+        "required_conditions": "ECE R44 integrated harness from 9kg; ECE R129 integrated harness >=60cm rearward-facing OR >=76cm forward-facing; never for infant carrier; not a newborn insert",
+        "stage1_new_pair_checked": "no"
+      },
+      "source": {
+        "brand": "Britax-Romer (Великобритания/Германия)",
+        "catalog_model_string": "Dualfix Plus",
+        "extract_status": "indexed",
+        "maker_id": "britax-romer",
+        "nid": 136278,
+        "sku": "2000036277",
+        "title": "Britax-Romer автокрісло Dualfix Plus",
+        "tnid": 134912
+      },
+      "target": {
+        "field_status": 1,
+        "nid": 82608,
+        "oem_base_sku": "2000030111",
+        "price": 1260.0,
+        "published": 1,
+        "role": "comfort_insert",
+        "sku": "2000030111",
+        "title": "BRITAX-ROMER вкладиш для новонароджених (авто group 1)",
+        "tnid": 82597
+      }
+    },
+    {
+      "case_id": "P01:136666:ru",
+      "group_id": "P01_OEM_ENUM_CONDITIONAL",
+      "lang": "ru",
+      "oem_compatible_model": "EVOLVAFIX",
+      "pr167": {
+        "already_in_corrected_AB": "no",
+        "evidence_status": "MODEL_COMPATIBLE_ONLY__CHILD_USE_REQUIRES_DYNAMIC_CONDITIONS",
+        "manual_T1_pair": "no",
+        "ready_for_publication": "NO — rules + individual Stage1 + conditions require separate validation",
+        "required_conditions": "ECE R44 integrated harness from 9kg; ECE R129 integrated harness >=60cm rearward-facing OR >=76cm forward-facing; never for infant carrier; not a newborn insert",
+        "stage1_new_pair_checked": "no"
+      },
+      "source": {
+        "brand": "Britax-Romer (Великобритания/Германия)",
+        "catalog_model_string": "Britax-R mer Evolvafix",
+        "extract_status": "indexed",
+        "maker_id": "britax-romer",
+        "nid": 136666,
+        "sku": "2000037922",
+        "title": "Britax-Römer автокресло Evolvafix ",
+        "tnid": 136666
+      },
+      "target": {
+        "field_status": 1,
+        "nid": 82597,
+        "oem_base_sku": "2000030111",
+        "price": 1260.0,
+        "published": 1,
+        "role": "comfort_insert",
+        "sku": "2000030111",
+        "title": "BRITAX-ROMER вкладыш для новорожденных (авто group 1)",
+        "tnid": 82597
+      }
+    },
+    {
+      "case_id": "P01:136863:uk",
+      "group_id": "P01_OEM_ENUM_CONDITIONAL",
+      "lang": "uk",
+      "oem_compatible_model": "EVOLVAFIX",
+      "pr167": {
+        "already_in_corrected_AB": "no",
+        "evidence_status": "MODEL_COMPATIBLE_ONLY__CHILD_USE_REQUIRES_DYNAMIC_CONDITIONS",
+        "manual_T1_pair": "no",
+        "ready_for_publication": "NO — rules + individual Stage1 + conditions require separate validation",
+        "required_conditions": "ECE R44 integrated harness from 9kg; ECE R129 integrated harness >=60cm rearward-facing OR >=76cm forward-facing; never for infant carrier; not a newborn insert",
+        "stage1_new_pair_checked": "no"
+      },
+      "source": {
+        "brand": "Britax-Romer (Великобритания/Германия)",
+        "catalog_model_string": "Britax-R mer Evolvafix",
+        "extract_status": "indexed",
+        "maker_id": "britax-romer",
+        "nid": 136863,
+        "sku": "2000037922",
+        "title": "Britax-Römer автокрісло Evolvafix ",
+        "tnid": 136666
+      },
+      "target": {
+        "field_status": 1,
+        "nid": 82608,
+        "oem_base_sku": "2000030111",
+        "price": 1260.0,
+        "published": 1,
+        "role": "comfort_insert",
+        "sku": "2000030111",
+        "title": "BRITAX-ROMER вкладиш для новонароджених (авто group 1)",
+        "tnid": 82597
+      }
+    },
+    {
+      "case_id": "P01:136852:ru",
+      "group_id": "P01_OEM_ENUM_CONDITIONAL",
+      "lang": "ru",
+      "oem_compatible_model": "DUALFIX PRO",
+      "pr167": {
+        "already_in_corrected_AB": "no",
+        "evidence_status": "MODEL_COMPATIBLE_ONLY__CHILD_USE_REQUIRES_DYNAMIC_CONDITIONS",
+        "manual_T1_pair": "yes",
+        "ready_for_publication": "NO — rules + individual Stage1 + conditions require separate validation",
+        "required_conditions": "ECE R44 integrated harness from 9kg; ECE R129 integrated harness >=60cm rearward-facing OR >=76cm forward-facing; never for infant carrier; not a newborn insert",
+        "stage1_new_pair_checked": "no"
+      },
+      "source": {
+        "brand": "Britax-Romer (Великобритания/Германия)",
+        "catalog_model_string": "Dualfix Pro",
+        "extract_status": "indexed",
+        "maker_id": "britax-romer",
+        "nid": 136852,
+        "sku": "2000038298",
+        "title": "Britax-Romer автокресло Dualfix Pro",
+        "tnid": 136852
+      },
+      "target": {
+        "field_status": 1,
+        "nid": 82597,
+        "oem_base_sku": "2000030111",
+        "price": 1260.0,
+        "published": 1,
+        "role": "comfort_insert",
+        "sku": "2000030111",
+        "title": "BRITAX-ROMER вкладыш для новорожденных (авто group 1)",
+        "tnid": 82597
+      }
+    },
+    {
+      "case_id": "P01:137217:uk",
+      "group_id": "P01_OEM_ENUM_CONDITIONAL",
+      "lang": "uk",
+      "oem_compatible_model": "DUALFIX PRO",
+      "pr167": {
+        "already_in_corrected_AB": "no",
+        "evidence_status": "MODEL_COMPATIBLE_ONLY__CHILD_USE_REQUIRES_DYNAMIC_CONDITIONS",
+        "manual_T1_pair": "yes",
+        "ready_for_publication": "NO — rules + individual Stage1 + conditions require separate validation",
+        "required_conditions": "ECE R44 integrated harness from 9kg; ECE R129 integrated harness >=60cm rearward-facing OR >=76cm forward-facing; never for infant carrier; not a newborn insert",
+        "stage1_new_pair_checked": "no"
+      },
+      "source": {
+        "brand": "Britax-Romer (Великобритания/Германия)",
+        "catalog_model_string": "Dualfix Pro",
+        "extract_status": "indexed",
+        "maker_id": "britax-romer",
+        "nid": 137217,
+        "sku": "2000038298",
+        "title": "Britax-Romer автокрісло Dualfix Pro",
+        "tnid": 136852
+      },
+      "target": {
+        "field_status": 1,
+        "nid": 82608,
+        "oem_base_sku": "2000030111",
+        "price": 1260.0,
+        "published": 1,
+        "role": "comfort_insert",
+        "sku": "2000030111",
+        "title": "BRITAX-ROMER вкладиш для новонароджених (авто group 1)",
+        "tnid": 82597
+      }
+    },
+    {
+      "case_id": "P01:136855:ru",
+      "group_id": "P01_OEM_ENUM_CONDITIONAL",
+      "lang": "ru",
+      "oem_compatible_model": "DUALFIX PRO M",
+      "pr167": {
+        "already_in_corrected_AB": "no",
+        "evidence_status": "MODEL_COMPATIBLE_ONLY__CHILD_USE_REQUIRES_DYNAMIC_CONDITIONS",
+        "manual_T1_pair": "no",
+        "ready_for_publication": "NO — rules + individual Stage1 + conditions require separate validation",
+        "required_conditions": "ECE R44 integrated harness from 9kg; ECE R129 integrated harness >=60cm rearward-facing OR >=76cm forward-facing; never for infant carrier; not a newborn insert",
+        "stage1_new_pair_checked": "no"
+      },
+      "source": {
+        "brand": "Britax-Romer (Великобритания/Германия)",
+        "catalog_model_string": "Dualfix Pro М",
+        "extract_status": "indexed",
+        "maker_id": "britax-romer",
+        "nid": 136855,
+        "sku": "2000038514",
+        "title": "Britax-Romer автокресло Dualfix Pro М",
+        "tnid": 136855
+      },
+      "target": {
+        "field_status": 1,
+        "nid": 82597,
+        "oem_base_sku": "2000030111",
+        "price": 1260.0,
+        "published": 1,
+        "role": "comfort_insert",
+        "sku": "2000030111",
+        "title": "BRITAX-ROMER вкладыш для новорожденных (авто group 1)",
+        "tnid": 82597
+      }
+    },
+    {
+      "case_id": "P01:137218:uk",
+      "group_id": "P01_OEM_ENUM_CONDITIONAL",
+      "lang": "uk",
+      "oem_compatible_model": "DUALFIX PRO M",
+      "pr167": {
+        "already_in_corrected_AB": "no",
+        "evidence_status": "MODEL_COMPATIBLE_ONLY__CHILD_USE_REQUIRES_DYNAMIC_CONDITIONS",
+        "manual_T1_pair": "no",
+        "ready_for_publication": "NO — rules + individual Stage1 + conditions require separate validation",
+        "required_conditions": "ECE R44 integrated harness from 9kg; ECE R129 integrated harness >=60cm rearward-facing OR >=76cm forward-facing; never for infant carrier; not a newborn insert",
+        "stage1_new_pair_checked": "no"
+      },
+      "source": {
+        "brand": "Britax-Romer (Великобритания/Германия)",
+        "catalog_model_string": "Dualfix Pro М",
+        "extract_status": "indexed",
+        "maker_id": "britax-romer",
+        "nid": 137218,
+        "sku": "2000038514",
+        "title": "Britax-Romer автокрісло Dualfix Pro М",
+        "tnid": 136855
+      },
+      "target": {
+        "field_status": 1,
+        "nid": 82608,
+        "oem_base_sku": "2000030111",
+        "price": 1260.0,
+        "published": 1,
+        "role": "comfort_insert",
+        "sku": "2000030111",
+        "title": "BRITAX-ROMER вкладиш для новонароджених (авто group 1)",
+        "tnid": 82597
+      }
+    },
+    {
+      "case_id": "P01:137510:ru",
+      "group_id": "P01_OEM_ENUM_CONDITIONAL",
+      "lang": "ru",
+      "oem_compatible_model": "DUALFIX 5Z",
+      "pr167": {
+        "already_in_corrected_AB": "no",
+        "evidence_status": "MODEL_COMPATIBLE_ONLY__CHILD_USE_REQUIRES_DYNAMIC_CONDITIONS",
+        "manual_T1_pair": "no",
+        "ready_for_publication": "NO — rules + individual Stage1 + conditions require separate validation",
+        "required_conditions": "ECE R44 integrated harness from 9kg; ECE R129 integrated harness >=60cm rearward-facing OR >=76cm forward-facing; never for infant carrier; not a newborn insert",
+        "stage1_new_pair_checked": "no"
+      },
+      "source": {
+        "brand": "Britax-Romer (Великобритания/Германия)",
+        "catalog_model_string": "Dualfix 5Z",
+        "extract_status": "indexed",
+        "maker_id": "britax-romer",
+        "nid": 137510,
+        "sku": "2000038859",
+        "title": "Britax-Romer автокресло Dualfix 5Z",
+        "tnid": 137510
+      },
+      "target": {
+        "field_status": 1,
+        "nid": 82597,
+        "oem_base_sku": "2000030111",
+        "price": 1260.0,
+        "published": 1,
+        "role": "comfort_insert",
+        "sku": "2000030111",
+        "title": "BRITAX-ROMER вкладыш для новорожденных (авто group 1)",
+        "tnid": 82597
+      }
+    },
+    {
+      "case_id": "P01:137709:uk",
+      "group_id": "P01_OEM_ENUM_CONDITIONAL",
+      "lang": "uk",
+      "oem_compatible_model": "DUALFIX 5Z",
+      "pr167": {
+        "already_in_corrected_AB": "no",
+        "evidence_status": "MODEL_COMPATIBLE_ONLY__CHILD_USE_REQUIRES_DYNAMIC_CONDITIONS",
+        "manual_T1_pair": "no",
+        "ready_for_publication": "NO — rules + individual Stage1 + conditions require separate validation",
+        "required_conditions": "ECE R44 integrated harness from 9kg; ECE R129 integrated harness >=60cm rearward-facing OR >=76cm forward-facing; never for infant carrier; not a newborn insert",
+        "stage1_new_pair_checked": "no"
+      },
+      "source": {
+        "brand": "Britax-Romer (Великобритания/Германия)",
+        "catalog_model_string": "Dualfix 5Z",
+        "extract_status": "indexed",
+        "maker_id": "britax-romer",
+        "nid": 137709,
+        "sku": "2000038859",
+        "title": "Britax-Romer автокрісло Dualfix 5Z",
+        "tnid": 137510
+      },
+      "target": {
+        "field_status": 1,
+        "nid": 82608,
+        "oem_base_sku": "2000030111",
+        "price": 1260.0,
+        "published": 1,
+        "role": "comfort_insert",
+        "sku": "2000030111",
+        "title": "BRITAX-ROMER вкладиш для новонароджених (авто group 1)",
+        "tnid": 82597
+      }
+    },
+    {
+      "case_id": "P01:137851:ru",
+      "group_id": "P01_OEM_ENUM_CONDITIONAL",
+      "lang": "ru",
+      "oem_compatible_model": "MAX-SAFE PRO",
+      "pr167": {
+        "already_in_corrected_AB": "no",
+        "evidence_status": "MODEL_COMPATIBLE_ONLY__CHILD_USE_REQUIRES_DYNAMIC_CONDITIONS",
+        "manual_T1_pair": "yes",
+        "ready_for_publication": "NO — rules + individual Stage1 + conditions require separate validation",
+        "required_conditions": "ECE R44 integrated harness from 9kg; ECE R129 integrated harness >=60cm rearward-facing OR >=76cm forward-facing; never for infant carrier; not a newborn insert",
+        "stage1_new_pair_checked": "no"
+      },
+      "source": {
+        "brand": "Britax-Romer (Великобритания/Германия)",
+        "catalog_model_string": "Max-Safe Pro",
+        "extract_status": "indexed",
+        "maker_id": "britax-romer",
+        "nid": 137851,
+        "sku": "2000038455",
+        "title": "Britax-Romer автокресло Max-Safe Pro",
+        "tnid": 137851
+      },
+      "target": {
+        "field_status": 1,
+        "nid": 82597,
+        "oem_base_sku": "2000030111",
+        "price": 1260.0,
+        "published": 1,
+        "role": "comfort_insert",
+        "sku": "2000030111",
+        "title": "BRITAX-ROMER вкладыш для новорожденных (авто group 1)",
+        "tnid": 82597
+      }
+    },
+    {
+      "case_id": "P01:137932:uk",
+      "group_id": "P01_OEM_ENUM_CONDITIONAL",
+      "lang": "uk",
+      "oem_compatible_model": "MAX-SAFE PRO",
+      "pr167": {
+        "already_in_corrected_AB": "no",
+        "evidence_status": "MODEL_COMPATIBLE_ONLY__CHILD_USE_REQUIRES_DYNAMIC_CONDITIONS",
+        "manual_T1_pair": "yes",
+        "ready_for_publication": "NO — rules + individual Stage1 + conditions require separate validation",
+        "required_conditions": "ECE R44 integrated harness from 9kg; ECE R129 integrated harness >=60cm rearward-facing OR >=76cm forward-facing; never for infant carrier; not a newborn insert",
+        "stage1_new_pair_checked": "no"
+      },
+      "source": {
+        "brand": "Britax-Romer (Великобритания/Германия)",
+        "catalog_model_string": "Max-Safe Pro",
+        "extract_status": "indexed",
+        "maker_id": "britax-romer",
+        "nid": 137932,
+        "sku": "2000038455",
+        "title": "Britax-Romer автокрісло Max-Safe Pro",
+        "tnid": 137851
+      },
+      "target": {
+        "field_status": 1,
+        "nid": 82608,
+        "oem_base_sku": "2000030111",
+        "price": 1260.0,
+        "published": 1,
+        "role": "comfort_insert",
+        "sku": "2000030111",
+        "title": "BRITAX-ROMER вкладиш для новонароджених (авто group 1)",
+        "tnid": 82597
+      }
+    },
+    {
+      "case_id": "P01:137852:ru",
+      "group_id": "P01_OEM_ENUM_CONDITIONAL",
+      "lang": "ru",
+      "oem_compatible_model": "KING PRO",
+      "pr167": {
+        "already_in_corrected_AB": "no",
+        "evidence_status": "MODEL_COMPATIBLE_ONLY__CHILD_USE_REQUIRES_DYNAMIC_CONDITIONS",
+        "manual_T1_pair": "yes",
+        "ready_for_publication": "NO — rules + individual Stage1 + conditions require separate validation",
+        "required_conditions": "ECE R44 integrated harness from 9kg; ECE R129 integrated harness >=60cm rearward-facing OR >=76cm forward-facing; never for infant carrier; not a newborn insert",
+        "stage1_new_pair_checked": "no"
+      },
+      "source": {
+        "brand": "Britax-Romer (Великобритания/Германия)",
+        "catalog_model_string": "King Pro",
+        "extract_status": "indexed",
+        "maker_id": "britax-romer",
+        "nid": 137852,
+        "sku": "2000039217",
+        "title": "Britax-Romer автокресло King Pro",
+        "tnid": 137852
+      },
+      "target": {
+        "field_status": 1,
+        "nid": 82597,
+        "oem_base_sku": "2000030111",
+        "price": 1260.0,
+        "published": 1,
+        "role": "comfort_insert",
+        "sku": "2000030111",
+        "title": "BRITAX-ROMER вкладыш для новорожденных (авто group 1)",
+        "tnid": 82597
+      }
+    },
+    {
+      "case_id": "P01:137933:uk",
+      "group_id": "P01_OEM_ENUM_CONDITIONAL",
+      "lang": "uk",
+      "oem_compatible_model": "KING PRO",
+      "pr167": {
+        "already_in_corrected_AB": "no",
+        "evidence_status": "MODEL_COMPATIBLE_ONLY__CHILD_USE_REQUIRES_DYNAMIC_CONDITIONS",
+        "manual_T1_pair": "yes",
+        "ready_for_publication": "NO — rules + individual Stage1 + conditions require separate validation",
+        "required_conditions": "ECE R44 integrated harness from 9kg; ECE R129 integrated harness >=60cm rearward-facing OR >=76cm forward-facing; never for infant carrier; not a newborn insert",
+        "stage1_new_pair_checked": "no"
+      },
+      "source": {
+        "brand": "Britax-Romer (Великобритания/Германия)",
+        "catalog_model_string": "King Pro",
+        "extract_status": "indexed",
+        "maker_id": "britax-romer",
+        "nid": 137933,
+        "sku": "2000039217",
+        "title": "Britax-Romer автокрісло King Pro",
+        "tnid": 137852
+      },
+      "target": {
+        "field_status": 1,
+        "nid": 82608,
+        "oem_base_sku": "2000030111",
+        "price": 1260.0,
+        "published": 1,
+        "role": "comfort_insert",
+        "sku": "2000030111",
+        "title": "BRITAX-ROMER вкладиш для новонароджених (авто group 1)",
+        "tnid": 82597
+      }
+    },
+    {
+      "case_id": "P01:138021:ru",
+      "group_id": "P01_OEM_ENUM_CONDITIONAL",
+      "lang": "ru",
+      "oem_compatible_model": "ADVANSAFIX PRO",
+      "pr167": {
+        "already_in_corrected_AB": "no",
+        "evidence_status": "MODEL_COMPATIBLE_ONLY__CHILD_USE_REQUIRES_DYNAMIC_CONDITIONS",
+        "manual_T1_pair": "no",
+        "ready_for_publication": "NO — rules + individual Stage1 + conditions require separate validation",
+        "required_conditions": "ECE R44 integrated harness from 9kg; ECE R129 integrated harness >=60cm rearward-facing OR >=76cm forward-facing; never for infant carrier; not a newborn insert",
+        "stage1_new_pair_checked": "no"
+      },
+      "source": {
+        "brand": "Britax-Romer (Великобритания/Германия)",
+        "catalog_model_string": "Advansafix Pro",
+        "extract_status": "indexed",
+        "maker_id": "britax-romer",
+        "nid": 138021,
+        "sku": "2000038230",
+        "title": "Britax-Romer автокресло Advansafix Pro",
+        "tnid": 138021
+      },
+      "target": {
+        "field_status": 1,
+        "nid": 82597,
+        "oem_base_sku": "2000030111",
+        "price": 1260.0,
+        "published": 1,
+        "role": "comfort_insert",
+        "sku": "2000030111",
+        "title": "BRITAX-ROMER вкладыш для новорожденных (авто group 1)",
+        "tnid": 82597
+      }
+    },
+    {
+      "case_id": "P01:138368:uk",
+      "group_id": "P01_OEM_ENUM_CONDITIONAL",
+      "lang": "uk",
+      "oem_compatible_model": "ADVANSAFIX PRO",
+      "pr167": {
+        "already_in_corrected_AB": "no",
+        "evidence_status": "MODEL_COMPATIBLE_ONLY__CHILD_USE_REQUIRES_DYNAMIC_CONDITIONS",
+        "manual_T1_pair": "no",
+        "ready_for_publication": "NO — rules + individual Stage1 + conditions require separate validation",
+        "required_conditions": "ECE R44 integrated harness from 9kg; ECE R129 integrated harness >=60cm rearward-facing OR >=76cm forward-facing; never for infant carrier; not a newborn insert",
+        "stage1_new_pair_checked": "no"
+      },
+      "source": {
+        "brand": "Britax-Romer (Великобритания/Германия)",
+        "catalog_model_string": "Advansafix Pro",
+        "extract_status": "indexed",
+        "maker_id": "britax-romer",
+        "nid": 138368,
+        "sku": "2000038230",
+        "title": "Britax-Romer автокрісло Advansafix Pro",
+        "tnid": 138021
+      },
+      "target": {
+        "field_status": 1,
+        "nid": 82608,
+        "oem_base_sku": "2000030111",
+        "price": 1260.0,
+        "published": 1,
+        "role": "comfort_insert",
+        "sku": "2000030111",
+        "title": "BRITAX-ROMER вкладиш для новонароджених (авто group 1)",
+        "tnid": 82597
+      }
+    },
+    {
+      "case_id": "P01:143126:ru",
+      "group_id": "P01_OEM_ENUM_CONDITIONAL",
+      "lang": "ru",
+      "oem_compatible_model": "SAFE-WAY M",
+      "pr167": {
+        "already_in_corrected_AB": "no",
+        "evidence_status": "MODEL_COMPATIBLE_ONLY__CHILD_USE_REQUIRES_DYNAMIC_CONDITIONS",
+        "manual_T1_pair": "no",
+        "ready_for_publication": "NO — rules + individual Stage1 + conditions require separate validation",
+        "required_conditions": "ECE R44 integrated harness from 9kg; ECE R129 integrated harness >=60cm rearward-facing OR >=76cm forward-facing; never for infant carrier; not a newborn insert",
+        "stage1_new_pair_checked": "no"
+      },
+      "source": {
+        "brand": "Britax-Romer (Великобритания/Германия)",
+        "catalog_model_string": "Safe-Way M",
+        "extract_status": "indexed",
+        "maker_id": "britax-romer",
+        "nid": 143126,
+        "sku": "2000038448",
+        "title": "Britax-Romer автокресло Safe-Way M",
+        "tnid": 143126
+      },
+      "target": {
+        "field_status": 1,
+        "nid": 82597,
+        "oem_base_sku": "2000030111",
+        "price": 1260.0,
+        "published": 1,
+        "role": "comfort_insert",
+        "sku": "2000030111",
+        "title": "BRITAX-ROMER вкладыш для новорожденных (авто group 1)",
+        "tnid": 82597
+      }
+    },
+    {
+      "case_id": "P01:143127:uk",
+      "group_id": "P01_OEM_ENUM_CONDITIONAL",
+      "lang": "uk",
+      "oem_compatible_model": "SAFE-WAY M",
+      "pr167": {
+        "already_in_corrected_AB": "no",
+        "evidence_status": "MODEL_COMPATIBLE_ONLY__CHILD_USE_REQUIRES_DYNAMIC_CONDITIONS",
+        "manual_T1_pair": "no",
+        "ready_for_publication": "NO — rules + individual Stage1 + conditions require separate validation",
+        "required_conditions": "ECE R44 integrated harness from 9kg; ECE R129 integrated harness >=60cm rearward-facing OR >=76cm forward-facing; never for infant carrier; not a newborn insert",
+        "stage1_new_pair_checked": "no"
+      },
+      "source": {
+        "brand": "Britax-Romer (Великобритания/Германия)",
+        "catalog_model_string": "Safe-Way M",
+        "extract_status": "indexed",
+        "maker_id": "britax-romer",
+        "nid": 143127,
+        "sku": "2000038448",
+        "title": "Britax-Romer автокрісло Safe-Way M",
+        "tnid": 143126
+      },
+      "target": {
+        "field_status": 1,
+        "nid": 82608,
+        "oem_base_sku": "2000030111",
+        "price": 1260.0,
+        "published": 1,
+        "role": "comfort_insert",
+        "sku": "2000030111",
+        "title": "BRITAX-ROMER вкладиш для новонароджених (авто group 1)",
+        "tnid": 82597
+      }
+    },
+    {
+      "case_id": "P01:143259:ru",
+      "group_id": "P01_OEM_ENUM_CONDITIONAL",
+      "lang": "ru",
+      "oem_compatible_model": "SWIVEL 2",
+      "pr167": {
+        "already_in_corrected_AB": "no",
+        "evidence_status": "MODEL_COMPATIBLE_ONLY__CHILD_USE_REQUIRES_DYNAMIC_CONDITIONS",
+        "manual_T1_pair": "yes",
+        "ready_for_publication": "NO — rules + individual Stage1 + conditions require separate validation",
+        "required_conditions": "ECE R44 integrated harness from 9kg; ECE R129 integrated harness >=60cm rearward-facing OR >=76cm forward-facing; never for infant carrier; not a newborn insert",
+        "stage1_new_pair_checked": "no"
+      },
+      "source": {
+        "brand": "Britax-Romer (Великобритания/Германия)",
+        "catalog_model_string": "Swivel 2",
+        "extract_status": "indexed",
+        "maker_id": "britax-romer",
+        "nid": 143259,
+        "sku": "2000042149",
+        "title": "Britax-Romer автокресло Swivel 2",
+        "tnid": 143259
+      },
+      "target": {
+        "field_status": 1,
+        "nid": 82597,
+        "oem_base_sku": "2000030111",
+        "price": 1260.0,
+        "published": 1,
+        "role": "comfort_insert",
+        "sku": "2000030111",
+        "title": "BRITAX-ROMER вкладыш для новорожденных (авто group 1)",
+        "tnid": 82597
+      }
+    },
+    {
+      "case_id": "P01:143260:uk",
+      "group_id": "P01_OEM_ENUM_CONDITIONAL",
+      "lang": "uk",
+      "oem_compatible_model": "SWIVEL 2",
+      "pr167": {
+        "already_in_corrected_AB": "no",
+        "evidence_status": "MODEL_COMPATIBLE_ONLY__CHILD_USE_REQUIRES_DYNAMIC_CONDITIONS",
+        "manual_T1_pair": "yes",
+        "ready_for_publication": "NO — rules + individual Stage1 + conditions require separate validation",
+        "required_conditions": "ECE R44 integrated harness from 9kg; ECE R129 integrated harness >=60cm rearward-facing OR >=76cm forward-facing; never for infant carrier; not a newborn insert",
+        "stage1_new_pair_checked": "no"
+      },
+      "source": {
+        "brand": "Britax-Romer (Великобритания/Германия)",
+        "catalog_model_string": "Swivel 2",
+        "extract_status": "indexed",
+        "maker_id": "britax-romer",
+        "nid": 143260,
+        "sku": "2000042149",
+        "title": "Britax-Romer автокрісло Swivel 2",
+        "tnid": 143259
+      },
+      "target": {
+        "field_status": 1,
+        "nid": 82608,
+        "oem_base_sku": "2000030111",
+        "price": 1260.0,
+        "published": 1,
+        "role": "comfort_insert",
+        "sku": "2000030111",
+        "title": "BRITAX-ROMER вкладиш для новонароджених (авто group 1)",
+        "tnid": 82597
+      }
+    },
+    {
+      "case_id": "P02:133428:ru",
+      "group_id": "P02_OEM_FAMILY_ALIAS_OUTDOOR",
+      "lang": "ru",
+      "oem_compatible_model": "iZi Go Modular X1 i-Size",
+      "pr167": {
+        "already_in_corrected_AB": "no",
+        "evidence_status": "MODEL_COMPATIBLE_FOR_OUTDOOR_USE_ONLY",
+        "manual_T1_pair": "yes",
+        "ready_for_publication": "NO — rules + individual Stage1 + conditions require separate validation",
+        "required_conditions": "Use when infant carrier is outside vehicle / on stroller; NEVER inside a car; source X-1 alias must map to OEM X1 not X2 without evidence",
+        "stage1_new_pair_checked": "no"
+      },
+      "source": {
+        "brand": "BeSafe (Норвегия)",
+        "catalog_model_string": "iZi Go Modular X-1 iSize",
+        "extract_status": "indexed",
+        "maker_id": "besafe",
+        "nid": 133428,
+        "sku": "11008150-BurgundyMpar",
+        "title": "BeSafe автокресло iZi Go Modular X-1 iSize",
+        "tnid": 133428
+      },
+      "target": {
+        "field_status": 1,
+        "nid": 133426,
+        "oem_base_sku": "11006001",
+        "price": 930.0,
+        "published": 1,
+        "role": "rain_shield",
+        "sku": "11006001par",
+        "title": "BeSafe дождевик Rain Shield",
+        "tnid": 133426
+      }
+    },
+    {
+      "case_id": "P02:133778:uk",
+      "group_id": "P02_OEM_FAMILY_ALIAS_OUTDOOR",
+      "lang": "uk",
+      "oem_compatible_model": "iZi Go Modular X1 i-Size",
+      "pr167": {
+        "already_in_corrected_AB": "no",
+        "evidence_status": "MODEL_COMPATIBLE_FOR_OUTDOOR_USE_ONLY",
+        "manual_T1_pair": "yes",
+        "ready_for_publication": "NO — rules + individual Stage1 + conditions require separate validation",
+        "required_conditions": "Use when infant carrier is outside vehicle / on stroller; NEVER inside a car; source X-1 alias must map to OEM X1 not X2 without evidence",
+        "stage1_new_pair_checked": "no"
+      },
+      "source": {
+        "brand": "BeSafe (Норвегия)",
+        "catalog_model_string": "iZi Go Modular X-1 iSize",
+        "extract_status": "indexed",
+        "maker_id": "besafe",
+        "nid": 133778,
+        "sku": "11008150-BurgundyMpar",
+        "title": "BeSafe автокрісло iZi Go Modular X-1 iSize",
+        "tnid": 133428
+      },
+      "target": {
+        "field_status": 1,
+        "nid": 133427,
+        "oem_base_sku": "11006001",
+        "price": 930.0,
+        "published": 1,
+        "role": "rain_shield",
+        "sku": "11006001par",
+        "title": "BeSafe дощовик Rain Shield",
+        "tnid": 133426
+      }
+    },
+    {
+      "case_id": "P03:144473:ru",
+      "group_id": "P03_OEM_TWO_SIDED_ADAPTER",
+      "lang": "ru",
+      "oem_compatible_model": "Coral Slide Pro SOFT CARRIER",
+      "pr167": {
+        "already_in_corrected_AB": "no",
+        "evidence_status": "MODEL_PAIR_WITH_REQUIRED_STROLLER_INTERFACE",
+        "manual_T1_pair": "yes",
+        "ready_for_publication": "NO — rules + individual Stage1 + conditions require separate validation",
+        "required_conditions": "Require both physical interfaces: Coral Slide Pro SOFT CARRIER and Fame/Fame Cabin. Do not infer compatibility with all seats or all strollers",
+        "stage1_new_pair_checked": "no"
+      },
+      "source": {
+        "brand": "Maxi-Cosi (Нидерланды)",
+        "catalog_model_string": "Coral Slide Pro",
+        "extract_status": "indexed",
+        "maker_id": "maxi-cosi",
+        "nid": 144473,
+        "sku": "8441129110",
+        "title": "Maxi-Cosi автокресло Coral Slide Pro",
+        "tnid": 144473
+      },
+      "target": {
+        "field_status": 1,
+        "nid": 143758,
+        "oem_base_sku": "1166057110",
+        "price": 1320.0,
+        "published": 1,
+        "role": "mechanical_adapter",
+        "sku": "1166057110",
+        "title": "Maxi-Cosi адаптеры Fame к автокреслу Coral Slide Pro",
+        "tnid": 143758
+      }
+    },
+    {
+      "case_id": "P03:144474:uk",
+      "group_id": "P03_OEM_TWO_SIDED_ADAPTER",
+      "lang": "uk",
+      "oem_compatible_model": "Coral Slide Pro SOFT CARRIER",
+      "pr167": {
+        "already_in_corrected_AB": "no",
+        "evidence_status": "MODEL_PAIR_WITH_REQUIRED_STROLLER_INTERFACE",
+        "manual_T1_pair": "yes",
+        "ready_for_publication": "NO — rules + individual Stage1 + conditions require separate validation",
+        "required_conditions": "Require both physical interfaces: Coral Slide Pro SOFT CARRIER and Fame/Fame Cabin. Do not infer compatibility with all seats or all strollers",
+        "stage1_new_pair_checked": "no"
+      },
+      "source": {
+        "brand": "Maxi-Cosi (Нидерланды)",
+        "catalog_model_string": "Coral Slide Pro",
+        "extract_status": "indexed",
+        "maker_id": "maxi-cosi",
+        "nid": 144474,
+        "sku": "8441129110",
+        "title": "Maxi-Cosi автокрісло Coral Slide Pro",
+        "tnid": 144473
+      },
+      "target": {
+        "field_status": 1,
+        "nid": 143759,
+        "oem_base_sku": "1166057110",
+        "price": 1320.0,
+        "published": 1,
+        "role": "mechanical_adapter",
+        "sku": "1166057110",
+        "title": "Maxi-Cosi адаптери Fame до автокрісла Coral Slide Pro",
+        "tnid": 143758
+      }
+    }
+  ],
+  "schema": "bp-oem-seed-cases-v1"
+}

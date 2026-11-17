@@ -1,0 +1,1124 @@
+{
+  "control": "PASS",
+  "hypothesis_examples": 60,
+  "mutants": [
+    {
+      "detail": "test_build_outputs_baseline_report.TestBaselineGateRules.test_a_failing_report_is_refused_and_names_the_failed_checks",
+      "failing_tests": 1,
+      "file": "oem_stage/baseline_gate.py",
+      "id": "BG-01",
+      "killed_by": [
+        "test_build_outputs_baseline_report.TestBaselineGateRules.test_a_failing_report_is_refused_and_names_the_failed_checks"
+      ],
+      "rule_broken": "a baseline report with result FAIL is accepted",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_build_outputs_baseline_report.TestBaselineGateRules.test_a_pass_label_cannot_hide_a_failed_check",
+      "failing_tests": 1,
+      "file": "oem_stage/baseline_gate.py",
+      "id": "BG-02",
+      "killed_by": [
+        "test_build_outputs_baseline_report.TestBaselineGateRules.test_a_pass_label_cannot_hide_a_failed_check"
+      ],
+      "rule_broken": "a PASS label hides a failed check",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_build_outputs_baseline_report.TestBaselineGateRules.test_a_changed_input_after_verification_is_detected",
+      "failing_tests": 1,
+      "file": "oem_stage/baseline_gate.py",
+      "id": "BG-03",
+      "killed_by": [
+        "test_build_outputs_baseline_report.TestBaselineGateRules.test_a_changed_input_after_verification_is_detected"
+      ],
+      "rule_broken": "a report for other inputs (digest mismatch) is accepted",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_build_outputs_baseline_report.TestBaselineGateRules.test_structural_problems_are_refused",
+      "failing_tests": 1,
+      "file": "oem_stage/baseline_gate.py",
+      "id": "BG-04",
+      "killed_by": [
+        "test_build_outputs_baseline_report.TestBaselineGateRules.test_structural_problems_are_refused"
+      ],
+      "rule_broken": "the baseline-identifying checks are not required",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_build_outputs_baseline_report.TestBaselineGateRules.test_structural_problems_are_refused",
+      "failing_tests": 1,
+      "file": "oem_stage/baseline_gate.py",
+      "id": "BG-05",
+      "killed_by": [
+        "test_build_outputs_baseline_report.TestBaselineGateRules.test_structural_problems_are_refused"
+      ],
+      "rule_broken": "a report that is not read-only is accepted",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_build_outputs_baseline_report.TestBaselineGateRules.test_structural_problems_are_refused",
+      "failing_tests": 1,
+      "file": "oem_stage/baseline_gate.py",
+      "id": "BG-06",
+      "killed_by": [
+        "test_build_outputs_baseline_report.TestBaselineGateRules.test_structural_problems_are_refused"
+      ],
+      "rule_broken": "a report with a foreign schema is accepted",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_build_outputs_baseline_report.TestBaselineGateRules.test_missing_inputs_cannot_be_bound",
+      "failing_tests": 1,
+      "file": "oem_stage/baseline_gate.py",
+      "id": "BG-07",
+      "killed_by": [
+        "test_build_outputs_baseline_report.TestBaselineGateRules.test_missing_inputs_cannot_be_bound"
+      ],
+      "rule_broken": "a report is accepted without rows/manifest/evidence to bind it to",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_build_outputs_baseline_report.TestRehearsalModeWithTheRealEngine.test_the_baseline_data_directories_stay_protected_even_with_a_valid_report",
+      "failing_tests": 1,
+      "file": "tools/build_outputs.py",
+      "id": "BO-01",
+      "killed_by": [
+        "test_build_outputs_baseline_report.TestRehearsalModeWithTheRealEngine.test_the_baseline_data_directories_stay_protected_even_with_a_valid_report"
+      ],
+      "rule_broken": "outputs may be written into the baseline/owner data locations",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_build_outputs_baseline_report.TestRehearsalModeWithTheRealEngine.test_the_baseline_data_directories_stay_protected_even_with_a_valid_report",
+      "failing_tests": 1,
+      "file": "tools/build_outputs.py",
+      "id": "BO-02",
+      "killed_by": [
+        "test_build_outputs_baseline_report.TestRehearsalModeWithTheRealEngine.test_the_baseline_data_directories_stay_protected_even_with_a_valid_report"
+      ],
+      "rule_broken": "outputs may be written above an input directory",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_build_outputs_baseline_report.TestOutputGuardDistinguishesFilesFromDirectories.test_an_auxiliary_file_in_a_shared_parent_does_not_block_a_sibling_or_child_output_directory",
+      "failing_tests": 1,
+      "file": "tools/build_outputs.py",
+      "id": "BO-03",
+      "killed_by": [
+        "test_build_outputs_baseline_report.TestOutputGuardDistinguishesFilesFromDirectories.test_an_auxiliary_file_in_a_shared_parent_does_not_block_a_sibling_or_child_output_directory"
+      ],
+      "rule_broken": "auxiliary files protect their whole parent tree again (B-R4 regression: /tmp)",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_build_outputs_baseline_report.TestOutputGuardDistinguishesFilesFromDirectories.test_outputs_are_never_mixed_into_the_directory_of_an_auxiliary_file",
+      "failing_tests": 1,
+      "file": "tools/build_outputs.py",
+      "id": "BO-04",
+      "killed_by": [
+        "test_build_outputs_baseline_report.TestOutputGuardDistinguishesFilesFromDirectories.test_outputs_are_never_mixed_into_the_directory_of_an_auxiliary_file"
+      ],
+      "rule_broken": "outputs may be mixed into the directory of an auxiliary input file",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_build_outputs_baseline_report.TestOutputGuardDistinguishesFilesFromDirectories.test_an_output_path_that_resolves_onto_an_input_file_is_refused",
+      "failing_tests": 1,
+      "file": "tools/build_outputs.py",
+      "id": "BO-05",
+      "killed_by": [
+        "test_build_outputs_baseline_report.TestOutputGuardDistinguishesFilesFromDirectories.test_an_output_path_that_resolves_onto_an_input_file_is_refused"
+      ],
+      "rule_broken": "an output name that is a symlink/hard link onto an input file is accepted",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_build_outputs_baseline_report.TestBaselineReportRefusalsNeedNoEngine.test_a_baseline_report_needs_rows_manifest_and_evidence_to_bind_to",
+      "failing_tests": 1,
+      "file": "tools/build_outputs.py",
+      "id": "BO-06",
+      "killed_by": [
+        "test_build_outputs_baseline_report.TestBaselineReportRefusalsNeedNoEngine.test_a_baseline_report_needs_rows_manifest_and_evidence_to_bind_to"
+      ],
+      "rule_broken": "the baseline report is embedded without being checked",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_build_outputs_baseline_report.TestRehearsalModeWithTheRealEngine.test_a_tampered_engine_root_is_refused_before_anything_is_written",
+      "failing_tests": 1,
+      "file": "tools/build_outputs.py",
+      "id": "BO-07",
+      "killed_by": [
+        "test_build_outputs_baseline_report.TestRehearsalModeWithTheRealEngine.test_a_tampered_engine_root_is_refused_before_anything_is_written"
+      ],
+      "rule_broken": "a changed engine root is not refused",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_build_outputs_baseline_report.TestEngineGate.test_the_gate_accepts_accepted_modules_and_refuses_everything_else",
+      "failing_tests": 1,
+      "file": "tools/build_outputs.py",
+      "id": "BO-08",
+      "killed_by": [
+        "test_build_outputs_baseline_report.TestEngineGate.test_the_gate_accepts_accepted_modules_and_refuses_everything_else"
+      ],
+      "rule_broken": "imported engine modules are not checked against the accepted bytes",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_build_outputs_baseline_report.TestBaselineReportRefusalsNeedNoEngine.test_a_baseline_report_needs_rows_manifest_and_evidence_to_bind_to",
+      "failing_tests": 1,
+      "file": "tools/build_outputs.py",
+      "id": "BO-09",
+      "killed_by": [
+        "test_build_outputs_baseline_report.TestBaselineReportRefusalsNeedNoEngine.test_a_baseline_report_needs_rows_manifest_and_evidence_to_bind_to"
+      ],
+      "rule_broken": "a failing baseline report is embedded and the build exits green",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_build_outputs_baseline_report.TestRehearsalModeWithTheRealEngine.test_the_documented_rehearsal_command_runs_with_the_report_next_to_the_output_directory",
+      "failing_tests": 1,
+      "file": "tools/build_outputs.py",
+      "id": "BO-10",
+      "killed_by": [
+        "test_build_outputs_baseline_report.TestRehearsalModeWithTheRealEngine.test_the_documented_rehearsal_command_runs_with_the_report_next_to_the_output_directory"
+      ],
+      "rule_broken": "the imported V3.2 module (v32_pipeline) is not checked",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_build_outputs_baseline_report.TestRehearsalModeWithTheRealEngine.test_the_documented_rehearsal_command_runs_with_the_report_next_to_the_output_directory",
+      "failing_tests": 1,
+      "file": "tools/build_outputs.py",
+      "id": "BO-11",
+      "killed_by": [
+        "test_build_outputs_baseline_report.TestRehearsalModeWithTheRealEngine.test_the_documented_rehearsal_command_runs_with_the_report_next_to_the_output_directory"
+      ],
+      "rule_broken": "the imported identity-key module (canonical_models) is not checked",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_build_outputs_baseline_report.TestOutputGuardDistinguishesFilesFromDirectories.test_an_output_path_that_resolves_onto_an_input_file_is_refused",
+      "failing_tests": 1,
+      "file": "tools/build_outputs.py",
+      "id": "BO-12",
+      "killed_by": [
+        "test_build_outputs_baseline_report.TestOutputGuardDistinguishesFilesFromDirectories.test_an_output_path_that_resolves_onto_an_input_file_is_refused"
+      ],
+      "rule_broken": "output names are not checked against input files",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_build_outputs_baseline_report.TestOutputGuardDistinguishesFilesFromDirectories.test_outputs_are_never_mixed_into_the_directory_of_an_auxiliary_file",
+      "failing_tests": 1,
+      "file": "tools/build_outputs.py",
+      "id": "BO-13",
+      "killed_by": [
+        "test_build_outputs_baseline_report.TestOutputGuardDistinguishesFilesFromDirectories.test_outputs_are_never_mixed_into_the_directory_of_an_auxiliary_file"
+      ],
+      "rule_broken": "auxiliary input files are not protected at all",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_conditions.TestFailClosed.test_review_state_contract",
+      "failing_tests": 1,
+      "file": "oem_stage/conditions.py",
+      "id": "C-01",
+      "killed_by": [
+        "test_conditions.TestFailClosed.test_review_state_contract"
+      ],
+      "rule_broken": "empty all_of/any_of is accepted (vacuous pass)",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_conditions.TestFailClosed.test_unreviewed_conditions_never_pass",
+      "failing_tests": 1,
+      "file": "oem_stage/conditions.py",
+      "id": "C-02",
+      "killed_by": [
+        "test_conditions.TestFailClosed.test_unreviewed_conditions_never_pass"
+      ],
+      "rule_broken": "unreviewed conditions pass",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_conditions.TestSeedVectors.test_missing_attribute_never_passes",
+      "failing_tests": 1,
+      "file": "oem_stage/conditions.py",
+      "id": "C-03",
+      "killed_by": [
+        "test_conditions.TestSeedVectors.test_missing_attribute_never_passes"
+      ],
+      "rule_broken": "a missing context attribute fails open",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_conditions.TestFailClosed.test_unknown_shapes_fail_closed",
+      "failing_tests": 1,
+      "file": "oem_stage/conditions.py",
+      "id": "C-04",
+      "killed_by": [
+        "test_conditions.TestFailClosed.test_unknown_shapes_fail_closed"
+      ],
+      "rule_broken": "an unknown condition shape is ignored",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_conditions.TestSeedVectors.test_missing_attribute_never_passes",
+      "failing_tests": 1,
+      "file": "oem_stage/conditions.py",
+      "id": "C-05",
+      "killed_by": [
+        "test_conditions.TestSeedVectors.test_missing_attribute_never_passes"
+      ],
+      "rule_broken": "any_of loses three-valued logic",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_conditions.TestFailClosed.test_size_and_depth_limits",
+      "failing_tests": 1,
+      "file": "oem_stage/conditions.py",
+      "id": "C-06",
+      "killed_by": [
+        "test_conditions.TestFailClosed.test_size_and_depth_limits"
+      ],
+      "rule_broken": "the nesting-depth limit is not enforced",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_classify_verdicts.TestVerdictPrecedence.test_a_case_is_eligible_only_when_every_live_relation_is_a_candidate_and_identity_is_verified",
+      "failing_tests": 1,
+      "file": "oem_stage/classify.py",
+      "id": "CL-01",
+      "killed_by": [
+        "test_classify_verdicts.TestVerdictPrecedence.test_a_case_is_eligible_only_when_every_live_relation_is_a_candidate_and_identity_is_verified"
+      ],
+      "rule_broken": "an unresolved catalog identity no longer holds a case",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_classify_verdicts.TestVerdictPrecedence.test_each_verdict_is_reachable_with_the_documented_inputs",
+      "failing_tests": 1,
+      "file": "oem_stage/classify.py",
+      "id": "CL-02",
+      "killed_by": [
+        "test_classify_verdicts.TestVerdictPrecedence.test_each_verdict_is_reachable_with_the_documented_inputs"
+      ],
+      "rule_broken": "a pending exclusion is not reported",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_classify_verdicts.TestVerdictPrecedence.test_each_verdict_is_reachable_with_the_documented_inputs",
+      "failing_tests": 1,
+      "file": "oem_stage/classify.py",
+      "id": "CL-03",
+      "killed_by": [
+        "test_classify_verdicts.TestVerdictPrecedence.test_each_verdict_is_reachable_with_the_documented_inputs"
+      ],
+      "rule_broken": "not-listed models are not reported as UNKNOWN",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_classify_verdicts.TestVerdictPrecedence.test_a_case_is_eligible_only_when_every_live_relation_is_a_candidate_and_identity_is_verified",
+      "failing_tests": 1,
+      "file": "oem_stage/classify.py",
+      "id": "CL-04",
+      "killed_by": [
+        "test_classify_verdicts.TestVerdictPrecedence.test_a_case_is_eligible_only_when_every_live_relation_is_a_candidate_and_identity_is_verified"
+      ],
+      "rule_broken": "policy-held relations are reported as eligible candidates",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_classify_verdicts.TestVerdictPrecedence.test_unverified_catalog_identity_is_never_eligible",
+      "failing_tests": 1,
+      "file": "oem_stage/classify.py",
+      "id": "CL-05",
+      "killed_by": [
+        "test_classify_verdicts.TestVerdictPrecedence.test_unverified_catalog_identity_is_never_eligible"
+      ],
+      "rule_broken": "an unverified catalog identity counts as verified",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_integration_real_modules.TestEngineTreeIsNeverWritten.test_importing_the_engine_writes_nothing_into_the_engine_tree",
+      "failing_tests": 1,
+      "file": "oem_stage/engine_env.py",
+      "id": "EN-01",
+      "killed_by": [
+        "test_integration_real_modules.TestEngineTreeIsNeverWritten.test_importing_the_engine_writes_nothing_into_the_engine_tree"
+      ],
+      "rule_broken": "importing the engine may write bytecode into the accepted campaign's engine tree",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_engine_provenance.TestImportProvenance.test_a_subdirectory_or_a_sibling_prefix_of_an_approved_directory_is_not_approved",
+      "failing_tests": 1,
+      "file": "oem_stage/engine_env.py",
+      "id": "EP-01",
+      "killed_by": [
+        "test_engine_provenance.TestImportProvenance.test_a_subdirectory_or_a_sibling_prefix_of_an_approved_directory_is_not_approved"
+      ],
+      "rule_broken": "the import location of an engine module is not enforced",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_build_outputs_baseline_report.TestEngineGate.test_the_gate_accepts_accepted_modules_and_refuses_everything_else",
+      "failing_tests": 1,
+      "file": "oem_stage/engine_env.py",
+      "id": "EP-02",
+      "killed_by": [
+        "test_build_outputs_baseline_report.TestEngineGate.test_the_gate_accepts_accepted_modules_and_refuses_everything_else"
+      ],
+      "rule_broken": "the pinned bytes of an engine module are not enforced",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_engine_provenance.TestImportProvenance.test_a_subdirectory_or_a_sibling_prefix_of_an_approved_directory_is_not_approved",
+      "failing_tests": 1,
+      "file": "oem_stage/engine_env.py",
+      "id": "EP-03",
+      "killed_by": [
+        "test_engine_provenance.TestImportProvenance.test_a_subdirectory_or_a_sibling_prefix_of_an_approved_directory_is_not_approved"
+      ],
+      "rule_broken": "a sub-directory or a sibling-prefix path of an approved directory is approved",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_build_outputs_baseline_report.TestRehearsalModeWithTheRealEngine.test_the_baseline_report_changes_only_the_baseline_field",
+      "failing_tests": 1,
+      "file": "oem_stage/engine_env.py",
+      "id": "EP-04",
+      "killed_by": [
+        "test_build_outputs_baseline_report.TestRehearsalModeWithTheRealEngine.test_the_baseline_report_changes_only_the_baseline_field"
+      ],
+      "rule_broken": "symlinks are not resolved before the import location is judged",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_build_outputs_baseline_report.TestEngineGate.test_the_gate_accepts_accepted_modules_and_refuses_everything_else",
+      "failing_tests": 1,
+      "file": "oem_stage/engine_env.py",
+      "id": "EP-05",
+      "killed_by": [
+        "test_build_outputs_baseline_report.TestEngineGate.test_the_gate_accepts_accepted_modules_and_refuses_everything_else"
+      ],
+      "rule_broken": "a module that was never imported is accepted as proven",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_engine_provenance.TestPinConstants.test_the_approved_directories_are_exactly_those_the_legacy_engine_hard_codes",
+      "failing_tests": 1,
+      "file": "oem_stage/engine_env.py",
+      "id": "EP-06",
+      "killed_by": [
+        "test_engine_provenance.TestPinConstants.test_the_approved_directories_are_exactly_those_the_legacy_engine_hard_codes"
+      ],
+      "rule_broken": "the legacy integration-rehearsal import directory is not approved (B-R3 regression)",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_build_outputs_baseline_report.TestRehearsalModeWithTheRealEngine.test_a_tampered_engine_root_is_refused_before_anything_is_written",
+      "failing_tests": 1,
+      "file": "oem_stage/engine_env.py",
+      "id": "EP-07",
+      "killed_by": [
+        "test_build_outputs_baseline_report.TestRehearsalModeWithTheRealEngine.test_a_tampered_engine_root_is_refused_before_anything_is_written"
+      ],
+      "rule_broken": "a changed pinned file in the engine root is not reported",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_build_outputs_baseline_report.TestRehearsalModeWithTheRealEngine.test_the_baseline_data_directories_stay_protected_even_with_a_valid_report",
+      "failing_tests": 1,
+      "file": "oem_stage/engine_env.py",
+      "id": "EP-08",
+      "killed_by": [
+        "test_build_outputs_baseline_report.TestRehearsalModeWithTheRealEngine.test_the_baseline_data_directories_stay_protected_even_with_a_valid_report"
+      ],
+      "rule_broken": "the accepted v32_pipeline digest is wrong",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_evidence_cli.TestIntegrity.test_a_missing_blob_is_an_integrity_problem",
+      "failing_tests": 1,
+      "file": "tools/evidence_cli.py",
+      "id": "EV-01",
+      "killed_by": [
+        "test_evidence_cli.TestIntegrity.test_a_missing_blob_is_an_integrity_problem"
+      ],
+      "rule_broken": "evidence verify never fails the run",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_evidence_cli.TestIntegrity.test_url_only_documents_stay_on_hold_and_can_never_back_an_accepted_claim",
+      "failing_tests": 1,
+      "file": "tools/evidence_cli.py",
+      "id": "EV-02",
+      "killed_by": [
+        "test_evidence_cli.TestIntegrity.test_url_only_documents_stay_on_hold_and_can_never_back_an_accepted_claim"
+      ],
+      "rule_broken": "a VERIFIED claim that fails a gate is no longer reported",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_evidence_cli.TestIntegrity.test_a_missing_blob_is_an_integrity_problem",
+      "failing_tests": 1,
+      "file": "tools/evidence_cli.py",
+      "id": "EV-03",
+      "killed_by": [
+        "test_evidence_cli.TestIntegrity.test_a_missing_blob_is_an_integrity_problem"
+      ],
+      "rule_broken": "tampered or missing document bytes are no longer a problem",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_evidence_cli.TestInputValidation.test_bad_inputs_exit_2_and_leave_the_files_untouched",
+      "failing_tests": 1,
+      "file": "tools/evidence_cli.py",
+      "id": "EV-04",
+      "killed_by": [
+        "test_evidence_cli.TestInputValidation.test_bad_inputs_exit_2_and_leave_the_files_untouched"
+      ],
+      "rule_broken": "a duplicate claim is recorded twice",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_evidence_cli.TestLifecycle.test_accepts_only_a_distinct_human_reviewed_byte_backed_claim",
+      "failing_tests": 1,
+      "file": "tools/evidence_cli.py",
+      "id": "EV-05",
+      "killed_by": [
+        "test_evidence_cli.TestLifecycle.test_accepts_only_a_distinct_human_reviewed_byte_backed_claim"
+      ],
+      "rule_broken": "synthetic evidence is allowed by default",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_files_manifest.TestManifest.test_any_edit_addition_or_removal_is_detected",
+      "failing_tests": 1,
+      "file": "tools/files_manifest.py",
+      "id": "FM-01",
+      "killed_by": [
+        "test_files_manifest.TestManifest.test_any_edit_addition_or_removal_is_detected"
+      ],
+      "rule_broken": "an edited file is not detected by the files manifest",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_files_manifest.TestManifest.test_any_edit_addition_or_removal_is_detected",
+      "failing_tests": 1,
+      "file": "tools/files_manifest.py",
+      "id": "FM-02",
+      "killed_by": [
+        "test_files_manifest.TestManifest.test_any_edit_addition_or_removal_is_detected"
+      ],
+      "rule_broken": "an added file is not detected by the files manifest",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_evidence_cli.TestIntegrity.test_tampered_blob_is_detected_by_the_recomputed_sha256",
+      "failing_tests": 1,
+      "file": "oem_stage/o1_evidence.py",
+      "id": "O1-01",
+      "killed_by": [
+        "test_evidence_cli.TestIntegrity.test_tampered_blob_is_detected_by_the_recomputed_sha256"
+      ],
+      "rule_broken": "SHA-256 is not recomputed over the stored bytes",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_evidence_cli.TestLifecycle.test_a_quote_that_is_not_in_the_document_cannot_be_accepted",
+      "failing_tests": 1,
+      "file": "oem_stage/o1_evidence.py",
+      "id": "O1-02",
+      "killed_by": [
+        "test_evidence_cli.TestLifecycle.test_a_quote_that_is_not_in_the_document_cannot_be_accepted"
+      ],
+      "rule_broken": "the quoted text need not appear in the bytes",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_evidence_cli.TestLifecycle.test_reviewer_equal_to_extractor_is_not_accepted",
+      "failing_tests": 1,
+      "file": "oem_stage/o1_evidence.py",
+      "id": "O1-03",
+      "killed_by": [
+        "test_evidence_cli.TestLifecycle.test_reviewer_equal_to_extractor_is_not_accepted"
+      ],
+      "rule_broken": "the extractor may review their own claim",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_evidence_cli.TestLifecycle.test_accepts_only_a_distinct_human_reviewed_byte_backed_claim",
+      "failing_tests": 1,
+      "file": "oem_stage/o1_evidence.py",
+      "id": "O1-04",
+      "killed_by": [
+        "test_evidence_cli.TestLifecycle.test_accepts_only_a_distinct_human_reviewed_byte_backed_claim"
+      ],
+      "rule_broken": "synthetic evidence is accepted by default policy",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_evidence_cli.TestIntegrity.test_url_only_documents_stay_on_hold_and_can_never_back_an_accepted_claim",
+      "failing_tests": 1,
+      "file": "oem_stage/o1_evidence.py",
+      "id": "O1-05",
+      "killed_by": [
+        "test_evidence_cli.TestIntegrity.test_url_only_documents_stay_on_hold_and_can_never_back_an_accepted_claim"
+      ],
+      "rule_broken": "a VERIFIED claim without captured bytes is accepted",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_evidence_cli.TestLifecycle.test_pdf_page_quotes_need_a_human_attestation",
+      "failing_tests": 1,
+      "file": "oem_stage/o1_evidence.py",
+      "id": "O1-06",
+      "killed_by": [
+        "test_evidence_cli.TestLifecycle.test_pdf_page_quotes_need_a_human_attestation"
+      ],
+      "rule_broken": "a PDF quote is accepted without human attestation",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_o2_identity.TestExactResolution.test_mixed_script_and_invisible_characters_are_blocked",
+      "failing_tests": 1,
+      "file": "oem_stage/o2_identity.py",
+      "id": "O2-01",
+      "killed_by": [
+        "test_o2_identity.TestExactResolution.test_mixed_script_and_invisible_characters_are_blocked"
+      ],
+      "rule_broken": "mixed-script (look-alike) model names are not blocked",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_integration_real_modules.TestBuildOutputsCliRehearsalMode.test_end_to_end_outputs_are_complete_deterministic_and_flagged_synthetic",
+      "failing_tests": 1,
+      "file": "oem_stage/o2_identity.py",
+      "id": "O2-02",
+      "killed_by": [
+        "test_integration_real_modules.TestBuildOutputsCliRehearsalMode.test_end_to_end_outputs_are_complete_deterministic_and_flagged_synthetic"
+      ],
+      "rule_broken": "a PROPOSED alias resolves a model",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_o2_identity.TestReviewedAliases.test_conflicting_verified_aliases_are_ambiguous_never_first_match",
+      "failing_tests": 1,
+      "file": "oem_stage/o2_identity.py",
+      "id": "O2-03",
+      "killed_by": [
+        "test_o2_identity.TestReviewedAliases.test_conflicting_verified_aliases_are_ambiguous_never_first_match"
+      ],
+      "rule_broken": "an ambiguous alias is resolved by guessing",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_o2_identity.TestExactResolution.test_prescreen_flags_are_sorted_and_stable",
+      "failing_tests": 1,
+      "file": "oem_stage/o2_identity.py",
+      "id": "O2-04",
+      "killed_by": [
+        "test_o2_identity.TestExactResolution.test_prescreen_flags_are_sorted_and_stable"
+      ],
+      "rule_broken": "slash shorthand ('A/B') is not blocked",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_o2_identity.TestExactResolution.test_case_and_whitespace_are_the_only_normalization",
+      "failing_tests": 1,
+      "file": "oem_stage/o2_identity.py",
+      "id": "O2-05",
+      "killed_by": [
+        "test_o2_identity.TestExactResolution.test_case_and_whitespace_are_the_only_normalization"
+      ],
+      "rule_broken": "non-NFKC (e.g. NBSP) names are not blocked",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_o3_articles.TestWithSyntheticEvidence.test_proposed_binding_is_visible_but_not_bound",
+      "failing_tests": 1,
+      "file": "oem_stage/o3_articles.py",
+      "id": "O3-01",
+      "killed_by": [
+        "test_o3_articles.TestWithSyntheticEvidence.test_proposed_binding_is_visible_but_not_bound"
+      ],
+      "rule_broken": "a PROPOSED binding is treated as bound",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_integration_real_modules.TestBuildOutputsCliRehearsalMode.test_synthetic_evidence_is_refused_without_the_explicit_flag",
+      "failing_tests": 1,
+      "file": "oem_stage/o3_articles.py",
+      "id": "O3-02",
+      "killed_by": [
+        "test_integration_real_modules.TestBuildOutputsCliRehearsalMode.test_synthetic_evidence_is_refused_without_the_explicit_flag"
+      ],
+      "rule_broken": "a binding needs no accepted evidence claim",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_o3_articles.TestWithSyntheticEvidence.test_sku_must_exist_in_the_catalog_when_a_catalog_is_known",
+      "failing_tests": 1,
+      "file": "oem_stage/o3_articles.py",
+      "id": "O3-03",
+      "killed_by": [
+        "test_o3_articles.TestWithSyntheticEvidence.test_sku_must_exist_in_the_catalog_when_a_catalog_is_known"
+      ],
+      "rule_broken": "a binding to a SKU that is not in the catalog is accepted",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_o3_articles.TestWithSyntheticEvidence.test_evidence_must_be_an_article_identity_claim_for_the_same_article",
+      "failing_tests": 1,
+      "file": "oem_stage/o3_articles.py",
+      "id": "O3-04",
+      "killed_by": [
+        "test_o3_articles.TestWithSyntheticEvidence.test_evidence_must_be_an_article_identity_claim_for_the_same_article"
+      ],
+      "rule_broken": "evidence that names a different article/SKU backs the join",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_integration_real_modules.TestBuildOutputsCliRehearsalMode.test_end_to_end_outputs_are_complete_deterministic_and_flagged_synthetic",
+      "failing_tests": 1,
+      "file": "oem_stage/o4_relations.py",
+      "id": "O4-01",
+      "killed_by": [
+        "test_integration_real_modules.TestBuildOutputsCliRehearsalMode.test_end_to_end_outputs_are_complete_deterministic_and_flagged_synthetic"
+      ],
+      "rule_broken": "absence from an OEM list becomes EXCLUDED",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_integration_real_modules.TestBuildOutputsCliRehearsalMode.test_end_to_end_outputs_are_complete_deterministic_and_flagged_synthetic",
+      "failing_tests": 1,
+      "file": "oem_stage/o4_relations.py",
+      "id": "O4-02",
+      "killed_by": [
+        "test_integration_real_modules.TestBuildOutputsCliRehearsalMode.test_end_to_end_outputs_are_complete_deterministic_and_flagged_synthetic"
+      ],
+      "rule_broken": "time-bound 'not tested' no longer holds (N01)",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_integration_real_modules.TestBuildOutputsCliRehearsalMode.test_end_to_end_outputs_are_complete_deterministic_and_flagged_synthetic",
+      "failing_tests": 1,
+      "file": "oem_stage/o4_relations.py",
+      "id": "O4-03",
+      "killed_by": [
+        "test_integration_real_modules.TestBuildOutputsCliRehearsalMode.test_end_to_end_outputs_are_complete_deterministic_and_flagged_synthetic"
+      ],
+      "rule_broken": "a positive claim vs an explicit no-recommendation is no longer a conflict",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_o4_relations.TestFiveStates.test_unreviewed_conditions_hold_even_with_accepted_claims",
+      "failing_tests": 1,
+      "file": "oem_stage/o4_relations.py",
+      "id": "O4-04",
+      "killed_by": [
+        "test_o4_relations.TestFiveStates.test_unreviewed_conditions_hold_even_with_accepted_claims"
+      ],
+      "rule_broken": "identity/article/condition/TTL issues no longer hold a relation",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_o4_relations.TestFiveStates.test_proposed_only_evidence_can_hold_but_never_grant",
+      "failing_tests": 1,
+      "file": "oem_stage/o4_relations.py",
+      "id": "O4-05",
+      "killed_by": [
+        "test_o4_relations.TestFiveStates.test_proposed_only_evidence_can_hold_but_never_grant"
+      ],
+      "rule_broken": "unverified (non-accepted) evidence can grant an effective state",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_o4_relations.TestUnsupportedAndPolicy.test_ttl_is_recorded_and_enforced_only_when_configured",
+      "failing_tests": 1,
+      "file": "oem_stage/o4_relations.py",
+      "id": "O4-06",
+      "killed_by": [
+        "test_o4_relations.TestUnsupportedAndPolicy.test_ttl_is_recorded_and_enforced_only_when_configured"
+      ],
+      "rule_broken": "expired evidence is silently granted (OD2)",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_o4_relations.TestUnsupportedAndPolicy.test_allow_list_and_synthetic_flags_are_independent_gates",
+      "failing_tests": 1,
+      "file": "oem_stage/o4_relations.py",
+      "id": "O4-07",
+      "killed_by": [
+        "test_o4_relations.TestUnsupportedAndPolicy.test_allow_list_and_synthetic_flags_are_independent_gates"
+      ],
+      "rule_broken": "synthetic relations can become publish candidates",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_seed_classification.TestThirteenPhysicalRelations.test_plain_p01_models_hold_on_article_binding_with_a_proposed_conditional_relation",
+      "failing_tests": 1,
+      "file": "oem_stage/o4_relations.py",
+      "id": "O4-08",
+      "killed_by": [
+        "test_seed_classification.TestThirteenPhysicalRelations.test_plain_p01_models_hold_on_article_binding_with_a_proposed_conditional_relation"
+      ],
+      "rule_broken": "conditional relations are no longer held (OD4)",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_o4_relations.TestTypesAndEnds.test_adapter_has_two_physical_ends_plus_exact_extension",
+      "failing_tests": 1,
+      "file": "oem_stage/o4_relations.py",
+      "id": "O4-09",
+      "killed_by": [
+        "test_o4_relations.TestTypesAndEnds.test_adapter_has_two_physical_ends_plus_exact_extension"
+      ],
+      "rule_broken": "one-ended adapters no longer abstain (OD5)",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_o4_relations.TestUnsupportedAndPolicy.test_policy_contract",
+      "failing_tests": 1,
+      "file": "oem_stage/o4_relations.py",
+      "id": "O4-10",
+      "killed_by": [
+        "test_o4_relations.TestUnsupportedAndPolicy.test_policy_contract"
+      ],
+      "rule_broken": "veto enforcement becomes configurable (OD3)",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_determinism_and_baseline.TestOutputsAreDeterministic.test_seed_mode_without_the_engine_is_byte_identical_and_path_free",
+      "failing_tests": 1,
+      "file": "oem_stage/o4_relations.py",
+      "id": "O4-11",
+      "killed_by": [
+        "test_determinism_and_baseline.TestOutputsAreDeterministic.test_seed_mode_without_the_engine_is_byte_identical_and_path_free"
+      ],
+      "rule_broken": "an unverified exclusion becomes a veto candidate",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_integration_real_modules.TestBuildOutputsCliRehearsalMode.test_end_to_end_outputs_are_complete_deterministic_and_flagged_synthetic",
+      "failing_tests": 1,
+      "file": "oem_stage/o4_relations.py",
+      "id": "O4-12",
+      "killed_by": [
+        "test_integration_real_modules.TestBuildOutputsCliRehearsalMode.test_end_to_end_outputs_are_complete_deterministic_and_flagged_synthetic"
+      ],
+      "rule_broken": "scope inheritance: relations merge across chassis",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_o4_relations.TestTypesAndEnds.test_vehicle_general_is_class_c_and_never_an_ab_candidate",
+      "failing_tests": 1,
+      "file": "oem_stage/o4_relations.py",
+      "id": "O4-13",
+      "killed_by": [
+        "test_o4_relations.TestTypesAndEnds.test_vehicle_general_is_class_c_and_never_an_ab_candidate"
+      ],
+      "rule_broken": "class C can reach the A/B tier",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_o4_relations.TestUnsupportedAndPolicy.test_default_policy_refuses_synthetic_evidence_and_the_empty_allow_list_blocks_publication",
+      "failing_tests": 1,
+      "file": "oem_stage/o4_relations.py",
+      "id": "O4-14",
+      "killed_by": [
+        "test_o4_relations.TestUnsupportedAndPolicy.test_default_policy_refuses_synthetic_evidence_and_the_empty_allow_list_blocks_publication"
+      ],
+      "rule_broken": "an empty allow-list publishes (OD6)",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_o4_relations.TestFiveStates.test_disagreeing_conditions_among_positives_is_a_conflict",
+      "failing_tests": 1,
+      "file": "oem_stage/o4_relations.py",
+      "id": "O4-15",
+      "killed_by": [
+        "test_o4_relations.TestFiveStates.test_disagreeing_conditions_among_positives_is_a_conflict"
+      ],
+      "rule_broken": "disagreeing conditions are merged silently",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_build_outputs_baseline_report.TestOutputGuardDistinguishesFilesFromDirectories.test_the_planned_names_are_exactly_what_a_real_run_writes",
+      "failing_tests": 1,
+      "file": "oem_stage/outputs.py",
+      "id": "OU-01",
+      "killed_by": [
+        "test_build_outputs_baseline_report.TestOutputGuardDistinguishesFilesFromDirectories.test_the_planned_names_are_exactly_what_a_real_run_writes"
+      ],
+      "rule_broken": "the planned output names miss a file the build really writes",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_baseline_tools.TestReplaySemanticComparison.test_any_other_change_fails_even_when_the_volatile_fields_also_differ",
+      "failing_tests": 1,
+      "file": "tools/replay_corrected_generation.py",
+      "id": "RP-01",
+      "killed_by": [
+        "test_baseline_tools.TestReplaySemanticComparison.test_any_other_change_fails_even_when_the_volatile_fields_also_differ"
+      ],
+      "rule_broken": "the replay may write bytecode into the original campaign",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_baseline_tools.TestReplayWrapper.test_patch_changes_exactly_one_line_and_refuses_ambiguity",
+      "failing_tests": 1,
+      "file": "tools/replay_corrected_generation.py",
+      "id": "RP-02",
+      "killed_by": [
+        "test_baseline_tools.TestReplayWrapper.test_patch_changes_exactly_one_line_and_refuses_ambiguity"
+      ],
+      "rule_broken": "the one-line patch guard is not enforced",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_baseline_tools.TestReplayWrapper.test_cli_refuses_with_exit_code_2_and_never_creates_the_new_campaign",
+      "failing_tests": 1,
+      "file": "tools/replay_corrected_generation.py",
+      "id": "RP-03",
+      "killed_by": [
+        "test_baseline_tools.TestReplayWrapper.test_cli_refuses_with_exit_code_2_and_never_creates_the_new_campaign"
+      ],
+      "rule_broken": "the replay may write inside the original campaign",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_baseline_tools.TestCompareArtifact.test_an_unparseable_whitelisted_file_is_a_difference_with_a_reason",
+      "failing_tests": 1,
+      "file": "tools/replay_corrected_generation.py",
+      "id": "RP-04",
+      "killed_by": [
+        "test_baseline_tools.TestCompareArtifact.test_an_unparseable_whitelisted_file_is_a_difference_with_a_reason"
+      ],
+      "rule_broken": "a replay with different bytes is reported identical",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_baseline_tools.TestCompareArtifact.test_key_order_and_whitespace_are_not_semantic_but_only_in_the_whitelisted_files",
+      "failing_tests": 1,
+      "file": "tools/replay_corrected_generation.py",
+      "id": "RP-05",
+      "killed_by": [
+        "test_baseline_tools.TestCompareArtifact.test_key_order_and_whitespace_are_not_semantic_but_only_in_the_whitelisted_files"
+      ],
+      "rule_broken": "a non-timing metric is ignored by the replay comparison (whitelist widened)",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_baseline_tools.TestCompareArtifact.test_type_presence_and_order_changes_are_differences",
+      "failing_tests": 1,
+      "file": "tools/replay_corrected_generation.py",
+      "id": "RP-06",
+      "killed_by": [
+        "test_baseline_tools.TestCompareArtifact.test_type_presence_and_order_changes_are_differences"
+      ],
+      "rule_broken": "the replay comparison ignores JSON types (1 == 1.0 == True)",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_baseline_tools.TestCompareArtifact.test_the_whitelisted_key_must_exist_on_both_sides_as_a_plain_number",
+      "failing_tests": 1,
+      "file": "tools/replay_corrected_generation.py",
+      "id": "RP-07",
+      "killed_by": [
+        "test_baseline_tools.TestCompareArtifact.test_the_whitelisted_key_must_exist_on_both_sides_as_a_plain_number"
+      ],
+      "rule_broken": "a measurement missing on one side is tolerated",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_baseline_tools.TestCompareArtifact.test_the_whitelisted_key_must_exist_on_both_sides_as_a_plain_number",
+      "failing_tests": 1,
+      "file": "tools/replay_corrected_generation.py",
+      "id": "RP-08",
+      "killed_by": [
+        "test_baseline_tools.TestCompareArtifact.test_the_whitelisted_key_must_exist_on_both_sides_as_a_plain_number"
+      ],
+      "rule_broken": "a boolean is accepted as a timing measurement",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_baseline_tools.TestCompareArtifact.test_key_order_and_whitespace_are_not_semantic_but_only_in_the_whitelisted_files",
+      "failing_tests": 1,
+      "file": "tools/replay_corrected_generation.py",
+      "id": "RP-09",
+      "killed_by": [
+        "test_baseline_tools.TestCompareArtifact.test_key_order_and_whitespace_are_not_semantic_but_only_in_the_whitelisted_files"
+      ],
+      "rule_broken": "files without volatile fields get a semantic second chance instead of strict bytes",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_baseline_tools.TestReplaySemanticComparison.test_any_other_change_fails_even_when_the_volatile_fields_also_differ",
+      "failing_tests": 1,
+      "file": "tools/replay_corrected_generation.py",
+      "id": "RP-10",
+      "killed_by": [
+        "test_baseline_tools.TestReplaySemanticComparison.test_any_other_change_fails_even_when_the_volatile_fields_also_differ"
+      ],
+      "rule_broken": "a DIFFERENT artifact no longer fails the replay",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_verify_scope.TestScope.test_a_modified_file_outside_is_reported",
+      "failing_tests": 1,
+      "file": "tools/verify_scope.py",
+      "id": "SC-01",
+      "killed_by": [
+        "test_verify_scope.TestScope.test_a_modified_file_outside_is_reported"
+      ],
+      "rule_broken": "changes outside the two allowed directories are not reported",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_verify_scope.TestScope.test_the_head_must_descend_from_the_base",
+      "failing_tests": 1,
+      "file": "tools/verify_scope.py",
+      "id": "SC-02",
+      "killed_by": [
+        "test_verify_scope.TestScope.test_the_head_must_descend_from_the_base"
+      ],
+      "rule_broken": "a head that does not descend from the base passes",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_verify_scope.TestScope.test_a_modified_file_outside_is_reported",
+      "failing_tests": 1,
+      "file": "tools/verify_scope.py",
+      "id": "SC-03",
+      "killed_by": [
+        "test_verify_scope.TestScope.test_a_modified_file_outside_is_reported"
+      ],
+      "rule_broken": "the scope check never fails",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_integration_real_modules.TestBuildOutputsCliRehearsalMode.test_end_to_end_outputs_are_complete_deterministic_and_flagged_synthetic",
+      "failing_tests": 1,
+      "file": "oem_stage/shadow.py",
+      "id": "SH-01",
+      "killed_by": [
+        "test_integration_real_modules.TestBuildOutputsCliRehearsalMode.test_end_to_end_outputs_are_complete_deterministic_and_flagged_synthetic"
+      ],
+      "rule_broken": "the veto report claims enforcement",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_integration_real_modules.TestBuildOutputsCliRehearsalMode.test_end_to_end_outputs_are_complete_deterministic_and_flagged_synthetic",
+      "failing_tests": 1,
+      "file": "oem_stage/shadow.py",
+      "id": "SH-02",
+      "killed_by": [
+        "test_integration_real_modules.TestBuildOutputsCliRehearsalMode.test_end_to_end_outputs_are_complete_deterministic_and_flagged_synthetic"
+      ],
+      "rule_broken": "RU and UK catalog rows are cross-joined",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_seed_classification.TestStage1GapAndShadowPairs.test_without_a_current_manifest_pairs_are_explicitly_not_evaluated",
+      "failing_tests": 1,
+      "file": "oem_stage/shadow.py",
+      "id": "SH-03",
+      "killed_by": [
+        "test_seed_classification.TestStage1GapAndShadowPairs.test_without_a_current_manifest_pairs_are_explicitly_not_evaluated"
+      ],
+      "rule_broken": "an unevaluated current side is reported as agreement",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_baseline_tools.TestReplayWrapper.test_a_replay_that_produces_different_bytes_fails",
+      "failing_tests": 1,
+      "file": "tools/verify_baseline.py",
+      "id": "VB-01",
+      "killed_by": [
+        "test_baseline_tools.TestReplayWrapper.test_a_replay_that_produces_different_bytes_fails"
+      ],
+      "rule_broken": "the accepted manifest digest is not enforced",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_baseline_tools.TestVerifyBaseline.test_duplicate_nids_and_missing_files_fail",
+      "failing_tests": 1,
+      "file": "tools/verify_baseline.py",
+      "id": "VB-02",
+      "killed_by": [
+        "test_baseline_tools.TestVerifyBaseline.test_duplicate_nids_and_missing_files_fail"
+      ],
+      "rule_broken": "duplicate catalog NIDs are not detected",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_baseline_tools.TestVerifierOnRealShapes.test_evidence_must_cover_exactly_the_sources_with_accessories",
+      "failing_tests": 1,
+      "file": "tools/verify_baseline.py",
+      "id": "VB-03",
+      "killed_by": [
+        "test_baseline_tools.TestVerifierOnRealShapes.test_evidence_must_cover_exactly_the_sources_with_accessories"
+      ],
+      "rule_broken": "the evidence keys are no longer compared with the sources that have accessories",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_baseline_tools.TestReplaySemanticComparison.test_cli_exit_code_0_and_statuses_are_printed_for_a_volatile_only_replay",
+      "failing_tests": 1,
+      "file": "tools/verify_baseline.py",
+      "id": "VB-04",
+      "killed_by": [
+        "test_baseline_tools.TestReplaySemanticComparison.test_cli_exit_code_0_and_statuses_are_printed_for_a_volatile_only_replay"
+      ],
+      "rule_broken": "every *_edges metric is summed (each edge counted twice)",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_baseline_tools.TestVerifierOnRealShapes.test_an_unknown_head_with_edges_fails_but_one_with_zero_edges_is_ignored",
+      "failing_tests": 1,
+      "file": "tools/verify_baseline.py",
+      "id": "VB-05",
+      "killed_by": [
+        "test_baseline_tools.TestVerifierOnRealShapes.test_an_unknown_head_with_edges_fails_but_one_with_zero_edges_is_ignored"
+      ],
+      "rule_broken": "edges under an unexpected source head are ignored",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_baseline_tools.TestVerifierOnRealShapes.test_a_malformed_t2_edges_value_fails_even_when_the_sums_would_still_match",
+      "failing_tests": 1,
+      "file": "tools/verify_baseline.py",
+      "id": "VB-06",
+      "killed_by": [
+        "test_baseline_tools.TestVerifierOnRealShapes.test_a_malformed_t2_edges_value_fails_even_when_the_sums_would_still_match"
+      ],
+      "rule_broken": "malformed T2_edges items are silently skipped",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_baseline_tools.TestVerifierOnRealShapes.test_a_metrics_file_without_t2_edges_fails",
+      "failing_tests": 1,
+      "file": "tools/verify_baseline.py",
+      "id": "VB-07",
+      "killed_by": [
+        "test_baseline_tools.TestVerifierOnRealShapes.test_a_metrics_file_without_t2_edges_fails"
+      ],
+      "rule_broken": "the T2_edges total is no longer compared with the manifest edge total",
+      "status": "KILLED"
+    }
+  ],
+  "schema": "bp-oem-mutation-check-v1",
+  "summary": {
+    "INVALID": 0,
+    "KILLED": 101,
+    "SURVIVED": 0,
+    "total": 101
+  }
+}

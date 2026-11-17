@@ -1,0 +1,16 @@
+{
+  "claims": [
+    {
+      "evidence_key": "bugaboo-dragonfly-adapter-400003001",
+      "locator_ref": "pr167:fixtures/HOLDOUT_RESULTS.csv#N01_PEBBLE_PRO2_DRAGONFLY.oem_compatible_models_proof",
+      "note": "PR #167 N01 text: 'Q&A says Pro 2 had not been tested at time of answer'. The answer date is not recorded, so as_of is null.",
+      "template": {
+        "type": "not_tested_at_time", "relation_type": "adapter_between", "as_of": null,
+        "seat": ["maxi-cosi", "Pebble 360 Pro 2"], "adapter": ["bugaboo", "400003001"],
+        "chassis": [["bugaboo", "Dragonfly"], ["bugaboo", "Dragonfly Plus"]]
+      }
+    }
+  ],
+  "provenance": "Hand-transcribed (PROPOSED) time-bound statements that exist in PR #167 fixture prose but not in its evidence JSON.",
+  "schema": "bp-oem-seed-supplement-claims-v1"
+}

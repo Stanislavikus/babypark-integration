@@ -1,0 +1,41 @@
+{
+  "aliases": [
+    {
+      "alias_id": "als:1cd583b3e88f",
+      "maker_id": "britax-romer",
+      "model_id": "britax-romer:dualfix-pro-m",
+      "notes": "Catalog RU/UK titles end in Cyrillic M (U+041C) while the OEM list uses Latin M. Mixed-script names stay blocked until a reviewer confirms this is a typo for the same model (PR #167 UNRESOLVED_BLOCKERS).",
+      "review": null,
+      "scope": {
+        "context": "catalog"
+      },
+      "status": "PROPOSED",
+      "text": "Dualfix Pro М"
+    },
+    {
+      "alias_id": "als:39c1d606b1ce",
+      "maker_id": "britax-romer",
+      "model_id": "britax-romer:evolvafix",
+      "notes": "The real V4.2.1 canonical_models.extract() turns the catalog title 'Britax-Römer автокресло Evolvafix' into the model string 'Britax-R mer Evolvafix' (the 'ö' is dropped and the brand prefix is kept). Exact matching therefore cannot reach OEM 'EVOLVAFIX'. No fuzzy rule is added: this PROPOSED alias needs a human reviewer; until then the catalog side stays unresolved (HOLD). Observed in the PR #167 fixtures P01 rows 136666/136863.",
+      "review": null,
+      "scope": {
+        "context": "catalog"
+      },
+      "status": "PROPOSED",
+      "text": "Britax-R mer Evolvafix"
+    },
+    {
+      "alias_id": "als:ef89d897cdda",
+      "maker_id": "besafe",
+      "model_id": "besafe:izi-go-modular-x1-i-size",
+      "notes": "Catalog title spelling for OEM 'iZi Go Modular X1 i-Size' (PR #167 P02/H03/M01). Never inferred by a normalizer; needs a human-verified maker mapping (lock O2: X-1/X1 only under verified maker model mapping). Must not map to X2.",
+      "review": null,
+      "scope": {
+        "context": "catalog"
+      },
+      "status": "PROPOSED",
+      "text": "iZi Go Modular X-1 iSize"
+    }
+  ],
+  "schema": "bp-oem-aliases-v1"
+}

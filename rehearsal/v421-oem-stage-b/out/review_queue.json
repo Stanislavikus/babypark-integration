@@ -1,0 +1,117 @@
+{
+  "aliases_pending_review": [
+    "als:1cd583b3e88f",
+    "als:39c1d606b1ce",
+    "als:ef89d897cdda"
+  ],
+  "bindings_pending_review": [
+    "bnd:besafe:11006001",
+    "bnd:britax-romer:2000030111",
+    "bnd:bugaboo:400003001",
+    "bnd:bugaboo:400019001",
+    "bnd:maxi-cosi:1166057110",
+    "bnd:maxi-cosi:74203550",
+    "bnd:unspecified:6900000016817"
+  ],
+  "canonical_models_key_collisions": [],
+  "catalog_identity_holds": [
+    "P01:136666:ru",
+    "P01:136855:ru",
+    "P01:136863:uk",
+    "P01:137218:uk",
+    "P02:133428:ru",
+    "P02:133778:uk"
+  ],
+  "conflict_holds_needing_adjudication": [
+    "rel:8cd931d049d1d1b4",
+    "rel:d48da9edacfa405c"
+  ],
+  "documents_needing_bytes_or_review": [
+    {
+      "action": "capture original bytes, then review claims",
+      "bytes_state": "NO_BYTES",
+      "doc_id": "doc:381465952729913b",
+      "issuer": "maxi-cosi",
+      "proposed_claims": 5,
+      "url": "https://www.maxi-cosi.co.uk/pushchairs/coral-slide-pro-carrier-adapter"
+    },
+    {
+      "action": "capture original bytes, then review claims",
+      "bytes_state": "NO_BYTES",
+      "doc_id": "doc:3d6c5125466e6847",
+      "issuer": "besafe",
+      "proposed_claims": 4,
+      "url": "https://www.besafe.com/4a4457/globalassets/inriverimages/commerce-besafe/2019_01_10_instruction_manual_rain_shield_-_web-manual-601.pdf"
+    },
+    {
+      "action": "capture original bytes, then review claims",
+      "bytes_state": "NO_BYTES",
+      "doc_id": "doc:81bb8659a109e590",
+      "issuer": "unspecified",
+      "proposed_claims": 2,
+      "url": "negative-control:NEGATIVE_AND_CONDITIONAL_CONTROLS.csv"
+    },
+    {
+      "action": "capture original bytes, then review claims",
+      "bytes_state": "NO_BYTES",
+      "doc_id": "doc:8b27a7246e3541d0",
+      "issuer": "bugaboo",
+      "proposed_claims": 9,
+      "url": "https://www.bugaboo.com/gb-en/outlet/bugaboo-dragonfly-car-seat-adapters-400003001.html"
+    },
+    {
+      "action": "capture original bytes, then review claims",
+      "bytes_state": "NO_BYTES",
+      "doc_id": "doc:b00a78102f589f76",
+      "issuer": "bugaboo",
+      "proposed_claims": 10,
+      "url": "https://www.bugaboo.com/gb-en/accessories/adapters/bugaboo-fox-kangaroo-car-seat-adapters-black-400019001.html"
+    },
+    {
+      "action": "capture original bytes, then review claims",
+      "bytes_state": "NO_BYTES",
+      "doc_id": "doc:bac1a286d1860ffb",
+      "issuer": "britax-romer",
+      "proposed_claims": 7,
+      "url": "https://www.britax-roemer.com/accessories/car-seat-accessories/relax-insert/ACCSFCC207.html"
+    },
+    {
+      "action": "capture original bytes, then review claims",
+      "bytes_state": "NO_BYTES",
+      "doc_id": "doc:c2ef54b501b55631",
+      "issuer": "britax-romer",
+      "proposed_claims": 14,
+      "url": "https://www.britax-roemer.com/accessories/car-seat-accessories/comfort-insert/2000030111.html"
+    },
+    {
+      "action": "capture original bytes, then review claims",
+      "bytes_state": "NO_BYTES",
+      "doc_id": "doc:f554312a10c64b6e",
+      "issuer": "maxi-cosi",
+      "proposed_claims": 2,
+      "url": "negative-control:NEGATIVE_AND_CONDITIONAL_CONTROLS.csv"
+    }
+  ],
+  "notice": "SHADOW DATA ONLY. Nothing in this file is a recommendation, a publication authorization or an enforced veto. OD1-OD8 are owner decisions that are still PENDING; the defaults implemented here are safe/held, not approved policy.",
+  "relations_with_unreviewed_conditions": [
+    "rel:105b35a3358e582c",
+    "rel:595f8589c89c6586",
+    "rel:5a066121edd0a2bc",
+    "rel:7b289bd096acd98c",
+    "rel:8fbd9214a244feab",
+    "rel:ef8a9da40a49eb97",
+    "rel:f5e825cedd3d0cf9",
+    "rel:fd9ff73a09ba0d97"
+  ],
+  "relations_with_unspecified_extension": [
+    "rel:66eef64200958edd"
+  ],
+  "schema": "bp-oem-review-queue-v1",
+  "unjoined_article_candidates": [
+    "britax-romer:ACCSFCC207"
+  ],
+  "veto_pending_verification": [
+    "rel:7ae7780e588e9567",
+    "rel:c75f181a49fc0bd0"
+  ]
+}

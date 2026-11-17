@@ -1,0 +1,4475 @@
+{
+  "candidates": [
+    {
+      "area": "RA1",
+      "candidate": "atheris",
+      "core_requires": [],
+      "discovery_query": "pypi search: coverage-guided fuzzing python",
+      "first_release_uploaded": "2020-11-17T16:08:36.063915Z",
+      "latest_files": [
+        {
+          "filename": "atheris-3.1.0-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "ec5e11f21a4c197fe91f7aea2b2de88e623c73a21fc07b105ac6329a1588457b"
+        },
+        {
+          "filename": "atheris-3.1.0-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "f8a9f51ce8369026e8eb7b7174835e8c4c85a1a6db5d9add36c15100779d2a39"
+        },
+        {
+          "filename": "atheris-3.1.0-cp314-cp314-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "315a0b5c819852b1ffe1ca72efc389c7724881f2c33e4aacb8c6bcec49bd5011"
+        }
+      ],
+      "latest_release_uploaded": "2026-06-17T00:04:07.702206Z",
+      "license": "UNSPECIFIED",
+      "project_urls": {
+        "Homepage": "https://github.com/google/atheris/"
+      },
+      "pypi_name": "atheris",
+      "release_count": 31,
+      "requires_dist": [],
+      "requires_python": null,
+      "version": "3.1.0",
+      "yanked": false
+    },
+    {
+      "area": "RA1",
+      "candidate": "crosshair-tool",
+      "core_requires": [
+        "importlib_metadata>=4.0.0; python_version < \"3.10\"",
+        "packaging",
+        "pygls>=1.0.0",
+        "typeshed-client>=2.0.5",
+        "typing-inspect>=0.7.1",
+        "typing_extensions>=3.10.0",
+        "z3-solver>=4.13.0.0"
+      ],
+      "discovery_query": "pypi search: symbolic execution contracts python",
+      "first_release_uploaded": "2020-02-09T20:45:00.137952Z",
+      "latest_files": [
+        {
+          "filename": "crosshair_tool-0.0.113-cp310-cp310-macosx_10_9_universal2.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "a762ea737f8917cd711eb082a204fc07f0e2deed28f0d15000f465ab03d9e47c"
+        },
+        {
+          "filename": "crosshair_tool-0.0.113-cp310-cp310-macosx_10_9_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "b6a0791a59dbbc190562aedfeff116a53da220d786a14829ad3a5a757f3daf2f"
+        },
+        {
+          "filename": "crosshair_tool-0.0.113-cp310-cp310-macosx_11_0_arm64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "18bc1f696c675f328684ef79a271ec956921f531220475dad22bcd3c70156513"
+        },
+        {
+          "filename": "crosshair_tool-0.0.113-cp310-cp310-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "f9d3c7a1b5c2d3d0b154d3c8e347ab70bef3c906db19a77ee78cacf9da9733a4"
+        },
+        {
+          "filename": "crosshair_tool-0.0.113-cp310-cp310-musllinux_1_2_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "1e6ef4aa8556c043d29149030726a27744aef6061f4673a8597b556ca8cbd852"
+        },
+        {
+          "filename": "crosshair_tool-0.0.113-cp310-cp310-win32.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "04d96e8ede0a114ac2544c5bbe102fdf11a4ace7d705289c9cd4c5d7e0f1533d"
+        },
+        {
+          "filename": "crosshair_tool-0.0.113-cp310-cp310-win_amd64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "691f941aa976eca0624fdfde7d4246bccf29901534e0fe960e23047c25b27685"
+        },
+        {
+          "filename": "crosshair_tool-0.0.113-cp311-cp311-macosx_10_9_universal2.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "61157f777d5a11c55cb8ef4c060965ef19016f5482c26f5d66e9281cbf6f641b"
+        },
+        {
+          "filename": "crosshair_tool-0.0.113-cp311-cp311-macosx_10_9_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "a0f70f37a60bce85801c63d6f25c97ca769c462dca88adf71b04f4cdc05ac607"
+        },
+        {
+          "filename": "crosshair_tool-0.0.113-cp311-cp311-macosx_11_0_arm64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "843c55b2ff4079f55b9f8bf9e0d87b880a23d45bd004bf25ad43ef9dc3ba0851"
+        },
+        {
+          "filename": "crosshair_tool-0.0.113-cp311-cp311-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "cd8817140d65481e946ccf24ec61636be9ad95b26d8f538143495a4c4b347364"
+        },
+        {
+          "filename": "crosshair_tool-0.0.113-cp311-cp311-musllinux_1_2_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "68ff4e23b95d612b0ead1d4838c97656656a8765ecf4af6b99d95409274fd48d"
+        },
+        {
+          "filename": "crosshair_tool-0.0.113-cp311-cp311-win32.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "20e928c79ff4de4abb20ad6b9066fb3cdb88a1fa445c5ae2d4bf09fd0354b4cd"
+        },
+        {
+          "filename": "crosshair_tool-0.0.113-cp311-cp311-win_amd64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "00c65e87a206522664d59354f132675432337e78f1c16261e4e05d532394778c"
+        },
+        {
+          "filename": "crosshair_tool-0.0.113-cp312-cp312-macosx_10_13_universal2.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "c505fb338851a4b8f71365559387def3e9a3b92cadc0c933acdd8c39c7c57fba"
+        },
+        {
+          "filename": "crosshair_tool-0.0.113-cp312-cp312-macosx_10_13_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "9c775ff75f43646a65617d2dc7ddc674c19ddce7c0e2161a1791a68a958effa6"
+        },
+        {
+          "filename": "crosshair_tool-0.0.113-cp312-cp312-macosx_11_0_arm64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "7f9b1ead7e76d95ac08ab50ebe842dd8d544cdee31ac316a7c5a8a2bdd33b0fb"
+        },
+        {
+          "filename": "crosshair_tool-0.0.113-cp312-cp312-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "cb1b8fd1005ccca0c94c2146cecf882d5803e44cff9e7946b7e8119c9099be12"
+        },
+        {
+          "filename": "crosshair_tool-0.0.113-cp312-cp312-musllinux_1_2_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "7b4c186faadd7270c1c3d895d96418a9d55c63c8caea114c147ed4160a0bd1e2"
+        },
+        {
+          "filename": "crosshair_tool-0.0.113-cp312-cp312-win32.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "42081f3f2f7e62b8c5458679ba24ce8cfcfa20ba8f9bac0d7569e390eb2ac1a1"
+        },
+        {
+          "filename": "crosshair_tool-0.0.113-cp312-cp312-win_amd64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "cd3768cb8ed69a3b62498cc364b0672fc67cdde632648703a4873750a5f1998c"
+        },
+        {
+          "filename": "crosshair_tool-0.0.113-cp313-cp313-macosx_10_13_universal2.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "c88fc2e6542d5d3488b0db56a3331aab722a16f8b50621257539b7031876b908"
+        },
+        {
+          "filename": "crosshair_tool-0.0.113-cp313-cp313-macosx_10_13_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "f58e215136a64f1315edbf1af8703bca4dd59785627f57316feb23232d99f6a6"
+        },
+        {
+          "filename": "crosshair_tool-0.0.113-cp313-cp313-macosx_11_0_arm64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "8a6a81f3ba4fc791971346f68054bafa2a73d0ca85b3e24c3056c30fd53e7e8b"
+        },
+        {
+          "filename": "crosshair_tool-0.0.113-cp313-cp313-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "09b6edbb4ca45bc98147cd3b92c05eae501dd90e0fb48c0e77b0e665cb9678fe"
+        },
+        {
+          "filename": "crosshair_tool-0.0.113-cp313-cp313-musllinux_1_2_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "c7332c0839995904a69878618f362ae07ee31aeb742a9aafda88038f8e165246"
+        },
+        {
+          "filename": "crosshair_tool-0.0.113-cp313-cp313-win32.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "c897d3f3e4ad9fdae8b5392071415cc52d36fc0c06800dd3f3845d2d534494ba"
+        },
+        {
+          "filename": "crosshair_tool-0.0.113-cp313-cp313-win_amd64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "f8c91abadcd02536f0b9fe77425d872b2051fbc70d46b6136a571ab22d40dcd5"
+        },
+        {
+          "filename": "crosshair_tool-0.0.113-cp314-cp314-macosx_10_15_universal2.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "296411fa72c783099bbd063c30811cf60c1e9656b4671a7498347a605243d92d"
+        },
+        {
+          "filename": "crosshair_tool-0.0.113-cp314-cp314-macosx_10_15_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "f2fc304b2e999a6bfc8d9a3bd504622a2811bfae10c39128ea74ff0d7020a6c1"
+        },
+        {
+          "filename": "crosshair_tool-0.0.113-cp314-cp314-macosx_11_0_arm64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "0e38d304a707628e04d718966beee0df2c8bc9db7584a98abe26d8d80d746f68"
+        },
+        {
+          "filename": "crosshair_tool-0.0.113-cp314-cp314-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "28da06ef4302480ab08ecfc44dfe840604fc36ca2e27cad5e614a1a25bc563ac"
+        },
+        {
+          "filename": "crosshair_tool-0.0.113-cp314-cp314-musllinux_1_2_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "cf33254da03fe98690fefced2603c5a436dd6c0fc3868948b2cc38e10fad2989"
+        },
+        {
+          "filename": "crosshair_tool-0.0.113-cp314-cp314-pyemscripten_2026_0_wasm32.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "ca1111ecfd76f7f834ba81d5985c5602963aa30cdca022dca5549a2a625dbf3f"
+        },
+        {
+          "filename": "crosshair_tool-0.0.113-cp314-cp314-win32.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "6042ad5aa583c6de830e358122ac10f540e928c480119d6ed102c09949755c22"
+        },
+        {
+          "filename": "crosshair_tool-0.0.113-cp314-cp314-win_amd64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "fc3b6cf233a714a3d52150e25254c97fea13a60623b91b3b61afcd19e444306c"
+        },
+        {
+          "filename": "crosshair_tool-0.0.113-cp315-cp315-macosx_10_15_universal2.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "80b6025518fa52a6073041c788cdd0d26c8e5a0dc97c1c5ecbae7afa15d841fb"
+        },
+        {
+          "filename": "crosshair_tool-0.0.113-cp315-cp315-macosx_10_15_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "f68ee369dd0efee8e6f99ab625b42cb7117c4008978177aa3eb4176e62e0835b"
+        },
+        {
+          "filename": "crosshair_tool-0.0.113-cp315-cp315-macosx_11_0_arm64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "96a88eb1bddb036d3031074a07399ec641a96dd0004cf13ce1e6611ab649f53b"
+        },
+        {
+          "filename": "crosshair_tool-0.0.113-cp315-cp315-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "4400420a48a9e303230b86abb3cae7fd964552ddea9bdc66bf685ee734845c2a"
+        },
+        {
+          "filename": "crosshair_tool-0.0.113-cp315-cp315-musllinux_1_2_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "e9c1a9ce714c2877e5aca57b55a7f67d2f30dc831fda3c296492b9de2baa0e41"
+        },
+        {
+          "filename": "crosshair_tool-0.0.113-cp315-cp315-win32.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "8937e4928d11cb3df5a4cdb24196b1f385f8cc72f8446758fd1e6ab934c82cce"
+        },
+        {
+          "filename": "crosshair_tool-0.0.113-cp315-cp315-win_amd64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "56b4778f4fb9f5c472e4b5b25878be786c362a1f37c7565967171077cc95e1b3"
+        },
+        {
+          "filename": "crosshair_tool-0.0.113-cp39-cp39-macosx_10_9_universal2.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "817e41b026b6d263bb5ee5f76b7a077ba3ad42518f01e9c9a3e6155ac99ded53"
+        },
+        {
+          "filename": "crosshair_tool-0.0.113-cp39-cp39-macosx_10_9_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "df05ec81e9e1d9149e6fed81b08e611b3cad5ae5d542250fd1e543a00bcb4768"
+        },
+        {
+          "filename": "crosshair_tool-0.0.113-cp39-cp39-macosx_11_0_arm64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "25012aa2f49b1957d598b95e12e72b849adc85378d8b1ee7dc4b330797f7ea47"
+        },
+        {
+          "filename": "crosshair_tool-0.0.113-cp39-cp39-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "99e002897cab8371379cb0d5db7788b4005d571f1e59fed6e9272a23f511f87c"
+        },
+        {
+          "filename": "crosshair_tool-0.0.113-cp39-cp39-musllinux_1_2_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "0ecc6b4ecaff6d7014096f0a7a810a151720aad627b9699ea16cc0f310bc7d5b"
+        },
+        {
+          "filename": "crosshair_tool-0.0.113-cp39-cp39-win32.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "428623a8a195bd5ee32195f3f1760dc71ce93d84ca952d14543b4de32774e283"
+        },
+        {
+          "filename": "crosshair_tool-0.0.113-cp39-cp39-win_amd64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "dfcdd2fae4a00114d334c04d50bc9920cc56ae972f57330b70d87a42caa21e88"
+        },
+        {
+          "filename": "crosshair_tool-0.0.113.tar.gz",
+          "packagetype": "sdist",
+          "sha256": "cb47634f37b80270850e6799a1159b2cc46fb9cee3842626285a8d42d2d9f3ba"
+        }
+      ],
+      "latest_release_uploaded": "2026-11-05T15:27:22.759268Z",
+      "license": "MIT",
+      "project_urls": {
+        "Homepage": "https://github.com/pschanely/CrossHair"
+      },
+      "pypi_name": "crosshair-tool",
+      "release_count": 113,
+      "requires_dist": [
+        "Flake8-pyproject>=1.2; extra == \"dev\"",
+        "autodocsumm<1,>=0.2.2; extra == \"dev\"",
+        "black==26.10.1; extra == \"dev\"",
+        "deal>=4.13.0; extra == \"dev\"",
+        "flake8==7.1.2; extra == \"dev\"",
+        "hypothesis>=6.0.0; extra == \"dev\"",
+        "icontract>=2.4.0; extra == \"dev\"",
+        "importlib_metadata>=4.0.0; python_version < \"3.10\"",
+        "isort==8.0.1; extra == \"dev\"",
+        "mypy==2.4.0; extra == \"dev\"",
+        "numpy==1.24.0; python_version < \"3.12\" and extra == \"dev\"",
+        "numpy==2.5.3; python_version >= \"3.12\" and extra == \"dev\"",
+        "packaging",
+        "pre-commit~=4.3; extra == \"dev\"",
+        "pygls>=1.0.0",
+        "pytest-xdist==3.8.0; extra == \"dev\"",
+        "pytest==9.1.1; extra == \"dev\"",
+        "rst2pdf>=0.102; extra == \"dev\"",
+        "setuptools; extra == \"dev\"",
+        "sphinx-rtd-theme>=0.5.1; extra == \"dev\"",
+        "sphinx>=3.4.3; extra == \"dev\"",
+        "typeshed-client>=2.0.5",
+        "typing-inspect>=0.7.1",
+        "typing_extensions>=3.10.0",
+        "z3-solver==5.3.3.0; extra == \"dev\"",
+        "z3-solver>=4.13.0.0"
+      ],
+      "requires_python": ">=3.9",
+      "version": "0.0.113",
+      "yanked": false
+    },
+    {
+      "area": "RA1",
+      "candidate": "hypothesis",
+      "core_requires": [
+        "sortedcontainers<3.0.0,>=2.1.0"
+      ],
+      "discovery_query": "pypi search: property-based testing python; owner/Agreement 7.0 names maintained OSS test tooling",
+      "first_release_uploaded": "2013-03-10T13:53:06.290056Z",
+      "latest_files": [
+        {
+          "filename": "hypothesis-6.170.15-cp311-abi3-macosx_10_12_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "db8211e0a56fa29bf9e5d9ff9cd969a91ff4e5ffa8fb4983d3dd788253aeee2c"
+        },
+        {
+          "filename": "hypothesis-6.170.15-cp311-abi3-macosx_11_0_arm64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "34e0859a53f20200f39db3f9cd92112eb6034c31dc670e88d56d8725f453562d"
+        },
+        {
+          "filename": "hypothesis-6.170.15-cp311-abi3-manylinux1_i686.manylinux_2_5_i686.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "5c5980821384206939c1c9d519b7adfb80b54d07e669ab0d36fe877f08cff07a"
+        },
+        {
+          "filename": "hypothesis-6.170.15-cp311-abi3-manylinux2014_aarch64.manylinux_2_17_aarch64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "f29339b5cd4c2a221885e8b7ddbd447b4dc7ee14f763a6f5aaff726d4d3fd5ed"
+        },
+        {
+          "filename": "hypothesis-6.170.15-cp311-abi3-manylinux2014_armv7l.manylinux_2_17_armv7l.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "d836a61c3dd94c6fc4677f4d0d95d30b92eb0ceab6f2b5c58e35c32545583170"
+        },
+        {
+          "filename": "hypothesis-6.170.15-cp311-abi3-manylinux2014_ppc64le.manylinux_2_17_ppc64le.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "d18ffd069360589a66ed125db62f12b490b3b9f6d47e5fd2505f1089d63a0f17"
+        },
+        {
+          "filename": "hypothesis-6.170.15-cp311-abi3-manylinux2014_s390x.manylinux_2_17_s390x.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "7636424c7b1477fdd279fce5a210b67687a3024ac7759fe2e46a767a76f8761c"
+        },
+        {
+          "filename": "hypothesis-6.170.15-cp311-abi3-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "99a1a4711b5276e5bfc3aa0cca034d0e45f8696a46ac8dce008308f580c18234"
+        },
+        {
+          "filename": "hypothesis-6.170.15-cp311-abi3-manylinux_2_31_riscv64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "f545a04342a53008fa696a0592f0a026278ee61fab04f3e9e395d0c7eba42fef"
+        },
+        {
+          "filename": "hypothesis-6.170.15-cp311-abi3-musllinux_1_2_aarch64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "1f11d685322a56ee73c2a7566ec9d1195740313c3b965bad3121c340ec0e657b"
+        },
+        {
+          "filename": "hypothesis-6.170.15-cp311-abi3-musllinux_1_2_armv7l.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "f6d5d34fa6b56f236ad9659043123efb85391a8a5640f067c9de82b0be0bff73"
+        },
+        {
+          "filename": "hypothesis-6.170.15-cp311-abi3-musllinux_1_2_i686.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "2ff9983a58647b03754fa3d1005e59a9c563e15256340fc062b4a34c7969d52a"
+        },
+        {
+          "filename": "hypothesis-6.170.15-cp311-abi3-musllinux_1_2_ppc64le.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "6e461d7b392a630593134611ebb1fce6baba88dbbf4f07661a37ff58ff4e1b6a"
+        },
+        {
+          "filename": "hypothesis-6.170.15-cp311-abi3-musllinux_1_2_riscv64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "62c0675a837bbe0f3f7c7a89b701bee159759840c23b9bec9d565d3434fb0b3a"
+        },
+        {
+          "filename": "hypothesis-6.170.15-cp311-abi3-musllinux_1_2_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "124b0b9962ff6b25786692b7b6cb0065f8bb7870081ddd9baf4745b0ff4a5c7a"
+        },
+        {
+          "filename": "hypothesis-6.170.15-cp311-abi3-win32.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "d34e54f485777eb217c85c425ddbe7b278ef56540feedb5de4097a5abc9f5719"
+        },
+        {
+          "filename": "hypothesis-6.170.15-cp311-abi3-win_amd64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "de9fe573a4955b0cf0354822fbfe9b79882e8de02f26287313fe1ad47ba3e69f"
+        },
+        {
+          "filename": "hypothesis-6.170.15-cp311-abi3-win_arm64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "de5e11c568fd411a3cf07e4e34d4f8cf07d638de2f254c8bd87c1879679cdd9a"
+        },
+        {
+          "filename": "hypothesis-6.170.15-cp311-cp311-macosx_10_12_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "679635cd52626790214f879a8bdbb877923333fbd18905c591af41bd74d2f8db"
+        },
+        {
+          "filename": "hypothesis-6.170.15-cp311-cp311-macosx_11_0_arm64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "f95b532f23bed43ef3c45fbd19baf4717687a4993fa6f42fc704fbde18bd744c"
+        },
+        {
+          "filename": "hypothesis-6.170.15-cp311-cp311-manylinux2014_aarch64.manylinux_2_17_aarch64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "9f5937e70c636ee46bd2242d9ef120d19744e63ce7d17a92fd4c9f57ef62b1c3"
+        },
+        {
+          "filename": "hypothesis-6.170.15-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "ecbd6294a636594580689debc3011a0ca3eb76577770f661224314202f107e14"
+        },
+        {
+          "filename": "hypothesis-6.170.15-cp311-cp311-musllinux_1_2_aarch64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "efaee8533a06b6a2382ff7c336ea5a747c1b22a4e97c19bfe825a02388f56d2d"
+        },
+        {
+          "filename": "hypothesis-6.170.15-cp311-cp311-musllinux_1_2_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "4af2d31c00306707166b4f39e5208d2585f9ef4accb10586534101eb32f243fb"
+        },
+        {
+          "filename": "hypothesis-6.170.15-cp311-cp311-win_amd64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "b48cb85180255ec3eb3b3e5d49068c9ad447b25e34fccafdabae63d2c3d854ad"
+        },
+        {
+          "filename": "hypothesis-6.170.15-cp312-cp312-macosx_10_12_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "29223a2d180e463f1205b7e5eb397db0c4827de06f2ae571b00c392d355c410e"
+        },
+        {
+          "filename": "hypothesis-6.170.15-cp312-cp312-macosx_11_0_arm64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "7953ad8f123b4289801b833666aaab757ba52e91ed687d954eb26f4af7328e5b"
+        },
+        {
+          "filename": "hypothesis-6.170.15-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "b1f37920547eafa77814bc9b638e47299562123023bdf3c9cb002795bb90fc92"
+        },
+        {
+          "filename": "hypothesis-6.170.15-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "e9e20ec17d2095e9314ea232b4e34b5510def0d9e7a7e764cc70cae88fe4b0c4"
+        },
+        {
+          "filename": "hypothesis-6.170.15-cp312-cp312-musllinux_1_2_aarch64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "11c541cf103c784306f6037e5ab962cbe3d5891d36fd98df993f38d7ddbcd360"
+        },
+        {
+          "filename": "hypothesis-6.170.15-cp312-cp312-musllinux_1_2_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "eecdcd38395facf6ea3af90320a574f5e63c310c194d2a0eb75f121223942386"
+        },
+        {
+          "filename": "hypothesis-6.170.15-cp312-cp312-win_amd64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "7dfb3d92df4faa67d3c975d1ecdefabc5a2481b789048f52cd5fb775c6c517b8"
+        },
+        {
+          "filename": "hypothesis-6.170.15-cp313-cp313-macosx_10_12_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "e3f478d4d9e13d528e352a4d938dea10b25793663ac752d774d7d35b008a1b45"
+        },
+        {
+          "filename": "hypothesis-6.170.15-cp313-cp313-macosx_11_0_arm64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "9c92af3f0c8844d9eba793a4371035a45e88bb59579a1408ce5d3cceb9e2b1da"
+        },
+        {
+          "filename": "hypothesis-6.170.15-cp313-cp313-manylinux2014_aarch64.manylinux_2_17_aarch64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "dce4d989f6b9c0a589b944591f13de3dff34e186c14401e11b819fed81d70a5b"
+        },
+        {
+          "filename": "hypothesis-6.170.15-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "f25261d1656f830a78863844be5fb55cd0208154dc9ddec85d44fe691488c557"
+        },
+        {
+          "filename": "hypothesis-6.170.15-cp313-cp313-musllinux_1_2_aarch64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "5ae92fa40b57c1cd331d63fe6f95aecfdb6aa32f15b4c418c108c41fcd4aef84"
+        },
+        {
+          "filename": "hypothesis-6.170.15-cp313-cp313-musllinux_1_2_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "b829dc3cbd73fe08c02151afc438448180907da62c154cfa68abd178eafd4d48"
+        },
+        {
+          "filename": "hypothesis-6.170.15-cp313-cp313-win_amd64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "1f7ede44b875dddd8f3e7562e6702c363e82c6fb680b0fe079536bae662987f8"
+        },
+        {
+          "filename": "hypothesis-6.170.15-cp314-cp314-macosx_10_12_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "ffac67d06f765fd000a132e71117ee92dbd59863cea18403220ca4e39b50397f"
+        },
+        {
+          "filename": "hypothesis-6.170.15-cp314-cp314-macosx_11_0_arm64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "82b613ee882068e781d810eb73a8195b59edd6cc47e8acbe4971562044a99c83"
+        },
+        {
+          "filename": "hypothesis-6.170.15-cp314-cp314-manylinux2014_aarch64.manylinux_2_17_aarch64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "eb6fe3d1cb91d4f14fd307f10ae969ef7e866c16e4010a750d1cade145dfd764"
+        },
+        {
+          "filename": "hypothesis-6.170.15-cp314-cp314-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "f91f27a89e8d55c7f043cb1e10705096236d4f7bcb35f3ac4f821e0c9b9bcd05"
+        },
+        {
+          "filename": "hypothesis-6.170.15-cp314-cp314-musllinux_1_2_aarch64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "e0e4ab687c0f2bd62b7963dc8c3c8d29211cdc6db7ce05d37ef2a20d21219c18"
+        },
+        {
+          "filename": "hypothesis-6.170.15-cp314-cp314-musllinux_1_2_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "b01d130c103fdf78a4a748cae7d095edfe5d37534828413a509936fb3567db61"
+        },
+        {
+          "filename": "hypothesis-6.170.15-cp314-cp314-pyemscripten_2026_0_wasm32.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "1138c03edf4c4401afb28e50255644b4ab4e1ad52864456cd4e84458ba8c671a"
+        },
+        {
+          "filename": "hypothesis-6.170.15-cp314-cp314-win_amd64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "57ae2617424f5bb55af0146b47e0aff64a9d6677a4d5216cf2a66bd3bda0d457"
+        },
+        {
+          "filename": "hypothesis-6.170.15-cp314-cp314t-macosx_10_12_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "c0514f3f8ab5d56103b756317dedc8476945b0633e51112312247e3caecd0eb2"
+        },
+        {
+          "filename": "hypothesis-6.170.15-cp314-cp314t-macosx_11_0_arm64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "cc5434cde3b22c900dfe01f891804b48f6e2aa93e891ca98a14c07dd04fa6d54"
+        },
+        {
+          "filename": "hypothesis-6.170.15-cp314-cp314t-manylinux2014_aarch64.manylinux_2_17_aarch64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "f22900eec7df2696073c05f60c666654eaa93f17aebe8964f751d75b131dcd90"
+        },
+        {
+          "filename": "hypothesis-6.170.15-cp314-cp314t-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "7288412dfba6b5a6f875279a25409eda6b25d097c26ea710540f904287c55d06"
+        },
+        {
+          "filename": "hypothesis-6.170.15-cp314-cp314t-musllinux_1_2_aarch64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "7d546a5d6a5549a6b34304f7315d20aff7afd206996592329877da529b9d9153"
+        },
+        {
+          "filename": "hypothesis-6.170.15-cp314-cp314t-musllinux_1_2_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "bd8b36d0403eff6473686c0e4d8b7704780ebf548b0b2cc86cb9cbbbe64f8c2f"
+        },
+        {
+          "filename": "hypothesis-6.170.15-cp314-cp314t-win_amd64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "67eb006925a3a49ddc4a48d9af8314349291a7eee9b2baea6beb93bc48211ead"
+        },
+        {
+          "filename": "hypothesis-6.170.15-cp315-abi3.abi3t-macosx_10_12_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "e007ff1dfb8bfa228b97ed6695325cfa1ba6487c7e1175c884e8795e71fb41a5"
+        },
+        {
+          "filename": "hypothesis-6.170.15-cp315-abi3.abi3t-macosx_11_0_arm64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "742846b0e2e31640acf8bba7c2b8b6eb9cecd6817a906af6d4b5ced9db697660"
+        },
+        {
+          "filename": "hypothesis-6.170.15-cp315-abi3.abi3t-manylinux1_i686.manylinux_2_5_i686.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "508488dd4e92e03ecd16ea086f33d766855ed1febd322a439ec231c920b1740a"
+        },
+        {
+          "filename": "hypothesis-6.170.15-cp315-abi3.abi3t-manylinux2014_aarch64.manylinux_2_17_aarch64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "ccc6a9ce18dced7f0d2cba36f334f44697c1c6e692949c1bbd0bc67a7065c86a"
+        },
+        {
+          "filename": "hypothesis-6.170.15-cp315-abi3.abi3t-manylinux2014_armv7l.manylinux_2_17_armv7l.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "b8a0b5b3e21a1d2e235f42a813fbf04872196ad53151fdd4cfe02723db699f8d"
+        },
+        {
+          "filename": "hypothesis-6.170.15-cp315-abi3.abi3t-manylinux2014_ppc64le.manylinux_2_17_ppc64le.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "b59187094929ce6d5351a6f92e7f3831cd463fe69591def6ebd0023a3073af2e"
+        },
+        {
+          "filename": "hypothesis-6.170.15-cp315-abi3.abi3t-manylinux2014_s390x.manylinux_2_17_s390x.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "0ecf4e2948c3de57ea12d66f6cf6c0e3ad88b5eae0d216cfa2922800ba5522a7"
+        },
+        {
+          "filename": "hypothesis-6.170.15-cp315-abi3.abi3t-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "55e3dcd5d8fbfd5a97018ff2712f375148b62ef537490c281a198977f3588578"
+        },
+        {
+          "filename": "hypothesis-6.170.15-cp315-abi3.abi3t-manylinux_2_31_riscv64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "417fe54775f846fa4903bb2094ce3092a0ecc107db6676b21fd8069fcc328cb9"
+        },
+        {
+          "filename": "hypothesis-6.170.15-cp315-abi3.abi3t-musllinux_1_2_aarch64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "47438186039fcfba3a245bb407490d442ce2c9cce4370565f1bfcdcb887e91e2"
+        },
+        {
+          "filename": "hypothesis-6.170.15-cp315-abi3.abi3t-musllinux_1_2_armv7l.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "372b05075d4a259c5ebf3fcf43dc689ef5d4335bed9d0c9dd25d14997842c0c0"
+        },
+        {
+          "filename": "hypothesis-6.170.15-cp315-abi3.abi3t-musllinux_1_2_i686.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "2161fb65416bf8da3b1c3119aa92ea63cc177fd88249bf7dc4ca64b4872e0bd1"
+        },
+        {
+          "filename": "hypothesis-6.170.15-cp315-abi3.abi3t-musllinux_1_2_ppc64le.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "b3db4c8aecd13e043c419d90ccb683fdf19711b547ca9d23e685a35157d4657f"
+        },
+        {
+          "filename": "hypothesis-6.170.15-cp315-abi3.abi3t-musllinux_1_2_riscv64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "3b81f08d6052ac74f479215029e253d88fb80e9867e8bc034252d345abfa94ce"
+        },
+        {
+          "filename": "hypothesis-6.170.15-cp315-abi3.abi3t-musllinux_1_2_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "a51297c26ab637a97ec3283a39de163efce0a926d0ccd4378faabf5994adb01f"
+        },
+        {
+          "filename": "hypothesis-6.170.15-cp315-abi3.abi3t-win32.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "51246e702c458b42a4b5079c3e6904c9dfb5193de920ed91fdbfa09fa694c55b"
+        },
+        {
+          "filename": "hypothesis-6.170.15-cp315-abi3.abi3t-win_amd64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "a951de05b61b7c1235a732543dc6c3b105b6c894e736f21cb891449589aaeba7"
+        },
+        {
+          "filename": "hypothesis-6.170.15-cp315-abi3.abi3t-win_arm64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "9dc31166ccb95928c6eb05817684b2dd1c2a3698a6daad0450e5f449e44bb633"
+        },
+        {
+          "filename": "hypothesis-6.170.15-pp311-pypy311_pp73-macosx_10_12_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "bfe10cd8c8138ba84cdd0f72d72e0a85f0f9adea8bc730f4ab4676cd41a730af"
+        },
+        {
+          "filename": "hypothesis-6.170.15-pp311-pypy311_pp73-macosx_11_0_arm64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "5c1331070d8688d31b9ce99a100593bc6afdada964689b5e1a5f2ecffefa2455"
+        },
+        {
+          "filename": "hypothesis-6.170.15-pp311-pypy311_pp73-manylinux2014_aarch64.manylinux_2_17_aarch64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "b56ea17542eabcb9e2c1d574fcabc9df7e14a7376cfce324e2fa05e9c836fff8"
+        },
+        {
+          "filename": "hypothesis-6.170.15-pp311-pypy311_pp73-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "c1c3b98713318639a6c852f3fff60bddd466096528eb2cd5853ab077ef04f74c"
+        },
+        {
+          "filename": "hypothesis-6.170.15-pp311-pypy311_pp73-win_amd64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "7ea75bc4c55f0ebb80179ae7e8fe1c8ab09b553005d1aadcec14e97e1306a82a"
+        },
+        {
+          "filename": "hypothesis-6.170.15-pp312-pypy312_pp80-macosx_10_12_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "45c267cb5bcd7b73b1ca6cedb039de423b8695b34a31cc87c29a7787058e7e59"
+        },
+        {
+          "filename": "hypothesis-6.170.15-pp312-pypy312_pp80-macosx_11_0_arm64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "3eb9428e0ba92993b61cab0289b8450f469b1e4c56cbdbdeaad258f0fb4f107e"
+        },
+        {
+          "filename": "hypothesis-6.170.15-pp312-pypy312_pp80-manylinux2014_aarch64.manylinux_2_17_aarch64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "9c30c911be51aa4fa84706f1d79dcd9ad6b9728207e69667a3fed2d4ab711434"
+        },
+        {
+          "filename": "hypothesis-6.170.15-pp312-pypy312_pp80-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "d2b68004bd5a238320569f7c03322b22815c2c145b1f7bbf52a319662570ee5c"
+        },
+        {
+          "filename": "hypothesis-6.170.15-pp312-pypy312_pp80-win_amd64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "d25e9a3f92e9f824bb110679506ece2b8fd7d093f1fa7d819ca46278a681a1f1"
+        },
+        {
+          "filename": "hypothesis-6.170.15.tar.gz",
+          "packagetype": "sdist",
+          "sha256": "a4a57e5fb106ecb29cad37e22e411d957e20d933bfb9fb029e1999b1deb8a0b6"
+        }
+      ],
+      "latest_release_uploaded": "2026-11-06T09:54:57.339202Z",
+      "license": "MPL-2.0",
+      "project_urls": {
+        "changelog": "https://hypothesis.readthedocs.io/en/latest/changelog.html",
+        "documentation": "https://hypothesis.readthedocs.io",
+        "homepage": "https://hypothesis.works",
+        "issues": "https://github.com/HypothesisWorks/hypothesis/issues",
+        "source": "https://github.com/HypothesisWorks/hypothesis"
+      },
+      "pypi_name": "hypothesis",
+      "release_count": 1594,
+      "requires_dist": [
+        "black>=20.8b0; extra == \"all\"",
+        "black>=20.8b0; extra == \"cli\"",
+        "black>=20.8b0; extra == \"ghostwriter\"",
+        "click>=7.0; extra == \"all\"",
+        "click>=7.0; extra == \"cli\"",
+        "crosshair-tool>=0.0.112; extra == \"all\"",
+        "crosshair-tool>=0.0.112; extra == \"crosshair\"",
+        "django>=5.2; extra == \"all\"",
+        "django>=5.2; extra == \"django\"",
+        "dpcontracts>=0.4; extra == \"all\"",
+        "dpcontracts>=0.4; extra == \"dpcontracts\"",
+        "hypothesis-crosshair>=0.0.31; extra == \"all\"",
+        "hypothesis-crosshair>=0.0.31; extra == \"crosshair\"",
+        "lark>=0.10.1; extra == \"all\"",
+        "lark>=0.10.1; extra == \"lark\"",
+        "libcst>=0.3.16; extra == \"all\"",
+        "libcst>=0.3.16; extra == \"codemods\"",
+        "numpy>=1.23.2; extra == \"all\"",
+        "numpy>=1.23.2; extra == \"numpy\"",
+        "pandas>=1.5; extra == \"all\"",
+        "pandas>=1.5; extra == \"pandas\"",
+        "pytest>=4.6; extra == \"all\"",
+        "pytest>=4.6; extra == \"pytest\"",
+        "python-dateutil>=1.4; extra == \"all\"",
+        "python-dateutil>=1.4; extra == \"dateutil\"",
+        "pytz>=2014.1; extra == \"all\"",
+        "pytz>=2014.1; extra == \"pytz\"",
+        "redis>=3.0.0; extra == \"all\"",
+        "redis>=3.0.0; extra == \"redis\"",
+        "rich>=9.0.0; extra == \"all\"",
+        "rich>=9.0.0; extra == \"cli\"",
+        "sortedcontainers<3.0.0,>=2.1.0",
+        "tzdata>=2026.5; (sys_platform == \"emscripten\" and extra == \"all\") or (sys_platform == \"win32\" and extra == \"all\")",
+        "tzdata>=2026.5; (sys_platform == \"emscripten\" and extra == \"zoneinfo\") or (sys_platform == \"win32\" and extra == \"zoneinfo\")",
+        "watchdog>=4.0.0; extra == \"all\"",
+        "watchdog>=4.0.0; extra == \"watchdog\""
+      ],
+      "requires_python": ">=3.11",
+      "version": "6.170.15",
+      "yanked": false
+    },
+    {
+      "area": "RA1",
+      "candidate": "sortedcontainers",
+      "core_requires": [],
+      "discovery_query": "required (non-extra) component of hypothesis: pypi requires_dist",
+      "first_release_uploaded": "2014-03-18T17:27:57.485589Z",
+      "latest_files": [
+        {
+          "filename": "sortedcontainers-2.4.0-py2.py3-none-any.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "a163dcaede0f1c021485e957a39245190e74249897e2ae4b2aa38595db237ee0"
+        },
+        {
+          "filename": "sortedcontainers-2.4.0.tar.gz",
+          "packagetype": "sdist",
+          "sha256": "25caa5a06cc30b6b83d11423433f65d1f9d76c4c6a0c90e3379eaa43b9bfdb88"
+        }
+      ],
+      "latest_release_uploaded": "2021-05-16T22:03:42.897871Z",
+      "license": "Apache Software License",
+      "project_urls": {
+        "Homepage": "http://www.grantjenks.com/docs/sortedcontainers/"
+      },
+      "pypi_name": "sortedcontainers",
+      "release_count": 40,
+      "requires_dist": [],
+      "requires_python": "",
+      "version": "2.4.0",
+      "yanked": false
+    },
+    {
+      "area": "RA2",
+      "candidate": "cerberus",
+      "core_requires": [
+        "importlib-metadata; python_version < \"3.8\""
+      ],
+      "discovery_query": "pypi search: lightweight data validation python",
+      "first_release_uploaded": "2012-10-16T07:37:27.789200Z",
+      "latest_files": [
+        {
+          "filename": "cerberus-1.3.8-py3-none-any.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "46c029e3e2a4735408ed36bec14ef2cbf3e50d8ebe47fb34ee1e54b2da814df2"
+        },
+        {
+          "filename": "cerberus-1.3.8.tar.gz",
+          "packagetype": "sdist",
+          "sha256": "579554887ffd189226774b87570f4a76db75cf0efcbaffcacd5e98b8ee877f61"
+        }
+      ],
+      "latest_release_uploaded": "2025-11-06T18:29:40.419459Z",
+      "license": "ISC License (ISCL)",
+      "project_urls": {
+        "Documentation": "http://docs.python-cerberus.org",
+        "Repository": "https://github.com/pyeve/cerberus"
+      },
+      "pypi_name": "Cerberus",
+      "release_count": 30,
+      "requires_dist": [
+        "importlib-metadata; python_version < \"3.8\""
+      ],
+      "requires_python": ">=3.7",
+      "version": "1.3.8",
+      "yanked": false
+    },
+    {
+      "area": "RA2",
+      "candidate": "fastjsonschema",
+      "core_requires": [],
+      "discovery_query": "pypi search: json schema validator python",
+      "first_release_uploaded": "2016-10-05T11:48:36.656853Z",
+      "latest_files": [
+        {
+          "filename": "fastjsonschema-2.22.3-py3-none-any.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "f670b443830b75aca3f00b75949efa20f4b2a80302ec7a21505c28dd54cffd43"
+        },
+        {
+          "filename": "fastjsonschema-2.22.3.tar.gz",
+          "packagetype": "sdist",
+          "sha256": "8330c91b027dcf941efcb7b1f0998515ff95d177ea15bbabdfe8671965620901"
+        }
+      ],
+      "latest_release_uploaded": "2026-11-01T21:11:34.389908Z",
+      "license": "BSD License",
+      "project_urls": {
+        "Homepage": "https://github.com/horejsek/python-fastjsonschema"
+      },
+      "pypi_name": "fastjsonschema",
+      "release_count": 49,
+      "requires_dist": [
+        "colorama; extra == \"devel\"",
+        "json-spec; extra == \"devel\"",
+        "jsonschema; extra == \"devel\"",
+        "pylint; extra == \"devel\"",
+        "pytest-benchmark; extra == \"devel\"",
+        "pytest-cache; extra == \"devel\"",
+        "pytest; extra == \"devel\"",
+        "validictory; extra == \"devel\""
+      ],
+      "requires_python": ">=3.10",
+      "version": "2.22.3",
+      "yanked": false
+    },
+    {
+      "area": "RA2",
+      "candidate": "jsonschema",
+      "core_requires": [
+        "attrs>=22.2.0",
+        "jsonschema-specifications>=2023.03.6",
+        "referencing>=0.28.4",
+        "rpds-py>=0.25.0"
+      ],
+      "discovery_query": "pypi search: json schema validation python",
+      "first_release_uploaded": "2012-01-02T03:52:12.562044Z",
+      "latest_files": [
+        {
+          "filename": "jsonschema-4.26.0-py3-none-any.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "d489f15263b8d200f8387e64b4c3a75f06629559fb73deb8fdfb525f2dab50ce"
+        },
+        {
+          "filename": "jsonschema-4.26.0.tar.gz",
+          "packagetype": "sdist",
+          "sha256": "0c26707e2efad8aa1bfc5b7ce170f3fccc2e4918ff85989ba9ffa9facb2be326"
+        }
+      ],
+      "latest_release_uploaded": "2026-01-07T13:41:07.246891Z",
+      "license": "MIT",
+      "project_urls": {
+        "Changelog": "https://github.com/python-jsonschema/jsonschema/blob/main/CHANGELOG.rst",
+        "Documentation": "https://python-jsonschema.readthedocs.io/",
+        "Funding": "https://github.com/sponsors/Julian",
+        "Homepage": "https://github.com/python-jsonschema/jsonschema",
+        "Issues": "https://github.com/python-jsonschema/jsonschema/issues/",
+        "Source": "https://github.com/python-jsonschema/jsonschema",
+        "Tidelift": "https://tidelift.com/subscription/pkg/pypi-jsonschema?utm_source=pypi-jsonschema&utm_medium=referral&utm_campaign=pypi-link"
+      },
+      "pypi_name": "jsonschema",
+      "release_count": 109,
+      "requires_dist": [
+        "attrs>=22.2.0",
+        "fqdn; extra == \"format\"",
+        "fqdn; extra == \"format-nongpl\"",
+        "idna; extra == \"format\"",
+        "idna; extra == \"format-nongpl\"",
+        "isoduration; extra == \"format\"",
+        "isoduration; extra == \"format-nongpl\"",
+        "jsonpointer>1.13; extra == \"format\"",
+        "jsonpointer>1.13; extra == \"format-nongpl\"",
+        "jsonschema-specifications>=2023.03.6",
+        "referencing>=0.28.4",
+        "rfc3339-validator; extra == \"format\"",
+        "rfc3339-validator; extra == \"format-nongpl\"",
+        "rfc3986-validator>0.1.0; extra == \"format-nongpl\"",
+        "rfc3987-syntax>=1.1.0; extra == \"format-nongpl\"",
+        "rfc3987; extra == \"format\"",
+        "rpds-py>=0.25.0",
+        "uri-template; extra == \"format\"",
+        "uri-template; extra == \"format-nongpl\"",
+        "webcolors>=1.11; extra == \"format\"",
+        "webcolors>=24.6.0; extra == \"format-nongpl\""
+      ],
+      "requires_python": ">=3.10",
+      "version": "4.26.0",
+      "yanked": false
+    },
+    {
+      "area": "RA2",
+      "candidate": "msgspec",
+      "core_requires": [],
+      "discovery_query": "pypi search: fast typed json validation python",
+      "first_release_uploaded": "2021-02-23T04:03:09.994777Z",
+      "latest_files": [
+        {
+          "filename": "msgspec-0.22.0-cp310-cp310-macosx_10_9_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "f3413e3647275f787b21b4dfb4836a59a1a5acf1018ab1d45843b1d7edf15c22"
+        },
+        {
+          "filename": "msgspec-0.22.0-cp310-cp310-macosx_11_0_arm64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "38c5b9bd347bc9abbcee40752be3c5117854e891ea7a1881a56d4b3dec58c5e7"
+        },
+        {
+          "filename": "msgspec-0.22.0-cp310-cp310-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "57c282f474e17acf6bcf84f393c73afd45d6eba47cccff8b76b79c4fbb8a3b54"
+        },
+        {
+          "filename": "msgspec-0.22.0-cp310-cp310-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "12a887c4c06e4a771a2db32c9a80c7bb21866b12458025f636dcdc2253331c28"
+        },
+        {
+          "filename": "msgspec-0.22.0-cp310-cp310-manylinux_2_31_riscv64.manylinux_2_39_riscv64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "a6c8a3f210421e29d8f7e9815f106cf59d758665b7fe5428e61152ce24fe65d7"
+        },
+        {
+          "filename": "msgspec-0.22.0-cp310-cp310-musllinux_1_2_aarch64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "ebd211d7af79ed8710c64e9e8d4c0d02749bc20170e7ab4e1c5801ca7c99d25b"
+        },
+        {
+          "filename": "msgspec-0.22.0-cp310-cp310-musllinux_1_2_riscv64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "27d9ef46c80884f9c4f323e0b18bec464287e872121e70f2cbe47335780bf597"
+        },
+        {
+          "filename": "msgspec-0.22.0-cp310-cp310-musllinux_1_2_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "ec108e96fdaa8fdbe5bb993ec97a9d1faa69b3a521eecd71a6e5acbe0e29ae69"
+        },
+        {
+          "filename": "msgspec-0.22.0-cp310-cp310-win_amd64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "21c887d4de397355f6635c2a037b1c067882dac5d132a1793d63bbf7cf5ca78e"
+        },
+        {
+          "filename": "msgspec-0.22.0-cp310-cp310-win_arm64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "4a663a8d7f6ad56ac1dbcba91e046ba8ebab7773ae72ef3dd3c47f8226919184"
+        },
+        {
+          "filename": "msgspec-0.22.0-cp311-cp311-macosx_10_9_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "fb1e129b81ac8fcf9ec649b081c6c8da1c7ea6f87cab336d46386abc2cd855c1"
+        },
+        {
+          "filename": "msgspec-0.22.0-cp311-cp311-macosx_11_0_arm64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "dce29a04966e31abf9b83b697c6d672486526dc5d03fcd6970cb56d5dc1fbeea"
+        },
+        {
+          "filename": "msgspec-0.22.0-cp311-cp311-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "b962000e11dd34fb210a5a2c57a8a62b2d92b381c8cb3b05c075a83e38f8d645"
+        },
+        {
+          "filename": "msgspec-0.22.0-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "a6db3806b3b76ca78064255eac6fa101a8a64fe6f698d80fbaf81fdfa21217d4"
+        },
+        {
+          "filename": "msgspec-0.22.0-cp311-cp311-manylinux_2_31_riscv64.manylinux_2_39_riscv64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "a88d939d3fe4b8c7314645ebcd6e86c8c8a512ea7820d6550355973e803bc0f1"
+        },
+        {
+          "filename": "msgspec-0.22.0-cp311-cp311-musllinux_1_2_aarch64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "0b31746da07cba0e330c6433a94a4699ad77d3aeb9638d1a320a7686b69f6249"
+        },
+        {
+          "filename": "msgspec-0.22.0-cp311-cp311-musllinux_1_2_riscv64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "6ae370f92f3517f0e6f209ba7cc649c957b444868439197e046be07154667551"
+        },
+        {
+          "filename": "msgspec-0.22.0-cp311-cp311-musllinux_1_2_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "9a696f23f7c1ffb31fae308502e01a3965c3891d5c400f01d0d1096dbe77519e"
+        },
+        {
+          "filename": "msgspec-0.22.0-cp311-cp311-win_amd64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "024138c51afd335d0b4dce401be33902caafac2b64f8c9f2509a378986175d98"
+        },
+        {
+          "filename": "msgspec-0.22.0-cp311-cp311-win_arm64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "4600dbec738ed74e4c9bd35503e84701200ea7db344cfdeda80677b3ee53eb64"
+        },
+        {
+          "filename": "msgspec-0.22.0-cp312-cp312-macosx_10_13_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "ab1e9e7531e353653b906cdd12a0220cc288a1e8e3436aabc65f4508d91b14d9"
+        },
+        {
+          "filename": "msgspec-0.22.0-cp312-cp312-macosx_11_0_arm64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "b60b43425a47eb9cfe987f6874e354ca7c760e58e295b4e2273ff03574df28a1"
+        },
+        {
+          "filename": "msgspec-0.22.0-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "b5a169b5b03f0f2c7a296c002647db1dab75d2cd501bca34e32b71cab0261b56"
+        },
+        {
+          "filename": "msgspec-0.22.0-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "99c401861c5bb3a57f7d6423ea7ed4352cd57aa3f04f4fbe9f3e3e4564a10f08"
+        },
+        {
+          "filename": "msgspec-0.22.0-cp312-cp312-manylinux_2_31_riscv64.manylinux_2_39_riscv64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "08826f5e5b0fa2f7a88592c396a243cfcc63d37e19f9d4fbe3b3f1be2fbdc404"
+        },
+        {
+          "filename": "msgspec-0.22.0-cp312-cp312-musllinux_1_2_aarch64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "21460f54cee9208239b1a8421fdf25bffc77293e1daba88f585711ad839b9758"
+        },
+        {
+          "filename": "msgspec-0.22.0-cp312-cp312-musllinux_1_2_riscv64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "cfc3d9557de9c806318725b702f3e664db33167bb42892079b693c69893fd33b"
+        },
+        {
+          "filename": "msgspec-0.22.0-cp312-cp312-musllinux_1_2_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "0b25dcbc108783cb72503ed705b9fbb8c3cb02ee5801923f44b5f038c91cc365"
+        },
+        {
+          "filename": "msgspec-0.22.0-cp312-cp312-win_amd64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "6ad64f5c260866b0d543f89f50cee43628989c1433c5de7ce820281fa28a2611"
+        },
+        {
+          "filename": "msgspec-0.22.0-cp312-cp312-win_arm64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "0922714feff5300aacd8ecd65fa828317ce4bf5212b3139258c0bfc0253cd80e"
+        },
+        {
+          "filename": "msgspec-0.22.0-cp313-cp313-macosx_10_13_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "f13c127a945479bc9db057eb253b8851075c8e1ae07ffc967bfa1c5676203a86"
+        },
+        {
+          "filename": "msgspec-0.22.0-cp313-cp313-macosx_11_0_arm64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "5aa24eb475d070ecbbe5b21080fc3ce4b0b76c60de25cfe0c9678d8fb44bb42f"
+        },
+        {
+          "filename": "msgspec-0.22.0-cp313-cp313-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "627bfdfe5a4b3d916b3360b30f4cddeee3a084f56593e33527c6872fa8322ff9"
+        },
+        {
+          "filename": "msgspec-0.22.0-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "c6c310ef83e7e291b01a63298828f848348bb99e84a1098c4b3923c05674d032"
+        },
+        {
+          "filename": "msgspec-0.22.0-cp313-cp313-manylinux_2_31_riscv64.manylinux_2_39_riscv64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "7c1e76c6bd523141b9c05c2f8a70979cd0efedbd68855a66f292f8892c0b8fc7"
+        },
+        {
+          "filename": "msgspec-0.22.0-cp313-cp313-musllinux_1_2_aarch64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "bc374dedd5f85a5f4de2386dc5f737894ccb8c1ac18e9566ce66fd9839e6285d"
+        },
+        {
+          "filename": "msgspec-0.22.0-cp313-cp313-musllinux_1_2_riscv64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "feafe612034d49e9144340c0b5168ee4e22c2af4aaa2c1db11ae84e1aac9543b"
+        },
+        {
+          "filename": "msgspec-0.22.0-cp313-cp313-musllinux_1_2_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "6f48317f05312bfdf78248f53933f830f07ab75cc1c813ac3ca4220cb3b5b019"
+        },
+        {
+          "filename": "msgspec-0.22.0-cp313-cp313-win_amd64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "0739b068f31f2004a364f97679ba91f2f5ecd6ec2a5b4b890188ab5c57d20672"
+        },
+        {
+          "filename": "msgspec-0.22.0-cp313-cp313-win_arm64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "508278300dd4efbd21cd3a4b2b016160a5feac98bc880d3673f6c06697baaf62"
+        },
+        {
+          "filename": "msgspec-0.22.0-cp314-cp314-macosx_10_15_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "221cbcbfa4478152b91d37dcfd4830e2be92773e8139e883f43773450ebacef8"
+        },
+        {
+          "filename": "msgspec-0.22.0-cp314-cp314-macosx_11_0_arm64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "dd9568695911055440d2bb7099ed9098fc181d335daa772d0eb3fe8f31ba4efb"
+        },
+        {
+          "filename": "msgspec-0.22.0-cp314-cp314-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "f039ef5207b847f075a0a43020ee6140cd47505f890e47e157f2deb485c2dc96"
+        },
+        {
+          "filename": "msgspec-0.22.0-cp314-cp314-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "5e4f7e09cceac7dbf4c0761b8ae7df51c55b5df5e9af7aff2c895aac1ebea015"
+        },
+        {
+          "filename": "msgspec-0.22.0-cp314-cp314-manylinux_2_31_riscv64.manylinux_2_39_riscv64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "614e2c827e0a3f934f3cf0cf4ba65210df8132b75a69a8a1f51bb3b2caf0ac5a"
+        },
+        {
+          "filename": "msgspec-0.22.0-cp314-cp314-musllinux_1_2_aarch64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "fa3689b9dfcc663358ef23ba4299d7460f01108515b041a7d30d05908ac9c32f"
+        },
+        {
+          "filename": "msgspec-0.22.0-cp314-cp314-musllinux_1_2_riscv64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "d2f950239ff1fc7322c6f9634807310265149cb168270d3ddcdda5b6ada13a28"
+        },
+        {
+          "filename": "msgspec-0.22.0-cp314-cp314-musllinux_1_2_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "3c789b5ccd07c0a3c09767108ee06e089b2875f2309a4569c2648f30a8d31dfa"
+        },
+        {
+          "filename": "msgspec-0.22.0-cp314-cp314-pyemscripten_2026_0_wasm32.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "a66b1766311e42371e509c996c3933b161c7ae0eabdf361af5316dec197e1022"
+        },
+        {
+          "filename": "msgspec-0.22.0-cp314-cp314-win_amd64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "749899563d26b211379f142b8ffd7e2d7da149a51717798f0ce994dce50324f0"
+        },
+        {
+          "filename": "msgspec-0.22.0-cp314-cp314-win_arm64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "10d0d1d464960d99a949f7ca01ef8928e51c472433a5f5ab74b2d695fb830652"
+        },
+        {
+          "filename": "msgspec-0.22.0-cp314-cp314t-macosx_10_15_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "e79725246291516a7359caad5fb743ddc0ec66ed40d2381fb846325b5031504e"
+        },
+        {
+          "filename": "msgspec-0.22.0-cp314-cp314t-macosx_11_0_arm64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "38f7022fbe91954b31afe3888a0af1b652e0f370fafdeb1d425f4a814d789c9f"
+        },
+        {
+          "filename": "msgspec-0.22.0-cp314-cp314t-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "b6d3ca19a8ff28d0a67a1824e2bff7ec649ec795c80a265f20ade4caa63080de"
+        },
+        {
+          "filename": "msgspec-0.22.0-cp314-cp314t-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "a8b98ae215a102cbf6635f7df45f5c4af12f77fad1f7b71b9808fcf868a5735d"
+        },
+        {
+          "filename": "msgspec-0.22.0-cp314-cp314t-manylinux_2_31_riscv64.manylinux_2_39_riscv64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "e0aa0cc3f18c35bab79bd7b87fde95d6274a9deddeebd1ea541f8066a5073165"
+        },
+        {
+          "filename": "msgspec-0.22.0-cp314-cp314t-musllinux_1_2_aarch64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "8c8e84789918fbc15a503b92a829115ddd7567ecd3e4778bd418c56abbb86c11"
+        },
+        {
+          "filename": "msgspec-0.22.0-cp314-cp314t-musllinux_1_2_riscv64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "3ca7d4cd69fbb66bd2da6211d3e79d40542d196c16c6d99bf838f76767ad35be"
+        },
+        {
+          "filename": "msgspec-0.22.0-cp314-cp314t-musllinux_1_2_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "28f53f3604dd3e70225f7563c831628dbb03299b428f8e62aadb4b628e386874"
+        },
+        {
+          "filename": "msgspec-0.22.0-cp314-cp314t-win_amd64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "7293dee54de040cfa225c22151cc3d72f17cd674b5ebcb52f38fb9f5701592e6"
+        },
+        {
+          "filename": "msgspec-0.22.0-cp314-cp314t-win_arm64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "c3c510aba9015c085e514b75a9b3f1ed7c4591ae5e379655821b8bba51f30cc7"
+        },
+        {
+          "filename": "msgspec-0.22.0-cp315-cp315-macosx_10_15_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "263e110955ed76fe0af2d79f819903b50a70dc0e7a752eb7aabe79d2e0a084fb"
+        },
+        {
+          "filename": "msgspec-0.22.0-cp315-cp315-macosx_11_0_arm64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "c6f06576eced70462179a4b4638e84cf69fdbba37f44d13a64a21739c131a830"
+        },
+        {
+          "filename": "msgspec-0.22.0-cp315-cp315-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "8d67582478b0eaabb899f2fb255c878ee7de57dff80eb73ab24f1865524ec441"
+        },
+        {
+          "filename": "msgspec-0.22.0-cp315-cp315-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "71cbbdb39631064e2f2f9e9ac2b1b69931d72276eb5f9da4ed025726296bdbb6"
+        },
+        {
+          "filename": "msgspec-0.22.0-cp315-cp315-manylinux_2_31_riscv64.manylinux_2_39_riscv64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "8f0a5c25516e2034b2db7767081759ff8996e214def9c43b3055f61e1be1caad"
+        },
+        {
+          "filename": "msgspec-0.22.0-cp315-cp315-musllinux_1_2_aarch64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "a1dab6a99c759d1391ab2993388c1892746a697254f4b5dc6c059ca6e3bfbc8b"
+        },
+        {
+          "filename": "msgspec-0.22.0-cp315-cp315-musllinux_1_2_riscv64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "a52eba5c9528fd181fcec39d22b67aaa1dccc6cfe8e24d3f5d41130e6d04289d"
+        },
+        {
+          "filename": "msgspec-0.22.0-cp315-cp315-musllinux_1_2_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "1e547966017265c0d23342bcf2e027305dde40ea042d16694a9b96b4f696a052"
+        },
+        {
+          "filename": "msgspec-0.22.0-cp315-cp315-win_amd64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "0067057df265795f742658b15dbe53f3b6f21d19dcfa53676db11088cfa41e0a"
+        },
+        {
+          "filename": "msgspec-0.22.0-cp315-cp315-win_arm64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "05dbc8268e50c9232ec72b9af1c7b13049aade4d1197764e38c427048706e046"
+        },
+        {
+          "filename": "msgspec-0.22.0-cp315-cp315t-macosx_10_15_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "b3113ebcceeb7693a915183c73d92c10bf5c62851dd187cab43bd025fb587419"
+        },
+        {
+          "filename": "msgspec-0.22.0-cp315-cp315t-macosx_11_0_arm64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "0dfadea8bdcfafc614bd031de55a8ede22b43445cfff6d8b77cc0c07d3edc8a8"
+        },
+        {
+          "filename": "msgspec-0.22.0-cp315-cp315t-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "d7a738826936c72348c613061d260446f13c82b6fd7d5d7705b6911ab8dca2f3"
+        },
+        {
+          "filename": "msgspec-0.22.0-cp315-cp315t-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "f2ddea9d78d09460f06c26a7a508adcd049761c3208776162b8eb79b8a032cff"
+        },
+        {
+          "filename": "msgspec-0.22.0-cp315-cp315t-manylinux_2_31_riscv64.manylinux_2_39_riscv64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "884c28c80b0a511595b29a9b04a3a230c3797369e4a033e6d5c6d9b5427f8e09"
+        },
+        {
+          "filename": "msgspec-0.22.0-cp315-cp315t-musllinux_1_2_aarch64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "f7a923bcde480065c8e25967464cfb2a687ee67000bb43157e2d57e40eca7305"
+        },
+        {
+          "filename": "msgspec-0.22.0-cp315-cp315t-musllinux_1_2_riscv64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "65eea14bc65ccfeb8f3af62cb204841871e2961f002d7fa87dbe0f79dacf1c1c"
+        },
+        {
+          "filename": "msgspec-0.22.0-cp315-cp315t-musllinux_1_2_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "0666a1520cab86796612e794e71107e0fbf5e8ff3ddcdfcfff8f1d94b860d2f1"
+        },
+        {
+          "filename": "msgspec-0.22.0-cp315-cp315t-win_amd64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "885c6e0c89d6103648525fe62aa78d600054dedf7b3713d23b15d7ddb6d66a13"
+        },
+        {
+          "filename": "msgspec-0.22.0-cp315-cp315t-win_arm64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "268594d0bae5510572599a6ab0364dd9de43c867d24a30856cd9f5edb63d8dc6"
+        },
+        {
+          "filename": "msgspec-0.22.0.tar.gz",
+          "packagetype": "sdist",
+          "sha256": "0a13624a4969159fe35d8c2a3d377b2b61bbd8585e327440d5e52725affcce38"
+        }
+      ],
+      "latest_release_uploaded": "2026-09-29T14:14:11.422240Z",
+      "license": "BSD-3-Clause",
+      "project_urls": {
+        "Homepage": "https://msgspec.dev",
+        "Issue Tracker": "https://github.com/msgspec/msgspec/issues",
+        "Source": "https://github.com/msgspec/msgspec"
+      },
+      "pypi_name": "msgspec",
+      "release_count": 41,
+      "requires_dist": [
+        "pyyaml; extra == \"yaml\"",
+        "tomli; python_version < \"3.11\" and extra == \"toml\"",
+        "tomli_w; extra == \"toml\""
+      ],
+      "requires_python": ">=3.10",
+      "version": "0.22.0",
+      "yanked": false
+    },
+    {
+      "area": "RA2",
+      "candidate": "pydantic",
+      "core_requires": [
+        "annotated-types>=0.6.0",
+        "pydantic-core==2.50.4",
+        "typing-extensions>=4.16.0",
+        "typing-inspection>=0.4.4"
+      ],
+      "discovery_query": "pypi search: data validation python typed models",
+      "first_release_uploaded": "2017-05-03T20:58:44.335432Z",
+      "latest_files": [
+        {
+          "filename": "pydantic-2.14.3-py3-none-any.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "3f7b347782ab7e4cf4c798496ae3a82787d9f21ec12676a9c564355eeef8daa8"
+        },
+        {
+          "filename": "pydantic-2.14.3.tar.gz",
+          "packagetype": "sdist",
+          "sha256": "1054f237f4d4733e5a30e1e2333bd33a2004ab9ab1510bd053a9a31bb48e232d"
+        }
+      ],
+      "latest_release_uploaded": "2026-11-05T09:17:04.686082Z",
+      "license": "MIT",
+      "project_urls": {
+        "Changelog": "https://pydantic.dev/docs/validation/latest/get-started/changelog/",
+        "Documentation": "https://pydantic.dev/docs/validation/latest/get-started/",
+        "Funding": "https://github.com/sponsors/samuelcolvin",
+        "Homepage": "https://github.com/pydantic/pydantic",
+        "Source": "https://github.com/pydantic/pydantic"
+      },
+      "pypi_name": "pydantic",
+      "release_count": 211,
+      "requires_dist": [
+        "annotated-types>=0.6.0",
+        "email-validator>=2.0.0; extra == \"email\"",
+        "pydantic-core==2.50.4",
+        "typing-extensions>=4.16.0",
+        "typing-inspection>=0.4.4",
+        "tzdata; platform_system == \"Windows\" and extra == \"timezone\""
+      ],
+      "requires_python": ">=3.10",
+      "version": "2.14.3",
+      "yanked": false
+    },
+    {
+      "area": "RA2",
+      "candidate": "voluptuous",
+      "core_requires": [],
+      "discovery_query": "pypi search: python data validation library",
+      "first_release_uploaded": "2010-07-15T12:24:38.901984Z",
+      "latest_files": [
+        {
+          "filename": "voluptuous-0.16.0-py3-none-any.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "ee342095263e1b5afbd4d418cb5adc92810eebfd07696bb033a261210df33db4"
+        },
+        {
+          "filename": "voluptuous-0.16.0.tar.gz",
+          "packagetype": "sdist",
+          "sha256": "006535e22fed944aec17bef6e8725472476194743c87bd233e912eb463f8ff05"
+        }
+      ],
+      "latest_release_uploaded": "2025-12-18T23:18:46.080396Z",
+      "license": "BSD License",
+      "project_urls": {
+        "Download": "https://pypi.python.org/pypi/voluptuous",
+        "Homepage": "https://github.com/alecthomas/voluptuous"
+      },
+      "pypi_name": "voluptuous",
+      "release_count": 51,
+      "requires_dist": [],
+      "requires_python": ">=3.9",
+      "version": "0.16.0",
+      "yanked": false
+    },
+    {
+      "area": "RA3",
+      "candidate": "cel-python",
+      "core_requires": [
+        "google-re2>=1.1.20240702",
+        "google-re2>=1.1.20250722; python_version == \"3.13\"",
+        "jmespath>=1.0.1",
+        "lark>=1.2.2",
+        "pendulum>=3.1.0",
+        "pyyaml>=6.0.2",
+        "tomli>=1.1.0; python_version < \"3.11\""
+      ],
+      "discovery_query": "pypi search: common expression language python",
+      "first_release_uploaded": "2021-05-06T19:31:22.782873Z",
+      "latest_files": [
+        {
+          "filename": "cel_python-0.5.0-py3-none-any.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "d0f85008b89655c2bb18d797d2fa3f96f2ed80f4a3b43b0e8138c6646581e5f6"
+        },
+        {
+          "filename": "cel_python-0.5.0.tar.gz",
+          "packagetype": "sdist",
+          "sha256": "3eb0a619e8df0f338d0430cda01427a742e77e3c433a1c7c3ebd409cd804c45a"
+        }
+      ],
+      "latest_release_uploaded": "2026-01-31T19:07:13.436812Z",
+      "license": "UNSPECIFIED",
+      "project_urls": {},
+      "pypi_name": "cel-python",
+      "release_count": 10,
+      "requires_dist": [
+        "google-re2>=1.1.20240702",
+        "google-re2>=1.1.20250722; python_version == \"3.13\"",
+        "jmespath>=1.0.1",
+        "lark>=1.2.2",
+        "pendulum>=3.1.0",
+        "pyyaml>=6.0.2",
+        "tomli>=1.1.0; python_version < \"3.11\""
+      ],
+      "requires_python": ">=3.10",
+      "version": "0.5.0",
+      "yanked": false
+    },
+    {
+      "area": "RA3",
+      "candidate": "json-logic",
+      "core_requires": [],
+      "discovery_query": "pypi search: jsonlogic python rules",
+      "first_release_uploaded": "2015-12-03T15:22:07.638159Z",
+      "latest_files": [
+        {
+          "filename": "json_logic-0.6.3-py2.py3-none-any.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "dd873af85ae44292cdd708357c16d7788cf7590befa8fa1250cced27589fa7f0"
+        },
+        {
+          "filename": "json_logic-0.6.3.tar.gz",
+          "packagetype": "sdist",
+          "sha256": "d67d4656f4f5b427858141fa8247bf3062d612ebed99005b069d92e31139375f"
+        }
+      ],
+      "latest_release_uploaded": "2015-12-04T10:35:17.322153Z",
+      "license": "MIT License",
+      "project_urls": {
+        "Homepage": "https://github.com/nadirizr/json-logic-py"
+      },
+      "pypi_name": "json-logic",
+      "release_count": 3,
+      "requires_dist": [
+        "check-manifest; extra == 'dev'",
+        "coverage; extra == 'test'"
+      ],
+      "requires_python": "",
+      "version": "0.6.3",
+      "yanked": false
+    },
+    {
+      "area": "RA3",
+      "candidate": "simpleeval",
+      "core_requires": [],
+      "discovery_query": "pypi search: safe expression evaluator python",
+      "first_release_uploaded": "2014-05-28T09:45:08.500954Z",
+      "latest_files": [
+        {
+          "filename": "simpleeval-1.0.8-py3-none-any.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "c9c4ff42879ebf0c05f6562cb81031869948916be343bcc950b81fcc081fe9ce"
+        },
+        {
+          "filename": "simpleeval-1.0.8.tar.gz",
+          "packagetype": "sdist",
+          "sha256": "b417f869c11f2de034eb919820a825f35d12ce99f63a43971947ce73679eb9ba"
+        }
+      ],
+      "latest_release_uploaded": "2026-09-12T10:16:08.103572Z",
+      "license": "MIT License",
+      "project_urls": {
+        "Source code": "https://github.com/danthedeckie/simpleeval"
+      },
+      "pypi_name": "simpleeval",
+      "release_count": 27,
+      "requires_dist": [],
+      "requires_python": ">=3.9",
+      "version": "1.0.8",
+      "yanked": false
+    },
+    {
+      "area": "RA4",
+      "candidate": "confusable-homoglyphs",
+      "core_requires": [],
+      "discovery_query": "pypi search: unicode confusables homoglyph detection python",
+      "first_release_uploaded": "2016-09-13T17:54:36.156731Z",
+      "latest_files": [
+        {
+          "filename": "confusable_homoglyphs-3.3.1-py2.py3-none-any.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "84c92cb79dc7f55aa290d0762b2349abd8dee4c16fbe6f99eac978d394e2e6a1"
+        },
+        {
+          "filename": "confusable_homoglyphs-3.3.1.tar.gz",
+          "packagetype": "sdist",
+          "sha256": "b995001c9b2e1b4cea0cf5f3840a7c79188a8cbbad053d693572bd8c1c1ec460"
+        }
+      ],
+      "latest_release_uploaded": "2024-01-30T10:10:27.470727Z",
+      "license": "MIT License",
+      "project_urls": {
+        "Homepage": "https://github.com/vhf/confusable_homoglyphs"
+      },
+      "pypi_name": "confusable-homoglyphs",
+      "release_count": 12,
+      "requires_dist": [
+        "click ; extra == 'cli'"
+      ],
+      "requires_python": "",
+      "version": "3.3.1",
+      "yanked": false
+    },
+    {
+      "area": "RA4",
+      "candidate": "dedupe",
+      "core_requires": [
+        "BTrees>=4.1.4",
+        "affinegap>=1.3",
+        "categorical-distance>=1.9",
+        "dedupe-Levenshtein-search",
+        "doublemetaphone",
+        "haversine>=0.4.1",
+        "highered>=0.2.0",
+        "numpy>=1.20",
+        "scikit-learn",
+        "simplecosine>=1.2",
+        "zope.index"
+      ],
+      "discovery_query": "pypi search: entity resolution deduplication python",
+      "first_release_uploaded": "2014-04-03T21:15:26.719927Z",
+      "latest_files": [
+        {
+          "filename": "dedupe-3.0.3-cp310-cp310-macosx_10_9_universal2.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "05f1c6eaf3169cbe20e60b695c4e716ee53d359cf36c76ce93b812fa6cda7a00"
+        },
+        {
+          "filename": "dedupe-3.0.3-cp310-cp310-macosx_10_9_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "5f655f15ad538d1ed3329b264ad7a1d594842491480828edf62694cd87ee5095"
+        },
+        {
+          "filename": "dedupe-3.0.3-cp310-cp310-macosx_11_0_arm64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "b63cc787ac3e5b77bf834e5486c83ae5445afdfad5dd54f1e952737d4a99a65b"
+        },
+        {
+          "filename": "dedupe-3.0.3-cp310-cp310-manylinux_2_5_i686.manylinux1_i686.manylinux_2_17_i686.manylinux2014_i686.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "3a3b231697feabaef94740e91511a8c65904dc7c7c5c4921d6279f2d3898c4df"
+        },
+        {
+          "filename": "dedupe-3.0.3-cp310-cp310-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "e39c8eca84338a3e75244e5fabed93dffb8ea0eb39e847afc095e93c8383384a"
+        },
+        {
+          "filename": "dedupe-3.0.3-cp310-cp310-musllinux_1_2_i686.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "1f03a4de85420813a4909d7a00ca889995d99478902deb710e4f9df485cc93a8"
+        },
+        {
+          "filename": "dedupe-3.0.3-cp310-cp310-musllinux_1_2_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "d2a8858fbfa50b1f1d33516bb9ca8844e2b2502666398591be8b23e7280a98fc"
+        },
+        {
+          "filename": "dedupe-3.0.3-cp310-cp310-win32.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "f8490e8977ca3085c22be2e87ced463bbf0d414c1e57cf0c92f0dca597ce43fb"
+        },
+        {
+          "filename": "dedupe-3.0.3-cp310-cp310-win_amd64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "5a48310120aff668ded4c6fb49256ce17fe672c2ff4a123098497f315f15244f"
+        },
+        {
+          "filename": "dedupe-3.0.3-cp311-cp311-macosx_10_9_universal2.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "b41b92e0185ae992b087973a8fa86a4c0aee70af1bdb0baa3283b5bfe10fbd86"
+        },
+        {
+          "filename": "dedupe-3.0.3-cp311-cp311-macosx_10_9_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "09ef4ddcac3bffd2079bdcdec4c70f595a8c7394e96489bba6c1b932408103ab"
+        },
+        {
+          "filename": "dedupe-3.0.3-cp311-cp311-macosx_11_0_arm64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "c01e10f01df91376185db1fbaca91c7b4043277c67fc2db71fc038b4cd738f06"
+        },
+        {
+          "filename": "dedupe-3.0.3-cp311-cp311-manylinux_2_5_i686.manylinux1_i686.manylinux_2_17_i686.manylinux2014_i686.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "7ad61b16ec7cd632b87f030ad7659ce35097b772abaeac6c24783544b60c8fd0"
+        },
+        {
+          "filename": "dedupe-3.0.3-cp311-cp311-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "590ed2697f4de406eaaf9d6464efadf992b3cf3d242a3466611d8b945c249c4e"
+        },
+        {
+          "filename": "dedupe-3.0.3-cp311-cp311-musllinux_1_2_i686.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "08a1de347345e8696681e52a9a8983c900ba2885621ea4d2f6c4763d36d3d499"
+        },
+        {
+          "filename": "dedupe-3.0.3-cp311-cp311-musllinux_1_2_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "10891cfba220d43544266887e1b1505ee4a6cf150545fd3d1cddc9b1b46262e9"
+        },
+        {
+          "filename": "dedupe-3.0.3-cp311-cp311-win32.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "90c628e9395e2473e05da6534f50e1881a3b680d4beee0389ccf9afc320b9cb3"
+        },
+        {
+          "filename": "dedupe-3.0.3-cp311-cp311-win_amd64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "1c9b1593bbc042328b4b6a4e15f1e83510223647b7c962b0adde735b92f32571"
+        },
+        {
+          "filename": "dedupe-3.0.3-cp312-cp312-macosx_10_9_universal2.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "bdd62424c51033e5c6870a75c60a74907857ea582ea67749cdb58ed2935244f3"
+        },
+        {
+          "filename": "dedupe-3.0.3-cp312-cp312-macosx_10_9_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "0362236177d1a5bfdc74021564f92a88dd2d5cfdef5cbed8e508a4996d5a8500"
+        },
+        {
+          "filename": "dedupe-3.0.3-cp312-cp312-macosx_11_0_arm64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "2c569e1e68e4ca8b41c7883ab8c06729cfcab0cb063f7526d462db988819b7c8"
+        },
+        {
+          "filename": "dedupe-3.0.3-cp312-cp312-manylinux_2_5_i686.manylinux1_i686.manylinux_2_17_i686.manylinux2014_i686.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "4c0d0999b6fd237d980118bfb0a453a11cadb9e13c9499eba3acf4002ceb074f"
+        },
+        {
+          "filename": "dedupe-3.0.3-cp312-cp312-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "0c7a304f2957cb9d91124c70d1887fad79789e8a2a6c9790bd5a83ca294f93a9"
+        },
+        {
+          "filename": "dedupe-3.0.3-cp312-cp312-musllinux_1_2_i686.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "2efd63c1bb82c25da8c7a8809289e16ba706c38e75cb66d55875ce5f1a16d785"
+        },
+        {
+          "filename": "dedupe-3.0.3-cp312-cp312-musllinux_1_2_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "3fd089ca5f01c5b47fd087abf12bc2b588f59ceb332f2c1394b7d85459a52be5"
+        },
+        {
+          "filename": "dedupe-3.0.3-cp312-cp312-win32.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "4cd8e3a8448b983c17c133c16f6d13949e97a669c6efd2f5b3fa50a38dfba5b0"
+        },
+        {
+          "filename": "dedupe-3.0.3-cp312-cp312-win_amd64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "e27b4e4611e3ea02776749f78e590230054961f1a268c44813d3b2375b543f93"
+        },
+        {
+          "filename": "dedupe-3.0.3-cp313-cp313-macosx_10_13_universal2.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "ff39302909810aee23766b7acb1c682df9ca1d8e3853f44b6398b89599231cff"
+        },
+        {
+          "filename": "dedupe-3.0.3-cp313-cp313-macosx_10_13_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "9d9354bdfa9fbd18f4e439d7c4526a37f054520c992e44cc6a483fb4c5b02e99"
+        },
+        {
+          "filename": "dedupe-3.0.3-cp313-cp313-macosx_11_0_arm64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "ae8beea269ec1b59aca221221ae029009687cf639998a0b225dbb6669a31f400"
+        },
+        {
+          "filename": "dedupe-3.0.3-cp313-cp313-manylinux_2_5_i686.manylinux1_i686.manylinux_2_17_i686.manylinux2014_i686.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "a9fb2998f591381e6ab5588af1df120a41802adc09609b497c75381518065edb"
+        },
+        {
+          "filename": "dedupe-3.0.3-cp313-cp313-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "f1881726102b4e683e69780399615bbf954d4196a7d4090eb733d0752ff1f060"
+        },
+        {
+          "filename": "dedupe-3.0.3-cp313-cp313-musllinux_1_2_i686.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "a9903da263ea6e94e256fc12f48fb8db4d241449649a488f03d85cc79cec23fe"
+        },
+        {
+          "filename": "dedupe-3.0.3-cp313-cp313-musllinux_1_2_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "747c717df2d85329c622719b0e6b1a1ed9cb5ce7e3707529bde3f92739a0f806"
+        },
+        {
+          "filename": "dedupe-3.0.3-cp313-cp313-win32.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "a9c122b766e0e4dde7eef5f1205e560550dfad8556c0162b2b0492d476eaf520"
+        },
+        {
+          "filename": "dedupe-3.0.3-cp313-cp313-win_amd64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "428c17c387c494dae7691fa37b1db912b6aa8d8c306bf11e7b7633f2b755c479"
+        },
+        {
+          "filename": "dedupe-3.0.3-cp38-cp38-macosx_10_9_universal2.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "be0f25d09ac991982f9f990f944ebb70beac639baca9a5e0bb68ec6fb3b60e14"
+        },
+        {
+          "filename": "dedupe-3.0.3-cp38-cp38-macosx_10_9_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "0781d3ef9cbfde70ef980ba3e4738abf0dbb0b32970286c1a6867da313e1bba4"
+        },
+        {
+          "filename": "dedupe-3.0.3-cp38-cp38-macosx_11_0_arm64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "03d068942246987c26d32efbb0a550ef6c34bf6f374cda726442b13248416282"
+        },
+        {
+          "filename": "dedupe-3.0.3-cp38-cp38-manylinux_2_5_i686.manylinux1_i686.manylinux_2_17_i686.manylinux2014_i686.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "f4644cab955687e3f65663dbfd993d74dee91fdd2b116aa98724b4a76b8738c4"
+        },
+        {
+          "filename": "dedupe-3.0.3-cp38-cp38-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "2abb8559a5c24a15ee09b78da668231d5de7606930967b985a80131688ed4c46"
+        },
+        {
+          "filename": "dedupe-3.0.3-cp38-cp38-musllinux_1_2_i686.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "4f3525ed6f9a5dec392bf270399950c36edaf32e4c7e6a50fc0fb670f66e55fb"
+        },
+        {
+          "filename": "dedupe-3.0.3-cp38-cp38-musllinux_1_2_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "54e676a4f75d7f1714d90927334a71b79b7a0465dfb90ac4d62eaad5a56911e0"
+        },
+        {
+          "filename": "dedupe-3.0.3-cp38-cp38-win32.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "d000a0f6dd28c027b616738ee0a92fd6319acb6d5d6c7935eb67d41099c6906e"
+        },
+        {
+          "filename": "dedupe-3.0.3-cp38-cp38-win_amd64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "8eeaa673a468cef591a3e2e75f7377c64834ce2ad74a3339a7fac82eaac5a804"
+        },
+        {
+          "filename": "dedupe-3.0.3-cp39-cp39-macosx_10_9_universal2.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "8b7f3708f4fcc368fead04b2185140c89e3906b109e693ded93d8d80245eb842"
+        },
+        {
+          "filename": "dedupe-3.0.3-cp39-cp39-macosx_10_9_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "995a757423ccc51d4b5299111978929c241c221ca7d698b29e736c2e1d57e840"
+        },
+        {
+          "filename": "dedupe-3.0.3-cp39-cp39-macosx_11_0_arm64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "c55716e0a8f789ba026cf4e571e79fce66137078165c657b3d42634d0e3323a3"
+        },
+        {
+          "filename": "dedupe-3.0.3-cp39-cp39-manylinux_2_5_i686.manylinux1_i686.manylinux_2_17_i686.manylinux2014_i686.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "299faaea02fc16990ece560a12c2a531a1eb3306f65974503a684b1dc9cef587"
+        },
+        {
+          "filename": "dedupe-3.0.3-cp39-cp39-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "d74067c8432a99cf65d33c25fcf95426051f07f8abc100ee96c699ea36e1fa4c"
+        },
+        {
+          "filename": "dedupe-3.0.3-cp39-cp39-musllinux_1_2_i686.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "f319d2791b4615437e8d9bbd5f4b0acf47b94ea5674f01a312bfc051bab9a58f"
+        },
+        {
+          "filename": "dedupe-3.0.3-cp39-cp39-musllinux_1_2_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "39e61112cdbf554fbc59f34372c1fda44542bdaf32d7e424a4318dc62bba9173"
+        },
+        {
+          "filename": "dedupe-3.0.3-cp39-cp39-win32.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "67032b7732a4a2de5e25eade70c020150d840d6901913705e86ff30059b49c20"
+        },
+        {
+          "filename": "dedupe-3.0.3-cp39-cp39-win_amd64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "7f148103f0fa6632c27e087b4e6b564053024cca2444842eae2bb566fe0c39dd"
+        },
+        {
+          "filename": "dedupe-3.0.3-pp310-pypy310_pp73-macosx_10_15_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "8ba0874e9576a16bcb0d27eb963284bf22e7674d98f85bc3ed25e9301647a3c0"
+        },
+        {
+          "filename": "dedupe-3.0.3-pp310-pypy310_pp73-macosx_11_0_arm64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "b8f2fa3a07e1e28cf6df0bf611cb8e2b0ebcefeff3078585fca4e81b7742a510"
+        },
+        {
+          "filename": "dedupe-3.0.3-pp310-pypy310_pp73-manylinux_2_5_i686.manylinux1_i686.manylinux_2_17_i686.manylinux2014_i686.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "a634980f4580dadca834ba7037de62af3890e215d94a888b3b5eb7a1ed7b6a1d"
+        },
+        {
+          "filename": "dedupe-3.0.3-pp310-pypy310_pp73-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "7820ffac5008df7c368a6ad461b15054acabc5944507aaeaeba2d1844c3167d0"
+        },
+        {
+          "filename": "dedupe-3.0.3-pp310-pypy310_pp73-win_amd64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "404fab77f7a8e860961f9c5fd15b55f7ebabf8111773bcfc5f3b8b6e560b6dfb"
+        },
+        {
+          "filename": "dedupe-3.0.3-pp38-pypy38_pp73-macosx_10_9_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "d4e7c501aa864579f7bcba82fddb59bcc510602ba9d97451f1086e26cc091ccf"
+        },
+        {
+          "filename": "dedupe-3.0.3-pp38-pypy38_pp73-macosx_11_0_arm64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "6f445d11991827376f7174938bd06ccb81c1e3b93d8098037af3005a599db1e9"
+        },
+        {
+          "filename": "dedupe-3.0.3-pp38-pypy38_pp73-manylinux_2_5_i686.manylinux1_i686.manylinux_2_17_i686.manylinux2014_i686.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "807a19b2fe1787092ad4e95990d6e98eb1732ff65f09722af983285cbf7b42fc"
+        },
+        {
+          "filename": "dedupe-3.0.3-pp38-pypy38_pp73-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "4ad643eb700201e3bc76e0368e23255a883b48ca5cc8952023f162680a038b87"
+        },
+        {
+          "filename": "dedupe-3.0.3-pp38-pypy38_pp73-win_amd64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "f2e662835af884987c00873f0adccf9a1de9d2f8b900d20b1e3b46a270deb527"
+        },
+        {
+          "filename": "dedupe-3.0.3-pp39-pypy39_pp73-macosx_10_15_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "22bf799bc00da2db78ddaee448af2e1a9cf70795201ba38a342eeed526c9e5e4"
+        },
+        {
+          "filename": "dedupe-3.0.3-pp39-pypy39_pp73-macosx_11_0_arm64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "b82629ebeab8ac3099e6b6d9ef9c6540c05d9fc02d2c7b8579ab80253a235308"
+        },
+        {
+          "filename": "dedupe-3.0.3-pp39-pypy39_pp73-manylinux_2_5_i686.manylinux1_i686.manylinux_2_17_i686.manylinux2014_i686.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "399b292c869962546c9c8701d513684b38f492e495ae0da07c1068b475889104"
+        },
+        {
+          "filename": "dedupe-3.0.3-pp39-pypy39_pp73-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "9761933b711faff6766ac122de59266123e3a6ed8ef4c5d8a93913372f0a2042"
+        },
+        {
+          "filename": "dedupe-3.0.3-pp39-pypy39_pp73-win_amd64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "58c30ebbfdacdf898cea5897b9792a8977645195f09f668fcbfa4291451e7737"
+        },
+        {
+          "filename": "dedupe-3.0.3.tar.gz",
+          "packagetype": "sdist",
+          "sha256": "d2ac91e14a2b873481da9917ee1b154f53d760326e1a47bce9bcb044eb884314"
+        }
+      ],
+      "latest_release_uploaded": "2024-08-15T14:35:09.683349Z",
+      "license": "MIT License",
+      "project_urls": {
+        "Changelog": "https://github.com/dedupeio/dedupe/blob/main/CHANGELOG.md",
+        "Documentation": "https://docs.dedupe.io/en/latest/",
+        "Examples": "https://github.com/dedupeio/dedupe-examples",
+        "Homepage": "https://github.com/dedupeio/dedupe",
+        "Issues": "https://github.com/dedupeio/dedupe/issues",
+        "MailingList": "https://groups.google.com/forum/#!forum/open-source-deduplication",
+        "Twitter": "https://twitter.com/DedupeIo"
+      },
+      "pypi_name": "dedupe",
+      "release_count": 179,
+      "requires_dist": [
+        "BTrees>=4.1.4",
+        "affinegap>=1.3",
+        "categorical-distance>=1.9",
+        "dedupe-Levenshtein-search",
+        "doublemetaphone",
+        "haversine>=0.4.1",
+        "highered>=0.2.0",
+        "numpy>=1.20",
+        "scikit-learn",
+        "simplecosine>=1.2",
+        "zope.index"
+      ],
+      "requires_python": ">=3.8",
+      "version": "3.0.3",
+      "yanked": false
+    },
+    {
+      "area": "RA4",
+      "candidate": "rapidfuzz",
+      "core_requires": [],
+      "discovery_query": "pypi search: fuzzy string matching python",
+      "first_release_uploaded": "2020-03-18T16:47:34.819286Z",
+      "latest_files": [
+        {
+          "filename": "rapidfuzz-3.14.6-cp311-cp311-macosx_10_9_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "1c0dd0d765184366b6e213a8af3b0b3bb39dad27943bbfb193515d4ff96ac82a"
+        },
+        {
+          "filename": "rapidfuzz-3.14.6-cp311-cp311-macosx_11_0_arm64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "0c61cade182f130c9903231946bd1074539121721693a918e7b70382ae802bd8"
+        },
+        {
+          "filename": "rapidfuzz-3.14.6-cp311-cp311-manylinux_2_26_aarch64.manylinux_2_28_aarch64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "3781cf14f9fc933d7198c2b25a8bbbd1a62b752746d5cd26de14957edc0e802f"
+        },
+        {
+          "filename": "rapidfuzz-3.14.6-cp311-cp311-manylinux_2_26_ppc64le.manylinux_2_28_ppc64le.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "71a5bbfd00da1963f27dd1432068929694cf0e00007ae2b9c1ad2a187ec29a16"
+        },
+        {
+          "filename": "rapidfuzz-3.14.6-cp311-cp311-manylinux_2_26_s390x.manylinux_2_28_s390x.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "eabaf06ca4896c59cfd9162480f0d37a15a2304ce2efe83ae2bbcfa1cf13534e"
+        },
+        {
+          "filename": "rapidfuzz-3.14.6-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "3d5d90bae3c6fb7ea34da968c9f23070e8440edb827a28b242580e0108110b14"
+        },
+        {
+          "filename": "rapidfuzz-3.14.6-cp311-cp311-manylinux_2_39_riscv64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "d6b58daadbe6974884ec39aee30cfb8bd2e126f8d03503f0069f70d5e84656a3"
+        },
+        {
+          "filename": "rapidfuzz-3.14.6-cp311-cp311-musllinux_1_2_aarch64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "ab4386ef7c2cb3e5eb46e815be49715dfcd301bb9f0a431f18da7aa0007de54f"
+        },
+        {
+          "filename": "rapidfuzz-3.14.6-cp311-cp311-musllinux_1_2_ppc64le.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "33a2f7faedaa3608c4876c41b448fc786d54e6cd7c6e732f7de466319b5a73c2"
+        },
+        {
+          "filename": "rapidfuzz-3.14.6-cp311-cp311-musllinux_1_2_riscv64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "adb160a100f6122aa45c78d686e198da3f9e815d4182e0c4fe730608479f7f9c"
+        },
+        {
+          "filename": "rapidfuzz-3.14.6-cp311-cp311-musllinux_1_2_s390x.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "ad60297c001d15af24338440bca85dfee8710e9e3222733c906b33e89d986166"
+        },
+        {
+          "filename": "rapidfuzz-3.14.6-cp311-cp311-musllinux_1_2_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "3d5b1cfa67bbe6239a643bca1d986f8a07e0a045286c674946e1648c132baa46"
+        },
+        {
+          "filename": "rapidfuzz-3.14.6-cp311-cp311-win32.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "46ddb42af4cad3ac9d5e0c97ee1e687500c529a1ad5cbf9c949ce35f6edd4537"
+        },
+        {
+          "filename": "rapidfuzz-3.14.6-cp311-cp311-win_amd64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "737a57cbca3e5c16decac86e205727bcd4b99c52f77c48bb44123078c5cd9a7a"
+        },
+        {
+          "filename": "rapidfuzz-3.14.6-cp311-cp311-win_arm64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "19c1cda8198cc57ffd4ff69a1c02cbe4297e9ca7b506bca03ec584da0a9fe1ff"
+        },
+        {
+          "filename": "rapidfuzz-3.14.6-cp312-cp312-macosx_10_13_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "b46cecf27025e7a934332ade033e6a394da8a493f19fa1d835e3b2968a4ff7da"
+        },
+        {
+          "filename": "rapidfuzz-3.14.6-cp312-cp312-macosx_11_0_arm64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "1901414b135afb1a7f4b1ef940b95523b49cc5642aecf02af740f37567e98137"
+        },
+        {
+          "filename": "rapidfuzz-3.14.6-cp312-cp312-manylinux_2_26_aarch64.manylinux_2_28_aarch64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "96a548979cd939b2c69358a0f5088a408524fbf7454f04bf90939fa971e64310"
+        },
+        {
+          "filename": "rapidfuzz-3.14.6-cp312-cp312-manylinux_2_26_ppc64le.manylinux_2_28_ppc64le.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "b22ef7e5e2341efc6216b666491022027b984e5aef93446064742f43f3c1d926"
+        },
+        {
+          "filename": "rapidfuzz-3.14.6-cp312-cp312-manylinux_2_26_s390x.manylinux_2_28_s390x.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "f0d2d95c787d812b9106cfbcb94ad37a49f59df9287e00a75eb61afc246e8759"
+        },
+        {
+          "filename": "rapidfuzz-3.14.6-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "0debb5f43662ea84d2f0228a0c7407ff647f9c3d13f3b692efff0cde46eebce0"
+        },
+        {
+          "filename": "rapidfuzz-3.14.6-cp312-cp312-manylinux_2_39_riscv64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "1d253e1fe44648242a0029b42ba23adf238ed2a7eb3d8ed0a03731a23f074ae0"
+        },
+        {
+          "filename": "rapidfuzz-3.14.6-cp312-cp312-musllinux_1_2_aarch64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "e06c6050c9bf6cd72305e3e6a293918b2b92cf2a067007585a53898624902e3c"
+        },
+        {
+          "filename": "rapidfuzz-3.14.6-cp312-cp312-musllinux_1_2_ppc64le.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "d85a6e9180e53cde95c95dfeb05a2ac94ead4d9d803a8fd186d2719a678b8483"
+        },
+        {
+          "filename": "rapidfuzz-3.14.6-cp312-cp312-musllinux_1_2_riscv64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "35db2670f69fa3a4eb4741055581477ff92f2cf39e7e06f43ebcb97c2192fe7c"
+        },
+        {
+          "filename": "rapidfuzz-3.14.6-cp312-cp312-musllinux_1_2_s390x.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "f9d93e5424d1e4c103b57906b8beba270e680afda3ffdff7ea3bc6173b37083c"
+        },
+        {
+          "filename": "rapidfuzz-3.14.6-cp312-cp312-musllinux_1_2_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "f9b0a501f37fb852c54469375baa25874246b3bbc8b6e21fb4cd186a32335868"
+        },
+        {
+          "filename": "rapidfuzz-3.14.6-cp312-cp312-win32.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "9e974251a9833791bc557b46f975676a56c2d58946f795cd2964b095496dfdcc"
+        },
+        {
+          "filename": "rapidfuzz-3.14.6-cp312-cp312-win_amd64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "cfca36e4612208875e08611a779164b6cb8900ab8bbd3d82d4cfdfae9efbfac9"
+        },
+        {
+          "filename": "rapidfuzz-3.14.6-cp312-cp312-win_arm64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "96bbd5a1c67d135334d02fae74f1d933fdda204ea03d544a59dab6b1cbfbf565"
+        },
+        {
+          "filename": "rapidfuzz-3.14.6-cp313-cp313-macosx_10_13_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "55dc9a55924b4ecfcf4a60a701bcfae7d9daf0129c41dc16139270d75be0996c"
+        },
+        {
+          "filename": "rapidfuzz-3.14.6-cp313-cp313-macosx_11_0_arm64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "bba0e9fad4dbea80227cde9cef3aaa984a934a84aec5f7505532e19838b14769"
+        },
+        {
+          "filename": "rapidfuzz-3.14.6-cp313-cp313-manylinux_2_26_aarch64.manylinux_2_28_aarch64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "0b34b7ee4f4f760690d6477163aabbec05705b5dd764cb6c3a6ba95aa1fffc42"
+        },
+        {
+          "filename": "rapidfuzz-3.14.6-cp313-cp313-manylinux_2_26_ppc64le.manylinux_2_28_ppc64le.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "abe92a70134c8b40790bb5c78b2a0a790686c26e83b6e99a456127ca141fe06a"
+        },
+        {
+          "filename": "rapidfuzz-3.14.6-cp313-cp313-manylinux_2_26_s390x.manylinux_2_28_s390x.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "659b41570fcc6e02631ac361c47cc8db9ad26d740e4be2177df1b63005a49174"
+        },
+        {
+          "filename": "rapidfuzz-3.14.6-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "6bb896f89a387219c671ebc33c4a636b222010cc3c5c83884a7fc8707bf0bbf9"
+        },
+        {
+          "filename": "rapidfuzz-3.14.6-cp313-cp313-manylinux_2_39_riscv64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "11d76bb2b2cd038df708ae18f521fb3a50af477cc5a0dffce812da43a2f1beb3"
+        },
+        {
+          "filename": "rapidfuzz-3.14.6-cp313-cp313-musllinux_1_2_aarch64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "28e9ce91bd41a8203185887ef9b1541a891aa61c5c1cb2e46f1689cd4288d372"
+        },
+        {
+          "filename": "rapidfuzz-3.14.6-cp313-cp313-musllinux_1_2_ppc64le.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "864658e5a10d249a2277374e800f944fe990346d70eea6f3a51b712b6dd01984"
+        },
+        {
+          "filename": "rapidfuzz-3.14.6-cp313-cp313-musllinux_1_2_riscv64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "3c2444f5cd757ded2c3ba8b1734253b801b9b2ba9ecb3ee40cd505cebbfa7341"
+        },
+        {
+          "filename": "rapidfuzz-3.14.6-cp313-cp313-musllinux_1_2_s390x.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "2cc9b5dde0ac89f7856f997ef917cac8e18e9dea473e9b3090a84bd600de6a91"
+        },
+        {
+          "filename": "rapidfuzz-3.14.6-cp313-cp313-musllinux_1_2_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "faebff9b9a287fb673f9a66465a7e03043601c9bfe5e71c3f91b3f2e7b8a37f6"
+        },
+        {
+          "filename": "rapidfuzz-3.14.6-cp313-cp313-win32.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "4406b2517b85febcf9419f8fbcdfbd534872ea32608050f9562224933ca49a4c"
+        },
+        {
+          "filename": "rapidfuzz-3.14.6-cp313-cp313-win_amd64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "c69fb0e064d10c79908dcda76d7ca8ecdf8393a39acbb74dbad3f709f2c60e95"
+        },
+        {
+          "filename": "rapidfuzz-3.14.6-cp313-cp313-win_arm64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "a0c8bef04f6b1d9fdbb319576350af53151a64692d477db7d4844c220bc8e212"
+        },
+        {
+          "filename": "rapidfuzz-3.14.6-cp314-cp314-macosx_10_15_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "0f8d6718e7edacdb16455c0472e7552fd518decb91e91250c58784fd6163f54f"
+        },
+        {
+          "filename": "rapidfuzz-3.14.6-cp314-cp314-macosx_11_0_arm64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "8fa7d45388dec34a86038f2a38380f4922b74b5dd8991247f629a531178db10f"
+        },
+        {
+          "filename": "rapidfuzz-3.14.6-cp314-cp314-manylinux_2_26_aarch64.manylinux_2_28_aarch64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "760ee152af5e8b4d241a469f933ba2d7215248618ae19770fec7d80d9e149db6"
+        },
+        {
+          "filename": "rapidfuzz-3.14.6-cp314-cp314-manylinux_2_26_ppc64le.manylinux_2_28_ppc64le.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "dbe3378db3ae0453accf6196e2ed943f43d416cfacdcb8883db105bc14a0130f"
+        },
+        {
+          "filename": "rapidfuzz-3.14.6-cp314-cp314-manylinux_2_26_s390x.manylinux_2_28_s390x.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "9ddb0ddf3ee616fdc066add4ef05639c5cf59b58d83779b6023488e5435f6191"
+        },
+        {
+          "filename": "rapidfuzz-3.14.6-cp314-cp314-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "08bc63b88048376114d1e66cf8fa6926495d03bb873eb87854fa74cf6848a70b"
+        },
+        {
+          "filename": "rapidfuzz-3.14.6-cp314-cp314-manylinux_2_39_riscv64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "50cd6718bcda7ec5293635a9d0b3fb5906251013d3b99ca403ba9dfa8965f661"
+        },
+        {
+          "filename": "rapidfuzz-3.14.6-cp314-cp314-musllinux_1_2_aarch64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "63b0e84faec3c5706cae8ae51246ff103407d54efa32a615a548b7b67392ebcf"
+        },
+        {
+          "filename": "rapidfuzz-3.14.6-cp314-cp314-musllinux_1_2_ppc64le.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "9080a730fdcf3cb8a07464c90f9cf40c1b4ffc73a8375b56a8898aba619dda30"
+        },
+        {
+          "filename": "rapidfuzz-3.14.6-cp314-cp314-musllinux_1_2_riscv64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "178557c7a50c8c8d65369ede7f3d845bf23590a951c9a368caf166b105d58cf3"
+        },
+        {
+          "filename": "rapidfuzz-3.14.6-cp314-cp314-musllinux_1_2_s390x.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "44f1cddbc2010700e2d88063d0ab64183efe2578d9b52770ce1cd283dda230c5"
+        },
+        {
+          "filename": "rapidfuzz-3.14.6-cp314-cp314-musllinux_1_2_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "17081a0e904c12bb4ed49619a2bbb6528f6af00fe850e7ace22487bfd2aea455"
+        },
+        {
+          "filename": "rapidfuzz-3.14.6-cp314-cp314-win32.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "9e00c8c9500aacbc0c52b66369f54533ecbdcb92e5aa87e160fc8e293000a696"
+        },
+        {
+          "filename": "rapidfuzz-3.14.6-cp314-cp314-win_amd64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "41ee893c4d7d0fb1844f6cad966540a833784b3bad2c239a0d80195d9231cef4"
+        },
+        {
+          "filename": "rapidfuzz-3.14.6-cp314-cp314-win_arm64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "10576c39fe6a49fad0bf1069371a77300ce166a3f36d2900d2d0bae08f297104"
+        },
+        {
+          "filename": "rapidfuzz-3.14.6-cp314-cp314t-macosx_10_15_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "1b0a9546a7328d3cfc2f1385501db7c4c374fb566dc1a3b22ad56092846c0134"
+        },
+        {
+          "filename": "rapidfuzz-3.14.6-cp314-cp314t-macosx_11_0_arm64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "9989280902b9c4ecf7de95fbb906e94df0d8c047290ed315c7aa1760cec9b3de"
+        },
+        {
+          "filename": "rapidfuzz-3.14.6-cp314-cp314t-manylinux_2_26_aarch64.manylinux_2_28_aarch64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "fc166efa4ca2fc9cc52e43784a54cbea95fc0e03e533f8266ef66b1c04c7cb76"
+        },
+        {
+          "filename": "rapidfuzz-3.14.6-cp314-cp314t-manylinux_2_26_ppc64le.manylinux_2_28_ppc64le.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "32352a3ed1aad9c097d31fd4f2eece3030169e2de3dedde7a2fadc2652b768ad"
+        },
+        {
+          "filename": "rapidfuzz-3.14.6-cp314-cp314t-manylinux_2_26_s390x.manylinux_2_28_s390x.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "ecb45d616002751b58914d5b7c2e66acd39e12242be12717a1258148a1b36526"
+        },
+        {
+          "filename": "rapidfuzz-3.14.6-cp314-cp314t-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "6f9ad513e3a3e045b60b421d5cd3887ae0a33b38fc6c6db3ea5e27c0a2e0412c"
+        },
+        {
+          "filename": "rapidfuzz-3.14.6-cp314-cp314t-manylinux_2_39_riscv64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "f35723caef8cc31b6f34209708fb172fc88bab0077c12e9b36bbb829baaf1b16"
+        },
+        {
+          "filename": "rapidfuzz-3.14.6-cp314-cp314t-musllinux_1_2_aarch64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "408b2e8e8c1ac71b57f0923cf964d6932539725e07b69e70ec66f22c4a403891"
+        },
+        {
+          "filename": "rapidfuzz-3.14.6-cp314-cp314t-musllinux_1_2_ppc64le.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "5667c56fdc902fa1e12449b5c042e8b1c7e9b30040db20c396fbdb3d0a750866"
+        },
+        {
+          "filename": "rapidfuzz-3.14.6-cp314-cp314t-musllinux_1_2_riscv64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "76a122fc573df603deb5fb827df31bb5efbd0826b50bb7aeca8535a6e8c70cf9"
+        },
+        {
+          "filename": "rapidfuzz-3.14.6-cp314-cp314t-musllinux_1_2_s390x.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "e221366e24709b9d41d5f9cc99053b04cfc575d429e956a82cfbc4c4e9e8860a"
+        },
+        {
+          "filename": "rapidfuzz-3.14.6-cp314-cp314t-musllinux_1_2_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "36710ff214b7a8049d26a9c81d99948026593cacb47663742c4119072b651ecd"
+        },
+        {
+          "filename": "rapidfuzz-3.14.6-cp314-cp314t-win32.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "66ece6f5e2586c742fc3e0b8487e06783d27c6c24adcdcfdd7f306afbd8b5737"
+        },
+        {
+          "filename": "rapidfuzz-3.14.6-cp314-cp314t-win_amd64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "cab4a932cec02d09471e2c9f1434049ef5bfe1f6e646ff10939c222dc610ad60"
+        },
+        {
+          "filename": "rapidfuzz-3.14.6-cp314-cp314t-win_arm64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "b056ce19eaea2ea70c6a6fb387a605ca2af8979de5b9d507597e8012820ddb14"
+        },
+        {
+          "filename": "rapidfuzz-3.14.6-cp315-cp315-macosx_10_15_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "bc3d74d18543ddfbc8babe1faadb19927a7999fd0d01181cce9e721c14c36ab6"
+        },
+        {
+          "filename": "rapidfuzz-3.14.6-cp315-cp315-macosx_11_0_arm64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "aaa83b633d877a05d549d2073629134998d1b3b9dbc114873d3ff4277984979f"
+        },
+        {
+          "filename": "rapidfuzz-3.14.6-cp315-cp315-manylinux_2_26_aarch64.manylinux_2_28_aarch64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "cbe6a62f71fcbca72acbf5a30e53380600369f257f951d664d81d30c0c598595"
+        },
+        {
+          "filename": "rapidfuzz-3.14.6-cp315-cp315-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "b82c21c30568e096ef2a9dda7d45c379e6141694e0472dac73bc4372ce13ccee"
+        },
+        {
+          "filename": "rapidfuzz-3.14.6-cp315-cp315-manylinux_2_39_riscv64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "fc950bb77105a2717d03d9f9c9e21e9ace7df2b8e864dd91edef7e32fa143be2"
+        },
+        {
+          "filename": "rapidfuzz-3.14.6-cp315-cp315-musllinux_1_2_aarch64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "c53a269bdbd71ffbc856d3db9e609478251001ee272507578fa838bc2bd421fe"
+        },
+        {
+          "filename": "rapidfuzz-3.14.6-cp315-cp315-musllinux_1_2_riscv64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "bf4fb0f19c9dfce7a908c3e309753602ce3edb83bb74e9ff997e278765bf89df"
+        },
+        {
+          "filename": "rapidfuzz-3.14.6-cp315-cp315-musllinux_1_2_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "189ce2bf14938bfa003fbbe7e6da7584ed6ebbc4c560686255dbc20e2829f470"
+        },
+        {
+          "filename": "rapidfuzz-3.14.6-cp315-cp315-win32.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "7ca0f498bf771a87557e6d8b573aa6cf3daded58ae2eaeb6973618ce3e1615ad"
+        },
+        {
+          "filename": "rapidfuzz-3.14.6-cp315-cp315-win_amd64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "d4c5adb921b67dd79ffc0a14f92b9f8df3d012e66aab340b154ed87014229d93"
+        },
+        {
+          "filename": "rapidfuzz-3.14.6-cp315-cp315-win_arm64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "c9d135fb93709d707577da8a7a8ffc7283525a5b6d0ce55aa3724be5639ed65b"
+        },
+        {
+          "filename": "rapidfuzz-3.14.6-cp315-cp315t-macosx_10_15_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "dd89abd1c4b3776c3471a817216830bd275441c8344bbda5d51a3bffe1e0fbdf"
+        },
+        {
+          "filename": "rapidfuzz-3.14.6-cp315-cp315t-macosx_11_0_arm64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "eab2d4680d7f438dbb1d484b187d59a943edea9c83f792c764a0c148a417a60a"
+        },
+        {
+          "filename": "rapidfuzz-3.14.6-cp315-cp315t-manylinux_2_26_aarch64.manylinux_2_28_aarch64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "8683fefdd3484d64a191b3efbc8cbe9162c3eac891fd62d0a1b70e117ffcd434"
+        },
+        {
+          "filename": "rapidfuzz-3.14.6-cp315-cp315t-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "2bc7af3a699371a941aac86dc8a79ac92adeb3c2add2aab02230e76068a0029e"
+        },
+        {
+          "filename": "rapidfuzz-3.14.6-cp315-cp315t-manylinux_2_39_riscv64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "40c2753e2d4dc96b25f8a25adc23ab0bb6cfd8bc8125a1753ac4b037d6ff6511"
+        },
+        {
+          "filename": "rapidfuzz-3.14.6-cp315-cp315t-musllinux_1_2_aarch64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "36a37ddc729c33618d89fa221d3333b9b956dc38cf15d31301e6169d962399a3"
+        },
+        {
+          "filename": "rapidfuzz-3.14.6-cp315-cp315t-musllinux_1_2_riscv64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "635f242f4bdf05d1477fa409815bd73e5f78896773ace84997bc472ffeef685f"
+        },
+        {
+          "filename": "rapidfuzz-3.14.6-cp315-cp315t-musllinux_1_2_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "40d0cd9c82083aeb30bae8dee265ae571e6748d0d7b222ddd777f33d95a3b712"
+        },
+        {
+          "filename": "rapidfuzz-3.14.6-cp315-cp315t-win32.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "15da2b258908eb38853c1a6a58a1d09d9aad9c721e03a68c8ba691cd31dff739"
+        },
+        {
+          "filename": "rapidfuzz-3.14.6-cp315-cp315t-win_amd64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "3d502769263318690d4f6638b08483979d1b88cdc7c6f087482eea935fde4031"
+        },
+        {
+          "filename": "rapidfuzz-3.14.6-cp315-cp315t-win_arm64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "07c7aa0b1e4b9999a54f9e73317d6743ff85442c8ef7b7fbbe6b190fd37d9e75"
+        },
+        {
+          "filename": "rapidfuzz-3.14.6-pp311-pypy311_pp73-macosx_10_15_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "0844066900cdc9909ce4ab4fb5ba1d8e0c021252d770f2ea476f3443df1d22ef"
+        },
+        {
+          "filename": "rapidfuzz-3.14.6-pp311-pypy311_pp73-macosx_11_0_arm64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "1398bd2c197b79bfc40b615999fd3599dc60265fdd5b59edc18156ae048c4cde"
+        },
+        {
+          "filename": "rapidfuzz-3.14.6-pp311-pypy311_pp73-manylinux_2_26_aarch64.manylinux_2_28_aarch64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "e2fc748d1fde4109e5d0dab27f1e61f53b3136a235dfee5a4fb579da44808b6a"
+        },
+        {
+          "filename": "rapidfuzz-3.14.6-pp311-pypy311_pp73-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "b42536675c930cb76b7998bfc4d8e59cb35d8df47f2103020265743b6b2ccd2a"
+        },
+        {
+          "filename": "rapidfuzz-3.14.6-pp311-pypy311_pp73-win_amd64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "1e6911e3a14971719ddc35af98f181d2e5369ab273a5a3488ab7685d23c31ad5"
+        },
+        {
+          "filename": "rapidfuzz-3.14.6.tar.gz",
+          "packagetype": "sdist",
+          "sha256": "e13a8160d017b499ec7a2fa9d0ce1ae2e7377080815785819f966fb235d4eb60"
+        }
+      ],
+      "latest_release_uploaded": "2026-08-30T21:45:51.097122Z",
+      "license": "MIT",
+      "project_urls": {
+        "Changelog": "https://github.com/rapidfuzz/RapidFuzz/blob/main/CHANGELOG.rst",
+        "Documentation": "https://rapidfuzz.github.io/RapidFuzz/",
+        "Homepage": "https://github.com/rapidfuzz/RapidFuzz",
+        "Issues": "https://github.com/rapidfuzz/RapidFuzz/issues",
+        "Repository": "https://github.com/rapidfuzz/RapidFuzz.git"
+      },
+      "pypi_name": "RapidFuzz",
+      "release_count": 175,
+      "requires_dist": [
+        "numpy; extra == \"all\""
+      ],
+      "requires_python": ">=3.11",
+      "version": "3.14.6",
+      "yanked": false
+    },
+    {
+      "area": "RA4",
+      "candidate": "recordlinkage",
+      "core_requires": [
+        "jellyfish (>=1)",
+        "joblib",
+        "numpy (>=1.13)",
+        "pandas (<3,>=1)",
+        "scikit-learn (>=1)",
+        "scipy (>=1)"
+      ],
+      "discovery_query": "pypi search: record linkage entity resolution python",
+      "first_release_uploaded": "2016-06-04T13:46:35.227935Z",
+      "latest_files": [
+        {
+          "filename": "recordlinkage-0.16-py3-none-any.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "7ca404ab30435ea4b0ae2eda411f8dcc3c48186e152d3ca91fb525e8f6c0fd63"
+        },
+        {
+          "filename": "recordlinkage-0.16.tar.gz",
+          "packagetype": "sdist",
+          "sha256": "ecda0c10dff138b1706815de332b1285f670ae7e8cce92596213501d589e6aa4"
+        }
+      ],
+      "latest_release_uploaded": "2023-07-20T13:01:59.172063Z",
+      "license": "BSD License",
+      "project_urls": {
+        "homepage": "https://recordlinkage.readthedocs.io/",
+        "repository": "https://github.com/J535D165/recordlinkage"
+      },
+      "pypi_name": "recordlinkage",
+      "release_count": 23,
+      "requires_dist": [
+        "bottleneck ; extra == 'all'",
+        "ipykernel ; extra == 'docs'",
+        "jellyfish (>=1)",
+        "joblib",
+        "nbsphinx ; extra == 'docs'",
+        "networkx (>=2) ; extra == 'all'",
+        "numexpr ; extra == 'all'",
+        "numpy (>=1.13)",
+        "pandas (<3,>=1)",
+        "pytest ; extra == 'test'",
+        "ruff ; extra == 'lint'",
+        "scikit-learn (>=1)",
+        "scipy (>=1)",
+        "sphinx ; extra == 'docs'",
+        "sphinx-rtd-theme ; extra == 'docs'"
+      ],
+      "requires_python": ">=3.8",
+      "version": "0.16",
+      "yanked": false
+    },
+    {
+      "area": "RA4",
+      "candidate": "splink",
+      "core_requires": [
+        "duckdb>=0.9.2",
+        "pyarrow>=18.0.0",
+        "sqlglot>=17.6.0"
+      ],
+      "discovery_query": "pypi search: probabilistic record linkage python",
+      "first_release_uploaded": "2020-03-13T13:56:54.498801Z",
+      "latest_files": [
+        {
+          "filename": "splink-5.0.0-py3-none-any.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "4b4b99a9d9d59f313a6bee766832d5632d33ff39083d153f5e9a5ab505325a1c"
+        },
+        {
+          "filename": "splink-5.0.0.tar.gz",
+          "packagetype": "sdist",
+          "sha256": "389dfc2669b08889324571d5ef19a068bc8901e3a6ea1cc5c23af95fbe021177"
+        }
+      ],
+      "latest_release_uploaded": "2026-09-28T14:24:19.446176Z",
+      "license": "MIT",
+      "project_urls": {
+        "Homepage": "https://github.com/moj-analytical-services/splink",
+        "Repository": "https://github.com/moj-analytical-services/splink"
+      },
+      "pypi_name": "splink",
+      "release_count": 165,
+      "requires_dist": [
+        "altair>=5.0.1; extra == \"altair\"",
+        "duckdb>=0.9.2",
+        "igraph>=0.11.2; extra == \"igraph\"",
+        "psycopg2-binary>=2.9.0; extra == \"postgres\"",
+        "pyarrow>=18.0.0",
+        "pyspark>=3.5.0; extra == \"pyspark\"",
+        "pyspark>=3.5.0; extra == \"spark\"",
+        "rapidfuzz>=3.10.0; extra == \"sqlite\"",
+        "sqlalchemy>=2.0.0; extra == \"postgres\"",
+        "sqlglot>=17.6.0"
+      ],
+      "requires_python": "<4.0.0,>=3.10.0",
+      "version": "5.0.0",
+      "yanked": false
+    },
+    {
+      "area": "RA4",
+      "candidate": "thefuzz",
+      "core_requires": [
+        "rapidfuzz <4.0.0,>=3.0.0"
+      ],
+      "discovery_query": "pypi search: fuzzy string matching python",
+      "first_release_uploaded": "2021-09-09T05:38:00.715350Z",
+      "latest_files": [
+        {
+          "filename": "thefuzz-0.22.1-py3-none-any.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "59729b33556850b90e1093c4cf9e618af6f2e4c985df193fdf3c5b5cf02ca481"
+        },
+        {
+          "filename": "thefuzz-0.22.1.tar.gz",
+          "packagetype": "sdist",
+          "sha256": "7138039a7ecf540da323792d8592ef9902b1d79eb78c147d4f20664de79f3680"
+        }
+      ],
+      "latest_release_uploaded": "2024-01-19T19:18:23.135879Z",
+      "license": "MIT License",
+      "project_urls": {
+        "Homepage": "https://github.com/seatgeek/thefuzz"
+      },
+      "pypi_name": "thefuzz",
+      "release_count": 4,
+      "requires_dist": [
+        "rapidfuzz <4.0.0,>=3.0.0"
+      ],
+      "requires_python": ">=3.8",
+      "version": "0.22.1",
+      "yanked": false
+    },
+    {
+      "area": "RA4",
+      "candidate": "Unidecode",
+      "core_requires": [],
+      "discovery_query": "pypi search: transliterate unicode ascii python",
+      "first_release_uploaded": "2009-06-17T00:37:32.454400Z",
+      "latest_files": [
+        {
+          "filename": "Unidecode-1.4.0-py3-none-any.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "c3c7606c27503ad8d501270406e345ddb480a7b5f38827eafe4fa82a137f0021"
+        },
+        {
+          "filename": "Unidecode-1.4.0.tar.gz",
+          "packagetype": "sdist",
+          "sha256": "ce35985008338b676573023acc382d62c264f307c8f7963733405add37ea2b23"
+        }
+      ],
+      "latest_release_uploaded": "2025-04-24T08:45:03.798556Z",
+      "license": "GNU General Public License v2 or later (GPLv2+)",
+      "project_urls": {},
+      "pypi_name": "Unidecode",
+      "release_count": 32,
+      "requires_dist": [],
+      "requires_python": ">=3.7",
+      "version": "1.4.0",
+      "yanked": false
+    },
+    {
+      "area": "RA5",
+      "candidate": "beautifulsoup4",
+      "core_requires": [
+        "soupsieve>=1.6.1",
+        "typing-extensions>=4.0.0"
+      ],
+      "discovery_query": "pypi search: html parser text extraction python",
+      "first_release_uploaded": "2013-10-02T12:43:44.049307Z",
+      "latest_files": [
+        {
+          "filename": "beautifulsoup4-4.15.0-py3-none-any.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "d6f88de62e1d4e38ecb1077eb9724cd0eff29d2a08ca16a401e9b9e93f117cf9"
+        },
+        {
+          "filename": "beautifulsoup4-4.15.0.tar.gz",
+          "packagetype": "sdist",
+          "sha256": "288e3ca7d54b06f2ac191970bc275c1939cb46d450b255bf6718b04aa37ab4f7"
+        }
+      ],
+      "latest_release_uploaded": "2026-06-07T16:44:21.566528Z",
+      "license": "MIT License",
+      "project_urls": {
+        "Download": "https://www.crummy.com/software/BeautifulSoup/bs4/download/",
+        "Homepage": "https://www.crummy.com/software/BeautifulSoup/bs4/"
+      },
+      "pypi_name": "beautifulsoup4",
+      "release_count": 54,
+      "requires_dist": [
+        "cchardet; extra == \"cchardet\"",
+        "chardet; extra == \"chardet\"",
+        "charset-normalizer; extra == \"charset-normalizer\"",
+        "html5lib; extra == \"html5lib\"",
+        "lxml; extra == \"lxml\"",
+        "soupsieve>=1.6.1",
+        "typing-extensions>=4.0.0"
+      ],
+      "requires_python": ">=3.7.0",
+      "version": "4.15.0",
+      "yanked": false
+    },
+    {
+      "area": "RA5",
+      "candidate": "lxml",
+      "core_requires": [],
+      "discovery_query": "pypi search: html parser python",
+      "first_release_uploaded": "2007-07-03T21:39:17Z",
+      "latest_files": [
+        {
+          "filename": "lxml-6.1.3-cp310-cp310-macosx_10_9_universal2.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "40bcbd9f94166ffe925811e730607385cec959f42fb1bb7dad83748680465221"
+        },
+        {
+          "filename": "lxml-6.1.3-cp310-cp310-macosx_10_9_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "05f5bce9af14fd1506997594bd81cee6d9c6b58ea80a39c058327aa6371ed9e9"
+        },
+        {
+          "filename": "lxml-6.1.3-cp310-cp310-manylinux2014_aarch64.manylinux_2_17_aarch64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "ff88a92cafde90888511242d1c54afcc1a8adbb6dc0a88fa7f87e29e92400d4a"
+        },
+        {
+          "filename": "lxml-6.1.3-cp310-cp310-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "c00e26288784460885fe76e4d4b293573e0f791f52e6d60e27b42edf005922eb"
+        },
+        {
+          "filename": "lxml-6.1.3-cp310-cp310-manylinux_2_26_aarch64.manylinux_2_28_aarch64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "773062aec2f2e56b2b22d37054123f0de8a22a4688a0c3376c3fe42685f975cf"
+        },
+        {
+          "filename": "lxml-6.1.3-cp310-cp310-manylinux_2_26_x86_64.manylinux_2_28_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "f6449672f9c93316deb5e2839e18931f468670e44d5bd9b1301a5a9655d45c07"
+        },
+        {
+          "filename": "lxml-6.1.3-cp310-cp310-manylinux_2_28_i686.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "ec295280f4b37769256da025acf5890370355ac589c27e89caae0b5e9eedc702"
+        },
+        {
+          "filename": "lxml-6.1.3-cp310-cp310-manylinux_2_31_armv7l.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "5929d9df5e7e3379183be0e21f7d559618a5b61cb63280df6164019242e337ed"
+        },
+        {
+          "filename": "lxml-6.1.3-cp310-cp310-manylinux_2_38_riscv64.manylinux_2_39_riscv64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "6e1eb8a4cbffd5553680ad96be6680e364710656eced73d1dc90ec489df599a3"
+        },
+        {
+          "filename": "lxml-6.1.3-cp310-cp310-musllinux_1_2_aarch64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "16148acd77ed1d8836a56db883af2f5eed720f9723088110b16a0d08582130a6"
+        },
+        {
+          "filename": "lxml-6.1.3-cp310-cp310-musllinux_1_2_armv7l.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "23c366231259cd75ad06495174701afb3fcb36a92917fa47de2d1f1bd9d95739"
+        },
+        {
+          "filename": "lxml-6.1.3-cp310-cp310-musllinux_1_2_riscv64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "da85db328e507da922d586c3c7416ec360ec22e9cd9e0700691afacde0c81f53"
+        },
+        {
+          "filename": "lxml-6.1.3-cp310-cp310-musllinux_1_2_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "0f17d83c48ee9dfd96abae3ac3e2108c76d2fc86ce96355e37b8da9f7f4ecc08"
+        },
+        {
+          "filename": "lxml-6.1.3-cp310-cp310-win32.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "7dd624c1eaa629ad44b59a1a0145fdf2d67895592dce94c9358b938b3d075e65"
+        },
+        {
+          "filename": "lxml-6.1.3-cp310-cp310-win_amd64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "18a4db52b5a7b53a3540b0b0f4123319334621ee8083d496de314d0bf06ff59a"
+        },
+        {
+          "filename": "lxml-6.1.3-cp310-cp310-win_arm64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "0feebef8d0521188d0157f758356072e840173aa61ca45b8b3f87959ac283dd5"
+        },
+        {
+          "filename": "lxml-6.1.3-cp311-cp311-macosx_10_9_universal2.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "c66f858b82497173f73366795fc6ee8171620e75a338506d6b2e7bc16f5fca11"
+        },
+        {
+          "filename": "lxml-6.1.3-cp311-cp311-macosx_10_9_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "032a0a97eed428bd143c75a11118238546424ceb2fa311cca5f073aa44658dc4"
+        },
+        {
+          "filename": "lxml-6.1.3-cp311-cp311-manylinux2014_aarch64.manylinux_2_17_aarch64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "4a579dfb9c835f8ab47f4b8ed33440cbc75b806b73297208e6ec2a33e903740b"
+        },
+        {
+          "filename": "lxml-6.1.3-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "49fbc2682a9306135b7ec49e93f97f9c26689b9b7f96ed2742d8d6497e994d13"
+        },
+        {
+          "filename": "lxml-6.1.3-cp311-cp311-manylinux_2_26_aarch64.manylinux_2_28_aarch64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "ea2c01cdb16dc12156e455007c406dfaaece0c89aa4ba0e3b47586779f951d41"
+        },
+        {
+          "filename": "lxml-6.1.3-cp311-cp311-manylinux_2_26_x86_64.manylinux_2_28_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "527195c188d7d0af748cd48d220ab8cdc5cb99be3d49ac4d9be7324d8abf9bc0"
+        },
+        {
+          "filename": "lxml-6.1.3-cp311-cp311-manylinux_2_28_i686.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "20384c2bbcbf87180c8c61eb60869699c1ec0cd09b62cfd13804022d860b0867"
+        },
+        {
+          "filename": "lxml-6.1.3-cp311-cp311-manylinux_2_31_armv7l.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "424aa5657141d306ba9ad1baab4b2c0a0719040075ee6c66aee9bb2dea2b5054"
+        },
+        {
+          "filename": "lxml-6.1.3-cp311-cp311-manylinux_2_38_riscv64.manylinux_2_39_riscv64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "4736e6c87e603146d8949d8501da621ad20c31015060d3fcf95ace2859f3e3e6"
+        },
+        {
+          "filename": "lxml-6.1.3-cp311-cp311-musllinux_1_2_aarch64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "6374e9e382e5a98c9c5e66d41b357b470da1c54bce30f17f9dc4bcc58436cc1c"
+        },
+        {
+          "filename": "lxml-6.1.3-cp311-cp311-musllinux_1_2_armv7l.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "22eec57e26c418cde02c051ce9914a365e52a7f135a565c6f0480242aeebab48"
+        },
+        {
+          "filename": "lxml-6.1.3-cp311-cp311-musllinux_1_2_riscv64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "8753b8d51dbc86fd335ee31fcf7f3658e9f5c016d4edfb23f76ad295f4b8c9d0"
+        },
+        {
+          "filename": "lxml-6.1.3-cp311-cp311-musllinux_1_2_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "207dfc3d47cf0e575e643bbc140dacc8863b39abaa1e5307cd64c7f2365b8a12"
+        },
+        {
+          "filename": "lxml-6.1.3-cp311-cp311-win32.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "18293f8a8d8b6a8e71ef37706b659e3846a4261232158167b1ddf35f6994f633"
+        },
+        {
+          "filename": "lxml-6.1.3-cp311-cp311-win_amd64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "7ae4949f212a53b007dbc355884fda122545c5764a54256c9217e419a62a6559"
+        },
+        {
+          "filename": "lxml-6.1.3-cp311-cp311-win_arm64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "2123e5aa075ac20d23c7af489255efd129cbfe190dbe88fd42598cc9df3199b6"
+        },
+        {
+          "filename": "lxml-6.1.3-cp312-cp312-macosx_10_13_universal2.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "0c0710ac085a157b593c38fbcacd950f15c4afa8e2057527185875ab302752bc"
+        },
+        {
+          "filename": "lxml-6.1.3-cp312-cp312-macosx_10_13_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "623c8799c17128753c65699f1c3aa32402657393a9ad6db09ed8b98ddf76611d"
+        },
+        {
+          "filename": "lxml-6.1.3-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "f683dc6300317700025e41d89a43e0276692ded16113a3c43eab704d605c58e5"
+        },
+        {
+          "filename": "lxml-6.1.3-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "379f8a75cf6eb7eef0af074b55f49ab73b868388a98de14646abcdfa4564bb11"
+        },
+        {
+          "filename": "lxml-6.1.3-cp312-cp312-manylinux_2_26_aarch64.manylinux_2_28_aarch64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "b37772102d44bb6628186accca3a121b1fa3a6b3d97518a8c29a5229ca4c0d0a"
+        },
+        {
+          "filename": "lxml-6.1.3-cp312-cp312-manylinux_2_26_ppc64le.manylinux_2_28_ppc64le.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "ddcf547bea2aee967d6a77779376a45e77e610e8465147a1f3d7e20d539d6e32"
+        },
+        {
+          "filename": "lxml-6.1.3-cp312-cp312-manylinux_2_26_x86_64.manylinux_2_28_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "909f4e927bb051f7740d6367285fc60cdcfdaf0258c2dba4ff5ba7eadadc250c"
+        },
+        {
+          "filename": "lxml-6.1.3-cp312-cp312-manylinux_2_28_i686.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "a5c18810318303ce9afb3f95e2ddb54834f96fa699a8600433fd5a93dcf44c56"
+        },
+        {
+          "filename": "lxml-6.1.3-cp312-cp312-manylinux_2_31_armv7l.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "3e42265103fb385d8642a78672edf376c6f7e1d3598a7a4f9cb1278f2f6b5f6f"
+        },
+        {
+          "filename": "lxml-6.1.3-cp312-cp312-manylinux_2_38_riscv64.manylinux_2_39_riscv64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "21402998e4b78e7cce237d2788841aaa21ac9a4d1574d04dc2d12ee41ae807b5"
+        },
+        {
+          "filename": "lxml-6.1.3-cp312-cp312-musllinux_1_2_aarch64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "38fc4e4e4e084e0bd491949482527d406788045c546d4f8789e93fc527b91385"
+        },
+        {
+          "filename": "lxml-6.1.3-cp312-cp312-musllinux_1_2_armv7l.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "5609efdb0d3c95499c00046bc53648b3482ec2175b5503d6e611b3f0555dc71d"
+        },
+        {
+          "filename": "lxml-6.1.3-cp312-cp312-musllinux_1_2_ppc64le.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "97ce49699d87ebf8aad631b55d65b33219a4f1bfefbbf5bff19dc9af160aeaf9"
+        },
+        {
+          "filename": "lxml-6.1.3-cp312-cp312-musllinux_1_2_riscv64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "48542c9acba9ff9450bd18d871d2c2c8787fdb283572b623d206f1b927cd7d9e"
+        },
+        {
+          "filename": "lxml-6.1.3-cp312-cp312-musllinux_1_2_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "c55e71a9b1db1f107efb60da49c093689b74c5c31a708e5379e2fd9439d4fbb5"
+        },
+        {
+          "filename": "lxml-6.1.3-cp312-cp312-win32.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "b3ff39654f0ce6ebd4db154211136dbe7e8157bcc3bed2344c87f32c7c6ecb6c"
+        },
+        {
+          "filename": "lxml-6.1.3-cp312-cp312-win_amd64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "3e9a00d1c2c30936f7add097c41afc5da6556c580909104aafd382cac92a855c"
+        },
+        {
+          "filename": "lxml-6.1.3-cp312-cp312-win_arm64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "1aeca87830c4fe649dcf93fe2b059525b71c72587f21be4ae4af7103082a79fa"
+        },
+        {
+          "filename": "lxml-6.1.3-cp313-cp313-macosx_10_13_universal2.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "3a48093cdb058a93af842ede9703520e810b05dcd0fc6d7190a06376c3bfb6bd"
+        },
+        {
+          "filename": "lxml-6.1.3-cp313-cp313-macosx_10_13_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "887c021d9a977cff89cb273047c1352997b772a8908a25c21836861f69b92be1"
+        },
+        {
+          "filename": "lxml-6.1.3-cp313-cp313-manylinux2014_aarch64.manylinux_2_17_aarch64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "611a51e61c92f62345a50b0035df6fc0d678f9299f33728826d831598862f59d"
+        },
+        {
+          "filename": "lxml-6.1.3-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "b477912f42c5c33405a10c759d22f80cf5af043ae02d95b9d8e5e5bc555739ed"
+        },
+        {
+          "filename": "lxml-6.1.3-cp313-cp313-manylinux_2_26_aarch64.manylinux_2_28_aarch64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "5cffe18571ccc51d742cd08cbb3f8b756de9311d18c7ea98f5d92f37b8fb60c2"
+        },
+        {
+          "filename": "lxml-6.1.3-cp313-cp313-manylinux_2_26_ppc64le.manylinux_2_28_ppc64le.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "75cc6569e86be5785b6188ef1642670c6adbc984e81ec35e224842ecd9eefcc8"
+        },
+        {
+          "filename": "lxml-6.1.3-cp313-cp313-manylinux_2_26_x86_64.manylinux_2_28_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "d85dfab42dd672f87a7f76e9de7172962aee69fa12044f0d6e1a23cbd53fb80e"
+        },
+        {
+          "filename": "lxml-6.1.3-cp313-cp313-manylinux_2_28_i686.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "42632b4024ab24a6b488f559ac851312509888b6b80ae2aa11cf29a646a0d245"
+        },
+        {
+          "filename": "lxml-6.1.3-cp313-cp313-manylinux_2_31_armv7l.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "febd35ef45f603c2d74b74655efdbf45e14f55fc0aef4ac82b663ca829b283e0"
+        },
+        {
+          "filename": "lxml-6.1.3-cp313-cp313-manylinux_2_38_riscv64.manylinux_2_39_riscv64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "a43b3bdf11e477dc7770609d3477316f974354dfc8425d596f64f471cc8daf6e"
+        },
+        {
+          "filename": "lxml-6.1.3-cp313-cp313-musllinux_1_2_aarch64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "5d582042c69857c364e8153de6e18e0da9b7b515a6a8113caf69a6ec8e0520f2"
+        },
+        {
+          "filename": "lxml-6.1.3-cp313-cp313-musllinux_1_2_armv7l.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "8e49a646acfab83c68974f4aa1d0a2acca9e88d7d627ae0fc13201b14b76d310"
+        },
+        {
+          "filename": "lxml-6.1.3-cp313-cp313-musllinux_1_2_ppc64le.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "0dee106e9aa97fb00541b1ed7827070564d0549c3d3fba8920e6b20fd980f748"
+        },
+        {
+          "filename": "lxml-6.1.3-cp313-cp313-musllinux_1_2_riscv64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "dd5e90f34cffcfed97f36cf066325773d2b6021c60c29942e53a18b028501b1d"
+        },
+        {
+          "filename": "lxml-6.1.3-cp313-cp313-musllinux_1_2_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "d9b3e7d71bf6acff341233417abbdface29c647e3113892d9aaedc02eb4aa2bc"
+        },
+        {
+          "filename": "lxml-6.1.3-cp313-cp313-win32.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "160fcf381f76c3aeac28a756bec44f48942a8f7245a87aa28e3a523b4d90cd87"
+        },
+        {
+          "filename": "lxml-6.1.3-cp313-cp313-win_amd64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "e477aca0bc0d19f3b4ae9e4f2a1cfd687c31bf772d78734910658186b40b2477"
+        },
+        {
+          "filename": "lxml-6.1.3-cp313-cp313-win_arm64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "b1cc980905221a5d8b3c476330730b3adb40ff80add71ffbdb6215ba055656f1"
+        },
+        {
+          "filename": "lxml-6.1.3-cp314-cp314-macosx_10_15_universal2.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "2bec13085dc8ef48a3fe62f7dfcacfeda2c785cdf19cc8eeda2bb9ed081da165"
+        },
+        {
+          "filename": "lxml-6.1.3-cp314-cp314-macosx_10_15_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "4f4db7c7e954d289d71878938348b3d91b904a3e8210a11939359fb758a58e7d"
+        },
+        {
+          "filename": "lxml-6.1.3-cp314-cp314-manylinux2014_aarch64.manylinux_2_17_aarch64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "2cae5d5c90a62d9139c512a0cb1aad1d182b022b5740daea2617eb5bf7fc658e"
+        },
+        {
+          "filename": "lxml-6.1.3-cp314-cp314-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "c6c0c13128a32eb04a51357e56a094e13aa8e6d3d1884de2e9ae923f6915e1a8"
+        },
+        {
+          "filename": "lxml-6.1.3-cp314-cp314-manylinux_2_26_aarch64.manylinux_2_28_aarch64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "2221e88679d1351e9a40aaee54bc65679b9795bbd0160bc3d5e36b163344eb75"
+        },
+        {
+          "filename": "lxml-6.1.3-cp314-cp314-manylinux_2_26_ppc64le.manylinux_2_28_ppc64le.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "cfb398886a7eb4c719161c3efcff2a1248febc53a4d8e5072d2d8a87fed84ac9"
+        },
+        {
+          "filename": "lxml-6.1.3-cp314-cp314-manylinux_2_26_x86_64.manylinux_2_28_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "a7eb78ba28b187e1e9203a55c60fcf70df2d22cb205fe6d51b9383d6097419f0"
+        },
+        {
+          "filename": "lxml-6.1.3-cp314-cp314-manylinux_2_28_i686.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "ea6b1e9105b4b24a34c722432d9fb578f9ed83af21fa1abda639011e0f22bbb6"
+        },
+        {
+          "filename": "lxml-6.1.3-cp314-cp314-manylinux_2_31_armv7l.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "e8b17e23df3e827a69d25af70990ca2420e92668aaffaeeb3cd2351d7916a023"
+        },
+        {
+          "filename": "lxml-6.1.3-cp314-cp314-manylinux_2_38_riscv64.manylinux_2_39_riscv64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "1b7c37339d7e75cab9a123a04248e243cefefb302ad6db566ea0c77cbcde421e"
+        },
+        {
+          "filename": "lxml-6.1.3-cp314-cp314-musllinux_1_2_aarch64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "83e3a51e7933db700a0da0db31849db3a24022d9970da9bb73001e1d0326fd92"
+        },
+        {
+          "filename": "lxml-6.1.3-cp314-cp314-musllinux_1_2_armv7l.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "9bde9ae026a55b9a192078dfa6e27dd0ca4a050171ab6272e92f97b757dfdf48"
+        },
+        {
+          "filename": "lxml-6.1.3-cp314-cp314-musllinux_1_2_ppc64le.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "1a635e837b50a1819bebfedaac5916498ea024120969da8790500148fb0a894d"
+        },
+        {
+          "filename": "lxml-6.1.3-cp314-cp314-musllinux_1_2_riscv64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "d0c5c362bc94f1929dc7e96e715bbe7bd17037f802e6d8f0d1545df9133c0559"
+        },
+        {
+          "filename": "lxml-6.1.3-cp314-cp314-musllinux_1_2_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "c59e4265608da6a041f54646ecc0c9ecdbb19aaf14c4c684bb6c2114998cc415"
+        },
+        {
+          "filename": "lxml-6.1.3-cp314-cp314-win32.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "2e62c569ec7531b679b184cbfe335c501c1d13c4b363560013019962eb630e6d"
+        },
+        {
+          "filename": "lxml-6.1.3-cp314-cp314-win_amd64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "66299564c046bc7e0cc5de5106601eae907e9fa5904cd68a323380a8502f7861"
+        },
+        {
+          "filename": "lxml-6.1.3-cp314-cp314-win_arm64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "ebd054ad1737a68fb7c5c073d405cef2b88bb824e294de3b4a4e995b47f0e376"
+        },
+        {
+          "filename": "lxml-6.1.3-cp314-cp314t-macosx_10_15_universal2.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "5a143e6207579de8baeded4eaac9134413200359f1969d636f0bfb98ee8c3c8f"
+        },
+        {
+          "filename": "lxml-6.1.3-cp314-cp314t-macosx_10_15_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "a1cec0f99b9b914d39176347a93b7610dc09324491aee1cbc57cd291a41a1d55"
+        },
+        {
+          "filename": "lxml-6.1.3-cp314-cp314t-manylinux2014_aarch64.manylinux_2_17_aarch64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "f6b9d2aad499c769ee8287609ab0e6de99d8bcea99c6e6c2e64945259fd52fb2"
+        },
+        {
+          "filename": "lxml-6.1.3-cp314-cp314t-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "28a23fefdb345b2d4d0ff2860571b5ff9a89a28b6a120f720e8fb0324d346626"
+        },
+        {
+          "filename": "lxml-6.1.3-cp314-cp314t-manylinux_2_26_aarch64.manylinux_2_28_aarch64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "545ccc14fb05485f48b4439ec35beb16d5b5280eb6c81c658bd4707a2a119414"
+        },
+        {
+          "filename": "lxml-6.1.3-cp314-cp314t-manylinux_2_26_ppc64le.manylinux_2_28_ppc64le.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "93476b6514b373fc6ca67d26c442784f7807c86f00635bfe79f935c3eab2af17"
+        },
+        {
+          "filename": "lxml-6.1.3-cp314-cp314t-manylinux_2_26_x86_64.manylinux_2_28_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "8db38ff3fb7aee7d6a82ae4da2eef1178656fe1216841fbd24870062a9d60473"
+        },
+        {
+          "filename": "lxml-6.1.3-cp314-cp314t-manylinux_2_28_i686.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "25f4118c438f96bb466e83108506d03d5c31b1bd2387e83e5b070bda6ded9c37"
+        },
+        {
+          "filename": "lxml-6.1.3-cp314-cp314t-manylinux_2_31_armv7l.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "1beb0f9909b26cee938df9ba56b15252a84429b1fc30ce6fca161390b9789a70"
+        },
+        {
+          "filename": "lxml-6.1.3-cp314-cp314t-manylinux_2_38_riscv64.manylinux_2_39_riscv64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "3a27ac6c780c8b8a1cd231b58407634cafc1c4cc28cd6c7141362df0f36351e7"
+        },
+        {
+          "filename": "lxml-6.1.3-cp314-cp314t-musllinux_1_2_aarch64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "a1932d7ce78a561367512c594fe66eac2b2ec9b9264cfd9b5f950622f4a116e2"
+        },
+        {
+          "filename": "lxml-6.1.3-cp314-cp314t-musllinux_1_2_armv7l.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "7d0f5976aa2701996f759b30172925829867547bb073af0ae67d1307a0f0262c"
+        },
+        {
+          "filename": "lxml-6.1.3-cp314-cp314t-musllinux_1_2_ppc64le.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "c5e7ce578aa8a80910a72a8ca0bbea3baae10100827249001999726a788456d8"
+        },
+        {
+          "filename": "lxml-6.1.3-cp314-cp314t-musllinux_1_2_riscv64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "d97c5227621af74b111882a290b10f371780a38eef9d9e730408fba2259b52fb"
+        },
+        {
+          "filename": "lxml-6.1.3-cp314-cp314t-musllinux_1_2_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "da707f14ea3c35ee463d50acd596d6488e4b2b4ae7cf77a5bf93f55c023d63e8"
+        },
+        {
+          "filename": "lxml-6.1.3-cp314-cp314t-win32.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "9efe56a68179f3adc4de41861c9358931db03837c48dd5e1c78077b84dd07f3a"
+        },
+        {
+          "filename": "lxml-6.1.3-cp314-cp314t-win_amd64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "c9389b3784b56c58d933b5e0aecdf28f901b073ff385358d8a7d40907f6e14b2"
+        },
+        {
+          "filename": "lxml-6.1.3-cp314-cp314t-win_arm64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "32a409be3190b088f960ac92bfedfbef2f86c49ff940765e1548177592d20026"
+        },
+        {
+          "filename": "lxml-6.1.3-cp315-cp315-macosx_10_15_universal2.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "6ea2f13dce778ca072ccee598bca46a092ce192e8fd907b6c1f0e52c800529a0"
+        },
+        {
+          "filename": "lxml-6.1.3-cp315-cp315-macosx_10_15_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "c581b1d68b3845fb86c6b2983e755b29bf001461c59fa411d2c26a911b6559a9"
+        },
+        {
+          "filename": "lxml-6.1.3-cp315-cp315-manylinux_2_26_aarch64.manylinux_2_28_aarch64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "2e01125896585139453cab8cb235893644d8815d7509520da95ae3ee8d1c1f79"
+        },
+        {
+          "filename": "lxml-6.1.3-cp315-cp315-manylinux_2_26_ppc64le.manylinux_2_28_ppc64le.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "290f66b97ede0e552e1cb44a0fd8a74f9753ee635b50830a0b122fb72788d015"
+        },
+        {
+          "filename": "lxml-6.1.3-cp315-cp315-manylinux_2_26_x86_64.manylinux_2_28_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "73fc05988ed20809450474ba760a87c8ad4e455fc09783c02195e56ec634b41a"
+        },
+        {
+          "filename": "lxml-6.1.3-cp315-cp315-manylinux_2_31_armv7l.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "dc3a44689eea43eab836e5c98a8ab015dc2419987d1ea6eafc7c590cdff86bed"
+        },
+        {
+          "filename": "lxml-6.1.3-cp315-cp315-manylinux_2_38_riscv64.manylinux_2_39_riscv64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "209c3ccbfe35a04ac6d24f0611f9d1cbf8025d49991b14acd935236234d6c156"
+        },
+        {
+          "filename": "lxml-6.1.3-cp315-cp315-musllinux_1_2_aarch64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "2f5b2a2b9811b853b39bfa41367c6d78747b8e3e80e07fc5a24aae295c1a4d7d"
+        },
+        {
+          "filename": "lxml-6.1.3-cp315-cp315-musllinux_1_2_armv7l.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "6a406d0b3cb207b0fa460ed4dc93e866f44f105da0169361cb18ff998a44c7f0"
+        },
+        {
+          "filename": "lxml-6.1.3-cp315-cp315-musllinux_1_2_ppc64le.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "53258656846f5c48996b882fb4b135885e088a3ad3d96b4bc0530f95124d1f69"
+        },
+        {
+          "filename": "lxml-6.1.3-cp315-cp315-musllinux_1_2_riscv64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "aa633613ff907ea91b9b0489a1f0da1b8725d8c6ccec6b77e8a1c9c235044bb0"
+        },
+        {
+          "filename": "lxml-6.1.3-cp315-cp315-musllinux_1_2_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "90f709b9accab6b2e4d14f5c8718203877a0486bcb3afd74d8b539ecd1e961d4"
+        },
+        {
+          "filename": "lxml-6.1.3-cp315-cp315-win32.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "b4fc6b03b9d9d90557274f571ab30e7fbbfc527955536935d96f98b6817a86e4"
+        },
+        {
+          "filename": "lxml-6.1.3-cp315-cp315-win_amd64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "33cadd956b667997e4de1635fce9541f2e8ede2038fcde8cf55aa14d571d1bad"
+        },
+        {
+          "filename": "lxml-6.1.3-cp315-cp315-win_arm64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "8a330c0ee5fa318c7b5cbbaad882baeca3f570357e7eb25ab34bf31008150758"
+        },
+        {
+          "filename": "lxml-6.1.3-cp315-cp315t-macosx_10_15_universal2.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "0bf5a3e397df2ec4258eb5eea4c1ac6cf013ca1abd04a176903bff20a70021fe"
+        },
+        {
+          "filename": "lxml-6.1.3-cp315-cp315t-macosx_10_15_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "13d22c0d57355366b393936acf6b98a5e0edeadddd3fccbc6a846c50a76b8741"
+        },
+        {
+          "filename": "lxml-6.1.3-cp315-cp315t-manylinux_2_26_aarch64.manylinux_2_28_aarch64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "cad7617727a96d189bd6f979d0fadf765198c7934e85f4edaba9bf3ad919a300"
+        },
+        {
+          "filename": "lxml-6.1.3-cp315-cp315t-manylinux_2_26_ppc64le.manylinux_2_28_ppc64le.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "cae82b5ca24b0c2beedb269f6e2a96f466acd926879ab00ae19f1a65cbf9ffb0"
+        },
+        {
+          "filename": "lxml-6.1.3-cp315-cp315t-manylinux_2_26_x86_64.manylinux_2_28_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "69cafd61aea04ebb3502c93c2aaa568b12931ca0802231e0b5de76bf8b6e74bd"
+        },
+        {
+          "filename": "lxml-6.1.3-cp315-cp315t-manylinux_2_31_armv7l.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "dc205732d593118cf701d986f40e9de7801bb2e371cb189ddbda9b7348f4d97e"
+        },
+        {
+          "filename": "lxml-6.1.3-cp315-cp315t-manylinux_2_38_riscv64.manylinux_2_39_riscv64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "88e719b9437f148f7e1465df845c758dd1598618cbea3a2fd1e61a715542f2b2"
+        },
+        {
+          "filename": "lxml-6.1.3-cp315-cp315t-musllinux_1_2_aarch64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "40983eabefd13da003e68170928c7acc011f0d095eefce5871a3c71c9385fb9a"
+        },
+        {
+          "filename": "lxml-6.1.3-cp315-cp315t-musllinux_1_2_armv7l.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "fad67b12ffe0f71e02b4932b04883cbc76a9072bbd30731409d3523cf058b011"
+        },
+        {
+          "filename": "lxml-6.1.3-cp315-cp315t-musllinux_1_2_ppc64le.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "6cd11e7550d89e551a87dcec30f04b1fca32e86b68708aa01a4daa455d8605e5"
+        },
+        {
+          "filename": "lxml-6.1.3-cp315-cp315t-musllinux_1_2_riscv64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "ca0ec532ad2f5ba1e5ec120ac157769c57f01855b3d8bf37213f5d88abd9ba0a"
+        },
+        {
+          "filename": "lxml-6.1.3-cp315-cp315t-musllinux_1_2_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "e99e09ab7741f1281e2677f4c0058c7f5267d182530b09c87e4f6aa26adf3887"
+        },
+        {
+          "filename": "lxml-6.1.3-cp315-cp315t-win32.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "ace1d2c83b2bd24db5940600541140e87a325e119cb32d5fa9ad720d7e76648e"
+        },
+        {
+          "filename": "lxml-6.1.3-cp315-cp315t-win_amd64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "b49638355ea3bebba70da783ccbc630fd72afa16bc46c54474bfa1f9a915bbc6"
+        },
+        {
+          "filename": "lxml-6.1.3-cp315-cp315t-win_arm64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "5a721a98c649855963811b59b55755b30566e7f7fc40bdc9803d66dee9f811cf"
+        },
+        {
+          "filename": "lxml-6.1.3-cp38-cp38-macosx_10_9_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "13a620a3fcc20023f9e6ed5c383e00e826f1c2d5db554df2f67240760f9118e8"
+        },
+        {
+          "filename": "lxml-6.1.3-cp38-cp38-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "fbfb70ba01355251faf6b293171df49f73a88a1b6494db109ffea85442574458"
+        },
+        {
+          "filename": "lxml-6.1.3-cp38-cp38-manylinux_2_26_x86_64.manylinux_2_28_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "302f72413251c03f671e063c9414bed5dc8c927069e5abb69245521e51a4e81b"
+        },
+        {
+          "filename": "lxml-6.1.3-cp38-cp38-manylinux_2_28_i686.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "ce1f220114959941170e22b8ad44279f6dee2dcef7591814d01ae805dc058889"
+        },
+        {
+          "filename": "lxml-6.1.3-cp38-cp38-musllinux_1_2_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "170773d8a3cdc76259065523ddd978c44f9806e28605f08812e8f86783e44ac6"
+        },
+        {
+          "filename": "lxml-6.1.3-cp38-cp38-win32.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "92d96586376fb79a33474797186bf993250152ee5c32650b67db78d54b92e6f3"
+        },
+        {
+          "filename": "lxml-6.1.3-cp38-cp38-win_amd64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "d44442effeb8781f392340c5dc8c6716fba41dbeacb82fd4c0f09026fb5ff682"
+        },
+        {
+          "filename": "lxml-6.1.3-cp39-cp39-macosx_10_9_universal2.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "869dfcd4d381cb0ea87085cc4f011b9171b494ef21e76ad8665f6d5e2d1dc8a1"
+        },
+        {
+          "filename": "lxml-6.1.3-cp39-cp39-macosx_10_9_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "6ba4fe5bfbef6811a8e49b3719cde373ad399006c0c1ac184b7297116ecbba5d"
+        },
+        {
+          "filename": "lxml-6.1.3-cp39-cp39-manylinux2014_aarch64.manylinux_2_17_aarch64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "61116cec57ed69aebc70f37a545eec095339bb829efbdabcfb97c51e9536e158"
+        },
+        {
+          "filename": "lxml-6.1.3-cp39-cp39-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "4e11e885e0704be185867fcf71b904d8f65d7d6877bc121f69870b0d0479ba7b"
+        },
+        {
+          "filename": "lxml-6.1.3-cp39-cp39-manylinux_2_26_aarch64.manylinux_2_28_aarch64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "41e2d428110b408e963b6fb18f9bbf1f5c027b56bd4b498d54556476c0aeb1c3"
+        },
+        {
+          "filename": "lxml-6.1.3-cp39-cp39-manylinux_2_26_x86_64.manylinux_2_28_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "aa9fd1ee2a5dacfc41039ed49ffeeacfa75bafbd255b69f3b578e11897a0e623"
+        },
+        {
+          "filename": "lxml-6.1.3-cp39-cp39-manylinux_2_28_i686.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "7f75b9b9fec2a9c6b18095c81865580e795b1441c429e42d22fcc82a77f40039"
+        },
+        {
+          "filename": "lxml-6.1.3-cp39-cp39-manylinux_2_31_armv7l.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "cc669256d28736f7f3a149df5c380c50ace2692ba3e62203d10656fade4a2145"
+        },
+        {
+          "filename": "lxml-6.1.3-cp39-cp39-manylinux_2_38_riscv64.manylinux_2_39_riscv64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "d077f21f4b16f0471353883748f126f62038760397c107bb9fad2ca94dc0dfb7"
+        },
+        {
+          "filename": "lxml-6.1.3-cp39-cp39-musllinux_1_2_aarch64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "d9a0d12846d6ce434fb3857918eef4315ec9b4769deb020c75828798614bfcfd"
+        },
+        {
+          "filename": "lxml-6.1.3-cp39-cp39-musllinux_1_2_armv7l.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "2b9b1325ca1c2a9a2dbb6eb913ae563313f2082ae60b03210f7e83ee80712274"
+        },
+        {
+          "filename": "lxml-6.1.3-cp39-cp39-musllinux_1_2_riscv64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "a2e3f70673a1d5b82f38255f777d26cd855bf2092b1436c4867464a7892f9238"
+        },
+        {
+          "filename": "lxml-6.1.3-cp39-cp39-musllinux_1_2_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "c34ca1dc41bd86d9ff830d5bdf4e4a752bba6c54f7d2707027ce0eabd36084c9"
+        },
+        {
+          "filename": "lxml-6.1.3-cp39-cp39-win32.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "b50343241eb69fd85f7791cf8bcc7b1c4729826b7d59ba2f6b27db29638fa745"
+        },
+        {
+          "filename": "lxml-6.1.3-cp39-cp39-win_amd64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "0794e04ba343852c6d78e996c58ef4b8e579b4ecc72f8df0d4058bf843b4c96e"
+        },
+        {
+          "filename": "lxml-6.1.3-cp39-cp39-win_arm64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "0ab2467e405e748d93495fb5568e74044802b8d3ff2b2a1607c3f78c6e982de5"
+        },
+        {
+          "filename": "lxml-6.1.3-pp310-pypy310_pp73-macosx_10_15_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "4b061064b4a2fe8598a466d723d43dbcd5a610a5d5cfe02fb6226f5c17349f75"
+        },
+        {
+          "filename": "lxml-6.1.3-pp310-pypy310_pp73-manylinux2014_aarch64.manylinux_2_17_aarch64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "8499d464de86fab0f102313cce32a9bed9ab1f06ec813cf025cb790964fbb765"
+        },
+        {
+          "filename": "lxml-6.1.3-pp310-pypy310_pp73-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "9e67324961ac9bbe616cce5100514d2e34d88665aeb07071e8b16eac55d06d94"
+        },
+        {
+          "filename": "lxml-6.1.3-pp310-pypy310_pp73-manylinux_2_26_aarch64.manylinux_2_28_aarch64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "5d12669a2c419b0e8dc423d23dea24bb82f6f9cb829f32e04674b0ba40322a7c"
+        },
+        {
+          "filename": "lxml-6.1.3-pp310-pypy310_pp73-manylinux_2_26_x86_64.manylinux_2_28_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "97acecb11cbc411473f15b8d780df06d7a9f3a2aad9aca78364f56640c8fb70e"
+        },
+        {
+          "filename": "lxml-6.1.3-pp310-pypy310_pp73-win_amd64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "f8b9c8ceebae6387d0dc77f7f4dbbfbfc962dba2efbfe6877486075a480726b4"
+        },
+        {
+          "filename": "lxml-6.1.3-pp311-pypy311_pp73-macosx_10_15_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "d2765c18ce303149ee804b1f3dad11232726dd0a702d73a15cf19179ac8cc962"
+        },
+        {
+          "filename": "lxml-6.1.3-pp311-pypy311_pp73-manylinux2014_aarch64.manylinux_2_17_aarch64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "7d5a748d12dd9b535e0a130f60dae9ddf0adafbabe61e7864f55c7436c84547a"
+        },
+        {
+          "filename": "lxml-6.1.3-pp311-pypy311_pp73-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "41096ec0740a58dad03d3ae0c7486d306d20becefb13ceb1649835ab3eb64167"
+        },
+        {
+          "filename": "lxml-6.1.3-pp311-pypy311_pp73-manylinux_2_26_aarch64.manylinux_2_28_aarch64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "415e3a115c0d510e329020012834d1c0aa1c581ee53a218603e38abbc1dea70a"
+        },
+        {
+          "filename": "lxml-6.1.3-pp311-pypy311_pp73-manylinux_2_26_x86_64.manylinux_2_28_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "20428910dae17a1a93152a3ff2c0441d2f4932992c0797d65651dd0561f1792f"
+        },
+        {
+          "filename": "lxml-6.1.3-pp311-pypy311_pp73-win_amd64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "bc8dd3d9c93e70c3df974a201ac2958b6d77b465d813c51d1f15fa8e645763ae"
+        },
+        {
+          "filename": "lxml-6.1.3-pp39-pypy39_pp73-macosx_10_15_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "3847e71a78cbbc1aff955dbbbaf2fff12153f611d3162c5beaa3395636cbc2f9"
+        },
+        {
+          "filename": "lxml-6.1.3-pp39-pypy39_pp73-manylinux2014_aarch64.manylinux_2_17_aarch64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "fe91993149523aa59941b9e3c90e2eb45f57ad014697aef6c8b13339a59c019e"
+        },
+        {
+          "filename": "lxml-6.1.3-pp39-pypy39_pp73-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "71532ebf30be0048a45559b4fab15333fbaaf9042f658e878d918ecd0cf09805"
+        },
+        {
+          "filename": "lxml-6.1.3-pp39-pypy39_pp73-manylinux_2_26_aarch64.manylinux_2_28_aarch64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "c1b50797ac246bb2942a04b6c0f69af0667aba7cf7535f39bbb1b3208fd5d128"
+        },
+        {
+          "filename": "lxml-6.1.3-pp39-pypy39_pp73-manylinux_2_26_x86_64.manylinux_2_28_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "7b2bb7d703bed7ac893bf7f40d97b5d9279d35d2ce460624ca28929eab0d5a3d"
+        },
+        {
+          "filename": "lxml-6.1.3-pp39-pypy39_pp73-win_amd64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "be5346653c0b0e34be96869ff9dbeba23860156f89a2896a64c64fb419260cb6"
+        },
+        {
+          "filename": "lxml-6.1.3.tar.gz",
+          "packagetype": "sdist",
+          "sha256": "45222d94ddd511536f3b2f7d9deae3b2339b4ce0f075f1ca25703b07cad9dd21"
+        }
+      ],
+      "latest_release_uploaded": "2026-09-03T12:04:50.126177Z",
+      "license": "BSD-3-Clause",
+      "project_urls": {
+        "Bug Tracker": "https://bugs.launchpad.net/lxml",
+        "Homepage": "https://lxml.de/",
+        "Source": "https://github.com/lxml/lxml"
+      },
+      "pypi_name": "lxml",
+      "release_count": 130,
+      "requires_dist": [
+        "BeautifulSoup4; extra == \"htmlsoup\"",
+        "cssselect>=0.7; extra == \"cssselect\"",
+        "html5lib; extra == \"html5\"",
+        "lxml_html_clean; extra == \"html-clean\""
+      ],
+      "requires_python": ">=3.8",
+      "version": "6.1.3",
+      "yanked": false
+    },
+    {
+      "area": "RA5",
+      "candidate": "pdfminer.six",
+      "core_requires": [
+        "charset-normalizer>=2.0.0",
+        "cryptography>=36.0.0"
+      ],
+      "discovery_query": "pypi search: pdf text extraction python",
+      "first_release_uploaded": "2014-09-19T11:54:04.862437Z",
+      "latest_files": [
+        {
+          "filename": "pdfminer_six-20260107-py3-none-any.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "366585ba97e80dffa8f00cebe303d2f381884d8637af4ce422f1df3ef38111a9"
+        },
+        {
+          "filename": "pdfminer_six-20260107.tar.gz",
+          "packagetype": "sdist",
+          "sha256": "96bfd431e3577a55a0efd25676968ca4ce8fd5b53f14565f85716ff363889602"
+        }
+      ],
+      "latest_release_uploaded": "2026-01-07T13:29:12.937407Z",
+      "license": "MIT",
+      "project_urls": {
+        "Homepage": "https://github.com/pdfminer/pdfminer.six"
+      },
+      "pypi_name": "pdfminer.six",
+      "release_count": 37,
+      "requires_dist": [
+        "Pillow; extra == \"image\"",
+        "charset-normalizer>=2.0.0",
+        "cryptography>=36.0.0"
+      ],
+      "requires_python": ">=3.10",
+      "version": "20260107",
+      "yanked": false
+    },
+    {
+      "area": "RA5",
+      "candidate": "PyMuPDF",
+      "core_requires": [
+        "networkx",
+        "numpy",
+        "onnxruntime",
+        "psutil",
+        "pymupdf-layout==2.1",
+        "pymupdf4llm==2.1",
+        "pymupdf_layout==2.1",
+        "pyyaml",
+        "tabulate"
+      ],
+      "discovery_query": "pypi search: pdf text extraction python",
+      "first_release_uploaded": "2017-11-27T18:53:13.373365Z",
+      "latest_files": [
+        {
+          "filename": "pymupdf-2.1-cp311-abi3-macosx_11_0_arm64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "1bb2284bde6067f05f83961ea678480060870dc966ad520bcf97da0b0eccf40c"
+        },
+        {
+          "filename": "pymupdf-2.1-cp311-abi3-manylinux_2_28_aarch64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "5a1a1fee36d5598013614e06eef25aaa68819d828f5401170dbcaf6f2714d1dd"
+        },
+        {
+          "filename": "pymupdf-2.1-cp311-abi3-manylinux_2_28_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "a9efa2e9e5f469d3b5749199329739cfef1ff1d1846538ced4885c544eecbcd9"
+        },
+        {
+          "filename": "pymupdf-2.1-cp311-abi3-win_amd64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "e1122bbc3a1212396f0d70d19f78e084991b59ebdfc9d846c28ca8b509de01ad"
+        },
+        {
+          "filename": "pymupdf-2.1.tar.gz",
+          "packagetype": "sdist",
+          "sha256": "9ac95f98016e83eafb8f1d786396f9c60e400d559590596e5b2df9eb6384948b"
+        }
+      ],
+      "latest_release_uploaded": "2026-11-02T17:17:53.360332Z",
+      "license": "Dual Licensed - GNU AFFERO GPL 3.0 or Artifex Commercial License",
+      "project_urls": {
+        "Changelog": "https://pymupdf.readthedocs.io/en/latest/changes.html",
+        "Documentation": "https://pymupdf.readthedocs.io/",
+        "Source": "https://github.com/pymupdf/pymupdf",
+        "Tracker": "https://github.com/pymupdf/PyMuPDF/issues"
+      },
+      "pypi_name": "pymupdf",
+      "release_count": 138,
+      "requires_dist": [
+        "networkx",
+        "numpy",
+        "onnxruntime",
+        "psutil",
+        "pymupdf-layout==2.1",
+        "pymupdf4llm==2.1",
+        "pymupdf_layout==2.1",
+        "pyyaml",
+        "tabulate"
+      ],
+      "requires_python": ">=3.11",
+      "version": "2.1",
+      "yanked": false
+    },
+    {
+      "area": "RA5",
+      "candidate": "pypdf",
+      "core_requires": [
+        "typing_extensions>=4.0; python_version < \"3.11\""
+      ],
+      "discovery_query": "pypi search: pdf text extraction python",
+      "first_release_uploaded": "2014-05-17T22:40:49.200819Z",
+      "latest_files": [
+        {
+          "filename": "pypdf-7.1.0-py3-none-any.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "47cca6b24bdcf4c4d65b5f7b8b972535c61710a061261e737688777cfd9a7bfb"
+        },
+        {
+          "filename": "pypdf-7.1.0.tar.gz",
+          "packagetype": "sdist",
+          "sha256": "ca3fa902369e98a6d2cb7b56396de902b72ef9bb3c1e8706c1bfc7d8bd0cf0d7"
+        }
+      ],
+      "latest_release_uploaded": "2026-11-13T12:23:18.629841Z",
+      "license": "BSD-3-Clause",
+      "project_urls": {
+        "Bug Reports": "https://github.com/py-pdf/pypdf/issues",
+        "Changelog": "https://pypdf.readthedocs.io/en/latest/meta/CHANGELOG.html",
+        "Documentation": "https://pypdf.readthedocs.io/en/latest/",
+        "Source": "https://github.com/py-pdf/pypdf"
+      },
+      "pypi_name": "pypdf",
+      "release_count": 126,
+      "requires_dist": [
+        "arabic-reshaper; extra == \"full\"",
+        "arabic-reshaper; extra == \"rtl-text\"",
+        "brotli>=1.2.0; extra == \"brotli\"",
+        "brotli>=1.2.0; extra == \"full\"",
+        "cryptography>=43; extra == \"crypto\"",
+        "cryptography>=43; extra == \"full\"",
+        "flit; extra == \"dev\"",
+        "fonttools; extra == \"fonts\"",
+        "fonttools; extra == \"full\"",
+        "myst-parser; extra == \"docs\"",
+        "pillow>=8.0.0; extra == \"full\"",
+        "pillow>=8.0.0; extra == \"image\"",
+        "pip-tools; extra == \"dev\"",
+        "pre-commit; extra == \"dev\"",
+        "pycryptodome; extra == \"cryptodome\"",
+        "pytest-cov; extra == \"dev\"",
+        "pytest-socket; extra == \"dev\"",
+        "pytest-timeout; extra == \"dev\"",
+        "pytest-xdist; extra == \"dev\"",
+        "python-bidi; extra == \"full\"",
+        "python-bidi; extra == \"rtl-text\"",
+        "sphinx-rtd-theme; extra == \"docs\"",
+        "sphinx; extra == \"docs\"",
+        "typing_extensions>=4.0; python_version < \"3.11\"",
+        "wheel; extra == \"dev\""
+      ],
+      "requires_python": ">=3.10",
+      "version": "7.1.0",
+      "yanked": false
+    },
+    {
+      "area": "RA5",
+      "candidate": "selectolax",
+      "core_requires": [],
+      "discovery_query": "pypi search: fast html parser python",
+      "first_release_uploaded": "2018-05-14T13:03:13.595507Z",
+      "latest_files": [
+        {
+          "filename": "selectolax-1.0.2-cp310-cp310-macosx_10_9_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "161f7ed49269a9f1de5bfb0c89ee54f1cf665f56a6b2a960a04654cf6bccb239"
+        },
+        {
+          "filename": "selectolax-1.0.2-cp310-cp310-macosx_11_0_arm64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "2a8eb5b878b06d404a9e5fe98aa1421727f496f4e05d2597a37fdb70839c431d"
+        },
+        {
+          "filename": "selectolax-1.0.2-cp310-cp310-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "118e98775ac7b018e028a3adedc03d688d08f8738feb65b73c7d9a7da6f3328e"
+        },
+        {
+          "filename": "selectolax-1.0.2-cp310-cp310-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "877f0b7c11084b1f5145fd1a2c3973a5dcf0a8aef93885b4d8bee52c7f854a96"
+        },
+        {
+          "filename": "selectolax-1.0.2-cp310-cp310-musllinux_1_2_aarch64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "92221242b7983ac87578e6e6dfb33084183ef538eeaf59b81dc9baf878f209ff"
+        },
+        {
+          "filename": "selectolax-1.0.2-cp310-cp310-musllinux_1_2_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "a714badbe74b813aa6a68d4fd45fa8d7fd51482476ede39d82093d49538bfe60"
+        },
+        {
+          "filename": "selectolax-1.0.2-cp310-cp310-win32.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "f4496552102a919c4377b14696cff4968fa3fafe58b2f6fdedc549648f260021"
+        },
+        {
+          "filename": "selectolax-1.0.2-cp310-cp310-win_amd64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "71d68d5c898163da1c21cfc668328ea82e221ce09fa31b60c8b4406fdad34a99"
+        },
+        {
+          "filename": "selectolax-1.0.2-cp310-cp310-win_arm64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "e9453ee86116c439b5a29a355ad18b82d51acf23d22458278bedc2eccd9c86e4"
+        },
+        {
+          "filename": "selectolax-1.0.2-cp311-cp311-macosx_10_9_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "e13e9a9c8e6bcea00b87f45974f91747535e6ad5e92d6b6d7a8ca376f0366eb4"
+        },
+        {
+          "filename": "selectolax-1.0.2-cp311-cp311-macosx_11_0_arm64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "2be0977451be9f5be1136e8ce2caae890fc9da27c25ecc7b8233019737c43874"
+        },
+        {
+          "filename": "selectolax-1.0.2-cp311-cp311-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "ee9a2e19bc744ac8358b8afcecf4981254550ad4dd7f1aeea70acd6c15422f91"
+        },
+        {
+          "filename": "selectolax-1.0.2-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "6b61a8f7af68cd0f3eff64b211ca3a0408c5407711f0b67b2fc16ff282e7bce2"
+        },
+        {
+          "filename": "selectolax-1.0.2-cp311-cp311-musllinux_1_2_aarch64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "6254912462466d7fb2884b53f0ccc6ef15f250fb99bbcec62ef7e9637480c225"
+        },
+        {
+          "filename": "selectolax-1.0.2-cp311-cp311-musllinux_1_2_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "6baf57b1ec157046b3e9a6125a9e4a28e97c07c15dfb3e7bb08cdc3d76947280"
+        },
+        {
+          "filename": "selectolax-1.0.2-cp311-cp311-win32.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "e31013daeee23842096ef774071252f3790aeda405ce78c6146d0afeefad3307"
+        },
+        {
+          "filename": "selectolax-1.0.2-cp311-cp311-win_amd64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "340fb53a0e87719b0b7f609adc4aecbad42ee9a213f945fc461e52e83c746d55"
+        },
+        {
+          "filename": "selectolax-1.0.2-cp311-cp311-win_arm64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "73644c9e3522620d6d8b6d914d4c6ce2df37ba1ce299e715046c723e9325182d"
+        },
+        {
+          "filename": "selectolax-1.0.2-cp312-cp312-macosx_10_13_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "c7dbcb6b4fd422171b612925d7a999ea213b2542170dfcd23978d0cf6e2e2c2b"
+        },
+        {
+          "filename": "selectolax-1.0.2-cp312-cp312-macosx_11_0_arm64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "df3850d34e4c486af752050883c8bbea2af250f88406893cf8b23fc2aee07668"
+        },
+        {
+          "filename": "selectolax-1.0.2-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "adf98fb286008354bcc698b759f9d115b787dbe5adb482771a29345d6e6144e8"
+        },
+        {
+          "filename": "selectolax-1.0.2-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "15925076edb6a6e29366eee68ce7e5dc4ecffa87b2a16a8cd147ba184d7d3bef"
+        },
+        {
+          "filename": "selectolax-1.0.2-cp312-cp312-musllinux_1_2_aarch64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "4dff3ea2a315174faa9a1431f4aa8a2f251ffdf011f8a20ccf2a3836a0cafc1e"
+        },
+        {
+          "filename": "selectolax-1.0.2-cp312-cp312-musllinux_1_2_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "3083605601a2191a75b6d391bf16695b8ed5087d1a7be6310d5b2a60aadf8688"
+        },
+        {
+          "filename": "selectolax-1.0.2-cp312-cp312-win32.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "cb9a6e5eea8b6d534b6424e843e3df44a5a48b96349c064a95d12242eb95c6d8"
+        },
+        {
+          "filename": "selectolax-1.0.2-cp312-cp312-win_amd64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "f6b6b5e6c2a7f044774352c1e0a0dcf3b2cc88516c58886590c91ce99ef8bfad"
+        },
+        {
+          "filename": "selectolax-1.0.2-cp312-cp312-win_arm64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "6893148ce0c2832f88d7e89de4882835be0be148a3eda6c96e266115c757ad19"
+        },
+        {
+          "filename": "selectolax-1.0.2-cp313-cp313-macosx_10_13_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "f88a373d5538d879491cad1c9fc7d403e1afbfc2cd2f903107322615c626f9c8"
+        },
+        {
+          "filename": "selectolax-1.0.2-cp313-cp313-macosx_11_0_arm64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "f53b9ed0820ea0fedd7254653e8d89458567654fdc59f70578af3993226f5683"
+        },
+        {
+          "filename": "selectolax-1.0.2-cp313-cp313-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "3cf00695df0f4ee1538cdcfb1fba35ccb645ea802269470123bf5bf0d2f9f2c8"
+        },
+        {
+          "filename": "selectolax-1.0.2-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "d05a745ce604884573df696d9338835ae601ca3263f1b0f35ee8ecbf43249c75"
+        },
+        {
+          "filename": "selectolax-1.0.2-cp313-cp313-musllinux_1_2_aarch64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "59a676ffc92fec61e34c37b70982c7652b384792e5408685d34e94a6e28588f6"
+        },
+        {
+          "filename": "selectolax-1.0.2-cp313-cp313-musllinux_1_2_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "e64e49df637eeae24456b035e4d8f5b80f1c30ebdd0d94b20ddb0d88bfc30c1f"
+        },
+        {
+          "filename": "selectolax-1.0.2-cp313-cp313-win32.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "e53f5075af5b5feb9ef5bc7d589f45cdfd7773ff4cf754e26a114d376aed25fc"
+        },
+        {
+          "filename": "selectolax-1.0.2-cp313-cp313-win_amd64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "9c723de882c343b1cf886d4185afade0ac0f2ee154f53b03d9e0be1d12fd97d3"
+        },
+        {
+          "filename": "selectolax-1.0.2-cp313-cp313-win_arm64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "6c9130520dff6754ca51e2bc686ce217ff49e2117bc8b9234d9c8218fbad3c75"
+        },
+        {
+          "filename": "selectolax-1.0.2-cp314-cp314-macosx_10_15_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "f27bf8ad6ec342a71fbc34886559a3abe95c268a78b471174e4a6e879cd583e9"
+        },
+        {
+          "filename": "selectolax-1.0.2-cp314-cp314-macosx_11_0_arm64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "9776b5c4a83b3d519f67f5653fe8a44a93f1be4b7089a7490d4c34b6897ccfd7"
+        },
+        {
+          "filename": "selectolax-1.0.2-cp314-cp314-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "337aad091f5c152477061c5597191233a3d059ac955048fef3d87ca3ebca2c79"
+        },
+        {
+          "filename": "selectolax-1.0.2-cp314-cp314-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "9de71c39319af3f51f2e58a8660914b1d5292c9612f82dafee5d69ef6a076703"
+        },
+        {
+          "filename": "selectolax-1.0.2-cp314-cp314-musllinux_1_2_aarch64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "6435ab586a10d4e1c2ae0a83eef20897daffc54a17267814b6601a749f1865dd"
+        },
+        {
+          "filename": "selectolax-1.0.2-cp314-cp314-musllinux_1_2_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "0a0f42ce48e467bea85e9c1b72787d3d5a710ee92abca2ec98bb2f69fe4bc9f1"
+        },
+        {
+          "filename": "selectolax-1.0.2-cp314-cp314-win32.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "9d96c61b2fbbf8bfe082f6a2107762fc2f68a021038a6beded2d49b8c8ebc9ef"
+        },
+        {
+          "filename": "selectolax-1.0.2-cp314-cp314-win_amd64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "98bff51f30126bc1640c596892e27dfeacfbeac470e9cf717894654404e953b6"
+        },
+        {
+          "filename": "selectolax-1.0.2-cp314-cp314-win_arm64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "69f63255cbbde65b0715bd352150cd3a2c237ba622542e6e8a47d9d1e687fcfd"
+        },
+        {
+          "filename": "selectolax-1.0.2-cp314-cp314t-macosx_10_15_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "0cc1e2b2006c8c5731636f2a83a924fcdd1b3405c1dc58eafb981631424ef362"
+        },
+        {
+          "filename": "selectolax-1.0.2-cp314-cp314t-macosx_11_0_arm64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "b935817dbb0c85de81d5e3c94d809fcb84ec1efdf98511a5503b75638c8dd2b0"
+        },
+        {
+          "filename": "selectolax-1.0.2-cp314-cp314t-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "cdb7fcba570ace9b6117071cddb2d8c5002797b8d07fc31193c2e39315db4014"
+        },
+        {
+          "filename": "selectolax-1.0.2-cp314-cp314t-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "468aef171eebbb9ca744c65fc9f56b6ad0d9f3c4b8cd5d8a5f18119118df284e"
+        },
+        {
+          "filename": "selectolax-1.0.2-cp314-cp314t-musllinux_1_2_aarch64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "dfe25fd5b08e4d2324acbdb0b7aa6f73baf3df84292d33e19bf722ef710cf623"
+        },
+        {
+          "filename": "selectolax-1.0.2-cp314-cp314t-musllinux_1_2_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "78cd522ab7fc5cc2a7b2c73bba4191624a4682bfb6a8c202d6ccc48f2c06cb1c"
+        },
+        {
+          "filename": "selectolax-1.0.2-cp314-cp314t-win32.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "fdfffd30a171630d598553ae3afe642b48ab39afbe19ac35c4b4c348211a0ef7"
+        },
+        {
+          "filename": "selectolax-1.0.2-cp314-cp314t-win_amd64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "06041d922864c7c2c4047b6a47b59501a9e051e8e3589152dd0172c9f449bc52"
+        },
+        {
+          "filename": "selectolax-1.0.2-cp314-cp314t-win_arm64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "5f679f6240c4aa19fda210cb102d14bd877489d78cc2c851d5ad636eca152bd0"
+        },
+        {
+          "filename": "selectolax-1.0.2-cp315-cp315-macosx_10_15_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "481813f124d090dfdea4e5863d7f48e7eb459f38b734e6e98eb3881a029a5900"
+        },
+        {
+          "filename": "selectolax-1.0.2-cp315-cp315-macosx_11_0_arm64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "5424c782ef1d22ee4fc0340f46ba1e93a1fdf426cac335c52b3b25b105f8fc24"
+        },
+        {
+          "filename": "selectolax-1.0.2-cp315-cp315-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "fb146a2d69c2216f76c4075bafad3abc1f2e95727ab074e24e8008fe2a0eab28"
+        },
+        {
+          "filename": "selectolax-1.0.2-cp315-cp315-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "f1353d0e276cd3b298002e1cca978d012fae899db7b096a14faf2a4413e7b0aa"
+        },
+        {
+          "filename": "selectolax-1.0.2-cp315-cp315-musllinux_1_2_aarch64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "d980d593a2e42af0c0c25aab49a070aa6536c1ac14e9c9b91dd5746e5f76683e"
+        },
+        {
+          "filename": "selectolax-1.0.2-cp315-cp315-musllinux_1_2_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "6857fb0de058b69bd2e2d06e9a09d7fcb7361eaed6b4a84e49611664b1a739c2"
+        },
+        {
+          "filename": "selectolax-1.0.2-cp315-cp315-win32.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "25e835f82c9ff0b3b7f3deab328caef1e627717fd97901db2baed0fc4335f58d"
+        },
+        {
+          "filename": "selectolax-1.0.2-cp315-cp315-win_amd64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "430f163f55800d51c541dee4cda877c140b9d73e3f8e84846169ee0b226c19a6"
+        },
+        {
+          "filename": "selectolax-1.0.2-cp315-cp315-win_arm64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "1aeb7114805f658a5c0b3e761a8c978eafe030efe9b31605679768c966fb3f2d"
+        },
+        {
+          "filename": "selectolax-1.0.2-cp315-cp315t-macosx_10_15_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "199dcbf961039a01d034075df69d9f538a672cb1252d372ebf31a9678eb00849"
+        },
+        {
+          "filename": "selectolax-1.0.2-cp315-cp315t-macosx_11_0_arm64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "79cf285beab85b1ada3d1afb980246197b2692f84b52292bb07d1cdc3521b638"
+        },
+        {
+          "filename": "selectolax-1.0.2-cp315-cp315t-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "c616c87aca8aab27d5fd669d1e0fa946c29aaf99bf31843c6b7eb318d9c3703a"
+        },
+        {
+          "filename": "selectolax-1.0.2-cp315-cp315t-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "666db317174469c66385f1d22360a09f4ba9363bb2a6418440ecf0ce4325825f"
+        },
+        {
+          "filename": "selectolax-1.0.2-cp315-cp315t-musllinux_1_2_aarch64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "76fe0dde3afa4f73453c2bf55badc18383285423b21b59e3720e14f88b4dff18"
+        },
+        {
+          "filename": "selectolax-1.0.2-cp315-cp315t-musllinux_1_2_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "b9dcd40958e2a3c0a7cf8b00323f389f78e77bb61ac558d7d20e554131075277"
+        },
+        {
+          "filename": "selectolax-1.0.2-cp315-cp315t-win32.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "fcd3a49df7f8761b6a3a82076fe2e4f0d53a5dac63ba2da895aab2b586c78243"
+        },
+        {
+          "filename": "selectolax-1.0.2-cp315-cp315t-win_amd64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "ad6b29a2f20c7d46b8306a995268f50c2a63eae40c3c7a05b6a3492d3968117d"
+        },
+        {
+          "filename": "selectolax-1.0.2-cp315-cp315t-win_arm64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "63dbbb0760a2a2b4f581afd186863ef47acecb410df7c937239c51ae853c3cb1"
+        },
+        {
+          "filename": "selectolax-1.0.2-cp39-cp39-macosx_10_9_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "a5a1a3572bc02fbb886f806fb29e64ca43586d90c746394897857babb4c3b952"
+        },
+        {
+          "filename": "selectolax-1.0.2-cp39-cp39-macosx_11_0_arm64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "ceb74c828eb5695ad2bf1894db0d3e0c1f4495782813fb111b2222e17401673d"
+        },
+        {
+          "filename": "selectolax-1.0.2-cp39-cp39-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "c55f980a8a9a0940ffd16d627d6e1a58230a6092790f46aeb26cfbbdaa190daf"
+        },
+        {
+          "filename": "selectolax-1.0.2-cp39-cp39-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "462e9074b3d649f63db139c68c10adc61d6c64dbbea10df90daf8effe2c63779"
+        },
+        {
+          "filename": "selectolax-1.0.2-cp39-cp39-musllinux_1_2_aarch64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "bc7d28b8794abfa95d01120744372ca180eb7e09367d91b156ba39423457cc75"
+        },
+        {
+          "filename": "selectolax-1.0.2-cp39-cp39-musllinux_1_2_x86_64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "3bb28299458b62e0afe5659f56e18efde33097875c709e0cb4cfc811568149fb"
+        },
+        {
+          "filename": "selectolax-1.0.2-cp39-cp39-win32.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "614095f114ed062fd0f18134217f2a8a4d39fac7afd56872e1cc04c2c22a841c"
+        },
+        {
+          "filename": "selectolax-1.0.2-cp39-cp39-win_amd64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "2996cc6281f16e3d6d10463b239e87f8cce71c9a5219e8d8d5791cfdb978e5d5"
+        },
+        {
+          "filename": "selectolax-1.0.2-cp39-cp39-win_arm64.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "91303ddc4db37dfe1ac48f2f38ab2480a8cf742f80cc2b704b0a87f4e9723139"
+        },
+        {
+          "filename": "selectolax-1.0.2.tar.gz",
+          "packagetype": "sdist",
+          "sha256": "f0508ad927aa426425d4aa7a2bb2f8b21c01412534465bd227e241d4d0a6a418"
+        }
+      ],
+      "latest_release_uploaded": "2026-10-22T15:45:16.466570Z",
+      "license": "MIT",
+      "project_urls": {
+        "Changelog": "https://github.com/rushter/selectolax/blob/master/CHANGES.md",
+        "Documentation": "https://selectolax.readthedocs.io/en/latest/lexbor.html",
+        "Homepage": "https://github.com/rushter/selectolax",
+        "Repository": "https://github.com/rushter/selectolax"
+      },
+      "pypi_name": "selectolax",
+      "release_count": 55,
+      "requires_dist": [
+        "Cython; extra == \"cython\""
+      ],
+      "requires_python": "<3.16,>=3.9",
+      "version": "1.0.2",
+      "yanked": false
+    },
+    {
+      "area": "RA5",
+      "candidate": "trafilatura",
+      "core_requires": [
+        "certifi",
+        "charset_normalizer>=3.5.2",
+        "courlan>=1.4.0",
+        "htmldate>=1.11.0",
+        "justext>=3.0.2",
+        "lxml>=6.1.3",
+        "urllib3<3,>=2.8.0"
+      ],
+      "discovery_query": "pypi search: web text extraction python",
+      "first_release_uploaded": "2019-07-17T11:13:14.660279Z",
+      "latest_files": [
+        {
+          "filename": "trafilatura-2.3.1-py3-none-any.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "f86bad2ee36f82884e14dee84c83aae0f0ac0127da5c65764e82f3846716b822"
+        },
+        {
+          "filename": "trafilatura-2.3.1.tar.gz",
+          "packagetype": "sdist",
+          "sha256": "2e5557aeab32d33b9da7ff0debbb677a676c5b648a927e50d91b8277011e1105"
+        }
+      ],
+      "latest_release_uploaded": "2026-10-06T19:30:26.202311Z",
+      "license": "Apache-2.0",
+      "project_urls": {
+        "Blog": "https://adrien.barbaresi.eu/blog/tag/trafilatura.html",
+        "Homepage": "https://trafilatura.readthedocs.io",
+        "Source": "https://github.com/adbar/trafilatura",
+        "Tracker": "https://github.com/adbar/trafilatura/issues"
+      },
+      "pypi_name": "trafilatura",
+      "release_count": 54,
+      "requires_dist": [
+        "backports.zstd>=1.7.0; python_version < \"3.14\" and extra == \"all\"",
+        "beautifulsoup4==4.15.0; extra == \"eval\"",
+        "boilerpy3==1.0.7; extra == \"eval\"",
+        "brotli>=1.2.0; extra == \"all\"",
+        "certifi",
+        "charset_normalizer>=3.5.2",
+        "courlan>=1.4.0",
+        "docutils==0.22.4; python_version >= \"3.12\" and extra == \"docs\"",
+        "faust-cchardet<3,>=2.2.1; extra == \"all\"",
+        "goose3==3.1.22; extra == \"eval\"",
+        "html-text==0.7.1; extra == \"eval\"",
+        "html2text==2025.4.15; extra == \"eval\"",
+        "htmldate>=1.11.0",
+        "htmldate[speed]>=1.11.0; extra == \"all\"",
+        "inscriptis==2.7.5; extra == \"eval\"",
+        "justext>=3.0.2",
+        "lxml>=6.1.3",
+        "magic-html==0.1.8; python_version >= \"3.12\" and extra == \"eval\"",
+        "mypy==2.4.0; extra == \"dev\"",
+        "myst-parser==5.1.0; python_version >= \"3.12\" and extra == \"docs\"",
+        "news-please==1.6.16; extra == \"eval\"",
+        "newspaper4k==0.9.6; extra == \"eval\"",
+        "nltk==3.10.3; extra == \"eval\"",
+        "pandas==3.0.6; python_version >= \"3.11\" and extra == \"eval\"",
+        "py3langid>=0.4.0; extra == \"all\"",
+        "pycurl>=7.48.0; extra == \"all\"",
+        "pydata-sphinx-theme==0.22.0; python_version >= \"3.12\" and extra == \"docs\"",
+        "pytest-cov==7.1.0; extra == \"dev\"",
+        "pytest==9.1.1; extra == \"dev\"",
+        "readability-lxml==0.9; extra == \"eval\"",
+        "resiliparse==1.0.9; extra == \"eval\"",
+        "ruff==0.16.10; extra == \"dev\"",
+        "sphinx-sitemap==2.9.0; python_version >= \"3.12\" and extra == \"docs\"",
+        "sphinx==9.1.0; python_version >= \"3.12\" and extra == \"docs\"",
+        "sphinxcontrib-programoutput==0.20; python_version >= \"3.12\" and extra == \"docs\"",
+        "sphinxext-opengraph==0.13.0; python_version >= \"3.12\" and extra == \"docs\"",
+        "tabulate==0.10.0; extra == \"eval\"",
+        "types-lxml==2026.2.16; extra == \"dev\"",
+        "types-pycurl==7.48.0.20260923; extra == \"dev\"",
+        "urllib3<3,>=2.8.0",
+        "urllib3[socks]>=2.8.0; extra == \"all\""
+      ],
+      "requires_python": ">=3.10",
+      "version": "2.3.1",
+      "yanked": false
+    },
+    {
+      "area": "RA6",
+      "candidate": "in-toto",
+      "core_requires": [
+        "attrs",
+        "iso8601",
+        "pathspec",
+        "python-dateutil",
+        "securesystemslib[crypto]~=1.0"
+      ],
+      "discovery_query": "pypi search: supply chain attestation provenance python",
+      "first_release_uploaded": "2017-11-09T19:45:48.957225Z",
+      "latest_files": [
+        {
+          "filename": "in_toto-3.1.0-py3-none-any.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "fe8c69a8dae32690d116bb8112e7d6da53bbad3b9a4057ff8d43f1a5a90ee2d4"
+        },
+        {
+          "filename": "in_toto-3.1.0.tar.gz",
+          "packagetype": "sdist",
+          "sha256": "56b02363e0eb74be3365faf98a60f6d2c3c6a06419be7fcb4dd59e0d1b86fb09"
+        }
+      ],
+      "latest_release_uploaded": "2026-04-25T20:39:36.202370Z",
+      "license": "Apache-2.0",
+      "project_urls": {
+        "Bug Reports": "https://github.com/in-toto/in-toto/issues",
+        "Homepage": "https://in-toto.io",
+        "Source": "https://github.com/in-toto/in-toto"
+      },
+      "pypi_name": "in-toto",
+      "release_count": 31,
+      "requires_dist": [
+        "attrs",
+        "iso8601",
+        "pathspec",
+        "python-dateutil",
+        "securesystemslib[crypto]~=1.0"
+      ],
+      "requires_python": ">=3.9",
+      "version": "3.1.0",
+      "yanked": false
+    },
+    {
+      "area": "RA6",
+      "candidate": "prov",
+      "core_requires": [],
+      "discovery_query": "pypi search: W3C PROV provenance python",
+      "first_release_uploaded": "2014-07-15T08:12:40.590932Z",
+      "latest_files": [
+        {
+          "filename": "prov-3.3.0-py3-none-any.whl",
+          "packagetype": "bdist_wheel",
+          "sha256": "7c4d119b6c88173a3673242ce7cf8e1898823ee2fdc40752777eed6ecbdf4d41"
+        },
+        {
+          "filename": "prov-3.3.0.tar.gz",
+          "packagetype": "sdist",
+          "sha256": "9a675b3b85f98c55c2ab8130e910fa81cf4a06942603d9f2a93a259f348d8d47"
+        }
+      ],
+      "latest_release_uploaded": "2026-11-08T22:33:38.395575Z",
+      "license": "MIT",
+      "project_urls": {
+        "Changelog": "https://prov.readthedocs.io/en/latest/history.html",
+        "Discussions": "https://github.com/trungdong/prov/discussions",
+        "Documentation": "https://prov.readthedocs.io",
+        "Homepage": "https://github.com/trungdong/prov",
+        "Issues": "https://github.com/trungdong/prov/issues",
+        "Repository": "https://github.com/trungdong/prov"
+      },
+      "pypi_name": "prov",
+      "release_count": 33,
+      "requires_dist": [
+        "lxml>=3.3.5; extra == \"xml\"",
+        "matplotlib>=3.6; extra == \"plot\"",
+        "networkx>=2.0; extra == \"dot\"",
+        "networkx>=2.0; extra == \"graph\"",
+        "networkx>=2.0; extra == \"plot\"",
+        "pydot>=1.2.0; extra == \"dot\"",
+        "pydot>=1.2.0; extra == \"plot\"",
+        "pygments>=2.13; extra == \"pygments\"",
+        "rdflib<8,>=7.0.0; extra == \"rdf\""
+      ],
+      "requires_python": ">=3.11",
+      "version": "3.3.0",
+      "yanked": false
+    }
+  ],
+  "failures": [],
+  "scan_time_utc": "2026-11-17T17:35:53Z",
+  "schema": "bp-oem-s0-scan-evidence-v1",
+  "source": "https://pypi.org/pypi/<name>/json"
+}

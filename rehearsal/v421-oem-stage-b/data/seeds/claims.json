@@ -1,0 +1,3180 @@
+{
+  "claims": [
+    {
+      "assertion": {
+        "as_of": null,
+        "ends": {
+          "adapter": {
+            "maker_id": "bugaboo",
+            "mpn": "400003001"
+          },
+          "chassis": {
+            "maker_id": "bugaboo",
+            "name": "Dragonfly Plus"
+          },
+          "seat": {
+            "maker_id": "maxi-cosi",
+            "name": "Pebble 360 Pro 2"
+          }
+        },
+        "relation_type": "adapter_between",
+        "type": "not_tested_at_time"
+      },
+      "claim_id": "clm:014746c9a9a4f1f2",
+      "doc_id": "doc:8b27a7246e3541d0",
+      "doc_sha256": null,
+      "extracted_by": "llm:pr167-handoff-unattributed",
+      "history": [
+        {
+          "by": "parser:migrate_pr167@stage-b-1",
+          "event": "created",
+          "note": "",
+          "seq": 0,
+          "to": "PROPOSED",
+          "utc": "2026-11-17T00:00:00Z"
+        }
+      ],
+      "locator": {
+        "kind": "record_ref",
+        "ref": "pr167:fixtures/HOLDOUT_RESULTS.csv#N01_PEBBLE_PRO2_DRAGONFLY.oem_compatible_models_proof/Dragonfly Plus"
+      },
+      "quote": null,
+      "review": null,
+      "status": "PROPOSED",
+      "supersedes": null,
+      "synthetic": false
+    },
+    {
+      "assertion": {
+        "conditions": [
+          {
+            "attr": "child_height_cm",
+            "op": "gte",
+            "value": 61
+          },
+          {
+            "attr": "child_height_cm",
+            "op": "lte",
+            "value": 87
+          },
+          {
+            "attr": "has_other_insert",
+            "op": "eq",
+            "value": false
+          }
+        ],
+        "conditions_review_state": "reviewed_constraints",
+        "ends": {
+          "accessory": {
+            "maker_id": "britax-romer",
+            "mpn": "ACCSFCC207"
+          },
+          "model": {
+            "maker_id": "britax-romer",
+            "name": "SWINGFIX M PLUS"
+          }
+        },
+        "relation_type": "accessory_for_model",
+        "type": "compatible"
+      },
+      "claim_id": "clm:063a57f2c4bfa10a",
+      "doc_id": "doc:bac1a286d1860ffb",
+      "doc_sha256": null,
+      "extracted_by": "llm:pr167-handoff-unattributed",
+      "history": [
+        {
+          "by": "parser:migrate_pr167@stage-b-1",
+          "event": "created",
+          "note": "",
+          "seq": 0,
+          "to": "PROPOSED",
+          "utc": "2026-11-17T00:00:00Z"
+        }
+      ],
+      "locator": {
+        "kind": "record_ref",
+        "ref": "pr167:oem_evidence/britax-relax-insert-ACCSFCC207#confirmed_models/SWINGFIX M PLUS"
+      },
+      "quote": null,
+      "review": null,
+      "status": "PROPOSED",
+      "supersedes": null,
+      "synthetic": false
+    },
+    {
+      "assertion": {
+        "ends": {
+          "accessory": {
+            "maker_id": "britax-romer",
+            "mpn": "2000030111"
+          },
+          "model": {
+            "maker_id": "britax-romer",
+            "name": "KIDFIX PRO"
+          }
+        },
+        "list_complete": false,
+        "relation_type": "accessory_for_model",
+        "type": "absent_from_list"
+      },
+      "claim_id": "clm:0964db5731167e0f",
+      "doc_id": "doc:c2ef54b501b55631",
+      "doc_sha256": null,
+      "extracted_by": "llm:pr167-handoff-unattributed",
+      "history": [
+        {
+          "by": "parser:migrate_pr167@stage-b-1",
+          "event": "created",
+          "note": "",
+          "seq": 0,
+          "to": "PROPOSED",
+          "utc": "2026-11-17T00:00:00Z"
+        }
+      ],
+      "locator": {
+        "kind": "record_ref",
+        "ref": "pr167:oem_evidence/britax-comfort-insert-2000030111#explicit_absent_models/KIDFIX PRO"
+      },
+      "quote": null,
+      "review": null,
+      "status": "PROPOSED",
+      "supersedes": null,
+      "synthetic": false
+    },
+    {
+      "assertion": {
+        "conditions": [
+          {
+            "not": {
+              "attr": "seat_kind",
+              "op": "eq",
+              "value": "infant_carrier"
+            }
+          },
+          {
+            "any_of": [
+              {
+                "all_of": [
+                  {
+                    "attr": "restraint_standard",
+                    "op": "eq",
+                    "value": "ECE R44"
+                  },
+                  {
+                    "attr": "harness_type",
+                    "op": "eq",
+                    "value": "integrated"
+                  },
+                  {
+                    "attr": "child_weight_kg",
+                    "op": "gte",
+                    "value": 9
+                  }
+                ]
+              },
+              {
+                "all_of": [
+                  {
+                    "attr": "restraint_standard",
+                    "op": "eq",
+                    "value": "ECE R129"
+                  },
+                  {
+                    "attr": "harness_type",
+                    "op": "eq",
+                    "value": "integrated"
+                  },
+                  {
+                    "any_of": [
+                      {
+                        "all_of": [
+                          {
+                            "attr": "facing",
+                            "op": "eq",
+                            "value": "rearward"
+                          },
+                          {
+                            "attr": "child_height_cm",
+                            "op": "gte",
+                            "value": 60
+                          }
+                        ]
+                      },
+                      {
+                        "all_of": [
+                          {
+                            "attr": "facing",
+                            "op": "eq",
+                            "value": "forward"
+                          },
+                          {
+                            "attr": "child_height_cm",
+                            "op": "gte",
+                            "value": 76
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "conditions_review_state": "reviewed_constraints",
+        "ends": {
+          "accessory": {
+            "maker_id": "britax-romer",
+            "mpn": "2000030111"
+          },
+          "model": {
+            "maker_id": "britax-romer",
+            "name": "DUALFIX 5Z"
+          }
+        },
+        "relation_type": "accessory_for_model",
+        "type": "compatible"
+      },
+      "claim_id": "clm:102d3d27d0fd88fb",
+      "doc_id": "doc:c2ef54b501b55631",
+      "doc_sha256": null,
+      "extracted_by": "llm:pr167-handoff-unattributed",
+      "history": [
+        {
+          "by": "parser:migrate_pr167@stage-b-1",
+          "event": "created",
+          "note": "",
+          "seq": 0,
+          "to": "PROPOSED",
+          "utc": "2026-11-17T00:00:00Z"
+        }
+      ],
+      "locator": {
+        "kind": "record_ref",
+        "ref": "pr167:oem_evidence/britax-comfort-insert-2000030111#confirmed_models/DUALFIX 5Z"
+      },
+      "quote": null,
+      "review": null,
+      "status": "PROPOSED",
+      "supersedes": null,
+      "synthetic": false
+    },
+    {
+      "assertion": {
+        "article": {
+          "maker_id": "maxi-cosi",
+          "mpn": "1166057110",
+          "role": "mechanical_adapter",
+          "sku_alias": null
+        },
+        "type": "article_identity"
+      },
+      "claim_id": "clm:10cea0f6bc1b71bc",
+      "doc_id": "doc:381465952729913b",
+      "doc_sha256": null,
+      "extracted_by": "llm:pr167-handoff-unattributed",
+      "history": [
+        {
+          "by": "parser:migrate_pr167@stage-b-1",
+          "event": "created",
+          "note": "",
+          "seq": 0,
+          "to": "PROPOSED",
+          "utc": "2026-11-17T00:00:00Z"
+        }
+      ],
+      "locator": {
+        "kind": "record_ref",
+        "ref": "pr167:oem_evidence/maxi-cosi-carrier-adapter-1166057110#article"
+      },
+      "quote": null,
+      "review": null,
+      "status": "PROPOSED",
+      "supersedes": null,
+      "synthetic": false
+    },
+    {
+      "assertion": {
+        "conditions": [
+          {
+            "attr": "carrier_component",
+            "op": "eq",
+            "value": "soft_carrier"
+          }
+        ],
+        "conditions_review_state": "reviewed_constraints",
+        "ends": {
+          "adapter": {
+            "maker_id": "maxi-cosi",
+            "mpn": "1166057110"
+          },
+          "chassis": {
+            "maker_id": "maxi-cosi",
+            "name": "Fame Cabin"
+          },
+          "seat": {
+            "maker_id": "maxi-cosi",
+            "name": "Coral Slide Pro"
+          }
+        },
+        "relation_type": "adapter_between",
+        "type": "compatible"
+      },
+      "claim_id": "clm:156beec5c65ff754",
+      "doc_id": "doc:381465952729913b",
+      "doc_sha256": null,
+      "extracted_by": "llm:pr167-handoff-unattributed",
+      "history": [
+        {
+          "by": "parser:migrate_pr167@stage-b-1",
+          "event": "created",
+          "note": "",
+          "seq": 0,
+          "to": "PROPOSED",
+          "utc": "2026-11-17T00:00:00Z"
+        }
+      ],
+      "locator": {
+        "kind": "record_ref",
+        "ref": "pr167:oem_evidence/maxi-cosi-carrier-adapter-1166057110#interface/Coral Slide Pro/Fame Cabin"
+      },
+      "quote": null,
+      "review": null,
+      "status": "PROPOSED",
+      "supersedes": null,
+      "synthetic": false
+    },
+    {
+      "assertion": {
+        "article": {
+          "maker_id": "bugaboo",
+          "mpn": "400003001",
+          "role": "mechanical_adapter",
+          "sku_alias": null
+        },
+        "type": "article_identity"
+      },
+      "claim_id": "clm:164f71eb56b3d7c0",
+      "doc_id": "doc:8b27a7246e3541d0",
+      "doc_sha256": null,
+      "extracted_by": "llm:pr167-handoff-unattributed",
+      "history": [
+        {
+          "by": "parser:migrate_pr167@stage-b-1",
+          "event": "created",
+          "note": "",
+          "seq": 0,
+          "to": "PROPOSED",
+          "utc": "2026-11-17T00:00:00Z"
+        }
+      ],
+      "locator": {
+        "kind": "record_ref",
+        "ref": "pr167:oem_evidence/bugaboo-dragonfly-adapter-400003001#article"
+      },
+      "quote": null,
+      "review": null,
+      "status": "PROPOSED",
+      "supersedes": null,
+      "synthetic": false
+    },
+    {
+      "assertion": {
+        "conditions": [
+          {
+            "not": {
+              "attr": "seat_kind",
+              "op": "eq",
+              "value": "infant_carrier"
+            }
+          },
+          {
+            "any_of": [
+              {
+                "all_of": [
+                  {
+                    "attr": "restraint_standard",
+                    "op": "eq",
+                    "value": "ECE R44"
+                  },
+                  {
+                    "attr": "harness_type",
+                    "op": "eq",
+                    "value": "integrated"
+                  },
+                  {
+                    "attr": "child_weight_kg",
+                    "op": "gte",
+                    "value": 9
+                  }
+                ]
+              },
+              {
+                "all_of": [
+                  {
+                    "attr": "restraint_standard",
+                    "op": "eq",
+                    "value": "ECE R129"
+                  },
+                  {
+                    "attr": "harness_type",
+                    "op": "eq",
+                    "value": "integrated"
+                  },
+                  {
+                    "any_of": [
+                      {
+                        "all_of": [
+                          {
+                            "attr": "facing",
+                            "op": "eq",
+                            "value": "rearward"
+                          },
+                          {
+                            "attr": "child_height_cm",
+                            "op": "gte",
+                            "value": 60
+                          }
+                        ]
+                      },
+                      {
+                        "all_of": [
+                          {
+                            "attr": "facing",
+                            "op": "eq",
+                            "value": "forward"
+                          },
+                          {
+                            "attr": "child_height_cm",
+                            "op": "gte",
+                            "value": 76
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "conditions_review_state": "reviewed_constraints",
+        "ends": {
+          "accessory": {
+            "maker_id": "britax-romer",
+            "mpn": "2000030111"
+          },
+          "model": {
+            "maker_id": "britax-romer",
+            "name": "MAX-SAFE PRO"
+          }
+        },
+        "relation_type": "accessory_for_model",
+        "type": "compatible"
+      },
+      "claim_id": "clm:1a21958934dafcba",
+      "doc_id": "doc:c2ef54b501b55631",
+      "doc_sha256": null,
+      "extracted_by": "llm:pr167-handoff-unattributed",
+      "history": [
+        {
+          "by": "parser:migrate_pr167@stage-b-1",
+          "event": "created",
+          "note": "",
+          "seq": 0,
+          "to": "PROPOSED",
+          "utc": "2026-11-17T00:00:00Z"
+        }
+      ],
+      "locator": {
+        "kind": "record_ref",
+        "ref": "pr167:oem_evidence/britax-comfort-insert-2000030111#confirmed_models/MAX-SAFE PRO"
+      },
+      "quote": null,
+      "review": null,
+      "status": "PROPOSED",
+      "supersedes": null,
+      "synthetic": false
+    },
+    {
+      "assertion": {
+        "conditions": [
+          {
+            "attr": "usage_context",
+            "op": "in",
+            "value": [
+              "outside_vehicle",
+              "on_stroller"
+            ]
+          }
+        ],
+        "conditions_review_state": "reviewed_constraints",
+        "ends": {
+          "accessory": {
+            "maker_id": "besafe",
+            "mpn": "11006001"
+          },
+          "model": {
+            "maker_id": "besafe",
+            "name": "iZi Go Modular X1"
+          }
+        },
+        "relation_type": "accessory_for_model",
+        "type": "compatible"
+      },
+      "claim_id": "clm:1a7d94b18807ab88",
+      "doc_id": "doc:3d6c5125466e6847",
+      "doc_sha256": null,
+      "extracted_by": "llm:pr167-handoff-unattributed",
+      "history": [
+        {
+          "by": "parser:migrate_pr167@stage-b-1",
+          "event": "created",
+          "note": "",
+          "seq": 0,
+          "to": "PROPOSED",
+          "utc": "2026-11-17T00:00:00Z"
+        }
+      ],
+      "locator": {
+        "kind": "record_ref",
+        "ref": "pr167:oem_evidence/besafe-rain-shield-11006001#confirmed_models/iZi Go Modular X1"
+      },
+      "quote": null,
+      "review": null,
+      "status": "PROPOSED",
+      "supersedes": null,
+      "synthetic": false
+    },
+    {
+      "assertion": {
+        "conditions": [],
+        "conditions_review_state": "unknown",
+        "ends": {
+          "adapter": {
+            "maker_id": "bugaboo",
+            "mpn": "400003001"
+          },
+          "chassis": {
+            "maker_id": "bugaboo",
+            "name": "Dragonfly Plus"
+          },
+          "seat": {
+            "maker_id": "maxi-cosi",
+            "name": "Pebble 360 Pro"
+          }
+        },
+        "relation_type": "adapter_between",
+        "type": "compatible"
+      },
+      "claim_id": "clm:2206525d7c7823db",
+      "doc_id": "doc:8b27a7246e3541d0",
+      "doc_sha256": null,
+      "extracted_by": "llm:pr167-handoff-unattributed",
+      "history": [
+        {
+          "by": "parser:migrate_pr167@stage-b-1",
+          "event": "created",
+          "note": "",
+          "seq": 0,
+          "to": "PROPOSED",
+          "utc": "2026-11-17T00:00:00Z"
+        }
+      ],
+      "locator": {
+        "kind": "record_ref",
+        "ref": "pr167:oem_evidence/bugaboo-dragonfly-adapter-400003001#lists/Dragonfly Plus/Pebble 360 Pro"
+      },
+      "quote": null,
+      "review": null,
+      "status": "PROPOSED",
+      "supersedes": null,
+      "synthetic": false
+    },
+    {
+      "assertion": {
+        "conditions": [],
+        "conditions_review_state": "unknown",
+        "ends": {
+          "adapter": {
+            "maker_id": "bugaboo",
+            "mpn": "400019001"
+          },
+          "chassis": {
+            "maker_id": "bugaboo",
+            "name": "Fox 5"
+          },
+          "seat": {
+            "maker_id": "besafe",
+            "name": "iZi Go Modular X1"
+          }
+        },
+        "relation_type": "adapter_between",
+        "type": "compatible"
+      },
+      "claim_id": "clm:2611e27496164090",
+      "doc_id": "doc:b00a78102f589f76",
+      "doc_sha256": null,
+      "extracted_by": "llm:pr167-handoff-unattributed",
+      "history": [
+        {
+          "by": "parser:migrate_pr167@stage-b-1",
+          "event": "created",
+          "note": "",
+          "seq": 0,
+          "to": "PROPOSED",
+          "utc": "2026-11-17T00:00:00Z"
+        }
+      ],
+      "locator": {
+        "kind": "record_ref",
+        "ref": "pr167:oem_evidence/bugaboo-fox-adapter-400019001#lists/Fox 5/iZi Go Modular X1"
+      },
+      "quote": null,
+      "review": null,
+      "status": "PROPOSED",
+      "supersedes": null,
+      "synthetic": false
+    },
+    {
+      "assertion": {
+        "conditions": [
+          {
+            "attr": "carrier_component",
+            "op": "eq",
+            "value": "soft_carrier"
+          }
+        ],
+        "conditions_review_state": "reviewed_constraints",
+        "ends": {
+          "adapter": {
+            "maker_id": "maxi-cosi",
+            "mpn": "1166057110"
+          },
+          "chassis": {
+            "maker_id": "maxi-cosi",
+            "name": "Fame"
+          },
+          "extension": {
+            "maker_id": null,
+            "mpn": null,
+            "name": null,
+            "required": true
+          },
+          "seat": {
+            "maker_id": "maxi-cosi",
+            "name": "Coral Slide Pro"
+          }
+        },
+        "relation_type": "adapter_between",
+        "type": "compatible"
+      },
+      "claim_id": "clm:34ba1e41d9f243cd",
+      "doc_id": "doc:381465952729913b",
+      "doc_sha256": null,
+      "extracted_by": "llm:pr167-handoff-unattributed",
+      "history": [
+        {
+          "by": "parser:migrate_pr167@stage-b-1",
+          "event": "created",
+          "note": "",
+          "seq": 0,
+          "to": "PROPOSED",
+          "utc": "2026-11-17T00:00:00Z"
+        }
+      ],
+      "locator": {
+        "kind": "record_ref",
+        "ref": "pr167:oem_evidence/maxi-cosi-carrier-adapter-1166057110#interface/Coral Slide Pro/Fame"
+      },
+      "quote": null,
+      "review": null,
+      "status": "PROPOSED",
+      "supersedes": null,
+      "synthetic": false
+    },
+    {
+      "assertion": {
+        "conditions": [
+          {
+            "not": {
+              "attr": "seat_kind",
+              "op": "eq",
+              "value": "infant_carrier"
+            }
+          },
+          {
+            "any_of": [
+              {
+                "all_of": [
+                  {
+                    "attr": "restraint_standard",
+                    "op": "eq",
+                    "value": "ECE R44"
+                  },
+                  {
+                    "attr": "harness_type",
+                    "op": "eq",
+                    "value": "integrated"
+                  },
+                  {
+                    "attr": "child_weight_kg",
+                    "op": "gte",
+                    "value": 9
+                  }
+                ]
+              },
+              {
+                "all_of": [
+                  {
+                    "attr": "restraint_standard",
+                    "op": "eq",
+                    "value": "ECE R129"
+                  },
+                  {
+                    "attr": "harness_type",
+                    "op": "eq",
+                    "value": "integrated"
+                  },
+                  {
+                    "any_of": [
+                      {
+                        "all_of": [
+                          {
+                            "attr": "facing",
+                            "op": "eq",
+                            "value": "rearward"
+                          },
+                          {
+                            "attr": "child_height_cm",
+                            "op": "gte",
+                            "value": 60
+                          }
+                        ]
+                      },
+                      {
+                        "all_of": [
+                          {
+                            "attr": "facing",
+                            "op": "eq",
+                            "value": "forward"
+                          },
+                          {
+                            "attr": "child_height_cm",
+                            "op": "gte",
+                            "value": 76
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "conditions_review_state": "reviewed_constraints",
+        "ends": {
+          "accessory": {
+            "maker_id": "britax-romer",
+            "mpn": "2000030111"
+          },
+          "model": {
+            "maker_id": "britax-romer",
+            "name": "SAFE-WAY M"
+          }
+        },
+        "relation_type": "accessory_for_model",
+        "type": "compatible"
+      },
+      "claim_id": "clm:352e86e384a03755",
+      "doc_id": "doc:c2ef54b501b55631",
+      "doc_sha256": null,
+      "extracted_by": "llm:pr167-handoff-unattributed",
+      "history": [
+        {
+          "by": "parser:migrate_pr167@stage-b-1",
+          "event": "created",
+          "note": "",
+          "seq": 0,
+          "to": "PROPOSED",
+          "utc": "2026-11-17T00:00:00Z"
+        }
+      ],
+      "locator": {
+        "kind": "record_ref",
+        "ref": "pr167:oem_evidence/britax-comfort-insert-2000030111#confirmed_models/SAFE-WAY M"
+      },
+      "quote": null,
+      "review": null,
+      "status": "PROPOSED",
+      "supersedes": null,
+      "synthetic": false
+    },
+    {
+      "assertion": {
+        "ends": {
+          "accessory": {
+            "maker_id": "maxi-cosi",
+            "mpn": "74203550"
+          },
+          "model": {
+            "maker_id": "maxi-cosi",
+            "name": "RodiFix Air Protect"
+          }
+        },
+        "list_complete": false,
+        "relation_type": "accessory_for_model",
+        "type": "absent_from_list"
+      },
+      "claim_id": "clm:3765db0a7f5edeef",
+      "doc_id": "doc:f554312a10c64b6e",
+      "doc_sha256": null,
+      "extracted_by": "llm:pr167-handoff-unattributed",
+      "history": [
+        {
+          "by": "parser:migrate_pr167@stage-b-1",
+          "event": "created",
+          "note": "",
+          "seq": 0,
+          "to": "PROPOSED",
+          "utc": "2026-11-17T00:00:00Z"
+        }
+      ],
+      "locator": {
+        "kind": "record_ref",
+        "ref": "pr167:fixtures/NEGATIVE_AND_CONDITIONAL_CONTROLS.csv#Maxi Cosi Pocket"
+      },
+      "quote": null,
+      "review": null,
+      "status": "PROPOSED",
+      "supersedes": null,
+      "synthetic": false
+    },
+    {
+      "assertion": {
+        "ends": {
+          "accessory": {
+            "maker_id": "besafe",
+            "mpn": "11006001"
+          },
+          "model": {
+            "maker_id": "besafe",
+            "name": "iZi Go Modular X2"
+          }
+        },
+        "list_complete": true,
+        "relation_type": "accessory_for_model",
+        "type": "absent_from_list"
+      },
+      "claim_id": "clm:389fbfba4c8bb7e9",
+      "doc_id": "doc:3d6c5125466e6847",
+      "doc_sha256": null,
+      "extracted_by": "llm:pr167-handoff-unattributed",
+      "history": [
+        {
+          "by": "parser:migrate_pr167@stage-b-1",
+          "event": "created",
+          "note": "",
+          "seq": 0,
+          "to": "PROPOSED",
+          "utc": "2026-11-17T00:00:00Z"
+        }
+      ],
+      "locator": {
+        "kind": "record_ref",
+        "ref": "pr167:oem_evidence/besafe-rain-shield-11006001#explicit_absent_models/iZi Go Modular X2"
+      },
+      "quote": null,
+      "review": null,
+      "status": "PROPOSED",
+      "supersedes": null,
+      "synthetic": false
+    },
+    {
+      "assertion": {
+        "article": {
+          "maker_id": "britax-romer",
+          "mpn": "2000030111",
+          "role": "comfort_insert",
+          "sku_alias": null
+        },
+        "type": "article_identity"
+      },
+      "claim_id": "clm:3b321c43ee8ff318",
+      "doc_id": "doc:c2ef54b501b55631",
+      "doc_sha256": null,
+      "extracted_by": "llm:pr167-handoff-unattributed",
+      "history": [
+        {
+          "by": "parser:migrate_pr167@stage-b-1",
+          "event": "created",
+          "note": "",
+          "seq": 0,
+          "to": "PROPOSED",
+          "utc": "2026-11-17T00:00:00Z"
+        }
+      ],
+      "locator": {
+        "kind": "record_ref",
+        "ref": "pr167:oem_evidence/britax-comfort-insert-2000030111#article"
+      },
+      "quote": null,
+      "review": null,
+      "status": "PROPOSED",
+      "supersedes": null,
+      "synthetic": false
+    },
+    {
+      "assertion": {
+        "conditions": [
+          {
+            "not": {
+              "attr": "seat_kind",
+              "op": "eq",
+              "value": "infant_carrier"
+            }
+          },
+          {
+            "any_of": [
+              {
+                "all_of": [
+                  {
+                    "attr": "restraint_standard",
+                    "op": "eq",
+                    "value": "ECE R44"
+                  },
+                  {
+                    "attr": "harness_type",
+                    "op": "eq",
+                    "value": "integrated"
+                  },
+                  {
+                    "attr": "child_weight_kg",
+                    "op": "gte",
+                    "value": 9
+                  }
+                ]
+              },
+              {
+                "all_of": [
+                  {
+                    "attr": "restraint_standard",
+                    "op": "eq",
+                    "value": "ECE R129"
+                  },
+                  {
+                    "attr": "harness_type",
+                    "op": "eq",
+                    "value": "integrated"
+                  },
+                  {
+                    "any_of": [
+                      {
+                        "all_of": [
+                          {
+                            "attr": "facing",
+                            "op": "eq",
+                            "value": "rearward"
+                          },
+                          {
+                            "attr": "child_height_cm",
+                            "op": "gte",
+                            "value": 60
+                          }
+                        ]
+                      },
+                      {
+                        "all_of": [
+                          {
+                            "attr": "facing",
+                            "op": "eq",
+                            "value": "forward"
+                          },
+                          {
+                            "attr": "child_height_cm",
+                            "op": "gte",
+                            "value": 76
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "conditions_review_state": "reviewed_constraints",
+        "ends": {
+          "accessory": {
+            "maker_id": "britax-romer",
+            "mpn": "2000030111"
+          },
+          "model": {
+            "maker_id": "britax-romer",
+            "name": "DUALFIX M PLUS"
+          }
+        },
+        "relation_type": "accessory_for_model",
+        "type": "compatible"
+      },
+      "claim_id": "clm:3ef7fae5f8e22014",
+      "doc_id": "doc:c2ef54b501b55631",
+      "doc_sha256": null,
+      "extracted_by": "llm:pr167-handoff-unattributed",
+      "history": [
+        {
+          "by": "parser:migrate_pr167@stage-b-1",
+          "event": "created",
+          "note": "",
+          "seq": 0,
+          "to": "PROPOSED",
+          "utc": "2026-11-17T00:00:00Z"
+        }
+      ],
+      "locator": {
+        "kind": "record_ref",
+        "ref": "pr167:oem_evidence/britax-comfort-insert-2000030111#confirmed_models/DUALFIX M PLUS"
+      },
+      "quote": null,
+      "review": null,
+      "status": "PROPOSED",
+      "supersedes": null,
+      "synthetic": false
+    },
+    {
+      "assertion": {
+        "conditions": [
+          {
+            "not": {
+              "attr": "seat_kind",
+              "op": "eq",
+              "value": "infant_carrier"
+            }
+          },
+          {
+            "any_of": [
+              {
+                "all_of": [
+                  {
+                    "attr": "restraint_standard",
+                    "op": "eq",
+                    "value": "ECE R44"
+                  },
+                  {
+                    "attr": "harness_type",
+                    "op": "eq",
+                    "value": "integrated"
+                  },
+                  {
+                    "attr": "child_weight_kg",
+                    "op": "gte",
+                    "value": 9
+                  }
+                ]
+              },
+              {
+                "all_of": [
+                  {
+                    "attr": "restraint_standard",
+                    "op": "eq",
+                    "value": "ECE R129"
+                  },
+                  {
+                    "attr": "harness_type",
+                    "op": "eq",
+                    "value": "integrated"
+                  },
+                  {
+                    "any_of": [
+                      {
+                        "all_of": [
+                          {
+                            "attr": "facing",
+                            "op": "eq",
+                            "value": "rearward"
+                          },
+                          {
+                            "attr": "child_height_cm",
+                            "op": "gte",
+                            "value": 60
+                          }
+                        ]
+                      },
+                      {
+                        "all_of": [
+                          {
+                            "attr": "facing",
+                            "op": "eq",
+                            "value": "forward"
+                          },
+                          {
+                            "attr": "child_height_cm",
+                            "op": "gte",
+                            "value": 76
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "conditions_review_state": "reviewed_constraints",
+        "ends": {
+          "accessory": {
+            "maker_id": "britax-romer",
+            "mpn": "2000030111"
+          },
+          "model": {
+            "maker_id": "britax-romer",
+            "name": "DUALFIX PLUS"
+          }
+        },
+        "relation_type": "accessory_for_model",
+        "type": "compatible"
+      },
+      "claim_id": "clm:478ee31e95da57aa",
+      "doc_id": "doc:c2ef54b501b55631",
+      "doc_sha256": null,
+      "extracted_by": "llm:pr167-handoff-unattributed",
+      "history": [
+        {
+          "by": "parser:migrate_pr167@stage-b-1",
+          "event": "created",
+          "note": "",
+          "seq": 0,
+          "to": "PROPOSED",
+          "utc": "2026-11-17T00:00:00Z"
+        }
+      ],
+      "locator": {
+        "kind": "record_ref",
+        "ref": "pr167:oem_evidence/britax-comfort-insert-2000030111#confirmed_models/DUALFIX PLUS"
+      },
+      "quote": null,
+      "review": null,
+      "status": "PROPOSED",
+      "supersedes": null,
+      "synthetic": false
+    },
+    {
+      "assertion": {
+        "conditions": [
+          {
+            "attr": "carrier_component",
+            "op": "eq",
+            "value": "soft_carrier"
+          }
+        ],
+        "conditions_review_state": "reviewed_constraints",
+        "ends": {
+          "adapter": {
+            "maker_id": "bugaboo",
+            "mpn": "400019001"
+          },
+          "chassis": {
+            "maker_id": "bugaboo",
+            "name": "Fox 5 Renew"
+          },
+          "seat": {
+            "maker_id": "maxi-cosi",
+            "name": "Coral Slide Pro"
+          }
+        },
+        "relation_type": "adapter_between",
+        "type": "compatible"
+      },
+      "claim_id": "clm:4819d97ce02b08a4",
+      "doc_id": "doc:b00a78102f589f76",
+      "doc_sha256": null,
+      "extracted_by": "llm:pr167-handoff-unattributed",
+      "history": [
+        {
+          "by": "parser:migrate_pr167@stage-b-1",
+          "event": "created",
+          "note": "",
+          "seq": 0,
+          "to": "PROPOSED",
+          "utc": "2026-11-17T00:00:00Z"
+        }
+      ],
+      "locator": {
+        "kind": "record_ref",
+        "ref": "pr167:oem_evidence/bugaboo-fox-adapter-400019001#lists/Fox 5 Renew/Coral Slide Pro"
+      },
+      "quote": null,
+      "review": null,
+      "status": "PROPOSED",
+      "supersedes": null,
+      "synthetic": false
+    },
+    {
+      "assertion": {
+        "conditions": [
+          {
+            "attr": "child_height_cm",
+            "op": "gte",
+            "value": 61
+          },
+          {
+            "attr": "child_height_cm",
+            "op": "lte",
+            "value": 87
+          },
+          {
+            "attr": "has_other_insert",
+            "op": "eq",
+            "value": false
+          }
+        ],
+        "conditions_review_state": "reviewed_constraints",
+        "ends": {
+          "accessory": {
+            "maker_id": "britax-romer",
+            "mpn": "ACCSFCC207"
+          },
+          "model": {
+            "maker_id": "britax-romer",
+            "name": "DUALFIX PRO"
+          }
+        },
+        "relation_type": "accessory_for_model",
+        "type": "compatible"
+      },
+      "claim_id": "clm:5bdfae6d9e473ced",
+      "doc_id": "doc:bac1a286d1860ffb",
+      "doc_sha256": null,
+      "extracted_by": "llm:pr167-handoff-unattributed",
+      "history": [
+        {
+          "by": "parser:migrate_pr167@stage-b-1",
+          "event": "created",
+          "note": "",
+          "seq": 0,
+          "to": "PROPOSED",
+          "utc": "2026-11-17T00:00:00Z"
+        }
+      ],
+      "locator": {
+        "kind": "record_ref",
+        "ref": "pr167:oem_evidence/britax-relax-insert-ACCSFCC207#confirmed_models/DUALFIX PRO"
+      },
+      "quote": null,
+      "review": null,
+      "status": "PROPOSED",
+      "supersedes": null,
+      "synthetic": false
+    },
+    {
+      "assertion": {
+        "article": {
+          "maker_id": "maxi-cosi",
+          "mpn": "74203550",
+          "role": "pocket",
+          "sku_alias": null
+        },
+        "type": "article_identity"
+      },
+      "claim_id": "clm:696cd8bdf49d2f76",
+      "doc_id": "doc:f554312a10c64b6e",
+      "doc_sha256": null,
+      "extracted_by": "llm:pr167-handoff-unattributed",
+      "history": [
+        {
+          "by": "parser:migrate_pr167@stage-b-1",
+          "event": "created",
+          "note": "",
+          "seq": 0,
+          "to": "PROPOSED",
+          "utc": "2026-11-17T00:00:00Z"
+        }
+      ],
+      "locator": {
+        "kind": "record_ref",
+        "ref": "pr167:oem_evidence/maxi-cosi-pocket-74203550#article"
+      },
+      "quote": null,
+      "review": null,
+      "status": "PROPOSED",
+      "supersedes": null,
+      "synthetic": false
+    },
+    {
+      "assertion": {
+        "as_of": null,
+        "ends": {
+          "adapter": {
+            "maker_id": "bugaboo",
+            "mpn": "400003001"
+          },
+          "chassis": {
+            "maker_id": "bugaboo",
+            "name": "Dragonfly"
+          },
+          "seat": {
+            "maker_id": "maxi-cosi",
+            "name": "Pebble 360 Pro 2"
+          }
+        },
+        "relation_type": "adapter_between",
+        "type": "not_tested_at_time"
+      },
+      "claim_id": "clm:69dde1c28d69b7c7",
+      "doc_id": "doc:8b27a7246e3541d0",
+      "doc_sha256": null,
+      "extracted_by": "llm:pr167-handoff-unattributed",
+      "history": [
+        {
+          "by": "parser:migrate_pr167@stage-b-1",
+          "event": "created",
+          "note": "",
+          "seq": 0,
+          "to": "PROPOSED",
+          "utc": "2026-11-17T00:00:00Z"
+        }
+      ],
+      "locator": {
+        "kind": "record_ref",
+        "ref": "pr167:fixtures/HOLDOUT_RESULTS.csv#N01_PEBBLE_PRO2_DRAGONFLY.oem_compatible_models_proof/Dragonfly"
+      },
+      "quote": null,
+      "review": null,
+      "status": "PROPOSED",
+      "supersedes": null,
+      "synthetic": false
+    },
+    {
+      "assertion": {
+        "ends": {
+          "adapter": {
+            "maker_id": "bugaboo",
+            "mpn": "400003001"
+          },
+          "chassis": {
+            "maker_id": "bugaboo",
+            "name": "Dragonfly"
+          },
+          "seat": {
+            "maker_id": "maxi-cosi",
+            "name": "CabrioFix"
+          }
+        },
+        "relation_type": "adapter_between",
+        "scope_note": "scoped to this exact seat + adapter + chassis",
+        "type": "not_recommended"
+      },
+      "claim_id": "clm:6a43ab3d603e0d8a",
+      "doc_id": "doc:8b27a7246e3541d0",
+      "doc_sha256": null,
+      "extracted_by": "llm:pr167-handoff-unattributed",
+      "history": [
+        {
+          "by": "parser:migrate_pr167@stage-b-1",
+          "event": "created",
+          "note": "",
+          "seq": 0,
+          "to": "PROPOSED",
+          "utc": "2026-11-17T00:00:00Z"
+        }
+      ],
+      "locator": {
+        "kind": "record_ref",
+        "ref": "pr167:oem_evidence/bugaboo-dragonfly-adapter-400003001#lists/Dragonfly/reject/CabrioFix"
+      },
+      "quote": null,
+      "review": null,
+      "status": "PROPOSED",
+      "supersedes": null,
+      "synthetic": false
+    },
+    {
+      "assertion": {
+        "conditions": [],
+        "conditions_review_state": "unknown",
+        "ends": {
+          "adapter": {
+            "maker_id": "bugaboo",
+            "mpn": "400019001"
+          },
+          "chassis": {
+            "maker_id": "bugaboo",
+            "name": "Fox 5 Renew"
+          },
+          "seat": {
+            "maker_id": "maxi-cosi",
+            "name": "Pebble 360 Pro 2"
+          }
+        },
+        "relation_type": "adapter_between",
+        "type": "compatible"
+      },
+      "claim_id": "clm:6f66fbb3a8e995fb",
+      "doc_id": "doc:b00a78102f589f76",
+      "doc_sha256": null,
+      "extracted_by": "llm:pr167-handoff-unattributed",
+      "history": [
+        {
+          "by": "parser:migrate_pr167@stage-b-1",
+          "event": "created",
+          "note": "",
+          "seq": 0,
+          "to": "PROPOSED",
+          "utc": "2026-11-17T00:00:00Z"
+        }
+      ],
+      "locator": {
+        "kind": "record_ref",
+        "ref": "pr167:oem_evidence/bugaboo-fox-adapter-400019001#lists/Fox 5 Renew/Pebble 360 Pro 2"
+      },
+      "quote": null,
+      "review": null,
+      "status": "PROPOSED",
+      "supersedes": null,
+      "synthetic": false
+    },
+    {
+      "assertion": {
+        "conditions": [
+          {
+            "attr": "child_height_cm",
+            "op": "gte",
+            "value": 61
+          },
+          {
+            "attr": "child_height_cm",
+            "op": "lte",
+            "value": 87
+          },
+          {
+            "attr": "has_other_insert",
+            "op": "eq",
+            "value": false
+          }
+        ],
+        "conditions_review_state": "reviewed_constraints",
+        "ends": {
+          "accessory": {
+            "maker_id": "britax-romer",
+            "mpn": "ACCSFCC207"
+          },
+          "model": {
+            "maker_id": "britax-romer",
+            "name": "DUALFIX 5Z"
+          }
+        },
+        "relation_type": "accessory_for_model",
+        "type": "compatible"
+      },
+      "claim_id": "clm:75e10be0b143f03e",
+      "doc_id": "doc:bac1a286d1860ffb",
+      "doc_sha256": null,
+      "extracted_by": "llm:pr167-handoff-unattributed",
+      "history": [
+        {
+          "by": "parser:migrate_pr167@stage-b-1",
+          "event": "created",
+          "note": "",
+          "seq": 0,
+          "to": "PROPOSED",
+          "utc": "2026-11-17T00:00:00Z"
+        }
+      ],
+      "locator": {
+        "kind": "record_ref",
+        "ref": "pr167:oem_evidence/britax-relax-insert-ACCSFCC207#confirmed_models/DUALFIX 5Z"
+      },
+      "quote": null,
+      "review": null,
+      "status": "PROPOSED",
+      "supersedes": null,
+      "synthetic": false
+    },
+    {
+      "assertion": {
+        "conditions": [],
+        "conditions_review_state": "verified_none",
+        "ends": {
+          "accessory": {
+            "maker_id": "unspecified",
+            "mpn": "6900000016817"
+          }
+        },
+        "relation_type": "vehicle_general",
+        "type": "compatible"
+      },
+      "claim_id": "clm:76cdc23051b3ba54",
+      "doc_id": "doc:81bb8659a109e590",
+      "doc_sha256": null,
+      "extracted_by": "llm:pr167-handoff-unattributed",
+      "history": [
+        {
+          "by": "parser:migrate_pr167@stage-b-1",
+          "event": "created",
+          "note": "",
+          "seq": 0,
+          "to": "PROPOSED",
+          "utc": "2026-11-17T00:00:00Z"
+        }
+      ],
+      "locator": {
+        "kind": "record_ref",
+        "ref": "pr167:oem_evidence/vehicle-organiser-6900000016817#never_ab"
+      },
+      "quote": null,
+      "review": null,
+      "status": "PROPOSED",
+      "supersedes": null,
+      "synthetic": false
+    },
+    {
+      "assertion": {
+        "conditions": [
+          {
+            "not": {
+              "attr": "seat_kind",
+              "op": "eq",
+              "value": "infant_carrier"
+            }
+          },
+          {
+            "any_of": [
+              {
+                "all_of": [
+                  {
+                    "attr": "restraint_standard",
+                    "op": "eq",
+                    "value": "ECE R44"
+                  },
+                  {
+                    "attr": "harness_type",
+                    "op": "eq",
+                    "value": "integrated"
+                  },
+                  {
+                    "attr": "child_weight_kg",
+                    "op": "gte",
+                    "value": 9
+                  }
+                ]
+              },
+              {
+                "all_of": [
+                  {
+                    "attr": "restraint_standard",
+                    "op": "eq",
+                    "value": "ECE R129"
+                  },
+                  {
+                    "attr": "harness_type",
+                    "op": "eq",
+                    "value": "integrated"
+                  },
+                  {
+                    "any_of": [
+                      {
+                        "all_of": [
+                          {
+                            "attr": "facing",
+                            "op": "eq",
+                            "value": "rearward"
+                          },
+                          {
+                            "attr": "child_height_cm",
+                            "op": "gte",
+                            "value": 60
+                          }
+                        ]
+                      },
+                      {
+                        "all_of": [
+                          {
+                            "attr": "facing",
+                            "op": "eq",
+                            "value": "forward"
+                          },
+                          {
+                            "attr": "child_height_cm",
+                            "op": "gte",
+                            "value": 76
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "conditions_review_state": "reviewed_constraints",
+        "ends": {
+          "accessory": {
+            "maker_id": "britax-romer",
+            "mpn": "2000030111"
+          },
+          "model": {
+            "maker_id": "britax-romer",
+            "name": "ADVANSAFIX PRO"
+          }
+        },
+        "relation_type": "accessory_for_model",
+        "type": "compatible"
+      },
+      "claim_id": "clm:7ab6a834f89c933b",
+      "doc_id": "doc:c2ef54b501b55631",
+      "doc_sha256": null,
+      "extracted_by": "llm:pr167-handoff-unattributed",
+      "history": [
+        {
+          "by": "parser:migrate_pr167@stage-b-1",
+          "event": "created",
+          "note": "",
+          "seq": 0,
+          "to": "PROPOSED",
+          "utc": "2026-11-17T00:00:00Z"
+        }
+      ],
+      "locator": {
+        "kind": "record_ref",
+        "ref": "pr167:oem_evidence/britax-comfort-insert-2000030111#confirmed_models/ADVANSAFIX PRO"
+      },
+      "quote": null,
+      "review": null,
+      "status": "PROPOSED",
+      "supersedes": null,
+      "synthetic": false
+    },
+    {
+      "assertion": {
+        "conditions": [
+          {
+            "attr": "child_height_cm",
+            "op": "gte",
+            "value": 61
+          },
+          {
+            "attr": "child_height_cm",
+            "op": "lte",
+            "value": 87
+          },
+          {
+            "attr": "has_other_insert",
+            "op": "eq",
+            "value": false
+          }
+        ],
+        "conditions_review_state": "reviewed_constraints",
+        "ends": {
+          "accessory": {
+            "maker_id": "britax-romer",
+            "mpn": "ACCSFCC207"
+          },
+          "model": {
+            "maker_id": "britax-romer",
+            "name": "DUALFIX PLUS"
+          }
+        },
+        "relation_type": "accessory_for_model",
+        "type": "compatible"
+      },
+      "claim_id": "clm:7b4898f3eb6812ae",
+      "doc_id": "doc:bac1a286d1860ffb",
+      "doc_sha256": null,
+      "extracted_by": "llm:pr167-handoff-unattributed",
+      "history": [
+        {
+          "by": "parser:migrate_pr167@stage-b-1",
+          "event": "created",
+          "note": "",
+          "seq": 0,
+          "to": "PROPOSED",
+          "utc": "2026-11-17T00:00:00Z"
+        }
+      ],
+      "locator": {
+        "kind": "record_ref",
+        "ref": "pr167:oem_evidence/britax-relax-insert-ACCSFCC207#confirmed_models/DUALFIX PLUS"
+      },
+      "quote": null,
+      "review": null,
+      "status": "PROPOSED",
+      "supersedes": null,
+      "synthetic": false
+    },
+    {
+      "assertion": {
+        "ends": {
+          "adapter": {
+            "maker_id": "bugaboo",
+            "mpn": "400003001"
+          },
+          "chassis": {
+            "maker_id": "bugaboo",
+            "name": "Dragonfly"
+          },
+          "seat": {
+            "maker_id": "maxi-cosi",
+            "name": "Pebble 360 Pro 2"
+          }
+        },
+        "list_complete": true,
+        "relation_type": "adapter_between",
+        "type": "absent_from_list"
+      },
+      "claim_id": "clm:7c820de148387ae9",
+      "doc_id": "doc:8b27a7246e3541d0",
+      "doc_sha256": null,
+      "extracted_by": "llm:pr167-handoff-unattributed",
+      "history": [
+        {
+          "by": "parser:migrate_pr167@stage-b-1",
+          "event": "created",
+          "note": "",
+          "seq": 0,
+          "to": "PROPOSED",
+          "utc": "2026-11-17T00:00:00Z"
+        }
+      ],
+      "locator": {
+        "kind": "record_ref",
+        "ref": "pr167:oem_evidence/bugaboo-dragonfly-adapter-400003001#lists/Dragonfly/absent/Pebble 360 Pro 2"
+      },
+      "quote": null,
+      "review": null,
+      "status": "PROPOSED",
+      "supersedes": null,
+      "synthetic": false
+    },
+    {
+      "assertion": {
+        "article": {
+          "maker_id": "britax-romer",
+          "mpn": "ACCSFCC207",
+          "role": "relax_insert",
+          "sku_alias": null
+        },
+        "type": "article_identity"
+      },
+      "claim_id": "clm:82c6de686e1b9f77",
+      "doc_id": "doc:bac1a286d1860ffb",
+      "doc_sha256": null,
+      "extracted_by": "llm:pr167-handoff-unattributed",
+      "history": [
+        {
+          "by": "parser:migrate_pr167@stage-b-1",
+          "event": "created",
+          "note": "",
+          "seq": 0,
+          "to": "PROPOSED",
+          "utc": "2026-11-17T00:00:00Z"
+        }
+      ],
+      "locator": {
+        "kind": "record_ref",
+        "ref": "pr167:oem_evidence/britax-relax-insert-ACCSFCC207#article"
+      },
+      "quote": null,
+      "review": null,
+      "status": "PROPOSED",
+      "supersedes": null,
+      "synthetic": false
+    },
+    {
+      "assertion": {
+        "conditions": [
+          {
+            "attr": "child_height_cm",
+            "op": "gte",
+            "value": 61
+          },
+          {
+            "attr": "child_height_cm",
+            "op": "lte",
+            "value": 87
+          },
+          {
+            "attr": "has_other_insert",
+            "op": "eq",
+            "value": false
+          }
+        ],
+        "conditions_review_state": "reviewed_constraints",
+        "ends": {
+          "accessory": {
+            "maker_id": "britax-romer",
+            "mpn": "ACCSFCC207"
+          },
+          "model": {
+            "maker_id": "britax-romer",
+            "name": "DUALFIX M PLUS"
+          }
+        },
+        "relation_type": "accessory_for_model",
+        "type": "compatible"
+      },
+      "claim_id": "clm:83a1619075d01648",
+      "doc_id": "doc:bac1a286d1860ffb",
+      "doc_sha256": null,
+      "extracted_by": "llm:pr167-handoff-unattributed",
+      "history": [
+        {
+          "by": "parser:migrate_pr167@stage-b-1",
+          "event": "created",
+          "note": "",
+          "seq": 0,
+          "to": "PROPOSED",
+          "utc": "2026-11-17T00:00:00Z"
+        }
+      ],
+      "locator": {
+        "kind": "record_ref",
+        "ref": "pr167:oem_evidence/britax-relax-insert-ACCSFCC207#confirmed_models/DUALFIX M PLUS"
+      },
+      "quote": null,
+      "review": null,
+      "status": "PROPOSED",
+      "supersedes": null,
+      "synthetic": false
+    },
+    {
+      "assertion": {
+        "conditions": [
+          {
+            "not": {
+              "attr": "seat_kind",
+              "op": "eq",
+              "value": "infant_carrier"
+            }
+          },
+          {
+            "any_of": [
+              {
+                "all_of": [
+                  {
+                    "attr": "restraint_standard",
+                    "op": "eq",
+                    "value": "ECE R44"
+                  },
+                  {
+                    "attr": "harness_type",
+                    "op": "eq",
+                    "value": "integrated"
+                  },
+                  {
+                    "attr": "child_weight_kg",
+                    "op": "gte",
+                    "value": 9
+                  }
+                ]
+              },
+              {
+                "all_of": [
+                  {
+                    "attr": "restraint_standard",
+                    "op": "eq",
+                    "value": "ECE R129"
+                  },
+                  {
+                    "attr": "harness_type",
+                    "op": "eq",
+                    "value": "integrated"
+                  },
+                  {
+                    "any_of": [
+                      {
+                        "all_of": [
+                          {
+                            "attr": "facing",
+                            "op": "eq",
+                            "value": "rearward"
+                          },
+                          {
+                            "attr": "child_height_cm",
+                            "op": "gte",
+                            "value": 60
+                          }
+                        ]
+                      },
+                      {
+                        "all_of": [
+                          {
+                            "attr": "facing",
+                            "op": "eq",
+                            "value": "forward"
+                          },
+                          {
+                            "attr": "child_height_cm",
+                            "op": "gte",
+                            "value": 76
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "conditions_review_state": "reviewed_constraints",
+        "ends": {
+          "accessory": {
+            "maker_id": "britax-romer",
+            "mpn": "2000030111"
+          },
+          "model": {
+            "maker_id": "britax-romer",
+            "name": "EVOLVAFIX"
+          }
+        },
+        "relation_type": "accessory_for_model",
+        "type": "compatible"
+      },
+      "claim_id": "clm:8b779d5f19ed28b2",
+      "doc_id": "doc:c2ef54b501b55631",
+      "doc_sha256": null,
+      "extracted_by": "llm:pr167-handoff-unattributed",
+      "history": [
+        {
+          "by": "parser:migrate_pr167@stage-b-1",
+          "event": "created",
+          "note": "",
+          "seq": 0,
+          "to": "PROPOSED",
+          "utc": "2026-11-17T00:00:00Z"
+        }
+      ],
+      "locator": {
+        "kind": "record_ref",
+        "ref": "pr167:oem_evidence/britax-comfort-insert-2000030111#confirmed_models/EVOLVAFIX"
+      },
+      "quote": null,
+      "review": null,
+      "status": "PROPOSED",
+      "supersedes": null,
+      "synthetic": false
+    },
+    {
+      "assertion": {
+        "ends": {
+          "adapter": {
+            "maker_id": "bugaboo",
+            "mpn": "400019001"
+          },
+          "chassis": {
+            "maker_id": "bugaboo",
+            "name": "Fox 2"
+          },
+          "seat": {
+            "maker_id": "maxi-cosi",
+            "name": "Pebble 360 Pro 2"
+          }
+        },
+        "list_complete": true,
+        "relation_type": "adapter_between",
+        "type": "absent_from_list"
+      },
+      "claim_id": "clm:8e9ddb1eae3c5a2e",
+      "doc_id": "doc:b00a78102f589f76",
+      "doc_sha256": null,
+      "extracted_by": "llm:pr167-handoff-unattributed",
+      "history": [
+        {
+          "by": "parser:migrate_pr167@stage-b-1",
+          "event": "created",
+          "note": "",
+          "seq": 0,
+          "to": "PROPOSED",
+          "utc": "2026-11-17T00:00:00Z"
+        }
+      ],
+      "locator": {
+        "kind": "record_ref",
+        "ref": "pr167:oem_evidence/bugaboo-fox-adapter-400019001#lists/Fox 2/absent/Pebble 360 Pro 2"
+      },
+      "quote": null,
+      "review": null,
+      "status": "PROPOSED",
+      "supersedes": null,
+      "synthetic": false
+    },
+    {
+      "assertion": {
+        "ends": {
+          "adapter": {
+            "maker_id": "maxi-cosi",
+            "mpn": "1166057110"
+          },
+          "chassis": {
+            "maker_id": "maxi-cosi",
+            "name": "Fame Cabin"
+          },
+          "seat": {
+            "maker_id": "maxi-cosi",
+            "name": "Coral 360"
+          }
+        },
+        "list_complete": true,
+        "relation_type": "adapter_between",
+        "type": "absent_from_list"
+      },
+      "claim_id": "clm:91134cc1c6557c54",
+      "doc_id": "doc:381465952729913b",
+      "doc_sha256": null,
+      "extracted_by": "llm:pr167-handoff-unattributed",
+      "history": [
+        {
+          "by": "parser:migrate_pr167@stage-b-1",
+          "event": "created",
+          "note": "",
+          "seq": 0,
+          "to": "PROPOSED",
+          "utc": "2026-11-17T00:00:00Z"
+        }
+      ],
+      "locator": {
+        "kind": "record_ref",
+        "ref": "pr167:oem_evidence/maxi-cosi-carrier-adapter-1166057110#interface/absent/Coral 360/Fame Cabin"
+      },
+      "quote": null,
+      "review": null,
+      "status": "PROPOSED",
+      "supersedes": null,
+      "synthetic": false
+    },
+    {
+      "assertion": {
+        "conditions": [
+          {
+            "not": {
+              "attr": "seat_kind",
+              "op": "eq",
+              "value": "infant_carrier"
+            }
+          },
+          {
+            "any_of": [
+              {
+                "all_of": [
+                  {
+                    "attr": "restraint_standard",
+                    "op": "eq",
+                    "value": "ECE R44"
+                  },
+                  {
+                    "attr": "harness_type",
+                    "op": "eq",
+                    "value": "integrated"
+                  },
+                  {
+                    "attr": "child_weight_kg",
+                    "op": "gte",
+                    "value": 9
+                  }
+                ]
+              },
+              {
+                "all_of": [
+                  {
+                    "attr": "restraint_standard",
+                    "op": "eq",
+                    "value": "ECE R129"
+                  },
+                  {
+                    "attr": "harness_type",
+                    "op": "eq",
+                    "value": "integrated"
+                  },
+                  {
+                    "any_of": [
+                      {
+                        "all_of": [
+                          {
+                            "attr": "facing",
+                            "op": "eq",
+                            "value": "rearward"
+                          },
+                          {
+                            "attr": "child_height_cm",
+                            "op": "gte",
+                            "value": 60
+                          }
+                        ]
+                      },
+                      {
+                        "all_of": [
+                          {
+                            "attr": "facing",
+                            "op": "eq",
+                            "value": "forward"
+                          },
+                          {
+                            "attr": "child_height_cm",
+                            "op": "gte",
+                            "value": 76
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "conditions_review_state": "reviewed_constraints",
+        "ends": {
+          "accessory": {
+            "maker_id": "britax-romer",
+            "mpn": "2000030111"
+          },
+          "model": {
+            "maker_id": "britax-romer",
+            "name": "KING PRO"
+          }
+        },
+        "relation_type": "accessory_for_model",
+        "type": "compatible"
+      },
+      "claim_id": "clm:9b5132c8837ec883",
+      "doc_id": "doc:c2ef54b501b55631",
+      "doc_sha256": null,
+      "extracted_by": "llm:pr167-handoff-unattributed",
+      "history": [
+        {
+          "by": "parser:migrate_pr167@stage-b-1",
+          "event": "created",
+          "note": "",
+          "seq": 0,
+          "to": "PROPOSED",
+          "utc": "2026-11-17T00:00:00Z"
+        }
+      ],
+      "locator": {
+        "kind": "record_ref",
+        "ref": "pr167:oem_evidence/britax-comfort-insert-2000030111#confirmed_models/KING PRO"
+      },
+      "quote": null,
+      "review": null,
+      "status": "PROPOSED",
+      "supersedes": null,
+      "synthetic": false
+    },
+    {
+      "assertion": {
+        "conditions": [],
+        "conditions_review_state": "unknown",
+        "ends": {
+          "adapter": {
+            "maker_id": "bugaboo",
+            "mpn": "400019001"
+          },
+          "chassis": {
+            "maker_id": "bugaboo",
+            "name": "Fox 5"
+          },
+          "seat": {
+            "maker_id": "maxi-cosi",
+            "name": "Pebble 360 Pro 2"
+          }
+        },
+        "relation_type": "adapter_between",
+        "type": "compatible"
+      },
+      "claim_id": "clm:a741efb866d18b6a",
+      "doc_id": "doc:b00a78102f589f76",
+      "doc_sha256": null,
+      "extracted_by": "llm:pr167-handoff-unattributed",
+      "history": [
+        {
+          "by": "parser:migrate_pr167@stage-b-1",
+          "event": "created",
+          "note": "",
+          "seq": 0,
+          "to": "PROPOSED",
+          "utc": "2026-11-17T00:00:00Z"
+        }
+      ],
+      "locator": {
+        "kind": "record_ref",
+        "ref": "pr167:oem_evidence/bugaboo-fox-adapter-400019001#lists/Fox 5/Pebble 360 Pro 2"
+      },
+      "quote": null,
+      "review": null,
+      "status": "PROPOSED",
+      "supersedes": null,
+      "synthetic": false
+    },
+    {
+      "assertion": {
+        "conditions": [],
+        "conditions_review_state": "unknown",
+        "ends": {
+          "adapter": {
+            "maker_id": "bugaboo",
+            "mpn": "400003001"
+          },
+          "chassis": {
+            "maker_id": "bugaboo",
+            "name": "Dragonfly"
+          },
+          "seat": {
+            "maker_id": "maxi-cosi",
+            "name": "Pebble 360 Pro"
+          }
+        },
+        "relation_type": "adapter_between",
+        "type": "compatible"
+      },
+      "claim_id": "clm:a9fa4b98947783cd",
+      "doc_id": "doc:8b27a7246e3541d0",
+      "doc_sha256": null,
+      "extracted_by": "llm:pr167-handoff-unattributed",
+      "history": [
+        {
+          "by": "parser:migrate_pr167@stage-b-1",
+          "event": "created",
+          "note": "",
+          "seq": 0,
+          "to": "PROPOSED",
+          "utc": "2026-11-17T00:00:00Z"
+        }
+      ],
+      "locator": {
+        "kind": "record_ref",
+        "ref": "pr167:oem_evidence/bugaboo-dragonfly-adapter-400003001#lists/Dragonfly/Pebble 360 Pro"
+      },
+      "quote": null,
+      "review": null,
+      "status": "PROPOSED",
+      "supersedes": null,
+      "synthetic": false
+    },
+    {
+      "assertion": {
+        "conditions": [],
+        "conditions_review_state": "unknown",
+        "ends": {
+          "adapter": {
+            "maker_id": "bugaboo",
+            "mpn": "400019001"
+          },
+          "chassis": {
+            "maker_id": "bugaboo",
+            "name": "Fox 5 Renew"
+          },
+          "seat": {
+            "maker_id": "besafe",
+            "name": "iZi Go Modular X1 i-Size"
+          }
+        },
+        "relation_type": "adapter_between",
+        "type": "compatible"
+      },
+      "claim_id": "clm:ae44bd0fbe028eba",
+      "doc_id": "doc:b00a78102f589f76",
+      "doc_sha256": null,
+      "extracted_by": "llm:pr167-handoff-unattributed",
+      "history": [
+        {
+          "by": "parser:migrate_pr167@stage-b-1",
+          "event": "created",
+          "note": "",
+          "seq": 0,
+          "to": "PROPOSED",
+          "utc": "2026-11-17T00:00:00Z"
+        }
+      ],
+      "locator": {
+        "kind": "record_ref",
+        "ref": "pr167:oem_evidence/bugaboo-fox-adapter-400019001#lists/Fox 5 Renew/iZi Go Modular X1 i-Size"
+      },
+      "quote": null,
+      "review": null,
+      "status": "PROPOSED",
+      "supersedes": null,
+      "synthetic": false
+    },
+    {
+      "assertion": {
+        "conditions": [
+          {
+            "not": {
+              "attr": "seat_kind",
+              "op": "eq",
+              "value": "infant_carrier"
+            }
+          },
+          {
+            "any_of": [
+              {
+                "all_of": [
+                  {
+                    "attr": "restraint_standard",
+                    "op": "eq",
+                    "value": "ECE R44"
+                  },
+                  {
+                    "attr": "harness_type",
+                    "op": "eq",
+                    "value": "integrated"
+                  },
+                  {
+                    "attr": "child_weight_kg",
+                    "op": "gte",
+                    "value": 9
+                  }
+                ]
+              },
+              {
+                "all_of": [
+                  {
+                    "attr": "restraint_standard",
+                    "op": "eq",
+                    "value": "ECE R129"
+                  },
+                  {
+                    "attr": "harness_type",
+                    "op": "eq",
+                    "value": "integrated"
+                  },
+                  {
+                    "any_of": [
+                      {
+                        "all_of": [
+                          {
+                            "attr": "facing",
+                            "op": "eq",
+                            "value": "rearward"
+                          },
+                          {
+                            "attr": "child_height_cm",
+                            "op": "gte",
+                            "value": 60
+                          }
+                        ]
+                      },
+                      {
+                        "all_of": [
+                          {
+                            "attr": "facing",
+                            "op": "eq",
+                            "value": "forward"
+                          },
+                          {
+                            "attr": "child_height_cm",
+                            "op": "gte",
+                            "value": 76
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "conditions_review_state": "reviewed_constraints",
+        "ends": {
+          "accessory": {
+            "maker_id": "britax-romer",
+            "mpn": "2000030111"
+          },
+          "model": {
+            "maker_id": "britax-romer",
+            "name": "SWIVEL 2"
+          }
+        },
+        "relation_type": "accessory_for_model",
+        "type": "compatible"
+      },
+      "claim_id": "clm:afd88cbe4e69c2ec",
+      "doc_id": "doc:c2ef54b501b55631",
+      "doc_sha256": null,
+      "extracted_by": "llm:pr167-handoff-unattributed",
+      "history": [
+        {
+          "by": "parser:migrate_pr167@stage-b-1",
+          "event": "created",
+          "note": "",
+          "seq": 0,
+          "to": "PROPOSED",
+          "utc": "2026-11-17T00:00:00Z"
+        }
+      ],
+      "locator": {
+        "kind": "record_ref",
+        "ref": "pr167:oem_evidence/britax-comfort-insert-2000030111#confirmed_models/SWIVEL 2"
+      },
+      "quote": null,
+      "review": null,
+      "status": "PROPOSED",
+      "supersedes": null,
+      "synthetic": false
+    },
+    {
+      "assertion": {
+        "conditions": [],
+        "conditions_review_state": "unknown",
+        "ends": {
+          "adapter": {
+            "maker_id": "bugaboo",
+            "mpn": "400019001"
+          },
+          "chassis": {
+            "maker_id": "bugaboo",
+            "name": "Fox 5 Renew"
+          },
+          "seat": {
+            "maker_id": "besafe",
+            "name": "iZi Go Modular X1"
+          }
+        },
+        "relation_type": "adapter_between",
+        "type": "compatible"
+      },
+      "claim_id": "clm:b9d355c13b36d0a9",
+      "doc_id": "doc:b00a78102f589f76",
+      "doc_sha256": null,
+      "extracted_by": "llm:pr167-handoff-unattributed",
+      "history": [
+        {
+          "by": "parser:migrate_pr167@stage-b-1",
+          "event": "created",
+          "note": "",
+          "seq": 0,
+          "to": "PROPOSED",
+          "utc": "2026-11-17T00:00:00Z"
+        }
+      ],
+      "locator": {
+        "kind": "record_ref",
+        "ref": "pr167:oem_evidence/bugaboo-fox-adapter-400019001#lists/Fox 5 Renew/iZi Go Modular X1"
+      },
+      "quote": null,
+      "review": null,
+      "status": "PROPOSED",
+      "supersedes": null,
+      "synthetic": false
+    },
+    {
+      "assertion": {
+        "conditions": [],
+        "conditions_review_state": "unknown",
+        "ends": {
+          "adapter": {
+            "maker_id": "bugaboo",
+            "mpn": "400019001"
+          },
+          "chassis": {
+            "maker_id": "bugaboo",
+            "name": "Fox 5"
+          },
+          "seat": {
+            "maker_id": "besafe",
+            "name": "iZi Go Modular X1 i-Size"
+          }
+        },
+        "relation_type": "adapter_between",
+        "type": "compatible"
+      },
+      "claim_id": "clm:c16de7388aa7d5a4",
+      "doc_id": "doc:b00a78102f589f76",
+      "doc_sha256": null,
+      "extracted_by": "llm:pr167-handoff-unattributed",
+      "history": [
+        {
+          "by": "parser:migrate_pr167@stage-b-1",
+          "event": "created",
+          "note": "",
+          "seq": 0,
+          "to": "PROPOSED",
+          "utc": "2026-11-17T00:00:00Z"
+        }
+      ],
+      "locator": {
+        "kind": "record_ref",
+        "ref": "pr167:oem_evidence/bugaboo-fox-adapter-400019001#lists/Fox 5/iZi Go Modular X1 i-Size"
+      },
+      "quote": null,
+      "review": null,
+      "status": "PROPOSED",
+      "supersedes": null,
+      "synthetic": false
+    },
+    {
+      "assertion": {
+        "article": {
+          "maker_id": "besafe",
+          "mpn": "11006001",
+          "role": "rain_shield",
+          "sku_alias": "11006001par"
+        },
+        "type": "article_identity"
+      },
+      "claim_id": "clm:cc3279303c9b05d3",
+      "doc_id": "doc:3d6c5125466e6847",
+      "doc_sha256": null,
+      "extracted_by": "llm:pr167-handoff-unattributed",
+      "history": [
+        {
+          "by": "parser:migrate_pr167@stage-b-1",
+          "event": "created",
+          "note": "",
+          "seq": 0,
+          "to": "PROPOSED",
+          "utc": "2026-11-17T00:00:00Z"
+        }
+      ],
+      "locator": {
+        "kind": "record_ref",
+        "ref": "pr167:oem_evidence/besafe-rain-shield-11006001#article"
+      },
+      "quote": null,
+      "review": null,
+      "status": "PROPOSED",
+      "supersedes": null,
+      "synthetic": false
+    },
+    {
+      "assertion": {
+        "article": {
+          "maker_id": "bugaboo",
+          "mpn": "400019001",
+          "role": "mechanical_adapter",
+          "sku_alias": null
+        },
+        "type": "article_identity"
+      },
+      "claim_id": "clm:d5696c476f1f8442",
+      "doc_id": "doc:b00a78102f589f76",
+      "doc_sha256": null,
+      "extracted_by": "llm:pr167-handoff-unattributed",
+      "history": [
+        {
+          "by": "parser:migrate_pr167@stage-b-1",
+          "event": "created",
+          "note": "",
+          "seq": 0,
+          "to": "PROPOSED",
+          "utc": "2026-11-17T00:00:00Z"
+        }
+      ],
+      "locator": {
+        "kind": "record_ref",
+        "ref": "pr167:oem_evidence/bugaboo-fox-adapter-400019001#article"
+      },
+      "quote": null,
+      "review": null,
+      "status": "PROPOSED",
+      "supersedes": null,
+      "synthetic": false
+    },
+    {
+      "assertion": {
+        "conditions": [
+          {
+            "attr": "child_height_cm",
+            "op": "gte",
+            "value": 61
+          },
+          {
+            "attr": "child_height_cm",
+            "op": "lte",
+            "value": 87
+          },
+          {
+            "attr": "has_other_insert",
+            "op": "eq",
+            "value": false
+          }
+        ],
+        "conditions_review_state": "reviewed_constraints",
+        "ends": {
+          "accessory": {
+            "maker_id": "britax-romer",
+            "mpn": "ACCSFCC207"
+          },
+          "model": {
+            "maker_id": "britax-romer",
+            "name": "DUALFIX PRO M"
+          }
+        },
+        "relation_type": "accessory_for_model",
+        "type": "compatible"
+      },
+      "claim_id": "clm:d969ec11280213d4",
+      "doc_id": "doc:bac1a286d1860ffb",
+      "doc_sha256": null,
+      "extracted_by": "llm:pr167-handoff-unattributed",
+      "history": [
+        {
+          "by": "parser:migrate_pr167@stage-b-1",
+          "event": "created",
+          "note": "",
+          "seq": 0,
+          "to": "PROPOSED",
+          "utc": "2026-11-17T00:00:00Z"
+        }
+      ],
+      "locator": {
+        "kind": "record_ref",
+        "ref": "pr167:oem_evidence/britax-relax-insert-ACCSFCC207#confirmed_models/DUALFIX PRO M"
+      },
+      "quote": null,
+      "review": null,
+      "status": "PROPOSED",
+      "supersedes": null,
+      "synthetic": false
+    },
+    {
+      "assertion": {
+        "ends": {
+          "adapter": {
+            "maker_id": "bugaboo",
+            "mpn": "400003001"
+          },
+          "chassis": {
+            "maker_id": "bugaboo",
+            "name": "Dragonfly Plus"
+          },
+          "seat": {
+            "maker_id": "maxi-cosi",
+            "name": "Pebble 360 Pro 2"
+          }
+        },
+        "list_complete": true,
+        "relation_type": "adapter_between",
+        "type": "absent_from_list"
+      },
+      "claim_id": "clm:d9df1eebd5fdd544",
+      "doc_id": "doc:8b27a7246e3541d0",
+      "doc_sha256": null,
+      "extracted_by": "llm:pr167-handoff-unattributed",
+      "history": [
+        {
+          "by": "parser:migrate_pr167@stage-b-1",
+          "event": "created",
+          "note": "",
+          "seq": 0,
+          "to": "PROPOSED",
+          "utc": "2026-11-17T00:00:00Z"
+        }
+      ],
+      "locator": {
+        "kind": "record_ref",
+        "ref": "pr167:oem_evidence/bugaboo-dragonfly-adapter-400003001#lists/Dragonfly Plus/absent/Pebble 360 Pro 2"
+      },
+      "quote": null,
+      "review": null,
+      "status": "PROPOSED",
+      "supersedes": null,
+      "synthetic": false
+    },
+    {
+      "assertion": {
+        "ends": {
+          "accessory": {
+            "maker_id": "britax-romer",
+            "mpn": "2000030111"
+          },
+          "model": {
+            "maker_id": "britax-romer",
+            "name": "SWIVEL"
+          }
+        },
+        "list_complete": false,
+        "relation_type": "accessory_for_model",
+        "type": "absent_from_list"
+      },
+      "claim_id": "clm:dbff243f6d5ca32b",
+      "doc_id": "doc:c2ef54b501b55631",
+      "doc_sha256": null,
+      "extracted_by": "llm:pr167-handoff-unattributed",
+      "history": [
+        {
+          "by": "parser:migrate_pr167@stage-b-1",
+          "event": "created",
+          "note": "",
+          "seq": 0,
+          "to": "PROPOSED",
+          "utc": "2026-11-17T00:00:00Z"
+        }
+      ],
+      "locator": {
+        "kind": "record_ref",
+        "ref": "pr167:oem_evidence/britax-comfort-insert-2000030111#explicit_absent_models/SWIVEL"
+      },
+      "quote": null,
+      "review": null,
+      "status": "PROPOSED",
+      "supersedes": null,
+      "synthetic": false
+    },
+    {
+      "assertion": {
+        "conditions": [
+          {
+            "not": {
+              "attr": "seat_kind",
+              "op": "eq",
+              "value": "infant_carrier"
+            }
+          },
+          {
+            "any_of": [
+              {
+                "all_of": [
+                  {
+                    "attr": "restraint_standard",
+                    "op": "eq",
+                    "value": "ECE R44"
+                  },
+                  {
+                    "attr": "harness_type",
+                    "op": "eq",
+                    "value": "integrated"
+                  },
+                  {
+                    "attr": "child_weight_kg",
+                    "op": "gte",
+                    "value": 9
+                  }
+                ]
+              },
+              {
+                "all_of": [
+                  {
+                    "attr": "restraint_standard",
+                    "op": "eq",
+                    "value": "ECE R129"
+                  },
+                  {
+                    "attr": "harness_type",
+                    "op": "eq",
+                    "value": "integrated"
+                  },
+                  {
+                    "any_of": [
+                      {
+                        "all_of": [
+                          {
+                            "attr": "facing",
+                            "op": "eq",
+                            "value": "rearward"
+                          },
+                          {
+                            "attr": "child_height_cm",
+                            "op": "gte",
+                            "value": 60
+                          }
+                        ]
+                      },
+                      {
+                        "all_of": [
+                          {
+                            "attr": "facing",
+                            "op": "eq",
+                            "value": "forward"
+                          },
+                          {
+                            "attr": "child_height_cm",
+                            "op": "gte",
+                            "value": 76
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "conditions_review_state": "reviewed_constraints",
+        "ends": {
+          "accessory": {
+            "maker_id": "britax-romer",
+            "mpn": "2000030111"
+          },
+          "model": {
+            "maker_id": "britax-romer",
+            "name": "DUALFIX PRO M"
+          }
+        },
+        "relation_type": "accessory_for_model",
+        "type": "compatible"
+      },
+      "claim_id": "clm:e21924e870b2476b",
+      "doc_id": "doc:c2ef54b501b55631",
+      "doc_sha256": null,
+      "extracted_by": "llm:pr167-handoff-unattributed",
+      "history": [
+        {
+          "by": "parser:migrate_pr167@stage-b-1",
+          "event": "created",
+          "note": "",
+          "seq": 0,
+          "to": "PROPOSED",
+          "utc": "2026-11-17T00:00:00Z"
+        }
+      ],
+      "locator": {
+        "kind": "record_ref",
+        "ref": "pr167:oem_evidence/britax-comfort-insert-2000030111#confirmed_models/DUALFIX PRO M"
+      },
+      "quote": null,
+      "review": null,
+      "status": "PROPOSED",
+      "supersedes": null,
+      "synthetic": false
+    },
+    {
+      "assertion": {
+        "conditions": [
+          {
+            "attr": "usage_context",
+            "op": "in",
+            "value": [
+              "outside_vehicle",
+              "on_stroller"
+            ]
+          }
+        ],
+        "conditions_review_state": "reviewed_constraints",
+        "ends": {
+          "accessory": {
+            "maker_id": "besafe",
+            "mpn": "11006001"
+          },
+          "model": {
+            "maker_id": "besafe",
+            "name": "iZi Go Modular X1 i-Size"
+          }
+        },
+        "relation_type": "accessory_for_model",
+        "type": "compatible"
+      },
+      "claim_id": "clm:e4498fbdd47559d0",
+      "doc_id": "doc:3d6c5125466e6847",
+      "doc_sha256": null,
+      "extracted_by": "llm:pr167-handoff-unattributed",
+      "history": [
+        {
+          "by": "parser:migrate_pr167@stage-b-1",
+          "event": "created",
+          "note": "",
+          "seq": 0,
+          "to": "PROPOSED",
+          "utc": "2026-11-17T00:00:00Z"
+        }
+      ],
+      "locator": {
+        "kind": "record_ref",
+        "ref": "pr167:oem_evidence/besafe-rain-shield-11006001#confirmed_models/iZi Go Modular X1 i-Size"
+      },
+      "quote": null,
+      "review": null,
+      "status": "PROPOSED",
+      "supersedes": null,
+      "synthetic": false
+    },
+    {
+      "assertion": {
+        "ends": {
+          "adapter": {
+            "maker_id": "maxi-cosi",
+            "mpn": "1166057110"
+          },
+          "chassis": {
+            "maker_id": "maxi-cosi",
+            "name": "Fame"
+          },
+          "seat": {
+            "maker_id": "maxi-cosi",
+            "name": "Coral 360"
+          }
+        },
+        "list_complete": true,
+        "relation_type": "adapter_between",
+        "type": "absent_from_list"
+      },
+      "claim_id": "clm:e8c4a3d2d28e4757",
+      "doc_id": "doc:381465952729913b",
+      "doc_sha256": null,
+      "extracted_by": "llm:pr167-handoff-unattributed",
+      "history": [
+        {
+          "by": "parser:migrate_pr167@stage-b-1",
+          "event": "created",
+          "note": "",
+          "seq": 0,
+          "to": "PROPOSED",
+          "utc": "2026-11-17T00:00:00Z"
+        }
+      ],
+      "locator": {
+        "kind": "record_ref",
+        "ref": "pr167:oem_evidence/maxi-cosi-carrier-adapter-1166057110#interface/absent/Coral 360/Fame"
+      },
+      "quote": null,
+      "review": null,
+      "status": "PROPOSED",
+      "supersedes": null,
+      "synthetic": false
+    },
+    {
+      "assertion": {
+        "ends": {
+          "adapter": {
+            "maker_id": "bugaboo",
+            "mpn": "400003001"
+          },
+          "chassis": {
+            "maker_id": "bugaboo",
+            "name": "Dragonfly Plus"
+          },
+          "seat": {
+            "maker_id": "maxi-cosi",
+            "name": "CabrioFix"
+          }
+        },
+        "relation_type": "adapter_between",
+        "scope_note": "scoped to this exact seat + adapter + chassis",
+        "type": "not_recommended"
+      },
+      "claim_id": "clm:e8d009fb45255472",
+      "doc_id": "doc:8b27a7246e3541d0",
+      "doc_sha256": null,
+      "extracted_by": "llm:pr167-handoff-unattributed",
+      "history": [
+        {
+          "by": "parser:migrate_pr167@stage-b-1",
+          "event": "created",
+          "note": "",
+          "seq": 0,
+          "to": "PROPOSED",
+          "utc": "2026-11-17T00:00:00Z"
+        }
+      ],
+      "locator": {
+        "kind": "record_ref",
+        "ref": "pr167:oem_evidence/bugaboo-dragonfly-adapter-400003001#lists/Dragonfly Plus/reject/CabrioFix"
+      },
+      "quote": null,
+      "review": null,
+      "status": "PROPOSED",
+      "supersedes": null,
+      "synthetic": false
+    },
+    {
+      "assertion": {
+        "conditions": [
+          {
+            "attr": "carrier_component",
+            "op": "eq",
+            "value": "soft_carrier"
+          }
+        ],
+        "conditions_review_state": "reviewed_constraints",
+        "ends": {
+          "adapter": {
+            "maker_id": "bugaboo",
+            "mpn": "400019001"
+          },
+          "chassis": {
+            "maker_id": "bugaboo",
+            "name": "Fox 5"
+          },
+          "seat": {
+            "maker_id": "maxi-cosi",
+            "name": "Coral Slide Pro"
+          }
+        },
+        "relation_type": "adapter_between",
+        "type": "compatible"
+      },
+      "claim_id": "clm:ee92f448d4fb4c93",
+      "doc_id": "doc:b00a78102f589f76",
+      "doc_sha256": null,
+      "extracted_by": "llm:pr167-handoff-unattributed",
+      "history": [
+        {
+          "by": "parser:migrate_pr167@stage-b-1",
+          "event": "created",
+          "note": "",
+          "seq": 0,
+          "to": "PROPOSED",
+          "utc": "2026-11-17T00:00:00Z"
+        }
+      ],
+      "locator": {
+        "kind": "record_ref",
+        "ref": "pr167:oem_evidence/bugaboo-fox-adapter-400019001#lists/Fox 5/Coral Slide Pro"
+      },
+      "quote": null,
+      "review": null,
+      "status": "PROPOSED",
+      "supersedes": null,
+      "synthetic": false
+    },
+    {
+      "assertion": {
+        "article": {
+          "maker_id": "unspecified",
+          "mpn": "6900000016817",
+          "role": "vehicle_organiser",
+          "sku_alias": null
+        },
+        "type": "article_identity"
+      },
+      "claim_id": "clm:f3fa158296cfbceb",
+      "doc_id": "doc:81bb8659a109e590",
+      "doc_sha256": null,
+      "extracted_by": "llm:pr167-handoff-unattributed",
+      "history": [
+        {
+          "by": "parser:migrate_pr167@stage-b-1",
+          "event": "created",
+          "note": "",
+          "seq": 0,
+          "to": "PROPOSED",
+          "utc": "2026-11-17T00:00:00Z"
+        }
+      ],
+      "locator": {
+        "kind": "record_ref",
+        "ref": "pr167:oem_evidence/vehicle-organiser-6900000016817#article"
+      },
+      "quote": null,
+      "review": null,
+      "status": "PROPOSED",
+      "supersedes": null,
+      "synthetic": false
+    },
+    {
+      "assertion": {
+        "conditions": [
+          {
+            "not": {
+              "attr": "seat_kind",
+              "op": "eq",
+              "value": "infant_carrier"
+            }
+          },
+          {
+            "any_of": [
+              {
+                "all_of": [
+                  {
+                    "attr": "restraint_standard",
+                    "op": "eq",
+                    "value": "ECE R44"
+                  },
+                  {
+                    "attr": "harness_type",
+                    "op": "eq",
+                    "value": "integrated"
+                  },
+                  {
+                    "attr": "child_weight_kg",
+                    "op": "gte",
+                    "value": 9
+                  }
+                ]
+              },
+              {
+                "all_of": [
+                  {
+                    "attr": "restraint_standard",
+                    "op": "eq",
+                    "value": "ECE R129"
+                  },
+                  {
+                    "attr": "harness_type",
+                    "op": "eq",
+                    "value": "integrated"
+                  },
+                  {
+                    "any_of": [
+                      {
+                        "all_of": [
+                          {
+                            "attr": "facing",
+                            "op": "eq",
+                            "value": "rearward"
+                          },
+                          {
+                            "attr": "child_height_cm",
+                            "op": "gte",
+                            "value": 60
+                          }
+                        ]
+                      },
+                      {
+                        "all_of": [
+                          {
+                            "attr": "facing",
+                            "op": "eq",
+                            "value": "forward"
+                          },
+                          {
+                            "attr": "child_height_cm",
+                            "op": "gte",
+                            "value": 76
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "conditions_review_state": "reviewed_constraints",
+        "ends": {
+          "accessory": {
+            "maker_id": "britax-romer",
+            "mpn": "2000030111"
+          },
+          "model": {
+            "maker_id": "britax-romer",
+            "name": "DUALFIX PRO"
+          }
+        },
+        "relation_type": "accessory_for_model",
+        "type": "compatible"
+      },
+      "claim_id": "clm:f621c6714a6e1fef",
+      "doc_id": "doc:c2ef54b501b55631",
+      "doc_sha256": null,
+      "extracted_by": "llm:pr167-handoff-unattributed",
+      "history": [
+        {
+          "by": "parser:migrate_pr167@stage-b-1",
+          "event": "created",
+          "note": "",
+          "seq": 0,
+          "to": "PROPOSED",
+          "utc": "2026-11-17T00:00:00Z"
+        }
+      ],
+      "locator": {
+        "kind": "record_ref",
+        "ref": "pr167:oem_evidence/britax-comfort-insert-2000030111#confirmed_models/DUALFIX PRO"
+      },
+      "quote": null,
+      "review": null,
+      "status": "PROPOSED",
+      "supersedes": null,
+      "synthetic": false
+    }
+  ],
+  "schema": "bp-oem-claims-v1"
+}
