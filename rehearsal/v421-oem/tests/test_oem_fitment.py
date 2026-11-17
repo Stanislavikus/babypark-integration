@@ -297,6 +297,40 @@ class OemFitmentTest(unittest.TestCase):
         blocked = self.match(source, target, {"in_vehicle": False, "stage1_passed": True}, rules=LEGACY + [record])
         self.assertFalse(blocked["unconditional_recommendation"])
         self.assertIn("variant_profile_not_cleared", blocked["publication_blockers"])
+        target["option_digest"] = ""
+        source["option_digest"] = "unknown-source-profile"
+        source_blocked = self.match(source, target, {"in_vehicle": False, "stage1_passed": True}, rules=LEGACY + [record])
+        self.assertFalse(source_blocked["unconditional_recommendation"])
+        self.assertIn("variant_profile_not_cleared", source_blocked["publication_blockers"])
+        source["option_digest"] = ""
+        null_vehicle = self.match(source, target, {"in_vehicle": None, "stage1_passed": True}, rules=LEGACY + [record])
+        self.assertFalse(null_vehicle)
+        self.assertIn("in_vehicle", null_vehicle["missing_required_conditions"])
+        self.assertNotEqual(null_vehicle["decision"], "confirmed_unconditional")
+
+    def test_null_prohibitions_and_mixed_rules_fail_closed(self):
+        comfort = json.loads(json.dumps(next(item for item in OEM if item["oem_article"] == "2000030111")))
+        comfort["document"]["content_sha256"] = "hash-comfort"
+        source = product(60, "Britax-Romer автокресло Dualfix Pro", "2000038298")
+        target = product(61, "Comfort Insert", "2000030111")
+        context = {"standard": "R129", "integrated_harness": True, "infant_carrier": None,
+                   "height_cm": 76, "direction": "forward", "stage1_passed": True}
+        carrier = self.match(source, target, context, rules=LEGACY + [comfort])
+        self.assertFalse(carrier)
+        self.assertIn("infant_carrier", carrier["missing_required_conditions"])
+        joined = json.loads(json.dumps(next(item for item in OEM if item["oem_article"] == "ACCSFCC207")))
+        joined["catalog_skus"] = ["ACCSFCC207"]
+        joined["unjoined_seller_skus"] = []
+        joined["document"]["content_sha256"] = "hash-relax"
+        relax_source = product(62, "Britax-Romer автокресло Dualfix Pro", "2000036277")
+        relax = product(63, "Relax Insert", "ACCSFCC207")
+        other_insert = self.match(relax_source, relax, {
+            "height_cm": 70, "other_insert_fitted": None, "seat_model": "DUALFIX PRO", "stage1_passed": True,
+        }, rules=LEGACY + [joined])
+        self.assertFalse(other_insert)
+        self.assertIn("other_insert_fitted", other_insert["missing_required_conditions"])
+        unrelated = self.match(source, product(64, "какой-то аксессуар", "not-an-oem-article"), rules=RULES)
+        self.assertIsNone(unrelated)
 
     def test_identity_does_not_use_nid_or_fuzzy_proof(self):
         first = self.match(product(134907, "Britax-Romer автокресло Dualfix Pro", "2000038298"),

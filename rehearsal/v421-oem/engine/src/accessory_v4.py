@@ -433,6 +433,28 @@ def _oem_chassis_text(chassis):
         return chassis.get("model") or chassis.get("title") or ""
     return ""
 
+def _oem_require_false(ctx, key, missing, failed):
+    """A prohibited condition passes only on an explicit boolean False.
+
+    A missing key, null, or any other value is not evidence that the prohibition holds.
+    An explicit True fails the condition.
+    """
+    value=ctx.get(key) if key in ctx else None
+    if not isinstance(value, bool):
+        missing.append(key)
+    elif value is True:
+        failed.append(key)
+
+def _oem_require_number(ctx, key, missing):
+    if key not in ctx:
+        missing.append(key)
+        return None
+    value=ctx.get(key)
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        missing.append(key)
+        return None
+    return float(value)
+
 def _oem_use_limits(record, use_context, target):
     limits=record.get("use_limits") or {}
     ctx=use_context or {}
@@ -449,53 +471,39 @@ def _oem_use_limits(record, use_context, target):
         if not standard:
             missing.extend(["approval_standard","integrated_harness","infant_carrier","child_measure"])
             return missing,failed
-        if "integrated_harness" not in ctx:
-            missing.append("integrated_harness")
-        elif ctx.get("integrated_harness") is not True:
-            failed.append("integrated_harness")
-        if "infant_carrier" not in ctx:
-            missing.append("infant_carrier")
-        elif ctx.get("infant_carrier") is True:
-            failed.append("infant_carrier")
-        if str(standard).upper()=="R129":
-            if "height_cm" not in ctx:
-                missing.append("height_cm")
-            if "direction" not in ctx:
-                missing.append("direction")
+        if ctx.get("integrated_harness") is not True:
+            if not isinstance(ctx.get("integrated_harness"), bool):
+                missing.append("integrated_harness")
             else:
-                direction=str(ctx.get("direction"))
-                height=ctx.get("height_cm")
-                if height is not None and direction=="rearward" and float(height)<60:
-                    failed.append("height_cm")
-                elif height is not None and direction=="forward" and float(height)<76:
-                    failed.append("height_cm")
-                elif direction not in ("rearward","forward"):
-                    failed.append("direction")
+                failed.append("integrated_harness")
+        _oem_require_false(ctx, "infant_carrier", missing, failed)
+        if str(standard).upper()=="R129":
+            height=_oem_require_number(ctx, "height_cm", missing)
+            direction=ctx.get("direction") if "direction" in ctx else None
+            if not isinstance(direction, str):
+                missing.append("direction")
+            elif direction=="rearward" and height is not None and height<60:
+                failed.append("height_cm")
+            elif direction=="forward" and height is not None and height<76:
+                failed.append("height_cm")
+            elif direction not in ("rearward","forward"):
+                failed.append("direction")
         elif str(standard).upper()=="R44":
-            if "weight_kg" not in ctx:
-                missing.append("weight_kg")
-            elif float(ctx.get("weight_kg"))<9:
+            weight=_oem_require_number(ctx, "weight_kg", missing)
+            if weight is not None and weight<9:
                 failed.append("weight_kg")
         else:
             failed.append("approval_standard")
     elif kind=="outdoor_only":
-        if "in_vehicle" not in ctx:
-            missing.append("in_vehicle")
-        elif ctx.get("in_vehicle") is True:
-            failed.append("in_vehicle")
+        _oem_require_false(ctx, "in_vehicle", missing, failed)
     elif kind=="height_band":
-        if "height_cm" not in ctx:
-            missing.append("height_cm")
-        else:
+        height=_oem_require_number(ctx, "height_cm", missing)
+        if height is not None:
             low,high=limits.get("height_cm") or (None,None)
-            height=float(ctx.get("height_cm"))
             if low is None or high is None or height<float(low) or height>float(high):
                 failed.append("height_cm")
         if limits.get("forbid_other_insert"):
-            if "other_insert_fitted" not in ctx:
-                missing.append("other_insert_fitted")
-            elif ctx.get("other_insert_fitted") is True:
-                failed.append("other_insert_fitted")
+            _oem_require_false(ctx, "other_insert_fitted", missing, failed)
         allowed=limits.get("models") or record.get("confirmed_models") or []
         seat=ctx.get("seat_model") or _oem_model_text({"title":ctx.get("seat_model") or ""})
         if ctx.get("seat_model"):
@@ -540,11 +548,14 @@ def _oem_finish(payload, record, source, target, profiles, use_context):
         blockers.append("stage1_not_run")
     if not eligible_source(source) or not eligible_source(target):
         blockers.append("not_currently_purchasable")
-    digest=str((target or {}).get("option_digest") or "")
-    if digest:
-        profile=_option_profile(target, profiles or {}, None)
+    for row in (source, target):
+        digest=str((row or {}).get("option_digest") or "")
+        if not digest:
+            continue
+        profile=_option_profile(row, profiles or {}, None)
         if not profile["ok"]:
             blockers.append("variant_profile_not_cleared")
+            break
     if payload.get("missing_required_conditions"):
         blockers.append("missing_required_conditions")
     if payload.get("failed_conditions"):
@@ -742,6 +753,8 @@ def manufacturer_fitment_match(source,target,policy,rules,profiles,use_context=N
     source_head_value=source_head(source,policy)
     if not source_head_value:return None
     for rule in rules:
+        if isinstance(rule, dict) and rule.get("record_type")=="oem_evidence":
+            continue
         if (source.get("brand_tid")!=rule["brand_tid"] or
             source_head_value!=rule["source_head"] or not target_in_head(target,rule["target_head"],policy) or
             source.get("type")!=rule["source_type"] or target.get("type")!=rule["target_type"]):
