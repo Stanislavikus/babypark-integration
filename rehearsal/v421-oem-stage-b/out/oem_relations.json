@@ -1,0 +1,5264 @@
+{
+  "article_bindings": {
+    "bindings": [
+      {
+        "binding_id": "bnd:besafe:11006001",
+        "catalog_sku": "11006001par",
+        "declared_status": "PROPOSED",
+        "evidence_claim_ids": [
+          "clm:cc3279303c9b05d3"
+        ],
+        "lookup_status": "proposed",
+        "manufacturer_id": "besafe",
+        "mpn": "11006001",
+        "reasons": [
+          "binding_unverified"
+        ]
+      },
+      {
+        "binding_id": "bnd:britax-romer:2000030111",
+        "catalog_sku": "2000030111",
+        "declared_status": "PROPOSED",
+        "evidence_claim_ids": [
+          "clm:3b321c43ee8ff318"
+        ],
+        "lookup_status": "proposed",
+        "manufacturer_id": "britax-romer",
+        "mpn": "2000030111",
+        "reasons": [
+          "binding_unverified"
+        ]
+      },
+      {
+        "binding_id": "bnd:bugaboo:400003001",
+        "catalog_sku": "400003001",
+        "declared_status": "PROPOSED",
+        "evidence_claim_ids": [
+          "clm:164f71eb56b3d7c0"
+        ],
+        "lookup_status": "proposed",
+        "manufacturer_id": "bugaboo",
+        "mpn": "400003001",
+        "reasons": [
+          "binding_unverified"
+        ]
+      },
+      {
+        "binding_id": "bnd:bugaboo:400019001",
+        "catalog_sku": "400019001",
+        "declared_status": "PROPOSED",
+        "evidence_claim_ids": [
+          "clm:d5696c476f1f8442"
+        ],
+        "lookup_status": "proposed",
+        "manufacturer_id": "bugaboo",
+        "mpn": "400019001",
+        "reasons": [
+          "binding_unverified"
+        ]
+      },
+      {
+        "binding_id": "bnd:maxi-cosi:1166057110",
+        "catalog_sku": "1166057110",
+        "declared_status": "PROPOSED",
+        "evidence_claim_ids": [
+          "clm:10cea0f6bc1b71bc"
+        ],
+        "lookup_status": "proposed",
+        "manufacturer_id": "maxi-cosi",
+        "mpn": "1166057110",
+        "reasons": [
+          "binding_unverified"
+        ]
+      },
+      {
+        "binding_id": "bnd:maxi-cosi:74203550",
+        "catalog_sku": "74203550",
+        "declared_status": "PROPOSED",
+        "evidence_claim_ids": [
+          "clm:696cd8bdf49d2f76"
+        ],
+        "lookup_status": "proposed",
+        "manufacturer_id": "maxi-cosi",
+        "mpn": "74203550",
+        "reasons": [
+          "binding_unverified"
+        ]
+      },
+      {
+        "binding_id": "bnd:unspecified:6900000016817",
+        "catalog_sku": "6900000016817",
+        "declared_status": "PROPOSED",
+        "evidence_claim_ids": [
+          "clm:f3fa158296cfbceb"
+        ],
+        "lookup_status": "proposed",
+        "manufacturer_id": "unspecified",
+        "mpn": "6900000016817",
+        "reasons": [
+          "binding_unverified"
+        ]
+      }
+    ],
+    "conflicts": {},
+    "unjoined_candidates": [
+      {
+        "manufacturer_id": "britax-romer",
+        "mpn": "ACCSFCC207",
+        "reason": "PR #167: no audited OEM-article mapping; name similarity is insufficient",
+        "seller_skus": [
+          "2000040775"
+        ]
+      }
+    ]
+  },
+  "identity": {
+    "aliases": [
+      {
+        "alias_id": "als:1cd583b3e88f",
+        "context": "catalog",
+        "maker_id": "britax-romer",
+        "model_id": "britax-romer:dualfix-pro-m",
+        "status": "PROPOSED",
+        "text": "Dualfix Pro М"
+      },
+      {
+        "alias_id": "als:39c1d606b1ce",
+        "context": "catalog",
+        "maker_id": "britax-romer",
+        "model_id": "britax-romer:evolvafix",
+        "status": "PROPOSED",
+        "text": "Britax-R mer Evolvafix"
+      },
+      {
+        "alias_id": "als:ef89d897cdda",
+        "context": "catalog",
+        "maker_id": "besafe",
+        "model_id": "besafe:izi-go-modular-x1-i-size",
+        "status": "PROPOSED",
+        "text": "iZi Go Modular X-1 iSize"
+      }
+    ],
+    "canonical_models_key_collisions": [],
+    "makers": [
+      "besafe",
+      "britax-romer",
+      "bugaboo",
+      "maxi-cosi",
+      "unspecified"
+    ],
+    "models": 30
+  },
+  "inputs": {
+    "engine_pins": {
+      "work/accessories/src/accessory_auto_v39.py": "7f313b47f7f94efd797527737d32761bd3670a2cbe236cefc1827a84692beb04",
+      "work/accessories/src/accessory_v4.py": "20c12303543fa7c4a522cc28ea5f4dc698098b0093ccf14fa066f9d67f7be2e8",
+      "work/accessories/src/canonical_models.py": "eb54e4bef88158af896ad54ebe5f6c27b3886c1b831fee91166877e9ccabdda3",
+      "work/accessories/src/v32_pipeline.py": "9c4cd8788aadc7d8a1422bd941c2a1032b36319f13daeaf58bb60b8ce32eafdc",
+      "work/accessories/src/v3_rules_v421.py": "42c4fa835d25f3ed027df25f01fdd29790da20af75bfcf5b68fc2ee420141a35"
+    },
+    "files": {
+      "aliases.json": "2360612cfc098871351df7de8889bafb56533497b84485cd32069559d8b710f6",
+      "articles.json": "70bfbfc8908a8973c478cd9aa4b33966d2b0fa31be8a7c90cff5b8e41ff595ac",
+      "claims.json": "2080968671f6fa1faee53ef24655bd18f9dbe84402736a9650b3dcd50e803e23",
+      "conditions_vocab.json": "c72a7b3cf1b55ecfd1362133a773af43ec6b8e19671a5c8a63f2930e7994f4ce",
+      "documents.json": "675f84bcda8609f1d1b43c9a2719da3aba6a35d83b50a999ab9d38bcfc1ff059",
+      "makers.json": "2ca51aa198de57c7b741bc1a6f22fd9e0fd80fe0bbc22d3a05c38472785a0481",
+      "models.json": "e2eef9f918bdd00363d7e5a1176a681a7d84aa4729e03cca66eabc77434faf5c"
+    }
+  },
+  "label": null,
+  "notice": "SHADOW DATA ONLY. Nothing in this file is a recommendation, a publication authorization or an enforced veto. OD1-OD8 are owner decisions that are still PENDING; the defaults implemented here are safe/held, not approved policy.",
+  "owner_decisions": [
+    {
+      "id": "OD1",
+      "implemented_default": "human reviewer metadata required; extractor != reviewer; LLM/parser can never verify; no reviewer approval is fabricated",
+      "status": "PENDING_OWNER",
+      "topic": "VERIFIED approval authority"
+    },
+    {
+      "id": "OD2",
+      "implemented_default": "staleness recorded (age_days); expiry only enforced when policy.ttl_days is set; never silently granted",
+      "status": "PENDING_OWNER",
+      "topic": "evidence TTL"
+    },
+    {
+      "id": "OD3",
+      "implemented_default": "report_only; any other mode is refused",
+      "status": "PENDING_OWNER",
+      "topic": "veto"
+    },
+    {
+      "id": "OD4",
+      "implemented_default": "LISTED_CONDITIONAL carries blocker od4_conditional_held",
+      "status": "PENDING_OWNER",
+      "topic": "conditional buyer-facing copy RU/UK"
+    },
+    {
+      "id": "OD5",
+      "implemented_default": "every adapter_between relation carries blocker od5_one_ended_adapter_abstain",
+      "status": "PENDING_OWNER",
+      "topic": "one-ended adapter"
+    },
+    {
+      "id": "OD6",
+      "implemented_default": "empty allow-list => od6_allowlist_empty blocker; shadow still records evidence",
+      "status": "PENDING_OWNER",
+      "topic": "market/language allow-list"
+    },
+    {
+      "id": "OD7",
+      "implemented_default": "isolated content-addressed folder (rehearsal only); no production location/retention",
+      "status": "PENDING_OWNER",
+      "topic": "evidence byte storage"
+    },
+    {
+      "id": "OD8",
+      "implemented_default": "no normalizer: strict pre-screen + exact key + scoped reviewed aliases; canonical_models.key() used for collision reporting only",
+      "status": "PENDING_OWNER",
+      "topic": "sole normalizer"
+    }
+  ],
+  "policy": {
+    "allow_synthetic": false,
+    "as_of": "2026-11-17",
+    "publish_allow_list": [],
+    "require_distinct_reviewer": true,
+    "ttl_days": null,
+    "veto_mode": "report_only"
+  },
+  "relations": [
+    {
+      "claims": [
+        {
+          "assertion_type": "compatible",
+          "claim_id": "clm:83a1619075d01648",
+          "declared_status": "PROPOSED",
+          "effective_status": "PROPOSED"
+        }
+      ],
+      "conditions": [
+        {
+          "attr": "child_height_cm",
+          "op": "gte",
+          "value": 61
+        },
+        {
+          "attr": "child_height_cm",
+          "op": "lte",
+          "value": 87
+        },
+        {
+          "attr": "has_other_insert",
+          "op": "eq",
+          "value": false
+        }
+      ],
+      "conditions_result_without_context": "UNKNOWN",
+      "conditions_review_state": "reviewed_constraints",
+      "context_requirements": [
+        "child_height_cm",
+        "has_other_insert"
+      ],
+      "effective_state": "UNKNOWN",
+      "ends": {
+        "accessory": {
+          "binding_reasons": [
+            "unjoined_candidate_unproven"
+          ],
+          "binding_status": "unbound",
+          "catalog_sku": null,
+          "kind": "article",
+          "maker_id": "britax-romer",
+          "mpn": "ACCSFCC207"
+        },
+        "model": {
+          "identity_candidates": [],
+          "identity_flags": [],
+          "identity_reason": "canonical_exact",
+          "identity_status": "resolved",
+          "identity_via": "canonical",
+          "kind": "model",
+          "maker_id": "britax-romer",
+          "model_id": "britax-romer:dualfix-m-plus",
+          "name": "DUALFIX M PLUS"
+        }
+      },
+      "evidence": {
+        "as_of": "2026-11-17",
+        "docs": [
+          {
+            "age_days": 0,
+            "bytes_state": "missing",
+            "doc_id": "doc:bac1a286d1860ffb",
+            "document_date": "2026-11-17",
+            "issuer": "britax-romer",
+            "language": "en",
+            "market": "manufacturer-com",
+            "synthetic": false
+          }
+        ],
+        "expired": null,
+        "max_age_days": 0,
+        "ttl_days": null
+      },
+      "proposed_state": "LISTED_CONDITIONAL",
+      "publish": {
+        "a_tier_candidate": false,
+        "blockers": [
+          "od4_conditional_held",
+          "od6_allowlist_empty",
+          "state_unknown"
+        ],
+        "downstream_gates": [
+          "stage1_native_receipt",
+          "locale_variant_commercial_gates",
+          "owner_enablement_flag"
+        ]
+      },
+      "reasons": [
+        "article:accessory:unbound",
+        "bytes_missing",
+        "claim_proposed_unverified"
+      ],
+      "relation_id": "rel:080c2e1d86f7f5a1",
+      "relation_type": "accessory_for_model",
+      "synthetic": false,
+      "time_bound_statements": [],
+      "veto": {
+        "candidate": false,
+        "mode": "report_only",
+        "pending_verification": false,
+        "scope": null
+      }
+    },
+    {
+      "claims": [
+        {
+          "assertion_type": "compatible",
+          "claim_id": "clm:478ee31e95da57aa",
+          "declared_status": "PROPOSED",
+          "effective_status": "PROPOSED"
+        }
+      ],
+      "conditions": [
+        {
+          "not": {
+            "attr": "seat_kind",
+            "op": "eq",
+            "value": "infant_carrier"
+          }
+        },
+        {
+          "any_of": [
+            {
+              "all_of": [
+                {
+                  "attr": "restraint_standard",
+                  "op": "eq",
+                  "value": "ECE R44"
+                },
+                {
+                  "attr": "harness_type",
+                  "op": "eq",
+                  "value": "integrated"
+                },
+                {
+                  "attr": "child_weight_kg",
+                  "op": "gte",
+                  "value": 9
+                }
+              ]
+            },
+            {
+              "all_of": [
+                {
+                  "attr": "restraint_standard",
+                  "op": "eq",
+                  "value": "ECE R129"
+                },
+                {
+                  "attr": "harness_type",
+                  "op": "eq",
+                  "value": "integrated"
+                },
+                {
+                  "any_of": [
+                    {
+                      "all_of": [
+                        {
+                          "attr": "facing",
+                          "op": "eq",
+                          "value": "rearward"
+                        },
+                        {
+                          "attr": "child_height_cm",
+                          "op": "gte",
+                          "value": 60
+                        }
+                      ]
+                    },
+                    {
+                      "all_of": [
+                        {
+                          "attr": "facing",
+                          "op": "eq",
+                          "value": "forward"
+                        },
+                        {
+                          "attr": "child_height_cm",
+                          "op": "gte",
+                          "value": 76
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "conditions_result_without_context": "UNKNOWN",
+      "conditions_review_state": "reviewed_constraints",
+      "context_requirements": [
+        "child_height_cm",
+        "child_weight_kg",
+        "facing",
+        "harness_type",
+        "restraint_standard",
+        "seat_kind"
+      ],
+      "effective_state": "UNKNOWN",
+      "ends": {
+        "accessory": {
+          "binding_reasons": [
+            "binding_unverified"
+          ],
+          "binding_status": "proposed",
+          "catalog_sku": "2000030111",
+          "kind": "article",
+          "maker_id": "britax-romer",
+          "mpn": "2000030111"
+        },
+        "model": {
+          "identity_candidates": [],
+          "identity_flags": [],
+          "identity_reason": "canonical_exact",
+          "identity_status": "resolved",
+          "identity_via": "canonical",
+          "kind": "model",
+          "maker_id": "britax-romer",
+          "model_id": "britax-romer:dualfix-plus",
+          "name": "DUALFIX PLUS"
+        }
+      },
+      "evidence": {
+        "as_of": "2026-11-17",
+        "docs": [
+          {
+            "age_days": 0,
+            "bytes_state": "missing",
+            "doc_id": "doc:c2ef54b501b55631",
+            "document_date": "2026-11-17",
+            "issuer": "britax-romer",
+            "language": "en",
+            "market": "manufacturer-com",
+            "synthetic": false
+          }
+        ],
+        "expired": null,
+        "max_age_days": 0,
+        "ttl_days": null
+      },
+      "proposed_state": "LISTED_CONDITIONAL",
+      "publish": {
+        "a_tier_candidate": false,
+        "blockers": [
+          "od4_conditional_held",
+          "od6_allowlist_empty",
+          "state_unknown"
+        ],
+        "downstream_gates": [
+          "stage1_native_receipt",
+          "locale_variant_commercial_gates",
+          "owner_enablement_flag"
+        ]
+      },
+      "reasons": [
+        "article:accessory:proposed",
+        "bytes_missing",
+        "claim_proposed_unverified"
+      ],
+      "relation_id": "rel:0909bb3f15adc5bb",
+      "relation_type": "accessory_for_model",
+      "synthetic": false,
+      "time_bound_statements": [],
+      "veto": {
+        "candidate": false,
+        "mode": "report_only",
+        "pending_verification": false,
+        "scope": null
+      }
+    },
+    {
+      "claims": [
+        {
+          "assertion_type": "compatible",
+          "claim_id": "clm:2206525d7c7823db",
+          "declared_status": "PROPOSED",
+          "effective_status": "PROPOSED"
+        }
+      ],
+      "conditions": [],
+      "conditions_result_without_context": "UNKNOWN",
+      "conditions_review_state": "unknown",
+      "context_requirements": [],
+      "effective_state": "UNKNOWN",
+      "ends": {
+        "adapter": {
+          "binding_reasons": [
+            "binding_unverified"
+          ],
+          "binding_status": "proposed",
+          "catalog_sku": "400003001",
+          "kind": "article",
+          "maker_id": "bugaboo",
+          "mpn": "400003001"
+        },
+        "chassis": {
+          "identity_candidates": [],
+          "identity_flags": [],
+          "identity_reason": "canonical_exact",
+          "identity_status": "resolved",
+          "identity_via": "canonical",
+          "kind": "model",
+          "maker_id": "bugaboo",
+          "model_id": "bugaboo:dragonfly-plus",
+          "name": "Dragonfly Plus"
+        },
+        "extension": null,
+        "seat": {
+          "identity_candidates": [],
+          "identity_flags": [],
+          "identity_reason": "canonical_exact",
+          "identity_status": "resolved",
+          "identity_via": "canonical",
+          "kind": "model",
+          "maker_id": "maxi-cosi",
+          "model_id": "maxi-cosi:pebble-360-pro",
+          "name": "Pebble 360 Pro"
+        }
+      },
+      "evidence": {
+        "as_of": "2026-11-17",
+        "docs": [
+          {
+            "age_days": 0,
+            "bytes_state": "missing",
+            "doc_id": "doc:8b27a7246e3541d0",
+            "document_date": "2026-11-17",
+            "issuer": "bugaboo",
+            "language": "en",
+            "market": "GB",
+            "synthetic": false
+          }
+        ],
+        "expired": null,
+        "max_age_days": 0,
+        "ttl_days": null
+      },
+      "proposed_state": "LISTED_CONDITIONAL",
+      "publish": {
+        "a_tier_candidate": false,
+        "blockers": [
+          "od4_conditional_held",
+          "od5_one_ended_adapter_abstain",
+          "od6_allowlist_empty",
+          "state_unknown"
+        ],
+        "downstream_gates": [
+          "stage1_native_receipt",
+          "locale_variant_commercial_gates",
+          "owner_enablement_flag"
+        ]
+      },
+      "reasons": [
+        "article:adapter:proposed",
+        "bytes_missing",
+        "claim_proposed_unverified",
+        "conditions_review_unknown"
+      ],
+      "relation_id": "rel:105b35a3358e582c",
+      "relation_type": "adapter_between",
+      "synthetic": false,
+      "time_bound_statements": [],
+      "veto": {
+        "candidate": false,
+        "mode": "report_only",
+        "pending_verification": false,
+        "scope": null
+      }
+    },
+    {
+      "claims": [
+        {
+          "assertion_type": "compatible",
+          "claim_id": "clm:102d3d27d0fd88fb",
+          "declared_status": "PROPOSED",
+          "effective_status": "PROPOSED"
+        }
+      ],
+      "conditions": [
+        {
+          "not": {
+            "attr": "seat_kind",
+            "op": "eq",
+            "value": "infant_carrier"
+          }
+        },
+        {
+          "any_of": [
+            {
+              "all_of": [
+                {
+                  "attr": "restraint_standard",
+                  "op": "eq",
+                  "value": "ECE R44"
+                },
+                {
+                  "attr": "harness_type",
+                  "op": "eq",
+                  "value": "integrated"
+                },
+                {
+                  "attr": "child_weight_kg",
+                  "op": "gte",
+                  "value": 9
+                }
+              ]
+            },
+            {
+              "all_of": [
+                {
+                  "attr": "restraint_standard",
+                  "op": "eq",
+                  "value": "ECE R129"
+                },
+                {
+                  "attr": "harness_type",
+                  "op": "eq",
+                  "value": "integrated"
+                },
+                {
+                  "any_of": [
+                    {
+                      "all_of": [
+                        {
+                          "attr": "facing",
+                          "op": "eq",
+                          "value": "rearward"
+                        },
+                        {
+                          "attr": "child_height_cm",
+                          "op": "gte",
+                          "value": 60
+                        }
+                      ]
+                    },
+                    {
+                      "all_of": [
+                        {
+                          "attr": "facing",
+                          "op": "eq",
+                          "value": "forward"
+                        },
+                        {
+                          "attr": "child_height_cm",
+                          "op": "gte",
+                          "value": 76
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "conditions_result_without_context": "UNKNOWN",
+      "conditions_review_state": "reviewed_constraints",
+      "context_requirements": [
+        "child_height_cm",
+        "child_weight_kg",
+        "facing",
+        "harness_type",
+        "restraint_standard",
+        "seat_kind"
+      ],
+      "effective_state": "UNKNOWN",
+      "ends": {
+        "accessory": {
+          "binding_reasons": [
+            "binding_unverified"
+          ],
+          "binding_status": "proposed",
+          "catalog_sku": "2000030111",
+          "kind": "article",
+          "maker_id": "britax-romer",
+          "mpn": "2000030111"
+        },
+        "model": {
+          "identity_candidates": [],
+          "identity_flags": [],
+          "identity_reason": "canonical_exact",
+          "identity_status": "resolved",
+          "identity_via": "canonical",
+          "kind": "model",
+          "maker_id": "britax-romer",
+          "model_id": "britax-romer:dualfix-5z",
+          "name": "DUALFIX 5Z"
+        }
+      },
+      "evidence": {
+        "as_of": "2026-11-17",
+        "docs": [
+          {
+            "age_days": 0,
+            "bytes_state": "missing",
+            "doc_id": "doc:c2ef54b501b55631",
+            "document_date": "2026-11-17",
+            "issuer": "britax-romer",
+            "language": "en",
+            "market": "manufacturer-com",
+            "synthetic": false
+          }
+        ],
+        "expired": null,
+        "max_age_days": 0,
+        "ttl_days": null
+      },
+      "proposed_state": "LISTED_CONDITIONAL",
+      "publish": {
+        "a_tier_candidate": false,
+        "blockers": [
+          "od4_conditional_held",
+          "od6_allowlist_empty",
+          "state_unknown"
+        ],
+        "downstream_gates": [
+          "stage1_native_receipt",
+          "locale_variant_commercial_gates",
+          "owner_enablement_flag"
+        ]
+      },
+      "reasons": [
+        "article:accessory:proposed",
+        "bytes_missing",
+        "claim_proposed_unverified"
+      ],
+      "relation_id": "rel:11e9c08274ef0694",
+      "relation_type": "accessory_for_model",
+      "synthetic": false,
+      "time_bound_statements": [],
+      "veto": {
+        "candidate": false,
+        "mode": "report_only",
+        "pending_verification": false,
+        "scope": null
+      }
+    },
+    {
+      "claims": [
+        {
+          "assertion_type": "compatible",
+          "claim_id": "clm:afd88cbe4e69c2ec",
+          "declared_status": "PROPOSED",
+          "effective_status": "PROPOSED"
+        }
+      ],
+      "conditions": [
+        {
+          "not": {
+            "attr": "seat_kind",
+            "op": "eq",
+            "value": "infant_carrier"
+          }
+        },
+        {
+          "any_of": [
+            {
+              "all_of": [
+                {
+                  "attr": "restraint_standard",
+                  "op": "eq",
+                  "value": "ECE R44"
+                },
+                {
+                  "attr": "harness_type",
+                  "op": "eq",
+                  "value": "integrated"
+                },
+                {
+                  "attr": "child_weight_kg",
+                  "op": "gte",
+                  "value": 9
+                }
+              ]
+            },
+            {
+              "all_of": [
+                {
+                  "attr": "restraint_standard",
+                  "op": "eq",
+                  "value": "ECE R129"
+                },
+                {
+                  "attr": "harness_type",
+                  "op": "eq",
+                  "value": "integrated"
+                },
+                {
+                  "any_of": [
+                    {
+                      "all_of": [
+                        {
+                          "attr": "facing",
+                          "op": "eq",
+                          "value": "rearward"
+                        },
+                        {
+                          "attr": "child_height_cm",
+                          "op": "gte",
+                          "value": 60
+                        }
+                      ]
+                    },
+                    {
+                      "all_of": [
+                        {
+                          "attr": "facing",
+                          "op": "eq",
+                          "value": "forward"
+                        },
+                        {
+                          "attr": "child_height_cm",
+                          "op": "gte",
+                          "value": 76
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "conditions_result_without_context": "UNKNOWN",
+      "conditions_review_state": "reviewed_constraints",
+      "context_requirements": [
+        "child_height_cm",
+        "child_weight_kg",
+        "facing",
+        "harness_type",
+        "restraint_standard",
+        "seat_kind"
+      ],
+      "effective_state": "UNKNOWN",
+      "ends": {
+        "accessory": {
+          "binding_reasons": [
+            "binding_unverified"
+          ],
+          "binding_status": "proposed",
+          "catalog_sku": "2000030111",
+          "kind": "article",
+          "maker_id": "britax-romer",
+          "mpn": "2000030111"
+        },
+        "model": {
+          "identity_candidates": [],
+          "identity_flags": [],
+          "identity_reason": "canonical_exact",
+          "identity_status": "resolved",
+          "identity_via": "canonical",
+          "kind": "model",
+          "maker_id": "britax-romer",
+          "model_id": "britax-romer:swivel-2",
+          "name": "SWIVEL 2"
+        }
+      },
+      "evidence": {
+        "as_of": "2026-11-17",
+        "docs": [
+          {
+            "age_days": 0,
+            "bytes_state": "missing",
+            "doc_id": "doc:c2ef54b501b55631",
+            "document_date": "2026-11-17",
+            "issuer": "britax-romer",
+            "language": "en",
+            "market": "manufacturer-com",
+            "synthetic": false
+          }
+        ],
+        "expired": null,
+        "max_age_days": 0,
+        "ttl_days": null
+      },
+      "proposed_state": "LISTED_CONDITIONAL",
+      "publish": {
+        "a_tier_candidate": false,
+        "blockers": [
+          "od4_conditional_held",
+          "od6_allowlist_empty",
+          "state_unknown"
+        ],
+        "downstream_gates": [
+          "stage1_native_receipt",
+          "locale_variant_commercial_gates",
+          "owner_enablement_flag"
+        ]
+      },
+      "reasons": [
+        "article:accessory:proposed",
+        "bytes_missing",
+        "claim_proposed_unverified"
+      ],
+      "relation_id": "rel:1c81c0d851450df5",
+      "relation_type": "accessory_for_model",
+      "synthetic": false,
+      "time_bound_statements": [],
+      "veto": {
+        "candidate": false,
+        "mode": "report_only",
+        "pending_verification": false,
+        "scope": null
+      }
+    },
+    {
+      "claims": [
+        {
+          "assertion_type": "compatible",
+          "claim_id": "clm:7b4898f3eb6812ae",
+          "declared_status": "PROPOSED",
+          "effective_status": "PROPOSED"
+        }
+      ],
+      "conditions": [
+        {
+          "attr": "child_height_cm",
+          "op": "gte",
+          "value": 61
+        },
+        {
+          "attr": "child_height_cm",
+          "op": "lte",
+          "value": 87
+        },
+        {
+          "attr": "has_other_insert",
+          "op": "eq",
+          "value": false
+        }
+      ],
+      "conditions_result_without_context": "UNKNOWN",
+      "conditions_review_state": "reviewed_constraints",
+      "context_requirements": [
+        "child_height_cm",
+        "has_other_insert"
+      ],
+      "effective_state": "UNKNOWN",
+      "ends": {
+        "accessory": {
+          "binding_reasons": [
+            "unjoined_candidate_unproven"
+          ],
+          "binding_status": "unbound",
+          "catalog_sku": null,
+          "kind": "article",
+          "maker_id": "britax-romer",
+          "mpn": "ACCSFCC207"
+        },
+        "model": {
+          "identity_candidates": [],
+          "identity_flags": [],
+          "identity_reason": "canonical_exact",
+          "identity_status": "resolved",
+          "identity_via": "canonical",
+          "kind": "model",
+          "maker_id": "britax-romer",
+          "model_id": "britax-romer:dualfix-plus",
+          "name": "DUALFIX PLUS"
+        }
+      },
+      "evidence": {
+        "as_of": "2026-11-17",
+        "docs": [
+          {
+            "age_days": 0,
+            "bytes_state": "missing",
+            "doc_id": "doc:bac1a286d1860ffb",
+            "document_date": "2026-11-17",
+            "issuer": "britax-romer",
+            "language": "en",
+            "market": "manufacturer-com",
+            "synthetic": false
+          }
+        ],
+        "expired": null,
+        "max_age_days": 0,
+        "ttl_days": null
+      },
+      "proposed_state": "LISTED_CONDITIONAL",
+      "publish": {
+        "a_tier_candidate": false,
+        "blockers": [
+          "od4_conditional_held",
+          "od6_allowlist_empty",
+          "state_unknown"
+        ],
+        "downstream_gates": [
+          "stage1_native_receipt",
+          "locale_variant_commercial_gates",
+          "owner_enablement_flag"
+        ]
+      },
+      "reasons": [
+        "article:accessory:unbound",
+        "bytes_missing",
+        "claim_proposed_unverified"
+      ],
+      "relation_id": "rel:28a660593040e9b0",
+      "relation_type": "accessory_for_model",
+      "synthetic": false,
+      "time_bound_statements": [],
+      "veto": {
+        "candidate": false,
+        "mode": "report_only",
+        "pending_verification": false,
+        "scope": null
+      }
+    },
+    {
+      "claims": [
+        {
+          "assertion_type": "compatible",
+          "claim_id": "clm:76cdc23051b3ba54",
+          "declared_status": "PROPOSED",
+          "effective_status": "PROPOSED"
+        }
+      ],
+      "conditions": [],
+      "conditions_result_without_context": "PASS",
+      "conditions_review_state": "verified_none",
+      "context_requirements": [],
+      "effective_state": "UNKNOWN",
+      "ends": {
+        "accessory": {
+          "binding_reasons": [
+            "binding_unverified"
+          ],
+          "binding_status": "proposed",
+          "catalog_sku": "6900000016817",
+          "kind": "article",
+          "maker_id": "unspecified",
+          "mpn": "6900000016817"
+        }
+      },
+      "evidence": {
+        "as_of": "2026-11-17",
+        "docs": [
+          {
+            "age_days": 0,
+            "bytes_state": "missing",
+            "doc_id": "doc:81bb8659a109e590",
+            "document_date": "2026-11-17",
+            "issuer": "unspecified",
+            "language": "ru",
+            "market": "catalog-control",
+            "synthetic": false
+          }
+        ],
+        "expired": null,
+        "max_age_days": 0,
+        "ttl_days": null
+      },
+      "proposed_state": "LISTED",
+      "publish": {
+        "a_tier_candidate": false,
+        "blockers": [
+          "class_c_never_ab",
+          "od6_allowlist_empty",
+          "state_unknown"
+        ],
+        "downstream_gates": [
+          "stage1_native_receipt",
+          "locale_variant_commercial_gates",
+          "owner_enablement_flag"
+        ]
+      },
+      "reasons": [
+        "article:accessory:proposed",
+        "bytes_missing",
+        "claim_proposed_unverified"
+      ],
+      "relation_id": "rel:2c22ecae2a9c3e40",
+      "relation_type": "vehicle_general",
+      "synthetic": false,
+      "time_bound_statements": [],
+      "veto": {
+        "candidate": false,
+        "mode": "report_only",
+        "pending_verification": false,
+        "scope": null
+      }
+    },
+    {
+      "claims": [
+        {
+          "assertion_type": "absent_from_list",
+          "claim_id": "clm:389fbfba4c8bb7e9",
+          "declared_status": "PROPOSED",
+          "effective_status": "PROPOSED"
+        }
+      ],
+      "conditions": [],
+      "conditions_result_without_context": null,
+      "conditions_review_state": null,
+      "context_requirements": [],
+      "effective_state": "UNKNOWN",
+      "ends": {
+        "accessory": {
+          "binding_reasons": [
+            "binding_unverified"
+          ],
+          "binding_status": "proposed",
+          "catalog_sku": "11006001par",
+          "kind": "article",
+          "maker_id": "besafe",
+          "mpn": "11006001"
+        },
+        "model": {
+          "identity_candidates": [],
+          "identity_flags": [],
+          "identity_reason": "canonical_exact",
+          "identity_status": "resolved",
+          "identity_via": "canonical",
+          "kind": "model",
+          "maker_id": "besafe",
+          "model_id": "besafe:izi-go-modular-x2",
+          "name": "iZi Go Modular X2"
+        }
+      },
+      "evidence": {
+        "as_of": "2026-11-17",
+        "docs": [
+          {
+            "age_days": 0,
+            "bytes_state": "missing",
+            "doc_id": "doc:3d6c5125466e6847",
+            "document_date": "2026-11-17",
+            "issuer": "besafe",
+            "language": "en",
+            "market": "manufacturer-manual",
+            "synthetic": false
+          }
+        ],
+        "expired": null,
+        "max_age_days": 0,
+        "ttl_days": null
+      },
+      "proposed_state": "UNKNOWN",
+      "publish": {
+        "a_tier_candidate": false,
+        "blockers": [
+          "od6_allowlist_empty",
+          "state_unknown"
+        ],
+        "downstream_gates": [
+          "stage1_native_receipt",
+          "locale_variant_commercial_gates",
+          "owner_enablement_flag"
+        ]
+      },
+      "reasons": [
+        "absent_from_list_or_no_positive_claim",
+        "article:accessory:proposed"
+      ],
+      "relation_id": "rel:43724e77b03ec423",
+      "relation_type": "accessory_for_model",
+      "synthetic": false,
+      "time_bound_statements": [],
+      "veto": {
+        "candidate": false,
+        "mode": "report_only",
+        "pending_verification": false,
+        "scope": null
+      }
+    },
+    {
+      "claims": [
+        {
+          "assertion_type": "compatible",
+          "claim_id": "clm:1a21958934dafcba",
+          "declared_status": "PROPOSED",
+          "effective_status": "PROPOSED"
+        }
+      ],
+      "conditions": [
+        {
+          "not": {
+            "attr": "seat_kind",
+            "op": "eq",
+            "value": "infant_carrier"
+          }
+        },
+        {
+          "any_of": [
+            {
+              "all_of": [
+                {
+                  "attr": "restraint_standard",
+                  "op": "eq",
+                  "value": "ECE R44"
+                },
+                {
+                  "attr": "harness_type",
+                  "op": "eq",
+                  "value": "integrated"
+                },
+                {
+                  "attr": "child_weight_kg",
+                  "op": "gte",
+                  "value": 9
+                }
+              ]
+            },
+            {
+              "all_of": [
+                {
+                  "attr": "restraint_standard",
+                  "op": "eq",
+                  "value": "ECE R129"
+                },
+                {
+                  "attr": "harness_type",
+                  "op": "eq",
+                  "value": "integrated"
+                },
+                {
+                  "any_of": [
+                    {
+                      "all_of": [
+                        {
+                          "attr": "facing",
+                          "op": "eq",
+                          "value": "rearward"
+                        },
+                        {
+                          "attr": "child_height_cm",
+                          "op": "gte",
+                          "value": 60
+                        }
+                      ]
+                    },
+                    {
+                      "all_of": [
+                        {
+                          "attr": "facing",
+                          "op": "eq",
+                          "value": "forward"
+                        },
+                        {
+                          "attr": "child_height_cm",
+                          "op": "gte",
+                          "value": 76
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "conditions_result_without_context": "UNKNOWN",
+      "conditions_review_state": "reviewed_constraints",
+      "context_requirements": [
+        "child_height_cm",
+        "child_weight_kg",
+        "facing",
+        "harness_type",
+        "restraint_standard",
+        "seat_kind"
+      ],
+      "effective_state": "UNKNOWN",
+      "ends": {
+        "accessory": {
+          "binding_reasons": [
+            "binding_unverified"
+          ],
+          "binding_status": "proposed",
+          "catalog_sku": "2000030111",
+          "kind": "article",
+          "maker_id": "britax-romer",
+          "mpn": "2000030111"
+        },
+        "model": {
+          "identity_candidates": [],
+          "identity_flags": [],
+          "identity_reason": "canonical_exact",
+          "identity_status": "resolved",
+          "identity_via": "canonical",
+          "kind": "model",
+          "maker_id": "britax-romer",
+          "model_id": "britax-romer:max-safe-pro",
+          "name": "MAX-SAFE PRO"
+        }
+      },
+      "evidence": {
+        "as_of": "2026-11-17",
+        "docs": [
+          {
+            "age_days": 0,
+            "bytes_state": "missing",
+            "doc_id": "doc:c2ef54b501b55631",
+            "document_date": "2026-11-17",
+            "issuer": "britax-romer",
+            "language": "en",
+            "market": "manufacturer-com",
+            "synthetic": false
+          }
+        ],
+        "expired": null,
+        "max_age_days": 0,
+        "ttl_days": null
+      },
+      "proposed_state": "LISTED_CONDITIONAL",
+      "publish": {
+        "a_tier_candidate": false,
+        "blockers": [
+          "od4_conditional_held",
+          "od6_allowlist_empty",
+          "state_unknown"
+        ],
+        "downstream_gates": [
+          "stage1_native_receipt",
+          "locale_variant_commercial_gates",
+          "owner_enablement_flag"
+        ]
+      },
+      "reasons": [
+        "article:accessory:proposed",
+        "bytes_missing",
+        "claim_proposed_unverified"
+      ],
+      "relation_id": "rel:52fd81e2c75f18bd",
+      "relation_type": "accessory_for_model",
+      "synthetic": false,
+      "time_bound_statements": [],
+      "veto": {
+        "candidate": false,
+        "mode": "report_only",
+        "pending_verification": false,
+        "scope": null
+      }
+    },
+    {
+      "claims": [
+        {
+          "assertion_type": "absent_from_list",
+          "claim_id": "clm:0964db5731167e0f",
+          "declared_status": "PROPOSED",
+          "effective_status": "PROPOSED"
+        }
+      ],
+      "conditions": [],
+      "conditions_result_without_context": null,
+      "conditions_review_state": null,
+      "context_requirements": [],
+      "effective_state": "UNKNOWN",
+      "ends": {
+        "accessory": {
+          "binding_reasons": [
+            "binding_unverified"
+          ],
+          "binding_status": "proposed",
+          "catalog_sku": "2000030111",
+          "kind": "article",
+          "maker_id": "britax-romer",
+          "mpn": "2000030111"
+        },
+        "model": {
+          "identity_candidates": [],
+          "identity_flags": [],
+          "identity_reason": "canonical_exact",
+          "identity_status": "resolved",
+          "identity_via": "canonical",
+          "kind": "model",
+          "maker_id": "britax-romer",
+          "model_id": "britax-romer:kidfix-pro",
+          "name": "KIDFIX PRO"
+        }
+      },
+      "evidence": {
+        "as_of": "2026-11-17",
+        "docs": [
+          {
+            "age_days": 0,
+            "bytes_state": "missing",
+            "doc_id": "doc:c2ef54b501b55631",
+            "document_date": "2026-11-17",
+            "issuer": "britax-romer",
+            "language": "en",
+            "market": "manufacturer-com",
+            "synthetic": false
+          }
+        ],
+        "expired": null,
+        "max_age_days": 0,
+        "ttl_days": null
+      },
+      "proposed_state": "UNKNOWN",
+      "publish": {
+        "a_tier_candidate": false,
+        "blockers": [
+          "od6_allowlist_empty",
+          "state_unknown"
+        ],
+        "downstream_gates": [
+          "stage1_native_receipt",
+          "locale_variant_commercial_gates",
+          "owner_enablement_flag"
+        ]
+      },
+      "reasons": [
+        "absent_from_list_or_no_positive_claim",
+        "article:accessory:proposed"
+      ],
+      "relation_id": "rel:54e1afd0bfa37816",
+      "relation_type": "accessory_for_model",
+      "synthetic": false,
+      "time_bound_statements": [],
+      "veto": {
+        "candidate": false,
+        "mode": "report_only",
+        "pending_verification": false,
+        "scope": null
+      }
+    },
+    {
+      "claims": [
+        {
+          "assertion_type": "compatible",
+          "claim_id": "clm:063a57f2c4bfa10a",
+          "declared_status": "PROPOSED",
+          "effective_status": "PROPOSED"
+        }
+      ],
+      "conditions": [
+        {
+          "attr": "child_height_cm",
+          "op": "gte",
+          "value": 61
+        },
+        {
+          "attr": "child_height_cm",
+          "op": "lte",
+          "value": 87
+        },
+        {
+          "attr": "has_other_insert",
+          "op": "eq",
+          "value": false
+        }
+      ],
+      "conditions_result_without_context": "UNKNOWN",
+      "conditions_review_state": "reviewed_constraints",
+      "context_requirements": [
+        "child_height_cm",
+        "has_other_insert"
+      ],
+      "effective_state": "UNKNOWN",
+      "ends": {
+        "accessory": {
+          "binding_reasons": [
+            "unjoined_candidate_unproven"
+          ],
+          "binding_status": "unbound",
+          "catalog_sku": null,
+          "kind": "article",
+          "maker_id": "britax-romer",
+          "mpn": "ACCSFCC207"
+        },
+        "model": {
+          "identity_candidates": [],
+          "identity_flags": [],
+          "identity_reason": "canonical_exact",
+          "identity_status": "resolved",
+          "identity_via": "canonical",
+          "kind": "model",
+          "maker_id": "britax-romer",
+          "model_id": "britax-romer:swingfix-m-plus",
+          "name": "SWINGFIX M PLUS"
+        }
+      },
+      "evidence": {
+        "as_of": "2026-11-17",
+        "docs": [
+          {
+            "age_days": 0,
+            "bytes_state": "missing",
+            "doc_id": "doc:bac1a286d1860ffb",
+            "document_date": "2026-11-17",
+            "issuer": "britax-romer",
+            "language": "en",
+            "market": "manufacturer-com",
+            "synthetic": false
+          }
+        ],
+        "expired": null,
+        "max_age_days": 0,
+        "ttl_days": null
+      },
+      "proposed_state": "LISTED_CONDITIONAL",
+      "publish": {
+        "a_tier_candidate": false,
+        "blockers": [
+          "od4_conditional_held",
+          "od6_allowlist_empty",
+          "state_unknown"
+        ],
+        "downstream_gates": [
+          "stage1_native_receipt",
+          "locale_variant_commercial_gates",
+          "owner_enablement_flag"
+        ]
+      },
+      "reasons": [
+        "article:accessory:unbound",
+        "bytes_missing",
+        "claim_proposed_unverified"
+      ],
+      "relation_id": "rel:5889f8a94282a1a5",
+      "relation_type": "accessory_for_model",
+      "synthetic": false,
+      "time_bound_statements": [],
+      "veto": {
+        "candidate": false,
+        "mode": "report_only",
+        "pending_verification": false,
+        "scope": null
+      }
+    },
+    {
+      "claims": [
+        {
+          "assertion_type": "compatible",
+          "claim_id": "clm:6f66fbb3a8e995fb",
+          "declared_status": "PROPOSED",
+          "effective_status": "PROPOSED"
+        }
+      ],
+      "conditions": [],
+      "conditions_result_without_context": "UNKNOWN",
+      "conditions_review_state": "unknown",
+      "context_requirements": [],
+      "effective_state": "UNKNOWN",
+      "ends": {
+        "adapter": {
+          "binding_reasons": [
+            "binding_unverified"
+          ],
+          "binding_status": "proposed",
+          "catalog_sku": "400019001",
+          "kind": "article",
+          "maker_id": "bugaboo",
+          "mpn": "400019001"
+        },
+        "chassis": {
+          "identity_candidates": [],
+          "identity_flags": [],
+          "identity_reason": "canonical_exact",
+          "identity_status": "resolved",
+          "identity_via": "canonical",
+          "kind": "model",
+          "maker_id": "bugaboo",
+          "model_id": "bugaboo:fox-5-renew",
+          "name": "Fox 5 Renew"
+        },
+        "extension": null,
+        "seat": {
+          "identity_candidates": [],
+          "identity_flags": [],
+          "identity_reason": "canonical_exact",
+          "identity_status": "resolved",
+          "identity_via": "canonical",
+          "kind": "model",
+          "maker_id": "maxi-cosi",
+          "model_id": "maxi-cosi:pebble-360-pro-2",
+          "name": "Pebble 360 Pro 2"
+        }
+      },
+      "evidence": {
+        "as_of": "2026-11-17",
+        "docs": [
+          {
+            "age_days": 0,
+            "bytes_state": "missing",
+            "doc_id": "doc:b00a78102f589f76",
+            "document_date": "2026-11-17",
+            "issuer": "bugaboo",
+            "language": "en",
+            "market": "GB",
+            "synthetic": false
+          }
+        ],
+        "expired": null,
+        "max_age_days": 0,
+        "ttl_days": null
+      },
+      "proposed_state": "LISTED_CONDITIONAL",
+      "publish": {
+        "a_tier_candidate": false,
+        "blockers": [
+          "od4_conditional_held",
+          "od5_one_ended_adapter_abstain",
+          "od6_allowlist_empty",
+          "state_unknown"
+        ],
+        "downstream_gates": [
+          "stage1_native_receipt",
+          "locale_variant_commercial_gates",
+          "owner_enablement_flag"
+        ]
+      },
+      "reasons": [
+        "article:adapter:proposed",
+        "bytes_missing",
+        "claim_proposed_unverified",
+        "conditions_review_unknown"
+      ],
+      "relation_id": "rel:595f8589c89c6586",
+      "relation_type": "adapter_between",
+      "synthetic": false,
+      "time_bound_statements": [],
+      "veto": {
+        "candidate": false,
+        "mode": "report_only",
+        "pending_verification": false,
+        "scope": null
+      }
+    },
+    {
+      "claims": [
+        {
+          "assertion_type": "compatible",
+          "claim_id": "clm:c16de7388aa7d5a4",
+          "declared_status": "PROPOSED",
+          "effective_status": "PROPOSED"
+        }
+      ],
+      "conditions": [],
+      "conditions_result_without_context": "UNKNOWN",
+      "conditions_review_state": "unknown",
+      "context_requirements": [],
+      "effective_state": "UNKNOWN",
+      "ends": {
+        "adapter": {
+          "binding_reasons": [
+            "binding_unverified"
+          ],
+          "binding_status": "proposed",
+          "catalog_sku": "400019001",
+          "kind": "article",
+          "maker_id": "bugaboo",
+          "mpn": "400019001"
+        },
+        "chassis": {
+          "identity_candidates": [],
+          "identity_flags": [],
+          "identity_reason": "canonical_exact",
+          "identity_status": "resolved",
+          "identity_via": "canonical",
+          "kind": "model",
+          "maker_id": "bugaboo",
+          "model_id": "bugaboo:fox-5",
+          "name": "Fox 5"
+        },
+        "extension": null,
+        "seat": {
+          "identity_candidates": [],
+          "identity_flags": [],
+          "identity_reason": "canonical_exact",
+          "identity_status": "resolved",
+          "identity_via": "canonical",
+          "kind": "model",
+          "maker_id": "besafe",
+          "model_id": "besafe:izi-go-modular-x1-i-size",
+          "name": "iZi Go Modular X1 i-Size"
+        }
+      },
+      "evidence": {
+        "as_of": "2026-11-17",
+        "docs": [
+          {
+            "age_days": 0,
+            "bytes_state": "missing",
+            "doc_id": "doc:b00a78102f589f76",
+            "document_date": "2026-11-17",
+            "issuer": "bugaboo",
+            "language": "en",
+            "market": "GB",
+            "synthetic": false
+          }
+        ],
+        "expired": null,
+        "max_age_days": 0,
+        "ttl_days": null
+      },
+      "proposed_state": "LISTED_CONDITIONAL",
+      "publish": {
+        "a_tier_candidate": false,
+        "blockers": [
+          "od4_conditional_held",
+          "od5_one_ended_adapter_abstain",
+          "od6_allowlist_empty",
+          "state_unknown"
+        ],
+        "downstream_gates": [
+          "stage1_native_receipt",
+          "locale_variant_commercial_gates",
+          "owner_enablement_flag"
+        ]
+      },
+      "reasons": [
+        "article:adapter:proposed",
+        "bytes_missing",
+        "claim_proposed_unverified",
+        "conditions_review_unknown"
+      ],
+      "relation_id": "rel:5a066121edd0a2bc",
+      "relation_type": "adapter_between",
+      "synthetic": false,
+      "time_bound_statements": [],
+      "veto": {
+        "candidate": false,
+        "mode": "report_only",
+        "pending_verification": false,
+        "scope": null
+      }
+    },
+    {
+      "claims": [
+        {
+          "assertion_type": "compatible",
+          "claim_id": "clm:8b779d5f19ed28b2",
+          "declared_status": "PROPOSED",
+          "effective_status": "PROPOSED"
+        }
+      ],
+      "conditions": [
+        {
+          "not": {
+            "attr": "seat_kind",
+            "op": "eq",
+            "value": "infant_carrier"
+          }
+        },
+        {
+          "any_of": [
+            {
+              "all_of": [
+                {
+                  "attr": "restraint_standard",
+                  "op": "eq",
+                  "value": "ECE R44"
+                },
+                {
+                  "attr": "harness_type",
+                  "op": "eq",
+                  "value": "integrated"
+                },
+                {
+                  "attr": "child_weight_kg",
+                  "op": "gte",
+                  "value": 9
+                }
+              ]
+            },
+            {
+              "all_of": [
+                {
+                  "attr": "restraint_standard",
+                  "op": "eq",
+                  "value": "ECE R129"
+                },
+                {
+                  "attr": "harness_type",
+                  "op": "eq",
+                  "value": "integrated"
+                },
+                {
+                  "any_of": [
+                    {
+                      "all_of": [
+                        {
+                          "attr": "facing",
+                          "op": "eq",
+                          "value": "rearward"
+                        },
+                        {
+                          "attr": "child_height_cm",
+                          "op": "gte",
+                          "value": 60
+                        }
+                      ]
+                    },
+                    {
+                      "all_of": [
+                        {
+                          "attr": "facing",
+                          "op": "eq",
+                          "value": "forward"
+                        },
+                        {
+                          "attr": "child_height_cm",
+                          "op": "gte",
+                          "value": 76
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "conditions_result_without_context": "UNKNOWN",
+      "conditions_review_state": "reviewed_constraints",
+      "context_requirements": [
+        "child_height_cm",
+        "child_weight_kg",
+        "facing",
+        "harness_type",
+        "restraint_standard",
+        "seat_kind"
+      ],
+      "effective_state": "UNKNOWN",
+      "ends": {
+        "accessory": {
+          "binding_reasons": [
+            "binding_unverified"
+          ],
+          "binding_status": "proposed",
+          "catalog_sku": "2000030111",
+          "kind": "article",
+          "maker_id": "britax-romer",
+          "mpn": "2000030111"
+        },
+        "model": {
+          "identity_candidates": [],
+          "identity_flags": [],
+          "identity_reason": "canonical_exact",
+          "identity_status": "resolved",
+          "identity_via": "canonical",
+          "kind": "model",
+          "maker_id": "britax-romer",
+          "model_id": "britax-romer:evolvafix",
+          "name": "EVOLVAFIX"
+        }
+      },
+      "evidence": {
+        "as_of": "2026-11-17",
+        "docs": [
+          {
+            "age_days": 0,
+            "bytes_state": "missing",
+            "doc_id": "doc:c2ef54b501b55631",
+            "document_date": "2026-11-17",
+            "issuer": "britax-romer",
+            "language": "en",
+            "market": "manufacturer-com",
+            "synthetic": false
+          }
+        ],
+        "expired": null,
+        "max_age_days": 0,
+        "ttl_days": null
+      },
+      "proposed_state": "LISTED_CONDITIONAL",
+      "publish": {
+        "a_tier_candidate": false,
+        "blockers": [
+          "od4_conditional_held",
+          "od6_allowlist_empty",
+          "state_unknown"
+        ],
+        "downstream_gates": [
+          "stage1_native_receipt",
+          "locale_variant_commercial_gates",
+          "owner_enablement_flag"
+        ]
+      },
+      "reasons": [
+        "article:accessory:proposed",
+        "bytes_missing",
+        "claim_proposed_unverified"
+      ],
+      "relation_id": "rel:5be44445bd1afa78",
+      "relation_type": "accessory_for_model",
+      "synthetic": false,
+      "time_bound_statements": [],
+      "veto": {
+        "candidate": false,
+        "mode": "report_only",
+        "pending_verification": false,
+        "scope": null
+      }
+    },
+    {
+      "claims": [
+        {
+          "assertion_type": "compatible",
+          "claim_id": "clm:d969ec11280213d4",
+          "declared_status": "PROPOSED",
+          "effective_status": "PROPOSED"
+        }
+      ],
+      "conditions": [
+        {
+          "attr": "child_height_cm",
+          "op": "gte",
+          "value": 61
+        },
+        {
+          "attr": "child_height_cm",
+          "op": "lte",
+          "value": 87
+        },
+        {
+          "attr": "has_other_insert",
+          "op": "eq",
+          "value": false
+        }
+      ],
+      "conditions_result_without_context": "UNKNOWN",
+      "conditions_review_state": "reviewed_constraints",
+      "context_requirements": [
+        "child_height_cm",
+        "has_other_insert"
+      ],
+      "effective_state": "UNKNOWN",
+      "ends": {
+        "accessory": {
+          "binding_reasons": [
+            "unjoined_candidate_unproven"
+          ],
+          "binding_status": "unbound",
+          "catalog_sku": null,
+          "kind": "article",
+          "maker_id": "britax-romer",
+          "mpn": "ACCSFCC207"
+        },
+        "model": {
+          "identity_candidates": [],
+          "identity_flags": [],
+          "identity_reason": "canonical_exact",
+          "identity_status": "resolved",
+          "identity_via": "canonical",
+          "kind": "model",
+          "maker_id": "britax-romer",
+          "model_id": "britax-romer:dualfix-pro-m",
+          "name": "DUALFIX PRO M"
+        }
+      },
+      "evidence": {
+        "as_of": "2026-11-17",
+        "docs": [
+          {
+            "age_days": 0,
+            "bytes_state": "missing",
+            "doc_id": "doc:bac1a286d1860ffb",
+            "document_date": "2026-11-17",
+            "issuer": "britax-romer",
+            "language": "en",
+            "market": "manufacturer-com",
+            "synthetic": false
+          }
+        ],
+        "expired": null,
+        "max_age_days": 0,
+        "ttl_days": null
+      },
+      "proposed_state": "LISTED_CONDITIONAL",
+      "publish": {
+        "a_tier_candidate": false,
+        "blockers": [
+          "od4_conditional_held",
+          "od6_allowlist_empty",
+          "state_unknown"
+        ],
+        "downstream_gates": [
+          "stage1_native_receipt",
+          "locale_variant_commercial_gates",
+          "owner_enablement_flag"
+        ]
+      },
+      "reasons": [
+        "article:accessory:unbound",
+        "bytes_missing",
+        "claim_proposed_unverified"
+      ],
+      "relation_id": "rel:5df39aa04cfbfbf1",
+      "relation_type": "accessory_for_model",
+      "synthetic": false,
+      "time_bound_statements": [],
+      "veto": {
+        "candidate": false,
+        "mode": "report_only",
+        "pending_verification": false,
+        "scope": null
+      }
+    },
+    {
+      "claims": [
+        {
+          "assertion_type": "compatible",
+          "claim_id": "clm:7ab6a834f89c933b",
+          "declared_status": "PROPOSED",
+          "effective_status": "PROPOSED"
+        }
+      ],
+      "conditions": [
+        {
+          "not": {
+            "attr": "seat_kind",
+            "op": "eq",
+            "value": "infant_carrier"
+          }
+        },
+        {
+          "any_of": [
+            {
+              "all_of": [
+                {
+                  "attr": "restraint_standard",
+                  "op": "eq",
+                  "value": "ECE R44"
+                },
+                {
+                  "attr": "harness_type",
+                  "op": "eq",
+                  "value": "integrated"
+                },
+                {
+                  "attr": "child_weight_kg",
+                  "op": "gte",
+                  "value": 9
+                }
+              ]
+            },
+            {
+              "all_of": [
+                {
+                  "attr": "restraint_standard",
+                  "op": "eq",
+                  "value": "ECE R129"
+                },
+                {
+                  "attr": "harness_type",
+                  "op": "eq",
+                  "value": "integrated"
+                },
+                {
+                  "any_of": [
+                    {
+                      "all_of": [
+                        {
+                          "attr": "facing",
+                          "op": "eq",
+                          "value": "rearward"
+                        },
+                        {
+                          "attr": "child_height_cm",
+                          "op": "gte",
+                          "value": 60
+                        }
+                      ]
+                    },
+                    {
+                      "all_of": [
+                        {
+                          "attr": "facing",
+                          "op": "eq",
+                          "value": "forward"
+                        },
+                        {
+                          "attr": "child_height_cm",
+                          "op": "gte",
+                          "value": 76
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "conditions_result_without_context": "UNKNOWN",
+      "conditions_review_state": "reviewed_constraints",
+      "context_requirements": [
+        "child_height_cm",
+        "child_weight_kg",
+        "facing",
+        "harness_type",
+        "restraint_standard",
+        "seat_kind"
+      ],
+      "effective_state": "UNKNOWN",
+      "ends": {
+        "accessory": {
+          "binding_reasons": [
+            "binding_unverified"
+          ],
+          "binding_status": "proposed",
+          "catalog_sku": "2000030111",
+          "kind": "article",
+          "maker_id": "britax-romer",
+          "mpn": "2000030111"
+        },
+        "model": {
+          "identity_candidates": [],
+          "identity_flags": [],
+          "identity_reason": "canonical_exact",
+          "identity_status": "resolved",
+          "identity_via": "canonical",
+          "kind": "model",
+          "maker_id": "britax-romer",
+          "model_id": "britax-romer:advansafix-pro",
+          "name": "ADVANSAFIX PRO"
+        }
+      },
+      "evidence": {
+        "as_of": "2026-11-17",
+        "docs": [
+          {
+            "age_days": 0,
+            "bytes_state": "missing",
+            "doc_id": "doc:c2ef54b501b55631",
+            "document_date": "2026-11-17",
+            "issuer": "britax-romer",
+            "language": "en",
+            "market": "manufacturer-com",
+            "synthetic": false
+          }
+        ],
+        "expired": null,
+        "max_age_days": 0,
+        "ttl_days": null
+      },
+      "proposed_state": "LISTED_CONDITIONAL",
+      "publish": {
+        "a_tier_candidate": false,
+        "blockers": [
+          "od4_conditional_held",
+          "od6_allowlist_empty",
+          "state_unknown"
+        ],
+        "downstream_gates": [
+          "stage1_native_receipt",
+          "locale_variant_commercial_gates",
+          "owner_enablement_flag"
+        ]
+      },
+      "reasons": [
+        "article:accessory:proposed",
+        "bytes_missing",
+        "claim_proposed_unverified"
+      ],
+      "relation_id": "rel:61f8586556fbb75b",
+      "relation_type": "accessory_for_model",
+      "synthetic": false,
+      "time_bound_statements": [],
+      "veto": {
+        "candidate": false,
+        "mode": "report_only",
+        "pending_verification": false,
+        "scope": null
+      }
+    },
+    {
+      "claims": [
+        {
+          "assertion_type": "compatible",
+          "claim_id": "clm:34ba1e41d9f243cd",
+          "declared_status": "PROPOSED",
+          "effective_status": "PROPOSED"
+        }
+      ],
+      "conditions": [
+        {
+          "attr": "carrier_component",
+          "op": "eq",
+          "value": "soft_carrier"
+        }
+      ],
+      "conditions_result_without_context": "UNKNOWN",
+      "conditions_review_state": "reviewed_constraints",
+      "context_requirements": [
+        "carrier_component"
+      ],
+      "effective_state": "UNKNOWN",
+      "ends": {
+        "adapter": {
+          "binding_reasons": [
+            "binding_unverified"
+          ],
+          "binding_status": "proposed",
+          "catalog_sku": "1166057110",
+          "kind": "article",
+          "maker_id": "maxi-cosi",
+          "mpn": "1166057110"
+        },
+        "chassis": {
+          "identity_candidates": [],
+          "identity_flags": [],
+          "identity_reason": "canonical_exact",
+          "identity_status": "resolved",
+          "identity_via": "canonical",
+          "kind": "model",
+          "maker_id": "maxi-cosi",
+          "model_id": "maxi-cosi:fame",
+          "name": "Fame"
+        },
+        "extension": {
+          "kind": "extension"
+        },
+        "seat": {
+          "identity_candidates": [],
+          "identity_flags": [],
+          "identity_reason": "canonical_exact",
+          "identity_status": "resolved",
+          "identity_via": "canonical",
+          "kind": "model",
+          "maker_id": "maxi-cosi",
+          "model_id": "maxi-cosi:coral-slide-pro",
+          "name": "Coral Slide Pro"
+        }
+      },
+      "evidence": {
+        "as_of": "2026-11-17",
+        "docs": [
+          {
+            "age_days": 0,
+            "bytes_state": "missing",
+            "doc_id": "doc:381465952729913b",
+            "document_date": "2026-11-17",
+            "issuer": "maxi-cosi",
+            "language": "en",
+            "market": "GB",
+            "synthetic": false
+          }
+        ],
+        "expired": null,
+        "max_age_days": 0,
+        "ttl_days": null
+      },
+      "proposed_state": "LISTED_CONDITIONAL",
+      "publish": {
+        "a_tier_candidate": false,
+        "blockers": [
+          "od4_conditional_held",
+          "od5_one_ended_adapter_abstain",
+          "od6_allowlist_empty",
+          "state_unknown"
+        ],
+        "downstream_gates": [
+          "stage1_native_receipt",
+          "locale_variant_commercial_gates",
+          "owner_enablement_flag"
+        ]
+      },
+      "reasons": [
+        "article:adapter:proposed",
+        "bytes_missing",
+        "claim_proposed_unverified",
+        "extension_unspecified"
+      ],
+      "relation_id": "rel:66eef64200958edd",
+      "relation_type": "adapter_between",
+      "synthetic": false,
+      "time_bound_statements": [],
+      "veto": {
+        "candidate": false,
+        "mode": "report_only",
+        "pending_verification": false,
+        "scope": null
+      }
+    },
+    {
+      "claims": [
+        {
+          "assertion_type": "compatible",
+          "claim_id": "clm:75e10be0b143f03e",
+          "declared_status": "PROPOSED",
+          "effective_status": "PROPOSED"
+        }
+      ],
+      "conditions": [
+        {
+          "attr": "child_height_cm",
+          "op": "gte",
+          "value": 61
+        },
+        {
+          "attr": "child_height_cm",
+          "op": "lte",
+          "value": 87
+        },
+        {
+          "attr": "has_other_insert",
+          "op": "eq",
+          "value": false
+        }
+      ],
+      "conditions_result_without_context": "UNKNOWN",
+      "conditions_review_state": "reviewed_constraints",
+      "context_requirements": [
+        "child_height_cm",
+        "has_other_insert"
+      ],
+      "effective_state": "UNKNOWN",
+      "ends": {
+        "accessory": {
+          "binding_reasons": [
+            "unjoined_candidate_unproven"
+          ],
+          "binding_status": "unbound",
+          "catalog_sku": null,
+          "kind": "article",
+          "maker_id": "britax-romer",
+          "mpn": "ACCSFCC207"
+        },
+        "model": {
+          "identity_candidates": [],
+          "identity_flags": [],
+          "identity_reason": "canonical_exact",
+          "identity_status": "resolved",
+          "identity_via": "canonical",
+          "kind": "model",
+          "maker_id": "britax-romer",
+          "model_id": "britax-romer:dualfix-5z",
+          "name": "DUALFIX 5Z"
+        }
+      },
+      "evidence": {
+        "as_of": "2026-11-17",
+        "docs": [
+          {
+            "age_days": 0,
+            "bytes_state": "missing",
+            "doc_id": "doc:bac1a286d1860ffb",
+            "document_date": "2026-11-17",
+            "issuer": "britax-romer",
+            "language": "en",
+            "market": "manufacturer-com",
+            "synthetic": false
+          }
+        ],
+        "expired": null,
+        "max_age_days": 0,
+        "ttl_days": null
+      },
+      "proposed_state": "LISTED_CONDITIONAL",
+      "publish": {
+        "a_tier_candidate": false,
+        "blockers": [
+          "od4_conditional_held",
+          "od6_allowlist_empty",
+          "state_unknown"
+        ],
+        "downstream_gates": [
+          "stage1_native_receipt",
+          "locale_variant_commercial_gates",
+          "owner_enablement_flag"
+        ]
+      },
+      "reasons": [
+        "article:accessory:unbound",
+        "bytes_missing",
+        "claim_proposed_unverified"
+      ],
+      "relation_id": "rel:6f838b667045eb6f",
+      "relation_type": "accessory_for_model",
+      "synthetic": false,
+      "time_bound_statements": [],
+      "veto": {
+        "candidate": false,
+        "mode": "report_only",
+        "pending_verification": false,
+        "scope": null
+      }
+    },
+    {
+      "claims": [
+        {
+          "assertion_type": "compatible",
+          "claim_id": "clm:5bdfae6d9e473ced",
+          "declared_status": "PROPOSED",
+          "effective_status": "PROPOSED"
+        }
+      ],
+      "conditions": [
+        {
+          "attr": "child_height_cm",
+          "op": "gte",
+          "value": 61
+        },
+        {
+          "attr": "child_height_cm",
+          "op": "lte",
+          "value": 87
+        },
+        {
+          "attr": "has_other_insert",
+          "op": "eq",
+          "value": false
+        }
+      ],
+      "conditions_result_without_context": "UNKNOWN",
+      "conditions_review_state": "reviewed_constraints",
+      "context_requirements": [
+        "child_height_cm",
+        "has_other_insert"
+      ],
+      "effective_state": "UNKNOWN",
+      "ends": {
+        "accessory": {
+          "binding_reasons": [
+            "unjoined_candidate_unproven"
+          ],
+          "binding_status": "unbound",
+          "catalog_sku": null,
+          "kind": "article",
+          "maker_id": "britax-romer",
+          "mpn": "ACCSFCC207"
+        },
+        "model": {
+          "identity_candidates": [],
+          "identity_flags": [],
+          "identity_reason": "canonical_exact",
+          "identity_status": "resolved",
+          "identity_via": "canonical",
+          "kind": "model",
+          "maker_id": "britax-romer",
+          "model_id": "britax-romer:dualfix-pro",
+          "name": "DUALFIX PRO"
+        }
+      },
+      "evidence": {
+        "as_of": "2026-11-17",
+        "docs": [
+          {
+            "age_days": 0,
+            "bytes_state": "missing",
+            "doc_id": "doc:bac1a286d1860ffb",
+            "document_date": "2026-11-17",
+            "issuer": "britax-romer",
+            "language": "en",
+            "market": "manufacturer-com",
+            "synthetic": false
+          }
+        ],
+        "expired": null,
+        "max_age_days": 0,
+        "ttl_days": null
+      },
+      "proposed_state": "LISTED_CONDITIONAL",
+      "publish": {
+        "a_tier_candidate": false,
+        "blockers": [
+          "od4_conditional_held",
+          "od6_allowlist_empty",
+          "state_unknown"
+        ],
+        "downstream_gates": [
+          "stage1_native_receipt",
+          "locale_variant_commercial_gates",
+          "owner_enablement_flag"
+        ]
+      },
+      "reasons": [
+        "article:accessory:unbound",
+        "bytes_missing",
+        "claim_proposed_unverified"
+      ],
+      "relation_id": "rel:74d6b05ac61156e8",
+      "relation_type": "accessory_for_model",
+      "synthetic": false,
+      "time_bound_statements": [],
+      "veto": {
+        "candidate": false,
+        "mode": "report_only",
+        "pending_verification": false,
+        "scope": null
+      }
+    },
+    {
+      "claims": [
+        {
+          "assertion_type": "absent_from_list",
+          "claim_id": "clm:3765db0a7f5edeef",
+          "declared_status": "PROPOSED",
+          "effective_status": "PROPOSED"
+        }
+      ],
+      "conditions": [],
+      "conditions_result_without_context": null,
+      "conditions_review_state": null,
+      "context_requirements": [],
+      "effective_state": "UNKNOWN",
+      "ends": {
+        "accessory": {
+          "binding_reasons": [
+            "binding_unverified"
+          ],
+          "binding_status": "proposed",
+          "catalog_sku": "74203550",
+          "kind": "article",
+          "maker_id": "maxi-cosi",
+          "mpn": "74203550"
+        },
+        "model": {
+          "identity_candidates": [],
+          "identity_flags": [],
+          "identity_reason": "canonical_exact",
+          "identity_status": "resolved",
+          "identity_via": "canonical",
+          "kind": "model",
+          "maker_id": "maxi-cosi",
+          "model_id": "maxi-cosi:rodifix-air-protect",
+          "name": "RodiFix Air Protect"
+        }
+      },
+      "evidence": {
+        "as_of": "2026-11-17",
+        "docs": [
+          {
+            "age_days": 0,
+            "bytes_state": "missing",
+            "doc_id": "doc:f554312a10c64b6e",
+            "document_date": "2026-11-17",
+            "issuer": "maxi-cosi",
+            "language": "ru",
+            "market": "catalog-control",
+            "synthetic": false
+          }
+        ],
+        "expired": null,
+        "max_age_days": 0,
+        "ttl_days": null
+      },
+      "proposed_state": "UNKNOWN",
+      "publish": {
+        "a_tier_candidate": false,
+        "blockers": [
+          "od6_allowlist_empty",
+          "state_unknown"
+        ],
+        "downstream_gates": [
+          "stage1_native_receipt",
+          "locale_variant_commercial_gates",
+          "owner_enablement_flag"
+        ]
+      },
+      "reasons": [
+        "absent_from_list_or_no_positive_claim",
+        "article:accessory:proposed"
+      ],
+      "relation_id": "rel:7676875887ade0d7",
+      "relation_type": "accessory_for_model",
+      "synthetic": false,
+      "time_bound_statements": [],
+      "veto": {
+        "candidate": false,
+        "mode": "report_only",
+        "pending_verification": false,
+        "scope": null
+      }
+    },
+    {
+      "claims": [
+        {
+          "assertion_type": "absent_from_list",
+          "claim_id": "clm:8e9ddb1eae3c5a2e",
+          "declared_status": "PROPOSED",
+          "effective_status": "PROPOSED"
+        }
+      ],
+      "conditions": [],
+      "conditions_result_without_context": null,
+      "conditions_review_state": null,
+      "context_requirements": [],
+      "effective_state": "UNKNOWN",
+      "ends": {
+        "adapter": {
+          "binding_reasons": [
+            "binding_unverified"
+          ],
+          "binding_status": "proposed",
+          "catalog_sku": "400019001",
+          "kind": "article",
+          "maker_id": "bugaboo",
+          "mpn": "400019001"
+        },
+        "chassis": {
+          "identity_candidates": [],
+          "identity_flags": [],
+          "identity_reason": "canonical_exact",
+          "identity_status": "resolved",
+          "identity_via": "canonical",
+          "kind": "model",
+          "maker_id": "bugaboo",
+          "model_id": "bugaboo:fox-2",
+          "name": "Fox 2"
+        },
+        "extension": null,
+        "seat": {
+          "identity_candidates": [],
+          "identity_flags": [],
+          "identity_reason": "canonical_exact",
+          "identity_status": "resolved",
+          "identity_via": "canonical",
+          "kind": "model",
+          "maker_id": "maxi-cosi",
+          "model_id": "maxi-cosi:pebble-360-pro-2",
+          "name": "Pebble 360 Pro 2"
+        }
+      },
+      "evidence": {
+        "as_of": "2026-11-17",
+        "docs": [
+          {
+            "age_days": 0,
+            "bytes_state": "missing",
+            "doc_id": "doc:b00a78102f589f76",
+            "document_date": "2026-11-17",
+            "issuer": "bugaboo",
+            "language": "en",
+            "market": "GB",
+            "synthetic": false
+          }
+        ],
+        "expired": null,
+        "max_age_days": 0,
+        "ttl_days": null
+      },
+      "proposed_state": "UNKNOWN",
+      "publish": {
+        "a_tier_candidate": false,
+        "blockers": [
+          "od5_one_ended_adapter_abstain",
+          "od6_allowlist_empty",
+          "state_unknown"
+        ],
+        "downstream_gates": [
+          "stage1_native_receipt",
+          "locale_variant_commercial_gates",
+          "owner_enablement_flag"
+        ]
+      },
+      "reasons": [
+        "absent_from_list_or_no_positive_claim",
+        "article:adapter:proposed"
+      ],
+      "relation_id": "rel:7888efcdf7102f63",
+      "relation_type": "adapter_between",
+      "synthetic": false,
+      "time_bound_statements": [],
+      "veto": {
+        "candidate": false,
+        "mode": "report_only",
+        "pending_verification": false,
+        "scope": null
+      }
+    },
+    {
+      "claims": [
+        {
+          "assertion_type": "not_recommended",
+          "claim_id": "clm:e8d009fb45255472",
+          "declared_status": "PROPOSED",
+          "effective_status": "PROPOSED"
+        }
+      ],
+      "conditions": [],
+      "conditions_result_without_context": null,
+      "conditions_review_state": null,
+      "context_requirements": [],
+      "effective_state": "UNKNOWN",
+      "ends": {
+        "adapter": {
+          "binding_reasons": [
+            "binding_unverified"
+          ],
+          "binding_status": "proposed",
+          "catalog_sku": "400003001",
+          "kind": "article",
+          "maker_id": "bugaboo",
+          "mpn": "400003001"
+        },
+        "chassis": {
+          "identity_candidates": [],
+          "identity_flags": [],
+          "identity_reason": "canonical_exact",
+          "identity_status": "resolved",
+          "identity_via": "canonical",
+          "kind": "model",
+          "maker_id": "bugaboo",
+          "model_id": "bugaboo:dragonfly-plus",
+          "name": "Dragonfly Plus"
+        },
+        "extension": null,
+        "seat": {
+          "identity_candidates": [],
+          "identity_flags": [],
+          "identity_reason": "canonical_exact",
+          "identity_status": "resolved",
+          "identity_via": "canonical",
+          "kind": "model",
+          "maker_id": "maxi-cosi",
+          "model_id": "maxi-cosi:cabriofix",
+          "name": "CabrioFix"
+        }
+      },
+      "evidence": {
+        "as_of": "2026-11-17",
+        "docs": [
+          {
+            "age_days": 0,
+            "bytes_state": "missing",
+            "doc_id": "doc:8b27a7246e3541d0",
+            "document_date": "2026-11-17",
+            "issuer": "bugaboo",
+            "language": "en",
+            "market": "GB",
+            "synthetic": false
+          }
+        ],
+        "expired": null,
+        "max_age_days": 0,
+        "ttl_days": null
+      },
+      "proposed_state": "EXCLUDED",
+      "publish": {
+        "a_tier_candidate": false,
+        "blockers": [
+          "od5_one_ended_adapter_abstain",
+          "od6_allowlist_empty",
+          "state_unknown"
+        ],
+        "downstream_gates": [
+          "stage1_native_receipt",
+          "locale_variant_commercial_gates",
+          "owner_enablement_flag"
+        ]
+      },
+      "reasons": [
+        "article:adapter:proposed",
+        "bytes_missing",
+        "claim_proposed_unverified"
+      ],
+      "relation_id": "rel:7ae7780e588e9567",
+      "relation_type": "adapter_between",
+      "synthetic": false,
+      "time_bound_statements": [],
+      "veto": {
+        "candidate": false,
+        "mode": "report_only",
+        "pending_verification": true,
+        "scope": {
+          "adapter": "art:bugaboo:400003001",
+          "chassis": "bugaboo:dragonfly-plus",
+          "extension": "none",
+          "seat": "maxi-cosi:cabriofix"
+        }
+      }
+    },
+    {
+      "claims": [
+        {
+          "assertion_type": "compatible",
+          "claim_id": "clm:ae44bd0fbe028eba",
+          "declared_status": "PROPOSED",
+          "effective_status": "PROPOSED"
+        }
+      ],
+      "conditions": [],
+      "conditions_result_without_context": "UNKNOWN",
+      "conditions_review_state": "unknown",
+      "context_requirements": [],
+      "effective_state": "UNKNOWN",
+      "ends": {
+        "adapter": {
+          "binding_reasons": [
+            "binding_unverified"
+          ],
+          "binding_status": "proposed",
+          "catalog_sku": "400019001",
+          "kind": "article",
+          "maker_id": "bugaboo",
+          "mpn": "400019001"
+        },
+        "chassis": {
+          "identity_candidates": [],
+          "identity_flags": [],
+          "identity_reason": "canonical_exact",
+          "identity_status": "resolved",
+          "identity_via": "canonical",
+          "kind": "model",
+          "maker_id": "bugaboo",
+          "model_id": "bugaboo:fox-5-renew",
+          "name": "Fox 5 Renew"
+        },
+        "extension": null,
+        "seat": {
+          "identity_candidates": [],
+          "identity_flags": [],
+          "identity_reason": "canonical_exact",
+          "identity_status": "resolved",
+          "identity_via": "canonical",
+          "kind": "model",
+          "maker_id": "besafe",
+          "model_id": "besafe:izi-go-modular-x1-i-size",
+          "name": "iZi Go Modular X1 i-Size"
+        }
+      },
+      "evidence": {
+        "as_of": "2026-11-17",
+        "docs": [
+          {
+            "age_days": 0,
+            "bytes_state": "missing",
+            "doc_id": "doc:b00a78102f589f76",
+            "document_date": "2026-11-17",
+            "issuer": "bugaboo",
+            "language": "en",
+            "market": "GB",
+            "synthetic": false
+          }
+        ],
+        "expired": null,
+        "max_age_days": 0,
+        "ttl_days": null
+      },
+      "proposed_state": "LISTED_CONDITIONAL",
+      "publish": {
+        "a_tier_candidate": false,
+        "blockers": [
+          "od4_conditional_held",
+          "od5_one_ended_adapter_abstain",
+          "od6_allowlist_empty",
+          "state_unknown"
+        ],
+        "downstream_gates": [
+          "stage1_native_receipt",
+          "locale_variant_commercial_gates",
+          "owner_enablement_flag"
+        ]
+      },
+      "reasons": [
+        "article:adapter:proposed",
+        "bytes_missing",
+        "claim_proposed_unverified",
+        "conditions_review_unknown"
+      ],
+      "relation_id": "rel:7b289bd096acd98c",
+      "relation_type": "adapter_between",
+      "synthetic": false,
+      "time_bound_statements": [],
+      "veto": {
+        "candidate": false,
+        "mode": "report_only",
+        "pending_verification": false,
+        "scope": null
+      }
+    },
+    {
+      "claims": [
+        {
+          "assertion_type": "not_tested_at_time",
+          "claim_id": "clm:014746c9a9a4f1f2",
+          "declared_status": "PROPOSED",
+          "effective_status": "PROPOSED"
+        },
+        {
+          "assertion_type": "absent_from_list",
+          "claim_id": "clm:d9df1eebd5fdd544",
+          "declared_status": "PROPOSED",
+          "effective_status": "PROPOSED"
+        }
+      ],
+      "conditions": [],
+      "conditions_result_without_context": null,
+      "conditions_review_state": null,
+      "context_requirements": [],
+      "effective_state": "CONFLICT_HOLD",
+      "ends": {
+        "adapter": {
+          "binding_reasons": [
+            "binding_unverified"
+          ],
+          "binding_status": "proposed",
+          "catalog_sku": "400003001",
+          "kind": "article",
+          "maker_id": "bugaboo",
+          "mpn": "400003001"
+        },
+        "chassis": {
+          "identity_candidates": [],
+          "identity_flags": [],
+          "identity_reason": "canonical_exact",
+          "identity_status": "resolved",
+          "identity_via": "canonical",
+          "kind": "model",
+          "maker_id": "bugaboo",
+          "model_id": "bugaboo:dragonfly-plus",
+          "name": "Dragonfly Plus"
+        },
+        "extension": null,
+        "seat": {
+          "identity_candidates": [],
+          "identity_flags": [],
+          "identity_reason": "canonical_exact",
+          "identity_status": "resolved",
+          "identity_via": "canonical",
+          "kind": "model",
+          "maker_id": "maxi-cosi",
+          "model_id": "maxi-cosi:pebble-360-pro-2",
+          "name": "Pebble 360 Pro 2"
+        }
+      },
+      "evidence": {
+        "as_of": "2026-11-17",
+        "docs": [
+          {
+            "age_days": 0,
+            "bytes_state": "missing",
+            "doc_id": "doc:8b27a7246e3541d0",
+            "document_date": "2026-11-17",
+            "issuer": "bugaboo",
+            "language": "en",
+            "market": "GB",
+            "synthetic": false
+          }
+        ],
+        "expired": null,
+        "max_age_days": 0,
+        "ttl_days": null
+      },
+      "proposed_state": "CONFLICT_HOLD",
+      "publish": {
+        "a_tier_candidate": false,
+        "blockers": [
+          "od5_one_ended_adapter_abstain",
+          "od6_allowlist_empty",
+          "state_conflict_hold"
+        ],
+        "downstream_gates": [
+          "stage1_native_receipt",
+          "locale_variant_commercial_gates",
+          "owner_enablement_flag"
+        ]
+      },
+      "reasons": [
+        "article:adapter:proposed",
+        "time_bound_not_tested_unadjudicated"
+      ],
+      "relation_id": "rel:8cd931d049d1d1b4",
+      "relation_type": "adapter_between",
+      "synthetic": false,
+      "time_bound_statements": [
+        {
+          "as_of": null,
+          "claim_id": "clm:014746c9a9a4f1f2"
+        }
+      ],
+      "veto": {
+        "candidate": false,
+        "mode": "report_only",
+        "pending_verification": false,
+        "scope": null
+      }
+    },
+    {
+      "claims": [
+        {
+          "assertion_type": "compatible",
+          "claim_id": "clm:a9fa4b98947783cd",
+          "declared_status": "PROPOSED",
+          "effective_status": "PROPOSED"
+        }
+      ],
+      "conditions": [],
+      "conditions_result_without_context": "UNKNOWN",
+      "conditions_review_state": "unknown",
+      "context_requirements": [],
+      "effective_state": "UNKNOWN",
+      "ends": {
+        "adapter": {
+          "binding_reasons": [
+            "binding_unverified"
+          ],
+          "binding_status": "proposed",
+          "catalog_sku": "400003001",
+          "kind": "article",
+          "maker_id": "bugaboo",
+          "mpn": "400003001"
+        },
+        "chassis": {
+          "identity_candidates": [],
+          "identity_flags": [],
+          "identity_reason": "canonical_exact",
+          "identity_status": "resolved",
+          "identity_via": "canonical",
+          "kind": "model",
+          "maker_id": "bugaboo",
+          "model_id": "bugaboo:dragonfly",
+          "name": "Dragonfly"
+        },
+        "extension": null,
+        "seat": {
+          "identity_candidates": [],
+          "identity_flags": [],
+          "identity_reason": "canonical_exact",
+          "identity_status": "resolved",
+          "identity_via": "canonical",
+          "kind": "model",
+          "maker_id": "maxi-cosi",
+          "model_id": "maxi-cosi:pebble-360-pro",
+          "name": "Pebble 360 Pro"
+        }
+      },
+      "evidence": {
+        "as_of": "2026-11-17",
+        "docs": [
+          {
+            "age_days": 0,
+            "bytes_state": "missing",
+            "doc_id": "doc:8b27a7246e3541d0",
+            "document_date": "2026-11-17",
+            "issuer": "bugaboo",
+            "language": "en",
+            "market": "GB",
+            "synthetic": false
+          }
+        ],
+        "expired": null,
+        "max_age_days": 0,
+        "ttl_days": null
+      },
+      "proposed_state": "LISTED_CONDITIONAL",
+      "publish": {
+        "a_tier_candidate": false,
+        "blockers": [
+          "od4_conditional_held",
+          "od5_one_ended_adapter_abstain",
+          "od6_allowlist_empty",
+          "state_unknown"
+        ],
+        "downstream_gates": [
+          "stage1_native_receipt",
+          "locale_variant_commercial_gates",
+          "owner_enablement_flag"
+        ]
+      },
+      "reasons": [
+        "article:adapter:proposed",
+        "bytes_missing",
+        "claim_proposed_unverified",
+        "conditions_review_unknown"
+      ],
+      "relation_id": "rel:8fbd9214a244feab",
+      "relation_type": "adapter_between",
+      "synthetic": false,
+      "time_bound_statements": [],
+      "veto": {
+        "candidate": false,
+        "mode": "report_only",
+        "pending_verification": false,
+        "scope": null
+      }
+    },
+    {
+      "claims": [
+        {
+          "assertion_type": "absent_from_list",
+          "claim_id": "clm:dbff243f6d5ca32b",
+          "declared_status": "PROPOSED",
+          "effective_status": "PROPOSED"
+        }
+      ],
+      "conditions": [],
+      "conditions_result_without_context": null,
+      "conditions_review_state": null,
+      "context_requirements": [],
+      "effective_state": "UNKNOWN",
+      "ends": {
+        "accessory": {
+          "binding_reasons": [
+            "binding_unverified"
+          ],
+          "binding_status": "proposed",
+          "catalog_sku": "2000030111",
+          "kind": "article",
+          "maker_id": "britax-romer",
+          "mpn": "2000030111"
+        },
+        "model": {
+          "identity_candidates": [],
+          "identity_flags": [],
+          "identity_reason": "canonical_exact",
+          "identity_status": "resolved",
+          "identity_via": "canonical",
+          "kind": "model",
+          "maker_id": "britax-romer",
+          "model_id": "britax-romer:swivel",
+          "name": "SWIVEL"
+        }
+      },
+      "evidence": {
+        "as_of": "2026-11-17",
+        "docs": [
+          {
+            "age_days": 0,
+            "bytes_state": "missing",
+            "doc_id": "doc:c2ef54b501b55631",
+            "document_date": "2026-11-17",
+            "issuer": "britax-romer",
+            "language": "en",
+            "market": "manufacturer-com",
+            "synthetic": false
+          }
+        ],
+        "expired": null,
+        "max_age_days": 0,
+        "ttl_days": null
+      },
+      "proposed_state": "UNKNOWN",
+      "publish": {
+        "a_tier_candidate": false,
+        "blockers": [
+          "od6_allowlist_empty",
+          "state_unknown"
+        ],
+        "downstream_gates": [
+          "stage1_native_receipt",
+          "locale_variant_commercial_gates",
+          "owner_enablement_flag"
+        ]
+      },
+      "reasons": [
+        "absent_from_list_or_no_positive_claim",
+        "article:accessory:proposed"
+      ],
+      "relation_id": "rel:99d38498de3a17ff",
+      "relation_type": "accessory_for_model",
+      "synthetic": false,
+      "time_bound_statements": [],
+      "veto": {
+        "candidate": false,
+        "mode": "report_only",
+        "pending_verification": false,
+        "scope": null
+      }
+    },
+    {
+      "claims": [
+        {
+          "assertion_type": "compatible",
+          "claim_id": "clm:f621c6714a6e1fef",
+          "declared_status": "PROPOSED",
+          "effective_status": "PROPOSED"
+        }
+      ],
+      "conditions": [
+        {
+          "not": {
+            "attr": "seat_kind",
+            "op": "eq",
+            "value": "infant_carrier"
+          }
+        },
+        {
+          "any_of": [
+            {
+              "all_of": [
+                {
+                  "attr": "restraint_standard",
+                  "op": "eq",
+                  "value": "ECE R44"
+                },
+                {
+                  "attr": "harness_type",
+                  "op": "eq",
+                  "value": "integrated"
+                },
+                {
+                  "attr": "child_weight_kg",
+                  "op": "gte",
+                  "value": 9
+                }
+              ]
+            },
+            {
+              "all_of": [
+                {
+                  "attr": "restraint_standard",
+                  "op": "eq",
+                  "value": "ECE R129"
+                },
+                {
+                  "attr": "harness_type",
+                  "op": "eq",
+                  "value": "integrated"
+                },
+                {
+                  "any_of": [
+                    {
+                      "all_of": [
+                        {
+                          "attr": "facing",
+                          "op": "eq",
+                          "value": "rearward"
+                        },
+                        {
+                          "attr": "child_height_cm",
+                          "op": "gte",
+                          "value": 60
+                        }
+                      ]
+                    },
+                    {
+                      "all_of": [
+                        {
+                          "attr": "facing",
+                          "op": "eq",
+                          "value": "forward"
+                        },
+                        {
+                          "attr": "child_height_cm",
+                          "op": "gte",
+                          "value": 76
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "conditions_result_without_context": "UNKNOWN",
+      "conditions_review_state": "reviewed_constraints",
+      "context_requirements": [
+        "child_height_cm",
+        "child_weight_kg",
+        "facing",
+        "harness_type",
+        "restraint_standard",
+        "seat_kind"
+      ],
+      "effective_state": "UNKNOWN",
+      "ends": {
+        "accessory": {
+          "binding_reasons": [
+            "binding_unverified"
+          ],
+          "binding_status": "proposed",
+          "catalog_sku": "2000030111",
+          "kind": "article",
+          "maker_id": "britax-romer",
+          "mpn": "2000030111"
+        },
+        "model": {
+          "identity_candidates": [],
+          "identity_flags": [],
+          "identity_reason": "canonical_exact",
+          "identity_status": "resolved",
+          "identity_via": "canonical",
+          "kind": "model",
+          "maker_id": "britax-romer",
+          "model_id": "britax-romer:dualfix-pro",
+          "name": "DUALFIX PRO"
+        }
+      },
+      "evidence": {
+        "as_of": "2026-11-17",
+        "docs": [
+          {
+            "age_days": 0,
+            "bytes_state": "missing",
+            "doc_id": "doc:c2ef54b501b55631",
+            "document_date": "2026-11-17",
+            "issuer": "britax-romer",
+            "language": "en",
+            "market": "manufacturer-com",
+            "synthetic": false
+          }
+        ],
+        "expired": null,
+        "max_age_days": 0,
+        "ttl_days": null
+      },
+      "proposed_state": "LISTED_CONDITIONAL",
+      "publish": {
+        "a_tier_candidate": false,
+        "blockers": [
+          "od4_conditional_held",
+          "od6_allowlist_empty",
+          "state_unknown"
+        ],
+        "downstream_gates": [
+          "stage1_native_receipt",
+          "locale_variant_commercial_gates",
+          "owner_enablement_flag"
+        ]
+      },
+      "reasons": [
+        "article:accessory:proposed",
+        "bytes_missing",
+        "claim_proposed_unverified"
+      ],
+      "relation_id": "rel:a5ade3135ec1024f",
+      "relation_type": "accessory_for_model",
+      "synthetic": false,
+      "time_bound_statements": [],
+      "veto": {
+        "candidate": false,
+        "mode": "report_only",
+        "pending_verification": false,
+        "scope": null
+      }
+    },
+    {
+      "claims": [
+        {
+          "assertion_type": "compatible",
+          "claim_id": "clm:156beec5c65ff754",
+          "declared_status": "PROPOSED",
+          "effective_status": "PROPOSED"
+        }
+      ],
+      "conditions": [
+        {
+          "attr": "carrier_component",
+          "op": "eq",
+          "value": "soft_carrier"
+        }
+      ],
+      "conditions_result_without_context": "UNKNOWN",
+      "conditions_review_state": "reviewed_constraints",
+      "context_requirements": [
+        "carrier_component"
+      ],
+      "effective_state": "UNKNOWN",
+      "ends": {
+        "adapter": {
+          "binding_reasons": [
+            "binding_unverified"
+          ],
+          "binding_status": "proposed",
+          "catalog_sku": "1166057110",
+          "kind": "article",
+          "maker_id": "maxi-cosi",
+          "mpn": "1166057110"
+        },
+        "chassis": {
+          "identity_candidates": [],
+          "identity_flags": [],
+          "identity_reason": "canonical_exact",
+          "identity_status": "resolved",
+          "identity_via": "canonical",
+          "kind": "model",
+          "maker_id": "maxi-cosi",
+          "model_id": "maxi-cosi:fame-cabin",
+          "name": "Fame Cabin"
+        },
+        "extension": null,
+        "seat": {
+          "identity_candidates": [],
+          "identity_flags": [],
+          "identity_reason": "canonical_exact",
+          "identity_status": "resolved",
+          "identity_via": "canonical",
+          "kind": "model",
+          "maker_id": "maxi-cosi",
+          "model_id": "maxi-cosi:coral-slide-pro",
+          "name": "Coral Slide Pro"
+        }
+      },
+      "evidence": {
+        "as_of": "2026-11-17",
+        "docs": [
+          {
+            "age_days": 0,
+            "bytes_state": "missing",
+            "doc_id": "doc:381465952729913b",
+            "document_date": "2026-11-17",
+            "issuer": "maxi-cosi",
+            "language": "en",
+            "market": "GB",
+            "synthetic": false
+          }
+        ],
+        "expired": null,
+        "max_age_days": 0,
+        "ttl_days": null
+      },
+      "proposed_state": "LISTED_CONDITIONAL",
+      "publish": {
+        "a_tier_candidate": false,
+        "blockers": [
+          "od4_conditional_held",
+          "od5_one_ended_adapter_abstain",
+          "od6_allowlist_empty",
+          "state_unknown"
+        ],
+        "downstream_gates": [
+          "stage1_native_receipt",
+          "locale_variant_commercial_gates",
+          "owner_enablement_flag"
+        ]
+      },
+      "reasons": [
+        "article:adapter:proposed",
+        "bytes_missing",
+        "claim_proposed_unverified"
+      ],
+      "relation_id": "rel:bf6b7978cbd99380",
+      "relation_type": "adapter_between",
+      "synthetic": false,
+      "time_bound_statements": [],
+      "veto": {
+        "candidate": false,
+        "mode": "report_only",
+        "pending_verification": false,
+        "scope": null
+      }
+    },
+    {
+      "claims": [
+        {
+          "assertion_type": "compatible",
+          "claim_id": "clm:e4498fbdd47559d0",
+          "declared_status": "PROPOSED",
+          "effective_status": "PROPOSED"
+        }
+      ],
+      "conditions": [
+        {
+          "attr": "usage_context",
+          "op": "in",
+          "value": [
+            "outside_vehicle",
+            "on_stroller"
+          ]
+        }
+      ],
+      "conditions_result_without_context": "UNKNOWN",
+      "conditions_review_state": "reviewed_constraints",
+      "context_requirements": [
+        "usage_context"
+      ],
+      "effective_state": "UNKNOWN",
+      "ends": {
+        "accessory": {
+          "binding_reasons": [
+            "binding_unverified"
+          ],
+          "binding_status": "proposed",
+          "catalog_sku": "11006001par",
+          "kind": "article",
+          "maker_id": "besafe",
+          "mpn": "11006001"
+        },
+        "model": {
+          "identity_candidates": [],
+          "identity_flags": [],
+          "identity_reason": "canonical_exact",
+          "identity_status": "resolved",
+          "identity_via": "canonical",
+          "kind": "model",
+          "maker_id": "besafe",
+          "model_id": "besafe:izi-go-modular-x1-i-size",
+          "name": "iZi Go Modular X1 i-Size"
+        }
+      },
+      "evidence": {
+        "as_of": "2026-11-17",
+        "docs": [
+          {
+            "age_days": 0,
+            "bytes_state": "missing",
+            "doc_id": "doc:3d6c5125466e6847",
+            "document_date": "2026-11-17",
+            "issuer": "besafe",
+            "language": "en",
+            "market": "manufacturer-manual",
+            "synthetic": false
+          }
+        ],
+        "expired": null,
+        "max_age_days": 0,
+        "ttl_days": null
+      },
+      "proposed_state": "LISTED_CONDITIONAL",
+      "publish": {
+        "a_tier_candidate": false,
+        "blockers": [
+          "od4_conditional_held",
+          "od6_allowlist_empty",
+          "state_unknown"
+        ],
+        "downstream_gates": [
+          "stage1_native_receipt",
+          "locale_variant_commercial_gates",
+          "owner_enablement_flag"
+        ]
+      },
+      "reasons": [
+        "article:accessory:proposed",
+        "bytes_missing",
+        "claim_proposed_unverified"
+      ],
+      "relation_id": "rel:bfdbab3befdfd03e",
+      "relation_type": "accessory_for_model",
+      "synthetic": false,
+      "time_bound_statements": [],
+      "veto": {
+        "candidate": false,
+        "mode": "report_only",
+        "pending_verification": false,
+        "scope": null
+      }
+    },
+    {
+      "claims": [
+        {
+          "assertion_type": "not_recommended",
+          "claim_id": "clm:6a43ab3d603e0d8a",
+          "declared_status": "PROPOSED",
+          "effective_status": "PROPOSED"
+        }
+      ],
+      "conditions": [],
+      "conditions_result_without_context": null,
+      "conditions_review_state": null,
+      "context_requirements": [],
+      "effective_state": "UNKNOWN",
+      "ends": {
+        "adapter": {
+          "binding_reasons": [
+            "binding_unverified"
+          ],
+          "binding_status": "proposed",
+          "catalog_sku": "400003001",
+          "kind": "article",
+          "maker_id": "bugaboo",
+          "mpn": "400003001"
+        },
+        "chassis": {
+          "identity_candidates": [],
+          "identity_flags": [],
+          "identity_reason": "canonical_exact",
+          "identity_status": "resolved",
+          "identity_via": "canonical",
+          "kind": "model",
+          "maker_id": "bugaboo",
+          "model_id": "bugaboo:dragonfly",
+          "name": "Dragonfly"
+        },
+        "extension": null,
+        "seat": {
+          "identity_candidates": [],
+          "identity_flags": [],
+          "identity_reason": "canonical_exact",
+          "identity_status": "resolved",
+          "identity_via": "canonical",
+          "kind": "model",
+          "maker_id": "maxi-cosi",
+          "model_id": "maxi-cosi:cabriofix",
+          "name": "CabrioFix"
+        }
+      },
+      "evidence": {
+        "as_of": "2026-11-17",
+        "docs": [
+          {
+            "age_days": 0,
+            "bytes_state": "missing",
+            "doc_id": "doc:8b27a7246e3541d0",
+            "document_date": "2026-11-17",
+            "issuer": "bugaboo",
+            "language": "en",
+            "market": "GB",
+            "synthetic": false
+          }
+        ],
+        "expired": null,
+        "max_age_days": 0,
+        "ttl_days": null
+      },
+      "proposed_state": "EXCLUDED",
+      "publish": {
+        "a_tier_candidate": false,
+        "blockers": [
+          "od5_one_ended_adapter_abstain",
+          "od6_allowlist_empty",
+          "state_unknown"
+        ],
+        "downstream_gates": [
+          "stage1_native_receipt",
+          "locale_variant_commercial_gates",
+          "owner_enablement_flag"
+        ]
+      },
+      "reasons": [
+        "article:adapter:proposed",
+        "bytes_missing",
+        "claim_proposed_unverified"
+      ],
+      "relation_id": "rel:c75f181a49fc0bd0",
+      "relation_type": "adapter_between",
+      "synthetic": false,
+      "time_bound_statements": [],
+      "veto": {
+        "candidate": false,
+        "mode": "report_only",
+        "pending_verification": true,
+        "scope": {
+          "adapter": "art:bugaboo:400003001",
+          "chassis": "bugaboo:dragonfly",
+          "extension": "none",
+          "seat": "maxi-cosi:cabriofix"
+        }
+      }
+    },
+    {
+      "claims": [
+        {
+          "assertion_type": "compatible",
+          "claim_id": "clm:e21924e870b2476b",
+          "declared_status": "PROPOSED",
+          "effective_status": "PROPOSED"
+        }
+      ],
+      "conditions": [
+        {
+          "not": {
+            "attr": "seat_kind",
+            "op": "eq",
+            "value": "infant_carrier"
+          }
+        },
+        {
+          "any_of": [
+            {
+              "all_of": [
+                {
+                  "attr": "restraint_standard",
+                  "op": "eq",
+                  "value": "ECE R44"
+                },
+                {
+                  "attr": "harness_type",
+                  "op": "eq",
+                  "value": "integrated"
+                },
+                {
+                  "attr": "child_weight_kg",
+                  "op": "gte",
+                  "value": 9
+                }
+              ]
+            },
+            {
+              "all_of": [
+                {
+                  "attr": "restraint_standard",
+                  "op": "eq",
+                  "value": "ECE R129"
+                },
+                {
+                  "attr": "harness_type",
+                  "op": "eq",
+                  "value": "integrated"
+                },
+                {
+                  "any_of": [
+                    {
+                      "all_of": [
+                        {
+                          "attr": "facing",
+                          "op": "eq",
+                          "value": "rearward"
+                        },
+                        {
+                          "attr": "child_height_cm",
+                          "op": "gte",
+                          "value": 60
+                        }
+                      ]
+                    },
+                    {
+                      "all_of": [
+                        {
+                          "attr": "facing",
+                          "op": "eq",
+                          "value": "forward"
+                        },
+                        {
+                          "attr": "child_height_cm",
+                          "op": "gte",
+                          "value": 76
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "conditions_result_without_context": "UNKNOWN",
+      "conditions_review_state": "reviewed_constraints",
+      "context_requirements": [
+        "child_height_cm",
+        "child_weight_kg",
+        "facing",
+        "harness_type",
+        "restraint_standard",
+        "seat_kind"
+      ],
+      "effective_state": "UNKNOWN",
+      "ends": {
+        "accessory": {
+          "binding_reasons": [
+            "binding_unverified"
+          ],
+          "binding_status": "proposed",
+          "catalog_sku": "2000030111",
+          "kind": "article",
+          "maker_id": "britax-romer",
+          "mpn": "2000030111"
+        },
+        "model": {
+          "identity_candidates": [],
+          "identity_flags": [],
+          "identity_reason": "canonical_exact",
+          "identity_status": "resolved",
+          "identity_via": "canonical",
+          "kind": "model",
+          "maker_id": "britax-romer",
+          "model_id": "britax-romer:dualfix-pro-m",
+          "name": "DUALFIX PRO M"
+        }
+      },
+      "evidence": {
+        "as_of": "2026-11-17",
+        "docs": [
+          {
+            "age_days": 0,
+            "bytes_state": "missing",
+            "doc_id": "doc:c2ef54b501b55631",
+            "document_date": "2026-11-17",
+            "issuer": "britax-romer",
+            "language": "en",
+            "market": "manufacturer-com",
+            "synthetic": false
+          }
+        ],
+        "expired": null,
+        "max_age_days": 0,
+        "ttl_days": null
+      },
+      "proposed_state": "LISTED_CONDITIONAL",
+      "publish": {
+        "a_tier_candidate": false,
+        "blockers": [
+          "od4_conditional_held",
+          "od6_allowlist_empty",
+          "state_unknown"
+        ],
+        "downstream_gates": [
+          "stage1_native_receipt",
+          "locale_variant_commercial_gates",
+          "owner_enablement_flag"
+        ]
+      },
+      "reasons": [
+        "article:accessory:proposed",
+        "bytes_missing",
+        "claim_proposed_unverified"
+      ],
+      "relation_id": "rel:c8cdb2ad7e178b34",
+      "relation_type": "accessory_for_model",
+      "synthetic": false,
+      "time_bound_statements": [],
+      "veto": {
+        "candidate": false,
+        "mode": "report_only",
+        "pending_verification": false,
+        "scope": null
+      }
+    },
+    {
+      "claims": [
+        {
+          "assertion_type": "compatible",
+          "claim_id": "clm:1a7d94b18807ab88",
+          "declared_status": "PROPOSED",
+          "effective_status": "PROPOSED"
+        }
+      ],
+      "conditions": [
+        {
+          "attr": "usage_context",
+          "op": "in",
+          "value": [
+            "outside_vehicle",
+            "on_stroller"
+          ]
+        }
+      ],
+      "conditions_result_without_context": "UNKNOWN",
+      "conditions_review_state": "reviewed_constraints",
+      "context_requirements": [
+        "usage_context"
+      ],
+      "effective_state": "UNKNOWN",
+      "ends": {
+        "accessory": {
+          "binding_reasons": [
+            "binding_unverified"
+          ],
+          "binding_status": "proposed",
+          "catalog_sku": "11006001par",
+          "kind": "article",
+          "maker_id": "besafe",
+          "mpn": "11006001"
+        },
+        "model": {
+          "identity_candidates": [],
+          "identity_flags": [],
+          "identity_reason": "canonical_exact",
+          "identity_status": "resolved",
+          "identity_via": "canonical",
+          "kind": "model",
+          "maker_id": "besafe",
+          "model_id": "besafe:izi-go-modular-x1",
+          "name": "iZi Go Modular X1"
+        }
+      },
+      "evidence": {
+        "as_of": "2026-11-17",
+        "docs": [
+          {
+            "age_days": 0,
+            "bytes_state": "missing",
+            "doc_id": "doc:3d6c5125466e6847",
+            "document_date": "2026-11-17",
+            "issuer": "besafe",
+            "language": "en",
+            "market": "manufacturer-manual",
+            "synthetic": false
+          }
+        ],
+        "expired": null,
+        "max_age_days": 0,
+        "ttl_days": null
+      },
+      "proposed_state": "LISTED_CONDITIONAL",
+      "publish": {
+        "a_tier_candidate": false,
+        "blockers": [
+          "od4_conditional_held",
+          "od6_allowlist_empty",
+          "state_unknown"
+        ],
+        "downstream_gates": [
+          "stage1_native_receipt",
+          "locale_variant_commercial_gates",
+          "owner_enablement_flag"
+        ]
+      },
+      "reasons": [
+        "article:accessory:proposed",
+        "bytes_missing",
+        "claim_proposed_unverified"
+      ],
+      "relation_id": "rel:c9f8405e9d91ef87",
+      "relation_type": "accessory_for_model",
+      "synthetic": false,
+      "time_bound_statements": [],
+      "veto": {
+        "candidate": false,
+        "mode": "report_only",
+        "pending_verification": false,
+        "scope": null
+      }
+    },
+    {
+      "claims": [
+        {
+          "assertion_type": "not_tested_at_time",
+          "claim_id": "clm:69dde1c28d69b7c7",
+          "declared_status": "PROPOSED",
+          "effective_status": "PROPOSED"
+        },
+        {
+          "assertion_type": "absent_from_list",
+          "claim_id": "clm:7c820de148387ae9",
+          "declared_status": "PROPOSED",
+          "effective_status": "PROPOSED"
+        }
+      ],
+      "conditions": [],
+      "conditions_result_without_context": null,
+      "conditions_review_state": null,
+      "context_requirements": [],
+      "effective_state": "CONFLICT_HOLD",
+      "ends": {
+        "adapter": {
+          "binding_reasons": [
+            "binding_unverified"
+          ],
+          "binding_status": "proposed",
+          "catalog_sku": "400003001",
+          "kind": "article",
+          "maker_id": "bugaboo",
+          "mpn": "400003001"
+        },
+        "chassis": {
+          "identity_candidates": [],
+          "identity_flags": [],
+          "identity_reason": "canonical_exact",
+          "identity_status": "resolved",
+          "identity_via": "canonical",
+          "kind": "model",
+          "maker_id": "bugaboo",
+          "model_id": "bugaboo:dragonfly",
+          "name": "Dragonfly"
+        },
+        "extension": null,
+        "seat": {
+          "identity_candidates": [],
+          "identity_flags": [],
+          "identity_reason": "canonical_exact",
+          "identity_status": "resolved",
+          "identity_via": "canonical",
+          "kind": "model",
+          "maker_id": "maxi-cosi",
+          "model_id": "maxi-cosi:pebble-360-pro-2",
+          "name": "Pebble 360 Pro 2"
+        }
+      },
+      "evidence": {
+        "as_of": "2026-11-17",
+        "docs": [
+          {
+            "age_days": 0,
+            "bytes_state": "missing",
+            "doc_id": "doc:8b27a7246e3541d0",
+            "document_date": "2026-11-17",
+            "issuer": "bugaboo",
+            "language": "en",
+            "market": "GB",
+            "synthetic": false
+          }
+        ],
+        "expired": null,
+        "max_age_days": 0,
+        "ttl_days": null
+      },
+      "proposed_state": "CONFLICT_HOLD",
+      "publish": {
+        "a_tier_candidate": false,
+        "blockers": [
+          "od5_one_ended_adapter_abstain",
+          "od6_allowlist_empty",
+          "state_conflict_hold"
+        ],
+        "downstream_gates": [
+          "stage1_native_receipt",
+          "locale_variant_commercial_gates",
+          "owner_enablement_flag"
+        ]
+      },
+      "reasons": [
+        "article:adapter:proposed",
+        "time_bound_not_tested_unadjudicated"
+      ],
+      "relation_id": "rel:d48da9edacfa405c",
+      "relation_type": "adapter_between",
+      "synthetic": false,
+      "time_bound_statements": [
+        {
+          "as_of": null,
+          "claim_id": "clm:69dde1c28d69b7c7"
+        }
+      ],
+      "veto": {
+        "candidate": false,
+        "mode": "report_only",
+        "pending_verification": false,
+        "scope": null
+      }
+    },
+    {
+      "claims": [
+        {
+          "assertion_type": "absent_from_list",
+          "claim_id": "clm:e8c4a3d2d28e4757",
+          "declared_status": "PROPOSED",
+          "effective_status": "PROPOSED"
+        }
+      ],
+      "conditions": [],
+      "conditions_result_without_context": null,
+      "conditions_review_state": null,
+      "context_requirements": [],
+      "effective_state": "UNKNOWN",
+      "ends": {
+        "adapter": {
+          "binding_reasons": [
+            "binding_unverified"
+          ],
+          "binding_status": "proposed",
+          "catalog_sku": "1166057110",
+          "kind": "article",
+          "maker_id": "maxi-cosi",
+          "mpn": "1166057110"
+        },
+        "chassis": {
+          "identity_candidates": [],
+          "identity_flags": [],
+          "identity_reason": "canonical_exact",
+          "identity_status": "resolved",
+          "identity_via": "canonical",
+          "kind": "model",
+          "maker_id": "maxi-cosi",
+          "model_id": "maxi-cosi:fame",
+          "name": "Fame"
+        },
+        "extension": null,
+        "seat": {
+          "identity_candidates": [],
+          "identity_flags": [],
+          "identity_reason": "canonical_exact",
+          "identity_status": "resolved",
+          "identity_via": "canonical",
+          "kind": "model",
+          "maker_id": "maxi-cosi",
+          "model_id": "maxi-cosi:coral-360",
+          "name": "Coral 360"
+        }
+      },
+      "evidence": {
+        "as_of": "2026-11-17",
+        "docs": [
+          {
+            "age_days": 0,
+            "bytes_state": "missing",
+            "doc_id": "doc:381465952729913b",
+            "document_date": "2026-11-17",
+            "issuer": "maxi-cosi",
+            "language": "en",
+            "market": "GB",
+            "synthetic": false
+          }
+        ],
+        "expired": null,
+        "max_age_days": 0,
+        "ttl_days": null
+      },
+      "proposed_state": "UNKNOWN",
+      "publish": {
+        "a_tier_candidate": false,
+        "blockers": [
+          "od5_one_ended_adapter_abstain",
+          "od6_allowlist_empty",
+          "state_unknown"
+        ],
+        "downstream_gates": [
+          "stage1_native_receipt",
+          "locale_variant_commercial_gates",
+          "owner_enablement_flag"
+        ]
+      },
+      "reasons": [
+        "absent_from_list_or_no_positive_claim",
+        "article:adapter:proposed"
+      ],
+      "relation_id": "rel:da3e670ef5a3f798",
+      "relation_type": "adapter_between",
+      "synthetic": false,
+      "time_bound_statements": [],
+      "veto": {
+        "candidate": false,
+        "mode": "report_only",
+        "pending_verification": false,
+        "scope": null
+      }
+    },
+    {
+      "claims": [
+        {
+          "assertion_type": "compatible",
+          "claim_id": "clm:ee92f448d4fb4c93",
+          "declared_status": "PROPOSED",
+          "effective_status": "PROPOSED"
+        }
+      ],
+      "conditions": [
+        {
+          "attr": "carrier_component",
+          "op": "eq",
+          "value": "soft_carrier"
+        }
+      ],
+      "conditions_result_without_context": "UNKNOWN",
+      "conditions_review_state": "reviewed_constraints",
+      "context_requirements": [
+        "carrier_component"
+      ],
+      "effective_state": "UNKNOWN",
+      "ends": {
+        "adapter": {
+          "binding_reasons": [
+            "binding_unverified"
+          ],
+          "binding_status": "proposed",
+          "catalog_sku": "400019001",
+          "kind": "article",
+          "maker_id": "bugaboo",
+          "mpn": "400019001"
+        },
+        "chassis": {
+          "identity_candidates": [],
+          "identity_flags": [],
+          "identity_reason": "canonical_exact",
+          "identity_status": "resolved",
+          "identity_via": "canonical",
+          "kind": "model",
+          "maker_id": "bugaboo",
+          "model_id": "bugaboo:fox-5",
+          "name": "Fox 5"
+        },
+        "extension": null,
+        "seat": {
+          "identity_candidates": [],
+          "identity_flags": [],
+          "identity_reason": "canonical_exact",
+          "identity_status": "resolved",
+          "identity_via": "canonical",
+          "kind": "model",
+          "maker_id": "maxi-cosi",
+          "model_id": "maxi-cosi:coral-slide-pro",
+          "name": "Coral Slide Pro"
+        }
+      },
+      "evidence": {
+        "as_of": "2026-11-17",
+        "docs": [
+          {
+            "age_days": 0,
+            "bytes_state": "missing",
+            "doc_id": "doc:b00a78102f589f76",
+            "document_date": "2026-11-17",
+            "issuer": "bugaboo",
+            "language": "en",
+            "market": "GB",
+            "synthetic": false
+          }
+        ],
+        "expired": null,
+        "max_age_days": 0,
+        "ttl_days": null
+      },
+      "proposed_state": "LISTED_CONDITIONAL",
+      "publish": {
+        "a_tier_candidate": false,
+        "blockers": [
+          "od4_conditional_held",
+          "od5_one_ended_adapter_abstain",
+          "od6_allowlist_empty",
+          "state_unknown"
+        ],
+        "downstream_gates": [
+          "stage1_native_receipt",
+          "locale_variant_commercial_gates",
+          "owner_enablement_flag"
+        ]
+      },
+      "reasons": [
+        "article:adapter:proposed",
+        "bytes_missing",
+        "claim_proposed_unverified"
+      ],
+      "relation_id": "rel:de5f13143bdf4074",
+      "relation_type": "adapter_between",
+      "synthetic": false,
+      "time_bound_statements": [],
+      "veto": {
+        "candidate": false,
+        "mode": "report_only",
+        "pending_verification": false,
+        "scope": null
+      }
+    },
+    {
+      "claims": [
+        {
+          "assertion_type": "compatible",
+          "claim_id": "clm:9b5132c8837ec883",
+          "declared_status": "PROPOSED",
+          "effective_status": "PROPOSED"
+        }
+      ],
+      "conditions": [
+        {
+          "not": {
+            "attr": "seat_kind",
+            "op": "eq",
+            "value": "infant_carrier"
+          }
+        },
+        {
+          "any_of": [
+            {
+              "all_of": [
+                {
+                  "attr": "restraint_standard",
+                  "op": "eq",
+                  "value": "ECE R44"
+                },
+                {
+                  "attr": "harness_type",
+                  "op": "eq",
+                  "value": "integrated"
+                },
+                {
+                  "attr": "child_weight_kg",
+                  "op": "gte",
+                  "value": 9
+                }
+              ]
+            },
+            {
+              "all_of": [
+                {
+                  "attr": "restraint_standard",
+                  "op": "eq",
+                  "value": "ECE R129"
+                },
+                {
+                  "attr": "harness_type",
+                  "op": "eq",
+                  "value": "integrated"
+                },
+                {
+                  "any_of": [
+                    {
+                      "all_of": [
+                        {
+                          "attr": "facing",
+                          "op": "eq",
+                          "value": "rearward"
+                        },
+                        {
+                          "attr": "child_height_cm",
+                          "op": "gte",
+                          "value": 60
+                        }
+                      ]
+                    },
+                    {
+                      "all_of": [
+                        {
+                          "attr": "facing",
+                          "op": "eq",
+                          "value": "forward"
+                        },
+                        {
+                          "attr": "child_height_cm",
+                          "op": "gte",
+                          "value": 76
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "conditions_result_without_context": "UNKNOWN",
+      "conditions_review_state": "reviewed_constraints",
+      "context_requirements": [
+        "child_height_cm",
+        "child_weight_kg",
+        "facing",
+        "harness_type",
+        "restraint_standard",
+        "seat_kind"
+      ],
+      "effective_state": "UNKNOWN",
+      "ends": {
+        "accessory": {
+          "binding_reasons": [
+            "binding_unverified"
+          ],
+          "binding_status": "proposed",
+          "catalog_sku": "2000030111",
+          "kind": "article",
+          "maker_id": "britax-romer",
+          "mpn": "2000030111"
+        },
+        "model": {
+          "identity_candidates": [],
+          "identity_flags": [],
+          "identity_reason": "canonical_exact",
+          "identity_status": "resolved",
+          "identity_via": "canonical",
+          "kind": "model",
+          "maker_id": "britax-romer",
+          "model_id": "britax-romer:king-pro",
+          "name": "KING PRO"
+        }
+      },
+      "evidence": {
+        "as_of": "2026-11-17",
+        "docs": [
+          {
+            "age_days": 0,
+            "bytes_state": "missing",
+            "doc_id": "doc:c2ef54b501b55631",
+            "document_date": "2026-11-17",
+            "issuer": "britax-romer",
+            "language": "en",
+            "market": "manufacturer-com",
+            "synthetic": false
+          }
+        ],
+        "expired": null,
+        "max_age_days": 0,
+        "ttl_days": null
+      },
+      "proposed_state": "LISTED_CONDITIONAL",
+      "publish": {
+        "a_tier_candidate": false,
+        "blockers": [
+          "od4_conditional_held",
+          "od6_allowlist_empty",
+          "state_unknown"
+        ],
+        "downstream_gates": [
+          "stage1_native_receipt",
+          "locale_variant_commercial_gates",
+          "owner_enablement_flag"
+        ]
+      },
+      "reasons": [
+        "article:accessory:proposed",
+        "bytes_missing",
+        "claim_proposed_unverified"
+      ],
+      "relation_id": "rel:e8dd0bfe6f0d9a82",
+      "relation_type": "accessory_for_model",
+      "synthetic": false,
+      "time_bound_statements": [],
+      "veto": {
+        "candidate": false,
+        "mode": "report_only",
+        "pending_verification": false,
+        "scope": null
+      }
+    },
+    {
+      "claims": [
+        {
+          "assertion_type": "compatible",
+          "claim_id": "clm:352e86e384a03755",
+          "declared_status": "PROPOSED",
+          "effective_status": "PROPOSED"
+        }
+      ],
+      "conditions": [
+        {
+          "not": {
+            "attr": "seat_kind",
+            "op": "eq",
+            "value": "infant_carrier"
+          }
+        },
+        {
+          "any_of": [
+            {
+              "all_of": [
+                {
+                  "attr": "restraint_standard",
+                  "op": "eq",
+                  "value": "ECE R44"
+                },
+                {
+                  "attr": "harness_type",
+                  "op": "eq",
+                  "value": "integrated"
+                },
+                {
+                  "attr": "child_weight_kg",
+                  "op": "gte",
+                  "value": 9
+                }
+              ]
+            },
+            {
+              "all_of": [
+                {
+                  "attr": "restraint_standard",
+                  "op": "eq",
+                  "value": "ECE R129"
+                },
+                {
+                  "attr": "harness_type",
+                  "op": "eq",
+                  "value": "integrated"
+                },
+                {
+                  "any_of": [
+                    {
+                      "all_of": [
+                        {
+                          "attr": "facing",
+                          "op": "eq",
+                          "value": "rearward"
+                        },
+                        {
+                          "attr": "child_height_cm",
+                          "op": "gte",
+                          "value": 60
+                        }
+                      ]
+                    },
+                    {
+                      "all_of": [
+                        {
+                          "attr": "facing",
+                          "op": "eq",
+                          "value": "forward"
+                        },
+                        {
+                          "attr": "child_height_cm",
+                          "op": "gte",
+                          "value": 76
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "conditions_result_without_context": "UNKNOWN",
+      "conditions_review_state": "reviewed_constraints",
+      "context_requirements": [
+        "child_height_cm",
+        "child_weight_kg",
+        "facing",
+        "harness_type",
+        "restraint_standard",
+        "seat_kind"
+      ],
+      "effective_state": "UNKNOWN",
+      "ends": {
+        "accessory": {
+          "binding_reasons": [
+            "binding_unverified"
+          ],
+          "binding_status": "proposed",
+          "catalog_sku": "2000030111",
+          "kind": "article",
+          "maker_id": "britax-romer",
+          "mpn": "2000030111"
+        },
+        "model": {
+          "identity_candidates": [],
+          "identity_flags": [],
+          "identity_reason": "canonical_exact",
+          "identity_status": "resolved",
+          "identity_via": "canonical",
+          "kind": "model",
+          "maker_id": "britax-romer",
+          "model_id": "britax-romer:safe-way-m",
+          "name": "SAFE-WAY M"
+        }
+      },
+      "evidence": {
+        "as_of": "2026-11-17",
+        "docs": [
+          {
+            "age_days": 0,
+            "bytes_state": "missing",
+            "doc_id": "doc:c2ef54b501b55631",
+            "document_date": "2026-11-17",
+            "issuer": "britax-romer",
+            "language": "en",
+            "market": "manufacturer-com",
+            "synthetic": false
+          }
+        ],
+        "expired": null,
+        "max_age_days": 0,
+        "ttl_days": null
+      },
+      "proposed_state": "LISTED_CONDITIONAL",
+      "publish": {
+        "a_tier_candidate": false,
+        "blockers": [
+          "od4_conditional_held",
+          "od6_allowlist_empty",
+          "state_unknown"
+        ],
+        "downstream_gates": [
+          "stage1_native_receipt",
+          "locale_variant_commercial_gates",
+          "owner_enablement_flag"
+        ]
+      },
+      "reasons": [
+        "article:accessory:proposed",
+        "bytes_missing",
+        "claim_proposed_unverified"
+      ],
+      "relation_id": "rel:ecc86358ad645abf",
+      "relation_type": "accessory_for_model",
+      "synthetic": false,
+      "time_bound_statements": [],
+      "veto": {
+        "candidate": false,
+        "mode": "report_only",
+        "pending_verification": false,
+        "scope": null
+      }
+    },
+    {
+      "claims": [
+        {
+          "assertion_type": "compatible",
+          "claim_id": "clm:b9d355c13b36d0a9",
+          "declared_status": "PROPOSED",
+          "effective_status": "PROPOSED"
+        }
+      ],
+      "conditions": [],
+      "conditions_result_without_context": "UNKNOWN",
+      "conditions_review_state": "unknown",
+      "context_requirements": [],
+      "effective_state": "UNKNOWN",
+      "ends": {
+        "adapter": {
+          "binding_reasons": [
+            "binding_unverified"
+          ],
+          "binding_status": "proposed",
+          "catalog_sku": "400019001",
+          "kind": "article",
+          "maker_id": "bugaboo",
+          "mpn": "400019001"
+        },
+        "chassis": {
+          "identity_candidates": [],
+          "identity_flags": [],
+          "identity_reason": "canonical_exact",
+          "identity_status": "resolved",
+          "identity_via": "canonical",
+          "kind": "model",
+          "maker_id": "bugaboo",
+          "model_id": "bugaboo:fox-5-renew",
+          "name": "Fox 5 Renew"
+        },
+        "extension": null,
+        "seat": {
+          "identity_candidates": [],
+          "identity_flags": [],
+          "identity_reason": "canonical_exact",
+          "identity_status": "resolved",
+          "identity_via": "canonical",
+          "kind": "model",
+          "maker_id": "besafe",
+          "model_id": "besafe:izi-go-modular-x1",
+          "name": "iZi Go Modular X1"
+        }
+      },
+      "evidence": {
+        "as_of": "2026-11-17",
+        "docs": [
+          {
+            "age_days": 0,
+            "bytes_state": "missing",
+            "doc_id": "doc:b00a78102f589f76",
+            "document_date": "2026-11-17",
+            "issuer": "bugaboo",
+            "language": "en",
+            "market": "GB",
+            "synthetic": false
+          }
+        ],
+        "expired": null,
+        "max_age_days": 0,
+        "ttl_days": null
+      },
+      "proposed_state": "LISTED_CONDITIONAL",
+      "publish": {
+        "a_tier_candidate": false,
+        "blockers": [
+          "od4_conditional_held",
+          "od5_one_ended_adapter_abstain",
+          "od6_allowlist_empty",
+          "state_unknown"
+        ],
+        "downstream_gates": [
+          "stage1_native_receipt",
+          "locale_variant_commercial_gates",
+          "owner_enablement_flag"
+        ]
+      },
+      "reasons": [
+        "article:adapter:proposed",
+        "bytes_missing",
+        "claim_proposed_unverified",
+        "conditions_review_unknown"
+      ],
+      "relation_id": "rel:ef8a9da40a49eb97",
+      "relation_type": "adapter_between",
+      "synthetic": false,
+      "time_bound_statements": [],
+      "veto": {
+        "candidate": false,
+        "mode": "report_only",
+        "pending_verification": false,
+        "scope": null
+      }
+    },
+    {
+      "claims": [
+        {
+          "assertion_type": "absent_from_list",
+          "claim_id": "clm:91134cc1c6557c54",
+          "declared_status": "PROPOSED",
+          "effective_status": "PROPOSED"
+        }
+      ],
+      "conditions": [],
+      "conditions_result_without_context": null,
+      "conditions_review_state": null,
+      "context_requirements": [],
+      "effective_state": "UNKNOWN",
+      "ends": {
+        "adapter": {
+          "binding_reasons": [
+            "binding_unverified"
+          ],
+          "binding_status": "proposed",
+          "catalog_sku": "1166057110",
+          "kind": "article",
+          "maker_id": "maxi-cosi",
+          "mpn": "1166057110"
+        },
+        "chassis": {
+          "identity_candidates": [],
+          "identity_flags": [],
+          "identity_reason": "canonical_exact",
+          "identity_status": "resolved",
+          "identity_via": "canonical",
+          "kind": "model",
+          "maker_id": "maxi-cosi",
+          "model_id": "maxi-cosi:fame-cabin",
+          "name": "Fame Cabin"
+        },
+        "extension": null,
+        "seat": {
+          "identity_candidates": [],
+          "identity_flags": [],
+          "identity_reason": "canonical_exact",
+          "identity_status": "resolved",
+          "identity_via": "canonical",
+          "kind": "model",
+          "maker_id": "maxi-cosi",
+          "model_id": "maxi-cosi:coral-360",
+          "name": "Coral 360"
+        }
+      },
+      "evidence": {
+        "as_of": "2026-11-17",
+        "docs": [
+          {
+            "age_days": 0,
+            "bytes_state": "missing",
+            "doc_id": "doc:381465952729913b",
+            "document_date": "2026-11-17",
+            "issuer": "maxi-cosi",
+            "language": "en",
+            "market": "GB",
+            "synthetic": false
+          }
+        ],
+        "expired": null,
+        "max_age_days": 0,
+        "ttl_days": null
+      },
+      "proposed_state": "UNKNOWN",
+      "publish": {
+        "a_tier_candidate": false,
+        "blockers": [
+          "od5_one_ended_adapter_abstain",
+          "od6_allowlist_empty",
+          "state_unknown"
+        ],
+        "downstream_gates": [
+          "stage1_native_receipt",
+          "locale_variant_commercial_gates",
+          "owner_enablement_flag"
+        ]
+      },
+      "reasons": [
+        "absent_from_list_or_no_positive_claim",
+        "article:adapter:proposed"
+      ],
+      "relation_id": "rel:f07b5cc54c92340f",
+      "relation_type": "adapter_between",
+      "synthetic": false,
+      "time_bound_statements": [],
+      "veto": {
+        "candidate": false,
+        "mode": "report_only",
+        "pending_verification": false,
+        "scope": null
+      }
+    },
+    {
+      "claims": [
+        {
+          "assertion_type": "compatible",
+          "claim_id": "clm:2611e27496164090",
+          "declared_status": "PROPOSED",
+          "effective_status": "PROPOSED"
+        }
+      ],
+      "conditions": [],
+      "conditions_result_without_context": "UNKNOWN",
+      "conditions_review_state": "unknown",
+      "context_requirements": [],
+      "effective_state": "UNKNOWN",
+      "ends": {
+        "adapter": {
+          "binding_reasons": [
+            "binding_unverified"
+          ],
+          "binding_status": "proposed",
+          "catalog_sku": "400019001",
+          "kind": "article",
+          "maker_id": "bugaboo",
+          "mpn": "400019001"
+        },
+        "chassis": {
+          "identity_candidates": [],
+          "identity_flags": [],
+          "identity_reason": "canonical_exact",
+          "identity_status": "resolved",
+          "identity_via": "canonical",
+          "kind": "model",
+          "maker_id": "bugaboo",
+          "model_id": "bugaboo:fox-5",
+          "name": "Fox 5"
+        },
+        "extension": null,
+        "seat": {
+          "identity_candidates": [],
+          "identity_flags": [],
+          "identity_reason": "canonical_exact",
+          "identity_status": "resolved",
+          "identity_via": "canonical",
+          "kind": "model",
+          "maker_id": "besafe",
+          "model_id": "besafe:izi-go-modular-x1",
+          "name": "iZi Go Modular X1"
+        }
+      },
+      "evidence": {
+        "as_of": "2026-11-17",
+        "docs": [
+          {
+            "age_days": 0,
+            "bytes_state": "missing",
+            "doc_id": "doc:b00a78102f589f76",
+            "document_date": "2026-11-17",
+            "issuer": "bugaboo",
+            "language": "en",
+            "market": "GB",
+            "synthetic": false
+          }
+        ],
+        "expired": null,
+        "max_age_days": 0,
+        "ttl_days": null
+      },
+      "proposed_state": "LISTED_CONDITIONAL",
+      "publish": {
+        "a_tier_candidate": false,
+        "blockers": [
+          "od4_conditional_held",
+          "od5_one_ended_adapter_abstain",
+          "od6_allowlist_empty",
+          "state_unknown"
+        ],
+        "downstream_gates": [
+          "stage1_native_receipt",
+          "locale_variant_commercial_gates",
+          "owner_enablement_flag"
+        ]
+      },
+      "reasons": [
+        "article:adapter:proposed",
+        "bytes_missing",
+        "claim_proposed_unverified",
+        "conditions_review_unknown"
+      ],
+      "relation_id": "rel:f5e825cedd3d0cf9",
+      "relation_type": "adapter_between",
+      "synthetic": false,
+      "time_bound_statements": [],
+      "veto": {
+        "candidate": false,
+        "mode": "report_only",
+        "pending_verification": false,
+        "scope": null
+      }
+    },
+    {
+      "claims": [
+        {
+          "assertion_type": "compatible",
+          "claim_id": "clm:4819d97ce02b08a4",
+          "declared_status": "PROPOSED",
+          "effective_status": "PROPOSED"
+        }
+      ],
+      "conditions": [
+        {
+          "attr": "carrier_component",
+          "op": "eq",
+          "value": "soft_carrier"
+        }
+      ],
+      "conditions_result_without_context": "UNKNOWN",
+      "conditions_review_state": "reviewed_constraints",
+      "context_requirements": [
+        "carrier_component"
+      ],
+      "effective_state": "UNKNOWN",
+      "ends": {
+        "adapter": {
+          "binding_reasons": [
+            "binding_unverified"
+          ],
+          "binding_status": "proposed",
+          "catalog_sku": "400019001",
+          "kind": "article",
+          "maker_id": "bugaboo",
+          "mpn": "400019001"
+        },
+        "chassis": {
+          "identity_candidates": [],
+          "identity_flags": [],
+          "identity_reason": "canonical_exact",
+          "identity_status": "resolved",
+          "identity_via": "canonical",
+          "kind": "model",
+          "maker_id": "bugaboo",
+          "model_id": "bugaboo:fox-5-renew",
+          "name": "Fox 5 Renew"
+        },
+        "extension": null,
+        "seat": {
+          "identity_candidates": [],
+          "identity_flags": [],
+          "identity_reason": "canonical_exact",
+          "identity_status": "resolved",
+          "identity_via": "canonical",
+          "kind": "model",
+          "maker_id": "maxi-cosi",
+          "model_id": "maxi-cosi:coral-slide-pro",
+          "name": "Coral Slide Pro"
+        }
+      },
+      "evidence": {
+        "as_of": "2026-11-17",
+        "docs": [
+          {
+            "age_days": 0,
+            "bytes_state": "missing",
+            "doc_id": "doc:b00a78102f589f76",
+            "document_date": "2026-11-17",
+            "issuer": "bugaboo",
+            "language": "en",
+            "market": "GB",
+            "synthetic": false
+          }
+        ],
+        "expired": null,
+        "max_age_days": 0,
+        "ttl_days": null
+      },
+      "proposed_state": "LISTED_CONDITIONAL",
+      "publish": {
+        "a_tier_candidate": false,
+        "blockers": [
+          "od4_conditional_held",
+          "od5_one_ended_adapter_abstain",
+          "od6_allowlist_empty",
+          "state_unknown"
+        ],
+        "downstream_gates": [
+          "stage1_native_receipt",
+          "locale_variant_commercial_gates",
+          "owner_enablement_flag"
+        ]
+      },
+      "reasons": [
+        "article:adapter:proposed",
+        "bytes_missing",
+        "claim_proposed_unverified"
+      ],
+      "relation_id": "rel:f8578e3b0f9d0534",
+      "relation_type": "adapter_between",
+      "synthetic": false,
+      "time_bound_statements": [],
+      "veto": {
+        "candidate": false,
+        "mode": "report_only",
+        "pending_verification": false,
+        "scope": null
+      }
+    },
+    {
+      "claims": [
+        {
+          "assertion_type": "compatible",
+          "claim_id": "clm:3ef7fae5f8e22014",
+          "declared_status": "PROPOSED",
+          "effective_status": "PROPOSED"
+        }
+      ],
+      "conditions": [
+        {
+          "not": {
+            "attr": "seat_kind",
+            "op": "eq",
+            "value": "infant_carrier"
+          }
+        },
+        {
+          "any_of": [
+            {
+              "all_of": [
+                {
+                  "attr": "restraint_standard",
+                  "op": "eq",
+                  "value": "ECE R44"
+                },
+                {
+                  "attr": "harness_type",
+                  "op": "eq",
+                  "value": "integrated"
+                },
+                {
+                  "attr": "child_weight_kg",
+                  "op": "gte",
+                  "value": 9
+                }
+              ]
+            },
+            {
+              "all_of": [
+                {
+                  "attr": "restraint_standard",
+                  "op": "eq",
+                  "value": "ECE R129"
+                },
+                {
+                  "attr": "harness_type",
+                  "op": "eq",
+                  "value": "integrated"
+                },
+                {
+                  "any_of": [
+                    {
+                      "all_of": [
+                        {
+                          "attr": "facing",
+                          "op": "eq",
+                          "value": "rearward"
+                        },
+                        {
+                          "attr": "child_height_cm",
+                          "op": "gte",
+                          "value": 60
+                        }
+                      ]
+                    },
+                    {
+                      "all_of": [
+                        {
+                          "attr": "facing",
+                          "op": "eq",
+                          "value": "forward"
+                        },
+                        {
+                          "attr": "child_height_cm",
+                          "op": "gte",
+                          "value": 76
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "conditions_result_without_context": "UNKNOWN",
+      "conditions_review_state": "reviewed_constraints",
+      "context_requirements": [
+        "child_height_cm",
+        "child_weight_kg",
+        "facing",
+        "harness_type",
+        "restraint_standard",
+        "seat_kind"
+      ],
+      "effective_state": "UNKNOWN",
+      "ends": {
+        "accessory": {
+          "binding_reasons": [
+            "binding_unverified"
+          ],
+          "binding_status": "proposed",
+          "catalog_sku": "2000030111",
+          "kind": "article",
+          "maker_id": "britax-romer",
+          "mpn": "2000030111"
+        },
+        "model": {
+          "identity_candidates": [],
+          "identity_flags": [],
+          "identity_reason": "canonical_exact",
+          "identity_status": "resolved",
+          "identity_via": "canonical",
+          "kind": "model",
+          "maker_id": "britax-romer",
+          "model_id": "britax-romer:dualfix-m-plus",
+          "name": "DUALFIX M PLUS"
+        }
+      },
+      "evidence": {
+        "as_of": "2026-11-17",
+        "docs": [
+          {
+            "age_days": 0,
+            "bytes_state": "missing",
+            "doc_id": "doc:c2ef54b501b55631",
+            "document_date": "2026-11-17",
+            "issuer": "britax-romer",
+            "language": "en",
+            "market": "manufacturer-com",
+            "synthetic": false
+          }
+        ],
+        "expired": null,
+        "max_age_days": 0,
+        "ttl_days": null
+      },
+      "proposed_state": "LISTED_CONDITIONAL",
+      "publish": {
+        "a_tier_candidate": false,
+        "blockers": [
+          "od4_conditional_held",
+          "od6_allowlist_empty",
+          "state_unknown"
+        ],
+        "downstream_gates": [
+          "stage1_native_receipt",
+          "locale_variant_commercial_gates",
+          "owner_enablement_flag"
+        ]
+      },
+      "reasons": [
+        "article:accessory:proposed",
+        "bytes_missing",
+        "claim_proposed_unverified"
+      ],
+      "relation_id": "rel:f8c6811cf2148620",
+      "relation_type": "accessory_for_model",
+      "synthetic": false,
+      "time_bound_statements": [],
+      "veto": {
+        "candidate": false,
+        "mode": "report_only",
+        "pending_verification": false,
+        "scope": null
+      }
+    },
+    {
+      "claims": [
+        {
+          "assertion_type": "compatible",
+          "claim_id": "clm:a741efb866d18b6a",
+          "declared_status": "PROPOSED",
+          "effective_status": "PROPOSED"
+        }
+      ],
+      "conditions": [],
+      "conditions_result_without_context": "UNKNOWN",
+      "conditions_review_state": "unknown",
+      "context_requirements": [],
+      "effective_state": "UNKNOWN",
+      "ends": {
+        "adapter": {
+          "binding_reasons": [
+            "binding_unverified"
+          ],
+          "binding_status": "proposed",
+          "catalog_sku": "400019001",
+          "kind": "article",
+          "maker_id": "bugaboo",
+          "mpn": "400019001"
+        },
+        "chassis": {
+          "identity_candidates": [],
+          "identity_flags": [],
+          "identity_reason": "canonical_exact",
+          "identity_status": "resolved",
+          "identity_via": "canonical",
+          "kind": "model",
+          "maker_id": "bugaboo",
+          "model_id": "bugaboo:fox-5",
+          "name": "Fox 5"
+        },
+        "extension": null,
+        "seat": {
+          "identity_candidates": [],
+          "identity_flags": [],
+          "identity_reason": "canonical_exact",
+          "identity_status": "resolved",
+          "identity_via": "canonical",
+          "kind": "model",
+          "maker_id": "maxi-cosi",
+          "model_id": "maxi-cosi:pebble-360-pro-2",
+          "name": "Pebble 360 Pro 2"
+        }
+      },
+      "evidence": {
+        "as_of": "2026-11-17",
+        "docs": [
+          {
+            "age_days": 0,
+            "bytes_state": "missing",
+            "doc_id": "doc:b00a78102f589f76",
+            "document_date": "2026-11-17",
+            "issuer": "bugaboo",
+            "language": "en",
+            "market": "GB",
+            "synthetic": false
+          }
+        ],
+        "expired": null,
+        "max_age_days": 0,
+        "ttl_days": null
+      },
+      "proposed_state": "LISTED_CONDITIONAL",
+      "publish": {
+        "a_tier_candidate": false,
+        "blockers": [
+          "od4_conditional_held",
+          "od5_one_ended_adapter_abstain",
+          "od6_allowlist_empty",
+          "state_unknown"
+        ],
+        "downstream_gates": [
+          "stage1_native_receipt",
+          "locale_variant_commercial_gates",
+          "owner_enablement_flag"
+        ]
+      },
+      "reasons": [
+        "article:adapter:proposed",
+        "bytes_missing",
+        "claim_proposed_unverified",
+        "conditions_review_unknown"
+      ],
+      "relation_id": "rel:fd9ff73a09ba0d97",
+      "relation_type": "adapter_between",
+      "synthetic": false,
+      "time_bound_statements": [],
+      "veto": {
+        "candidate": false,
+        "mode": "report_only",
+        "pending_verification": false,
+        "scope": null
+      }
+    }
+  ],
+  "relations_digest": "b7386ecf636509d671943fe0c8ab7db2c01a0fdcf369790a0d7c88f2b80b794a",
+  "schema": "bp-oem-relations-v1",
+  "stage": "B-shadow",
+  "summary": {
+    "a_tier_candidates": 0,
+    "by_effective_state": {
+      "CONFLICT_HOLD": 2,
+      "UNKNOWN": 41
+    },
+    "by_proposed_state": {
+      "CONFLICT_HOLD": 2,
+      "EXCLUDED": 2,
+      "LISTED": 1,
+      "LISTED_CONDITIONAL": 31,
+      "UNKNOWN": 7
+    },
+    "by_relation_type": {
+      "accessory_for_model": 23,
+      "adapter_between": 19,
+      "vehicle_general": 1
+    },
+    "relations": 43,
+    "veto_candidates": 0,
+    "veto_pending_verification": 2
+  },
+  "synthetic": false
+}

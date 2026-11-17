@@ -1,0 +1,1007 @@
+{
+  "claims": [
+    {
+      "accepted": false,
+      "assertion_type": "not_tested_at_time",
+      "claim_id": "clm:014746c9a9a4f1f2",
+      "declared_status": "PROPOSED",
+      "doc_id": "doc:8b27a7246e3541d0",
+      "effective_status": "PROPOSED",
+      "extracted_by_kind": "llm",
+      "reasons": [
+        "bytes_missing",
+        "claim_proposed_unverified"
+      ],
+      "relation_ids": [
+        "rel:8cd931d049d1d1b4"
+      ],
+      "relation_type": "adapter_between"
+    },
+    {
+      "accepted": false,
+      "assertion_type": "compatible",
+      "claim_id": "clm:063a57f2c4bfa10a",
+      "declared_status": "PROPOSED",
+      "doc_id": "doc:bac1a286d1860ffb",
+      "effective_status": "PROPOSED",
+      "extracted_by_kind": "llm",
+      "reasons": [
+        "bytes_missing",
+        "claim_proposed_unverified"
+      ],
+      "relation_ids": [
+        "rel:5889f8a94282a1a5"
+      ],
+      "relation_type": "accessory_for_model"
+    },
+    {
+      "accepted": false,
+      "assertion_type": "absent_from_list",
+      "claim_id": "clm:0964db5731167e0f",
+      "declared_status": "PROPOSED",
+      "doc_id": "doc:c2ef54b501b55631",
+      "effective_status": "PROPOSED",
+      "extracted_by_kind": "llm",
+      "reasons": [
+        "bytes_missing",
+        "claim_proposed_unverified"
+      ],
+      "relation_ids": [
+        "rel:54e1afd0bfa37816"
+      ],
+      "relation_type": "accessory_for_model"
+    },
+    {
+      "accepted": false,
+      "assertion_type": "compatible",
+      "claim_id": "clm:102d3d27d0fd88fb",
+      "declared_status": "PROPOSED",
+      "doc_id": "doc:c2ef54b501b55631",
+      "effective_status": "PROPOSED",
+      "extracted_by_kind": "llm",
+      "reasons": [
+        "bytes_missing",
+        "claim_proposed_unverified"
+      ],
+      "relation_ids": [
+        "rel:11e9c08274ef0694"
+      ],
+      "relation_type": "accessory_for_model"
+    },
+    {
+      "accepted": false,
+      "assertion_type": "article_identity",
+      "claim_id": "clm:10cea0f6bc1b71bc",
+      "declared_status": "PROPOSED",
+      "doc_id": "doc:381465952729913b",
+      "effective_status": "PROPOSED",
+      "extracted_by_kind": "llm",
+      "reasons": [
+        "bytes_missing",
+        "claim_proposed_unverified"
+      ],
+      "relation_ids": [],
+      "relation_type": null
+    },
+    {
+      "accepted": false,
+      "assertion_type": "compatible",
+      "claim_id": "clm:156beec5c65ff754",
+      "declared_status": "PROPOSED",
+      "doc_id": "doc:381465952729913b",
+      "effective_status": "PROPOSED",
+      "extracted_by_kind": "llm",
+      "reasons": [
+        "bytes_missing",
+        "claim_proposed_unverified"
+      ],
+      "relation_ids": [
+        "rel:bf6b7978cbd99380"
+      ],
+      "relation_type": "adapter_between"
+    },
+    {
+      "accepted": false,
+      "assertion_type": "article_identity",
+      "claim_id": "clm:164f71eb56b3d7c0",
+      "declared_status": "PROPOSED",
+      "doc_id": "doc:8b27a7246e3541d0",
+      "effective_status": "PROPOSED",
+      "extracted_by_kind": "llm",
+      "reasons": [
+        "bytes_missing",
+        "claim_proposed_unverified"
+      ],
+      "relation_ids": [],
+      "relation_type": null
+    },
+    {
+      "accepted": false,
+      "assertion_type": "compatible",
+      "claim_id": "clm:1a21958934dafcba",
+      "declared_status": "PROPOSED",
+      "doc_id": "doc:c2ef54b501b55631",
+      "effective_status": "PROPOSED",
+      "extracted_by_kind": "llm",
+      "reasons": [
+        "bytes_missing",
+        "claim_proposed_unverified"
+      ],
+      "relation_ids": [
+        "rel:52fd81e2c75f18bd"
+      ],
+      "relation_type": "accessory_for_model"
+    },
+    {
+      "accepted": false,
+      "assertion_type": "compatible",
+      "claim_id": "clm:1a7d94b18807ab88",
+      "declared_status": "PROPOSED",
+      "doc_id": "doc:3d6c5125466e6847",
+      "effective_status": "PROPOSED",
+      "extracted_by_kind": "llm",
+      "reasons": [
+        "bytes_missing",
+        "claim_proposed_unverified"
+      ],
+      "relation_ids": [
+        "rel:c9f8405e9d91ef87"
+      ],
+      "relation_type": "accessory_for_model"
+    },
+    {
+      "accepted": false,
+      "assertion_type": "compatible",
+      "claim_id": "clm:2206525d7c7823db",
+      "declared_status": "PROPOSED",
+      "doc_id": "doc:8b27a7246e3541d0",
+      "effective_status": "PROPOSED",
+      "extracted_by_kind": "llm",
+      "reasons": [
+        "bytes_missing",
+        "claim_proposed_unverified"
+      ],
+      "relation_ids": [
+        "rel:105b35a3358e582c"
+      ],
+      "relation_type": "adapter_between"
+    },
+    {
+      "accepted": false,
+      "assertion_type": "compatible",
+      "claim_id": "clm:2611e27496164090",
+      "declared_status": "PROPOSED",
+      "doc_id": "doc:b00a78102f589f76",
+      "effective_status": "PROPOSED",
+      "extracted_by_kind": "llm",
+      "reasons": [
+        "bytes_missing",
+        "claim_proposed_unverified"
+      ],
+      "relation_ids": [
+        "rel:f5e825cedd3d0cf9"
+      ],
+      "relation_type": "adapter_between"
+    },
+    {
+      "accepted": false,
+      "assertion_type": "compatible",
+      "claim_id": "clm:34ba1e41d9f243cd",
+      "declared_status": "PROPOSED",
+      "doc_id": "doc:381465952729913b",
+      "effective_status": "PROPOSED",
+      "extracted_by_kind": "llm",
+      "reasons": [
+        "bytes_missing",
+        "claim_proposed_unverified"
+      ],
+      "relation_ids": [
+        "rel:66eef64200958edd"
+      ],
+      "relation_type": "adapter_between"
+    },
+    {
+      "accepted": false,
+      "assertion_type": "compatible",
+      "claim_id": "clm:352e86e384a03755",
+      "declared_status": "PROPOSED",
+      "doc_id": "doc:c2ef54b501b55631",
+      "effective_status": "PROPOSED",
+      "extracted_by_kind": "llm",
+      "reasons": [
+        "bytes_missing",
+        "claim_proposed_unverified"
+      ],
+      "relation_ids": [
+        "rel:ecc86358ad645abf"
+      ],
+      "relation_type": "accessory_for_model"
+    },
+    {
+      "accepted": false,
+      "assertion_type": "absent_from_list",
+      "claim_id": "clm:3765db0a7f5edeef",
+      "declared_status": "PROPOSED",
+      "doc_id": "doc:f554312a10c64b6e",
+      "effective_status": "PROPOSED",
+      "extracted_by_kind": "llm",
+      "reasons": [
+        "bytes_missing",
+        "claim_proposed_unverified"
+      ],
+      "relation_ids": [
+        "rel:7676875887ade0d7"
+      ],
+      "relation_type": "accessory_for_model"
+    },
+    {
+      "accepted": false,
+      "assertion_type": "absent_from_list",
+      "claim_id": "clm:389fbfba4c8bb7e9",
+      "declared_status": "PROPOSED",
+      "doc_id": "doc:3d6c5125466e6847",
+      "effective_status": "PROPOSED",
+      "extracted_by_kind": "llm",
+      "reasons": [
+        "bytes_missing",
+        "claim_proposed_unverified"
+      ],
+      "relation_ids": [
+        "rel:43724e77b03ec423"
+      ],
+      "relation_type": "accessory_for_model"
+    },
+    {
+      "accepted": false,
+      "assertion_type": "article_identity",
+      "claim_id": "clm:3b321c43ee8ff318",
+      "declared_status": "PROPOSED",
+      "doc_id": "doc:c2ef54b501b55631",
+      "effective_status": "PROPOSED",
+      "extracted_by_kind": "llm",
+      "reasons": [
+        "bytes_missing",
+        "claim_proposed_unverified"
+      ],
+      "relation_ids": [],
+      "relation_type": null
+    },
+    {
+      "accepted": false,
+      "assertion_type": "compatible",
+      "claim_id": "clm:3ef7fae5f8e22014",
+      "declared_status": "PROPOSED",
+      "doc_id": "doc:c2ef54b501b55631",
+      "effective_status": "PROPOSED",
+      "extracted_by_kind": "llm",
+      "reasons": [
+        "bytes_missing",
+        "claim_proposed_unverified"
+      ],
+      "relation_ids": [
+        "rel:f8c6811cf2148620"
+      ],
+      "relation_type": "accessory_for_model"
+    },
+    {
+      "accepted": false,
+      "assertion_type": "compatible",
+      "claim_id": "clm:478ee31e95da57aa",
+      "declared_status": "PROPOSED",
+      "doc_id": "doc:c2ef54b501b55631",
+      "effective_status": "PROPOSED",
+      "extracted_by_kind": "llm",
+      "reasons": [
+        "bytes_missing",
+        "claim_proposed_unverified"
+      ],
+      "relation_ids": [
+        "rel:0909bb3f15adc5bb"
+      ],
+      "relation_type": "accessory_for_model"
+    },
+    {
+      "accepted": false,
+      "assertion_type": "compatible",
+      "claim_id": "clm:4819d97ce02b08a4",
+      "declared_status": "PROPOSED",
+      "doc_id": "doc:b00a78102f589f76",
+      "effective_status": "PROPOSED",
+      "extracted_by_kind": "llm",
+      "reasons": [
+        "bytes_missing",
+        "claim_proposed_unverified"
+      ],
+      "relation_ids": [
+        "rel:f8578e3b0f9d0534"
+      ],
+      "relation_type": "adapter_between"
+    },
+    {
+      "accepted": false,
+      "assertion_type": "compatible",
+      "claim_id": "clm:5bdfae6d9e473ced",
+      "declared_status": "PROPOSED",
+      "doc_id": "doc:bac1a286d1860ffb",
+      "effective_status": "PROPOSED",
+      "extracted_by_kind": "llm",
+      "reasons": [
+        "bytes_missing",
+        "claim_proposed_unverified"
+      ],
+      "relation_ids": [
+        "rel:74d6b05ac61156e8"
+      ],
+      "relation_type": "accessory_for_model"
+    },
+    {
+      "accepted": false,
+      "assertion_type": "article_identity",
+      "claim_id": "clm:696cd8bdf49d2f76",
+      "declared_status": "PROPOSED",
+      "doc_id": "doc:f554312a10c64b6e",
+      "effective_status": "PROPOSED",
+      "extracted_by_kind": "llm",
+      "reasons": [
+        "bytes_missing",
+        "claim_proposed_unverified"
+      ],
+      "relation_ids": [],
+      "relation_type": null
+    },
+    {
+      "accepted": false,
+      "assertion_type": "not_tested_at_time",
+      "claim_id": "clm:69dde1c28d69b7c7",
+      "declared_status": "PROPOSED",
+      "doc_id": "doc:8b27a7246e3541d0",
+      "effective_status": "PROPOSED",
+      "extracted_by_kind": "llm",
+      "reasons": [
+        "bytes_missing",
+        "claim_proposed_unverified"
+      ],
+      "relation_ids": [
+        "rel:d48da9edacfa405c"
+      ],
+      "relation_type": "adapter_between"
+    },
+    {
+      "accepted": false,
+      "assertion_type": "not_recommended",
+      "claim_id": "clm:6a43ab3d603e0d8a",
+      "declared_status": "PROPOSED",
+      "doc_id": "doc:8b27a7246e3541d0",
+      "effective_status": "PROPOSED",
+      "extracted_by_kind": "llm",
+      "reasons": [
+        "bytes_missing",
+        "claim_proposed_unverified"
+      ],
+      "relation_ids": [
+        "rel:c75f181a49fc0bd0"
+      ],
+      "relation_type": "adapter_between"
+    },
+    {
+      "accepted": false,
+      "assertion_type": "compatible",
+      "claim_id": "clm:6f66fbb3a8e995fb",
+      "declared_status": "PROPOSED",
+      "doc_id": "doc:b00a78102f589f76",
+      "effective_status": "PROPOSED",
+      "extracted_by_kind": "llm",
+      "reasons": [
+        "bytes_missing",
+        "claim_proposed_unverified"
+      ],
+      "relation_ids": [
+        "rel:595f8589c89c6586"
+      ],
+      "relation_type": "adapter_between"
+    },
+    {
+      "accepted": false,
+      "assertion_type": "compatible",
+      "claim_id": "clm:75e10be0b143f03e",
+      "declared_status": "PROPOSED",
+      "doc_id": "doc:bac1a286d1860ffb",
+      "effective_status": "PROPOSED",
+      "extracted_by_kind": "llm",
+      "reasons": [
+        "bytes_missing",
+        "claim_proposed_unverified"
+      ],
+      "relation_ids": [
+        "rel:6f838b667045eb6f"
+      ],
+      "relation_type": "accessory_for_model"
+    },
+    {
+      "accepted": false,
+      "assertion_type": "compatible",
+      "claim_id": "clm:76cdc23051b3ba54",
+      "declared_status": "PROPOSED",
+      "doc_id": "doc:81bb8659a109e590",
+      "effective_status": "PROPOSED",
+      "extracted_by_kind": "llm",
+      "reasons": [
+        "bytes_missing",
+        "claim_proposed_unverified"
+      ],
+      "relation_ids": [
+        "rel:2c22ecae2a9c3e40"
+      ],
+      "relation_type": "vehicle_general"
+    },
+    {
+      "accepted": false,
+      "assertion_type": "compatible",
+      "claim_id": "clm:7ab6a834f89c933b",
+      "declared_status": "PROPOSED",
+      "doc_id": "doc:c2ef54b501b55631",
+      "effective_status": "PROPOSED",
+      "extracted_by_kind": "llm",
+      "reasons": [
+        "bytes_missing",
+        "claim_proposed_unverified"
+      ],
+      "relation_ids": [
+        "rel:61f8586556fbb75b"
+      ],
+      "relation_type": "accessory_for_model"
+    },
+    {
+      "accepted": false,
+      "assertion_type": "compatible",
+      "claim_id": "clm:7b4898f3eb6812ae",
+      "declared_status": "PROPOSED",
+      "doc_id": "doc:bac1a286d1860ffb",
+      "effective_status": "PROPOSED",
+      "extracted_by_kind": "llm",
+      "reasons": [
+        "bytes_missing",
+        "claim_proposed_unverified"
+      ],
+      "relation_ids": [
+        "rel:28a660593040e9b0"
+      ],
+      "relation_type": "accessory_for_model"
+    },
+    {
+      "accepted": false,
+      "assertion_type": "absent_from_list",
+      "claim_id": "clm:7c820de148387ae9",
+      "declared_status": "PROPOSED",
+      "doc_id": "doc:8b27a7246e3541d0",
+      "effective_status": "PROPOSED",
+      "extracted_by_kind": "llm",
+      "reasons": [
+        "bytes_missing",
+        "claim_proposed_unverified"
+      ],
+      "relation_ids": [
+        "rel:d48da9edacfa405c"
+      ],
+      "relation_type": "adapter_between"
+    },
+    {
+      "accepted": false,
+      "assertion_type": "article_identity",
+      "claim_id": "clm:82c6de686e1b9f77",
+      "declared_status": "PROPOSED",
+      "doc_id": "doc:bac1a286d1860ffb",
+      "effective_status": "PROPOSED",
+      "extracted_by_kind": "llm",
+      "reasons": [
+        "bytes_missing",
+        "claim_proposed_unverified"
+      ],
+      "relation_ids": [],
+      "relation_type": null
+    },
+    {
+      "accepted": false,
+      "assertion_type": "compatible",
+      "claim_id": "clm:83a1619075d01648",
+      "declared_status": "PROPOSED",
+      "doc_id": "doc:bac1a286d1860ffb",
+      "effective_status": "PROPOSED",
+      "extracted_by_kind": "llm",
+      "reasons": [
+        "bytes_missing",
+        "claim_proposed_unverified"
+      ],
+      "relation_ids": [
+        "rel:080c2e1d86f7f5a1"
+      ],
+      "relation_type": "accessory_for_model"
+    },
+    {
+      "accepted": false,
+      "assertion_type": "compatible",
+      "claim_id": "clm:8b779d5f19ed28b2",
+      "declared_status": "PROPOSED",
+      "doc_id": "doc:c2ef54b501b55631",
+      "effective_status": "PROPOSED",
+      "extracted_by_kind": "llm",
+      "reasons": [
+        "bytes_missing",
+        "claim_proposed_unverified"
+      ],
+      "relation_ids": [
+        "rel:5be44445bd1afa78"
+      ],
+      "relation_type": "accessory_for_model"
+    },
+    {
+      "accepted": false,
+      "assertion_type": "absent_from_list",
+      "claim_id": "clm:8e9ddb1eae3c5a2e",
+      "declared_status": "PROPOSED",
+      "doc_id": "doc:b00a78102f589f76",
+      "effective_status": "PROPOSED",
+      "extracted_by_kind": "llm",
+      "reasons": [
+        "bytes_missing",
+        "claim_proposed_unverified"
+      ],
+      "relation_ids": [
+        "rel:7888efcdf7102f63"
+      ],
+      "relation_type": "adapter_between"
+    },
+    {
+      "accepted": false,
+      "assertion_type": "absent_from_list",
+      "claim_id": "clm:91134cc1c6557c54",
+      "declared_status": "PROPOSED",
+      "doc_id": "doc:381465952729913b",
+      "effective_status": "PROPOSED",
+      "extracted_by_kind": "llm",
+      "reasons": [
+        "bytes_missing",
+        "claim_proposed_unverified"
+      ],
+      "relation_ids": [
+        "rel:f07b5cc54c92340f"
+      ],
+      "relation_type": "adapter_between"
+    },
+    {
+      "accepted": false,
+      "assertion_type": "compatible",
+      "claim_id": "clm:9b5132c8837ec883",
+      "declared_status": "PROPOSED",
+      "doc_id": "doc:c2ef54b501b55631",
+      "effective_status": "PROPOSED",
+      "extracted_by_kind": "llm",
+      "reasons": [
+        "bytes_missing",
+        "claim_proposed_unverified"
+      ],
+      "relation_ids": [
+        "rel:e8dd0bfe6f0d9a82"
+      ],
+      "relation_type": "accessory_for_model"
+    },
+    {
+      "accepted": false,
+      "assertion_type": "compatible",
+      "claim_id": "clm:a741efb866d18b6a",
+      "declared_status": "PROPOSED",
+      "doc_id": "doc:b00a78102f589f76",
+      "effective_status": "PROPOSED",
+      "extracted_by_kind": "llm",
+      "reasons": [
+        "bytes_missing",
+        "claim_proposed_unverified"
+      ],
+      "relation_ids": [
+        "rel:fd9ff73a09ba0d97"
+      ],
+      "relation_type": "adapter_between"
+    },
+    {
+      "accepted": false,
+      "assertion_type": "compatible",
+      "claim_id": "clm:a9fa4b98947783cd",
+      "declared_status": "PROPOSED",
+      "doc_id": "doc:8b27a7246e3541d0",
+      "effective_status": "PROPOSED",
+      "extracted_by_kind": "llm",
+      "reasons": [
+        "bytes_missing",
+        "claim_proposed_unverified"
+      ],
+      "relation_ids": [
+        "rel:8fbd9214a244feab"
+      ],
+      "relation_type": "adapter_between"
+    },
+    {
+      "accepted": false,
+      "assertion_type": "compatible",
+      "claim_id": "clm:ae44bd0fbe028eba",
+      "declared_status": "PROPOSED",
+      "doc_id": "doc:b00a78102f589f76",
+      "effective_status": "PROPOSED",
+      "extracted_by_kind": "llm",
+      "reasons": [
+        "bytes_missing",
+        "claim_proposed_unverified"
+      ],
+      "relation_ids": [
+        "rel:7b289bd096acd98c"
+      ],
+      "relation_type": "adapter_between"
+    },
+    {
+      "accepted": false,
+      "assertion_type": "compatible",
+      "claim_id": "clm:afd88cbe4e69c2ec",
+      "declared_status": "PROPOSED",
+      "doc_id": "doc:c2ef54b501b55631",
+      "effective_status": "PROPOSED",
+      "extracted_by_kind": "llm",
+      "reasons": [
+        "bytes_missing",
+        "claim_proposed_unverified"
+      ],
+      "relation_ids": [
+        "rel:1c81c0d851450df5"
+      ],
+      "relation_type": "accessory_for_model"
+    },
+    {
+      "accepted": false,
+      "assertion_type": "compatible",
+      "claim_id": "clm:b9d355c13b36d0a9",
+      "declared_status": "PROPOSED",
+      "doc_id": "doc:b00a78102f589f76",
+      "effective_status": "PROPOSED",
+      "extracted_by_kind": "llm",
+      "reasons": [
+        "bytes_missing",
+        "claim_proposed_unverified"
+      ],
+      "relation_ids": [
+        "rel:ef8a9da40a49eb97"
+      ],
+      "relation_type": "adapter_between"
+    },
+    {
+      "accepted": false,
+      "assertion_type": "compatible",
+      "claim_id": "clm:c16de7388aa7d5a4",
+      "declared_status": "PROPOSED",
+      "doc_id": "doc:b00a78102f589f76",
+      "effective_status": "PROPOSED",
+      "extracted_by_kind": "llm",
+      "reasons": [
+        "bytes_missing",
+        "claim_proposed_unverified"
+      ],
+      "relation_ids": [
+        "rel:5a066121edd0a2bc"
+      ],
+      "relation_type": "adapter_between"
+    },
+    {
+      "accepted": false,
+      "assertion_type": "article_identity",
+      "claim_id": "clm:cc3279303c9b05d3",
+      "declared_status": "PROPOSED",
+      "doc_id": "doc:3d6c5125466e6847",
+      "effective_status": "PROPOSED",
+      "extracted_by_kind": "llm",
+      "reasons": [
+        "bytes_missing",
+        "claim_proposed_unverified"
+      ],
+      "relation_ids": [],
+      "relation_type": null
+    },
+    {
+      "accepted": false,
+      "assertion_type": "article_identity",
+      "claim_id": "clm:d5696c476f1f8442",
+      "declared_status": "PROPOSED",
+      "doc_id": "doc:b00a78102f589f76",
+      "effective_status": "PROPOSED",
+      "extracted_by_kind": "llm",
+      "reasons": [
+        "bytes_missing",
+        "claim_proposed_unverified"
+      ],
+      "relation_ids": [],
+      "relation_type": null
+    },
+    {
+      "accepted": false,
+      "assertion_type": "compatible",
+      "claim_id": "clm:d969ec11280213d4",
+      "declared_status": "PROPOSED",
+      "doc_id": "doc:bac1a286d1860ffb",
+      "effective_status": "PROPOSED",
+      "extracted_by_kind": "llm",
+      "reasons": [
+        "bytes_missing",
+        "claim_proposed_unverified"
+      ],
+      "relation_ids": [
+        "rel:5df39aa04cfbfbf1"
+      ],
+      "relation_type": "accessory_for_model"
+    },
+    {
+      "accepted": false,
+      "assertion_type": "absent_from_list",
+      "claim_id": "clm:d9df1eebd5fdd544",
+      "declared_status": "PROPOSED",
+      "doc_id": "doc:8b27a7246e3541d0",
+      "effective_status": "PROPOSED",
+      "extracted_by_kind": "llm",
+      "reasons": [
+        "bytes_missing",
+        "claim_proposed_unverified"
+      ],
+      "relation_ids": [
+        "rel:8cd931d049d1d1b4"
+      ],
+      "relation_type": "adapter_between"
+    },
+    {
+      "accepted": false,
+      "assertion_type": "absent_from_list",
+      "claim_id": "clm:dbff243f6d5ca32b",
+      "declared_status": "PROPOSED",
+      "doc_id": "doc:c2ef54b501b55631",
+      "effective_status": "PROPOSED",
+      "extracted_by_kind": "llm",
+      "reasons": [
+        "bytes_missing",
+        "claim_proposed_unverified"
+      ],
+      "relation_ids": [
+        "rel:99d38498de3a17ff"
+      ],
+      "relation_type": "accessory_for_model"
+    },
+    {
+      "accepted": false,
+      "assertion_type": "compatible",
+      "claim_id": "clm:e21924e870b2476b",
+      "declared_status": "PROPOSED",
+      "doc_id": "doc:c2ef54b501b55631",
+      "effective_status": "PROPOSED",
+      "extracted_by_kind": "llm",
+      "reasons": [
+        "bytes_missing",
+        "claim_proposed_unverified"
+      ],
+      "relation_ids": [
+        "rel:c8cdb2ad7e178b34"
+      ],
+      "relation_type": "accessory_for_model"
+    },
+    {
+      "accepted": false,
+      "assertion_type": "compatible",
+      "claim_id": "clm:e4498fbdd47559d0",
+      "declared_status": "PROPOSED",
+      "doc_id": "doc:3d6c5125466e6847",
+      "effective_status": "PROPOSED",
+      "extracted_by_kind": "llm",
+      "reasons": [
+        "bytes_missing",
+        "claim_proposed_unverified"
+      ],
+      "relation_ids": [
+        "rel:bfdbab3befdfd03e"
+      ],
+      "relation_type": "accessory_for_model"
+    },
+    {
+      "accepted": false,
+      "assertion_type": "absent_from_list",
+      "claim_id": "clm:e8c4a3d2d28e4757",
+      "declared_status": "PROPOSED",
+      "doc_id": "doc:381465952729913b",
+      "effective_status": "PROPOSED",
+      "extracted_by_kind": "llm",
+      "reasons": [
+        "bytes_missing",
+        "claim_proposed_unverified"
+      ],
+      "relation_ids": [
+        "rel:da3e670ef5a3f798"
+      ],
+      "relation_type": "adapter_between"
+    },
+    {
+      "accepted": false,
+      "assertion_type": "not_recommended",
+      "claim_id": "clm:e8d009fb45255472",
+      "declared_status": "PROPOSED",
+      "doc_id": "doc:8b27a7246e3541d0",
+      "effective_status": "PROPOSED",
+      "extracted_by_kind": "llm",
+      "reasons": [
+        "bytes_missing",
+        "claim_proposed_unverified"
+      ],
+      "relation_ids": [
+        "rel:7ae7780e588e9567"
+      ],
+      "relation_type": "adapter_between"
+    },
+    {
+      "accepted": false,
+      "assertion_type": "compatible",
+      "claim_id": "clm:ee92f448d4fb4c93",
+      "declared_status": "PROPOSED",
+      "doc_id": "doc:b00a78102f589f76",
+      "effective_status": "PROPOSED",
+      "extracted_by_kind": "llm",
+      "reasons": [
+        "bytes_missing",
+        "claim_proposed_unverified"
+      ],
+      "relation_ids": [
+        "rel:de5f13143bdf4074"
+      ],
+      "relation_type": "adapter_between"
+    },
+    {
+      "accepted": false,
+      "assertion_type": "article_identity",
+      "claim_id": "clm:f3fa158296cfbceb",
+      "declared_status": "PROPOSED",
+      "doc_id": "doc:81bb8659a109e590",
+      "effective_status": "PROPOSED",
+      "extracted_by_kind": "llm",
+      "reasons": [
+        "bytes_missing",
+        "claim_proposed_unverified"
+      ],
+      "relation_ids": [],
+      "relation_type": null
+    },
+    {
+      "accepted": false,
+      "assertion_type": "compatible",
+      "claim_id": "clm:f621c6714a6e1fef",
+      "declared_status": "PROPOSED",
+      "doc_id": "doc:c2ef54b501b55631",
+      "effective_status": "PROPOSED",
+      "extracted_by_kind": "llm",
+      "reasons": [
+        "bytes_missing",
+        "claim_proposed_unverified"
+      ],
+      "relation_ids": [
+        "rel:a5ade3135ec1024f"
+      ],
+      "relation_type": "accessory_for_model"
+    }
+  ],
+  "documents": [
+    {
+      "bytes_state": "NO_BYTES",
+      "doc_id": "doc:381465952729913b",
+      "document_date": "2026-11-17",
+      "issuer": "maxi-cosi",
+      "language": "en",
+      "market": "GB",
+      "sha256": null,
+      "synthetic": false,
+      "url": "https://www.maxi-cosi.co.uk/pushchairs/coral-slide-pro-carrier-adapter"
+    },
+    {
+      "bytes_state": "NO_BYTES",
+      "doc_id": "doc:3d6c5125466e6847",
+      "document_date": "2026-11-17",
+      "issuer": "besafe",
+      "language": "en",
+      "market": "manufacturer-manual",
+      "sha256": null,
+      "synthetic": false,
+      "url": "https://www.besafe.com/4a4457/globalassets/inriverimages/commerce-besafe/2019_01_10_instruction_manual_rain_shield_-_web-manual-601.pdf"
+    },
+    {
+      "bytes_state": "NO_BYTES",
+      "doc_id": "doc:81bb8659a109e590",
+      "document_date": "2026-11-17",
+      "issuer": "unspecified",
+      "language": "ru",
+      "market": "catalog-control",
+      "sha256": null,
+      "synthetic": false,
+      "url": "negative-control:NEGATIVE_AND_CONDITIONAL_CONTROLS.csv"
+    },
+    {
+      "bytes_state": "NO_BYTES",
+      "doc_id": "doc:8b27a7246e3541d0",
+      "document_date": "2026-11-17",
+      "issuer": "bugaboo",
+      "language": "en",
+      "market": "GB",
+      "sha256": null,
+      "synthetic": false,
+      "url": "https://www.bugaboo.com/gb-en/outlet/bugaboo-dragonfly-car-seat-adapters-400003001.html"
+    },
+    {
+      "bytes_state": "NO_BYTES",
+      "doc_id": "doc:b00a78102f589f76",
+      "document_date": "2026-11-17",
+      "issuer": "bugaboo",
+      "language": "en",
+      "market": "GB",
+      "sha256": null,
+      "synthetic": false,
+      "url": "https://www.bugaboo.com/gb-en/accessories/adapters/bugaboo-fox-kangaroo-car-seat-adapters-black-400019001.html"
+    },
+    {
+      "bytes_state": "NO_BYTES",
+      "doc_id": "doc:bac1a286d1860ffb",
+      "document_date": "2026-11-17",
+      "issuer": "britax-romer",
+      "language": "en",
+      "market": "manufacturer-com",
+      "sha256": null,
+      "synthetic": false,
+      "url": "https://www.britax-roemer.com/accessories/car-seat-accessories/relax-insert/ACCSFCC207.html"
+    },
+    {
+      "bytes_state": "NO_BYTES",
+      "doc_id": "doc:c2ef54b501b55631",
+      "document_date": "2026-11-17",
+      "issuer": "britax-romer",
+      "language": "en",
+      "market": "manufacturer-com",
+      "sha256": null,
+      "synthetic": false,
+      "url": "https://www.britax-roemer.com/accessories/car-seat-accessories/comfort-insert/2000030111.html"
+    },
+    {
+      "bytes_state": "NO_BYTES",
+      "doc_id": "doc:f554312a10c64b6e",
+      "document_date": "2026-11-17",
+      "issuer": "maxi-cosi",
+      "language": "ru",
+      "market": "catalog-control",
+      "sha256": null,
+      "synthetic": false,
+      "url": "negative-control:NEGATIVE_AND_CONDITIONAL_CONTROLS.csv"
+    }
+  ],
+  "drift": [],
+  "notice": "SHADOW DATA ONLY. Nothing in this file is a recommendation, a publication authorization or an enforced veto. OD1-OD8 are owner decisions that are still PENDING; the defaults implemented here are safe/held, not approved policy.",
+  "policy": {
+    "allow_synthetic": false,
+    "as_of": "2026-11-17",
+    "publish_allow_list": [],
+    "require_distinct_reviewer": true,
+    "ttl_days": null,
+    "veto_mode": "report_only"
+  },
+  "schema": "bp-oem-claim-status-matrix-v1",
+  "summary": {
+    "by_assertion_type": {
+      "absent_from_list": 9,
+      "article_identity": 8,
+      "compatible": 32,
+      "not_recommended": 2,
+      "not_tested_at_time": 2
+    },
+    "by_effective_status": {
+      "PROPOSED": 53
+    },
+    "by_reason": {
+      "bytes_missing": 53,
+      "claim_proposed_unverified": 53
+    },
+    "total": 53
+  }
+}
