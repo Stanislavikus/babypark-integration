@@ -27,6 +27,8 @@ def engine_root() -> Path:
 
 def prepare_sys_path(root: Path | None = None) -> Path:
     """Put the engine source dirs first on sys.path (same precedence accessory_v4 itself uses)."""
+    # The engine tree lives inside the accepted campaign (baseline data, immutable): importing it must never write bytecode there.
+    sys.dont_write_bytecode = True
     root = root or engine_root()
     for sub in ("upstream/v32/engine", "work/accessories/src"):
         path = str(root / sub)

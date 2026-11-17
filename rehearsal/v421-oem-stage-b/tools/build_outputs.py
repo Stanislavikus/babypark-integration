@@ -46,6 +46,18 @@ def load_index(path):
         return json.load(handle)
 
 
+def refuse_unsafe_out(out, inputs, engine=None) -> None:
+    """Outputs must never land in (or above) a directory this run reads: the accepted campaign, the engine tree, the data or blob folders."""
+    out = Path(out).resolve()
+    protected = [Path(p).resolve() for p in inputs if p]
+    if engine is not None:
+        protected.append(Path(engine).resolve())
+    for path in protected:
+        base = path if path.is_dir() else path.parent
+        if out == base or base in out.parents or out in base.parents:
+            raise SystemExit(f"refusing to write outputs to {out}: it overlaps the input location {base} (baseline and owner data are immutable)")
+
+
 def parse_args(argv):
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--data-dir", default=str(W.SEEDS), help="typed data directory (default: data/seeds)")
@@ -74,6 +86,8 @@ def main(argv=None) -> int:
     engine = None
     if not args.no_engine or args.rows:
         engine = engine_env.prepare_sys_path()
+    refuse_unsafe_out(args.out, [data_dir, args.blob_root, args.rows, args.index, args.manifest, args.evidence,
+                                 args.baseline_report, args.allow_list], engine)
     rows = index = None
     if args.rows:
         rows = read_rows(args.rows)

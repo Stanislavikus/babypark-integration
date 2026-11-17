@@ -1,0 +1,25 @@
+{
+  "accepted_manifest_sha256": "10a3a9af57635cfa60d008f6c702054a667249bd78e1412318502e855481176d",
+  "capture_sha256": "30829f6bcc903b66dc26a6ace53fefbc41d3a50916dfdf8b29d42aaf5951a3e4",
+  "catalog_rows": 28769,
+  "evidence_schema": "babypark-v42-rehearsal-evidence-v1",
+  "fresh_source_rows_sha256": "20544b488f12d86f590d13efca7e732f8470f61a889ef151b929bfff6453b8d0",
+  "generation_id": "v421-t2-fresh-20261116-live-v34",
+  "links": {
+    "car_seat": 42,
+    "stroller": 1832,
+    "total": 1874
+  },
+  "manifest_schema": "babypark-recommendations-v42-rehearsal-candidate-v1",
+  "manifest_sources": 8129,
+  "not_this_generation": {
+    "catalog_rows": 28011,
+    "manifest_sources": 8471
+  },
+  "provenance": {
+    "capture_sha256": "assert in run_fresh_t2.py (full_category_capture.json.gz)",
+    "lock": "docs/oem-review-20261117/STAGE_B_EXECUTION_LOCK_20261117.md, section 'Authority and immutable inputs'",
+    "other_digests": "the lock says to use the full CANONICAL_INPUT_MANIFEST.json for all other digests; it is not available to Stage B in the sandbox, so only the values stated in the lock (and the capture digest asserted by run_fresh_t2.py) are pinned here"
+  },
+  "schema": "bp-oem-baseline-pins-v1"
+}

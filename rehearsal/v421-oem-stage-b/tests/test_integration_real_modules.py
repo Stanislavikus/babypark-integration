@@ -13,6 +13,7 @@ import gzip
 import hashlib
 import json
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -304,15 +305,45 @@ class TestBuildOutputsCliRehearsalMode(unittest.TestCase):
         self.assertFalse((self.base / "half").exists())
 
     def test_duplicate_catalog_nid_is_an_error_not_silently_merged(self):
-        rows = self.base / "dup_rows.jsonl.gz"
+        (self.base / "dup_in").mkdir()   # outputs may not be written next to the inputs they were built from
+        rows = self.base / "dup_in" / "dup_rows.jsonl.gz"
         with gzip.open(self.mini.rows_path, "rt", encoding="utf-8") as handle:
             lines = handle.read().splitlines()
         with gzip.GzipFile(rows, "wb", mtime=0) as handle:
             handle.write(("\n".join(lines + [lines[0]]) + "\n").encode("utf-8"))
         args = [a if a != self.mini.rows_path else rows for a in self.args]
-        bad = run_cli(*args, "--allow-synthetic", "--out", self.base / "dup", check=False)
+        bad = run_cli(*args, "--allow-synthetic", "--out", self.base / "dup_out", check=False)
         self.assertNotEqual(bad.returncode, 0)
         self.assertIn("duplicate catalog NID", bad.stderr)
+
+
+
+@require_engine
+class TestEngineTreeIsNeverWritten(unittest.TestCase):
+    """The accepted campaign's engine_root is baseline data: importing it through the OEM stage must not create bytecode there."""
+
+    def test_importing_the_engine_writes_nothing_into_the_engine_tree(self):
+        real = engine_env.engine_root()
+        with tempfile.TemporaryDirectory() as tmp:
+            copy_root = Path(tmp) / "engine_root"
+            for sub in ("work/accessories/src", "upstream/v32/engine"):
+                shutil.copytree(real / sub, copy_root / sub, ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
+
+            def listing():
+                return sorted(str(p.relative_to(copy_root)) for p in copy_root.rglob("*"))
+
+            before = listing()
+            code = (f"import sys; sys.path.insert(0, {str(ROOT)!r})\n"
+                    "from oem_stage import engine_env\n"
+                    "engine_env.prepare_sys_path()\n"
+                    "import accessory_v4, v32_pipeline, v3_rules_v421, canonical_models\n"
+                    "print(sys.dont_write_bytecode)\n")
+            proc = subprocess.run([sys.executable, "-I", "-c", code], capture_output=True, text=True,
+                                  env={**os.environ, "BP_V421_ENGINE_ROOT": str(copy_root)})
+            self.assertEqual(proc.returncode, 0, proc.stderr[-800:])
+            self.assertEqual(proc.stdout.strip(), "True")
+            self.assertEqual(before, listing(), "importing the engine created files inside the engine tree")
+            self.assertFalse([p for p in listing() if "__pycache__" in p or p.endswith(".pyc")])
 
 
 if __name__ == "__main__":
