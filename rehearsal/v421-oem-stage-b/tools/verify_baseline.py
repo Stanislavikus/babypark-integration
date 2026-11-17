@@ -8,6 +8,13 @@ Pins (data/baseline_pins.json; values from the Stage B lock): accepted manifest 
 8,129 manifest sources, generation id, 1,832 stroller + 42 seat links (1,874; from the metrics ``scope_counts`` and cross-checked
 against the manifest edge total), the capture digest recorded by run_fresh_t2.py, and "not the older 28,011/8,471 generation".
 Every input is opened read-only and its size/mtime is compared before and after. Exit code 0 only when every check is PASS.
+
+Shape of the real corrected generation (what the checks below model; a test double with the same shapes is in tests/fixtures):
+* the manifest lists every source (8,129) but only some have ``accessories``; the evidence file is SPARSE: it has an entry exactly for
+  the sources that have accessories (591 of 8,129), so the evidence keys are compared with that set, not with the source count;
+* ``scope_counts`` carries per (head, lang) the metrics sources / eligible_sources / sources_with_T2 / T2_edges / A_edges / B_edges /
+  eligible_sources_with_zero_T2, where A_edges + B_edges == T2_edges (a tier split of the same edges). The links are the ``T2_edges``
+  metric ONLY; adding every ``*_edges`` metric counts each edge twice (3,748 instead of 1,874).
 """
 from __future__ import annotations
 
@@ -39,6 +46,19 @@ def _stat(path: Path) -> tuple:
     return (st.st_size, st.st_mtime_ns)
 
 
+def _accessories(source) -> list:
+    """Accessory ids of one manifest source (a source without the key, or with null, has none)."""
+    return (source or {}).get("accessories") or []
+
+
+def _set_note(expected: set, observed: set, what: str) -> str:
+    only_expected, only_observed = sorted(expected - observed), sorted(observed - expected)
+
+    def show(ids):
+        return f"{len(ids)}" + (f" {ids[:5]}" if ids else "")
+    return f"{what}; only_in_manifest={show(only_expected)}, only_in_evidence={show(only_observed)}"
+
+
 def _check(name, expected, observed, ok=None, note="") -> dict:
     status = "PASS" if (observed == expected if ok is None else ok) else "FAIL"
     return {"check": name, "status": status, "expected": expected, "observed": observed, "note": note}
@@ -61,7 +81,8 @@ def verify(input_dir, output_dir, pins: dict, campaign_dir=None) -> dict:
     if "manifest" in present:
         manifest = json.loads(present["manifest"].read_text(encoding="utf-8"))
         sources = manifest.get("sources", {})
-        edges = sum(len(s.get("accessories", [])) for s in sources.values())
+        with_edges = {str(k) for k, src in sources.items() if _accessories(src)}
+        edges = sum(len(_accessories(src)) for src in sources.values())
         checks += [
             _check("manifest_sha256", pins["accepted_manifest_sha256"], digests["manifest"]),
             _check("generation_id", pins["generation_id"], manifest.get("generation_id")),
@@ -77,7 +98,12 @@ def verify(input_dir, output_dir, pins: dict, campaign_dir=None) -> dict:
         evidence = json.loads(present["evidence"].read_text(encoding="utf-8"))
         checks.append(_check("evidence_schema", pins["evidence_schema"], evidence.get("schema")))
         if "manifest" in present:
-            checks.append(_check("evidence_sources_match_manifest", len(sources), len(evidence.get("sources", {}))))
+            ev_sources = evidence.get("sources")
+            covered = {str(k) for k in ev_sources} if isinstance(ev_sources, dict) else None
+            checks.append(_check(
+                "evidence_sources_match_manifest", len(with_edges), len(covered) if covered is not None else "evidence.sources is not an object",
+                ok=covered is not None and covered == with_edges,
+                note=_set_note(with_edges, covered or set(), "evidence is sparse by design: its keys must be exactly the manifest sources that have accessories")))
     if "rows" in present:
         raw_sha = hashlib.sha256()
         count, seen, duplicates = 0, set(), 0
@@ -102,15 +128,29 @@ def verify(input_dir, output_dir, pins: dict, campaign_dir=None) -> dict:
         ]
     if "metrics" in present:
         metrics = json.loads(present["metrics"].read_text(encoding="utf-8"))
-        by_head: dict = {}
+        t2_by_head: dict = {}
+        malformed = 0
         for item in metrics.get("scope_counts", []):
-            if str(item.get("metric", "")).endswith("_edges"):
-                by_head[item["head"]] = by_head.get(item["head"], 0) + int(item["value"])
+            if not isinstance(item, dict):
+                malformed += 1
+                continue
+            if item.get("metric") != "T2_edges":      # A_edges / B_edges are the tier split of the same edges: never added
+                continue
+            value = item.get("value")
+            if isinstance(value, bool) or not isinstance(value, int):
+                malformed += 1
+                continue
+            t2_by_head[str(item.get("head"))] = t2_by_head.get(str(item.get("head")), 0) + value
         want = {k: v for k, v in pins["links"].items() if k != "total"}
+        observed_links = {k: t2_by_head.get(k, 0) for k in want}
+        observed_links.update({h: v for h, v in sorted(t2_by_head.items()) if h not in want and v})   # an unexpected head with edges
+        if malformed:
+            observed_links["malformed_scope_count_items"] = malformed
+        t2_total = sum(t2_by_head.values())
         checks += [
-            _check("links_by_source_head", want, {k: by_head.get(k, 0) for k in want}),
-            _check("metrics_edges_match_manifest_total", edges, sum(by_head.values()), ok=edges is not None and edges == sum(by_head.values()),
-                   note="sum of scope_counts *_edges vs manifest accessory total"),
+            _check("links_by_source_head", want, observed_links, note="T2_edges per source head"),
+            _check("metrics_edges_match_manifest_total", edges, t2_total, ok=edges is not None and edges == t2_total and not malformed,
+                   note="sum of the T2_edges metric vs manifest accessory total (A_edges + B_edges is its tier split, not added)"),
         ]
     if "metadata" in present:
         meta = json.loads(present["metadata"].read_text(encoding="utf-8"))

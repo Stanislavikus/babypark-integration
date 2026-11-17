@@ -71,14 +71,21 @@ class TestShadowAgainstRealEngineOutput(unittest.TestCase):
 
     # ---------------------------------------------------------------- the real engine, not a stub
     def test_modules_are_the_real_engine_files_with_pinned_digests(self):
+        """B-R3: pinned BYTES + a trusted import LOCATION, not ``startswith(engine_root)``. The unmodified legacy engine may import the same
+        accepted bytes from another approved path (on the rehearsal host ``model_mentions`` puts
+        /opt/bp-accessories-v421-integration-rehearsal-20261112/upstream/v32/engine first on sys.path, so ``v32_pipeline`` is loaded from there).
+        This must pass whether or not that directory exists, and must fail if the bytes or the location are not the approved ones."""
         root = engine_env.engine_root().resolve()
         pins = engine_env.engine_pins(root)
         self.assertEqual(sorted(pins), sorted(engine_env.ENGINE_FILES))
-        for name in ("accessory_v4", "v32_pipeline", "canonical_models", "v3_rules_v421"):
-            module = sys.modules[name]
-            path = Path(module.__file__).resolve()
-            self.assertTrue(str(path).startswith(str(root)), (name, path))
-            self.assertEqual(canon.file_sha256(path), pins[str(path.relative_to(root))])
+        self.assertEqual(pins, engine_env.ACCEPTED_ENGINE_SHA256)                 # the engine root in use holds exactly the accepted bytes
+        self.assertEqual(engine_env.engine_root_problems(root), [])
+        rows = engine_env.import_provenance(root)                                 # all five pinned modules, from sys.modules
+        self.assertEqual([r["module"] for r in rows], sorted(engine_env.MODULE_SHA256))
+        self.assertEqual(engine_env.provenance_problems(rows), [], json.dumps(rows, indent=1))
+        for row in rows:
+            self.assertEqual((row["status"], row["bytes"]), ("PASS", "MATCH"), row)
+            self.assertEqual(row["sha256"], engine_env.MODULE_SHA256[row["module"]])
         import accessory_v4 as v4
         self.assertGreater(len(Path(v4.__file__).read_text(encoding="utf-8").splitlines()), 200)  # real code, not a shim
 

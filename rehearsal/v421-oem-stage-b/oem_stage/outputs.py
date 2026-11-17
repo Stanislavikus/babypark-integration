@@ -215,6 +215,16 @@ def hashes_doc(files: dict, inputs: dict) -> dict:
     return {"schema": "bp-oem-hashes-v1", "files": dict(sorted(files.items())), "inputs": dict(sorted(inputs.items()))}
 
 
+DOC_NAMES = ("claim_status_matrix", "oem_relations", "oem_vs_current_report", "review_queue")
+
+
+def planned_file_names(label=None) -> list:
+    """Every file a build writes into its output directory (the four documents, HASHES and SHA256SUMS), sorted. Used by the output-location
+    guard of tools/build_outputs.py: none of these may coincide with an input file."""
+    suffix = f".{label}" if label else ""
+    return sorted([f"{name}{suffix}.json" for name in DOC_NAMES] + [f"HASHES{suffix}.json", f"SHA256SUMS{suffix}.txt"])
+
+
 def write_outputs(out_dir, docs: dict, label=None) -> dict:
     """Write ``{name: object}`` as ``name[.label].json``; return ``{filename: sha256}`` (deterministic)."""
     out_dir = Path(out_dir)
