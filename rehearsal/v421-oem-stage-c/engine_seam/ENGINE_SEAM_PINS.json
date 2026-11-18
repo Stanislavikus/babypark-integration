@@ -30,13 +30,13 @@
     }
   ],
   "helpers_file": "engine_seam/seam_helpers.py.txt",
-  "helpers_sha256": "2c664e9b6ea13624c6d86b521b4d7d11b3fa4da3e1c6b2ecf57e04ae5b23867b",
-  "patch_added_lines": 178,
+  "helpers_sha256": "7fd4169e14f3e0be2e45fc4754a840fde3c349e50d4994ec4c8c3d28356bf5ce",
+  "patch_added_lines": 180,
   "patch_file": "engine_seam/accessory_v4_stage_c.patch",
   "patch_removed_lines": 1,
-  "patch_sha256": "ca58472f108799e983b64193bdbd9fd11a2eb871543f7e59b6644532015b8ca0",
+  "patch_sha256": "21952b93cd8f5e6614041aed21cf1332ee3163e294b52b63dbf6f78dcf08493a",
   "patched_file": "engine_seam/accessory_v4_stage_c.py",
-  "patched_lines": 829,
-  "patched_sha256": "7f59fe38241896e3f52a43bb3d8bb16034c67cd45b7b5ad8b2646cad8b7778df",
+  "patched_lines": 831,
+  "patched_sha256": "57310d4c78b1906f2547c4361b404baaa1f53cf486f2b8e5b4c05508f7d3ab8f",
   "schema": "bp-oem-engine-seam-pins-v1"
 }

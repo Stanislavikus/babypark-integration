@@ -58,7 +58,7 @@ class TestOffIsIdentical(unittest.TestCase):
         for name in legacy_names:
             self.assertTrue(hasattr(new, name), name)
         added = sorted(n for n in dir(new) if not n.startswith("__") and not hasattr(base, n))
-        self.assertEqual(added, ["OEM_SCHEMA", "_OEM_EDGE_KEYS", "_OEM_ENDS", "_OEM_ENVELOPE_KEYS", "_OEM_GATE_KEYS", "_OEM_HEX64",
+        self.assertEqual(added, ["OEM_SCHEMA", "_OEM_DATE", "_OEM_EDGE_KEYS", "_OEM_ENDS", "_OEM_ENVELOPE_KEYS", "_OEM_GATE_KEYS", "_OEM_HEX64",
                                  "_OEM_PROVENANCE_KEYS", "_oem_close", "_oem_edge_hold", "_oem_fail", "_oem_finalize", "_oem_hex",
                                  "_oem_keys", "_oem_merge", "_oem_strings", "_oem_variant_ok", "oem_load_envelope"])
 
@@ -99,7 +99,9 @@ class TestOnIsStrict(unittest.TestCase):
             "float nid": lambda d: d["edges"][src][0].update(target_nid=1.0),
             "bool nid": lambda d: d["edges"][src][0].update(target_nid=True),
             "bad hash": lambda d: d["edges"][src][0].update(doc_hashes=["xyz"]),
-            "hash with newline": lambda d: d["edges"][src][0].update(doc_hashes=[sc.A64[:-1] + "\n" + ""] if False else [sc.A64 + "\n"]),
+            "hash with trailing newline": lambda d: d["edges"][src][0].update(doc_hashes=[sc.A64 + "\n"]),
+            "as_of with trailing newline": lambda d: d["gate"].update(as_of="2026-11-17\n"),
+            "as_of not a date": lambda d: d["gate"].update(as_of="soon"),
             "empty claims": lambda d: d["edges"][src][0].update(claim_ids=[]),
             "self edge": lambda d: d["edges"][src][0].update(target_nid=int(src)),
             "duplicate edge": lambda d: d["edges"][src].append(copy.deepcopy(d["edges"][src][0])),

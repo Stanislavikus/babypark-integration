@@ -12,11 +12,15 @@ the relation fields itself (it never trusts ``publish.a_tier_candidate`` alone) 
 * class C (``vehicle_general``) never yields a model relation.
 
 Brand is never a key: cross-brand relations are admitted like any other. An adapter relation is two-ended by construction (seat model,
-adapter article, chassis model, plus a bound extension when required); a missing or unverified end holds the whole relation.
+adapter article, chassis model); a missing or unverified end holds the whole relation. A relation whose configuration REQUIRES an extension
+is held (``extension_required_not_in_edge``): an edge names one target and cannot express "the adapter AND EXT-1".
 Catalog joins are exact: ``shadow.expand_pairs`` (model_id -> source NIDs, SKU -> target NIDs, same locale); a pair whose target is not
 purchasable (field_status / published / price) or whose join is ambiguous is held, never guessed.
 """
 from __future__ import annotations
+
+import datetime
+import re
 
 from . import _stage_b, envelope as E
 
@@ -30,6 +34,7 @@ DEFAULT_POLICY = {"publish_states": ["LISTED"], "one_ended_adapter": "abstain", 
 OVERRIDABLE_BLOCKERS = ("synthetic_relation", "od5_one_ended_adapter_abstain")
 VERIFIED_MODEL_VIA = ("canonical", "alias")
 CLAIM_DECLARED_OK, CLAIM_EFFECTIVE_OK = "VERIFIED", "ACCEPTED"     # o1_evidence.check_claim: human-VERIFIED and byte-backed = ACCEPTED
+_DATE = re.compile(r"[0-9]{4}-[0-9]{2}-[0-9]{2}")
 REQUIRED_ENDS = {"accessory_for_model": ("accessory", "model"), "adapter_between": ("seat", "adapter", "chassis")}
 
 
@@ -52,8 +57,12 @@ def normalize_policy(policy, *, as_of) -> dict:
         raise GateRefused("allow_synthetic must be a boolean")
     if merged["one_ended_adapter"] != "abstain" and not merged["allow_synthetic"]:
         raise GateRefused("a non-default OD5 policy is test-only: it requires allow_synthetic=True (synthetic evidence only)")
-    if not isinstance(as_of, str) or len(as_of) != 10:
+    if not isinstance(as_of, str) or not _DATE.fullmatch(as_of):
         raise GateRefused("as_of (YYYY-MM-DD) is required: the gate never reads the wall clock")
+    try:
+        datetime.date(int(as_of[:4]), int(as_of[5:7]), int(as_of[8:]))
+    except ValueError:
+        raise GateRefused("as_of is not a calendar date") from None
     merged["as_of"] = as_of
     return merged
 
@@ -111,6 +120,10 @@ def decide_relation(rel, policy, *, doc_hashes) -> dict:
             hold.update(_end_problems(name, ends.get(name)))
         if rtype == "adapter_between":
             hold.update(_end_problems("extension", ends.get("extension"), optional=True))
+            if ends.get("extension") is not None:
+                # Stage B keeps an extension end only when the configuration REQUIRES it. An edge names one target (the adapter) and cannot
+                # say "also needs EXT-1", so recommending the bare adapter would promise a fit the OEM statement does not make.
+                hold.add("extension_required_not_in_edge")
     evidence = rel["evidence"]
     if not evidence["docs"]:
         hold.add("no_evidence_documents")
@@ -169,6 +182,10 @@ def build(relations, view, *, policy, as_of, doc_hashes, binding_ids_of=None, in
     rels = sorted(relations, key=lambda r: r["relation_id"])
     if len({r["relation_id"] for r in rels}) != len(rels):
         raise GateRefused("duplicate relation_id in the relations")
+    derived_as_of = sorted({r["evidence"]["as_of"] for r in rels})
+    if derived_as_of and derived_as_of != [pol["as_of"]]:
+        # evidence staleness (OD2) was computed at the relations' own as_of; stamping a different date on the envelope would misstate it
+        raise GateRefused(f"as_of {pol['as_of']} differs from the date the relations were derived for: {derived_as_of}")
     relations_digest, inputs_digest = canon.digest(rels), canon.digest(inputs_files)
     price_of = {t["nid"]: t.get("price") for targets in view.targets_by_sku.values() for t in targets}
     counts = {"target": {}}

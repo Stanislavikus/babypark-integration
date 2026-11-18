@@ -7,6 +7,7 @@
 # ---------------------------------------------------------------------------------------------------------------------
 OEM_SCHEMA="bp-oem-accepted-edges-v1"
 _OEM_HEX64=re.compile(r"[0-9a-f]{64}")
+_OEM_DATE=re.compile(r"[0-9]{4}-[0-9]{2}-[0-9]{2}")
 _OEM_ENVELOPE_KEYS={"schema","mode","synthetic","label","gate","provenance","edges"}
 _OEM_GATE_KEYS={"publish_states","one_ended_adapter","veto_mode","as_of","allow_synthetic"}
 _OEM_PROVENANCE_KEYS={"relations_digest","inputs_digest","relations_schema","gate_version"}
@@ -48,7 +49,7 @@ def oem_load_envelope(envelope,allow_synthetic=False):
         _oem_fail("gate.one_ended_adapter is not an allowed value for this envelope")
     if type(gate["allow_synthetic"]) is not bool or (gate["allow_synthetic"] and not synthetic):
         _oem_fail("gate.allow_synthetic is inconsistent")
-    if not isinstance(gate["as_of"],str) or not gate["as_of"]:_oem_fail("gate.as_of must be a non-empty string")
+    if not isinstance(gate["as_of"],str) or not _OEM_DATE.fullmatch(gate["as_of"]):_oem_fail("gate.as_of must be YYYY-MM-DD")
     prov=envelope["provenance"];_oem_keys(prov,_OEM_PROVENANCE_KEYS,"provenance")
     for key in ("relations_digest","inputs_digest"):
         if not _oem_hex(prov[key]):_oem_fail("provenance."+key+" must be a SHA-256")
@@ -70,7 +71,8 @@ def oem_load_envelope(envelope,allow_synthetic=False):
                 if not isinstance(edge[field],str) or not edge[field]:_oem_fail(where+"."+field+" must be a non-empty string")
             relation_ids=_oem_strings(edge["relation_ids"],where+".relation_ids")
             if relation_ids!=sorted(relation_ids):_oem_fail(where+".relation_ids must be sorted")
-            if edge["relation_type"] not in _OEM_ENDS or edge["end"] not in _OEM_ENDS[edge["relation_type"]]:
+            rtype,end=edge["relation_type"],edge["end"]
+            if not (isinstance(rtype,str) and isinstance(end,str) and rtype in _OEM_ENDS and end in _OEM_ENDS[rtype]):
                 _oem_fail(where+" relation_type/end is not an accepted combination")
             if edge["fit_state"]!="LISTED":_oem_fail(where+".fit_state must be LISTED")
             if edge["conditions"]!=[]:_oem_fail(where+".conditions must be empty (conditional edges are held)")

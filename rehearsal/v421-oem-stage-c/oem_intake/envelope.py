@@ -124,7 +124,7 @@ def validate(doc, *, allow_synthetic: bool = False) -> dict:
     if not isinstance(edges, dict):
         raise EnvelopeError("envelope.edges: expected an object keyed by source NID")
     out, seen, count = {}, set(), 0
-    for key in sorted(edges, key=lambda k: (len(k), k)):
+    for key in sorted(edges, key=lambda k: (len(str(k)), str(k))):
         if not isinstance(key, str) or not key.isdigit() or key != str(int(key)) or int(key) <= 0:
             raise EnvelopeError(f"envelope.edges: key {key!r} is not a canonical positive integer NID")
         items = edges[key]
