@@ -1,0 +1,2201 @@
+{
+  "control": {
+    "excluded_modules": [
+      "tests/test_mutation_harness.py",
+      "tests/test_governance_docs.py"
+    ],
+    "result": "PASS",
+    "skipped": 0,
+    "tests": 281
+  },
+  "hypothesis_examples": 60,
+  "mutants": [
+    {
+      "detail": "test_cli_accepted_edges.TestBuildAcceptedEdgesCli.test_a_relations_file_that_is_not_reproducible_from_the_typed_data_is_refused",
+      "file": "tools/build_accepted_edges.py",
+      "id": "BA-01",
+      "killed_by": [
+        "test_cli_accepted_edges.TestBuildAcceptedEdgesCli.test_a_relations_file_that_is_not_reproducible_from_the_typed_data_is_refused"
+      ],
+      "rule_broken": "relations that differ from the re-derivation are accepted",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_cli_accepted_edges.TestBuildAcceptedEdgesCli.test_a_relations_file_that_is_not_reproducible_from_the_typed_data_is_refused",
+      "file": "tools/build_accepted_edges.py",
+      "id": "BA-02",
+      "killed_by": [
+        "test_cli_accepted_edges.TestBuildAcceptedEdgesCli.test_a_relations_file_that_is_not_reproducible_from_the_typed_data_is_refused"
+      ],
+      "rule_broken": "a wrong relations digest is accepted",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_cli_accepted_edges.TestBuildAcceptedEdgesCli.test_a_relations_file_that_is_not_reproducible_from_the_typed_data_is_refused",
+      "file": "tools/build_accepted_edges.py",
+      "id": "BA-03",
+      "killed_by": [
+        "test_cli_accepted_edges.TestBuildAcceptedEdgesCli.test_a_relations_file_that_is_not_reproducible_from_the_typed_data_is_refused"
+      ],
+      "rule_broken": "a wrong synthetic flag of the relations file is accepted",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_cli_accepted_edges.TestBuildAcceptedEdgesCli.test_a_relations_file_that_is_not_reproducible_from_the_typed_data_is_refused",
+      "file": "tools/build_accepted_edges.py",
+      "id": "BA-04",
+      "killed_by": [
+        "test_cli_accepted_edges.TestBuildAcceptedEdgesCli.test_a_relations_file_that_is_not_reproducible_from_the_typed_data_is_refused"
+      ],
+      "rule_broken": "a relations file of another schema is accepted",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_cli_accepted_edges.TestBuildAcceptedEdgesCli.test_a_relations_file_that_is_not_reproducible_from_the_typed_data_is_refused",
+      "file": "tools/build_accepted_edges.py",
+      "id": "BA-05",
+      "killed_by": [
+        "test_cli_accepted_edges.TestBuildAcceptedEdgesCli.test_a_relations_file_that_is_not_reproducible_from_the_typed_data_is_refused"
+      ],
+      "rule_broken": "problems found with the relations file do not stop the run",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_cli_accepted_edges.TestBuildAcceptedEdgesCli.test_an_engine_root_with_other_bytes_is_refused_before_anything_is_read_or_written",
+      "file": "tools/build_accepted_edges.py",
+      "id": "BA-06",
+      "killed_by": [
+        "test_cli_accepted_edges.TestBuildAcceptedEdgesCli.test_an_engine_root_with_other_bytes_is_refused_before_anything_is_read_or_written"
+      ],
+      "rule_broken": "an engine root that is not the accepted engine does not stop the run",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_cli_accepted_edges.TestBuildAcceptedEdgesCli.test_unsafe_output_locations_are_refused_before_anything_is_written",
+      "file": "tools/build_accepted_edges.py",
+      "id": "BA-07",
+      "killed_by": [
+        "test_cli_accepted_edges.TestBuildAcceptedEdgesCli.test_unsafe_output_locations_are_refused_before_anything_is_written"
+      ],
+      "rule_broken": "the output may overlap an input location",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_cli_accepted_edges.TestBuildAcceptedEdgesCli.test_a_baseline_report_must_be_a_pass_for_exactly_these_files",
+      "file": "tools/build_accepted_edges.py",
+      "id": "BA-08",
+      "killed_by": [
+        "test_cli_accepted_edges.TestBuildAcceptedEdgesCli.test_a_baseline_report_must_be_a_pass_for_exactly_these_files"
+      ],
+      "rule_broken": "a baseline report that is not acceptable for this run is not refused",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_cli_accepted_edges.TestBuildAcceptedEdgesCli.test_an_accepted_envelope_drives_the_patched_engine_end_to_end_from_files",
+      "file": "tools/build_accepted_edges.py",
+      "id": "BAI-01",
+      "killed_by": [
+        "test_cli_accepted_edges.TestBuildAcceptedEdgesCli.test_an_accepted_envelope_drives_the_patched_engine_end_to_end_from_files"
+      ],
+      "rule_broken": "the accepted-edges builder binds placeholders instead of source identities",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_review_fixes.TestTwoEndedAdapterCrossesTheTaxonomy.test_the_crossing_rule_itself_as_a_truth_table",
+      "file": "engine_seam/accessory_v4_stage_c.py",
+      "id": "C-01",
+      "killed_by": [
+        "test_review_fixes.TestTwoEndedAdapterCrossesTheTaxonomy.test_the_crossing_rule_itself_as_a_truth_table"
+      ],
+      "rule_broken": "an edge that is not an adapter_between edge may cross the taxonomy (finding C-R2)",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_review_fixes.TestTwoEndedAdapterCrossesTheTaxonomy.test_an_end_that_belongs_to_the_other_page_never_crosses",
+      "file": "engine_seam/accessory_v4_stage_c.py",
+      "id": "C-02",
+      "killed_by": [
+        "test_review_fixes.TestTwoEndedAdapterCrossesTheTaxonomy.test_an_end_that_belongs_to_the_other_page_never_crosses"
+      ],
+      "rule_broken": "an adapter end may cross onto the page of the other end",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_review_fixes.TestTwoEndedAdapterCrossesTheTaxonomy.test_a_generic_accessory_never_crosses_even_when_the_edge_claims_to_be_an_adapter",
+      "file": "engine_seam/accessory_v4_stage_c.py",
+      "id": "C-03",
+      "killed_by": [
+        "test_review_fixes.TestTwoEndedAdapterCrossesTheTaxonomy.test_a_generic_accessory_never_crosses_even_when_the_edge_claims_to_be_an_adapter"
+      ],
+      "rule_broken": "an accessory that the engine does not recognise as an adapter may cross the taxonomy",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_review_fixes.TestTwoEndedAdapterCrossesTheTaxonomy.test_a_taxonomy_the_engine_does_not_know_does_not_cross",
+      "file": "engine_seam/accessory_v4_stage_c.py",
+      "id": "C-04",
+      "killed_by": [
+        "test_review_fixes.TestTwoEndedAdapterCrossesTheTaxonomy.test_a_taxonomy_the_engine_does_not_know_does_not_cross"
+      ],
+      "rule_broken": "an adapter of an unknown taxonomy may cross",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_review_fixes.TestTwoEndedAdapterCrossesTheTaxonomy.test_an_end_that_belongs_to_the_other_page_never_crosses",
+      "file": "engine_seam/accessory_v4_stage_c.py",
+      "id": "C-05",
+      "killed_by": [
+        "test_review_fixes.TestTwoEndedAdapterCrossesTheTaxonomy.test_an_end_that_belongs_to_the_other_page_never_crosses"
+      ],
+      "rule_broken": "the two adapter ends are swapped",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_review_fixes.TestTwoEndedAdapterCrossesTheTaxonomy.test_each_end_in_each_language_reaches_its_own_page_with_provenance",
+      "file": "engine_seam/accessory_v4_stage_c.py",
+      "id": "C-06",
+      "killed_by": [
+        "test_review_fixes.TestTwoEndedAdapterCrossesTheTaxonomy.test_each_end_in_each_language_reaches_its_own_page_with_provenance"
+      ],
+      "rule_broken": "a crossing adapter is published without the cross-taxonomy note",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_review_fixes.TestTwoEndedAdapterCrossesTheTaxonomy.test_a_generic_accessory_never_crosses_even_when_the_edge_claims_to_be_an_adapter",
+      "file": "engine_seam/accessory_v4_stage_c.py",
+      "id": "C-07",
+      "killed_by": [
+        "test_review_fixes.TestTwoEndedAdapterCrossesTheTaxonomy.test_a_generic_accessory_never_crosses_even_when_the_edge_claims_to_be_an_adapter"
+      ],
+      "rule_broken": "every OEM edge may cross the taxonomy (target_in_head is relaxed globally)",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_envelope.TestEngineValidatorAgrees.test_the_two_validators_agree_on_every_systematic_mutation",
+      "file": "oem_intake/envelope.py",
+      "id": "E-01",
+      "killed_by": [
+        "test_envelope.TestEngineValidatorAgrees.test_the_two_validators_agree_on_every_systematic_mutation"
+      ],
+      "rule_broken": "a non-LISTED edge is accepted by the envelope",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_envelope.TestEngineValidatorAgrees.test_the_two_validators_agree_on_every_systematic_mutation",
+      "file": "oem_intake/envelope.py",
+      "id": "E-02",
+      "killed_by": [
+        "test_envelope.TestEngineValidatorAgrees.test_the_two_validators_agree_on_every_systematic_mutation"
+      ],
+      "rule_broken": "a conditional edge is accepted by the envelope",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_envelope.TestEngineValidatorAgrees.test_the_two_validators_agree_on_every_systematic_mutation",
+      "file": "oem_intake/envelope.py",
+      "id": "E-03",
+      "killed_by": [
+        "test_envelope.TestEngineValidatorAgrees.test_the_two_validators_agree_on_every_systematic_mutation"
+      ],
+      "rule_broken": "a synthetic envelope is accepted without the opt-in",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_envelope.TestEngineValidatorAgrees.test_the_two_validators_agree_on_every_systematic_mutation",
+      "file": "oem_intake/envelope.py",
+      "id": "E-04",
+      "killed_by": [
+        "test_envelope.TestEngineValidatorAgrees.test_the_two_validators_agree_on_every_systematic_mutation"
+      ],
+      "rule_broken": "an envelope can declare an enforced veto",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_envelope.TestEngineValidatorAgrees.test_the_two_validators_agree_on_every_systematic_mutation",
+      "file": "oem_intake/envelope.py",
+      "id": "E-05",
+      "killed_by": [
+        "test_envelope.TestEngineValidatorAgrees.test_the_two_validators_agree_on_every_systematic_mutation"
+      ],
+      "rule_broken": "an envelope can declare conditional publication",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_envelope.TestEngineValidatorAgrees.test_the_two_validators_agree_on_every_systematic_mutation",
+      "file": "oem_intake/envelope.py",
+      "id": "E-06",
+      "killed_by": [
+        "test_envelope.TestEngineValidatorAgrees.test_the_two_validators_agree_on_every_systematic_mutation"
+      ],
+      "rule_broken": "an edge from a product to itself is accepted",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_envelope.TestEngineValidatorAgrees.test_the_two_validators_agree_on_every_systematic_mutation",
+      "file": "oem_intake/envelope.py",
+      "id": "E-07",
+      "killed_by": [
+        "test_envelope.TestEngineValidatorAgrees.test_the_two_validators_agree_on_every_systematic_mutation"
+      ],
+      "rule_broken": "a synthetic edge in a real envelope is accepted",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_envelope.TestEngineValidatorAgrees.test_the_two_validators_agree_on_every_systematic_mutation",
+      "file": "oem_intake/envelope.py",
+      "id": "E-08",
+      "killed_by": [
+        "test_envelope.TestEngineValidatorAgrees.test_the_two_validators_agree_on_every_systematic_mutation"
+      ],
+      "rule_broken": "document hashes need not be SHA-256 hex",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_envelope.TestEngineValidatorAgrees.test_the_two_validators_agree_on_every_systematic_mutation",
+      "file": "oem_intake/envelope.py",
+      "id": "E-09",
+      "killed_by": [
+        "test_envelope.TestEngineValidatorAgrees.test_the_two_validators_agree_on_every_systematic_mutation"
+      ],
+      "rule_broken": "the envelope accepts an edge without a source SKU",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_envelope.TestEngineValidatorAgrees.test_the_two_validators_agree_on_every_systematic_mutation",
+      "file": "oem_intake/envelope.py",
+      "id": "E-10",
+      "killed_by": [
+        "test_envelope.TestEngineValidatorAgrees.test_the_two_validators_agree_on_every_systematic_mutation"
+      ],
+      "rule_broken": "the envelope accepts a source identity that is not a SHA-256",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_envelope.TestEngineValidatorAgrees.test_both_validators_refuse_an_adapter_edge_under_the_default_od5",
+      "file": "oem_intake/envelope.py",
+      "id": "E-11",
+      "killed_by": [
+        "test_envelope.TestEngineValidatorAgrees.test_both_validators_refuse_an_adapter_edge_under_the_default_od5"
+      ],
+      "rule_broken": "the envelope accepts an adapter edge although the declared OD5 policy is the default 'abstain'",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_gate.TestPolicy.test_every_unauthorized_policy_is_refused",
+      "file": "oem_intake/gate.py",
+      "id": "G-01",
+      "killed_by": [
+        "test_gate.TestPolicy.test_every_unauthorized_policy_is_refused"
+      ],
+      "rule_broken": "conditional publication can be switched on by policy (OD4)",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_gate.TestPolicy.test_every_unauthorized_policy_is_refused",
+      "file": "oem_intake/gate.py",
+      "id": "G-02",
+      "killed_by": [
+        "test_gate.TestPolicy.test_every_unauthorized_policy_is_refused"
+      ],
+      "rule_broken": "veto enforcement can be switched on by policy (OD3)",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_cli_accepted_edges.TestBuildAcceptedEdgesCli.test_adapters_abstain_by_default_and_the_test_policy_needs_the_synthetic_opt_in",
+      "file": "oem_intake/gate.py",
+      "id": "G-03",
+      "killed_by": [
+        "test_cli_accepted_edges.TestBuildAcceptedEdgesCli.test_adapters_abstain_by_default_and_the_test_policy_needs_the_synthetic_opt_in"
+      ],
+      "rule_broken": "a non-default OD5 value is accepted for real evidence",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_gate.TestDecideRelation.test_every_single_defect_holds_the_relation_with_its_own_reason",
+      "file": "oem_intake/gate.py",
+      "id": "G-04",
+      "killed_by": [
+        "test_gate.TestDecideRelation.test_every_single_defect_holds_the_relation_with_its_own_reason"
+      ],
+      "rule_broken": "a relation whose effective state is not LISTED is not held",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_gate.TestBuild.test_unknown_conflict_conditional_excluded_unverified_and_class_c_publish_nothing",
+      "file": "oem_intake/gate.py",
+      "id": "G-05",
+      "killed_by": [
+        "test_gate.TestBuild.test_unknown_conflict_conditional_excluded_unverified_and_class_c_publish_nothing"
+      ],
+      "rule_broken": "conditions that are not verified-none no longer hold a relation",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_gate.TestDecideRelation.test_every_single_defect_holds_the_relation_with_its_own_reason",
+      "file": "oem_intake/gate.py",
+      "id": "G-06",
+      "killed_by": [
+        "test_gate.TestDecideRelation.test_every_single_defect_holds_the_relation_with_its_own_reason"
+      ],
+      "rule_broken": "a class C vehicle-general relation can reach the A tier",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_gate.TestDecideRelation.test_every_single_defect_holds_the_relation_with_its_own_reason",
+      "file": "oem_intake/gate.py",
+      "id": "G-07",
+      "killed_by": [
+        "test_gate.TestDecideRelation.test_every_single_defect_holds_the_relation_with_its_own_reason"
+      ],
+      "rule_broken": "the O1 effective status of a claim is not required (regression of finding B1)",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_gate.TestDecideRelation.test_the_gate_rechecks_the_declared_status_even_if_the_effective_status_says_accepted",
+      "file": "oem_intake/gate.py",
+      "id": "G-08",
+      "killed_by": [
+        "test_gate.TestDecideRelation.test_the_gate_rechecks_the_declared_status_even_if_the_effective_status_says_accepted"
+      ],
+      "rule_broken": "a claim that was never declared VERIFIED is accepted",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_gate.TestDecideRelation.test_a_negative_or_time_bound_claim_beside_a_positive_one_holds_the_relation",
+      "file": "oem_intake/gate.py",
+      "id": "G-09",
+      "killed_by": [
+        "test_gate.TestDecideRelation.test_a_negative_or_time_bound_claim_beside_a_positive_one_holds_the_relation"
+      ],
+      "rule_broken": "a negative or time-bound claim next to a positive one no longer holds the relation",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_gate.TestAdapters.test_each_adapter_end_is_checked_individually",
+      "file": "oem_intake/gate.py",
+      "id": "G-10",
+      "killed_by": [
+        "test_gate.TestAdapters.test_each_adapter_end_is_checked_individually"
+      ],
+      "rule_broken": "the identity / article binding of the relation's ends is not checked",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_gate.TestAdapters.test_an_adapter_whose_configuration_requires_an_extension_is_held_even_under_the_test_policy",
+      "file": "oem_intake/gate.py",
+      "id": "G-11",
+      "killed_by": [
+        "test_gate.TestAdapters.test_an_adapter_whose_configuration_requires_an_extension_is_held_even_under_the_test_policy"
+      ],
+      "rule_broken": "an adapter that requires an extension is published as the bare adapter (regression of finding B2)",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_gate.TestDecideRelation.test_every_single_defect_holds_the_relation_with_its_own_reason",
+      "file": "oem_intake/gate.py",
+      "id": "G-12",
+      "killed_by": [
+        "test_gate.TestDecideRelation.test_every_single_defect_holds_the_relation_with_its_own_reason"
+      ],
+      "rule_broken": "expired evidence is silently granted (OD2)",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_gate.TestDecideRelation.test_every_single_defect_holds_the_relation_with_its_own_reason",
+      "file": "oem_intake/gate.py",
+      "id": "G-13",
+      "killed_by": [
+        "test_gate.TestDecideRelation.test_every_single_defect_holds_the_relation_with_its_own_reason"
+      ],
+      "rule_broken": "a relation without captured OEM bytes is accepted",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_gate.TestDecideRelation.test_evidence_documents_need_a_known_byte_hash",
+      "file": "oem_intake/gate.py",
+      "id": "G-14",
+      "killed_by": [
+        "test_gate.TestDecideRelation.test_evidence_documents_need_a_known_byte_hash"
+      ],
+      "rule_broken": "an evidence document without a known hash is accepted",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_gate.TestBuild.test_the_veto_report_is_report_only_and_never_removes_an_accepted_edge",
+      "file": "oem_intake/gate.py",
+      "id": "G-15",
+      "killed_by": [
+        "test_gate.TestBuild.test_the_veto_report_is_report_only_and_never_removes_an_accepted_edge"
+      ],
+      "rule_broken": "a veto signal no longer holds the relation",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_gate.TestDecideRelation.test_the_synthetic_flag_of_the_record_is_rechecked_even_without_the_o4_blocker",
+      "file": "oem_intake/gate.py",
+      "id": "G-16",
+      "killed_by": [
+        "test_gate.TestDecideRelation.test_the_synthetic_flag_of_the_record_is_rechecked_even_without_the_o4_blocker"
+      ],
+      "rule_broken": "synthetic relations are accepted by the default policy",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_gate.TestAdapters.test_the_test_policy_never_waives_od5_for_a_non_synthetic_relation",
+      "file": "oem_intake/gate.py",
+      "id": "G-17",
+      "killed_by": [
+        "test_gate.TestAdapters.test_the_test_policy_never_waives_od5_for_a_non_synthetic_relation"
+      ],
+      "rule_broken": "the one-ended-adapter override works on real (non-synthetic) relations",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_gate.TestPairLevelHolds.test_a_target_that_is_not_field_status_1_is_held_per_locale",
+      "file": "oem_intake/gate.py",
+      "id": "G-18",
+      "killed_by": [
+        "test_gate.TestPairLevelHolds.test_a_target_that_is_not_field_status_1_is_held_per_locale"
+      ],
+      "rule_broken": "a target with field_status != 1 gets an edge",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_gate.TestPairLevelHolds.test_unpublished_free_or_unpriced_targets_are_held",
+      "file": "oem_intake/gate.py",
+      "id": "G-19",
+      "killed_by": [
+        "test_gate.TestPairLevelHolds.test_unpublished_free_or_unpriced_targets_are_held"
+      ],
+      "rule_broken": "an unpublished target gets an edge",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_gate.TestPairLevelHolds.test_unpublished_free_or_unpriced_targets_are_held",
+      "file": "oem_intake/gate.py",
+      "id": "G-20",
+      "killed_by": [
+        "test_gate.TestPairLevelHolds.test_unpublished_free_or_unpriced_targets_are_held"
+      ],
+      "rule_broken": "a target with price <= 0 gets an edge",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_gate.TestPairLevelHolds.test_a_sku_that_is_ambiguous_in_a_locale_is_never_guessed",
+      "file": "oem_intake/gate.py",
+      "id": "G-21",
+      "killed_by": [
+        "test_gate.TestPairLevelHolds.test_a_sku_that_is_ambiguous_in_a_locale_is_never_guessed"
+      ],
+      "rule_broken": "an ambiguous SKU in the locale gets an edge",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_gate.TestPairLevelHolds.test_the_pair_checks_themselves_name_unverified_identity_and_binding",
+      "file": "oem_intake/gate.py",
+      "id": "G-22",
+      "killed_by": [
+        "test_gate.TestPairLevelHolds.test_the_pair_checks_themselves_name_unverified_identity_and_binding"
+      ],
+      "rule_broken": "an unverified model identity gets an edge",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_gate.TestBuild.test_a_relation_that_does_not_belong_to_the_as_of_of_the_run_is_refused",
+      "file": "oem_intake/gate.py",
+      "id": "G-23",
+      "killed_by": [
+        "test_gate.TestBuild.test_a_relation_that_does_not_belong_to_the_as_of_of_the_run_is_refused"
+      ],
+      "rule_broken": "an envelope can be stamped with a different as_of than its evidence",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_gate.TestConflictingSupport.test_relations_that_disagree_about_a_pair_are_both_held",
+      "file": "oem_intake/gate.py",
+      "id": "G-24",
+      "killed_by": [
+        "test_gate.TestConflictingSupport.test_relations_that_disagree_about_a_pair_are_both_held"
+      ],
+      "rule_broken": "conflicting support for one pair is merged silently",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_gate.TestPolicy.test_as_of_is_an_explicit_real_calendar_date_never_the_wall_clock",
+      "file": "oem_intake/gate.py",
+      "id": "G-25",
+      "killed_by": [
+        "test_gate.TestPolicy.test_as_of_is_an_explicit_real_calendar_date_never_the_wall_clock"
+      ],
+      "rule_broken": "the gate accepts a non-date as_of",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_gate.TestAdapters.test_each_adapter_end_is_checked_individually",
+      "file": "oem_intake/gate.py",
+      "id": "G-26",
+      "killed_by": [
+        "test_gate.TestAdapters.test_each_adapter_end_is_checked_individually"
+      ],
+      "rule_broken": "a model end whose identity is not verified is accepted",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_gate.TestAdapters.test_an_unresolved_or_unbound_extension_is_named_in_the_hold",
+      "file": "oem_intake/gate.py",
+      "id": "G-27",
+      "killed_by": [
+        "test_gate.TestAdapters.test_an_unresolved_or_unbound_extension_is_named_in_the_hold"
+      ],
+      "rule_broken": "an article end that is not bound to a catalog SKU is accepted",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_gate.TestAdapters.test_each_adapter_end_is_checked_individually",
+      "file": "oem_intake/gate.py",
+      "id": "G-28",
+      "killed_by": [
+        "test_gate.TestAdapters.test_each_adapter_end_is_checked_individually"
+      ],
+      "rule_broken": "a relation with a missing required end is accepted",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_gate.TestDecideRelation.test_every_single_defect_holds_the_relation_with_its_own_reason",
+      "file": "oem_intake/gate.py",
+      "id": "G-29",
+      "killed_by": [
+        "test_gate.TestDecideRelation.test_every_single_defect_holds_the_relation_with_its_own_reason"
+      ],
+      "rule_broken": "a relation of an unsupported type is accepted",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_gate.TestDecideRelation.test_every_single_defect_holds_the_relation_with_its_own_reason",
+      "file": "oem_intake/gate.py",
+      "id": "G-30",
+      "killed_by": [
+        "test_gate.TestDecideRelation.test_every_single_defect_holds_the_relation_with_its_own_reason"
+      ],
+      "rule_broken": "a relation without any evidence document is accepted",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_gate.TestBuild.test_unknown_conflict_conditional_excluded_unverified_and_class_c_publish_nothing",
+      "file": "oem_intake/gate.py",
+      "id": "G-31",
+      "killed_by": [
+        "test_gate.TestBuild.test_unknown_conflict_conditional_excluded_unverified_and_class_c_publish_nothing"
+      ],
+      "rule_broken": "a relation without any verified compatible claim is accepted",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_gate.TestPairLevelHolds.test_the_pair_checks_themselves_name_unverified_identity_and_binding",
+      "file": "oem_intake/gate.py",
+      "id": "G-32",
+      "killed_by": [
+        "test_gate.TestPairLevelHolds.test_the_pair_checks_themselves_name_unverified_identity_and_binding"
+      ],
+      "rule_broken": "a pair whose article is not bound gets an edge",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_cli_accepted_edges.TestBuildAcceptedEdgesCli.test_an_accepted_envelope_drives_the_patched_engine_end_to_end_from_files",
+      "file": "oem_intake/gate.py",
+      "id": "G-33",
+      "killed_by": [
+        "test_cli_accepted_edges.TestBuildAcceptedEdgesCli.test_an_accepted_envelope_drives_the_patched_engine_end_to_end_from_files"
+      ],
+      "rule_broken": "the blockers recorded by O4 no longer hold the relation",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_gate.TestBuild.test_inputs_are_not_mutated_and_duplicates_are_refused",
+      "file": "oem_intake/gate.py",
+      "id": "G-34",
+      "killed_by": [
+        "test_gate.TestBuild.test_inputs_are_not_mutated_and_duplicates_are_refused"
+      ],
+      "rule_broken": "duplicate relation ids are accepted",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_cli_accepted_edges.TestBuildAcceptedEdgesCli.test_adapters_abstain_by_default_and_the_test_policy_needs_the_synthetic_opt_in",
+      "file": "oem_intake/gate.py",
+      "id": "G-35",
+      "killed_by": [
+        "test_cli_accepted_edges.TestBuildAcceptedEdgesCli.test_adapters_abstain_by_default_and_the_test_policy_needs_the_synthetic_opt_in"
+      ],
+      "rule_broken": "the pairs of a held relation get edges anyway",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_cli_accepted_edges.TestBuildAcceptedEdgesCli.test_adapters_abstain_by_default_and_the_test_policy_needs_the_synthetic_opt_in",
+      "file": "oem_intake/gate.py",
+      "id": "G-36",
+      "killed_by": [
+        "test_cli_accepted_edges.TestBuildAcceptedEdgesCli.test_adapters_abstain_by_default_and_the_test_policy_needs_the_synthetic_opt_in"
+      ],
+      "rule_broken": "an envelope built under the synthetic opt-in is not marked synthetic",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_gate.TestBuild.test_the_gate_never_writes_an_envelope_it_would_itself_refuse",
+      "file": "oem_intake/gate.py",
+      "id": "G-37",
+      "killed_by": [
+        "test_gate.TestBuild.test_the_gate_never_writes_an_envelope_it_would_itself_refuse"
+      ],
+      "rule_broken": "the gate no longer validates the envelope it is about to write",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_gate.TestBuild.test_the_envelope_lists_only_the_claims_that_verified_the_edge",
+      "file": "oem_intake/gate.py",
+      "id": "G-38",
+      "killed_by": [
+        "test_gate.TestBuild.test_the_envelope_lists_only_the_claims_that_verified_the_edge"
+      ],
+      "rule_broken": "the envelope lists claims that did not verify the edge as its evidence",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_gate.TestPairLevelHolds.test_a_pair_whose_source_binding_is_missing_or_malformed_is_held_as_source_identity_unknown",
+      "file": "oem_intake/gate.py",
+      "id": "GI-01",
+      "killed_by": [
+        "test_gate.TestPairLevelHolds.test_a_pair_whose_source_binding_is_missing_or_malformed_is_held_as_source_identity_unknown"
+      ],
+      "rule_broken": "a pair whose source cannot be described gets an edge (finding C-R1)",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_cli_accepted_edges.TestBuildAcceptedEdgesCli.test_an_accepted_envelope_drives_the_patched_engine_end_to_end_from_files",
+      "file": "oem_intake/gate.py",
+      "id": "GI-02",
+      "killed_by": [
+        "test_cli_accepted_edges.TestBuildAcceptedEdgesCli.test_an_accepted_envelope_drives_the_patched_engine_end_to_end_from_files"
+      ],
+      "rule_broken": "the gate writes an opaque placeholder instead of the source identity",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_gate.TestPairLevelHolds.test_a_pair_whose_source_binding_is_missing_or_malformed_is_held_as_source_identity_unknown",
+      "file": "oem_intake/gate.py",
+      "id": "GI-03",
+      "killed_by": [
+        "test_gate.TestPairLevelHolds.test_a_pair_whose_source_binding_is_missing_or_malformed_is_held_as_source_identity_unknown"
+      ],
+      "rule_broken": "the gate accepts a malformed source binding",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_seam.TestOnWiring.test_sources_outside_the_scope_or_without_a_head_or_not_purchasable_are_held_with_a_reason",
+      "file": "engine_seam/accessory_v4_stage_c.py",
+      "id": "H-01",
+      "killed_by": [
+        "test_seam.TestOnWiring.test_sources_outside_the_scope_or_without_a_head_or_not_purchasable_are_held_with_a_reason"
+      ],
+      "rule_broken": "an OEM edge enters a source that has no recommendation head",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_review_fixes.TestTwoEndedAdapterCrossesTheTaxonomy.test_a_source_that_is_not_purchasable_or_not_a_source_gets_no_adapter",
+      "file": "engine_seam/accessory_v4_stage_c.py",
+      "id": "H-02",
+      "killed_by": [
+        "test_review_fixes.TestTwoEndedAdapterCrossesTheTaxonomy.test_a_source_that_is_not_purchasable_or_not_a_source_gets_no_adapter"
+      ],
+      "rule_broken": "an OEM edge enters a source that is not purchasable",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_review_fixes.TestTwoEndedAdapterCrossesTheTaxonomy.test_locale_sku_and_no_self_gates_are_unchanged_for_a_crossing_adapter",
+      "file": "engine_seam/accessory_v4_stage_c.py",
+      "id": "H-03",
+      "killed_by": [
+        "test_review_fixes.TestTwoEndedAdapterCrossesTheTaxonomy.test_locale_sku_and_no_self_gates_are_unchanged_for_a_crossing_adapter"
+      ],
+      "rule_broken": "an OEM edge to a target that is not in the catalog is not held",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_review_fixes.TestTwoEndedAdapterCrossesTheTaxonomy.test_locale_sku_and_no_self_gates_are_unchanged_for_a_crossing_adapter",
+      "file": "engine_seam/accessory_v4_stage_c.py",
+      "id": "H-04",
+      "killed_by": [
+        "test_review_fixes.TestTwoEndedAdapterCrossesTheTaxonomy.test_locale_sku_and_no_self_gates_are_unchanged_for_a_crossing_adapter"
+      ],
+      "rule_broken": "an OEM edge whose target SKU changed since the gate is published",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_invariants_random.TestRandomizedInvariants.test_invariants_hold_for_generated_catalogs_and_envelopes",
+      "file": "engine_seam/accessory_v4_stage_c.py",
+      "id": "H-05",
+      "killed_by": [
+        "test_invariants_random.TestRandomizedInvariants.test_invariants_hold_for_generated_catalogs_and_envelopes"
+      ],
+      "rule_broken": "an OEM edge across locales is published",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_replay_diff.TestEveryDifferenceIsExplained.test_edges_held_by_a_current_engine_gate_are_listed_with_the_reason",
+      "file": "engine_seam/accessory_v4_stage_c.py",
+      "id": "H-06",
+      "killed_by": [
+        "test_replay_diff.TestEveryDifferenceIsExplained.test_edges_held_by_a_current_engine_gate_are_listed_with_the_reason"
+      ],
+      "rule_broken": "an OEM edge involving a product kit is published",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_replay_diff.TestEveryDifferenceIsExplained.test_edges_held_by_a_current_engine_gate_are_listed_with_the_reason",
+      "file": "engine_seam/accessory_v4_stage_c.py",
+      "id": "H-07",
+      "killed_by": [
+        "test_replay_diff.TestEveryDifferenceIsExplained.test_edges_held_by_a_current_engine_gate_are_listed_with_the_reason"
+      ],
+      "rule_broken": "an OEM edge to a target that is not purchasable is published",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_review_fixes.TestTwoEndedAdapterCrossesTheTaxonomy.test_locale_sku_and_no_self_gates_are_unchanged_for_a_crossing_adapter",
+      "file": "engine_seam/accessory_v4_stage_c.py",
+      "id": "H-08",
+      "killed_by": [
+        "test_review_fixes.TestTwoEndedAdapterCrossesTheTaxonomy.test_locale_sku_and_no_self_gates_are_unchanged_for_a_crossing_adapter"
+      ],
+      "rule_broken": "an OEM edge from a product to its own translation is published",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_review_fixes.TestSourceIdentityIsEnforcedByTheEngine.test_the_variant_gate_still_decides_the_options_of_the_source",
+      "file": "engine_seam/accessory_v4_stage_c.py",
+      "id": "H-09",
+      "killed_by": [
+        "test_review_fixes.TestSourceIdentityIsEnforcedByTheEngine.test_the_variant_gate_still_decides_the_options_of_the_source"
+      ],
+      "rule_broken": "an OEM edge from a source with an unverified variant is published",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_review_fixes.TestTwoEndedAdapterCrossesTheTaxonomy.test_commercial_and_safety_gates_are_unchanged_for_a_crossing_adapter",
+      "file": "engine_seam/accessory_v4_stage_c.py",
+      "id": "H-10",
+      "killed_by": [
+        "test_review_fixes.TestTwoEndedAdapterCrossesTheTaxonomy.test_commercial_and_safety_gates_are_unchanged_for_a_crossing_adapter"
+      ],
+      "rule_broken": "an OEM edge to a target with an unverified variant is published",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_review_fixes.TestTwoEndedAdapterCrossesTheTaxonomy.test_a_generic_accessory_never_crosses_even_when_the_edge_claims_to_be_an_adapter",
+      "file": "engine_seam/accessory_v4_stage_c.py",
+      "id": "H-11",
+      "killed_by": [
+        "test_review_fixes.TestTwoEndedAdapterCrossesTheTaxonomy.test_a_generic_accessory_never_crosses_even_when_the_edge_claims_to_be_an_adapter"
+      ],
+      "rule_broken": "an OEM edge to a target outside the source's head (taxonomy) is published",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_seam.TestOnWiring.test_seat_liner_age_group_gate_still_applies_to_car_seat_sources",
+      "file": "engine_seam/accessory_v4_stage_c.py",
+      "id": "H-12",
+      "killed_by": [
+        "test_seam.TestOnWiring.test_seat_liner_age_group_gate_still_applies_to_car_seat_sources"
+      ],
+      "rule_broken": "an OEM seat liner of an incompatible age group is published",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_review_fixes.TestSourceIdentityIsEnforcedByTheEngine.test_the_variant_gate_still_decides_the_options_of_the_source",
+      "file": "engine_seam/accessory_v4_stage_c.py",
+      "id": "H-13",
+      "killed_by": [
+        "test_review_fixes.TestSourceIdentityIsEnforcedByTheEngine.test_the_variant_gate_still_decides_the_options_of_the_source"
+      ],
+      "rule_broken": "any variant profile is accepted as verified",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_seam.TestOnWiring.test_each_current_engine_gate_holds_its_own_edge_and_names_the_reason",
+      "file": "engine_seam/accessory_v4_stage_c.py",
+      "id": "H-14",
+      "killed_by": [
+        "test_seam.TestOnWiring.test_each_current_engine_gate_holds_its_own_edge_and_names_the_reason"
+      ],
+      "rule_broken": "a fitment-critical variant profile is accepted as verified",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_review_fixes.TestSourceIdentityIsEnforcedByTheEngine.test_a_stale_edge_is_held_before_it_can_be_called_already_present_or_published",
+      "file": "engine_seam/accessory_v4_stage_c.py",
+      "id": "I-01",
+      "killed_by": [
+        "test_review_fixes.TestSourceIdentityIsEnforcedByTheEngine.test_a_stale_edge_is_held_before_it_can_be_called_already_present_or_published"
+      ],
+      "rule_broken": "an edge is published for a source whose SKU changed since the gate (finding C-R1)",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_review_fixes.TestSourceIdentityIsEnforcedByTheEngine.test_a_changed_translation_sibling_or_group_is_a_changed_identity",
+      "file": "engine_seam/accessory_v4_stage_c.py",
+      "id": "I-02",
+      "killed_by": [
+        "test_review_fixes.TestSourceIdentityIsEnforcedByTheEngine.test_a_changed_translation_sibling_or_group_is_a_changed_identity"
+      ],
+      "rule_broken": "an edge is published for a source whose model / brand / translation group changed since the gate (finding C-R1)",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_review_fixes.TestSourceIdentityIsEnforcedByTheEngine.test_a_changed_translation_sibling_or_group_is_a_changed_identity",
+      "file": "engine_seam/accessory_v4_stage_c.py",
+      "id": "I-03",
+      "killed_by": [
+        "test_review_fixes.TestSourceIdentityIsEnforcedByTheEngine.test_a_changed_translation_sibling_or_group_is_a_changed_identity"
+      ],
+      "rule_broken": "the stale-source check is skipped for every edge",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_review_fixes.TestSourceIdentityIsEnforcedByTheEngine.test_a_stale_edge_is_held_before_it_can_be_called_already_present_or_published",
+      "file": "engine_seam/accessory_v4_stage_c.py",
+      "id": "I-04",
+      "killed_by": [
+        "test_review_fixes.TestSourceIdentityIsEnforcedByTheEngine.test_a_stale_edge_is_held_before_it_can_be_called_already_present_or_published"
+      ],
+      "rule_broken": "a stale edge is reported as already present in the legacy list instead of held (check order)",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_cli_accepted_edges.TestBuildAcceptedEdgesCli.test_an_accepted_envelope_drives_the_patched_engine_end_to_end_from_files",
+      "file": "engine_seam/accessory_v4_stage_c.py",
+      "id": "I-05",
+      "killed_by": [
+        "test_cli_accepted_edges.TestBuildAcceptedEdgesCli.test_an_accepted_envelope_drives_the_patched_engine_end_to_end_from_files"
+      ],
+      "rule_broken": "the engine identity is a constant",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_cli_accepted_edges.TestBuildAcceptedEdgesCli.test_an_accepted_envelope_drives_the_patched_engine_end_to_end_from_files",
+      "file": "engine_seam/accessory_v4_stage_c.py",
+      "id": "I-06",
+      "killed_by": [
+        "test_cli_accepted_edges.TestBuildAcceptedEdgesCli.test_an_accepted_envelope_drives_the_patched_engine_end_to_end_from_files"
+      ],
+      "rule_broken": "the engine identity ignores the SKU of the source",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_cli_accepted_edges.TestBuildAcceptedEdgesCli.test_an_accepted_envelope_drives_the_patched_engine_end_to_end_from_files",
+      "file": "engine_seam/accessory_v4_stage_c.py",
+      "id": "I-07",
+      "killed_by": [
+        "test_cli_accepted_edges.TestBuildAcceptedEdgesCli.test_an_accepted_envelope_drives_the_patched_engine_end_to_end_from_files"
+      ],
+      "rule_broken": "the engine identity ignores the maker-scoped model of the source",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_cli_accepted_edges.TestBuildAcceptedEdgesCli.test_an_accepted_envelope_drives_the_patched_engine_end_to_end_from_files",
+      "file": "engine_seam/accessory_v4_stage_c.py",
+      "id": "I-08",
+      "killed_by": [
+        "test_cli_accepted_edges.TestBuildAcceptedEdgesCli.test_an_accepted_envelope_drives_the_patched_engine_end_to_end_from_files"
+      ],
+      "rule_broken": "the engine identity ignores the translation group of the source",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_cli_accepted_edges.TestBuildAcceptedEdgesCli.test_an_accepted_envelope_drives_the_patched_engine_end_to_end_from_files",
+      "file": "engine_seam/accessory_v4_stage_c.py",
+      "id": "I-09",
+      "killed_by": [
+        "test_cli_accepted_edges.TestBuildAcceptedEdgesCli.test_an_accepted_envelope_drives_the_patched_engine_end_to_end_from_files"
+      ],
+      "rule_broken": "the engine identity ignores the brand of the source",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_cli_accepted_edges.TestBuildAcceptedEdgesCli.test_an_accepted_envelope_drives_the_patched_engine_end_to_end_from_files",
+      "file": "engine_seam/accessory_v4_stage_c.py",
+      "id": "I-10",
+      "killed_by": [
+        "test_cli_accepted_edges.TestBuildAcceptedEdgesCli.test_an_accepted_envelope_drives_the_patched_engine_end_to_end_from_files"
+      ],
+      "rule_broken": "the engine identity ignores the translation group id and the locale of the source",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_review_fixes.TestSourceIdentityIsEnforcedByTheEngine.test_a_malformed_model_group_has_no_identity_on_the_engine_side_either",
+      "file": "engine_seam/accessory_v4_stage_c.py",
+      "id": "I-11",
+      "killed_by": [
+        "test_review_fixes.TestSourceIdentityIsEnforcedByTheEngine.test_a_malformed_model_group_has_no_identity_on_the_engine_side_either"
+      ],
+      "rule_broken": "a source with a malformed model group still gets an identity",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_replay_stage_c.TestReplayStageC.test_the_launcher_refuses_an_engine_that_is_not_the_accepted_file",
+      "file": "tools/stage_c_launcher.py",
+      "id": "LA-01",
+      "killed_by": [
+        "test_replay_stage_c.TestReplayStageC.test_the_launcher_refuses_an_engine_that_is_not_the_accepted_file"
+      ],
+      "rule_broken": "the launcher accepts an engine that is not the accepted file",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_replay_stage_c.TestReplayStageC.test_the_launcher_refuses_a_wrong_seam_or_a_missing_envelope",
+      "file": "tools/stage_c_launcher.py",
+      "id": "LA-02",
+      "killed_by": [
+        "test_replay_stage_c.TestReplayStageC.test_the_launcher_refuses_a_wrong_seam_or_a_missing_envelope"
+      ],
+      "rule_broken": "the launcher accepts a seam copy that is not the audited one",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_replay_stage_c.TestReplayStageC.test_the_launcher_refuses_a_wrong_seam_or_a_missing_envelope",
+      "file": "tools/stage_c_launcher.py",
+      "id": "LA-03",
+      "killed_by": [
+        "test_replay_stage_c.TestReplayStageC.test_the_launcher_refuses_a_wrong_seam_or_a_missing_envelope"
+      ],
+      "rule_broken": "an ON run without an envelope is started",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_replay_stage_c.TestReplayStageC.test_the_launcher_refuses_a_wrong_seam_or_a_missing_envelope",
+      "file": "tools/stage_c_launcher.py",
+      "id": "LA-04",
+      "killed_by": [
+        "test_replay_stage_c.TestReplayStageC.test_the_launcher_refuses_a_wrong_seam_or_a_missing_envelope"
+      ],
+      "rule_broken": "an OFF run with an envelope or a synthetic opt-in is started",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_replay_stage_c.TestReplayStageC.test_a_synthetic_envelope_is_not_given_the_engine_opt_in_by_the_launcher",
+      "file": "tools/stage_c_launcher.py",
+      "id": "LA-05",
+      "killed_by": [
+        "test_replay_stage_c.TestReplayStageC.test_a_synthetic_envelope_is_not_given_the_engine_opt_in_by_the_launcher"
+      ],
+      "rule_broken": "an ON run silently stays OFF",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_replay_stage_c.TestReplayStageC.test_a_synthetic_envelope_is_not_given_the_engine_opt_in_by_the_launcher",
+      "file": "tools/stage_c_launcher.py",
+      "id": "LA-06",
+      "killed_by": [
+        "test_replay_stage_c.TestReplayStageC.test_a_synthetic_envelope_is_not_given_the_engine_opt_in_by_the_launcher"
+      ],
+      "rule_broken": "the synthetic opt-in is always granted to the engine",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_replay_stage_c.TestReplayStageC.test_a_replay_that_changes_the_original_campaign_fails_even_if_everything_else_passes",
+      "file": "tools/stage_c_launcher.py",
+      "id": "LA-07",
+      "killed_by": [
+        "test_replay_stage_c.TestReplayStageC.test_a_replay_that_changes_the_original_campaign_fails_even_if_everything_else_passes"
+      ],
+      "rule_broken": "an OFF run enables the feature",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_cli_accepted_edges.TestBuildAcceptedEdgesCli.test_an_accepted_envelope_drives_the_patched_engine_end_to_end_from_files",
+      "file": "engine_seam/accessory_v4_stage_c.py",
+      "id": "M-01",
+      "killed_by": [
+        "test_cli_accepted_edges.TestBuildAcceptedEdgesCli.test_an_accepted_envelope_drives_the_patched_engine_end_to_end_from_files"
+      ],
+      "rule_broken": "an OEM edge the legacy engine already has is added again",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_review_fixes.TestTwoEndedAdapterCrossesTheTaxonomy.test_v36_similar_still_wins_over_a_crossing_adapter",
+      "file": "engine_seam/accessory_v4_stage_c.py",
+      "id": "M-02",
+      "killed_by": [
+        "test_review_fixes.TestTwoEndedAdapterCrossesTheTaxonomy.test_v36_similar_still_wins_over_a_crossing_adapter"
+      ],
+      "rule_broken": "V3.6 similar no longer wins over an OEM edge",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_invariants_random.TestRandomizedInvariants.test_invariants_hold_for_generated_catalogs_and_envelopes",
+      "file": "engine_seam/accessory_v4_stage_c.py",
+      "id": "M-03",
+      "killed_by": [
+        "test_invariants_random.TestRandomizedInvariants.test_invariants_hold_for_generated_catalogs_and_envelopes"
+      ],
+      "rule_broken": "OEM edges are inserted BEFORE the legacy A edges",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_invariants_random.TestRandomizedInvariants.test_invariants_hold_for_generated_catalogs_and_envelopes",
+      "file": "engine_seam/accessory_v4_stage_c.py",
+      "id": "M-04",
+      "killed_by": [
+        "test_invariants_random.TestRandomizedInvariants.test_invariants_hold_for_generated_catalogs_and_envelopes"
+      ],
+      "rule_broken": "an edge dropped by the limit of 20 is reported as published",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_seam.TestLedgerInvariantGuard.test_an_undisposed_unknown_or_miscounted_ledger_is_refused",
+      "file": "engine_seam/accessory_v4_stage_c.py",
+      "id": "M-05",
+      "killed_by": [
+        "test_seam.TestLedgerInvariantGuard.test_an_undisposed_unknown_or_miscounted_ledger_is_refused"
+      ],
+      "rule_broken": "a ledger shorter or longer than the envelope is not detected",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_review_fixes.TestTwoEndedAdapterCrossesTheTaxonomy.test_a_source_that_is_not_purchasable_or_not_a_source_gets_no_adapter",
+      "file": "engine_seam/accessory_v4_stage_c.py",
+      "id": "M-06",
+      "killed_by": [
+        "test_review_fixes.TestTwoEndedAdapterCrossesTheTaxonomy.test_a_source_that_is_not_purchasable_or_not_a_source_gets_no_adapter"
+      ],
+      "rule_broken": "an envelope edge whose source is outside the scope vanishes from the ledger",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_invariants_random.TestRandomizedInvariants.test_invariants_hold_for_generated_catalogs_and_envelopes",
+      "file": "engine_seam/accessory_v4_stage_c.py",
+      "id": "M-07",
+      "killed_by": [
+        "test_invariants_random.TestRandomizedInvariants.test_invariants_hold_for_generated_catalogs_and_envelopes"
+      ],
+      "rule_broken": "an OEM edge claims a legacy reason",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_review_fixes.TestTwoEndedAdapterCrossesTheTaxonomy.test_each_end_in_each_language_reaches_its_own_page_with_provenance",
+      "file": "engine_seam/accessory_v4_stage_c.py",
+      "id": "M-08",
+      "killed_by": [
+        "test_review_fixes.TestTwoEndedAdapterCrossesTheTaxonomy.test_each_end_in_each_language_reaches_its_own_page_with_provenance"
+      ],
+      "rule_broken": "OEM evidence carries invented conditions",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_seam.TestLedgerInvariantGuard.test_an_undisposed_unknown_or_miscounted_ledger_is_refused",
+      "file": "engine_seam/accessory_v4_stage_c.py",
+      "id": "M-09",
+      "killed_by": [
+        "test_seam.TestLedgerInvariantGuard.test_an_undisposed_unknown_or_miscounted_ledger_is_refused"
+      ],
+      "rule_broken": "a ledger entry with an unknown status is not detected",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_replay_diff.TestViolationsAreNamed.test_a_changed_v36_similar_fails",
+      "file": "oem_intake/replay_diff.py",
+      "id": "R-01",
+      "killed_by": [
+        "test_replay_diff.TestViolationsAreNamed.test_a_changed_v36_similar_fails"
+      ],
+      "rule_broken": "a changed V3.6 similar list is not reported",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_replay_diff.TestViolationsAreNamed.test_a_removed_legacy_a_edge_fails",
+      "file": "oem_intake/replay_diff.py",
+      "id": "R-02",
+      "killed_by": [
+        "test_replay_diff.TestViolationsAreNamed.test_a_removed_legacy_a_edge_fails"
+      ],
+      "rule_broken": "a removed legacy A edge is not reported",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_replay_diff.TestViolationsAreNamed.test_a_duplicated_or_overlong_accessory_list_fails",
+      "file": "oem_intake/replay_diff.py",
+      "id": "R-03",
+      "killed_by": [
+        "test_replay_diff.TestViolationsAreNamed.test_a_duplicated_or_overlong_accessory_list_fails"
+      ],
+      "rule_broken": "a list over the limit of 20 or with duplicates is not reported",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_replay_diff.TestViolationsAreNamed.test_a_backfilled_b_edge_without_a_freed_slot_fails",
+      "file": "oem_intake/replay_diff.py",
+      "id": "R-04",
+      "killed_by": [
+        "test_replay_diff.TestViolationsAreNamed.test_a_backfilled_b_edge_without_a_freed_slot_fails"
+      ],
+      "rule_broken": "a backfill without a freed slot is not reported",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_replay_diff.TestViolationsAreNamed.test_an_unexplained_added_or_removed_edge_fails",
+      "file": "oem_intake/replay_diff.py",
+      "id": "R-05",
+      "killed_by": [
+        "test_replay_diff.TestViolationsAreNamed.test_an_unexplained_added_or_removed_edge_fails"
+      ],
+      "rule_broken": "an unexplained added edge is not reported",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_replay_diff.TestViolationsAreNamed.test_a_moved_legacy_edge_fails",
+      "file": "oem_intake/replay_diff.py",
+      "id": "R-06",
+      "killed_by": [
+        "test_replay_diff.TestViolationsAreNamed.test_a_moved_legacy_edge_fails"
+      ],
+      "rule_broken": "a reordered legacy A prefix is not reported",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_replay_diff.TestViolationsAreNamed.test_oem_edges_without_oem_metrics_and_a_changed_source_set_fail",
+      "file": "oem_intake/replay_diff.py",
+      "id": "R-07",
+      "killed_by": [
+        "test_replay_diff.TestViolationsAreNamed.test_oem_edges_without_oem_metrics_and_a_changed_source_set_fail"
+      ],
+      "rule_broken": "a changed source set is not reported",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_replay_diff.TestViolationsAreNamed.test_a_duplicated_ledger_entry_fails",
+      "file": "oem_intake/replay_diff.py",
+      "id": "R-08",
+      "killed_by": [
+        "test_replay_diff.TestViolationsAreNamed.test_a_duplicated_ledger_entry_fails"
+      ],
+      "rule_broken": "a duplicate ledger entry is not reported",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_replay_diff.TestViolationsAreNamed.test_a_changed_source_language_fails",
+      "file": "oem_intake/replay_diff.py",
+      "id": "R-09",
+      "killed_by": [
+        "test_replay_diff.TestViolationsAreNamed.test_a_changed_source_language_fails"
+      ],
+      "rule_broken": "a changed source language is not reported",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_replay_diff.TestViolationsAreNamed.test_an_output_edge_without_evidence_fails",
+      "file": "oem_intake/replay_diff.py",
+      "id": "R-10",
+      "killed_by": [
+        "test_replay_diff.TestViolationsAreNamed.test_an_output_edge_without_evidence_fails"
+      ],
+      "rule_broken": "an output edge without evidence is not reported",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_replay_diff.TestViolationsAreNamed.test_changed_evidence_of_a_kept_edge_fails",
+      "file": "oem_intake/replay_diff.py",
+      "id": "R-11",
+      "killed_by": [
+        "test_replay_diff.TestViolationsAreNamed.test_changed_evidence_of_a_kept_edge_fails"
+      ],
+      "rule_broken": "changed evidence of a kept edge is not reported",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_replay_diff.TestViolationsAreNamed.test_changed_evidence_of_a_kept_edge_fails",
+      "file": "oem_intake/replay_diff.py",
+      "id": "R-12",
+      "killed_by": [
+        "test_replay_diff.TestViolationsAreNamed.test_changed_evidence_of_a_kept_edge_fails"
+      ],
+      "rule_broken": "any change of a kept edge's evidence is explained as a promotion",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_replay_diff.TestEveryDifferenceIsExplained.test_a_slot_freed_under_the_max_3_b_cap_is_filled_by_the_next_generic_edge",
+      "file": "oem_intake/replay_diff.py",
+      "id": "R-13",
+      "killed_by": [
+        "test_replay_diff.TestEveryDifferenceIsExplained.test_a_slot_freed_under_the_max_3_b_cap_is_filled_by_the_next_generic_edge"
+      ],
+      "rule_broken": "any added edge is explained as a new OEM edge",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_replay_diff.TestViolationsAreNamed.test_an_unexplained_added_or_removed_edge_fails",
+      "file": "oem_intake/replay_diff.py",
+      "id": "R-14",
+      "killed_by": [
+        "test_replay_diff.TestViolationsAreNamed.test_an_unexplained_added_or_removed_edge_fails"
+      ],
+      "rule_broken": "any added edge is explained as a B backfill",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_replay_diff.TestViolationsAreNamed.test_an_unexplained_added_or_removed_edge_fails",
+      "file": "oem_intake/replay_diff.py",
+      "id": "R-15",
+      "killed_by": [
+        "test_replay_diff.TestViolationsAreNamed.test_an_unexplained_added_or_removed_edge_fails"
+      ],
+      "rule_broken": "a removed B edge that nothing explains is not reported",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_replay_diff.TestEveryDifferenceIsExplained.test_the_limit_of_20_pushes_a_trailing_b_edge_out_and_never_a_legacy_a_edge",
+      "file": "oem_intake/replay_diff.py",
+      "id": "R-16",
+      "killed_by": [
+        "test_replay_diff.TestEveryDifferenceIsExplained.test_the_limit_of_20_pushes_a_trailing_b_edge_out_and_never_a_legacy_a_edge"
+      ],
+      "rule_broken": "any removed B edge is explained as role coverage",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_replay_diff.TestViolationsAreNamed.test_an_unexplained_added_or_removed_edge_fails",
+      "file": "oem_intake/replay_diff.py",
+      "id": "R-17",
+      "killed_by": [
+        "test_replay_diff.TestViolationsAreNamed.test_an_unexplained_added_or_removed_edge_fails"
+      ],
+      "rule_broken": "any removed B edge is explained as the limit of 20",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_replay_diff.TestViolationsAreNamed.test_a_changed_relative_order_of_the_generic_edges_fails",
+      "file": "oem_intake/replay_diff.py",
+      "id": "R-18",
+      "killed_by": [
+        "test_replay_diff.TestViolationsAreNamed.test_a_changed_relative_order_of_the_generic_edges_fails"
+      ],
+      "rule_broken": "a changed relative order of the B edges is not reported",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_replay_diff.TestViolationsAreNamed.test_ledger_and_output_must_agree_edge_for_edge",
+      "file": "oem_intake/replay_diff.py",
+      "id": "R-19",
+      "killed_by": [
+        "test_replay_diff.TestViolationsAreNamed.test_ledger_and_output_must_agree_edge_for_edge"
+      ],
+      "rule_broken": "an OEM output edge without a published ledger entry is not reported",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_replay_diff.TestViolationsAreNamed.test_ledger_and_output_must_agree_edge_for_edge",
+      "file": "oem_intake/replay_diff.py",
+      "id": "R-20",
+      "killed_by": [
+        "test_replay_diff.TestViolationsAreNamed.test_ledger_and_output_must_agree_edge_for_edge"
+      ],
+      "rule_broken": "a published ledger entry without an output edge is not reported",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_replay_diff.TestViolationsAreNamed.test_a_ledger_status_that_the_outputs_do_not_bear_out_fails",
+      "file": "oem_intake/replay_diff.py",
+      "id": "R-21",
+      "killed_by": [
+        "test_replay_diff.TestViolationsAreNamed.test_a_ledger_status_that_the_outputs_do_not_bear_out_fails"
+      ],
+      "rule_broken": "an unknown ledger status is not reported",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_replay_diff.TestViolationsAreNamed.test_a_ledger_status_that_the_outputs_do_not_bear_out_fails",
+      "file": "oem_intake/replay_diff.py",
+      "id": "R-22",
+      "killed_by": [
+        "test_replay_diff.TestViolationsAreNamed.test_a_ledger_status_that_the_outputs_do_not_bear_out_fails"
+      ],
+      "rule_broken": "an already-present claim that the outputs do not bear out is not reported",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_replay_diff.TestViolationsAreNamed.test_a_ledger_status_that_the_outputs_do_not_bear_out_fails",
+      "file": "oem_intake/replay_diff.py",
+      "id": "R-23",
+      "killed_by": [
+        "test_replay_diff.TestViolationsAreNamed.test_a_ledger_status_that_the_outputs_do_not_bear_out_fails"
+      ],
+      "rule_broken": "a drop by the limit of 20 that the output does not bear out is not reported",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_replay_diff.TestViolationsAreNamed.test_a_ledger_status_that_the_outputs_do_not_bear_out_fails",
+      "file": "oem_intake/replay_diff.py",
+      "id": "R-24",
+      "killed_by": [
+        "test_replay_diff.TestViolationsAreNamed.test_a_ledger_status_that_the_outputs_do_not_bear_out_fails"
+      ],
+      "rule_broken": "a held edge that is in the output as an OEM edge is not reported",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_replay_diff.TestViolationsAreNamed.test_ledger_and_output_must_agree_edge_for_edge",
+      "file": "oem_intake/replay_diff.py",
+      "id": "R-25",
+      "killed_by": [
+        "test_replay_diff.TestViolationsAreNamed.test_ledger_and_output_must_agree_edge_for_edge"
+      ],
+      "rule_broken": "a ledger summary that disagrees with the ledger is not reported",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_replay_diff.TestViolationsAreNamed.test_ledger_and_output_must_agree_edge_for_edge",
+      "file": "oem_intake/replay_diff.py",
+      "id": "R-26",
+      "killed_by": [
+        "test_replay_diff.TestViolationsAreNamed.test_ledger_and_output_must_agree_edge_for_edge"
+      ],
+      "rule_broken": "an A_oem_relation metric that disagrees with the ledger is not reported",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_replay_diff.TestViolationsAreNamed.test_the_edges_in_count_must_equal_the_ledger",
+      "file": "oem_intake/replay_diff.py",
+      "id": "R-27",
+      "killed_by": [
+        "test_replay_diff.TestViolationsAreNamed.test_the_edges_in_count_must_equal_the_ledger"
+      ],
+      "rule_broken": "an edges_in count that disagrees with the ledger is not reported",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_replay_diff.TestViolationsAreNamed.test_a_different_envelope_than_the_one_the_run_used_fails",
+      "file": "oem_intake/replay_diff.py",
+      "id": "R-28",
+      "killed_by": [
+        "test_replay_diff.TestViolationsAreNamed.test_a_different_envelope_than_the_one_the_run_used_fails"
+      ],
+      "rule_broken": "a ledger that is not the envelope that was given is not reported",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_replay_diff.TestViolationsAreNamed.test_oem_edges_without_oem_metrics_and_a_changed_source_set_fail",
+      "file": "oem_intake/replay_diff.py",
+      "id": "R-29",
+      "killed_by": [
+        "test_replay_diff.TestViolationsAreNamed.test_oem_edges_without_oem_metrics_and_a_changed_source_set_fail"
+      ],
+      "rule_broken": "OEM edges in an output without the OEM metrics block are not reported",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_replay_diff.TestViolationsAreNamed.test_link_counts_that_do_not_reconcile_fail",
+      "file": "oem_intake/replay_diff.py",
+      "id": "R-30",
+      "killed_by": [
+        "test_replay_diff.TestViolationsAreNamed.test_link_counts_that_do_not_reconcile_fail"
+      ],
+      "rule_broken": "link counts that do not reconcile with the edge classification are not reported",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_replay_diff.TestViolationsAreNamed.test_per_relation_edge_counts_must_reconcile_with_the_ledger",
+      "file": "oem_intake/replay_diff.py",
+      "id": "R-31",
+      "killed_by": [
+        "test_replay_diff.TestViolationsAreNamed.test_per_relation_edge_counts_must_reconcile_with_the_ledger"
+      ],
+      "rule_broken": "per-relation edge counts that do not reconcile with the ledger are not reported",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_replay_stage_c.TestReplayStageC.test_unsafe_or_stale_locations_are_refused",
+      "file": "tools/replay_stage_c.py",
+      "id": "RP-01",
+      "killed_by": [
+        "test_replay_stage_c.TestReplayStageC.test_unsafe_or_stale_locations_are_refused"
+      ],
+      "rule_broken": "the original, OFF, ON and output directories may overlap",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_replay_stage_c.TestReplayStageC.test_a_non_empty_output_directory_is_refused_and_left_untouched",
+      "file": "tools/replay_stage_c.py",
+      "id": "RP-02",
+      "killed_by": [
+        "test_replay_stage_c.TestReplayStageC.test_a_non_empty_output_directory_is_refused_and_left_untouched"
+      ],
+      "rule_broken": "the replay writes into a non-empty output directory",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_replay_stage_c.TestReplayStageC.test_an_engine_that_is_not_the_accepted_file_is_refused",
+      "file": "tools/replay_stage_c.py",
+      "id": "RP-03",
+      "killed_by": [
+        "test_replay_stage_c.TestReplayStageC.test_an_engine_that_is_not_the_accepted_file_is_refused"
+      ],
+      "rule_broken": "the replay runs on an engine that is not the accepted V4.2.1 file",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_replay_stage_c.TestReplayStageC.test_a_seam_copy_that_is_not_the_pinned_one_is_refused_before_anything_runs",
+      "file": "tools/replay_stage_c.py",
+      "id": "RP-04",
+      "killed_by": [
+        "test_replay_stage_c.TestReplayStageC.test_a_seam_copy_that_is_not_the_pinned_one_is_refused_before_anything_runs"
+      ],
+      "rule_broken": "the replay runs on a seam copy that is not the audited one",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_replay_stage_c.TestReplayStageC.test_a_replay_that_changes_the_original_campaign_fails_even_if_everything_else_passes",
+      "file": "tools/replay_stage_c.py",
+      "id": "RP-05",
+      "killed_by": [
+        "test_replay_stage_c.TestReplayStageC.test_a_replay_that_changes_the_original_campaign_fails_even_if_everything_else_passes"
+      ],
+      "rule_broken": "a replay that changes the original campaign still passes",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_replay_stage_c.TestReplayStageC.test_an_on_run_that_changes_a_legacy_field_fails_the_replay_although_both_runs_complete",
+      "file": "tools/replay_stage_c.py",
+      "id": "RP-06",
+      "killed_by": [
+        "test_replay_stage_c.TestReplayStageC.test_an_on_run_that_changes_a_legacy_field_fails_the_replay_although_both_runs_complete"
+      ],
+      "rule_broken": "an ON/OFF diff with violations still passes the replay",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_replay_stage_c.TestReplayStageC.test_an_empty_envelope_whose_on_run_changes_the_manifest_fails_the_identity_proof",
+      "file": "tools/replay_stage_c.py",
+      "id": "RP-07",
+      "killed_by": [
+        "test_replay_stage_c.TestReplayStageC.test_an_empty_envelope_whose_on_run_changes_the_manifest_fails_the_identity_proof"
+      ],
+      "rule_broken": "an empty envelope that changes the output still passes the replay",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_replay_stage_c.TestReplayStageC.test_an_off_run_that_does_not_reproduce_the_pinned_baseline_fails_the_replay",
+      "file": "tools/replay_stage_c.py",
+      "id": "RP-08",
+      "killed_by": [
+        "test_replay_stage_c.TestReplayStageC.test_an_off_run_that_does_not_reproduce_the_pinned_baseline_fails_the_replay"
+      ],
+      "rule_broken": "an OFF run that does not reproduce the pinned accepted baseline still passes",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_replay_stage_c.TestReplayStageC.test_a_tampered_original_artifact_makes_the_off_proof_fail",
+      "file": "tools/replay_stage_c.py",
+      "id": "RP-09",
+      "killed_by": [
+        "test_replay_stage_c.TestReplayStageC.test_a_tampered_original_artifact_makes_the_off_proof_fail"
+      ],
+      "rule_broken": "OFF artifacts that differ from the accepted generation still pass",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_replay_stage_c.TestReplayStageC.test_a_replay_that_changes_the_original_campaign_fails_even_if_everything_else_passes",
+      "file": "tools/replay_stage_c.py",
+      "id": "RP-10",
+      "killed_by": [
+        "test_replay_stage_c.TestReplayStageC.test_a_replay_that_changes_the_original_campaign_fails_even_if_everything_else_passes"
+      ],
+      "rule_broken": "the exit code of a failed replay is 0",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_replay_stage_c.TestReplayStageC.test_an_empty_envelope_whose_on_run_changes_the_metrics_fails_the_identity_proof",
+      "file": "tools/replay_stage_c.py",
+      "id": "RP-11",
+      "killed_by": [
+        "test_replay_stage_c.TestReplayStageC.test_an_empty_envelope_whose_on_run_changes_the_metrics_fails_the_identity_proof"
+      ],
+      "rule_broken": "an empty-envelope ON run may change the metrics",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_replay_stage_c.TestReplayStageC.test_an_empty_envelope_whose_on_run_changes_the_manifest_fails_the_identity_proof",
+      "file": "tools/replay_stage_c.py",
+      "id": "RP-12",
+      "killed_by": [
+        "test_replay_stage_c.TestReplayStageC.test_an_empty_envelope_whose_on_run_changes_the_manifest_fails_the_identity_proof"
+      ],
+      "rule_broken": "an empty-envelope ON run may change the manifest or the evidence",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_replay_stage_c.TestReplayStageC.test_an_empty_envelope_whose_on_run_changes_the_manifest_fails_the_identity_proof",
+      "file": "tools/replay_stage_c.py",
+      "id": "RP-13",
+      "killed_by": [
+        "test_replay_stage_c.TestReplayStageC.test_an_empty_envelope_whose_on_run_changes_the_manifest_fails_the_identity_proof"
+      ],
+      "rule_broken": "the empty-envelope identity proof is never computed",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_replay_stage_c.TestReplayStageC.test_an_on_run_whose_input_side_artifacts_differ_from_the_accepted_inputs_fails",
+      "file": "tools/replay_stage_c.py",
+      "id": "RP-14",
+      "killed_by": [
+        "test_replay_stage_c.TestReplayStageC.test_an_on_run_whose_input_side_artifacts_differ_from_the_accepted_inputs_fails"
+      ],
+      "rule_broken": "ON input-side artifacts that differ from the accepted inputs still pass",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_replay_stage_c.TestReplayStageC.test_a_replay_that_changes_the_original_campaign_fails_even_if_everything_else_passes",
+      "file": "tools/replay_stage_c.py",
+      "id": "RP-15",
+      "killed_by": [
+        "test_replay_stage_c.TestReplayStageC.test_a_replay_that_changes_the_original_campaign_fails_even_if_everything_else_passes"
+      ],
+      "rule_broken": "a change of the original campaign during the run is not detected",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_properties.TestStageOneProperties.test_a_receipt_passes_if_and_only_if_every_required_field_is_equivalent",
+      "file": "oem_intake/stage1.py",
+      "id": "S1-01",
+      "killed_by": [
+        "test_properties.TestStageOneProperties.test_a_receipt_passes_if_and_only_if_every_required_field_is_equivalent"
+      ],
+      "rule_broken": "a receipt with all_gates_pass != true is accepted",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_stage1.TestReceipts.test_every_field_of_a_receipt_is_compared_and_a_failure_names_its_reason",
+      "file": "oem_intake/stage1.py",
+      "id": "S1-02",
+      "killed_by": [
+        "test_stage1.TestReceipts.test_every_field_of_a_receipt_is_compared_and_a_failure_names_its_reason"
+      ],
+      "rule_broken": "a receipt whose native probe did not pass is accepted",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_stage1.TestReceipts.test_every_field_of_a_receipt_is_compared_and_a_failure_names_its_reason",
+      "file": "oem_intake/stage1.py",
+      "id": "S1-03",
+      "killed_by": [
+        "test_stage1.TestReceipts.test_every_field_of_a_receipt_is_compared_and_a_failure_names_its_reason"
+      ],
+      "rule_broken": "a receipt without a native buy CTA is accepted",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_stage1.TestCli.test_plan_then_verify_end_to_end",
+      "file": "oem_intake/stage1.py",
+      "id": "S1-04",
+      "killed_by": [
+        "test_stage1.TestCli.test_plan_then_verify_end_to_end"
+      ],
+      "rule_broken": "a stale VID / changed / TNID in a receipt is accepted",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_properties.TestStageOneProperties.test_a_receipt_passes_if_and_only_if_every_required_field_is_equivalent",
+      "file": "oem_intake/stage1.py",
+      "id": "S1-05",
+      "killed_by": [
+        "test_properties.TestStageOneProperties.test_a_receipt_passes_if_and_only_if_every_required_field_is_equivalent"
+      ],
+      "rule_broken": "a receipt for other option rows or another option digest is accepted",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_properties.TestStageOneProperties.test_a_receipt_passes_if_and_only_if_every_required_field_is_equivalent",
+      "file": "oem_intake/stage1.py",
+      "id": "S1-06",
+      "killed_by": [
+        "test_properties.TestStageOneProperties.test_a_receipt_passes_if_and_only_if_every_required_field_is_equivalent"
+      ],
+      "rule_broken": "a receipt for another SKU is accepted",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_stage1.TestReceipts.test_a_synthetic_receipt_is_refused_for_a_real_plan_and_tolerated_for_a_synthetic_one",
+      "file": "oem_intake/stage1.py",
+      "id": "S1-07",
+      "killed_by": [
+        "test_stage1.TestReceipts.test_a_synthetic_receipt_is_refused_for_a_real_plan_and_tolerated_for_a_synthetic_one"
+      ],
+      "rule_broken": "a synthetic receipt is accepted for a real plan",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_properties.TestStageOneProperties.test_arbitrary_receipt_content_never_crashes_and_a_duplicate_never_passes",
+      "file": "oem_intake/stage1.py",
+      "id": "S1-08",
+      "killed_by": [
+        "test_properties.TestStageOneProperties.test_arbitrary_receipt_content_never_crashes_and_a_duplicate_never_passes"
+      ],
+      "rule_broken": "duplicate receipts for one node no longer block",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_stage1.TestCli.test_the_sku_preflight_and_every_refusal",
+      "file": "oem_intake/stage1.py",
+      "id": "S1-09",
+      "killed_by": [
+        "test_stage1.TestCli.test_the_sku_preflight_and_every_refusal"
+      ],
+      "rule_broken": "a field_status != 1 node is planned for a native test (and may be 'recommended')",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_stage1.TestReceipts.test_the_source_context_is_required_separately",
+      "file": "oem_intake/stage1.py",
+      "id": "S1-10",
+      "killed_by": [
+        "test_stage1.TestReceipts.test_the_source_context_is_required_separately"
+      ],
+      "rule_broken": "the source context is no longer required to have its own receipt",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_stage1.TestCli.test_the_sku_preflight_and_every_refusal",
+      "file": "oem_intake/stage1.py",
+      "id": "S1-11",
+      "killed_by": [
+        "test_stage1.TestCli.test_the_sku_preflight_and_every_refusal"
+      ],
+      "rule_broken": "an edited plan is accepted",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_stage1.TestPlan.test_the_diff_plan_refuses_what_it_cannot_trust",
+      "file": "oem_intake/stage1.py",
+      "id": "S1-12",
+      "killed_by": [
+        "test_stage1.TestPlan.test_the_diff_plan_refuses_what_it_cannot_trust"
+      ],
+      "rule_broken": "a failing ON/OFF diff is used to plan native checks",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_stage1.TestPlan.test_an_envelope_that_does_not_match_the_catalog_is_refused",
+      "file": "oem_intake/stage1.py",
+      "id": "S1-13",
+      "killed_by": [
+        "test_stage1.TestPlan.test_an_envelope_that_does_not_match_the_catalog_is_refused"
+      ],
+      "rule_broken": "a link across locales is planned",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_stage1.TestCli.test_the_diff_mode_of_the_cli",
+      "file": "oem_intake/stage1.py",
+      "id": "S1-14",
+      "killed_by": [
+        "test_stage1.TestCli.test_the_diff_mode_of_the_cli"
+      ],
+      "rule_broken": "a synthetic or undeclared diff is planned without the opt-in",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_invariants_random.TestRandomizedInvariants.test_invariants_hold_for_generated_catalogs_and_envelopes",
+      "file": "oem_intake/stage1.py",
+      "id": "S1-15",
+      "killed_by": [
+        "test_invariants_random.TestRandomizedInvariants.test_invariants_hold_for_generated_catalogs_and_envelopes"
+      ],
+      "rule_broken": "backfilled B links get no native check",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_stage1.TestPlan.test_an_envelope_that_does_not_match_the_catalog_is_refused",
+      "file": "oem_intake/stage1.py",
+      "id": "S1-16",
+      "killed_by": [
+        "test_stage1.TestPlan.test_an_envelope_that_does_not_match_the_catalog_is_refused"
+      ],
+      "rule_broken": "a link whose source is not in the catalog is planned",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_stage1.TestPlan.test_an_envelope_that_does_not_match_the_catalog_is_refused",
+      "file": "oem_intake/stage1.py",
+      "id": "S1-17",
+      "killed_by": [
+        "test_stage1.TestPlan.test_an_envelope_that_does_not_match_the_catalog_is_refused"
+      ],
+      "rule_broken": "a link whose target is not in the catalog is planned",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_stage1.TestPlan.test_an_envelope_that_does_not_match_the_catalog_is_refused",
+      "file": "oem_intake/stage1.py",
+      "id": "S1-18",
+      "killed_by": [
+        "test_stage1.TestPlan.test_an_envelope_that_does_not_match_the_catalog_is_refused"
+      ],
+      "rule_broken": "a link whose SKU differs from the catalog row is planned",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_stage1.TestPlan.test_the_diff_plan_refuses_what_it_cannot_trust",
+      "file": "oem_intake/stage1.py",
+      "id": "S1-19",
+      "killed_by": [
+        "test_stage1.TestPlan.test_the_diff_plan_refuses_what_it_cannot_trust"
+      ],
+      "rule_broken": "a document that is not an ON/OFF diff is planned from",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_stage1.TestPlan.test_the_diff_plan_refuses_what_it_cannot_trust",
+      "file": "oem_intake/stage1.py",
+      "id": "S1-20",
+      "killed_by": [
+        "test_stage1.TestPlan.test_the_diff_plan_refuses_what_it_cannot_trust"
+      ],
+      "rule_broken": "a diff edge without integer nids is planned",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_stage1.TestPlan.test_the_candidate_preflight_ignores_other_locales_and_names_the_gap",
+      "file": "oem_intake/stage1.py",
+      "id": "S1-21",
+      "killed_by": [
+        "test_stage1.TestPlan.test_the_candidate_preflight_ignores_other_locales_and_names_the_gap"
+      ],
+      "rule_broken": "an empty SKU list or an empty SKU is planned",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_stage1.TestCli.test_the_sku_preflight_and_every_refusal",
+      "file": "oem_intake/stage1.py",
+      "id": "S1-22",
+      "killed_by": [
+        "test_stage1.TestCli.test_the_sku_preflight_and_every_refusal"
+      ],
+      "rule_broken": "a receipts document of another format is read",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_stage1.TestReceipts.test_unusable_receipt_documents_are_refused",
+      "file": "oem_intake/stage1.py",
+      "id": "S1-23",
+      "killed_by": [
+        "test_stage1.TestReceipts.test_unusable_receipt_documents_are_refused"
+      ],
+      "rule_broken": "a receipt record without an integer nid is read",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_stage1.TestReceipts.test_every_field_of_a_receipt_is_compared_and_a_failure_names_its_reason",
+      "file": "oem_intake/stage1.py",
+      "id": "S1-24",
+      "killed_by": [
+        "test_stage1.TestReceipts.test_every_field_of_a_receipt_is_compared_and_a_failure_names_its_reason"
+      ],
+      "rule_broken": "a malformed integer field of a receipt is not reported",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_stage1.TestReceipts.test_every_field_of_a_receipt_is_compared_and_a_failure_names_its_reason",
+      "file": "oem_intake/stage1.py",
+      "id": "S1-25",
+      "killed_by": [
+        "test_stage1.TestReceipts.test_every_field_of_a_receipt_is_compared_and_a_failure_names_its_reason"
+      ],
+      "rule_broken": "a receipt for another locale is accepted",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_stage1.TestCli.test_plan_then_verify_end_to_end",
+      "file": "oem_intake/stage1.py",
+      "id": "S1-26",
+      "killed_by": [
+        "test_stage1.TestCli.test_plan_then_verify_end_to_end"
+      ],
+      "rule_broken": "a receipt with problems still passes",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_properties.TestStageOneProperties.test_arbitrary_receipt_content_never_crashes_and_a_duplicate_never_passes",
+      "file": "oem_intake/stage1.py",
+      "id": "S1-27",
+      "killed_by": [
+        "test_properties.TestStageOneProperties.test_arbitrary_receipt_content_never_crashes_and_a_duplicate_never_passes"
+      ],
+      "rule_broken": "a Stage1 report authorizes publication",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_stage1.TestReceipts.test_complete_matching_receipts_clear_every_edge_but_still_authorize_nothing",
+      "file": "oem_intake/stage1.py",
+      "id": "S1-28",
+      "killed_by": [
+        "test_stage1.TestReceipts.test_complete_matching_receipts_clear_every_edge_but_still_authorize_nothing"
+      ],
+      "rule_broken": "a Stage1 report claims to be an OEM-fit proof",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_stage1.TestPlan.test_an_envelope_of_zero_edges_gives_an_empty_plan",
+      "file": "oem_intake/stage1.py",
+      "id": "S1-29",
+      "killed_by": [
+        "test_stage1.TestPlan.test_an_envelope_of_zero_edges_gives_an_empty_plan"
+      ],
+      "rule_broken": "a plan with no checks is reported as passed",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_stage1.TestReceipts.test_duplicate_receipts_unexpected_receipts_and_non_recommendable_nodes",
+      "file": "oem_intake/stage1.py",
+      "id": "S1-30",
+      "killed_by": [
+        "test_stage1.TestReceipts.test_duplicate_receipts_unexpected_receipts_and_non_recommendable_nodes"
+      ],
+      "rule_broken": "a receipt for a node that cannot be recommended is judged like any other",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_stage1.TestPlan.test_a_self_consistent_document_of_another_schema_is_not_a_plan",
+      "file": "oem_intake/stage1.py",
+      "id": "S1-31",
+      "killed_by": [
+        "test_stage1.TestPlan.test_a_self_consistent_document_of_another_schema_is_not_a_plan"
+      ],
+      "rule_broken": "a document that is not a Stage1 plan is checked",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_stage1.TestPlan.test_a_node_whose_own_catalog_state_rules_it_out_gets_no_native_test",
+      "file": "oem_intake/stage1.py",
+      "id": "S1-32",
+      "killed_by": [
+        "test_stage1.TestPlan.test_a_node_whose_own_catalog_state_rules_it_out_gets_no_native_test"
+      ],
+      "rule_broken": "an unpublished node is planned for a native test",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_stage1.TestPlan.test_a_catalog_row_without_the_identity_fields_cannot_be_planned_for_a_native_check",
+      "file": "oem_intake/stage1.py",
+      "id": "S1-33",
+      "killed_by": [
+        "test_stage1.TestPlan.test_a_catalog_row_without_the_identity_fields_cannot_be_planned_for_a_native_check"
+      ],
+      "rule_broken": "a node whose price is not positive is planned for a native test",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_stage1.TestPlan.test_a_node_outside_the_two_locales_is_not_planned_for_a_native_test",
+      "file": "oem_intake/stage1.py",
+      "id": "S1-34",
+      "killed_by": [
+        "test_stage1.TestPlan.test_a_node_outside_the_two_locales_is_not_planned_for_a_native_test"
+      ],
+      "rule_broken": "a node outside RU/UK is planned for a native test",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_stage1.TestPlan.test_a_catalog_row_without_the_identity_fields_cannot_be_planned_for_a_native_check",
+      "file": "oem_intake/stage1.py",
+      "id": "S1-35",
+      "killed_by": [
+        "test_stage1.TestPlan.test_a_catalog_row_without_the_identity_fields_cannot_be_planned_for_a_native_check"
+      ],
+      "rule_broken": "a catalog row without nid / tnid / vid / changed is planned",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_stage1.TestPlan.test_a_source_row_without_a_sku_gets_no_native_check",
+      "file": "oem_intake/stage1.py",
+      "id": "S1-36",
+      "killed_by": [
+        "test_stage1.TestPlan.test_a_source_row_without_a_sku_gets_no_native_check"
+      ],
+      "rule_broken": "a catalog row without a SKU is planned",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_cli_accepted_edges.TestBuildAcceptedEdgesCli.test_an_accepted_envelope_drives_the_patched_engine_end_to_end_from_files",
+      "file": "oem_intake/source_identity.py",
+      "id": "SI-01",
+      "killed_by": [
+        "test_cli_accepted_edges.TestBuildAcceptedEdgesCli.test_an_accepted_envelope_drives_the_patched_engine_end_to_end_from_files"
+      ],
+      "rule_broken": "the gate-side identity ignores the SKU of the source",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_cli_accepted_edges.TestBuildAcceptedEdgesCli.test_an_accepted_envelope_drives_the_patched_engine_end_to_end_from_files",
+      "file": "oem_intake/source_identity.py",
+      "id": "SI-02",
+      "killed_by": [
+        "test_cli_accepted_edges.TestBuildAcceptedEdgesCli.test_an_accepted_envelope_drives_the_patched_engine_end_to_end_from_files"
+      ],
+      "rule_broken": "the gate-side identity ignores the model of the source",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_cli_accepted_edges.TestBuildAcceptedEdgesCli.test_an_accepted_envelope_drives_the_patched_engine_end_to_end_from_files",
+      "file": "oem_intake/source_identity.py",
+      "id": "SI-03",
+      "killed_by": [
+        "test_cli_accepted_edges.TestBuildAcceptedEdgesCli.test_an_accepted_envelope_drives_the_patched_engine_end_to_end_from_files"
+      ],
+      "rule_broken": "the gate-side identity ignores the translation group",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_cli_accepted_edges.TestBuildAcceptedEdgesCli.test_an_accepted_envelope_drives_the_patched_engine_end_to_end_from_files",
+      "file": "oem_intake/source_identity.py",
+      "id": "SI-04",
+      "killed_by": [
+        "test_cli_accepted_edges.TestBuildAcceptedEdgesCli.test_an_accepted_envelope_drives_the_patched_engine_end_to_end_from_files"
+      ],
+      "rule_broken": "the gate-side identity ignores the brand of the source",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_review_fixes.TestIdentityDefinition.test_a_source_that_cannot_be_described_has_no_identity",
+      "file": "oem_intake/source_identity.py",
+      "id": "SI-05",
+      "killed_by": [
+        "test_review_fixes.TestIdentityDefinition.test_a_source_that_cannot_be_described_has_no_identity"
+      ],
+      "rule_broken": "a source with a malformed model group still gets an identity on the gate side",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_envelope.TestEngineValidatorAgrees.test_the_two_validators_agree_on_every_systematic_mutation",
+      "file": "engine_seam/accessory_v4_stage_c.py",
+      "id": "V-01",
+      "killed_by": [
+        "test_envelope.TestEngineValidatorAgrees.test_the_two_validators_agree_on_every_systematic_mutation"
+      ],
+      "rule_broken": "the engine accepts an envelope of another schema or mode",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_envelope.TestEngineValidatorAgrees.test_the_two_validators_agree_on_every_systematic_mutation",
+      "file": "engine_seam/accessory_v4_stage_c.py",
+      "id": "V-02",
+      "killed_by": [
+        "test_envelope.TestEngineValidatorAgrees.test_the_two_validators_agree_on_every_systematic_mutation"
+      ],
+      "rule_broken": "the engine accepts a synthetic envelope without the opt-in",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_envelope.TestEngineValidatorAgrees.test_the_two_validators_agree_on_every_systematic_mutation",
+      "file": "engine_seam/accessory_v4_stage_c.py",
+      "id": "V-03",
+      "killed_by": [
+        "test_envelope.TestEngineValidatorAgrees.test_the_two_validators_agree_on_every_systematic_mutation"
+      ],
+      "rule_broken": "the engine accepts conditional publication",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_envelope.TestEngineValidatorAgrees.test_the_two_validators_agree_on_every_systematic_mutation",
+      "file": "engine_seam/accessory_v4_stage_c.py",
+      "id": "V-04",
+      "killed_by": [
+        "test_envelope.TestEngineValidatorAgrees.test_the_two_validators_agree_on_every_systematic_mutation"
+      ],
+      "rule_broken": "the engine accepts an enforced veto",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_envelope.TestEngineValidatorAgrees.test_the_two_validators_agree_on_every_systematic_mutation",
+      "file": "engine_seam/accessory_v4_stage_c.py",
+      "id": "V-05",
+      "killed_by": [
+        "test_envelope.TestEngineValidatorAgrees.test_the_two_validators_agree_on_every_systematic_mutation"
+      ],
+      "rule_broken": "the engine accepts a non-LISTED edge",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_envelope.TestEngineValidatorAgrees.test_the_two_validators_agree_on_every_systematic_mutation",
+      "file": "engine_seam/accessory_v4_stage_c.py",
+      "id": "V-06",
+      "killed_by": [
+        "test_envelope.TestEngineValidatorAgrees.test_the_two_validators_agree_on_every_systematic_mutation"
+      ],
+      "rule_broken": "the engine accepts a conditional edge",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_envelope.TestEngineValidatorAgrees.test_the_two_validators_agree_on_every_systematic_mutation",
+      "file": "engine_seam/accessory_v4_stage_c.py",
+      "id": "V-07",
+      "killed_by": [
+        "test_envelope.TestEngineValidatorAgrees.test_the_two_validators_agree_on_every_systematic_mutation"
+      ],
+      "rule_broken": "the engine accepts a duplicate or self edge",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_envelope.TestEngineValidatorAgrees.test_the_two_validators_agree_on_every_systematic_mutation",
+      "file": "engine_seam/accessory_v4_stage_c.py",
+      "id": "V-08",
+      "killed_by": [
+        "test_envelope.TestEngineValidatorAgrees.test_the_two_validators_agree_on_every_systematic_mutation"
+      ],
+      "rule_broken": "the engine accepts a synthetic edge in a real envelope",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_envelope.TestEngineValidatorAgrees.test_the_two_validators_agree_on_every_systematic_mutation",
+      "file": "engine_seam/accessory_v4_stage_c.py",
+      "id": "V-09",
+      "killed_by": [
+        "test_envelope.TestEngineValidatorAgrees.test_the_two_validators_agree_on_every_systematic_mutation"
+      ],
+      "rule_broken": "the engine accepts unsorted relation ids",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_envelope.TestEngineValidatorAgrees.test_the_two_validators_agree_on_every_systematic_mutation",
+      "file": "engine_seam/accessory_v4_stage_c.py",
+      "id": "V-10",
+      "killed_by": [
+        "test_envelope.TestEngineValidatorAgrees.test_the_two_validators_agree_on_every_systematic_mutation"
+      ],
+      "rule_broken": "the engine accepts a non-canonical source key",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_envelope.TestEngineValidatorAgrees.test_the_two_validators_agree_on_every_systematic_mutation",
+      "file": "engine_seam/accessory_v4_stage_c.py",
+      "id": "V-11",
+      "killed_by": [
+        "test_envelope.TestEngineValidatorAgrees.test_the_two_validators_agree_on_every_systematic_mutation"
+      ],
+      "rule_broken": "the engine accepts a non-SHA-256 provenance digest",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_envelope.TestEngineValidatorAgrees.test_the_two_validators_agree_on_every_systematic_mutation",
+      "file": "engine_seam/accessory_v4_stage_c.py",
+      "id": "V-12",
+      "killed_by": [
+        "test_envelope.TestEngineValidatorAgrees.test_the_two_validators_agree_on_every_systematic_mutation"
+      ],
+      "rule_broken": "the engine accepts evidence hashes that are not SHA-256",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_envelope.TestEngineValidatorAgrees.test_the_two_validators_agree_on_every_systematic_mutation",
+      "file": "engine_seam/accessory_v4_stage_c.py",
+      "id": "V-13",
+      "killed_by": [
+        "test_envelope.TestEngineValidatorAgrees.test_the_two_validators_agree_on_every_systematic_mutation"
+      ],
+      "rule_broken": "the engine accepts an unknown relation type or an end that does not belong to it",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_envelope.TestEngineValidatorAgrees.test_the_two_validators_agree_on_every_systematic_mutation",
+      "file": "engine_seam/accessory_v4_stage_c.py",
+      "id": "V-14",
+      "killed_by": [
+        "test_envelope.TestEngineValidatorAgrees.test_the_two_validators_agree_on_every_systematic_mutation"
+      ],
+      "rule_broken": "the engine accepts a non-default OD5 value in a real envelope",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_envelope.TestEngineValidatorAgrees.test_the_two_validators_agree_on_every_systematic_mutation",
+      "file": "engine_seam/accessory_v4_stage_c.py",
+      "id": "V-15",
+      "killed_by": [
+        "test_envelope.TestEngineValidatorAgrees.test_the_two_validators_agree_on_every_systematic_mutation"
+      ],
+      "rule_broken": "the engine accepts an as_of that is not a date",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_envelope.TestEngineValidatorAgrees.test_both_validators_refuse_an_adapter_edge_under_the_default_od5",
+      "file": "engine_seam/accessory_v4_stage_c.py",
+      "id": "V-16",
+      "killed_by": [
+        "test_envelope.TestEngineValidatorAgrees.test_both_validators_refuse_an_adapter_edge_under_the_default_od5"
+      ],
+      "rule_broken": "the engine accepts an adapter edge although the envelope declares the default OD5 'abstain'",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_envelope.TestEngineValidatorAgrees.test_the_two_validators_agree_on_every_systematic_mutation",
+      "file": "engine_seam/accessory_v4_stage_c.py",
+      "id": "V-17",
+      "killed_by": [
+        "test_envelope.TestEngineValidatorAgrees.test_the_two_validators_agree_on_every_systematic_mutation"
+      ],
+      "rule_broken": "the engine accepts a source identity that is not a SHA-256",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_envelope.TestEngineValidatorAgrees.test_the_two_validators_agree_on_every_systematic_mutation",
+      "file": "engine_seam/accessory_v4_stage_c.py",
+      "id": "V-18",
+      "killed_by": [
+        "test_envelope.TestEngineValidatorAgrees.test_the_two_validators_agree_on_every_systematic_mutation"
+      ],
+      "rule_broken": "the engine accepts an edge without a source SKU",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_verify_scope.TestScope.test_unsafe_paths_are_rejected",
+      "file": "tools/verify_scope.py",
+      "id": "VS-01",
+      "killed_by": [
+        "test_verify_scope.TestScope.test_unsafe_paths_are_rejected"
+      ],
+      "rule_broken": "a path with a .. component is not flagged",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_verify_scope.TestScope.test_a_modified_file_outside_is_reported",
+      "file": "tools/verify_scope.py",
+      "id": "VS-02",
+      "killed_by": [
+        "test_verify_scope.TestScope.test_a_modified_file_outside_is_reported"
+      ],
+      "rule_broken": "a change outside the two allowed directories is not flagged",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_verify_scope.TestScope.test_the_head_must_descend_from_the_base",
+      "file": "tools/verify_scope.py",
+      "id": "VS-03",
+      "killed_by": [
+        "test_verify_scope.TestScope.test_the_head_must_descend_from_the_base"
+      ],
+      "rule_broken": "a head that is not a descendant of the base is not flagged",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_verify_scope.TestScope.test_a_modified_file_outside_is_reported",
+      "file": "tools/verify_scope.py",
+      "id": "VS-04",
+      "killed_by": [
+        "test_verify_scope.TestScope.test_a_modified_file_outside_is_reported"
+      ],
+      "rule_broken": "a scope violation does not fail the check",
+      "status": "KILLED"
+    }
+  ],
+  "schema": "bp-oem-stage-c-mutation-check-v1",
+  "summary": {
+    "INVALID": 0,
+    "KILLED": 218,
+    "SURVIVED": 0,
+    "total": 218
+  }
+}

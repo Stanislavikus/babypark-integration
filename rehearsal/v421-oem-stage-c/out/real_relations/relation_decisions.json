@@ -1,0 +1,988 @@
+{
+  "inputs": {
+    "relation_count": 43,
+    "relations_digest": "b7386ecf636509d671943fe0c8ab7db2c01a0fdcf369790a0d7c88f2b80b794a",
+    "relations_schema": "bp-oem-relations-v1",
+    "relations_sha256": "7c606903c1861d1399457be812bcdf76e2f81951838d18275d69e6cc0691f44e",
+    "synthetic": false
+  },
+  "notice": "RELATION-LEVEL VIEW ONLY. Not the gate, not a recommendation, not a publication authorization. No catalog row and no OEM byte store was read, so no document hash is known and this view can never accept a relation; the gate (tools/build_accepted_edges.py) is the only place that can.",
+  "policy": {
+    "allow_synthetic": false,
+    "as_of": "2026-11-17",
+    "one_ended_adapter": "abstain",
+    "publish_states": [
+      "LISTED"
+    ],
+    "veto_mode": "report"
+  },
+  "relations": [
+    {
+      "claim_statuses": [
+        "PROPOSED/PROPOSED"
+      ],
+      "decision": "HOLD",
+      "effective_state": "UNKNOWN",
+      "proposed_state": "LISTED_CONDITIONAL",
+      "reasons": [
+        "article_not_bound:accessory",
+        "conditions_not_verified_none",
+        "evidence_bytes_not_present",
+        "evidence_doc_hash_unknown",
+        "no_verified_compatible_claim",
+        "od4_conditional_held",
+        "od6_allowlist_empty",
+        "state_unknown"
+      ],
+      "relation_id": "rel:080c2e1d86f7f5a1",
+      "relation_type": "accessory_for_model",
+      "synthetic": false
+    },
+    {
+      "claim_statuses": [
+        "PROPOSED/PROPOSED"
+      ],
+      "decision": "HOLD",
+      "effective_state": "UNKNOWN",
+      "proposed_state": "LISTED_CONDITIONAL",
+      "reasons": [
+        "article_not_bound:accessory",
+        "conditions_not_verified_none",
+        "evidence_bytes_not_present",
+        "evidence_doc_hash_unknown",
+        "no_verified_compatible_claim",
+        "od4_conditional_held",
+        "od6_allowlist_empty",
+        "state_unknown"
+      ],
+      "relation_id": "rel:0909bb3f15adc5bb",
+      "relation_type": "accessory_for_model",
+      "synthetic": false
+    },
+    {
+      "claim_statuses": [
+        "PROPOSED/PROPOSED"
+      ],
+      "decision": "HOLD",
+      "effective_state": "UNKNOWN",
+      "proposed_state": "LISTED_CONDITIONAL",
+      "reasons": [
+        "article_not_bound:adapter",
+        "conditions_not_verified_none",
+        "evidence_bytes_not_present",
+        "evidence_doc_hash_unknown",
+        "no_verified_compatible_claim",
+        "od4_conditional_held",
+        "od5_one_ended_adapter_abstain",
+        "od6_allowlist_empty",
+        "state_unknown"
+      ],
+      "relation_id": "rel:105b35a3358e582c",
+      "relation_type": "adapter_between",
+      "synthetic": false
+    },
+    {
+      "claim_statuses": [
+        "PROPOSED/PROPOSED"
+      ],
+      "decision": "HOLD",
+      "effective_state": "UNKNOWN",
+      "proposed_state": "LISTED_CONDITIONAL",
+      "reasons": [
+        "article_not_bound:accessory",
+        "conditions_not_verified_none",
+        "evidence_bytes_not_present",
+        "evidence_doc_hash_unknown",
+        "no_verified_compatible_claim",
+        "od4_conditional_held",
+        "od6_allowlist_empty",
+        "state_unknown"
+      ],
+      "relation_id": "rel:11e9c08274ef0694",
+      "relation_type": "accessory_for_model",
+      "synthetic": false
+    },
+    {
+      "claim_statuses": [
+        "PROPOSED/PROPOSED"
+      ],
+      "decision": "HOLD",
+      "effective_state": "UNKNOWN",
+      "proposed_state": "LISTED_CONDITIONAL",
+      "reasons": [
+        "article_not_bound:accessory",
+        "conditions_not_verified_none",
+        "evidence_bytes_not_present",
+        "evidence_doc_hash_unknown",
+        "no_verified_compatible_claim",
+        "od4_conditional_held",
+        "od6_allowlist_empty",
+        "state_unknown"
+      ],
+      "relation_id": "rel:1c81c0d851450df5",
+      "relation_type": "accessory_for_model",
+      "synthetic": false
+    },
+    {
+      "claim_statuses": [
+        "PROPOSED/PROPOSED"
+      ],
+      "decision": "HOLD",
+      "effective_state": "UNKNOWN",
+      "proposed_state": "LISTED_CONDITIONAL",
+      "reasons": [
+        "article_not_bound:accessory",
+        "conditions_not_verified_none",
+        "evidence_bytes_not_present",
+        "evidence_doc_hash_unknown",
+        "no_verified_compatible_claim",
+        "od4_conditional_held",
+        "od6_allowlist_empty",
+        "state_unknown"
+      ],
+      "relation_id": "rel:28a660593040e9b0",
+      "relation_type": "accessory_for_model",
+      "synthetic": false
+    },
+    {
+      "claim_statuses": [
+        "PROPOSED/PROPOSED"
+      ],
+      "decision": "HOLD",
+      "effective_state": "UNKNOWN",
+      "proposed_state": "LISTED",
+      "reasons": [
+        "class_c_never_ab",
+        "evidence_bytes_not_present",
+        "evidence_doc_hash_unknown",
+        "no_verified_compatible_claim",
+        "od6_allowlist_empty",
+        "state_unknown"
+      ],
+      "relation_id": "rel:2c22ecae2a9c3e40",
+      "relation_type": "vehicle_general",
+      "synthetic": false
+    },
+    {
+      "claim_statuses": [
+        "PROPOSED/PROPOSED"
+      ],
+      "decision": "HOLD",
+      "effective_state": "UNKNOWN",
+      "proposed_state": "UNKNOWN",
+      "reasons": [
+        "article_not_bound:accessory",
+        "conditions_not_verified_none",
+        "evidence_bytes_not_present",
+        "evidence_doc_hash_unknown",
+        "no_verified_compatible_claim",
+        "od6_allowlist_empty",
+        "state_unknown"
+      ],
+      "relation_id": "rel:43724e77b03ec423",
+      "relation_type": "accessory_for_model",
+      "synthetic": false
+    },
+    {
+      "claim_statuses": [
+        "PROPOSED/PROPOSED"
+      ],
+      "decision": "HOLD",
+      "effective_state": "UNKNOWN",
+      "proposed_state": "LISTED_CONDITIONAL",
+      "reasons": [
+        "article_not_bound:accessory",
+        "conditions_not_verified_none",
+        "evidence_bytes_not_present",
+        "evidence_doc_hash_unknown",
+        "no_verified_compatible_claim",
+        "od4_conditional_held",
+        "od6_allowlist_empty",
+        "state_unknown"
+      ],
+      "relation_id": "rel:52fd81e2c75f18bd",
+      "relation_type": "accessory_for_model",
+      "synthetic": false
+    },
+    {
+      "claim_statuses": [
+        "PROPOSED/PROPOSED"
+      ],
+      "decision": "HOLD",
+      "effective_state": "UNKNOWN",
+      "proposed_state": "UNKNOWN",
+      "reasons": [
+        "article_not_bound:accessory",
+        "conditions_not_verified_none",
+        "evidence_bytes_not_present",
+        "evidence_doc_hash_unknown",
+        "no_verified_compatible_claim",
+        "od6_allowlist_empty",
+        "state_unknown"
+      ],
+      "relation_id": "rel:54e1afd0bfa37816",
+      "relation_type": "accessory_for_model",
+      "synthetic": false
+    },
+    {
+      "claim_statuses": [
+        "PROPOSED/PROPOSED"
+      ],
+      "decision": "HOLD",
+      "effective_state": "UNKNOWN",
+      "proposed_state": "LISTED_CONDITIONAL",
+      "reasons": [
+        "article_not_bound:accessory",
+        "conditions_not_verified_none",
+        "evidence_bytes_not_present",
+        "evidence_doc_hash_unknown",
+        "no_verified_compatible_claim",
+        "od4_conditional_held",
+        "od6_allowlist_empty",
+        "state_unknown"
+      ],
+      "relation_id": "rel:5889f8a94282a1a5",
+      "relation_type": "accessory_for_model",
+      "synthetic": false
+    },
+    {
+      "claim_statuses": [
+        "PROPOSED/PROPOSED"
+      ],
+      "decision": "HOLD",
+      "effective_state": "UNKNOWN",
+      "proposed_state": "LISTED_CONDITIONAL",
+      "reasons": [
+        "article_not_bound:adapter",
+        "conditions_not_verified_none",
+        "evidence_bytes_not_present",
+        "evidence_doc_hash_unknown",
+        "no_verified_compatible_claim",
+        "od4_conditional_held",
+        "od5_one_ended_adapter_abstain",
+        "od6_allowlist_empty",
+        "state_unknown"
+      ],
+      "relation_id": "rel:595f8589c89c6586",
+      "relation_type": "adapter_between",
+      "synthetic": false
+    },
+    {
+      "claim_statuses": [
+        "PROPOSED/PROPOSED"
+      ],
+      "decision": "HOLD",
+      "effective_state": "UNKNOWN",
+      "proposed_state": "LISTED_CONDITIONAL",
+      "reasons": [
+        "article_not_bound:adapter",
+        "conditions_not_verified_none",
+        "evidence_bytes_not_present",
+        "evidence_doc_hash_unknown",
+        "no_verified_compatible_claim",
+        "od4_conditional_held",
+        "od5_one_ended_adapter_abstain",
+        "od6_allowlist_empty",
+        "state_unknown"
+      ],
+      "relation_id": "rel:5a066121edd0a2bc",
+      "relation_type": "adapter_between",
+      "synthetic": false
+    },
+    {
+      "claim_statuses": [
+        "PROPOSED/PROPOSED"
+      ],
+      "decision": "HOLD",
+      "effective_state": "UNKNOWN",
+      "proposed_state": "LISTED_CONDITIONAL",
+      "reasons": [
+        "article_not_bound:accessory",
+        "conditions_not_verified_none",
+        "evidence_bytes_not_present",
+        "evidence_doc_hash_unknown",
+        "no_verified_compatible_claim",
+        "od4_conditional_held",
+        "od6_allowlist_empty",
+        "state_unknown"
+      ],
+      "relation_id": "rel:5be44445bd1afa78",
+      "relation_type": "accessory_for_model",
+      "synthetic": false
+    },
+    {
+      "claim_statuses": [
+        "PROPOSED/PROPOSED"
+      ],
+      "decision": "HOLD",
+      "effective_state": "UNKNOWN",
+      "proposed_state": "LISTED_CONDITIONAL",
+      "reasons": [
+        "article_not_bound:accessory",
+        "conditions_not_verified_none",
+        "evidence_bytes_not_present",
+        "evidence_doc_hash_unknown",
+        "no_verified_compatible_claim",
+        "od4_conditional_held",
+        "od6_allowlist_empty",
+        "state_unknown"
+      ],
+      "relation_id": "rel:5df39aa04cfbfbf1",
+      "relation_type": "accessory_for_model",
+      "synthetic": false
+    },
+    {
+      "claim_statuses": [
+        "PROPOSED/PROPOSED"
+      ],
+      "decision": "HOLD",
+      "effective_state": "UNKNOWN",
+      "proposed_state": "LISTED_CONDITIONAL",
+      "reasons": [
+        "article_not_bound:accessory",
+        "conditions_not_verified_none",
+        "evidence_bytes_not_present",
+        "evidence_doc_hash_unknown",
+        "no_verified_compatible_claim",
+        "od4_conditional_held",
+        "od6_allowlist_empty",
+        "state_unknown"
+      ],
+      "relation_id": "rel:61f8586556fbb75b",
+      "relation_type": "accessory_for_model",
+      "synthetic": false
+    },
+    {
+      "claim_statuses": [
+        "PROPOSED/PROPOSED"
+      ],
+      "decision": "HOLD",
+      "effective_state": "UNKNOWN",
+      "proposed_state": "LISTED_CONDITIONAL",
+      "reasons": [
+        "article_not_bound:adapter",
+        "conditions_not_verified_none",
+        "evidence_bytes_not_present",
+        "evidence_doc_hash_unknown",
+        "extension_required_not_in_edge",
+        "extension_unspecified",
+        "no_verified_compatible_claim",
+        "od4_conditional_held",
+        "od5_one_ended_adapter_abstain",
+        "od6_allowlist_empty",
+        "state_unknown"
+      ],
+      "relation_id": "rel:66eef64200958edd",
+      "relation_type": "adapter_between",
+      "synthetic": false
+    },
+    {
+      "claim_statuses": [
+        "PROPOSED/PROPOSED"
+      ],
+      "decision": "HOLD",
+      "effective_state": "UNKNOWN",
+      "proposed_state": "LISTED_CONDITIONAL",
+      "reasons": [
+        "article_not_bound:accessory",
+        "conditions_not_verified_none",
+        "evidence_bytes_not_present",
+        "evidence_doc_hash_unknown",
+        "no_verified_compatible_claim",
+        "od4_conditional_held",
+        "od6_allowlist_empty",
+        "state_unknown"
+      ],
+      "relation_id": "rel:6f838b667045eb6f",
+      "relation_type": "accessory_for_model",
+      "synthetic": false
+    },
+    {
+      "claim_statuses": [
+        "PROPOSED/PROPOSED"
+      ],
+      "decision": "HOLD",
+      "effective_state": "UNKNOWN",
+      "proposed_state": "LISTED_CONDITIONAL",
+      "reasons": [
+        "article_not_bound:accessory",
+        "conditions_not_verified_none",
+        "evidence_bytes_not_present",
+        "evidence_doc_hash_unknown",
+        "no_verified_compatible_claim",
+        "od4_conditional_held",
+        "od6_allowlist_empty",
+        "state_unknown"
+      ],
+      "relation_id": "rel:74d6b05ac61156e8",
+      "relation_type": "accessory_for_model",
+      "synthetic": false
+    },
+    {
+      "claim_statuses": [
+        "PROPOSED/PROPOSED"
+      ],
+      "decision": "HOLD",
+      "effective_state": "UNKNOWN",
+      "proposed_state": "UNKNOWN",
+      "reasons": [
+        "article_not_bound:accessory",
+        "conditions_not_verified_none",
+        "evidence_bytes_not_present",
+        "evidence_doc_hash_unknown",
+        "no_verified_compatible_claim",
+        "od6_allowlist_empty",
+        "state_unknown"
+      ],
+      "relation_id": "rel:7676875887ade0d7",
+      "relation_type": "accessory_for_model",
+      "synthetic": false
+    },
+    {
+      "claim_statuses": [
+        "PROPOSED/PROPOSED"
+      ],
+      "decision": "HOLD",
+      "effective_state": "UNKNOWN",
+      "proposed_state": "UNKNOWN",
+      "reasons": [
+        "article_not_bound:adapter",
+        "conditions_not_verified_none",
+        "evidence_bytes_not_present",
+        "evidence_doc_hash_unknown",
+        "no_verified_compatible_claim",
+        "od5_one_ended_adapter_abstain",
+        "od6_allowlist_empty",
+        "state_unknown"
+      ],
+      "relation_id": "rel:7888efcdf7102f63",
+      "relation_type": "adapter_between",
+      "synthetic": false
+    },
+    {
+      "claim_statuses": [
+        "PROPOSED/PROPOSED"
+      ],
+      "decision": "HOLD",
+      "effective_state": "UNKNOWN",
+      "proposed_state": "EXCLUDED",
+      "reasons": [
+        "article_not_bound:adapter",
+        "conditions_not_verified_none",
+        "evidence_bytes_not_present",
+        "evidence_doc_hash_unknown",
+        "negative_or_time_bound_claim_present",
+        "no_verified_compatible_claim",
+        "od5_one_ended_adapter_abstain",
+        "od6_allowlist_empty",
+        "state_unknown",
+        "veto_signal_present"
+      ],
+      "relation_id": "rel:7ae7780e588e9567",
+      "relation_type": "adapter_between",
+      "synthetic": false
+    },
+    {
+      "claim_statuses": [
+        "PROPOSED/PROPOSED"
+      ],
+      "decision": "HOLD",
+      "effective_state": "UNKNOWN",
+      "proposed_state": "LISTED_CONDITIONAL",
+      "reasons": [
+        "article_not_bound:adapter",
+        "conditions_not_verified_none",
+        "evidence_bytes_not_present",
+        "evidence_doc_hash_unknown",
+        "no_verified_compatible_claim",
+        "od4_conditional_held",
+        "od5_one_ended_adapter_abstain",
+        "od6_allowlist_empty",
+        "state_unknown"
+      ],
+      "relation_id": "rel:7b289bd096acd98c",
+      "relation_type": "adapter_between",
+      "synthetic": false
+    },
+    {
+      "claim_statuses": [
+        "PROPOSED/PROPOSED"
+      ],
+      "decision": "HOLD",
+      "effective_state": "CONFLICT_HOLD",
+      "proposed_state": "CONFLICT_HOLD",
+      "reasons": [
+        "article_not_bound:adapter",
+        "conditions_not_verified_none",
+        "evidence_bytes_not_present",
+        "evidence_doc_hash_unknown",
+        "negative_or_time_bound_claim_present",
+        "no_verified_compatible_claim",
+        "od5_one_ended_adapter_abstain",
+        "od6_allowlist_empty",
+        "state_conflict_hold"
+      ],
+      "relation_id": "rel:8cd931d049d1d1b4",
+      "relation_type": "adapter_between",
+      "synthetic": false
+    },
+    {
+      "claim_statuses": [
+        "PROPOSED/PROPOSED"
+      ],
+      "decision": "HOLD",
+      "effective_state": "UNKNOWN",
+      "proposed_state": "LISTED_CONDITIONAL",
+      "reasons": [
+        "article_not_bound:adapter",
+        "conditions_not_verified_none",
+        "evidence_bytes_not_present",
+        "evidence_doc_hash_unknown",
+        "no_verified_compatible_claim",
+        "od4_conditional_held",
+        "od5_one_ended_adapter_abstain",
+        "od6_allowlist_empty",
+        "state_unknown"
+      ],
+      "relation_id": "rel:8fbd9214a244feab",
+      "relation_type": "adapter_between",
+      "synthetic": false
+    },
+    {
+      "claim_statuses": [
+        "PROPOSED/PROPOSED"
+      ],
+      "decision": "HOLD",
+      "effective_state": "UNKNOWN",
+      "proposed_state": "UNKNOWN",
+      "reasons": [
+        "article_not_bound:accessory",
+        "conditions_not_verified_none",
+        "evidence_bytes_not_present",
+        "evidence_doc_hash_unknown",
+        "no_verified_compatible_claim",
+        "od6_allowlist_empty",
+        "state_unknown"
+      ],
+      "relation_id": "rel:99d38498de3a17ff",
+      "relation_type": "accessory_for_model",
+      "synthetic": false
+    },
+    {
+      "claim_statuses": [
+        "PROPOSED/PROPOSED"
+      ],
+      "decision": "HOLD",
+      "effective_state": "UNKNOWN",
+      "proposed_state": "LISTED_CONDITIONAL",
+      "reasons": [
+        "article_not_bound:accessory",
+        "conditions_not_verified_none",
+        "evidence_bytes_not_present",
+        "evidence_doc_hash_unknown",
+        "no_verified_compatible_claim",
+        "od4_conditional_held",
+        "od6_allowlist_empty",
+        "state_unknown"
+      ],
+      "relation_id": "rel:a5ade3135ec1024f",
+      "relation_type": "accessory_for_model",
+      "synthetic": false
+    },
+    {
+      "claim_statuses": [
+        "PROPOSED/PROPOSED"
+      ],
+      "decision": "HOLD",
+      "effective_state": "UNKNOWN",
+      "proposed_state": "LISTED_CONDITIONAL",
+      "reasons": [
+        "article_not_bound:adapter",
+        "conditions_not_verified_none",
+        "evidence_bytes_not_present",
+        "evidence_doc_hash_unknown",
+        "no_verified_compatible_claim",
+        "od4_conditional_held",
+        "od5_one_ended_adapter_abstain",
+        "od6_allowlist_empty",
+        "state_unknown"
+      ],
+      "relation_id": "rel:bf6b7978cbd99380",
+      "relation_type": "adapter_between",
+      "synthetic": false
+    },
+    {
+      "claim_statuses": [
+        "PROPOSED/PROPOSED"
+      ],
+      "decision": "HOLD",
+      "effective_state": "UNKNOWN",
+      "proposed_state": "LISTED_CONDITIONAL",
+      "reasons": [
+        "article_not_bound:accessory",
+        "conditions_not_verified_none",
+        "evidence_bytes_not_present",
+        "evidence_doc_hash_unknown",
+        "no_verified_compatible_claim",
+        "od4_conditional_held",
+        "od6_allowlist_empty",
+        "state_unknown"
+      ],
+      "relation_id": "rel:bfdbab3befdfd03e",
+      "relation_type": "accessory_for_model",
+      "synthetic": false
+    },
+    {
+      "claim_statuses": [
+        "PROPOSED/PROPOSED"
+      ],
+      "decision": "HOLD",
+      "effective_state": "UNKNOWN",
+      "proposed_state": "EXCLUDED",
+      "reasons": [
+        "article_not_bound:adapter",
+        "conditions_not_verified_none",
+        "evidence_bytes_not_present",
+        "evidence_doc_hash_unknown",
+        "negative_or_time_bound_claim_present",
+        "no_verified_compatible_claim",
+        "od5_one_ended_adapter_abstain",
+        "od6_allowlist_empty",
+        "state_unknown",
+        "veto_signal_present"
+      ],
+      "relation_id": "rel:c75f181a49fc0bd0",
+      "relation_type": "adapter_between",
+      "synthetic": false
+    },
+    {
+      "claim_statuses": [
+        "PROPOSED/PROPOSED"
+      ],
+      "decision": "HOLD",
+      "effective_state": "UNKNOWN",
+      "proposed_state": "LISTED_CONDITIONAL",
+      "reasons": [
+        "article_not_bound:accessory",
+        "conditions_not_verified_none",
+        "evidence_bytes_not_present",
+        "evidence_doc_hash_unknown",
+        "no_verified_compatible_claim",
+        "od4_conditional_held",
+        "od6_allowlist_empty",
+        "state_unknown"
+      ],
+      "relation_id": "rel:c8cdb2ad7e178b34",
+      "relation_type": "accessory_for_model",
+      "synthetic": false
+    },
+    {
+      "claim_statuses": [
+        "PROPOSED/PROPOSED"
+      ],
+      "decision": "HOLD",
+      "effective_state": "UNKNOWN",
+      "proposed_state": "LISTED_CONDITIONAL",
+      "reasons": [
+        "article_not_bound:accessory",
+        "conditions_not_verified_none",
+        "evidence_bytes_not_present",
+        "evidence_doc_hash_unknown",
+        "no_verified_compatible_claim",
+        "od4_conditional_held",
+        "od6_allowlist_empty",
+        "state_unknown"
+      ],
+      "relation_id": "rel:c9f8405e9d91ef87",
+      "relation_type": "accessory_for_model",
+      "synthetic": false
+    },
+    {
+      "claim_statuses": [
+        "PROPOSED/PROPOSED"
+      ],
+      "decision": "HOLD",
+      "effective_state": "CONFLICT_HOLD",
+      "proposed_state": "CONFLICT_HOLD",
+      "reasons": [
+        "article_not_bound:adapter",
+        "conditions_not_verified_none",
+        "evidence_bytes_not_present",
+        "evidence_doc_hash_unknown",
+        "negative_or_time_bound_claim_present",
+        "no_verified_compatible_claim",
+        "od5_one_ended_adapter_abstain",
+        "od6_allowlist_empty",
+        "state_conflict_hold"
+      ],
+      "relation_id": "rel:d48da9edacfa405c",
+      "relation_type": "adapter_between",
+      "synthetic": false
+    },
+    {
+      "claim_statuses": [
+        "PROPOSED/PROPOSED"
+      ],
+      "decision": "HOLD",
+      "effective_state": "UNKNOWN",
+      "proposed_state": "UNKNOWN",
+      "reasons": [
+        "article_not_bound:adapter",
+        "conditions_not_verified_none",
+        "evidence_bytes_not_present",
+        "evidence_doc_hash_unknown",
+        "no_verified_compatible_claim",
+        "od5_one_ended_adapter_abstain",
+        "od6_allowlist_empty",
+        "state_unknown"
+      ],
+      "relation_id": "rel:da3e670ef5a3f798",
+      "relation_type": "adapter_between",
+      "synthetic": false
+    },
+    {
+      "claim_statuses": [
+        "PROPOSED/PROPOSED"
+      ],
+      "decision": "HOLD",
+      "effective_state": "UNKNOWN",
+      "proposed_state": "LISTED_CONDITIONAL",
+      "reasons": [
+        "article_not_bound:adapter",
+        "conditions_not_verified_none",
+        "evidence_bytes_not_present",
+        "evidence_doc_hash_unknown",
+        "no_verified_compatible_claim",
+        "od4_conditional_held",
+        "od5_one_ended_adapter_abstain",
+        "od6_allowlist_empty",
+        "state_unknown"
+      ],
+      "relation_id": "rel:de5f13143bdf4074",
+      "relation_type": "adapter_between",
+      "synthetic": false
+    },
+    {
+      "claim_statuses": [
+        "PROPOSED/PROPOSED"
+      ],
+      "decision": "HOLD",
+      "effective_state": "UNKNOWN",
+      "proposed_state": "LISTED_CONDITIONAL",
+      "reasons": [
+        "article_not_bound:accessory",
+        "conditions_not_verified_none",
+        "evidence_bytes_not_present",
+        "evidence_doc_hash_unknown",
+        "no_verified_compatible_claim",
+        "od4_conditional_held",
+        "od6_allowlist_empty",
+        "state_unknown"
+      ],
+      "relation_id": "rel:e8dd0bfe6f0d9a82",
+      "relation_type": "accessory_for_model",
+      "synthetic": false
+    },
+    {
+      "claim_statuses": [
+        "PROPOSED/PROPOSED"
+      ],
+      "decision": "HOLD",
+      "effective_state": "UNKNOWN",
+      "proposed_state": "LISTED_CONDITIONAL",
+      "reasons": [
+        "article_not_bound:accessory",
+        "conditions_not_verified_none",
+        "evidence_bytes_not_present",
+        "evidence_doc_hash_unknown",
+        "no_verified_compatible_claim",
+        "od4_conditional_held",
+        "od6_allowlist_empty",
+        "state_unknown"
+      ],
+      "relation_id": "rel:ecc86358ad645abf",
+      "relation_type": "accessory_for_model",
+      "synthetic": false
+    },
+    {
+      "claim_statuses": [
+        "PROPOSED/PROPOSED"
+      ],
+      "decision": "HOLD",
+      "effective_state": "UNKNOWN",
+      "proposed_state": "LISTED_CONDITIONAL",
+      "reasons": [
+        "article_not_bound:adapter",
+        "conditions_not_verified_none",
+        "evidence_bytes_not_present",
+        "evidence_doc_hash_unknown",
+        "no_verified_compatible_claim",
+        "od4_conditional_held",
+        "od5_one_ended_adapter_abstain",
+        "od6_allowlist_empty",
+        "state_unknown"
+      ],
+      "relation_id": "rel:ef8a9da40a49eb97",
+      "relation_type": "adapter_between",
+      "synthetic": false
+    },
+    {
+      "claim_statuses": [
+        "PROPOSED/PROPOSED"
+      ],
+      "decision": "HOLD",
+      "effective_state": "UNKNOWN",
+      "proposed_state": "UNKNOWN",
+      "reasons": [
+        "article_not_bound:adapter",
+        "conditions_not_verified_none",
+        "evidence_bytes_not_present",
+        "evidence_doc_hash_unknown",
+        "no_verified_compatible_claim",
+        "od5_one_ended_adapter_abstain",
+        "od6_allowlist_empty",
+        "state_unknown"
+      ],
+      "relation_id": "rel:f07b5cc54c92340f",
+      "relation_type": "adapter_between",
+      "synthetic": false
+    },
+    {
+      "claim_statuses": [
+        "PROPOSED/PROPOSED"
+      ],
+      "decision": "HOLD",
+      "effective_state": "UNKNOWN",
+      "proposed_state": "LISTED_CONDITIONAL",
+      "reasons": [
+        "article_not_bound:adapter",
+        "conditions_not_verified_none",
+        "evidence_bytes_not_present",
+        "evidence_doc_hash_unknown",
+        "no_verified_compatible_claim",
+        "od4_conditional_held",
+        "od5_one_ended_adapter_abstain",
+        "od6_allowlist_empty",
+        "state_unknown"
+      ],
+      "relation_id": "rel:f5e825cedd3d0cf9",
+      "relation_type": "adapter_between",
+      "synthetic": false
+    },
+    {
+      "claim_statuses": [
+        "PROPOSED/PROPOSED"
+      ],
+      "decision": "HOLD",
+      "effective_state": "UNKNOWN",
+      "proposed_state": "LISTED_CONDITIONAL",
+      "reasons": [
+        "article_not_bound:adapter",
+        "conditions_not_verified_none",
+        "evidence_bytes_not_present",
+        "evidence_doc_hash_unknown",
+        "no_verified_compatible_claim",
+        "od4_conditional_held",
+        "od5_one_ended_adapter_abstain",
+        "od6_allowlist_empty",
+        "state_unknown"
+      ],
+      "relation_id": "rel:f8578e3b0f9d0534",
+      "relation_type": "adapter_between",
+      "synthetic": false
+    },
+    {
+      "claim_statuses": [
+        "PROPOSED/PROPOSED"
+      ],
+      "decision": "HOLD",
+      "effective_state": "UNKNOWN",
+      "proposed_state": "LISTED_CONDITIONAL",
+      "reasons": [
+        "article_not_bound:accessory",
+        "conditions_not_verified_none",
+        "evidence_bytes_not_present",
+        "evidence_doc_hash_unknown",
+        "no_verified_compatible_claim",
+        "od4_conditional_held",
+        "od6_allowlist_empty",
+        "state_unknown"
+      ],
+      "relation_id": "rel:f8c6811cf2148620",
+      "relation_type": "accessory_for_model",
+      "synthetic": false
+    },
+    {
+      "claim_statuses": [
+        "PROPOSED/PROPOSED"
+      ],
+      "decision": "HOLD",
+      "effective_state": "UNKNOWN",
+      "proposed_state": "LISTED_CONDITIONAL",
+      "reasons": [
+        "article_not_bound:adapter",
+        "conditions_not_verified_none",
+        "evidence_bytes_not_present",
+        "evidence_doc_hash_unknown",
+        "no_verified_compatible_claim",
+        "od4_conditional_held",
+        "od5_one_ended_adapter_abstain",
+        "od6_allowlist_empty",
+        "state_unknown"
+      ],
+      "relation_id": "rel:fd9ff73a09ba0d97",
+      "relation_type": "adapter_between",
+      "synthetic": false
+    }
+  ],
+  "schema": "bp-oem-relation-decisions-v1",
+  "summary": {
+    "accept": 0,
+    "by_reason": {
+      "article_not_bound:accessory": 23,
+      "article_not_bound:adapter": 19,
+      "class_c_never_ab": 1,
+      "conditions_not_verified_none": 42,
+      "evidence_bytes_not_present": 43,
+      "evidence_doc_hash_unknown": 43,
+      "extension_required_not_in_edge": 1,
+      "extension_unspecified": 1,
+      "negative_or_time_bound_claim_present": 4,
+      "no_verified_compatible_claim": 43,
+      "od4_conditional_held": 31,
+      "od5_one_ended_adapter_abstain": 19,
+      "od6_allowlist_empty": 43,
+      "state_conflict_hold": 2,
+      "state_unknown": 41,
+      "veto_signal_present": 2
+    },
+    "by_type_state_decision": [
+      {
+        "count": 23,
+        "decision": "HOLD",
+        "effective_state": "UNKNOWN",
+        "relation_type": "accessory_for_model"
+      },
+      {
+        "count": 2,
+        "decision": "HOLD",
+        "effective_state": "CONFLICT_HOLD",
+        "relation_type": "adapter_between"
+      },
+      {
+        "count": 17,
+        "decision": "HOLD",
+        "effective_state": "UNKNOWN",
+        "relation_type": "adapter_between"
+      },
+      {
+        "count": 1,
+        "decision": "HOLD",
+        "effective_state": "UNKNOWN",
+        "relation_type": "vehicle_general"
+      }
+    ],
+    "hold": 43,
+    "relations": 43
+  }
+}

@@ -1,0 +1,211 @@
+# ---------------------------------------------------------------------------------------------------------------------
+# Stage C (S5): optional, default-OFF seam for verified OEM relations. With oem_enabled=False (the default) the code below never runs
+# and oem_relations is never read. The accepted-edges envelope is produced by the Stage C gate (rehearsal/v421-oem-stage-c); this module
+# only validates it, applies the existing exact-ID / locale / variant / commercial / head gates to every edge and appends the survivors
+# AFTER all legacy A edges (tier A_model, reason accepted_oem_relation). Legacy rules, manufacturer_fitment_match, B_universal, the
+# V3.6 similar field, the ordering of legacy edges and the limit of 20 are untouched.
+# Two guards close the findings of the independent rehearsal review: every edge is bound to the exact identity of its SOURCE (C-R1: the
+# SKU and a digest of the identity inputs are recomputed from the CURRENT rows and index; a different product under the same NID is held), and
+# a gate-approved two-ended adapter may cross the catalog taxonomy to the page whose end it belongs to (C-R2), under the conditions of
+# _oem_adapter_crosses only.
+# ---------------------------------------------------------------------------------------------------------------------
+OEM_SCHEMA="bp-oem-accepted-edges-v1"
+_OEM_HEX64=re.compile(r"[0-9a-f]{64}")
+_OEM_DATE=re.compile(r"[0-9]{4}-[0-9]{2}-[0-9]{2}")
+_OEM_ENVELOPE_KEYS={"schema","mode","synthetic","label","gate","provenance","edges"}
+_OEM_GATE_KEYS={"publish_states","one_ended_adapter","veto_mode","as_of","allow_synthetic"}
+_OEM_PROVENANCE_KEYS={"relations_digest","inputs_digest","relations_schema","gate_version"}
+_OEM_EDGE_KEYS={"target_nid","target_sku","lang","relation_ids","relation_type","end","fit_state","conditions","claim_ids","doc_ids",
+                "doc_hashes","binding_ids","source_model_id","source_sku","source_identity","relation_digest","registry_version","synthetic"}
+_OEM_ENDS={"accessory_for_model":("model",),"adapter_between":("seat","chassis")}
+_OEM_END_HEAD={"seat":"car_seat","chassis":"stroller"}
+
+def _oem_fail(message):
+    raise ValueError("oem_relations: "+message)
+
+def _oem_keys(obj,expected,where):
+    if not isinstance(obj,dict):_oem_fail(where+" must be an object")
+    if set(obj)!=set(expected):
+        _oem_fail(where+" keys differ from the contract: missing "+str(sorted(set(expected)-set(obj)))+", unknown "+str(sorted(set(obj)-set(expected))))
+
+def _oem_strings(value,where,non_empty=True):
+    ok=(isinstance(value,list) and (bool(value) or not non_empty) and all(isinstance(x,str) and x for x in value)
+        and len(set(value))==len(value))
+    if not ok:_oem_fail(where+" must be a list of unique non-empty strings")
+    return value
+
+def _oem_hex(value):
+    return isinstance(value,str) and bool(_OEM_HEX64.fullmatch(value))
+
+def oem_load_envelope(envelope,allow_synthetic=False):
+    """Validate a bp-oem-accepted-edges-v1 envelope and index its edges by integer source NID. Any problem raises ValueError."""
+    _oem_keys(envelope,_OEM_ENVELOPE_KEYS,"envelope")
+    if envelope["schema"]!=OEM_SCHEMA or envelope["mode"]!="accepted_only":
+        _oem_fail("schema/mode is not bp-oem-accepted-edges-v1/accepted_only")
+    synthetic=envelope["synthetic"]
+    if type(synthetic) is not bool:_oem_fail("synthetic must be a boolean")
+    if synthetic and not allow_synthetic:
+        _oem_fail("a synthetic envelope is refused without the explicit oem_allow_synthetic opt-in")
+    if envelope["label"] is not None and not isinstance(envelope["label"],str):_oem_fail("label must be a string or null")
+    gate=envelope["gate"];_oem_keys(gate,_OEM_GATE_KEYS,"gate")
+    if gate["publish_states"]!=["LISTED"]:_oem_fail("gate.publish_states must be ['LISTED']")
+    if gate["veto_mode"]!="report":_oem_fail("gate.veto_mode must be 'report'")
+    if gate["one_ended_adapter"] not in ("abstain","synthetic_test_two_ended") or (gate["one_ended_adapter"]!="abstain" and not synthetic):
+        _oem_fail("gate.one_ended_adapter is not an allowed value for this envelope")
+    if type(gate["allow_synthetic"]) is not bool or (gate["allow_synthetic"] and not synthetic):
+        _oem_fail("gate.allow_synthetic is inconsistent")
+    if not isinstance(gate["as_of"],str) or not _OEM_DATE.fullmatch(gate["as_of"]):_oem_fail("gate.as_of must be YYYY-MM-DD")
+    prov=envelope["provenance"];_oem_keys(prov,_OEM_PROVENANCE_KEYS,"provenance")
+    for key in ("relations_digest","inputs_digest"):
+        if not _oem_hex(prov[key]):_oem_fail("provenance."+key+" must be a SHA-256")
+    for key in ("relations_schema","gate_version"):
+        if not isinstance(prov[key],str) or not prov[key]:_oem_fail("provenance."+key+" must be a non-empty string")
+    edges=envelope["edges"]
+    if not isinstance(edges,dict):_oem_fail("edges must be an object keyed by source NID")
+    by_source={};seen=set();count=0
+    for key in sorted(edges,key=lambda k:(len(str(k)),str(k))):
+        if not (isinstance(key,str) and key.isascii() and key.isdigit() and key==str(int(key)) and int(key)>0):
+            _oem_fail("edge source key "+repr(key)+" is not a canonical positive NID")
+        items=edges[key]
+        if not isinstance(items,list) or not items:_oem_fail("edges["+key+"] must be a non-empty list")
+        for edge in items:
+            where="edges["+key+"]"
+            _oem_keys(edge,_OEM_EDGE_KEYS,where)
+            if type(edge["target_nid"]) is not int or edge["target_nid"]<=0:_oem_fail(where+".target_nid must be a positive integer")
+            for field in ("target_sku","lang","source_model_id","source_sku"):
+                if not isinstance(edge[field],str) or not edge[field]:_oem_fail(where+"."+field+" must be a non-empty string")
+            relation_ids=_oem_strings(edge["relation_ids"],where+".relation_ids")
+            if relation_ids!=sorted(relation_ids):_oem_fail(where+".relation_ids must be sorted")
+            rtype,end=edge["relation_type"],edge["end"]
+            if not (isinstance(rtype,str) and isinstance(end,str) and rtype in _OEM_ENDS and end in _OEM_ENDS[rtype]):
+                _oem_fail(where+" relation_type/end is not an accepted combination")
+            if rtype=="adapter_between" and gate["one_ended_adapter"]=="abstain":
+                _oem_fail(where+" is an adapter edge but gate.one_ended_adapter is the default 'abstain' (OD5): adapters are never published by default")
+            if edge["fit_state"]!="LISTED":_oem_fail(where+".fit_state must be LISTED")
+            if edge["conditions"]!=[]:_oem_fail(where+".conditions must be empty (conditional edges are held)")
+            _oem_strings(edge["claim_ids"],where+".claim_ids");_oem_strings(edge["doc_ids"],where+".doc_ids")
+            if not all(_oem_hex(h) for h in _oem_strings(edge["doc_hashes"],where+".doc_hashes")):
+                _oem_fail(where+".doc_hashes must be SHA-256 values")
+            _oem_strings(edge["binding_ids"],where+".binding_ids",False)
+            for field in ("source_identity","relation_digest","registry_version"):
+                if not _oem_hex(edge[field]):_oem_fail(where+"."+field+" must be a SHA-256")
+            if type(edge["synthetic"]) is not bool or (edge["synthetic"] and not synthetic):_oem_fail(where+".synthetic is inconsistent")
+            pair=(int(key),edge["target_nid"])
+            if pair in seen or pair[0]==pair[1]:_oem_fail(where+" has a duplicate or self edge")
+            seen.add(pair);count+=1
+        by_source[int(key)]=items
+    return by_source,{"synthetic":synthetic,"relations_digest":prov["relations_digest"],"inputs_digest":prov["inputs_digest"],
+                      "gate_version":prov["gate_version"],"one_ended_adapter":gate["one_ended_adapter"],"as_of":gate["as_of"],
+                      "edges_in":count}
+
+def _oem_source_identity(nid,rows,index):
+    """SHA-256 of the identity inputs of source ``nid`` (same definition as oem_intake/source_identity.py), or None when it cannot be described."""
+    try:
+        row=rows[int(nid)];record=index["source_models"][str(int(row["tnid"]))];locales=record["locales"]
+        if not isinstance(locales,dict) or not locales or not isinstance(record["models"],dict):return None
+        group={}
+        for lang,loc in sorted(locales.items()):
+            sibling=int(loc["nid"]);group[str(lang)]={"nid":sibling,"brand":rows[sibling].get("brand")}
+        found={"schema":"bp-oem-source-identity-v1","nid":int(nid),"tnid":int(row["tnid"]),"lang":row.get("lang"),"sku":str(row.get("sku") or ""),
+               "type":row.get("type"),"brand":row.get("brand"),"brand_tid":row.get("brand_tid"),
+               "group":{"brand_tid":record.get("brand_tid"),"models":record["models"],"locales":group}}
+        return hashlib.sha256(json.dumps(found,ensure_ascii=False,sort_keys=True,separators=(",",":"),allow_nan=False).encode("utf-8")).hexdigest()
+    except (KeyError,TypeError,ValueError,AttributeError):
+        return None
+
+def _oem_source_stale(source,edge,identity):
+    """Why the envelope edge no longer describes THIS source row (None = it is still the product the gate accepted it for)."""
+    if str(source.get("sku") or "")!=edge["source_sku"]:return "source_sku_changed"
+    if identity is None or identity!=edge["source_identity"]:return "source_identity_changed"
+    return None
+
+def _oem_adapter_crosses(edge,target,head,policy):
+    """May an accepted adapter edge reach this source although the catalog files the adapter under another taxonomy? Only when the gate accepted
+    it as adapter_between (both physical ends verified), its end is the one of THIS source's page (seat: car seat, chassis: stroller), the engine
+    itself recognises the target as an adapter and the target is an accessory of some taxonomy. Nothing else may cross (finding C-R2)."""
+    return (edge["relation_type"]=="adapter_between" and _OEM_END_HEAD.get(edge["end"])==head
+            and target_role(target,head)=="adapter" and bool(target_heads(target,policy)))
+
+def _oem_variant_ok(row,profiles):
+    """A product without options has no variant ambiguity; one with options needs a known, fully available, non-fitment-critical profile."""
+    digest=str(row.get("option_digest") or "")
+    if not digest:return True
+    profile=profiles.get(digest)
+    return bool(profile and profile.get("all_oids_available") and not profile.get("fitment_critical"))
+
+def _oem_edge_hold(source,target,edge,head,policy,profiles):
+    """Why an accepted OEM edge cannot enter this source's A tier under the CURRENT engine gates (None = it can)."""
+    if not head:return "source_has_no_recommendation_head"
+    if not eligible_source(source):return "source_not_purchasable"
+    if target is None:return "target_not_in_catalog"
+    if str(target.get("sku") or "")!=edge["target_sku"]:return "target_sku_changed"
+    if source.get("lang")!=edge["lang"] or target.get("lang")!=edge["lang"]:return "locale_mismatch"
+    if source.get("type")=="product_kit" or target.get("type")=="product_kit":return "product_kit_excluded"
+    if not eligible_source(target):return "target_not_purchasable"
+    if source.get("nid")==target.get("nid") or source.get("tnid")==target.get("tnid"):return "same_product"
+    if not _oem_variant_ok(source,profiles):return "source_variant_unverified"
+    if not _oem_variant_ok(target,profiles):return "target_variant_unverified"
+    if not target_in_head(target,head,policy) and not _oem_adapter_crosses(edge,target,head,policy):return "target_not_in_source_head"
+    if head=="car_seat" and target_role(target,head)=="seat_liner" and not seat_liner_age_group_compatible(source,target):
+        return "seat_liner_age_group_incompatible"
+    return None
+
+def _oem_merge(nid,source,head,a_ids,a_reasons,old_similar,rows,policy,profiles,oem_edges,ledger,index):
+    """Append the accepted OEM edges of one source AFTER its legacy A edges; every envelope edge gets exactly one ledger entry."""
+    items=oem_edges.get(nid)
+    if not items:return a_ids,[]
+    legacy=set(a_ids);similar=set(old_similar);new_ids=[];accepted=[];identity=_oem_source_identity(nid,rows,index)
+    for edge in items:
+        tid=edge["target_nid"]
+        entry={"source_nid":nid,"target_nid":tid,"relation_ids":list(edge["relation_ids"]),"status":None,"reason":None}
+        ledger.append(entry)
+        stale=_oem_source_stale(source,edge,identity)
+        if stale:
+            entry["status"]="held";entry["reason"]=stale
+            continue
+        if tid in legacy:
+            entry["status"]="already_present_legacy";entry["reason"]=a_reasons.get(str(tid),{}).get("reason")
+            continue
+        why=_oem_edge_hold(source,rows.get(tid),edge,head,policy,profiles)
+        if not why and tid in similar:why="in_v36_similar"
+        if why:
+            entry["status"]="held";entry["reason"]=why
+            continue
+        a_reasons[str(tid)]={"tier":"A_model","reason":"accepted_oem_relation","role":target_role(rows[tid],head),
+                             "fit_state":"LISTED","conditions":[],"relation_ids":list(edge["relation_ids"]),
+                             "relation_type":edge["relation_type"],"end":edge["end"],"relation_digest":edge["relation_digest"],
+                             "claim_ids":list(edge["claim_ids"]),"doc_ids":list(edge["doc_ids"]),"doc_hashes":list(edge["doc_hashes"]),
+                             "binding_ids":list(edge["binding_ids"]),"registry_version":edge["registry_version"],
+                             "source_model_id":edge["source_model_id"],"source_sku":edge["source_sku"],
+                             "source_identity":edge["source_identity"],"synthetic":edge["synthetic"]}
+        if not target_in_head(rows[tid],head,policy):
+            a_reasons[str(tid)].update({"cross_taxonomy":"gate-approved two-ended adapter filed under another catalog taxonomy",
+                                       "taxonomy_heads":sorted(taxonomy_target_heads(rows[tid],policy)),"functional_head":head})
+        entry["status"]="accepted";new_ids.append(tid);accepted.append(entry)
+    if new_ids:a_ids=a_ids+commercial_accessory_order(new_ids,source,rows,a_reasons,head)
+    return a_ids,accepted
+
+def _oem_finalize(accepted,total):
+    """After the limit of 20 is applied: an accepted edge is either published in the output or dropped by the limit."""
+    for entry in accepted:
+        entry["status"]="published" if entry["target_nid"] in total else "dropped_by_limit_20"
+
+def _oem_close(metrics,oem_edges,original,ledger,meta):
+    for src,items in oem_edges.items():
+        if str(src) not in original:
+            for edge in items:
+                ledger.append({"source_nid":src,"target_nid":edge["target_nid"],"relation_ids":list(edge["relation_ids"]),
+                               "status":"held","reason":"source_not_in_scope"})
+    counts=collections.Counter(x["status"] for x in ledger)
+    held=collections.Counter(x["reason"] for x in ledger if x["status"]=="held")
+    if any(x["status"] in (None,"accepted") for x in ledger) or len(ledger)!=meta["edges_in"] or \
+       len(ledger)!=counts["published"]+counts["dropped_by_limit_20"]+counts["already_present_legacy"]+counts["held"]:
+        raise ValueError("oem ledger invariant failed: every envelope edge must end in exactly one disposition")
+    metrics["edges"]["A_oem_relation"]=counts["published"]
+    metrics["oem"]={"enabled":True,"envelope_synthetic":meta["synthetic"],"relations_digest":meta["relations_digest"],
+                    "inputs_digest":meta["inputs_digest"],"gate_version":meta["gate_version"],"as_of":meta["as_of"],
+                    "one_ended_adapter":meta["one_ended_adapter"],"edges_in":meta["edges_in"],"published":counts["published"],
+                    "dropped_by_limit_20":counts["dropped_by_limit_20"],"already_present_legacy":counts["already_present_legacy"],
+                    "held":counts["held"],"held_by_reason":dict(sorted(held.items())),
+                    "ledger":sorted(ledger,key=lambda x:(x["source_nid"],x["target_nid"]))}
+
