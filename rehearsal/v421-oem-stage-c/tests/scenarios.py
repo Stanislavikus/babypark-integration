@@ -49,17 +49,22 @@ def standard():
     return inp, cat
 
 
-def edge(inp, source, target, *, lang="ru", end="model", relation_type="accessory_for_model", rel="rel:0000000000000001",
-         model="zeta:alpha-1", synthetic=True, **over):
-    """One envelope edge for the pair (source ref, target ref) in ``lang``; returns ``(source_nid, edge)``."""
-    cat = inp.catalog
-    src, tgt = cat.nid(source, lang), cat.nid(target, lang)
-    out = {"target_nid": tgt, "target_sku": inp.rows[tgt]["sku"], "lang": lang, "relation_ids": [rel], "relation_type": relation_type,
+def edge_for(rows, target_nid, *, lang, end="model", relation_type="accessory_for_model", rel="rel:0000000000000001", model="zeta:alpha-1",
+             synthetic=True, **over):
+    """One envelope edge to a target given by nid (also for generated catalogs that have no reference handles)."""
+    out = {"target_nid": target_nid, "target_sku": rows[target_nid]["sku"], "lang": lang, "relation_ids": [rel], "relation_type": relation_type,
            "end": end, "fit_state": "LISTED", "conditions": [], "claim_ids": ["claim:test-1"], "doc_ids": ["doc:test-1"],
            "doc_hashes": [A64], "binding_ids": ["bind:test-1"], "source_model_id": model, "relation_digest": B64,
            "registry_version": C64, "synthetic": synthetic}
     out.update(over)
-    return src, out
+    return out
+
+
+def edge(inp, source, target, *, lang="ru", **kw):
+    """One envelope edge for the pair (source ref, target ref) in ``lang``; returns ``(source_nid, edge)``."""
+    cat = inp.catalog
+    src, tgt = cat.nid(source, lang), cat.nid(target, lang)
+    return src, edge_for(inp.rows, tgt, lang=lang, **kw)
 
 
 def envelope(pairs, *, synthetic=True, one_ended_adapter="abstain", label="synthetic-test", **over):

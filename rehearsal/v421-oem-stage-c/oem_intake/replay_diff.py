@@ -244,6 +244,7 @@ def classify(off, on, *, envelope=None, gate_report=None, rows=None) -> dict:
     edges.sort(key=lambda r: (r["source_nid"], r["target_nid"], r["change"]))
     violations.sort(key=lambda v: (v["code"], v["source_nid"] or 0, v["target_nid"] or 0))
     return {"schema": SCHEMA, "result": "PASS" if not violations else "FAIL",
+            "synthetic": None if envelope is None else bool(envelope.get("synthetic")),
             "sources": {"total": len(s_off), "changed": changed, "unchanged": unchanged},
             "counts_by_change": dict(sorted(counts_by_change.items())), "violations": violations,
             "invariants_checked": ["similar identical for every source", "accessory lists unique and at most 20", "no legacy A edge removed or moved",

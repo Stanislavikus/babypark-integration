@@ -6,11 +6,17 @@ gate is in ``test_wiring.py``. Skipped loudly when the real engine is not import
 from __future__ import annotations
 
 import copy
+import hashlib
+import json
+import os
+import subprocess
+import sys
 import unittest
+from pathlib import Path
 
 from tests import catalog_fixture as cf
 from tests import scenarios as sc
-from tests.helpers import baseline, patched, require_engine
+from tests.helpers import ROOT, SEAM_FILE, baseline, patched, require_engine
 
 ON = {"oem_enabled": True, "oem_allow_synthetic": True}
 
@@ -304,6 +310,29 @@ class TestOnWiring(unittest.TestCase):
         mm["edges"] = {k: v for k, v in mm["edges"].items() if k != "A_oem_relation"}
         self.assertEqual(mm, bm)
         self.assertEqual(metrics["oem"]["edges_in"], 0)
+
+
+@require_engine
+class TestSeamFilesAreConsistent(unittest.TestCase):
+    """The committed patch, helper block, patched file and pins are exactly what the build tool regenerates from the accepted engine file."""
+
+    def test_the_build_tool_check_passes(self):
+        proc = subprocess.run([sys.executable, "-I", "-B", str(ROOT / "tools" / "build_engine_seam.py"), "--check"], capture_output=True, text=True,
+                              env=dict(os.environ), cwd=str(ROOT), timeout=300)
+        self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+        self.assertIn("ENGINE SEAM VERIFIED", proc.stdout + proc.stderr)
+
+    def test_the_pins_equal_the_files_and_the_accepted_engine_file(self):
+        pins = json.loads((ROOT / "engine_seam" / "ENGINE_SEAM_PINS.json").read_text(encoding="utf-8"))
+        sha = lambda path: hashlib.sha256(Path(path).read_bytes()).hexdigest()  # noqa: E731
+        engine_file = Path(os.environ["BP_V421_ENGINE_ROOT"]) / pins["base_file"]
+        self.assertEqual(sha(engine_file), pins["base_sha256"])
+        self.assertEqual(sha(SEAM_FILE), pins["patched_sha256"])
+        self.assertEqual(sha(ROOT / pins["patch_file"]), pins["patch_sha256"])
+        self.assertEqual(sha(ROOT / pins["helpers_file"]), pins["helpers_sha256"])
+        base_lines = engine_file.read_text(encoding="utf-8").count("\n")
+        self.assertEqual(base_lines, pins["base_lines"])
+        self.assertEqual(SEAM_FILE.read_text(encoding="utf-8").count("\n") - base_lines, pins["patch_added_lines"] - pins["patch_removed_lines"])
 
 
 if __name__ == "__main__":
