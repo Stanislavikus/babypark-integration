@@ -221,12 +221,26 @@ class TestBuildAcceptedEdgesCli(unittest.TestCase):
                         "--baseline-report", bad)                                                  # without the files it would have to cover
         self.assertEqual(proc.returncode, 3, proc.stderr)
 
-    def test_a_wrong_engine_root_is_refused(self):
+    def test_a_missing_engine_root_is_refused_cleanly(self):
         empty = self.base / "empty_engine"
         empty.mkdir()
-        proc = self.cli(self.rel_syn, self.base / "engine_refused", "--allow-synthetic", "--allow-list", self.base / "ctl" / "allow_list.json",
+        proc = self.cli(self.rel_syn, self.base / "engine_missing", "--allow-synthetic", "--allow-list", self.base / "ctl" / "allow_list.json",
                         env_extra={"BP_V421_ENGINE_ROOT": str(empty)})
-        self.assertNotEqual(proc.returncode, 0)
+        self.assertEqual(proc.returncode, 4, proc.stderr)                              # the specific refusal (exit 4), not just any crash
+        self.assertIn("the engine root is not the accepted V4.2.1 engine", proc.stderr)
+        self.assertNotIn("Traceback", proc.stderr)
+        self.assertFalse((self.base / "engine_missing").exists())
+
+    def test_an_engine_root_with_other_bytes_is_refused_before_anything_is_read_or_written(self):
+        fake = self.base / "fake_engine"
+        (fake / "work" / "accessories" / "src").mkdir(parents=True)
+        (fake / "work" / "accessories" / "src" / "accessory_v4.py").write_text("# not the accepted engine\n", encoding="utf-8")
+        proc = self.cli(self.rel_syn, self.base / "engine_refused", "--allow-synthetic", "--allow-list", self.base / "ctl" / "allow_list.json",
+                        env_extra={"BP_V421_ENGINE_ROOT": str(fake)})
+        self.assertEqual(proc.returncode, 4, proc.stderr)
+        self.assertIn("the engine root is not the accepted V4.2.1 engine", proc.stderr)
+        self.assertIn("sha256 differs from the accepted pin", proc.stderr)             # the changed file is named ...
+        self.assertIn("missing in the engine root", proc.stderr)                       # ... and so are the missing ones
         self.assertFalse((self.base / "engine_refused").exists())
 
     def test_the_inputs_are_never_modified(self):

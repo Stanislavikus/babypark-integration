@@ -108,7 +108,10 @@ def build(args) -> tuple:
     except gate.GateRefused as exc:
         refuse(EXIT_POLICY, f"{exc}; nothing was written")
     baseline = B.load_acceptable_baseline(args)
-    engine = engine_env.prepare_sys_path()
+    try:
+        engine = engine_env.prepare_sys_path()
+    except FileNotFoundError as exc:                                      # no engine at all: a refusal like any other, not a traceback
+        refuse(B.EXIT_ENGINE, f"the engine root is not the accepted V4.2.1 engine - {exc}; no outputs were written")
     root_problems = engine_env.engine_root_problems(engine)
     if root_problems:
         refuse(B.EXIT_ENGINE, "the engine root is not the accepted V4.2.1 engine - " + "; ".join(root_problems) + "; no outputs were written")

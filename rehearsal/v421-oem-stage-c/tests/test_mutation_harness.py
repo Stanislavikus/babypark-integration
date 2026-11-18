@@ -76,11 +76,14 @@ class TestMutantsAreWellFormed(unittest.TestCase):
             self.assertTrue(why.strip(), mid)
             self.assertTrue((ROOT / rel).is_file(), mid)
 
+    SEAM_PREFIXES = ("M-", "V-", "H-")       # M: ledger/merge wiring, V: engine-side envelope validator, H: the existing per-edge engine gates
+
     def test_seam_mutants_target_the_patched_seam_file_only(self):
-        seam = [m for m in mc.ALL if m[0].startswith("M-")]
+        seam = [m for m in mc.ALL if m[0].startswith(self.SEAM_PREFIXES)]
         self.assertTrue(seam)
+        self.assertEqual({m[0][:2] for m in seam}, set(self.SEAM_PREFIXES))              # every family is present
         self.assertEqual({m[1] for m in seam}, {mc.SEAM})
-        self.assertEqual({m[1] for m in mc.ALL if not m[0].startswith("M-")} & {mc.SEAM}, set())
+        self.assertEqual({m[1] for m in mc.ALL if not m[0].startswith(self.SEAM_PREFIXES)} & {mc.SEAM}, set())
 
 
 class TestRunMutantEndToEnd(unittest.TestCase):
@@ -133,6 +136,18 @@ class TestRunMutantEndToEnd(unittest.TestCase):
         finally:
             tmp.cleanup()
         self.assertEqual((out["verdict"], out["tests"]), ("PASSED", 4), out)
+
+    def test_the_copy_keeps_the_committed_real_view_and_leaves_the_rest_of_out_behind(self):
+        for name, text in (("real_relations/relation_decisions.json", "{}"), ("MUTATION_CHECK.json", "{}"), ("scratch/x.txt", "x")):
+            path = self.mini / "out" / name
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(text, encoding="utf-8")
+        tmp, work = mc._copy_project()
+        try:
+            self.assertEqual(sorted(p.name for p in (work / "out").iterdir()), ["real_relations"])
+            self.assertTrue((work / "out" / "real_relations" / "relation_decisions.json").is_file())
+        finally:
+            tmp.cleanup()
 
     def test_a_behavioural_change_is_killed_with_and_without_failfast(self):
         for failfast in (False, True):

@@ -232,6 +232,36 @@ class TestOnWiring(unittest.TestCase):
         self.assertEqual(metrics["oem"]["held_by_reason"], {"product_kit_excluded": 1, "target_not_purchasable": 2,
                                                             "target_not_in_source_head": 1, "target_variant_unverified": 2})
 
+    def test_the_variant_gate_applies_to_a_source_as_well_as_to_a_target(self):
+        inp, cat = sc.standard()
+        safe = next(d for d, p in cat.profiles.items() if not p["fitment_critical"])
+        critical = next(d for d, p in cat.profiles.items() if p["fitment_critical"])
+        for model, sku, digest in (("Frame U", "C-FU", "0" * 64), ("Frame V", "C-FV", critical), ("Frame W", "C-FW", safe)):
+            cat.stroller(model, sku)
+            cat.set(sku, option_digest=digest)                    # unknown profile / fitment-critical profile / known, available, non-critical profile
+        inp = cat.finish()
+        pairs = [sc.edge(inp, sku, "RC-9") for sku in ("C-FU", "C-FV", "C-FW")]
+        _, evidence, metrics = inp.patched(oem_relations=sc.envelope(pairs), **ON)
+        got = {e["source_nid"]: (e["status"], e["reason"]) for e in metrics["oem"]["ledger"]}
+        self.assertEqual(got[cat.nid("C-FU")], ("held", "source_variant_unverified"))
+        self.assertEqual(got[cat.nid("C-FV")], ("held", "source_variant_unverified"))
+        self.assertEqual(got[cat.nid("C-FW")][0], "published")
+        rc9 = str(cat.nid("RC-9"))
+        self.assertNotIn(rc9, evidence[str(cat.nid("C-FU"))]["targets"])
+        self.assertNotIn(rc9, evidence[str(cat.nid("C-FV"))]["targets"])
+        self.assertIn(rc9, evidence[str(cat.nid("C-FW"))]["targets"])
+        self.assertEqual(metrics["oem"]["held_by_reason"], {"source_variant_unverified": 2})
+
+    def test_a_target_in_the_translation_set_of_the_source_is_the_same_product_and_is_held(self):
+        inp, cat = sc.standard()
+        src, edge = sc.edge(inp, "C-FX", "RC-9")
+        cat.rows[edge["target_nid"]]["tnid"] = cat.rows[src]["tnid"]       # two rows of one language in one translation set: the legacy rules call it one product
+        inp = cat.finish()
+        _, evidence, metrics = inp.patched(oem_relations=sc.envelope([(src, edge)]), **ON)
+        self.assertEqual([(e["status"], e["reason"]) for e in metrics["oem"]["ledger"]], [("held", "same_product")])
+        self.assertNotIn(str(edge["target_nid"]), evidence[str(src)]["targets"])
+        self.assertEqual(metrics["edges"]["A_oem_relation"], 0)
+
     def test_locale_sku_and_catalog_staleness_are_checked_against_the_live_rows(self):
         rc9 = self.cat.nid("RC-9", "ru")
         src_ru = self.cat.nid("C-FX", "ru")
@@ -310,6 +340,46 @@ class TestOnWiring(unittest.TestCase):
         mm["edges"] = {k: v for k, v in mm["edges"].items() if k != "A_oem_relation"}
         self.assertEqual(mm, bm)
         self.assertEqual(metrics["oem"]["edges_in"], 0)
+
+
+@require_engine
+class TestLedgerInvariantGuard(unittest.TestCase):
+    """``_oem_close`` refuses a ledger in which an envelope edge did not end in exactly one known disposition (a bug guard: it must never be silent)."""
+
+    META = {"synthetic": False, "relations_digest": "0" * 64, "inputs_digest": "1" * 64, "gate_version": "test", "as_of": "2026-11-17",
+            "one_ended_adapter": "abstain", "edges_in": 2}
+
+    @staticmethod
+    def entry(target, status, reason=None):
+        return {"source_nid": 1, "target_nid": target, "relation_ids": ["rel:0000000000000001"], "status": status, "reason": reason}
+
+    def close(self, ledger, **meta):
+        metrics = {"edges": {}}
+        patched()._oem_close(metrics, {}, {"1": {}}, ledger, {**self.META, **meta})
+        return metrics
+
+    def test_a_ledger_in_which_every_edge_has_one_known_status_is_accepted_and_counted(self):
+        metrics = self.close([self.entry(2, "published"), self.entry(3, "held", "target_not_in_source_head")])
+        oem = metrics["oem"]
+        self.assertEqual((metrics["edges"]["A_oem_relation"], oem["published"], oem["held"], oem["edges_in"]), (1, 1, 1, 2))
+        self.assertEqual(oem["held_by_reason"], {"target_not_in_source_head": 1})
+
+    def test_an_undisposed_unknown_or_miscounted_ledger_is_refused(self):
+        cases = {"status None": [self.entry(2, "published"), self.entry(3, None)],
+                 "status accepted (never final)": [self.entry(2, "published"), self.entry(3, "accepted")],
+                 "an unknown status": [self.entry(2, "published"), self.entry(3, "bogus")],
+                 "an envelope edge without any entry": [self.entry(2, "published")],
+                 "an entry more than the envelope has": [self.entry(2, "published"), self.entry(3, "held", "x"), self.entry(4, "held", "x")]}
+        for name, ledger in cases.items():
+            with self.subTest(name), self.assertRaises(ValueError) as ctx:
+                self.close(ledger)
+            self.assertIn("ledger invariant", str(ctx.exception))
+
+    def test_an_edge_whose_source_is_outside_the_scope_gets_its_own_held_entry(self):
+        edges = {7: [{"target_nid": 9, "relation_ids": ["rel:0000000000000002"]}]}
+        metrics, ledger = {"edges": {}}, [self.entry(2, "published")]
+        patched()._oem_close(metrics, edges, {"1": {}}, ledger, {**self.META, "edges_in": 2})
+        self.assertEqual(metrics["oem"]["held_by_reason"], {"source_not_in_scope": 1})
 
 
 @require_engine

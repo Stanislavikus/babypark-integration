@@ -5,7 +5,10 @@ the OFF-identity proof, the ON classification and every refusal on data of the s
 """
 from __future__ import annotations
 
+import contextlib
 import hashlib
+import importlib.util
+import io
 import json
 import os
 import shutil
@@ -14,6 +17,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from tests import scenarios as sc
 from tests.helpers import ROOT, SEAM_FILE, engine_ready, require_engine
@@ -100,6 +104,21 @@ write_json_new(INPUT / "fresh_v36_scope_sources.json", scope_original)
 print(json.dumps({"event": "V421_T2_COMPLETE", "sources": len(sources), "t2_edges": metrics["edges"]}, sort_keys=True), flush=True)
 '''
 
+MINI_RUNNER = '''import json
+from pathlib import Path
+
+import accessory_v4 as v4
+import v32_pipeline as v32
+
+FIXTURE = Path("__FIXTURE__")
+rows = {int(k): v for k, v in json.loads((FIXTURE / "rows.json").read_text(encoding="utf-8")).items()}
+scope = json.loads((FIXTURE / "scope.json").read_text(encoding="utf-8"))
+policy = v4.taxonomy_policy(json.loads((FIXTURE / "taxonomy.json").read_text(encoding="utf-8")))
+profiles = v4.validate_variant_profiles(json.loads((FIXTURE / "profiles.json").read_text(encoding="utf-8")))
+sources, evidence, metrics = v4.build_catalog(rows, scope, v32.build_indexes(rows), policy, [], profiles)
+print(json.dumps({"A_oem_relation": metrics["edges"].get("A_oem_relation"), "has_oem_block": "oem" in metrics}, sort_keys=True))
+'''
+
 
 def run(*args, env_extra=None, cwd=None):
     env = dict(os.environ)
@@ -131,6 +150,8 @@ class TestReplayStageC(unittest.TestCase):
         cls.runner = base / "run_fresh_t2.py"
         cls.runner.write_text(RUNNER.replace("__BASE__", str(base)).replace("__ENGINE__", str(engine_root / "work" / "accessories"))
                               .replace("__FIXTURE__", str(fixture)), encoding="utf-8")
+        cls.mini_runner = base / "mini_runner.py"
+        cls.mini_runner.write_text(MINI_RUNNER.replace("__FIXTURE__", str(fixture)), encoding="utf-8")
         cls.orig = base / "car_seat_correction_20261117"
         live = cls.orig / "input" / "v36_live_transfer"
         live.mkdir(parents=True)
@@ -271,6 +292,166 @@ class TestReplayStageC(unittest.TestCase):
         proc = run(launcher, "--runner", self.runner, "--engine-src", self.engine_src, "--seam-file", SEAM_FILE, "--pins", pins, "--mode", "off",
                    "--envelope", self.empty_path)
         self.assertEqual(proc.returncode, 2)
+
+
+    # ------------------------------------------------------------------------------------------------------------------------------
+    # What the replay must NOT let through. Each runner below imitates a run that goes wrong in exactly one way; ``ON_RUN`` is True only in the ON
+    # campaign (the launcher's receipt says which mode it started), so every one of these is something only the ON run does.
+    # ------------------------------------------------------------------------------------------------------------------------------
+    ON_RUN = 'ON_RUN = json.loads(Path("stage_c_launcher_receipt.json").read_text(encoding="utf-8"))["mode"] == "on"\n'
+
+    def tampered_runner(self, name, anchor, code):
+        """The imitation runner with ``code`` inserted before the single line ``anchor`` (``ON_RUN`` is defined there)."""
+        text = self.runner.read_text(encoding="utf-8")
+        self.assertEqual(text.count(anchor), 1, anchor)
+        path = self.base / f"{name}_runner.py"
+        path.write_text(text.replace(anchor, self.ON_RUN + code + anchor, 1), encoding="utf-8")
+        return path
+
+    def failed_replay(self, name, script, envelope, *extra, original=None):
+        """A replay that completes but must FAIL (exit 1): returns ``(report, diff or None)``."""
+        off, on, out = self.base / f"{name}_off", self.base / f"{name}_on", self.base / f"{name}_out"
+        proc = run(CLI, "--script", script, "--original-campaign", original or self.orig, "--new-campaign-off", off, "--new-campaign-on", on,
+                   "--envelope", envelope, "--engine-src", self.engine_src, "--no-verify", "--out", out, *extra)
+        self.assertEqual(proc.returncode, 1, proc.stdout[-2000:] + proc.stderr[-2000:])
+        diff_path = out / "on_off_diff.json"
+        return (json.loads((out / "replay_report.json").read_text(encoding="utf-8")),
+                json.loads(diff_path.read_text(encoding="utf-8")) if diff_path.is_file() else None)
+
+    @staticmethod
+    def load_cli():
+        """A private in-process copy of the replay module (so that a module constant can be replaced without touching anything else)."""
+        spec = importlib.util.spec_from_file_location("replay_stage_c_in_process", CLI)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return module
+
+    def cli_main(self, cli, name, envelope, *extra, script=None):
+        argv = ["--script", str(script or self.runner), "--original-campaign", str(self.orig), "--new-campaign-off", str(self.base / f"{name}_off"),
+                "--new-campaign-on", str(self.base / f"{name}_on"), "--envelope", str(envelope), "--engine-src", str(self.engine_src),
+                "--out", str(self.base / f"{name}_out"), *extra]
+        out, err = io.StringIO(), io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            code = cli.main(argv)
+        return code, err.getvalue()
+
+    def test_a_non_empty_output_directory_is_refused_and_left_untouched(self):
+        out = self.base / "busy_out"
+        out.mkdir()
+        (out / "keep.txt").write_text("keep", encoding="utf-8")
+        off, on = self.base / "busy_off", self.base / "busy_on"
+        proc = run(CLI, "--script", self.runner, "--original-campaign", self.orig, "--new-campaign-off", off, "--new-campaign-on", on,
+                   "--envelope", self.empty_path, "--engine-src", self.engine_src, "--no-verify", "--out", out)
+        self.assertEqual(proc.returncode, 2, proc.stderr)
+        self.assertIn("output directory must not exist or must be empty", proc.stderr)
+        self.assertEqual([p.name for p in out.iterdir()], ["keep.txt"])
+        self.assertFalse(off.exists() or on.exists())
+
+    def test_a_seam_copy_that_is_not_the_pinned_one_is_refused_before_anything_runs(self):
+        cli = self.load_cli()
+        tampered = self.base / "tampered_seam.py"
+        tampered.write_bytes(SEAM_FILE.read_bytes() + b"\n# tampered\n")
+        cli.SEAM_FILE = tampered
+        code, err = self.cli_main(cli, "seam", self.empty_path, "--no-verify")
+        self.assertEqual(code, 2, err)
+        self.assertIn("not the audited patched copy", err)
+        for name in ("seam_off", "seam_on", "seam_out"):
+            self.assertFalse((self.base / name).exists(), name)               # refused by the replay itself: no campaign was even started
+
+    def test_a_replay_that_changes_the_original_campaign_fails_even_if_everything_else_passes(self):
+        orig = self.base / "touched_orig"
+        shutil.copytree(self.orig, orig)
+        script = self.base / "touching_runner.py"
+        script.write_text(self.runner.read_text(encoding="utf-8")
+                          + '\n(BASE / "touched_orig" / "input" / "written_during_the_run.txt").write_text("x", encoding="utf-8")\n', encoding="utf-8")
+        report, _ = self.failed_replay("touched", script, self.empty_path, original=orig)
+        self.assertEqual(report["result"], "FAIL")
+        self.assertFalse(report["original_tree_unchanged"])
+        self.assertEqual((report["off"]["result"], report["on"]["result"], report["on_vs_off"]["result"]), ("PASS", "PASS", "PASS"))   # that rule alone
+
+    def test_an_on_run_that_changes_a_legacy_field_fails_the_replay_although_both_runs_complete(self):
+        script = self.tampered_runner("similar", "t2_counts = Counter()\n",
+                                      'if ON_RUN:                                                # something only the ON run does, which the seam must never do\n'
+                                      '    sources[sorted(sources)[0]]["similar"] = [123456789]\n')
+        report, diff = self.failed_replay("similar", script, self.env_path, "--allow-synthetic")
+        self.assertEqual((report["off"]["result"], report["on"]["result"], report["original_tree_unchanged"]), ("PASS", "PASS", True))
+        self.assertEqual((report["result"], report["on_vs_off"]["result"]), ("FAIL", "FAIL"))
+        self.assertIn("similar_changed", {v["code"] for v in diff["violations"]})
+
+    def test_an_empty_envelope_whose_on_run_changes_the_metrics_fails_the_identity_proof(self):
+        script = self.tampered_runner("metrics", 'write_json_new(OUT / "t2_v421_manifest.json", {',
+                                      'if ON_RUN:\n    metrics["changed_in_the_on_run_only"] = 1\n')
+        report, _ = self.failed_replay("metrics", script, self.empty_path)
+        identity = report["empty_envelope_identity"]
+        self.assertFalse(identity["ok"])
+        self.assertFalse(identity["metrics_equal_without_oem_additions"])
+        self.assertEqual({v["status"] for v in identity["files"].values()}, {"IDENTICAL"})
+        self.assertEqual((report["off"]["result"], report["on"]["result"], report["on_vs_off"]["result"]), ("PASS", "PASS", "PASS"))   # only the identity proof failed
+
+    def test_an_empty_envelope_whose_on_run_changes_the_manifest_fails_the_identity_proof(self):
+        script = self.tampered_runner("manifest", 'write_json_new(OUT / "t2_v421_manifest.json", {', "")
+        text = script.read_text(encoding="utf-8")
+        marker = '"generation_id": "synthetic-fake-runner"'
+        self.assertEqual(text.count(marker), 1)
+        script.write_text(text.replace(marker, marker + ' + ("-on" if ON_RUN else "")', 1), encoding="utf-8")
+        report, _ = self.failed_replay("manifest", script, self.empty_path)
+        identity = report["empty_envelope_identity"]
+        self.assertFalse(identity["ok"])
+        self.assertEqual({k: v["status"] for k, v in identity["files"].items()},
+                         {"output/t2_v421_manifest.json": "DIFFERENT", "output/t2_v421_evidence.json": "IDENTICAL"})
+        self.assertTrue(identity["metrics_equal_without_oem_additions"])
+        self.assertEqual((report["off"]["result"], report["on"]["result"], report["on_vs_off"]["result"]), ("PASS", "PASS", "PASS"))
+
+    def test_an_on_run_whose_input_side_artifacts_differ_from_the_accepted_inputs_fails(self):
+        script = self.tampered_runner("scope", 'write_json_new(INPUT / "fresh_v36_scope_sources.json", scope_original)\n',
+                                      'if ON_RUN:\n    scope_original = {**scope_original, "999999999": {"language": "ru", "similar": [], "accessories": []}}\n')
+        report, _ = self.failed_replay("scope", script, self.empty_path)
+        self.assertEqual((report["off"]["result"], report["on"]["result"]), ("PASS", "FAIL"))
+        statuses = {a["file"]: a["status"] for a in report["on"]["artifacts"]}
+        self.assertEqual(statuses["input/fresh_v36_scope_sources.json"], "DIFFERENT")
+
+    def test_an_off_run_that_does_not_reproduce_the_pinned_baseline_fails_the_replay(self):
+        cli = self.load_cli()
+        with mock.patch.object(cli.verify_baseline, "verify", return_value={"result": "PASS", "checks": []}):
+            code, err = self.cli_main(cli, "pinned_ok", self.empty_path)
+        self.assertEqual(code, 0, err)                                                     # the control: with a passing verification the same run passes
+        with mock.patch.object(cli.verify_baseline, "verify", return_value={"result": "FAIL", "checks": []}):
+            code, err = self.cli_main(cli, "pinned_bad", self.empty_path)
+        self.assertEqual(code, 1, err)
+        report = json.loads((self.base / "pinned_bad_out" / "replay_report.json").read_text(encoding="utf-8"))
+        self.assertEqual((report["result"], report["off"]["result"], report["off"]["baseline_verification"]["result"]), ("FAIL", "FAIL", "FAIL"))
+        self.assertTrue(all(a["status"] in ("IDENTICAL", "SEMANTICALLY_IDENTICAL") for a in report["off"]["artifacts"]))   # the verification alone failed it
+
+    # ------------------------------------------------------------------------------------------------------------------------------
+    # The launcher on its own: OFF adds nothing, ON needs the envelope, a synthetic envelope needs the explicit opt-in, the engine must be the accepted file.
+    # ------------------------------------------------------------------------------------------------------------------------------
+    def launcher(self, *extra, mode, engine_src=None):
+        return run(ROOT / "tools" / "stage_c_launcher.py", "--runner", self.mini_runner, "--engine-src", engine_src or self.engine_src,
+                   "--seam-file", SEAM_FILE, "--pins", ROOT / "engine_seam" / "ENGINE_SEAM_PINS.json", "--mode", mode, *extra)
+
+    def test_the_launcher_adds_nothing_when_off_and_enables_the_seam_only_when_on(self):
+        off = self.launcher(mode="off")
+        self.assertEqual(off.returncode, 0, off.stderr[-1500:])
+        self.assertEqual(json.loads(off.stdout.strip().splitlines()[-1]), {"A_oem_relation": None, "has_oem_block": False})
+        on = self.launcher("--envelope", self.env_path, "--allow-synthetic", mode="on")
+        self.assertEqual(on.returncode, 0, on.stderr[-1500:])
+        self.assertEqual(json.loads(on.stdout.strip().splitlines()[-1]), {"A_oem_relation": 4, "has_oem_block": True})
+
+    def test_a_synthetic_envelope_is_not_given_the_engine_opt_in_by_the_launcher(self):
+        proc = self.launcher("--envelope", self.env_path, mode="on")                       # synthetic envelope, but no --allow-synthetic
+        self.assertNotEqual(proc.returncode, 0)
+        self.assertIn("synthetic envelope is refused", proc.stderr)
+        self.assertEqual(proc.stdout, "")                                                  # the build never finished
+
+    def test_the_launcher_refuses_an_engine_that_is_not_the_accepted_file(self):
+        copy = self.base / "launcher_engine_src"
+        shutil.copytree(self.engine_src, copy, ignore=shutil.ignore_patterns("__pycache__"))
+        with open(copy / "accessory_v4.py", "a", encoding="utf-8") as handle:
+            handle.write("\n# tampered\n")
+        proc = self.launcher(mode="off", engine_src=copy)
+        self.assertEqual(proc.returncode, 2, proc.stderr)
+        self.assertIn("is not the accepted V4.2.1 file", proc.stderr)
+        self.assertEqual(proc.stdout, "")                                                  # the runner never started
 
 
 if __name__ == "__main__":

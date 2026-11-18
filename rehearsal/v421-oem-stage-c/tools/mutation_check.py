@@ -11,7 +11,7 @@ binds document digests to file bytes, so it fails for ANY edit and says nothing 
 A mutant is KILLED when at least one BEHAVIOURAL test fails, SURVIVED when the suite still passes (a test gap), and INVALID when its snippet no longer
 matches exactly once or the run was broken (usage error, import failure, timeout) - a broken run is never counted as a kill. The unmutated copy (the
 control) is run first and must pass. Seam mutants rewrite the pinned SHA-256 in the copy so that the launcher accepts the mutated engine copy; the two
-seam-consistency tests (they fail for any change of that file) never count as a kill, and seam mutants always run the whole suite.
+seam-consistency tests (they fail for any change of that file) never count as a kill: when they are the only failures seen, the mutant survives.
 
 Exit code 0 only when the control passes and every mutant is killed; 2 when the control fails or the engine is missing. The report is deterministic
 (derandomized property tests, no timings, no paths).
@@ -39,6 +39,7 @@ EXCLUDED_MODULES = ("tests/test_mutation_harness.py", "tests/test_governance_doc
 NON_BEHAVIOURAL_PREFIXES = ("test_seam.TestSeamFilesAreConsistent.",)                       # fail for ANY change of the seam file
 
 G, E, S, R = "oem_intake/gate.py", "oem_intake/envelope.py", "oem_intake/stage1.py", "oem_intake/replay_diff.py"
+RP, LA, VS, BA = "tools/replay_stage_c.py", "tools/stage_c_launcher.py", "tools/verify_scope.py", "tools/build_accepted_edges.py"
 
 # (id, file, old snippet (must occur exactly once), new snippet, rule being broken)
 MUTANTS = [
@@ -118,6 +119,123 @@ MUTANTS = [
     ("R-06", R, '        if b[:len(legacy_off)] != legacy_off and not [t for t in legacy_off if t not in b]:', '        if False:', "a reordered legacy A prefix is not reported"),
     ("R-07", R, '    if set(s_off) != set(s_on):', '    if False:', "a changed source set is not reported"),
     ("R-08", R, '        if len(pairs) != len(ledger):', '        if False:', "a duplicate ledger entry is not reported"),
+    # ---------------------------------------------------------------------------------------------------------------- the replay tool (the S6 acceptance criterion)
+    ("RP-01", RP, '            if pa == pb or pa in pb.parents or pb in pa.parents:', '            if False:', "the original, OFF, ON and output directories may overlap"),
+    ("RP-02", RP, '    if out.exists() and any(out.iterdir()):', '    if False:', "the replay writes into a non-empty output directory"),
+    ("RP-03", RP, '    if not (engine_src / "accessory_v4.py").is_file() or RC.sha256(engine_src / "accessory_v4.py") != pins["base_sha256"]:', '    if False:',
+     "the replay runs on an engine that is not the accepted V4.2.1 file"),
+    ("RP-04", RP, '    if RC.sha256(SEAM_FILE) != pins["patched_sha256"]:', '    if False:', "the replay runs on a seam copy that is not the audited one"),
+    ("RP-05", RP, '    ok = (off_ok and on_input_ok and before == after and diff is not None and diff["result"] == "PASS"',
+     '    ok = (off_ok and on_input_ok and diff is not None and diff["result"] == "PASS"', "a replay that changes the original campaign still passes"),
+    ("RP-06", RP, '    ok = (off_ok and on_input_ok and before == after and diff is not None and diff["result"] == "PASS"',
+     '    ok = (off_ok and on_input_ok and before == after and diff is not None', "an ON/OFF diff with violations still passes the replay"),
+    ("RP-07", RP, '          and (identity is None or identity["ok"]))', '          and True)', "an empty envelope that changes the output still passes the replay"),
+    ("RP-08", RP, 'and (verification is None or verification["result"] == "PASS"))', 'and True)',
+     "an OFF run that does not reproduce the pinned accepted baseline still passes"),
+    ("RP-09", RP, 'all(a["status"] in RC.ACCEPTED_STATUSES for a in artifacts["off"])', 'True', "OFF artifacts that differ from the accepted generation still pass"),
+    ("RP-10", RP, '    return 0 if report["result"] == "PASS" else 1', '    return 0', "the exit code of a failed replay is 0"),
+    ("RP-11", RP, '    metrics_same = canon.canonical_json(a) == canon.canonical_json(b)', '    metrics_same = True', "an empty-envelope ON run may change the metrics"),
+    ("RP-12", RP, '            "ok": all(r["status"] == "IDENTICAL" for r in files.values()) and metrics_same}', '            "ok": metrics_same}',
+     "an empty-envelope ON run may change the manifest or the evidence"),
+    ("RP-13", RP, '        if info["edge_count"] == 0:', '        if False:', "the empty-envelope identity proof is never computed"),
+    ("RP-14", RP, 'all(a["status"] in RC.ACCEPTED_STATUSES for a in artifacts["on"] if a["file"] in INPUT_SIDE))', 'True)',
+     "ON input-side artifacts that differ from the accepted inputs still pass"),
+    ("RP-15", RP, '    after = RC.tree_snapshot(original)', '    after = before', "a change of the original campaign during the run is not detected"),
+    # ---------------------------------------------------------------------------------------------------------------- the launcher (OFF stays OFF, ON is explicit)
+    ("LA-01", LA, '    if not base.is_file() or sha256(base) != pins["base_sha256"]:', '    if False:', "the launcher accepts an engine that is not the accepted file"),
+    ("LA-02", LA, '    if sha256(args.seam_file) != pins["patched_sha256"]:', '    if False:', "the launcher accepts a seam copy that is not the audited one"),
+    ("LA-03", LA, '    if args.mode == "on" and not args.envelope:', '    if False:', "an ON run without an envelope is started"),
+    ("LA-04", LA, '    if args.mode == "off" and (args.envelope or args.allow_synthetic):', '    if False:', "an OFF run with an envelope or a synthetic opt-in is started"),
+    ("LA-05", LA, 'oem_relations=envelope, oem_enabled=True, oem_allow_synthetic=args.allow_synthetic', 'oem_relations=envelope, oem_enabled=False, oem_allow_synthetic=args.allow_synthetic',
+     "an ON run silently stays OFF"),
+    ("LA-06", LA, 'oem_allow_synthetic=args.allow_synthetic, **kw)', 'oem_allow_synthetic=True, **kw)', "the synthetic opt-in is always granted to the engine"),
+    ("LA-07", LA, '    if args.mode == "on":\n        original = module.build_catalog', '    if True:\n        original = module.build_catalog', "an OFF run enables the feature"),
+    # ---------------------------------------------------------------------------------------------------------------- the scope guard
+    ("VS-01", VS, '".." in path.split("/")', 'False', "a path with a .. component is not flagged"),
+    ("VS-02", VS, '    if not path.startswith(ALLOWED_PREFIXES):', '    if False:', "a change outside the two allowed directories is not flagged"),
+    ("VS-03", VS, '    if not ancestor:', '    if False:', "a head that is not a descendant of the base is not flagged"),
+    ("VS-04", VS, '"result": "PASS" if not violations else "FAIL"}', '"result": "PASS"}', "a scope violation does not fail the check"),
+    # ---------------------------------------------------------------------------------------------------------------- the gate CLI (relations are re-derived, never trusted)
+    ("BA-01", BA, '    if doc.get("relations") != derived:', '    if False:', "relations that differ from the re-derivation are accepted"),
+    ("BA-02", BA, '    if doc.get("relations_digest") != canon.digest(derived):', '    if False:', "a wrong relations digest is accepted"),
+    ("BA-03", BA, '    if doc.get("synthetic") is not any(r["synthetic"] for r in derived):', '    if False:', "a wrong synthetic flag of the relations file is accepted"),
+    ("BA-04", BA, '    if doc.get("schema") != gate.RELATIONS_SCHEMA:', '    if False:', "a relations file of another schema is accepted"),
+    ("BA-05", BA, '    if found:\n        refuse(EXIT_RELATIONS,', '    if False:\n        refuse(EXIT_RELATIONS,', "problems found with the relations file do not stop the run"),
+    ("BA-06", BA, '    if root_problems:', '    if False:', "an engine root that is not the accepted engine does not stop the run"),
+    ("BA-07", BA, '    B.refuse_unsafe_out(args.out,', '    (lambda *a, **k: None)(args.out,', "the output may overlap an input location"),
+    ("BA-08", BA, '    baseline = B.load_acceptable_baseline(args)', '    baseline = None', "a baseline report that is not acceptable for this run is not refused"),
+    # ---------------------------------------------------------------------------------------------------------------- the gate: the rest of its rules
+    ("G-26", G, '        if not (end.get("identity_status") == "resolved" and end.get("model_id") and end.get("identity_via") in VERIFIED_MODEL_VIA):', '        if False:',
+     "a model end whose identity is not verified is accepted"),
+    ("G-27", G, '        if not (end.get("binding_status") == "bound" and end.get("catalog_sku")):', '        if False:', "an article end that is not bound to a catalog SKU is accepted"),
+    ("G-28", G, '        return [] if optional else [f"end_missing:{name}"]', '        return []', "a relation with a missing required end is accepted"),
+    ("G-29", G, '    elif rtype not in E.RELATION_TYPES:', '    elif False:', "a relation of an unsupported type is accepted"),
+    ("G-30", G, '    if not evidence["docs"]:', '    if False:', "a relation without any evidence document is accepted"),
+    ("G-31", G, '    if not any(c["assertion_type"] == "compatible" and c["declared_status"] == CLAIM_DECLARED_OK',
+     '    if False and any(c["assertion_type"] == "compatible" and c["declared_status"] == CLAIM_DECLARED_OK', "a relation without any verified compatible claim is accepted"),
+    ("G-32", G, '    if pair["article_binding_status"] != "bound":', '    if False:', "a pair whose article is not bound gets an edge"),
+    ("G-33", G, '        else:\n            hold.add(blocker)', '        else:\n            pass', "the blockers recorded by O4 no longer hold the relation"),
+    ("G-34", G, '    if len({r["relation_id"] for r in rels}) != len(rels):', '    if False:', "duplicate relation ids are accepted"),
+    ("G-35", G, '        if verdict["decision"] == "HOLD":\n            # would-be edges', '        if False:\n            # would-be edges', "the pairs of a held relation get edges anyway"),
+    ("G-36", G, '"synthetic": bool(pol["allow_synthetic"]),', '"synthetic": False,', "an envelope built under the synthetic opt-in is not marked synthetic"),
+    ("G-37", G, '    E.validate(envelope, allow_synthetic=pol["allow_synthetic"])', '    pass', "the gate no longer validates the envelope it is about to write"),
+    ("G-38", G, 'if c["assertion_type"] == "compatible" and c["effective_status"] == CLAIM_EFFECTIVE_OK})', 'if True})',
+     "the envelope lists claims that did not verify the edge as its evidence"),
+    # ---------------------------------------------------------------------------------------------------------------- the classifier: the rest of its violations
+    ("R-09", R, '        if s_off[sid]["language"] != s_on[sid]["language"]:', '        if False:', "a changed source language is not reported"),
+    ("R-10", R, '            if str(t) not in t_on:', '            if False:', "an output edge without evidence is not reported"),
+    ("R-11", R, '            else:\n                violate("evidence_changed_for_kept_edge"', '            elif False:\n                violate("evidence_changed_for_kept_edge"',
+     "changed evidence of a kept edge is not reported"),
+    ("R-12", R, '            if before.get("tier") == "B_universal" and after.get("reason") == OEM_REASON:', '            if True:',
+     "any change of a kept edge's evidence is explained as a promotion"),
+    ("R-13", R, '            if ev.get("reason") == OEM_REASON:\n                edges.append(enrich({"change": "new_oem_edge"',
+     '            if True:\n                edges.append(enrich({"change": "new_oem_edge"', "any added edge is explained as a new OEM edge"),
+    ("R-14", R, '            elif ev.get("tier") == "B_universal":\n                edges.append(enrich({"change": "new_b_backfill_after_role_coverage"',
+     '            elif True:\n                edges.append(enrich({"change": "new_b_backfill_after_role_coverage"', "any added edge is explained as a B backfill"),
+    ("R-15", R, '            else:\n                violate("unexplained_removal"', '            elif False:\n                violate("unexplained_removal"',
+     "a removed B edge that nothing explains is not reported"),
+    ("R-16", R, '            elif ev.get("role") in oem_roles:', '            elif True:', "any removed B edge is explained as role coverage"),
+    ("R-17", R, '            elif len(b) == LIMIT:', '            elif True:', "any removed B edge is explained as the limit of 20"),
+    ("R-18", R, '        if b_on != b_off:', '        if False:', "a changed relative order of the B edges is not reported"),
+    ("R-19", R, 'sorted(on_oem - published)', '[]', "an OEM output edge without a published ledger entry is not reported"),
+    ("R-20", R, 'sorted(published - on_oem)', '[]', "a published ledger entry without an output edge is not reported"),
+    ("R-21", R, '            if status not in LEDGER_STATUSES:', '            if False:', "an unknown ledger status is not reported"),
+    ("R-22", R, '            elif status == "already_present_legacy" and not (', '            elif False and not (', "an already-present claim that the outputs do not bear out is not reported"),
+    ("R-23", R, '            elif status == "dropped_by_limit_20" and (', '            elif False and (', "a drop by the limit of 20 that the output does not bear out is not reported"),
+    ("R-24", R, '            elif status == "held" and _targets(e_on, sid)', '            elif False and _targets(e_on, sid)', "a held edge that is in the output as an OEM edge is not reported"),
+    ("R-25", R, '            if oem.get(key, oem.get("held") if key == "held" else None) != counted[key]:', '            if False:', "a ledger summary that disagrees with the ledger is not reported"),
+    ("R-26", R, '        if m_on.get("edges", {}).get("A_oem_relation") != counted["published"]:', '        if False:', "an A_oem_relation metric that disagrees with the ledger is not reported"),
+    ("R-27", R, '        if oem.get("edges_in") != len(ledger):', '        if False:', "an edges_in count that disagrees with the ledger is not reported"),
+    ("R-28", R, '            if env_pairs != pairs:', '            if False:', "a ledger that is not the envelope that was given is not reported"),
+    ("R-29", R, '        violate("oem_edges_without_oem_metrics")', '        pass', "OEM edges in an output without the OEM metrics block are not reported"),
+    ("R-30", R, '        if expected != actual:', '        if False:', "link counts that do not reconcile with the edge classification are not reported"),
+    ("R-31", R, '                if sum(counts.values()) != r["edges_accepted"] and oem is not None and envelope is not None:', '                if False:',
+     "per-relation edge counts that do not reconcile with the ledger are not reported"),
+    # ---------------------------------------------------------------------------------------------------------------- Stage1: the rest of its rules
+    ("S1-16", S, '        if src not in rows:', '        if False:', "a link whose source is not in the catalog is planned"),
+    ("S1-17", S, '        if tgt not in rows:', '        if False:', "a link whose target is not in the catalog is planned"),
+    ("S1-18", S, '        if sku is not None and rows[tgt].get("sku") != sku:', '        if False:', "a link whose SKU differs from the catalog row is planned"),
+    ("S1-19", S, '    if not isinstance(diff, dict) or diff.get("schema") != DIFF_SCHEMA:', '    if not isinstance(diff, dict):', "a document that is not an ON/OFF diff is planned from"),
+    ("S1-20", S, '    if any(x is None for link in links for x in link[:2]):', '    if False:', "a diff edge without integer nids is planned"),
+    ("S1-21", S, '    if not skus or any(not s for s in skus):', '    if False:', "an empty SKU list or an empty SKU is planned"),
+    ("S1-22", S, '    if not isinstance(doc, dict) or not isinstance(doc.get("targets"), list):', '    if False:', "a receipts document of another format is read"),
+    ("S1-23", S, '        if nid is None:\n            raise Stage1Refused(f"{what}: a record without an integer nid")', '        if False:\n            raise Stage1Refused(f"{what}: a record without an integer nid")',
+     "a receipt record without an integer nid is read"),
+    ("S1-24", S, '        elif _int(rec[name]) is None:\n            problems.append(f"malformed_{name}")', '        elif False:\n            problems.append(f"malformed_{name}")',
+     "a malformed integer field of a receipt is not reported"),
+    ("S1-25", S, '        if name in rec and rec[name] != expected["lang"]:', '        if False:', "a receipt for another locale is accepted"),
+    ("S1-26", S, '            row["state"] = BLOCKED if row["problems"] else PASS_STAGE1', '            row["state"] = PASS_STAGE1', "a receipt with problems still passes"),
+    ("S1-27", S, '"authorizes_publication": False, "oem_fit_proof": False,', '"authorizes_publication": True, "oem_fit_proof": False,', "a Stage1 report authorizes publication"),
+    ("S1-28", S, '"authorizes_publication": False, "oem_fit_proof": False,', '"authorizes_publication": False, "oem_fit_proof": True,', "a Stage1 report claims to be an OEM-fit proof"),
+    ("S1-29", S, '"all_planned_checks_pass": bool(planned) and all(r["state"] == PASS_STAGE1 for r in planned)}}', '"all_planned_checks_pass": all(r["state"] == PASS_STAGE1 for r in planned)}}',
+     "a plan with no checks is reported as passed"),
+    ("S1-30", S, '        if entry["state"] == NOT_RECOMMENDABLE:', '        if False:', "a receipt for a node that cannot be recommended is judged like any other"),
+    ("S1-31", S, '    if not isinstance(plan, dict) or plan.get("schema") != PLAN_SCHEMA:', '    if not isinstance(plan, dict):', "a document that is not a Stage1 plan is checked"),
+    ("S1-32", S, '    if snap["published"] != 1:', '    if False:', "an unpublished node is planned for a native test"),
+    ("S1-33", S, '    if not _price_ok(snap["price"]):', '    if False:', "a node whose price is not positive is planned for a native test"),
+    ("S1-34", S, '    if snap["lang"] not in LOCALES:', '    if False:', "a node outside RU/UK is planned for a native test"),
+    ("S1-35", S, '        if snap[name] is None:', '        if False:', "a catalog row without nid / tnid / vid / changed is planned"),
+    ("S1-36", S, '    if not snap["sku"]:', '    if False:', "a catalog row without a SKU is planned"),
 ]
 
 SEAM_MUTANTS = [
@@ -129,12 +247,71 @@ SEAM_MUTANTS = [
      "OEM edges are inserted BEFORE the legacy A edges"),
     ("M-04", '        entry["status"]="published" if entry["target_nid"] in total else "dropped_by_limit_20"', '        entry["status"]="published"',
      "an edge dropped by the limit of 20 is reported as published"),
-    ("M-05", '    if any(x["status"] in (None,"accepted") for x in ledger) or len(ledger)!=meta["edges_in"] or', '    if False or len(ledger)!=meta["edges_in"] or',
-     "an undisposed ledger entry is not detected"),
+    ("M-05", 'len(ledger)!=meta["edges_in"] or \\', 'False or \\', "a ledger shorter or longer than the envelope is not detected"),
     ("M-06", '                ledger.append({"source_nid":src,"target_nid":edge["target_nid"],"relation_ids":list(edge["relation_ids"]),\n                               "status":"held","reason":"source_not_in_scope"})',
      '                pass', "an envelope edge whose source is outside the scope vanishes from the ledger"),
     ("M-07", '"reason":"accepted_oem_relation"', '"reason":"accepted_model_title"', "an OEM edge claims a legacy reason"),
     ("M-08", '"fit_state":"LISTED","conditions":[]', '"fit_state":"LISTED","conditions":["x"]', "OEM evidence carries invented conditions"),
+    ("M-09", '       len(ledger)!=counts["published"]+counts["dropped_by_limit_20"]+counts["already_present_legacy"]+counts["held"]:', '       False:',
+     "a ledger entry with an unknown status is not detected"),
+    # ---- the engine-side envelope validator (independent of the gate's own validator)
+    ("V-01", '    if envelope["schema"]!=OEM_SCHEMA or envelope["mode"]!="accepted_only":', '    if False:', "the engine accepts an envelope of another schema or mode"),
+    ("V-02", '    if synthetic and not allow_synthetic:', '    if False:', "the engine accepts a synthetic envelope without the opt-in"),
+    ("V-03", '''    if gate["publish_states"]!=["LISTED"]:_oem_fail("gate.publish_states must be ['LISTED']")''', '''    if False:_oem_fail("gate.publish_states must be ['LISTED']")''',
+     "the engine accepts conditional publication"),
+    ("V-04", '''    if gate["veto_mode"]!="report":_oem_fail("gate.veto_mode must be 'report'")''', '''    if False:_oem_fail("gate.veto_mode must be 'report'")''',
+     "the engine accepts an enforced veto"),
+    ("V-05", '''    if edge["fit_state"]!="LISTED":_oem_fail(where+".fit_state must be LISTED")''', '''    if False:_oem_fail(where+".fit_state must be LISTED")''',
+     "the engine accepts a non-LISTED edge"),
+    ("V-06", '''            if edge["conditions"]!=[]:_oem_fail(where+".conditions must be empty (conditional edges are held)")''',
+     '''            if False:_oem_fail(where+".conditions must be empty (conditional edges are held)")''', "the engine accepts a conditional edge"),
+    ("V-07", '            if pair in seen or pair[0]==pair[1]:_oem_fail(where+" has a duplicate or self edge")',
+     '            if False:_oem_fail(where+" has a duplicate or self edge")', "the engine accepts a duplicate or self edge"),
+    ("V-08", '''            if type(edge["synthetic"]) is not bool or (edge["synthetic"] and not synthetic):_oem_fail(where+".synthetic is inconsistent")''',
+     '''            if False:_oem_fail(where+".synthetic is inconsistent")''', "the engine accepts a synthetic edge in a real envelope"),
+    ("V-09", '''            if relation_ids!=sorted(relation_ids):_oem_fail(where+".relation_ids must be sorted")''',
+     '''            if False:_oem_fail(where+".relation_ids must be sorted")''', "the engine accepts unsorted relation ids"),
+    ("V-10", '''        if not (isinstance(key,str) and key.isascii() and key.isdigit() and key==str(int(key)) and int(key)>0):''', '        if False:',
+     "the engine accepts a non-canonical source key"),
+    ("V-11", '''        if not _oem_hex(prov[key]):_oem_fail("provenance."+key+" must be a SHA-256")''', '''        if False:_oem_fail("provenance."+key+" must be a SHA-256")''',
+     "the engine accepts a non-SHA-256 provenance digest"),
+    ("V-12", '''            if not all(_oem_hex(h) for h in _oem_strings(edge["doc_hashes"],where+".doc_hashes")):''', '''            if False:''',
+     "the engine accepts evidence hashes that are not SHA-256"),
+    ("V-13", '''            if not (isinstance(rtype,str) and isinstance(end,str) and rtype in _OEM_ENDS and end in _OEM_ENDS[rtype]):''', '''            if False:''',
+     "the engine accepts an unknown relation type or an end that does not belong to it"),
+    ("V-14", '''    if gate["one_ended_adapter"] not in ("abstain","synthetic_test_two_ended") or (gate["one_ended_adapter"]!="abstain" and not synthetic):''', '''    if False:''',
+     "the engine accepts a non-default OD5 value in a real envelope"),
+    ("V-15", '''    if not isinstance(gate["as_of"],str) or not _OEM_DATE.fullmatch(gate["as_of"]):_oem_fail("gate.as_of must be YYYY-MM-DD")''',
+     '''    if False:_oem_fail("gate.as_of must be YYYY-MM-DD")''', "the engine accepts an as_of that is not a date"),
+    # ---- the existing engine gates applied to every accepted edge
+    ("H-01", '    if not head:return "source_has_no_recommendation_head"', '    if False:return "source_has_no_recommendation_head"',
+     "an OEM edge enters a source that has no recommendation head"),
+    ("H-02", '    if not eligible_source(source):return "source_not_purchasable"', '    if False:return "source_not_purchasable"',
+     "an OEM edge enters a source that is not purchasable"),
+    ("H-03", '    if target is None:return "target_not_in_catalog"', '    if False:return "target_not_in_catalog"', "an OEM edge to a target that is not in the catalog is not held"),
+    ("H-04", '    if str(target.get("sku") or "")!=edge["target_sku"]:return "target_sku_changed"', '    if False:return "target_sku_changed"',
+     "an OEM edge whose target SKU changed since the gate is published"),
+    ("H-05", '    if source.get("lang")!=edge["lang"] or target.get("lang")!=edge["lang"]:return "locale_mismatch"', '    if False:return "locale_mismatch"',
+     "an OEM edge across locales is published"),
+    ("H-06", '    if source.get("type")=="product_kit" or target.get("type")=="product_kit":return "product_kit_excluded"', '    if False:return "product_kit_excluded"',
+     "an OEM edge involving a product kit is published"),
+    ("H-07", '    if not eligible_source(target):return "target_not_purchasable"', '    if False:return "target_not_purchasable"',
+     "an OEM edge to a target that is not purchasable is published"),
+    ("H-08", '    if source.get("nid")==target.get("nid") or source.get("tnid")==target.get("tnid"):return "same_product"', '    if False:return "same_product"',
+     "an OEM edge from a product to its own translation is published"),
+    ("H-09", '    if not _oem_variant_ok(source,profiles):return "source_variant_unverified"', '    if False:return "source_variant_unverified"',
+     "an OEM edge from a source with an unverified variant is published"),
+    ("H-10", '    if not _oem_variant_ok(target,profiles):return "target_variant_unverified"', '    if False:return "target_variant_unverified"',
+     "an OEM edge to a target with an unverified variant is published"),
+    ("H-11", '    if not target_in_head(target,head,policy):return "target_not_in_source_head"', '    if False:return "target_not_in_source_head"',
+     "an OEM edge to a target outside the source's head (taxonomy) is published"),
+    ("H-12", '    if head=="car_seat" and target_role(target,head)=="seat_liner" and not seat_liner_age_group_compatible(source,target):\n        return "seat_liner_age_group_incompatible"',
+     '    if False:\n        return "seat_liner_age_group_incompatible"',
+     "an OEM seat liner of an incompatible age group is published"),
+    ("H-13", '    return bool(profile and profile.get("all_oids_available") and not profile.get("fitment_critical"))', '    return True',
+     "any variant profile is accepted as verified"),
+    ("H-14", '    return bool(profile and profile.get("all_oids_available") and not profile.get("fitment_critical"))',
+     '    return bool(profile and profile.get("all_oids_available"))', "a fitment-critical variant profile is accepted as verified"),
 ]
 
 
@@ -172,12 +349,21 @@ def snippet_problems(mutants) -> list:
     return problems
 
 
+def _ignored(directory, names) -> set:
+    """What the copy leaves out: caches and byte stores, and everything in ``out/`` except the committed view of the real relations (two tests compare against it;
+    the mutation report itself, written into ``out/``, never goes into a copy)."""
+    skip = set(shutil.ignore_patterns("__pycache__", ".git", "*.pyc", ".hypothesis", "blobs")(directory, names))
+    if Path(directory) == ROOT / "out":
+        skip |= {name for name in names if name != "real_relations"}
+    return skip
+
+
 def _copy_project() -> tuple:
     """A repository-shaped throw-away copy: this stage (to be mutated) and the accepted Stage B linked read-only."""
     tmp = tempfile.TemporaryDirectory()
     base = Path(tmp.name)
     work = base / "rehearsal" / "v421-oem-stage-c"
-    shutil.copytree(ROOT, work, ignore=shutil.ignore_patterns("__pycache__", "out", ".git", "*.pyc", ".hypothesis", "blobs"))
+    shutil.copytree(ROOT, work, ignore=_ignored)
     for rel in EXCLUDED_MODULES:
         (work / rel).unlink(missing_ok=True)
     (base / "rehearsal" / "v421-oem-stage-b").symlink_to(STAGE_B, target_is_directory=True)
@@ -253,7 +439,9 @@ def run_mutant(mutant, env_extra, failfast: bool = False) -> dict:
             pins = json.loads(pins_path.read_text(encoding="utf-8"))
             pins["patched_sha256"] = _sha(path)
             pins_path.write_text(json.dumps(pins, indent=2, sort_keys=True) + "\n", encoding="utf-8", newline="\n")
-        use_failfast = failfast and rel != SEAM
+        # failfast stops at the first failing test: enough to kill a mutant, unless that first failure is one of the seam-consistency tests (they fail
+        # for ANY change of the seam file and prove nothing): then the whole suite is run below to see whether a behavioural test fails too.
+        use_failfast = failfast
         try:
             outcome = parse_outcome(*_judge_inputs(_run_suite(work, env_extra, failfast=use_failfast)))
             if outcome["verdict"] == "FAILED" and use_failfast and not behavioural(outcome["failing"]):
@@ -284,7 +472,7 @@ def main(argv=None) -> int:
     ap.add_argument("-j", "--jobs", type=int, default=2)
     ap.add_argument("--examples", default="60", help="Hypothesis examples per property while mutating (default 60)")
     ap.add_argument("--failfast", action="store_true",
-                    help="stop each non-seam mutant's run at its first failing test (much faster; seam mutants always run the whole suite)")
+                    help="stop each mutant's run at its first failing test (much faster; if that failure is a seam-consistency test the whole suite is run)")
     ap.add_argument("--validate-only", action="store_true", help="only check that every snippet occurs exactly once; run nothing")
     args = ap.parse_args(argv)
     if not (STAGE_B / "oem_stage" / "__init__.py").is_file():

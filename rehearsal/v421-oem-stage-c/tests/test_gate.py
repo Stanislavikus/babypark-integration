@@ -8,6 +8,7 @@ from __future__ import annotations
 import copy
 import random
 import unittest
+from unittest import mock
 
 from tests import world_fixture as WF
 from oem_intake import envelope as E, gate
@@ -149,6 +150,25 @@ class TestDecideRelation(WorldCase):
                                   "effective_status": "ACCEPTED"})
             with self.subTest(assertion):
                 self.assertIn("negative_or_time_bound_claim_present", self.decide(rel, policy={})["reasons"])
+
+    def test_the_gate_rechecks_the_declared_status_even_if_the_effective_status_says_accepted(self):
+        """Defence in depth: O1 derives ACCEPTED from a declared VERIFIED, but the gate never trusts one field of a record that could disagree with itself."""
+        good = non_synthetic(self.listed)
+        for declared in ("PROPOSED", "REJECTED", "DRAFT", None):
+            rel = WF.mutated(good, **{"claims.0.declared_status": declared, "claims.0.effective_status": "ACCEPTED"})
+            with self.subTest(declared=declared):
+                verdict = self.decide(rel, policy={})
+                self.assertEqual(verdict["decision"], "HOLD")
+                self.assertIn("no_verified_compatible_claim", verdict["reasons"])
+
+    def test_the_synthetic_flag_of_the_record_is_rechecked_even_without_the_o4_blocker(self):
+        """A record that says synthetic=True but whose blocker list does not mention it is still held under the default policy (independent re-check)."""
+        rel = WF.mutated(self.listed, synthetic=True)
+        rel["publish"]["blockers"] = [b for b in rel["publish"]["blockers"] if b != "synthetic_relation"]
+        verdict = self.decide(rel, policy={})
+        self.assertEqual((verdict["decision"], verdict["reasons"]), ("HOLD", ["synthetic_relation"]))
+        opted_in = self.decide(rel)                                                     # the explicit test-only opt-in lets it through
+        self.assertEqual((opted_in["decision"], opted_in["reasons"]), ("ACCEPT", []))
 
     def test_the_a_tier_candidate_flag_is_never_trusted(self):
         rel = non_synthetic(WF.mutated(self.listed, effective_state="UNKNOWN", **{"publish.a_tier_candidate": True}))
@@ -358,6 +378,30 @@ class TestBuild(WorldCase):
         self.assertEqual(edge["binding_ids"], ["b-RS-100"])
         self.assertEqual(edge["registry_version"], self.env["provenance"]["inputs_digest"])
         self.assertEqual((edge["fit_state"], edge["conditions"], edge["synthetic"]), ("LISTED", [], True))
+
+    def test_the_envelope_lists_only_the_claims_that_verified_the_edge(self):
+        extra = copy.deepcopy(self.listed["claims"][0])
+        extra.update(claim_id="claim:not-verified", declared_status="PROPOSED", effective_status="PROPOSED")        # a further, unverified compatible claim
+        rel = WF.mutated(self.listed)
+        rel["claims"] = [*rel["claims"], extra]
+        env, report = WF.run_gate(self.world, relations=[rel])
+        row = next(r for r in report["relations"] if r["relation_id"] == rel["relation_id"])
+        self.assertEqual((row["decision"], row["edges_accepted"]), ("ACCEPT", 2))                                   # the verified claim is enough
+        edges = [e for items in env["edges"].values() for e in items]
+        self.assertEqual(len(edges), 2)
+        for edge in edges:
+            self.assertEqual(edge["claim_ids"], [self.listed["claims"][0]["claim_id"]])
+
+    def test_the_gate_never_writes_an_envelope_it_would_itself_refuse(self):
+        """Defence in depth: whatever goes wrong upstream (here a defective pair expansion in which a product recommends itself), the gate validates
+        the envelope it is about to write and stops."""
+        real = gate.shadow.expand_pairs
+
+        def self_recommending(rel, view):
+            return [dict(p, target_nid=p["source_nid"]) for p in real(rel, view)]
+        with mock.patch.object(gate, "_pair_problem", return_value=None), mock.patch.object(gate.shadow, "expand_pairs", self_recommending):
+            with self.assertRaises(E.EnvelopeError):
+                WF.run_gate(self.world)
 
     def test_a_relation_that_does_not_belong_to_the_as_of_of_the_run_is_refused(self):
         with self.assertRaisesRegex(gate.GateRefused, "differs from the date the relations were derived"):

@@ -213,6 +213,17 @@ class TestViolationsAreNamed(unittest.TestCase):
     def test_a_changed_v36_similar_fails(self):
         self.assertIn("similar_changed", codes(self.corrupted(lambda on: on["sources"][self.fx]["similar"].append(1))))
 
+    def test_a_duplicated_or_overlong_accessory_list_fails(self):
+        """The existing engine invariants (unique targets, at most 20) are re-checked on every source of the ON output."""
+        def duplicate(on):
+            ids = on["sources"][self.fx]["accessories"]
+            ids.append(ids[0])
+        self.assertIn("accessory_list_invariant", codes(self.corrupted(duplicate)))
+
+        def overlong(on):
+            on["sources"][self.fx]["accessories"].extend(range(900001, 900022))              # 21 further distinct ids: over the limit of 20
+        self.assertIn("accessory_list_invariant", codes(self.corrupted(overlong)))
+
     def test_an_unexplained_added_or_removed_edge_fails(self):
         def add(on):
             on["sources"][self.fx]["accessories"].append(self.cat.nid("BG-9"))
@@ -226,6 +237,24 @@ class TestViolationsAreNamed(unittest.TestCase):
             on["evidence"][self.fx]["targets"].pop(str(b_target))
             on["evidence"][self.fx]["B_universal"].remove(b_target)
         self.assertIn("unexplained_removal", codes(self.corrupted(drop_b)))
+
+    def test_a_backfilled_b_edge_without_a_freed_slot_fails(self):
+        """A generic B edge may only enter because an OEM A edge freed a slot (role coverage or promotion); otherwise nothing explains it."""
+        nid = self.cat.nid("BG-9")
+
+        def add_b(on):
+            on["sources"][self.fx]["accessories"].append(nid)
+            on["evidence"][self.fx]["targets"][str(nid)] = {"tier": "B_universal", "reason": "universal_scope", "role": "bag"}
+            on["evidence"][self.fx]["B_universal"].append(nid)
+        result = self.corrupted(add_b)
+        self.assertIn("backfill_exceeds_freed_slots", codes(result))
+        self.assertEqual(result["result"], "FAIL")
+
+    def test_a_duplicated_ledger_entry_fails(self):
+        def duplicate(on):
+            ledger = on["metrics"]["oem"]["ledger"]
+            ledger.append(dict(ledger[0]))
+        self.assertIn("ledger_duplicate_pair", codes(self.corrupted(duplicate)))
 
     def test_changed_evidence_of_a_kept_edge_fails(self):
         def edit(on):
@@ -268,6 +297,51 @@ class TestViolationsAreNamed(unittest.TestCase):
     def test_a_different_envelope_than_the_one_the_run_used_fails(self):
         other = sc.envelope([sc.edge(self.inp, "C-FX", "BG-9")])
         self.assertIn("envelope_and_ledger_differ", codes(R.classify(self.off, self.on, envelope=other)))
+
+    def test_a_changed_source_language_fails(self):
+        self.assertIn("language_changed", codes(self.corrupted(lambda on: on["sources"][self.fx].update(language="uk"))))
+
+    def test_an_output_edge_without_evidence_fails(self):
+        def edit(on):
+            gone = on["sources"][self.fx]["accessories"][0]
+            on["evidence"][self.fx]["targets"].pop(str(gone))                   # the edge stays in the output list, its evidence is gone
+        self.assertIn("output_edge_without_evidence", codes(self.corrupted(edit)))
+
+    def test_a_changed_relative_order_of_the_generic_edges_fails(self):
+        def swap(on):
+            for sid in (self.fx, self.fy):
+                ids = on["sources"][sid]["accessories"]
+                pos = [i for i, t in enumerate(ids) if on["evidence"][sid]["targets"][str(t)]["tier"] == "B_universal"]
+                if len(pos) >= 2:
+                    ids[pos[0]], ids[pos[1]] = ids[pos[1]], ids[pos[0]]
+                    return
+            self.fail("the fixture has no source with two generic edges")
+        self.assertIn("b_relative_order_changed", codes(self.corrupted(swap)))
+
+    def test_a_ledger_status_that_the_outputs_do_not_bear_out_fails(self):
+        """Each status of the ledger is a claim about the two outputs; a claim they do not bear out (or an unknown status) is a violation."""
+        for status, code in (("already_present_legacy", "already_present_but_not_in_both_outputs"),
+                             ("dropped_by_limit_20", "dropped_by_limit_but_output_has_room_or_edge"),
+                             ("held", "held_edge_present_as_oem"), ("bogus", "ledger_unknown_status")):
+            def edit(on):
+                next(e for e in on["metrics"]["oem"]["ledger"] if e["status"] == "published")["status"] = status
+            with self.subTest(status):
+                self.assertIn(code, codes(self.corrupted(edit)))
+
+    def test_the_edges_in_count_must_equal_the_ledger(self):
+        def edit(on):
+            on["metrics"]["oem"]["edges_in"] += 1
+        result = self.corrupted(edit)
+        self.assertTrue([v for v in result["violations"] if v["code"] == "ledger_summary_mismatch" and "edges_in" in (v["detail"] or "")], result["violations"])
+
+    def test_per_relation_edge_counts_must_reconcile_with_the_ledger(self):
+        def gate_report(accepted):
+            return {"relations": [{"relation_id": "rel:0000000000000001", "decision": "ACCEPT", "effective_state": "LISTED", "reasons": [],
+                                   "edges_accepted": accepted}], "veto_report": {"pairs": []}}
+        good = R.classify(self.off, self.on, envelope=self.env, gate_report=gate_report(4))           # the envelope has four edges of that relation
+        self.assertNotIn("relation_edges_do_not_reconcile", codes(good))
+        bad = R.classify(self.off, self.on, envelope=self.env, gate_report=gate_report(5))
+        self.assertIn("relation_edges_do_not_reconcile", codes(bad))
 
 
 if __name__ == "__main__":

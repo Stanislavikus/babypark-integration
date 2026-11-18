@@ -147,6 +147,29 @@ class TestPlan(StageOneCase):
         self.assertEqual(next(t for t in S1.plan_from_envelope(envelope(rows, PAIRS), rows, allow_synthetic=True)["targets"] if t["nid"] == 11)["reasons"],
                          ["price_not_positive"])                                   # a NaN price must not crash the canonical hashing
 
+    def test_a_node_outside_the_two_locales_is_not_planned_for_a_native_test(self):
+        rows = {n: row(n, n, f"X-{n}", "en") for n in (1, 11)}
+        plan = S1.plan_from_envelope(envelope(rows, [(1, 11)]), rows, allow_synthetic=True)
+        self.assertEqual([(t["nid"], t["state"], t["reasons"]) for t in plan["targets"]], [(11, S1.NOT_RECOMMENDABLE, ["locale_not_ru_uk"])])
+        self.assertEqual([(s["nid"], s["state"], s["reasons"]) for s in plan["source_contexts"]], [(1, S1.NOT_RECOMMENDABLE, ["locale_not_ru_uk"])])
+        self.assertEqual(plan["native_check_nids"], {"targets": [], "source_contexts": []})
+
+    def test_a_self_consistent_document_of_another_schema_is_not_a_plan(self):
+        """The digest check alone would accept it: the schema is checked on its own."""
+        other = copy.deepcopy(self.plan)
+        other["schema"] = "bp-oem-something-else-v1"
+        other["plan_digest"] = canon.digest({k: v for k, v in other.items() if k != "plan_digest"})
+        with self.assertRaisesRegex(S1.Stage1Refused, "not a bp-oem-stage1-plan-v1 document"):
+            S1.check_receipts(other)
+
+    def test_a_source_row_without_a_sku_gets_no_native_check(self):
+        rows = catalog()
+        rows[1] = dict(rows[1], sku="")
+        plan = S1.plan_from_envelope(envelope(rows, PAIRS), rows, allow_synthetic=True)
+        entry = next(s for s in plan["source_contexts"] if s["nid"] == 1)
+        self.assertEqual((entry["state"], entry["reasons"]), (S1.NOT_RECOMMENDABLE, ["catalog_row_without_sku"]))
+        self.assertNotIn(1, plan["native_check_nids"]["source_contexts"])
+
     def test_an_envelope_that_does_not_match_the_catalog_is_refused(self):
         bad = envelope(self.rows, PAIRS)
         bad["edges"]["1"][-1]["target_nid"] = 999                                   # unknown target (still the last, so the edge order is valid)
