@@ -27,9 +27,9 @@ Index (all under `rehearsal/v421-oem-stage-c/`; the full list with digests is `d
 | Engine seam | `engine_seam/accessory_v4_stage_c.py`, `engine_seam/accessory_v4_stage_c.patch`, `engine_seam/seam_helpers.py.txt`, `engine_seam/ENGINE_SEAM_PINS.json`, `tools/build_engine_seam.py` |
 | S6 replay and diff | `tools/replay_stage_c.py`, `tools/stage_c_launcher.py`, `oem_intake/replay_diff.py` |
 | Stage1 preparation | `oem_intake/stage1.py`, `tools/stage1_plan.py` |
-| Verification tooling | `tools/mutation_check.py`, `tools/verify_scope.py`, `tools/files_manifest.py`, `tests/` |
+| Verification tooling | `tools/mutation_check.py`, `tools/verify_scope.py`, `tools/files_manifest.py`, `tools/relation_decisions.py`, `tests/` |
 | Governance | `docs/oem-stage-c-20261118/S5_GOVERNANCE_RECORD_20261118.md`, `docs/oem-stage-c-20261118/S5_ALTERNATIVES_SCAN_20261118.md`, `governance/` |
-| Results | `docs/oem-stage-c-20261118/STAGE_C_RESULT_20261118.md`, `out/` |
+| Results | `docs/oem-stage-c-20261118/STAGE_C_RESULT_20261118.md`, `out/MUTATION_CHECK.json`, `out/real_relations/` |
 
 ## 3. State at this checkpoint
 
