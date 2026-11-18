@@ -29,12 +29,12 @@ The engine is found at `$ORIG/engine_root` by default (override: `BP_V421_ENGINE
 ```
 git rev-parse HEAD                                                                # the delivered HEAD (quoted in the pull request)
 (cd $ORIG/engine_root && sha256sum work/accessories/src/accessory_v4.py)         # must be the pinned base digest below
-python3 -B tools/build_engine_seam.py --check                                    # ENGINE SEAM VERIFIED base 20c12303543f patched 57310d4c78b1
+python3 -B tools/build_engine_seam.py --check                                    # ENGINE SEAM VERIFIED base 20c12303543f patched 5b514c7bc4c5
 python3 -B tools/verify_scope.py --base 39c9bbb6486d571207891e7e9892636f36b8014c   # SCOPE PASS (only the two Stage C directories changed)
 python3 -B tools/files_manifest.py --check                                        # MANIFEST PASS
 ```
 
-The accepted engine file `accessory_v4.py` must have the SHA-256 `20c12303543fa7c4a522cc28ea5f4dc698098b0093ccf14fa066f9d67f7be2e8` (the same value Stage B pinned). The seam is the whole engine change: a patched COPY (`rehearsal/v421-oem-stage-c/engine_seam/accessory_v4_stage_c.py`, never applied in place) and its reviewable unified diff `rehearsal/v421-oem-stage-c/engine_seam/accessory_v4_stage_c.patch` (+180 / −1 lines). Read the diff first.
+The accepted engine file `accessory_v4.py` must have the SHA-256 `20c12303543fa7c4a522cc28ea5f4dc698098b0093ccf14fa066f9d67f7be2e8` (the same value Stage B pinned). The seam is the whole engine change: a patched COPY (`rehearsal/v421-oem-stage-c/engine_seam/accessory_v4_stage_c.py`, never applied in place) and its reviewable unified diff `rehearsal/v421-oem-stage-c/engine_seam/accessory_v4_stage_c.patch` (+223 / −1 lines). Read the diff first.
 
 ## 2. Tests against the real engine
 
@@ -62,6 +62,8 @@ python3 -B tools/build_accepted_edges.py --as-of 2026-11-17 \
    --manifest $ORIG/output/t2_v421_manifest.json --evidence $ORIG/output/t2_v421_evidence.json \
    --baseline-report $WORK/baseline_verification.json --out $WORK/stage_c_edges
 ```
+
+Since the correction round (C-R1) the builder also binds every accepted edge to the identity of its source row, computed from `--rows` and `--index` (`oem_intake/source_identity.py`); an envelope written by an earlier HEAD has no such binding and is refused by the engine seam, so rebuild it with this HEAD. A pair whose source cannot be described is held as `source_identity_unknown` (expected on the real catalog: none, because all relations are held earlier).
 
 Expected (deduced): exit 0; the supplied `oem_relations.json` is reproduced from the typed data directory (otherwise exit 5: a finding); `accepted_edges.json` has ZERO edges; `oem_gate_report.json` shows 43 relations held and 0 accepted, with every hold reason (`no_verified_compatible_claim`, `evidence_bytes_not_present`, `od6_allowlist_empty`, ...), the report-only veto section (2 relations proposed as `EXCLUDED`, effective state `UNKNOWN`, pending verification) and no veto applied. This is the honest state: there is no verified OEM evidence, so nothing may be published and nothing may be invented for the real catalog. The relation-level part of this outcome is also pinned by `tests/test_real_relations_held.py`, which runs in step 2.
 
@@ -115,7 +117,7 @@ Without a receipts file every planned check is `NOT_RUN`. The output always says
 python3 -B tools/mutation_check.py --failfast -j 2 --json $WORK/mutation_check.json
 ```
 
-Expected: the control passes and every mutant is KILLED by a behavioural test; it takes about 20 minutes on 2 CPUs (the committed result is `rehearsal/v421-oem-stage-c/out/MUTATION_CHECK.json`; its counts are in `STAGE_C_RESULT_20261118.md`). A mutant counts as killed only when a real test fails: a broken run is INVALID, never a kill. To re-run one mutant: `python3 -B tools/mutation_check.py --only G-12 --failfast`.
+Expected: the control passes and every one of the 218 mutants is KILLED by a behavioural test; it takes about 25 minutes on 2 CPUs (the committed result is `rehearsal/v421-oem-stage-c/out/MUTATION_CHECK.json`; its counts are in `STAGE_C_RESULT_20261118.md`). A mutant counts as killed only when a real test fails: a broken run is INVALID, never a kill. To re-run one mutant: `python3 -B tools/mutation_check.py --only G-12 --failfast`.
 
 ## 8. What to report back
 

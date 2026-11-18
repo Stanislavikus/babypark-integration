@@ -6,7 +6,7 @@
     ],
     "result": "PASS",
     "skipped": 0,
-    "tests": 235
+    "tests": 281
   },
   "hypothesis_examples": 60,
   "mutants": [
@@ -91,6 +91,86 @@
       "status": "KILLED"
     },
     {
+      "detail": "test_cli_accepted_edges.TestBuildAcceptedEdgesCli.test_an_accepted_envelope_drives_the_patched_engine_end_to_end_from_files",
+      "file": "tools/build_accepted_edges.py",
+      "id": "BAI-01",
+      "killed_by": [
+        "test_cli_accepted_edges.TestBuildAcceptedEdgesCli.test_an_accepted_envelope_drives_the_patched_engine_end_to_end_from_files"
+      ],
+      "rule_broken": "the accepted-edges builder binds placeholders instead of source identities",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_review_fixes.TestTwoEndedAdapterCrossesTheTaxonomy.test_the_crossing_rule_itself_as_a_truth_table",
+      "file": "engine_seam/accessory_v4_stage_c.py",
+      "id": "C-01",
+      "killed_by": [
+        "test_review_fixes.TestTwoEndedAdapterCrossesTheTaxonomy.test_the_crossing_rule_itself_as_a_truth_table"
+      ],
+      "rule_broken": "an edge that is not an adapter_between edge may cross the taxonomy (finding C-R2)",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_review_fixes.TestTwoEndedAdapterCrossesTheTaxonomy.test_an_end_that_belongs_to_the_other_page_never_crosses",
+      "file": "engine_seam/accessory_v4_stage_c.py",
+      "id": "C-02",
+      "killed_by": [
+        "test_review_fixes.TestTwoEndedAdapterCrossesTheTaxonomy.test_an_end_that_belongs_to_the_other_page_never_crosses"
+      ],
+      "rule_broken": "an adapter end may cross onto the page of the other end",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_review_fixes.TestTwoEndedAdapterCrossesTheTaxonomy.test_a_generic_accessory_never_crosses_even_when_the_edge_claims_to_be_an_adapter",
+      "file": "engine_seam/accessory_v4_stage_c.py",
+      "id": "C-03",
+      "killed_by": [
+        "test_review_fixes.TestTwoEndedAdapterCrossesTheTaxonomy.test_a_generic_accessory_never_crosses_even_when_the_edge_claims_to_be_an_adapter"
+      ],
+      "rule_broken": "an accessory that the engine does not recognise as an adapter may cross the taxonomy",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_review_fixes.TestTwoEndedAdapterCrossesTheTaxonomy.test_a_taxonomy_the_engine_does_not_know_does_not_cross",
+      "file": "engine_seam/accessory_v4_stage_c.py",
+      "id": "C-04",
+      "killed_by": [
+        "test_review_fixes.TestTwoEndedAdapterCrossesTheTaxonomy.test_a_taxonomy_the_engine_does_not_know_does_not_cross"
+      ],
+      "rule_broken": "an adapter of an unknown taxonomy may cross",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_review_fixes.TestTwoEndedAdapterCrossesTheTaxonomy.test_an_end_that_belongs_to_the_other_page_never_crosses",
+      "file": "engine_seam/accessory_v4_stage_c.py",
+      "id": "C-05",
+      "killed_by": [
+        "test_review_fixes.TestTwoEndedAdapterCrossesTheTaxonomy.test_an_end_that_belongs_to_the_other_page_never_crosses"
+      ],
+      "rule_broken": "the two adapter ends are swapped",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_review_fixes.TestTwoEndedAdapterCrossesTheTaxonomy.test_each_end_in_each_language_reaches_its_own_page_with_provenance",
+      "file": "engine_seam/accessory_v4_stage_c.py",
+      "id": "C-06",
+      "killed_by": [
+        "test_review_fixes.TestTwoEndedAdapterCrossesTheTaxonomy.test_each_end_in_each_language_reaches_its_own_page_with_provenance"
+      ],
+      "rule_broken": "a crossing adapter is published without the cross-taxonomy note",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_review_fixes.TestTwoEndedAdapterCrossesTheTaxonomy.test_a_generic_accessory_never_crosses_even_when_the_edge_claims_to_be_an_adapter",
+      "file": "engine_seam/accessory_v4_stage_c.py",
+      "id": "C-07",
+      "killed_by": [
+        "test_review_fixes.TestTwoEndedAdapterCrossesTheTaxonomy.test_a_generic_accessory_never_crosses_even_when_the_edge_claims_to_be_an_adapter"
+      ],
+      "rule_broken": "every OEM edge may cross the taxonomy (target_in_head is relaxed globally)",
+      "status": "KILLED"
+    },
+    {
       "detail": "test_envelope.TestEngineValidatorAgrees.test_the_two_validators_agree_on_every_systematic_mutation",
       "file": "oem_intake/envelope.py",
       "id": "E-01",
@@ -168,6 +248,36 @@
         "test_envelope.TestEngineValidatorAgrees.test_the_two_validators_agree_on_every_systematic_mutation"
       ],
       "rule_broken": "document hashes need not be SHA-256 hex",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_envelope.TestEngineValidatorAgrees.test_the_two_validators_agree_on_every_systematic_mutation",
+      "file": "oem_intake/envelope.py",
+      "id": "E-09",
+      "killed_by": [
+        "test_envelope.TestEngineValidatorAgrees.test_the_two_validators_agree_on_every_systematic_mutation"
+      ],
+      "rule_broken": "the envelope accepts an edge without a source SKU",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_envelope.TestEngineValidatorAgrees.test_the_two_validators_agree_on_every_systematic_mutation",
+      "file": "oem_intake/envelope.py",
+      "id": "E-10",
+      "killed_by": [
+        "test_envelope.TestEngineValidatorAgrees.test_the_two_validators_agree_on_every_systematic_mutation"
+      ],
+      "rule_broken": "the envelope accepts a source identity that is not a SHA-256",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_envelope.TestEngineValidatorAgrees.test_both_validators_refuse_an_adapter_edge_under_the_default_od5",
+      "file": "oem_intake/envelope.py",
+      "id": "E-11",
+      "killed_by": [
+        "test_envelope.TestEngineValidatorAgrees.test_both_validators_refuse_an_adapter_edge_under_the_default_od5"
+      ],
+      "rule_broken": "the envelope accepts an adapter edge although the declared OD5 policy is the default 'abstain'",
       "status": "KILLED"
     },
     {
@@ -551,6 +661,36 @@
       "status": "KILLED"
     },
     {
+      "detail": "test_gate.TestPairLevelHolds.test_a_pair_whose_source_binding_is_missing_or_malformed_is_held_as_source_identity_unknown",
+      "file": "oem_intake/gate.py",
+      "id": "GI-01",
+      "killed_by": [
+        "test_gate.TestPairLevelHolds.test_a_pair_whose_source_binding_is_missing_or_malformed_is_held_as_source_identity_unknown"
+      ],
+      "rule_broken": "a pair whose source cannot be described gets an edge (finding C-R1)",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_cli_accepted_edges.TestBuildAcceptedEdgesCli.test_an_accepted_envelope_drives_the_patched_engine_end_to_end_from_files",
+      "file": "oem_intake/gate.py",
+      "id": "GI-02",
+      "killed_by": [
+        "test_cli_accepted_edges.TestBuildAcceptedEdgesCli.test_an_accepted_envelope_drives_the_patched_engine_end_to_end_from_files"
+      ],
+      "rule_broken": "the gate writes an opaque placeholder instead of the source identity",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_gate.TestPairLevelHolds.test_a_pair_whose_source_binding_is_missing_or_malformed_is_held_as_source_identity_unknown",
+      "file": "oem_intake/gate.py",
+      "id": "GI-03",
+      "killed_by": [
+        "test_gate.TestPairLevelHolds.test_a_pair_whose_source_binding_is_missing_or_malformed_is_held_as_source_identity_unknown"
+      ],
+      "rule_broken": "the gate accepts a malformed source binding",
+      "status": "KILLED"
+    },
+    {
       "detail": "test_seam.TestOnWiring.test_sources_outside_the_scope_or_without_a_head_or_not_purchasable_are_held_with_a_reason",
       "file": "engine_seam/accessory_v4_stage_c.py",
       "id": "H-01",
@@ -561,31 +701,31 @@
       "status": "KILLED"
     },
     {
-      "detail": "test_seam.TestOnWiring.test_sources_outside_the_scope_or_without_a_head_or_not_purchasable_are_held_with_a_reason",
+      "detail": "test_review_fixes.TestTwoEndedAdapterCrossesTheTaxonomy.test_a_source_that_is_not_purchasable_or_not_a_source_gets_no_adapter",
       "file": "engine_seam/accessory_v4_stage_c.py",
       "id": "H-02",
       "killed_by": [
-        "test_seam.TestOnWiring.test_sources_outside_the_scope_or_without_a_head_or_not_purchasable_are_held_with_a_reason"
+        "test_review_fixes.TestTwoEndedAdapterCrossesTheTaxonomy.test_a_source_that_is_not_purchasable_or_not_a_source_gets_no_adapter"
       ],
       "rule_broken": "an OEM edge enters a source that is not purchasable",
       "status": "KILLED"
     },
     {
-      "detail": "test_seam.TestOnWiring.test_locale_sku_and_catalog_staleness_are_checked_against_the_live_rows",
+      "detail": "test_review_fixes.TestTwoEndedAdapterCrossesTheTaxonomy.test_locale_sku_and_no_self_gates_are_unchanged_for_a_crossing_adapter",
       "file": "engine_seam/accessory_v4_stage_c.py",
       "id": "H-03",
       "killed_by": [
-        "test_seam.TestOnWiring.test_locale_sku_and_catalog_staleness_are_checked_against_the_live_rows"
+        "test_review_fixes.TestTwoEndedAdapterCrossesTheTaxonomy.test_locale_sku_and_no_self_gates_are_unchanged_for_a_crossing_adapter"
       ],
       "rule_broken": "an OEM edge to a target that is not in the catalog is not held",
       "status": "KILLED"
     },
     {
-      "detail": "test_seam.TestOnWiring.test_locale_sku_and_catalog_staleness_are_checked_against_the_live_rows",
+      "detail": "test_review_fixes.TestTwoEndedAdapterCrossesTheTaxonomy.test_locale_sku_and_no_self_gates_are_unchanged_for_a_crossing_adapter",
       "file": "engine_seam/accessory_v4_stage_c.py",
       "id": "H-04",
       "killed_by": [
-        "test_seam.TestOnWiring.test_locale_sku_and_catalog_staleness_are_checked_against_the_live_rows"
+        "test_review_fixes.TestTwoEndedAdapterCrossesTheTaxonomy.test_locale_sku_and_no_self_gates_are_unchanged_for_a_crossing_adapter"
       ],
       "rule_broken": "an OEM edge whose target SKU changed since the gate is published",
       "status": "KILLED"
@@ -621,41 +761,41 @@
       "status": "KILLED"
     },
     {
-      "detail": "test_seam.TestOnWiring.test_a_target_in_the_translation_set_of_the_source_is_the_same_product_and_is_held",
+      "detail": "test_review_fixes.TestTwoEndedAdapterCrossesTheTaxonomy.test_locale_sku_and_no_self_gates_are_unchanged_for_a_crossing_adapter",
       "file": "engine_seam/accessory_v4_stage_c.py",
       "id": "H-08",
       "killed_by": [
-        "test_seam.TestOnWiring.test_a_target_in_the_translation_set_of_the_source_is_the_same_product_and_is_held"
+        "test_review_fixes.TestTwoEndedAdapterCrossesTheTaxonomy.test_locale_sku_and_no_self_gates_are_unchanged_for_a_crossing_adapter"
       ],
       "rule_broken": "an OEM edge from a product to its own translation is published",
       "status": "KILLED"
     },
     {
-      "detail": "test_seam.TestOnWiring.test_the_variant_gate_applies_to_a_source_as_well_as_to_a_target",
+      "detail": "test_review_fixes.TestSourceIdentityIsEnforcedByTheEngine.test_the_variant_gate_still_decides_the_options_of_the_source",
       "file": "engine_seam/accessory_v4_stage_c.py",
       "id": "H-09",
       "killed_by": [
-        "test_seam.TestOnWiring.test_the_variant_gate_applies_to_a_source_as_well_as_to_a_target"
+        "test_review_fixes.TestSourceIdentityIsEnforcedByTheEngine.test_the_variant_gate_still_decides_the_options_of_the_source"
       ],
       "rule_broken": "an OEM edge from a source with an unverified variant is published",
       "status": "KILLED"
     },
     {
-      "detail": "test_seam.TestOnWiring.test_each_current_engine_gate_holds_its_own_edge_and_names_the_reason",
+      "detail": "test_review_fixes.TestTwoEndedAdapterCrossesTheTaxonomy.test_commercial_and_safety_gates_are_unchanged_for_a_crossing_adapter",
       "file": "engine_seam/accessory_v4_stage_c.py",
       "id": "H-10",
       "killed_by": [
-        "test_seam.TestOnWiring.test_each_current_engine_gate_holds_its_own_edge_and_names_the_reason"
+        "test_review_fixes.TestTwoEndedAdapterCrossesTheTaxonomy.test_commercial_and_safety_gates_are_unchanged_for_a_crossing_adapter"
       ],
       "rule_broken": "an OEM edge to a target with an unverified variant is published",
       "status": "KILLED"
     },
     {
-      "detail": "test_seam.TestOnWiring.test_each_current_engine_gate_holds_its_own_edge_and_names_the_reason",
+      "detail": "test_review_fixes.TestTwoEndedAdapterCrossesTheTaxonomy.test_a_generic_accessory_never_crosses_even_when_the_edge_claims_to_be_an_adapter",
       "file": "engine_seam/accessory_v4_stage_c.py",
       "id": "H-11",
       "killed_by": [
-        "test_seam.TestOnWiring.test_each_current_engine_gate_holds_its_own_edge_and_names_the_reason"
+        "test_review_fixes.TestTwoEndedAdapterCrossesTheTaxonomy.test_a_generic_accessory_never_crosses_even_when_the_edge_claims_to_be_an_adapter"
       ],
       "rule_broken": "an OEM edge to a target outside the source's head (taxonomy) is published",
       "status": "KILLED"
@@ -671,11 +811,11 @@
       "status": "KILLED"
     },
     {
-      "detail": "test_seam.TestOnWiring.test_each_current_engine_gate_holds_its_own_edge_and_names_the_reason",
+      "detail": "test_review_fixes.TestSourceIdentityIsEnforcedByTheEngine.test_the_variant_gate_still_decides_the_options_of_the_source",
       "file": "engine_seam/accessory_v4_stage_c.py",
       "id": "H-13",
       "killed_by": [
-        "test_seam.TestOnWiring.test_each_current_engine_gate_holds_its_own_edge_and_names_the_reason"
+        "test_review_fixes.TestSourceIdentityIsEnforcedByTheEngine.test_the_variant_gate_still_decides_the_options_of_the_source"
       ],
       "rule_broken": "any variant profile is accepted as verified",
       "status": "KILLED"
@@ -688,6 +828,116 @@
         "test_seam.TestOnWiring.test_each_current_engine_gate_holds_its_own_edge_and_names_the_reason"
       ],
       "rule_broken": "a fitment-critical variant profile is accepted as verified",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_review_fixes.TestSourceIdentityIsEnforcedByTheEngine.test_a_stale_edge_is_held_before_it_can_be_called_already_present_or_published",
+      "file": "engine_seam/accessory_v4_stage_c.py",
+      "id": "I-01",
+      "killed_by": [
+        "test_review_fixes.TestSourceIdentityIsEnforcedByTheEngine.test_a_stale_edge_is_held_before_it_can_be_called_already_present_or_published"
+      ],
+      "rule_broken": "an edge is published for a source whose SKU changed since the gate (finding C-R1)",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_review_fixes.TestSourceIdentityIsEnforcedByTheEngine.test_a_changed_translation_sibling_or_group_is_a_changed_identity",
+      "file": "engine_seam/accessory_v4_stage_c.py",
+      "id": "I-02",
+      "killed_by": [
+        "test_review_fixes.TestSourceIdentityIsEnforcedByTheEngine.test_a_changed_translation_sibling_or_group_is_a_changed_identity"
+      ],
+      "rule_broken": "an edge is published for a source whose model / brand / translation group changed since the gate (finding C-R1)",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_review_fixes.TestSourceIdentityIsEnforcedByTheEngine.test_a_changed_translation_sibling_or_group_is_a_changed_identity",
+      "file": "engine_seam/accessory_v4_stage_c.py",
+      "id": "I-03",
+      "killed_by": [
+        "test_review_fixes.TestSourceIdentityIsEnforcedByTheEngine.test_a_changed_translation_sibling_or_group_is_a_changed_identity"
+      ],
+      "rule_broken": "the stale-source check is skipped for every edge",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_review_fixes.TestSourceIdentityIsEnforcedByTheEngine.test_a_stale_edge_is_held_before_it_can_be_called_already_present_or_published",
+      "file": "engine_seam/accessory_v4_stage_c.py",
+      "id": "I-04",
+      "killed_by": [
+        "test_review_fixes.TestSourceIdentityIsEnforcedByTheEngine.test_a_stale_edge_is_held_before_it_can_be_called_already_present_or_published"
+      ],
+      "rule_broken": "a stale edge is reported as already present in the legacy list instead of held (check order)",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_cli_accepted_edges.TestBuildAcceptedEdgesCli.test_an_accepted_envelope_drives_the_patched_engine_end_to_end_from_files",
+      "file": "engine_seam/accessory_v4_stage_c.py",
+      "id": "I-05",
+      "killed_by": [
+        "test_cli_accepted_edges.TestBuildAcceptedEdgesCli.test_an_accepted_envelope_drives_the_patched_engine_end_to_end_from_files"
+      ],
+      "rule_broken": "the engine identity is a constant",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_cli_accepted_edges.TestBuildAcceptedEdgesCli.test_an_accepted_envelope_drives_the_patched_engine_end_to_end_from_files",
+      "file": "engine_seam/accessory_v4_stage_c.py",
+      "id": "I-06",
+      "killed_by": [
+        "test_cli_accepted_edges.TestBuildAcceptedEdgesCli.test_an_accepted_envelope_drives_the_patched_engine_end_to_end_from_files"
+      ],
+      "rule_broken": "the engine identity ignores the SKU of the source",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_cli_accepted_edges.TestBuildAcceptedEdgesCli.test_an_accepted_envelope_drives_the_patched_engine_end_to_end_from_files",
+      "file": "engine_seam/accessory_v4_stage_c.py",
+      "id": "I-07",
+      "killed_by": [
+        "test_cli_accepted_edges.TestBuildAcceptedEdgesCli.test_an_accepted_envelope_drives_the_patched_engine_end_to_end_from_files"
+      ],
+      "rule_broken": "the engine identity ignores the maker-scoped model of the source",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_cli_accepted_edges.TestBuildAcceptedEdgesCli.test_an_accepted_envelope_drives_the_patched_engine_end_to_end_from_files",
+      "file": "engine_seam/accessory_v4_stage_c.py",
+      "id": "I-08",
+      "killed_by": [
+        "test_cli_accepted_edges.TestBuildAcceptedEdgesCli.test_an_accepted_envelope_drives_the_patched_engine_end_to_end_from_files"
+      ],
+      "rule_broken": "the engine identity ignores the translation group of the source",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_cli_accepted_edges.TestBuildAcceptedEdgesCli.test_an_accepted_envelope_drives_the_patched_engine_end_to_end_from_files",
+      "file": "engine_seam/accessory_v4_stage_c.py",
+      "id": "I-09",
+      "killed_by": [
+        "test_cli_accepted_edges.TestBuildAcceptedEdgesCli.test_an_accepted_envelope_drives_the_patched_engine_end_to_end_from_files"
+      ],
+      "rule_broken": "the engine identity ignores the brand of the source",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_cli_accepted_edges.TestBuildAcceptedEdgesCli.test_an_accepted_envelope_drives_the_patched_engine_end_to_end_from_files",
+      "file": "engine_seam/accessory_v4_stage_c.py",
+      "id": "I-10",
+      "killed_by": [
+        "test_cli_accepted_edges.TestBuildAcceptedEdgesCli.test_an_accepted_envelope_drives_the_patched_engine_end_to_end_from_files"
+      ],
+      "rule_broken": "the engine identity ignores the translation group id and the locale of the source",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_review_fixes.TestSourceIdentityIsEnforcedByTheEngine.test_a_malformed_model_group_has_no_identity_on_the_engine_side_either",
+      "file": "engine_seam/accessory_v4_stage_c.py",
+      "id": "I-11",
+      "killed_by": [
+        "test_review_fixes.TestSourceIdentityIsEnforcedByTheEngine.test_a_malformed_model_group_has_no_identity_on_the_engine_side_either"
+      ],
+      "rule_broken": "a source with a malformed model group still gets an identity",
       "status": "KILLED"
     },
     {
@@ -771,11 +1021,11 @@
       "status": "KILLED"
     },
     {
-      "detail": "test_seam.TestOnWiring.test_v36_similar_wins_over_an_oem_edge",
+      "detail": "test_review_fixes.TestTwoEndedAdapterCrossesTheTaxonomy.test_v36_similar_still_wins_over_a_crossing_adapter",
       "file": "engine_seam/accessory_v4_stage_c.py",
       "id": "M-02",
       "killed_by": [
-        "test_seam.TestOnWiring.test_v36_similar_wins_over_an_oem_edge"
+        "test_review_fixes.TestTwoEndedAdapterCrossesTheTaxonomy.test_v36_similar_still_wins_over_a_crossing_adapter"
       ],
       "rule_broken": "V3.6 similar no longer wins over an OEM edge",
       "status": "KILLED"
@@ -811,11 +1061,11 @@
       "status": "KILLED"
     },
     {
-      "detail": "test_seam.TestLedgerInvariantGuard.test_an_edge_whose_source_is_outside_the_scope_gets_its_own_held_entry",
+      "detail": "test_review_fixes.TestTwoEndedAdapterCrossesTheTaxonomy.test_a_source_that_is_not_purchasable_or_not_a_source_gets_no_adapter",
       "file": "engine_seam/accessory_v4_stage_c.py",
       "id": "M-06",
       "killed_by": [
-        "test_seam.TestLedgerInvariantGuard.test_an_edge_whose_source_is_outside_the_scope_gets_its_own_held_entry"
+        "test_review_fixes.TestTwoEndedAdapterCrossesTheTaxonomy.test_a_source_that_is_not_purchasable_or_not_a_source_gets_no_adapter"
       ],
       "rule_broken": "an envelope edge whose source is outside the scope vanishes from the ledger",
       "status": "KILLED"
@@ -831,11 +1081,11 @@
       "status": "KILLED"
     },
     {
-      "detail": "test_seam.TestOnWiring.test_a_verified_edge_enters_the_existing_a_tier_with_provenance",
+      "detail": "test_review_fixes.TestTwoEndedAdapterCrossesTheTaxonomy.test_each_end_in_each_language_reaches_its_own_page_with_provenance",
       "file": "engine_seam/accessory_v4_stage_c.py",
       "id": "M-08",
       "killed_by": [
-        "test_seam.TestOnWiring.test_a_verified_edge_enters_the_existing_a_tier_with_provenance"
+        "test_review_fixes.TestTwoEndedAdapterCrossesTheTaxonomy.test_each_end_in_each_language_reaches_its_own_page_with_provenance"
       ],
       "rule_broken": "OEM evidence carries invented conditions",
       "status": "KILLED"
@@ -1671,6 +1921,56 @@
       "status": "KILLED"
     },
     {
+      "detail": "test_cli_accepted_edges.TestBuildAcceptedEdgesCli.test_an_accepted_envelope_drives_the_patched_engine_end_to_end_from_files",
+      "file": "oem_intake/source_identity.py",
+      "id": "SI-01",
+      "killed_by": [
+        "test_cli_accepted_edges.TestBuildAcceptedEdgesCli.test_an_accepted_envelope_drives_the_patched_engine_end_to_end_from_files"
+      ],
+      "rule_broken": "the gate-side identity ignores the SKU of the source",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_cli_accepted_edges.TestBuildAcceptedEdgesCli.test_an_accepted_envelope_drives_the_patched_engine_end_to_end_from_files",
+      "file": "oem_intake/source_identity.py",
+      "id": "SI-02",
+      "killed_by": [
+        "test_cli_accepted_edges.TestBuildAcceptedEdgesCli.test_an_accepted_envelope_drives_the_patched_engine_end_to_end_from_files"
+      ],
+      "rule_broken": "the gate-side identity ignores the model of the source",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_cli_accepted_edges.TestBuildAcceptedEdgesCli.test_an_accepted_envelope_drives_the_patched_engine_end_to_end_from_files",
+      "file": "oem_intake/source_identity.py",
+      "id": "SI-03",
+      "killed_by": [
+        "test_cli_accepted_edges.TestBuildAcceptedEdgesCli.test_an_accepted_envelope_drives_the_patched_engine_end_to_end_from_files"
+      ],
+      "rule_broken": "the gate-side identity ignores the translation group",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_cli_accepted_edges.TestBuildAcceptedEdgesCli.test_an_accepted_envelope_drives_the_patched_engine_end_to_end_from_files",
+      "file": "oem_intake/source_identity.py",
+      "id": "SI-04",
+      "killed_by": [
+        "test_cli_accepted_edges.TestBuildAcceptedEdgesCli.test_an_accepted_envelope_drives_the_patched_engine_end_to_end_from_files"
+      ],
+      "rule_broken": "the gate-side identity ignores the brand of the source",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_review_fixes.TestIdentityDefinition.test_a_source_that_cannot_be_described_has_no_identity",
+      "file": "oem_intake/source_identity.py",
+      "id": "SI-05",
+      "killed_by": [
+        "test_review_fixes.TestIdentityDefinition.test_a_source_that_cannot_be_described_has_no_identity"
+      ],
+      "rule_broken": "a source with a malformed model group still gets an identity on the gate side",
+      "status": "KILLED"
+    },
+    {
       "detail": "test_envelope.TestEngineValidatorAgrees.test_the_two_validators_agree_on_every_systematic_mutation",
       "file": "engine_seam/accessory_v4_stage_c.py",
       "id": "V-01",
@@ -1821,6 +2121,36 @@
       "status": "KILLED"
     },
     {
+      "detail": "test_envelope.TestEngineValidatorAgrees.test_both_validators_refuse_an_adapter_edge_under_the_default_od5",
+      "file": "engine_seam/accessory_v4_stage_c.py",
+      "id": "V-16",
+      "killed_by": [
+        "test_envelope.TestEngineValidatorAgrees.test_both_validators_refuse_an_adapter_edge_under_the_default_od5"
+      ],
+      "rule_broken": "the engine accepts an adapter edge although the envelope declares the default OD5 'abstain'",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_envelope.TestEngineValidatorAgrees.test_the_two_validators_agree_on_every_systematic_mutation",
+      "file": "engine_seam/accessory_v4_stage_c.py",
+      "id": "V-17",
+      "killed_by": [
+        "test_envelope.TestEngineValidatorAgrees.test_the_two_validators_agree_on_every_systematic_mutation"
+      ],
+      "rule_broken": "the engine accepts a source identity that is not a SHA-256",
+      "status": "KILLED"
+    },
+    {
+      "detail": "test_envelope.TestEngineValidatorAgrees.test_the_two_validators_agree_on_every_systematic_mutation",
+      "file": "engine_seam/accessory_v4_stage_c.py",
+      "id": "V-18",
+      "killed_by": [
+        "test_envelope.TestEngineValidatorAgrees.test_the_two_validators_agree_on_every_systematic_mutation"
+      ],
+      "rule_broken": "the engine accepts an edge without a source SKU",
+      "status": "KILLED"
+    },
+    {
       "detail": "test_verify_scope.TestScope.test_unsafe_paths_are_rejected",
       "file": "tools/verify_scope.py",
       "id": "VS-01",
@@ -1864,8 +2194,8 @@
   "schema": "bp-oem-stage-c-mutation-check-v1",
   "summary": {
     "INVALID": 0,
-    "KILLED": 185,
+    "KILLED": 218,
     "SURVIVED": 0,
-    "total": 185
+    "total": 218
   }
 }
