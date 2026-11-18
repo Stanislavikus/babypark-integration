@@ -4,6 +4,8 @@ The envelope carries ONLY edges the gate accepted (VERIFIED, unconditional, non-
 IDs). Held relations, the veto report and the reasons live in the separate gate report; the engine never sees them. ``validate`` here is the
 gate's own self-check before it writes the file; the engine seam carries an independent validator of the same contract (a differential test
 keeps the two in agreement). Unknown keys, wrong types and every non-LISTED / conditional / malformed edge are errors (fail closed).
+Every edge is bound to the identity of its source (``source_sku``, ``source_identity``; see ``source_identity.py``): the engine recomputes it from the
+CURRENT catalog and holds an edge whose source is no longer the product the gate accepted it for (finding C-R1).
 """
 from __future__ import annotations
 
@@ -15,7 +17,8 @@ ENVELOPE_KEYS = ("schema", "mode", "synthetic", "label", "gate", "provenance", "
 GATE_KEYS = ("publish_states", "one_ended_adapter", "veto_mode", "as_of", "allow_synthetic")
 PROVENANCE_KEYS = ("relations_digest", "inputs_digest", "relations_schema", "gate_version")
 EDGE_KEYS = ("target_nid", "target_sku", "lang", "relation_ids", "relation_type", "end", "fit_state", "conditions", "claim_ids",
-             "doc_ids", "doc_hashes", "binding_ids", "source_model_id", "relation_digest", "registry_version", "synthetic")
+             "doc_ids", "doc_hashes", "binding_ids", "source_model_id", "source_sku", "source_identity", "relation_digest",
+             "registry_version", "synthetic")
 RELATION_TYPES = ("accessory_for_model", "adapter_between")
 ENDS = {"accessory_for_model": ("model",), "adapter_between": ("seat", "chassis")}
 ONE_ENDED_ADAPTER_VALUES = ("abstain", "synthetic_test_two_ended")
@@ -32,6 +35,11 @@ def _is_int(value) -> bool:
 
 def _hex64(value) -> bool:
     return isinstance(value, str) and bool(_HEX64.fullmatch(value))
+
+
+def is_hex64(value) -> bool:
+    """Public form of the SHA-256 shape check (the gate validates the source identities it is given with it)."""
+    return _hex64(value)
 
 
 def _strings(value, where, *, unique=True, non_empty=True) -> list:
@@ -56,7 +64,7 @@ def validate_edge(edge, *, envelope_synthetic: bool, where: str = "edge") -> Non
     _keys(edge, EDGE_KEYS, where)
     if not _is_int(edge["target_nid"]) or edge["target_nid"] <= 0:
         raise EnvelopeError(f"{where}.target_nid: expected a positive integer")
-    for key in ("target_sku", "lang", "source_model_id"):
+    for key in ("target_sku", "lang", "source_model_id", "source_sku"):
         if not isinstance(edge[key], str) or not edge[key]:
             raise EnvelopeError(f"{where}.{key}: expected a non-empty string")
     _strings(edge["relation_ids"], f"{where}.relation_ids")
@@ -76,7 +84,7 @@ def validate_edge(edge, *, envelope_synthetic: bool, where: str = "edge") -> Non
     if not all(_hex64(h) for h in hashes):
         raise EnvelopeError(f"{where}.doc_hashes: every item must be a 64-hex SHA-256")
     _strings(edge["binding_ids"], f"{where}.binding_ids", non_empty=False)
-    for key in ("relation_digest", "registry_version"):
+    for key in ("source_identity", "relation_digest", "registry_version"):
         if not _hex64(edge[key]):
             raise EnvelopeError(f"{where}.{key}: expected a 64-hex SHA-256")
     if type(edge["synthetic"]) is not bool:
@@ -132,6 +140,8 @@ def validate(doc, *, allow_synthetic: bool = False) -> dict:
             raise EnvelopeError(f"envelope.edges[{key}]: expected a non-empty list")
         for index, edge in enumerate(items):
             validate_edge(edge, envelope_synthetic=doc["synthetic"], where=f"envelope.edges[{key}][{index}]")
+            if edge["relation_type"] == "adapter_between" and gate["one_ended_adapter"] == "abstain":
+                raise EnvelopeError(f"envelope.edges[{key}][{index}]: an adapter edge needs a non-default OD5 policy (adapters abstain by default)")
             pair = (int(key), edge["target_nid"])
             if pair in seen:
                 raise EnvelopeError(f"envelope.edges[{key}]: duplicate target {edge['target_nid']}")

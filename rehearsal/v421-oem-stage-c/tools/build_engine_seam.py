@@ -51,7 +51,7 @@ EDITS = [
      None,
      "        old_similar=list(record[\"similar\"])\n"
      "        oem_accepted=[]\n"
-     "        if oem_on:a_ids,oem_accepted=_oem_merge(nid,source,head,a_ids,a_reasons,old_similar,rows,policy,option_profiles,oem_edges,oem_ledger)\n"
+     "        if oem_on:a_ids,oem_accepted=_oem_merge(nid,source,head,a_ids,a_reasons,old_similar,rows,policy,option_profiles,oem_edges,oem_ledger,index)\n"
      "        b_ids=[]; b_reasons={}\n"),
     ("E4", "record published / dropped-by-limit once the limit of 20 is applied",
      "        total=(a_ids+b_ids)[:20]\n",

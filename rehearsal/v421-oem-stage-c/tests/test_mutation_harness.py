@@ -76,7 +76,8 @@ class TestMutantsAreWellFormed(unittest.TestCase):
             self.assertTrue(why.strip(), mid)
             self.assertTrue((ROOT / rel).is_file(), mid)
 
-    SEAM_PREFIXES = ("M-", "V-", "H-")       # M: ledger/merge wiring, V: engine-side envelope validator, H: the existing per-edge engine gates
+    SEAM_PREFIXES = ("M-", "V-", "H-", "I-", "C-")   # M: ledger/merge wiring, V: engine-side envelope validator, H: the existing per-edge engine gates,
+                                                      # I: source identity (C-R1), C: adapter crossing (C-R2)
 
     def test_seam_mutants_target_the_patched_seam_file_only(self):
         seam = [m for m in mc.ALL if m[0].startswith(self.SEAM_PREFIXES)]

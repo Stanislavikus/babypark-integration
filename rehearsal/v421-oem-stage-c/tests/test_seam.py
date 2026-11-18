@@ -64,9 +64,10 @@ class TestOffIsIdentical(unittest.TestCase):
         for name in legacy_names:
             self.assertTrue(hasattr(new, name), name)
         added = sorted(n for n in dir(new) if not n.startswith("__") and not hasattr(base, n))
-        self.assertEqual(added, ["OEM_SCHEMA", "_OEM_DATE", "_OEM_EDGE_KEYS", "_OEM_ENDS", "_OEM_ENVELOPE_KEYS", "_OEM_GATE_KEYS", "_OEM_HEX64",
-                                 "_OEM_PROVENANCE_KEYS", "_oem_close", "_oem_edge_hold", "_oem_fail", "_oem_finalize", "_oem_hex",
-                                 "_oem_keys", "_oem_merge", "_oem_strings", "_oem_variant_ok", "oem_load_envelope"])
+        self.assertEqual(added, ["OEM_SCHEMA", "_OEM_DATE", "_OEM_EDGE_KEYS", "_OEM_ENDS", "_OEM_END_HEAD", "_OEM_ENVELOPE_KEYS", "_OEM_GATE_KEYS",
+                                 "_OEM_HEX64", "_OEM_PROVENANCE_KEYS", "_oem_adapter_crosses", "_oem_close", "_oem_edge_hold", "_oem_fail",
+                                 "_oem_finalize", "_oem_hex", "_oem_keys", "_oem_merge", "_oem_source_identity", "_oem_source_stale",
+                                 "_oem_strings", "_oem_variant_ok", "oem_load_envelope"])
 
 
 @require_engine
@@ -162,7 +163,8 @@ class TestOnWiring(unittest.TestCase):
         self.assertEqual((ev["fit_state"], ev["conditions"], ev["relation_ids"], ev["end"]), ("LISTED", [], ["rel:00000000000000aa"], "model"))
         self.assertEqual(sorted(ev), sorted(["tier", "reason", "role", "fit_state", "conditions", "relation_ids", "relation_type", "end",
                                              "relation_digest", "claim_ids", "doc_ids", "doc_hashes", "binding_ids", "registry_version",
-                                             "source_model_id", "synthetic"]))
+                                             "source_model_id", "source_sku", "source_identity", "synthetic"]))
+        self.assertEqual((ev["source_sku"], ev["source_identity"]), ("C-FY", sc.SI.digest_of(fy, self.inp.rows, self.inp.index)))
         self.assertEqual(ev["role"], "rain_cover")
         self.assertIn(target, evidence[str(fy)]["A_model"])
         self.assertEqual(metrics["edges"]["A_oem_relation"], 1)
@@ -256,7 +258,7 @@ class TestOnWiring(unittest.TestCase):
         inp, cat = sc.standard()
         src, edge = sc.edge(inp, "C-FX", "RC-9")
         cat.rows[edge["target_nid"]]["tnid"] = cat.rows[src]["tnid"]       # two rows of one language in one translation set: the legacy rules call it one product
-        inp = cat.finish()
+        # (the index is not rebuilt: the source keeps the identity the edge is bound to, so this test is about the target side only)
         _, evidence, metrics = inp.patched(oem_relations=sc.envelope([(src, edge)]), **ON)
         self.assertEqual([(e["status"], e["reason"]) for e in metrics["oem"]["ledger"]], [("held", "same_product")])
         self.assertNotIn(str(edge["target_nid"]), evidence[str(src)]["targets"])
@@ -282,10 +284,10 @@ class TestOnWiring(unittest.TestCase):
         out_of_scope = cat.nid("RC-9", "ru")                                                         # an accessory is not a recommendation source
         seat_fs3 = cat.nid("S-B1", "ru")
         cat.rows[seat_fs3]["field_status"] = 3                                                      # a seat that is not purchasable
-        headless = cat.nid("OK-3", "ru")
-        inp.scope[str(headless)] = {"language": "ru", "similar": [], "accessories": []}              # in scope (the runner scopes every cohort row) but no head
+        headless = cat.nid("C-FX", "ru")
         pairs = [(out_of_scope, sc.edge(inp, "C-FY", "BG-9")[1]), (seat_fs3, sc.edge(inp, "S-B1", "SC-5", model="zeta:beta-1")[1]),
-                 (headless, sc.edge(inp, "C-FY", "BG-9")[1])]
+                 (headless, sc.edge(inp, "C-FX", "BG-9")[1])]
+        cat.rows[headless]["cats"] = ""                                                             # still a bindable model product, but no longer in a source category: no head
         result = inp.patched(oem_relations=sc.envelope(pairs), **ON)
         got = {e["source_nid"]: e["reason"] for e in result[2]["oem"]["ledger"]}
         self.assertEqual(got[out_of_scope], "source_not_in_scope")

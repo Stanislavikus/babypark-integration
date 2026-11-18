@@ -521,14 +521,15 @@ class TestPairLevelHolds(WorldCase):
 
     def test_the_pair_checks_themselves_name_unverified_identity_and_binding(self):
         base = {"end_identity_verified": True, "article_binding_status": "bound", "target_field_status": 1, "target_published": 1,
-                "target_nid": 1, "target_sku": "S", "lang": "ru"}
+                "target_nid": 1, "target_sku": "S", "lang": "ru", "source_nid": 7}
         counts = {"target": {("S", "ru"): 1}}
         prices = {1: 10.0}
-        self.assertIsNone(gate._pair_problem(base, prices, counts))
-        self.assertEqual(gate._pair_problem({**base, "end_identity_verified": False}, prices, counts), "identity_not_verified_for_pair")
-        self.assertEqual(gate._pair_problem({**base, "article_binding_status": "proposed"}, prices, counts), "article_not_bound_for_pair")
-        self.assertEqual(gate._pair_problem({**base, "target_field_status": "1"}, prices, counts), None)       # catalog stores either spelling
-        self.assertEqual(gate._pair_problem({**base, "target_field_status": "x"}, prices, counts), "target_field_status_not_1")
+        ids = {7: {"sku": "S-7", "identity": "a" * 64}}
+        self.assertIsNone(gate._pair_problem(base, prices, counts, ids))
+        self.assertEqual(gate._pair_problem({**base, "end_identity_verified": False}, prices, counts, ids), "identity_not_verified_for_pair")
+        self.assertEqual(gate._pair_problem({**base, "article_binding_status": "proposed"}, prices, counts, ids), "article_not_bound_for_pair")
+        self.assertEqual(gate._pair_problem({**base, "target_field_status": "1"}, prices, counts, ids), None)       # catalog stores either spelling
+        self.assertEqual(gate._pair_problem({**base, "target_field_status": "x"}, prices, counts, ids), "target_field_status_not_1")
 
     def test_pair_holds_never_block_unrelated_relations(self):
         def mutate(view):
@@ -543,8 +544,10 @@ class TestConflictingSupport(WorldCase):
         twin["claims"][0]["claim_id"] = "clm:twin"
         twin["evidence"]["docs"][0]["doc_id"] = "doc:twin"
         hashes = {**self.hashes, "doc:twin": "e" * 64}
-        env, report = gate.build(self.world.relations + [twin], WF.build_view(self.world), policy=SYN, as_of=WF.AS_OF, doc_hashes=hashes,
-                                 binding_ids_of=self.world.binding_ids_of, inputs_files=self.world.inputs_files)
+        twin_view = WF.build_view(self.world)
+        env, report = gate.build(self.world.relations + [twin], twin_view, policy=SYN, as_of=WF.AS_OF, doc_hashes=hashes,
+                                 binding_ids_of=self.world.binding_ids_of, inputs_files=self.world.inputs_files,
+                                 source_identities=WF.synthetic_identities(twin_view))
         src = WF.source_nid(self.world, "zeta:alpha-1", "ru")
         edge, = env["edges"][str(src)]
         self.assertEqual(edge["relation_ids"], sorted([self.listed["relation_id"], "rel:00000000000000aa"]))
@@ -562,7 +565,8 @@ class TestConflictingSupport(WorldCase):
         other = self.world.listed_afm_xl
         twin = WF.mutated(other, relation_id="rel:00000000000000bb", **{"ends.accessory.catalog_sku": "RS-100"})
         env, report = gate.build([self.listed, twin], view, policy=SYN, as_of=WF.AS_OF, doc_hashes=self.hashes,
-                                 binding_ids_of=self.world.binding_ids_of, inputs_files=self.world.inputs_files)
+                                 binding_ids_of=self.world.binding_ids_of, inputs_files=self.world.inputs_files,
+                                 source_identities=WF.synthetic_identities(view))
         conflicts = [h for h in report["held_pairs"] if h["reason"] == "conflicting_support_for_pair"]
         self.assertEqual({h["relation_id"] for h in conflicts}, {self.listed["relation_id"], "rel:00000000000000bb"})
         self.assertEqual({(h["source_nid"], h["target_nid"]) for h in conflicts}, {(src_ru, WF.target_nid("RS-100", "ru"))})

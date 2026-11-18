@@ -1,9 +1,10 @@
 """Reusable fictional scenarios for the seam tests (real engine modules; every envelope here is explicitly SYNTHETIC test data)."""
 from __future__ import annotations
 
+from oem_intake import source_identity as SI
 from tests import catalog_fixture as cf
 
-A64, B64, C64 = "a" * 64, "b" * 64, "c" * 64
+A64, B64, C64, D64 = "a" * 64, "b" * 64, "c" * 64, "d" * 64
 AS_OF = "2026-11-17"
 
 
@@ -49,10 +50,15 @@ def standard():
     return inp, cat
 
 
-def edge_for(rows, target_nid, *, lang, end="model", relation_type="accessory_for_model", rel="rel:0000000000000001", model="zeta:alpha-1",
-             synthetic=True, **over):
-    """One envelope edge to a target given by nid (also for generated catalogs that have no reference handles)."""
-    out = {"target_nid": target_nid, "target_sku": rows[target_nid]["sku"], "lang": lang, "relation_ids": [rel], "relation_type": relation_type,
+def edge_for(rows, target_nid, *, lang, source=None, index=None, end="model", relation_type="accessory_for_model", rel="rel:0000000000000001",
+             model="zeta:alpha-1", synthetic=True, **over):
+    """One envelope edge to a target given by nid (also for generated catalogs that have no reference handles).
+
+    ``source`` (the source nid) and ``index`` (the V3.2 index of the same catalog) bind the edge to the identity of its source exactly as the gate does
+    (C-R1). Without an index the identity digest is a fixed placeholder: such an edge is only meant for tests that never run the engine.
+    """
+    identity = SI.digest_of(source, rows, index) if source is not None and index is not None else D64
+    out = {"target_nid": target_nid, "source_sku": rows[source]["sku"] if source is not None else "SRC-UNBOUND", "source_identity": identity, "target_sku": rows[target_nid]["sku"], "lang": lang, "relation_ids": [rel], "relation_type": relation_type,
            "end": end, "fit_state": "LISTED", "conditions": [], "claim_ids": ["claim:test-1"], "doc_ids": ["doc:test-1"],
            "doc_hashes": [A64], "binding_ids": ["bind:test-1"], "source_model_id": model, "relation_digest": B64,
            "registry_version": C64, "synthetic": synthetic}
@@ -64,7 +70,7 @@ def edge(inp, source, target, *, lang="ru", **kw):
     """One envelope edge for the pair (source ref, target ref) in ``lang``; returns ``(source_nid, edge)``."""
     cat = inp.catalog
     src, tgt = cat.nid(source, lang), cat.nid(target, lang)
-    return src, edge_for(inp.rows, tgt, lang=lang, **kw)
+    return src, edge_for(inp.rows, tgt, lang=lang, source=src, index=inp.index, **kw)
 
 
 def envelope(pairs, *, synthetic=True, one_ended_adapter="abstain", label="synthetic-test", **over):

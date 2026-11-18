@@ -33,7 +33,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from oem_intake import _stage_b, envelope as E, gate  # noqa: E402
+from oem_intake import _stage_b, envelope as E, gate, source_identity  # noqa: E402
 
 STAGE_B = _stage_b.ensure_on_path()
 from oem_stage import canon, engine_env, outputs, shadow, world as W  # noqa: E402
@@ -142,7 +142,8 @@ def build(args) -> tuple:
     try:
         envelope, report = gate.build(derived, view, policy=gate_policy, as_of=args.as_of, doc_hashes=doc_hashes,
                                       binding_ids_of=lambda maker, mpn: world.articles.lookup(maker, mpn)["binding_id"],
-                                      inputs_files=inputs, label=args.label)
+                                      inputs_files=inputs, label=args.label,
+                                      source_identities=source_identity.identities_for(rows, index))
     except (gate.GateRefused, E.EnvelopeError) as exc:
         refuse(EXIT_POLICY, f"{exc}; no outputs were written")
     report_doc = {**report, "notice": NOTICE,

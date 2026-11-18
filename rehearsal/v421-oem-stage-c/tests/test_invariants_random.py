@@ -54,7 +54,7 @@ def generate(seed):
         chosen = rnd.sample(same, min(rnd.randint(0, 6), len(same)))
         if other and rnd.random() < 0.2:
             chosen.append(rnd.choice(other))                        # locale mismatch: the engine must hold it
-        pairs += [(sid, sc.edge_for(inp.rows, t, lang=lang)) for t in chosen]
+        pairs += [(sid, sc.edge_for(inp.rows, t, lang=lang, source=sid, index=inp.index)) for t in chosen]
     return inp, pairs
 
 

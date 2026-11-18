@@ -4,6 +4,10 @@
 # only validates it, applies the existing exact-ID / locale / variant / commercial / head gates to every edge and appends the survivors
 # AFTER all legacy A edges (tier A_model, reason accepted_oem_relation). Legacy rules, manufacturer_fitment_match, B_universal, the
 # V3.6 similar field, the ordering of legacy edges and the limit of 20 are untouched.
+# Two guards close the findings of the independent rehearsal review: every edge is bound to the exact identity of its SOURCE (C-R1: the
+# SKU and a digest of the identity inputs are recomputed from the CURRENT rows and index; a different product under the same NID is held), and
+# a gate-approved two-ended adapter may cross the catalog taxonomy to the page whose end it belongs to (C-R2), under the conditions of
+# _oem_adapter_crosses only.
 # ---------------------------------------------------------------------------------------------------------------------
 OEM_SCHEMA="bp-oem-accepted-edges-v1"
 _OEM_HEX64=re.compile(r"[0-9a-f]{64}")
@@ -12,8 +16,9 @@ _OEM_ENVELOPE_KEYS={"schema","mode","synthetic","label","gate","provenance","edg
 _OEM_GATE_KEYS={"publish_states","one_ended_adapter","veto_mode","as_of","allow_synthetic"}
 _OEM_PROVENANCE_KEYS={"relations_digest","inputs_digest","relations_schema","gate_version"}
 _OEM_EDGE_KEYS={"target_nid","target_sku","lang","relation_ids","relation_type","end","fit_state","conditions","claim_ids","doc_ids",
-                "doc_hashes","binding_ids","source_model_id","relation_digest","registry_version","synthetic"}
+                "doc_hashes","binding_ids","source_model_id","source_sku","source_identity","relation_digest","registry_version","synthetic"}
 _OEM_ENDS={"accessory_for_model":("model",),"adapter_between":("seat","chassis")}
+_OEM_END_HEAD={"seat":"car_seat","chassis":"stroller"}
 
 def _oem_fail(message):
     raise ValueError("oem_relations: "+message)
@@ -67,20 +72,22 @@ def oem_load_envelope(envelope,allow_synthetic=False):
             where="edges["+key+"]"
             _oem_keys(edge,_OEM_EDGE_KEYS,where)
             if type(edge["target_nid"]) is not int or edge["target_nid"]<=0:_oem_fail(where+".target_nid must be a positive integer")
-            for field in ("target_sku","lang","source_model_id"):
+            for field in ("target_sku","lang","source_model_id","source_sku"):
                 if not isinstance(edge[field],str) or not edge[field]:_oem_fail(where+"."+field+" must be a non-empty string")
             relation_ids=_oem_strings(edge["relation_ids"],where+".relation_ids")
             if relation_ids!=sorted(relation_ids):_oem_fail(where+".relation_ids must be sorted")
             rtype,end=edge["relation_type"],edge["end"]
             if not (isinstance(rtype,str) and isinstance(end,str) and rtype in _OEM_ENDS and end in _OEM_ENDS[rtype]):
                 _oem_fail(where+" relation_type/end is not an accepted combination")
+            if rtype=="adapter_between" and gate["one_ended_adapter"]=="abstain":
+                _oem_fail(where+" is an adapter edge but gate.one_ended_adapter is the default 'abstain' (OD5): adapters are never published by default")
             if edge["fit_state"]!="LISTED":_oem_fail(where+".fit_state must be LISTED")
             if edge["conditions"]!=[]:_oem_fail(where+".conditions must be empty (conditional edges are held)")
             _oem_strings(edge["claim_ids"],where+".claim_ids");_oem_strings(edge["doc_ids"],where+".doc_ids")
             if not all(_oem_hex(h) for h in _oem_strings(edge["doc_hashes"],where+".doc_hashes")):
                 _oem_fail(where+".doc_hashes must be SHA-256 values")
             _oem_strings(edge["binding_ids"],where+".binding_ids",False)
-            for field in ("relation_digest","registry_version"):
+            for field in ("source_identity","relation_digest","registry_version"):
                 if not _oem_hex(edge[field]):_oem_fail(where+"."+field+" must be a SHA-256")
             if type(edge["synthetic"]) is not bool or (edge["synthetic"] and not synthetic):_oem_fail(where+".synthetic is inconsistent")
             pair=(int(key),edge["target_nid"])
@@ -90,6 +97,34 @@ def oem_load_envelope(envelope,allow_synthetic=False):
     return by_source,{"synthetic":synthetic,"relations_digest":prov["relations_digest"],"inputs_digest":prov["inputs_digest"],
                       "gate_version":prov["gate_version"],"one_ended_adapter":gate["one_ended_adapter"],"as_of":gate["as_of"],
                       "edges_in":count}
+
+def _oem_source_identity(nid,rows,index):
+    """SHA-256 of the identity inputs of source ``nid`` (same definition as oem_intake/source_identity.py), or None when it cannot be described."""
+    try:
+        row=rows[int(nid)];record=index["source_models"][str(int(row["tnid"]))];locales=record["locales"]
+        if not isinstance(locales,dict) or not locales or not isinstance(record["models"],dict):return None
+        group={}
+        for lang,loc in sorted(locales.items()):
+            sibling=int(loc["nid"]);group[str(lang)]={"nid":sibling,"brand":rows[sibling].get("brand")}
+        found={"schema":"bp-oem-source-identity-v1","nid":int(nid),"tnid":int(row["tnid"]),"lang":row.get("lang"),"sku":str(row.get("sku") or ""),
+               "type":row.get("type"),"brand":row.get("brand"),"brand_tid":row.get("brand_tid"),
+               "group":{"brand_tid":record.get("brand_tid"),"models":record["models"],"locales":group}}
+        return hashlib.sha256(json.dumps(found,ensure_ascii=False,sort_keys=True,separators=(",",":"),allow_nan=False).encode("utf-8")).hexdigest()
+    except (KeyError,TypeError,ValueError,AttributeError):
+        return None
+
+def _oem_source_stale(source,edge,identity):
+    """Why the envelope edge no longer describes THIS source row (None = it is still the product the gate accepted it for)."""
+    if str(source.get("sku") or "")!=edge["source_sku"]:return "source_sku_changed"
+    if identity is None or identity!=edge["source_identity"]:return "source_identity_changed"
+    return None
+
+def _oem_adapter_crosses(edge,target,head,policy):
+    """May an accepted adapter edge reach this source although the catalog files the adapter under another taxonomy? Only when the gate accepted
+    it as adapter_between (both physical ends verified), its end is the one of THIS source's page (seat: car seat, chassis: stroller), the engine
+    itself recognises the target as an adapter and the target is an accessory of some taxonomy. Nothing else may cross (finding C-R2)."""
+    return (edge["relation_type"]=="adapter_between" and _OEM_END_HEAD.get(edge["end"])==head
+            and target_role(target,head)=="adapter" and bool(target_heads(target,policy)))
 
 def _oem_variant_ok(row,profiles):
     """A product without options has no variant ambiguity; one with options needs a known, fully available, non-fitment-critical profile."""
@@ -110,20 +145,24 @@ def _oem_edge_hold(source,target,edge,head,policy,profiles):
     if source.get("nid")==target.get("nid") or source.get("tnid")==target.get("tnid"):return "same_product"
     if not _oem_variant_ok(source,profiles):return "source_variant_unverified"
     if not _oem_variant_ok(target,profiles):return "target_variant_unverified"
-    if not target_in_head(target,head,policy):return "target_not_in_source_head"
+    if not target_in_head(target,head,policy) and not _oem_adapter_crosses(edge,target,head,policy):return "target_not_in_source_head"
     if head=="car_seat" and target_role(target,head)=="seat_liner" and not seat_liner_age_group_compatible(source,target):
         return "seat_liner_age_group_incompatible"
     return None
 
-def _oem_merge(nid,source,head,a_ids,a_reasons,old_similar,rows,policy,profiles,oem_edges,ledger):
+def _oem_merge(nid,source,head,a_ids,a_reasons,old_similar,rows,policy,profiles,oem_edges,ledger,index):
     """Append the accepted OEM edges of one source AFTER its legacy A edges; every envelope edge gets exactly one ledger entry."""
     items=oem_edges.get(nid)
     if not items:return a_ids,[]
-    legacy=set(a_ids);similar=set(old_similar);new_ids=[];accepted=[]
+    legacy=set(a_ids);similar=set(old_similar);new_ids=[];accepted=[];identity=_oem_source_identity(nid,rows,index)
     for edge in items:
         tid=edge["target_nid"]
         entry={"source_nid":nid,"target_nid":tid,"relation_ids":list(edge["relation_ids"]),"status":None,"reason":None}
         ledger.append(entry)
+        stale=_oem_source_stale(source,edge,identity)
+        if stale:
+            entry["status"]="held";entry["reason"]=stale
+            continue
         if tid in legacy:
             entry["status"]="already_present_legacy";entry["reason"]=a_reasons.get(str(tid),{}).get("reason")
             continue
@@ -137,7 +176,11 @@ def _oem_merge(nid,source,head,a_ids,a_reasons,old_similar,rows,policy,profiles,
                              "relation_type":edge["relation_type"],"end":edge["end"],"relation_digest":edge["relation_digest"],
                              "claim_ids":list(edge["claim_ids"]),"doc_ids":list(edge["doc_ids"]),"doc_hashes":list(edge["doc_hashes"]),
                              "binding_ids":list(edge["binding_ids"]),"registry_version":edge["registry_version"],
-                             "source_model_id":edge["source_model_id"],"synthetic":edge["synthetic"]}
+                             "source_model_id":edge["source_model_id"],"source_sku":edge["source_sku"],
+                             "source_identity":edge["source_identity"],"synthetic":edge["synthetic"]}
+        if not target_in_head(rows[tid],head,policy):
+            a_reasons[str(tid)].update({"cross_taxonomy":"gate-approved two-ended adapter filed under another catalog taxonomy",
+                                       "taxonomy_heads":sorted(taxonomy_target_heads(rows[tid],policy)),"functional_head":head})
         entry["status"]="accepted";new_ids.append(tid);accepted.append(entry)
     if new_ids:a_ids=a_ids+commercial_accessory_order(new_ids,source,rows,a_reasons,head)
     return a_ids,accepted

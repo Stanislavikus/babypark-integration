@@ -22,13 +22,16 @@ def good(synthetic=True):
     a = {"target_nid": 2001, "target_sku": "RS-100", "lang": "ru", "relation_ids": ["rel:0000000000000001", "rel:0000000000000002"],
          "relation_type": "accessory_for_model", "end": "model", "fit_state": "LISTED", "conditions": [],
          "claim_ids": ["clm:1", "clm:2"], "doc_ids": ["doc:1"], "doc_hashes": [sc.A64, sc.B64], "binding_ids": ["b-1"],
-         "source_model_id": "zeta:alpha-1", "relation_digest": sc.B64, "registry_version": sc.C64, "synthetic": synthetic}
+         "source_model_id": "zeta:alpha-1", "source_sku": "S-A1", "source_identity": sc.D64, "relation_digest": sc.B64,
+         "registry_version": sc.C64, "synthetic": synthetic}
     b = {**a, "target_nid": 2003, "relation_type": "adapter_between", "end": "seat", "binding_ids": [], "relation_ids": ["rel:0000000000000003"]}
     c = {**a, "target_nid": 2002, "lang": "uk"}
     doc = sc.envelope([], synthetic=synthetic)
     doc["edges"] = {"1001": [a, b], "1002": [c]}
     if synthetic:
         doc["gate"]["one_ended_adapter"] = "synthetic_test_two_ended"
+    else:                                                                # under the default OD5 an adapter edge cannot exist (C-R2 hardening)
+        b.update(relation_type="accessory_for_model", end="model")
     return doc
 
 
@@ -134,6 +137,15 @@ class TestStandaloneValidator(unittest.TestCase):
             with self.subTest(gate_change), self.assertRaises(E.EnvelopeError):
                 E.validate(doc, allow_synthetic=True)
 
+    def test_an_adapter_edge_cannot_exist_under_the_default_od5_abstain(self):
+        doc = good()
+        doc["gate"]["one_ended_adapter"] = "abstain"                         # synthetic envelope, but the declared policy is the default one
+        with self.assertRaisesRegex(E.EnvelopeError, "adapter edge needs a non-default OD5"):
+            E.validate(doc, allow_synthetic=True)
+        for edge in doc["edges"]["1001"]:
+            edge.update(relation_type="accessory_for_model", end="model")
+        self.assertEqual(E.validate(doc, allow_synthetic=True)["edge_count"], 3)
+
     def test_end_must_belong_to_the_relation_type(self):
         for relation_type, end, ok in (("accessory_for_model", "model", True), ("accessory_for_model", "seat", False),
                                        ("accessory_for_model", "chassis", False), ("adapter_between", "seat", True),
@@ -186,6 +198,17 @@ class TestEngineValidatorAgrees(unittest.TestCase):
             self.assertTrue(standalone and engine, synthetic)
             self.assertEqual(standalone["edges"], engine[0])
             self.assertEqual(standalone["edge_count"], engine[1]["edges_in"])
+
+    def test_both_validators_refuse_an_adapter_edge_under_the_default_od5(self):
+        doc = good()
+        doc["gate"]["one_ended_adapter"] = "abstain"
+        self.assertEqual(self.both(doc, True), (False, False))
+        with self.assertRaisesRegex(ValueError, "default 'abstain'"):
+            self.engine.oem_load_envelope(doc, allow_synthetic=True)
+        for edge in doc["edges"]["1001"]:
+            edge.update(relation_type="accessory_for_model", end="model")
+        standalone, engine = self.both(doc, True)
+        self.assertTrue(standalone and engine)
 
     def test_the_two_validators_agree_on_every_systematic_mutation(self):
         disagreements, checked = [], 0

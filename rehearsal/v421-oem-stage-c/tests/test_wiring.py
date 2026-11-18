@@ -36,7 +36,7 @@ class TestScenarioAMiniCatalog(unittest.TestCase):
         cls.mini = mc.build(Path(tempfile.mkdtemp(prefix="bp-stage-c-mini-")) / "catalog")
         cls.world = WF.build_world()
         cls.view = shadow.CatalogView.from_engine(cls.mini.rows, cls.mini.index, cls.world.world.registry)
-        cls.env, cls.report = WF.run_gate(cls.world, cls.view)
+        cls.env, cls.report = WF.run_gate(cls.world, cls.view, rows=cls.mini.rows, index=cls.mini.index)
         cls.scope = {str(n): {"language": cls.mini.rows[n]["lang"], "similar": [], "accessories": []} for n in map(int, cls.mini.scope_keys)}
         cls.base = cls.build(H.baseline())
         cls.off = cls.build(H.patched())
@@ -122,7 +122,7 @@ class TestScenarioAMiniCatalog(unittest.TestCase):
         self.assertFalse(self.report["veto_report"]["enforced"])
 
     def test_the_default_policy_publishes_nothing_even_with_the_feature_enabled(self):
-        env, report = WF.run_gate(self.world, self.view, policy={})
+        env, report = WF.run_gate(self.world, self.view, policy={}, rows=self.mini.rows, index=self.mini.index)
         self.assertEqual((report["summary"]["edges_accepted"], env["synthetic"]), (0, False))
         result = self.build(H.patched(), oem_relations=env, oem_enabled=True)                # no synthetic opt-in needed for an empty real envelope
         self.assertEqual(result[0], self.base[0])
@@ -136,21 +136,18 @@ class TestScenarioAMiniCatalog(unittest.TestCase):
     def test_adapters_abstain_by_default_and_under_the_test_policy_both_ends_are_offered(self):
         default_adapters = [e for items in self.env["edges"].values() for e in items if e["relation_type"] == "adapter_between"]
         self.assertEqual(default_adapters, [])                                   # OD5: abstain
-        env, report = WF.run_gate(self.world, self.view, policy=SYN_TEST_OD5)
+        env, report = WF.run_gate(self.world, self.view, policy=SYN_TEST_OD5, rows=self.mini.rows, index=self.mini.index)
         offered = [(int(s), e) for s, items in env["edges"].items() for e in items if e["relation_type"] == "adapter_between"]
         self.assertEqual(sorted(e["end"] for _, e in offered), ["chassis", "chassis", "seat", "seat"])
         result = self.build(H.patched(), oem_relations=env, **ON)
         ledger = {(e["source_nid"], e["target_nid"]): e for e in result[2]["oem"]["ledger"]}
         for src, edge in offered:
             entry = ledger[(src, edge["target_nid"])]
-            if edge["end"] == "chassis":                                        # stroller source, stroller accessory: published
-                self.assertEqual(entry["status"], "published", edge)
-            else:                                                               # car-seat source: the existing head gate does not file it there
-                self.assertEqual((entry["status"], entry["reason"]), ("held", "target_not_in_source_head"), edge)
+            self.assertEqual(entry["status"], "published", edge)                # chassis end -> stroller page; seat end -> car-seat page (C-R2)
         self.assertEqual(report["od5_would_be_pairs"], [])
 
     def test_gate_outputs_and_engine_outputs_are_deterministic_across_runs(self):
-        env, _ = WF.run_gate(self.world, self.view)
+        env, _ = WF.run_gate(self.world, self.view, rows=self.mini.rows, index=self.mini.index)
         self.assertEqual(env, self.env)
         again = self.build(H.patched(), oem_relations=copy.deepcopy(self.env), **ON)
         self.assertEqual(normalize(again), normalize(self.on))
@@ -172,7 +169,7 @@ class TestScenarioBCrossBrand(unittest.TestCase):
         cls.cat, cls.inp = cat, cat.finish()
         cls.world = WF.build_world()
         cls.view = shadow.CatalogView.from_engine(cls.inp.rows, cls.inp.index, cls.world.world.registry)
-        cls.env, cls.report = WF.run_gate(cls.world, cls.view)
+        cls.env, cls.report = WF.run_gate(cls.world, cls.view, rows=cls.inp.rows, index=cls.inp.index)
 
     def test_the_accessory_brands_differ_from_the_seat_brand(self):
         seat = self.inp.rows[self.cat.nid("S-A1")]
@@ -201,14 +198,14 @@ class TestScenarioBCrossBrand(unittest.TestCase):
         cat.seat_accessory("Acme дождевик RS-100", "Acme дощовик RS-100", "RS-100", brand=cf.STROLLER_BRAND)
         inp = cat.finish()
         view = shadow.CatalogView.from_engine(inp.rows, inp.index, self.world.world.registry)
-        env, report = WF.run_gate(self.world, view)
+        env, report = WF.run_gate(self.world, view, rows=inp.rows, index=inp.index)
         self.assertEqual(report["summary"]["edges_accepted"], 0)
         self.assertEqual(inp.patched(oem_relations=env, **ON)[2]["edges"]["A_oem_relation"], 0)
 
     def test_an_adapter_chassis_end_is_published_to_the_stroller_pages_under_the_test_policy_only(self):
-        default_env, _ = WF.run_gate(self.world, self.view)
+        default_env, _ = WF.run_gate(self.world, self.view, rows=self.inp.rows, index=self.inp.index)
         self.assertFalse([e for items in default_env["edges"].values() for e in items if e["relation_type"] == "adapter_between"])
-        env, _ = WF.run_gate(self.world, self.view, policy=SYN_TEST_OD5)
+        env, _ = WF.run_gate(self.world, self.view, policy=SYN_TEST_OD5, rows=self.inp.rows, index=self.inp.index)
         sources, evidence, metrics = self.inp.patched(oem_relations=env, **ON)
         for lang in cf.LANGS:
             src, tgt = self.cat.nid("C-FY", lang), self.cat.nid("ADP-200", lang)

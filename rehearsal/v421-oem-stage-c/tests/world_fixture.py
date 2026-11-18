@@ -12,7 +12,7 @@ import weakref
 from pathlib import Path
 
 from tests import helpers as H
-from oem_stage import shadow  # noqa: E402  (helpers puts the accepted Stage B package on sys.path)
+from oem_stage import canon, shadow  # noqa: E402  (helpers puts the accepted Stage B package on sys.path)
 
 AS_OF = "2026-11-17"
 ALLOW_LIST = [{"issuer": "acme", "markets": ["GB"], "languages": ["en"]}]
@@ -121,13 +121,29 @@ def target_nid(sku: str, lang: str, *, skus=SKUS) -> int:
     return 2000 + 10 * skus.index(sku) + (1 if lang == "ru" else 2)
 
 
-def run_gate(world: WorldBundle, view=None, *, relations=None, policy=None, as_of=AS_OF, doc_hashes=None, label="test"):
-    """``gate.build`` with the world's own bindings; ``policy`` defaults to the opt-in synthetic policy used by every test here."""
-    from oem_intake import gate
-    return gate.build(world.relations if relations is None else relations, view or build_view(world),
+def synthetic_identities(view) -> dict:
+    """Stand-in source identities for an ENGINE-FREE view: every source nid gets a SKU and a digest that nothing recomputes (tests that run the
+    real engine pass ``rows`` and ``index`` to ``run_gate`` instead, so the gate binds the edges exactly as it does on a real catalog)."""
+    nids = sorted({src["nid"] for sources in view.sources_by_model.values() for src in sources})
+    return {nid: {"sku": f"SRC-{nid}", "identity": canon.digest({"synthetic_source": nid})} for nid in nids}
+
+
+def run_gate(world: WorldBundle, view=None, *, relations=None, policy=None, as_of=AS_OF, doc_hashes=None, label="test", rows=None, index=None,
+             source_identities=None):
+    """``gate.build`` with the world's own bindings; ``policy`` defaults to the opt-in synthetic policy used by every test here.
+
+    Source identities: given explicitly, or derived from the catalog ``rows`` and V3.2 ``index`` exactly as the CLI does, or - for an engine-free
+    view - the synthetic stand-ins above.
+    """
+    from oem_intake import gate, source_identity
+    view = view or build_view(world)
+    if source_identities is None:
+        source_identities = source_identity.identities_for(rows, index) if rows is not None and index is not None else synthetic_identities(view)
+    return gate.build(world.relations if relations is None else relations, view,
                       policy={"allow_synthetic": True} if policy is None else policy, as_of=as_of,
                       doc_hashes=world.doc_hashes if doc_hashes is None else doc_hashes,
-                      binding_ids_of=world.binding_ids_of, inputs_files=world.inputs_files, label=label)
+                      binding_ids_of=world.binding_ids_of, inputs_files=world.inputs_files, label=label,
+                      source_identities=source_identities)
 
 
 def mutated(rel: dict, **changes) -> dict:

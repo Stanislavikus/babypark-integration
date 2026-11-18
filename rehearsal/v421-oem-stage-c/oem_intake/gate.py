@@ -15,7 +15,9 @@ Brand is never a key: cross-brand relations are admitted like any other. An adap
 adapter article, chassis model); a missing or unverified end holds the whole relation. A relation whose configuration REQUIRES an extension
 is held (``extension_required_not_in_edge``): an edge names one target and cannot express "the adapter AND EXT-1".
 Catalog joins are exact: ``shadow.expand_pairs`` (model_id -> source NIDs, SKU -> target NIDs, same locale); a pair whose target is not
-purchasable (field_status / published / price) or whose join is ambiguous is held, never guessed.
+purchasable (field_status / published / price) or whose join is ambiguous is held, never guessed. Every accepted edge is also bound to the identity
+of its SOURCE row (``source_identities``: SKU and the digest of ``source_identity.py``); a source that cannot be described holds its pairs
+(``source_identity_unknown``), and the engine seam later refuses an edge whose source is no longer that product (finding C-R1).
 """
 from __future__ import annotations
 
@@ -143,7 +145,12 @@ def decide_relation(rel, policy, *, doc_hashes) -> dict:
 
 
 # ---------------------------------------------------------------------------------------------------------- pair level
-def _pair_problem(pair, price_of, counts) -> str | None:
+def _identity_ok(found) -> bool:
+    return (isinstance(found, dict) and set(found) == {"sku", "identity"} and isinstance(found["sku"], str) and bool(found["sku"])
+            and E.is_hex64(found["identity"]))
+
+
+def _pair_problem(pair, price_of, counts, source_identities) -> str | None:
     if not pair["end_identity_verified"]:
         return "identity_not_verified_for_pair"
     if pair["article_binding_status"] != "bound":
@@ -157,6 +164,8 @@ def _pair_problem(pair, price_of, counts) -> str | None:
         return "target_price_not_positive"
     if counts["target"].get((pair["target_sku"], pair["lang"]), 0) != 1:
         return "ambiguous_target_sku_in_locale"
+    if not _identity_ok(source_identities.get(pair["source_nid"])):
+        return "source_identity_unknown"
     return None
 
 
@@ -171,13 +180,17 @@ def _relation_ids(rels) -> list:
     return sorted(r["relation_id"] for r in rels)
 
 
-def build(relations, view, *, policy, as_of, doc_hashes, binding_ids_of=None, inputs_files, label=None,
+def build(relations, view, *, policy, as_of, doc_hashes, binding_ids_of=None, inputs_files, source_identities, label=None,
           relations_schema=RELATIONS_SCHEMA) -> tuple:
     """Run the gate. Returns ``(envelope, report)``; both are plain deterministic JSON structures.
 
     ``doc_hashes``: ``{doc_id: sha256}`` of the captured OEM bytes. ``binding_ids_of(maker_id, mpn)``: optional lookup of the O3 binding id.
     ``inputs_files``: ``{typed data file: sha256}`` (the registry version of the identity and binding data the relations were derived from).
+    ``source_identities``: ``{source nid: {"sku": ..., "identity": sha256}}`` from ``source_identity.identities_for(rows, index)``; required, so no
+    caller can forget the binding. A pair whose source is missing or malformed there is held (``source_identity_unknown``).
     """
+    if not isinstance(source_identities, dict):
+        raise GateRefused("source_identities must be a mapping {source nid: {sku, identity}} (finding C-R1)")
     pol = normalize_policy(policy, as_of=as_of)
     rels = sorted(relations, key=lambda r: r["relation_id"])
     if len({r["relation_id"] for r in rels}) != len(rels):
@@ -206,7 +219,7 @@ def build(relations, view, *, policy, as_of, doc_hashes, binding_ids_of=None, in
             # would-be edges of a relation held ONLY by OD5 (both physical ends verified): reported for the owner, never published
             if verdict["reasons"] == ["od5_one_ended_adapter_abstain"]:
                 for p in pairs:
-                    problem = _pair_problem(p, price_of, counts)
+                    problem = _pair_problem(p, price_of, counts, source_identities)
                     od5_would.append({"relation_id": rel["relation_id"], "end": p["end"], "source_nid": p["source_nid"],
                                       "target_nid": p["target_nid"], "lang": p["lang"], "target_sku": p["target_sku"],
                                       "pair_problem": problem})
@@ -224,7 +237,7 @@ def build(relations, view, *, policy, as_of, doc_hashes, binding_ids_of=None, in
             row["pairs_held"] += 1
             continue
         for p in pairs:
-            problem = _pair_problem(p, price_of, counts)
+            problem = _pair_problem(p, price_of, counts, source_identities)
             if problem:
                 held_pairs.append({"relation_id": rel["relation_id"], "source_nid": p["source_nid"], "target_nid": p["target_nid"],
                                    "lang": p["lang"], "end": p["end"], "reason": problem})
@@ -246,6 +259,7 @@ def build(relations, view, *, policy, as_of, doc_hashes, binding_ids_of=None, in
             continue
         rels_here = sorted({rel["relation_id"]: rel for rel, _ in support}.values(), key=lambda r: r["relation_id"])
         first = support[0][1]
+        bound = source_identities[src]
         claim_ids = sorted({c["claim_id"] for r in rels_here for c in r["claims"]
                             if c["assertion_type"] == "compatible" and c["effective_status"] == CLAIM_EFFECTIVE_OK})
         doc_ids = sorted({d["doc_id"] for r in rels_here for d in r["evidence"]["docs"]})
@@ -254,7 +268,8 @@ def build(relations, view, *, policy, as_of, doc_hashes, binding_ids_of=None, in
                 "relation_ids": _relation_ids(rels_here), "relation_type": types.pop(), "end": first["end"],
                 "fit_state": "LISTED", "conditions": [], "claim_ids": claim_ids, "doc_ids": doc_ids,
                 "doc_hashes": sorted({doc_hashes[d] for d in doc_ids}), "binding_ids": bindings,
-                "source_model_id": models.pop(), "relation_digest": canon.digest(rels_here), "registry_version": inputs_digest,
+                "source_model_id": models.pop(), "source_sku": bound["sku"], "source_identity": bound["identity"],
+                "relation_digest": canon.digest(rels_here), "registry_version": inputs_digest,
                 "synthetic": any(r["synthetic"] for r in rels_here)}
         envelope_edges.setdefault(str(src), []).append(edge)
         edge_count += 1

@@ -43,7 +43,7 @@ def catalog() -> dict:
 
 
 def envelope(rows, pairs, **over):
-    return sc.envelope([(src, sc.edge_for(rows, tgt, lang=rows[src]["lang"])) for src, tgt in pairs], **over)
+    return sc.envelope([(src, sc.edge_for(rows, tgt, lang=rows[src]["lang"], source=src)) for src, tgt in pairs], **over)
 
 
 PAIRS = [(1, 11), (2, 12), (3, 11), (4, 12), (1, 13), (2, 14), (1, 17), (2, 18)]
@@ -164,8 +164,9 @@ class TestPlan(StageOneCase):
 
     def test_a_source_row_without_a_sku_gets_no_native_check(self):
         rows = catalog()
+        accepted = envelope(rows, PAIRS)                                    # the gate can no longer bind a source without a SKU (C-R1): defence in depth
         rows[1] = dict(rows[1], sku="")
-        plan = S1.plan_from_envelope(envelope(rows, PAIRS), rows, allow_synthetic=True)
+        plan = S1.plan_from_envelope(accepted, rows, allow_synthetic=True)
         entry = next(s for s in plan["source_contexts"] if s["nid"] == 1)
         self.assertEqual((entry["state"], entry["reasons"]), (S1.NOT_RECOMMENDABLE, ["catalog_row_without_sku"]))
         self.assertNotIn(1, plan["native_check_nids"]["source_contexts"])
