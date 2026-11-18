@@ -63,7 +63,7 @@ python3 -B tools/build_accepted_edges.py --as-of 2026-11-17 \
    --baseline-report $WORK/baseline_verification.json --out $WORK/stage_c_edges
 ```
 
-Expected (deduced): exit 0; the supplied `oem_relations.json` is reproduced from the typed data directory (otherwise exit 5: a finding); `accepted_edges.json` has ZERO edges; `oem_gate_report.json` shows 43 relations held and 0 accepted, with every hold reason (`no_verified_compatible_claim`, `evidence_bytes_not_present`, `od6_allowlist_empty`, ...), the report-only veto section (2 `EXCLUDED` relations pending verification) and no veto applied. This is the honest state: there is no verified OEM evidence, so nothing may be published and nothing may be invented for the real catalog. The relation-level part of this outcome is also pinned by `tests/test_real_relations_held.py`, which runs in step 2.
+Expected (deduced): exit 0; the supplied `oem_relations.json` is reproduced from the typed data directory (otherwise exit 5: a finding); `accepted_edges.json` has ZERO edges; `oem_gate_report.json` shows 43 relations held and 0 accepted, with every hold reason (`no_verified_compatible_claim`, `evidence_bytes_not_present`, `od6_allowlist_empty`, ...), the report-only veto section (2 relations proposed as `EXCLUDED`, effective state `UNKNOWN`, pending verification) and no veto applied. This is the honest state: there is no verified OEM evidence, so nothing may be published and nothing may be invented for the real catalog. The relation-level part of this outcome is also pinned by `tests/test_real_relations_held.py`, which runs in step 2.
 
 ## 5. The S6 replay: feature OFF must equal the accepted generation, feature ON must be explained
 
@@ -109,13 +109,13 @@ python3 -I -B tools/stage1_plan.py verify --plan $WORK/stage1_candidates/stage1_
 
 Without a receipts file every planned check is `NOT_RUN`. The output always says `authorizes_publication: false` and `oem_fit_proof: false`. Note for the owner of the native tool: the receipt fields `sku`, `tnid` and `changed` are matched strictly because the lock names them, but the real receipt shape was not available to the author; confirm it (an unknown shape is refused, never guessed).
 
-## 7. Mutation self-check (the unmutated control is the whole suite, so it can only start when step 2 is green)
+## 7. Mutation self-check (its unmutated control is the suite without the harness's own tests and the documents test, so run it only when step 2 is green)
 
 ```
 python3 -B tools/mutation_check.py --failfast -j 2 --json $WORK/mutation_check.json
 ```
 
-Expected: the control passes and every mutant is KILLED by a behavioural test (the committed result is `rehearsal/v421-oem-stage-c/out/MUTATION_CHECK.json`; its counts are in `STAGE_C_RESULT_20261118.md`). A mutant counts as killed only when a real test fails: a broken run is INVALID, never a kill. To re-run one mutant: `python3 -B tools/mutation_check.py --only G-12 --failfast`.
+Expected: the control passes and every mutant is KILLED by a behavioural test; it takes about 20 minutes on 2 CPUs (the committed result is `rehearsal/v421-oem-stage-c/out/MUTATION_CHECK.json`; its counts are in `STAGE_C_RESULT_20261118.md`). A mutant counts as killed only when a real test fails: a broken run is INVALID, never a kill. To re-run one mutant: `python3 -B tools/mutation_check.py --only G-12 --failfast`.
 
 ## 8. What to report back
 
