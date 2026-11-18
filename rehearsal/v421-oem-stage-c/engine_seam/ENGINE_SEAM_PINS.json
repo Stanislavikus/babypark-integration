@@ -1,0 +1,42 @@
+{
+  "base_file": "work/accessories/src/accessory_v4.py",
+  "base_lines": 652,
+  "base_sha256": "20c12303543fa7c4a522cc28ea5f4dc698098b0093ccf14fa066f9d67f7be2e8",
+  "edits": [
+    {
+      "base_line": 441,
+      "description": "signature and helper block (inert unless oem_enabled=True)",
+      "id": "E1"
+    },
+    {
+      "base_line": 450,
+      "description": "run-level flag: validate the envelope once, only when ON",
+      "id": "E2"
+    },
+    {
+      "base_line": 515,
+      "description": "merge accepted OEM edges AFTER all legacy A edges (order of legacy edges cannot change)",
+      "id": "E3"
+    },
+    {
+      "base_line": 572,
+      "description": "record published / dropped-by-limit once the limit of 20 is applied",
+      "id": "E4"
+    },
+    {
+      "base_line": 615,
+      "description": "close the ledger and write the OEM metrics (only when ON)",
+      "id": "E5"
+    }
+  ],
+  "helpers_file": "engine_seam/seam_helpers.py.txt",
+  "helpers_sha256": "2c664e9b6ea13624c6d86b521b4d7d11b3fa4da3e1c6b2ecf57e04ae5b23867b",
+  "patch_added_lines": 178,
+  "patch_file": "engine_seam/accessory_v4_stage_c.patch",
+  "patch_removed_lines": 1,
+  "patch_sha256": "ca58472f108799e983b64193bdbd9fd11a2eb871543f7e59b6644532015b8ca0",
+  "patched_file": "engine_seam/accessory_v4_stage_c.py",
+  "patched_lines": 829,
+  "patched_sha256": "7f59fe38241896e3f52a43bb3d8bb16034c67cd45b7b5ad8b2646cad8b7778df",
+  "schema": "bp-oem-engine-seam-pins-v1"
+}
