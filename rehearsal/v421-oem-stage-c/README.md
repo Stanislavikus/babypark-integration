@@ -14,7 +14,7 @@ Supersedes: none.
 
 ```
 oem_intake/       stdlib-only: gate (relation + catalog-pair decisions), envelope (bp-oem-accepted-edges-v1), replay_diff (explained ON/OFF diff),
-                  stage1 (plan + fail-closed receipt comparison), _stage_b (read-only reuse of the accepted Stage B package)
+                  source_identity (digest that binds an accepted edge to its source row), stage1 (plan + fail-closed receipt comparison), _stage_b (read-only reuse of the accepted Stage B package)
 engine_seam/      accessory_v4_stage_c.py (patched copy), accessory_v4_stage_c.patch (regenerated unified diff), seam_helpers.py.txt, ENGINE_SEAM_PINS.json
 tools/            build_accepted_edges.py (gate CLI), build_engine_seam.py (--check / --write), stage_c_launcher.py, replay_stage_c.py (S6),
                   stage1_plan.py, relation_decisions.py (relation-level view of the real relations), mutation_check.py, verify_scope.py, files_manifest.py

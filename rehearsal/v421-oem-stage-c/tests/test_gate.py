@@ -531,6 +531,38 @@ class TestPairLevelHolds(WorldCase):
         self.assertEqual(gate._pair_problem({**base, "target_field_status": "1"}, prices, counts, ids), None)       # catalog stores either spelling
         self.assertEqual(gate._pair_problem({**base, "target_field_status": "x"}, prices, counts, ids), "target_field_status_not_1")
 
+    def test_a_pair_whose_source_binding_is_missing_or_malformed_is_held_as_source_identity_unknown(self):
+        base = {"end_identity_verified": True, "article_binding_status": "bound", "target_field_status": 1, "target_published": 1,
+                "target_nid": 1, "target_sku": "S", "lang": "ru", "source_nid": 7}
+        counts, prices = {"target": {("S", "ru"): 1}}, {1: 10.0}
+        self.assertIsNone(gate._pair_problem(base, prices, counts, {7: {"sku": "S-7", "identity": "a" * 64}}))
+        bad = {"missing source": {}, "another source only": {8: {"sku": "S-8", "identity": "a" * 64}}, "not a mapping": {7: "x"}, "none": {7: None},
+               "extra key": {7: {"sku": "S-7", "identity": "a" * 64, "x": 1}}, "missing key": {7: {"sku": "S-7"}},
+               "empty sku": {7: {"sku": "", "identity": "a" * 64}}, "sku not a string": {7: {"sku": 7, "identity": "a" * 64}},
+               "identity not hex": {7: {"sku": "S-7", "identity": "z" * 64}}, "identity upper case": {7: {"sku": "S-7", "identity": "A" * 64}},
+               "identity too short": {7: {"sku": "S-7", "identity": "a" * 63}}, "identity not a string": {7: {"sku": "S-7", "identity": 7}}}
+        for name, identities in bad.items():
+            with self.subTest(name):
+                self.assertEqual(gate._pair_problem(base, prices, counts, identities), "source_identity_unknown")
+
+    def test_the_gate_writes_no_edge_for_a_source_it_cannot_bind_and_binds_the_others(self):
+        env, report = WF.run_gate(self.world)
+        sources = sorted(int(s) for s in env["edges"])
+        self.assertGreaterEqual(len(sources), 2)
+        identities = WF.synthetic_identities(WF.build_view(self.world))
+        for src in sources:
+            for edge in env["edges"][str(src)]:
+                self.assertEqual((edge["source_sku"], edge["source_identity"]), (identities[src]["sku"], identities[src]["identity"]))
+        env_none, report_none = WF.run_gate(self.world, source_identities={})
+        self.assertEqual((env_none["edges"], report_none["summary"]["edges_accepted"]), ({}, 0))
+        self.assertIn("source_identity_unknown", {h["reason"] for h in report_none["held_pairs"]})
+        partial = {n: v for n, v in identities.items() if n != sources[0]}
+        env_part, report_part = WF.run_gate(self.world, source_identities=partial)
+        self.assertEqual(sorted(int(s) for s in env_part["edges"]), sources[1:])
+        self.assertEqual({h["source_nid"] for h in report_part["held_pairs"] if h["reason"] == "source_identity_unknown"}, {sources[0]})
+        with self.assertRaises(gate.GateRefused):
+            WF.run_gate(self.world, source_identities=[])
+
     def test_pair_holds_never_block_unrelated_relations(self):
         def mutate(view):
             view.targets_by_sku["RS-100"][0]["field_status"] = 3

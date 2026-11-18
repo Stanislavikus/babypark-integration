@@ -278,6 +278,19 @@ class TestSourceIdentityIsEnforcedByTheEngine(unittest.TestCase):
         self.assertIsNone(module._oem_source_identity(999999, catalogs[0].rows, catalogs[0].index))
         self.assertIsNone(module._oem_source_identity(next(iter(catalogs[0].rows)), catalogs[0].rows, {"source_models": {}}))
 
+    def test_a_malformed_model_group_has_no_identity_on_the_engine_side_either(self):
+        module = patched()
+        inp = sc.standard()[0]
+        nid = next(n for n, row in inp.rows.items() if str(row["tnid"]) in inp.index["source_models"])
+        tnid = str(inp.rows[nid]["tnid"])
+        self.assertIsNotNone(module._oem_source_identity(nid, inp.rows, inp.index))
+        for field, value in (("models", ["x"]), ("models", None), ("models", "x"), ("locales", {}), ("locales", None), ("locales", [1])):
+            with self.subTest(field=field, value=value):
+                index = copy.deepcopy(inp.index)
+                index["source_models"][tnid][field] = value
+                self.assertIsNone(module._oem_source_identity(nid, inp.rows, index))
+                self.assertIsNone(SI.digest_of(nid, inp.rows, index))
+
     def test_the_engine_hold_reasons_are_exactly_the_documented_ones(self):
         module = patched()
         source = {"sku": "C-FY"}
