@@ -1,0 +1,35 @@
+{
+ "schema": "bp-oem-browser-capture-v1",
+ "seed_doc_id": "doc:bac1a286d1860ffb",
+ "capture_note": "Original response body fetched in the Claude desktop built-in browser (fetch, credentials omit, cache no-store). SHA-256 over the decoded body. The browser saved the same bytes to the user's Downloads folder; the sandbox cannot read them (folder access denied), so bytes_in_repo is false and register-doc --file is NOT yet done.",
+ "issuer": "britax-romer",
+ "url_requested": "https://www.britax-roemer.com/accessories/car-seat-accessories/relax-insert/ACCSFCC207.html",
+ "url_final": "https://www.britax-roemer.com/accessories/car-seat-accessories/relax-insert/ACCSFCC207.html",
+ "canonical_url_in_page": "https://www.britax-roemer.com/accessories/car-seat-accessories/relax-insert/ACCSFCC207.html",
+ "page_title": "Relax Insert | Britax Römer - Fossil Grey / n.a. / ACCSFCC207",
+ "market": "ME (Britax-EU site, locale en_ME, currency EUR)", "language": "en-ME", "document_version": null,
+ "retrieved_http_date": "Thu, 19 Nov 2026 07:35:42 GMT",
+ "http_status": 200, "content_type": "text/html;charset=UTF-8",
+ "bytes": 80284,
+ "sha256": "3da562db69fd193862ccc70a377e9bb1ee3a53c05aa807d7a73859b4b967285b",
+ "downloaded_file_name": "bp-oem-acq-20261119__britax-relax-insert-ACCSFCC207__en-ME.html",
+ "article_identity_in_raw_bytes": {
+  "product_master_id (MPN)": "ACCSFCC207",
+  "product_id / sku": "2000040775",
+  "product_ean": "4000984938036",
+  "product_name": "Relax Insert",
+  "colour": "Fossil Grey",
+  "evidence_markup": "var utag_data = {... \"product_id\": [ \"2000040775\" ], \"product_master_id\": [ \"ACCSFCC207\" ], \"product_ean\": [ \"4000984938036\" ] ...}; cq_params.product = { id: 'ACCSFCC207', sku: '2000040775' ...}",
+  "note": "This is manufacturer page markup tying MPN ACCSFCC207 to SKU 2000040775 and EAN; it must still be matched to the catalog row by a human (catalog SKU/EAN) before the binding is accepted."
+ },
+ "raw_byte_offsets": {"available_for_these_products": 46162, "product_content_details": 47861},
+ "available_for_these_products_text": ["DUALFIX 5Z", "DUALFIX PRO", "DUALFIX PRO M", "DUALFIX PLUS", "DUALFIX M PLUS", "SWINGFIX M PLUS"],
+ "conditions_text_verbatim": "The Relax Insert for our DUALFIX products is designed to provide an even more relaxing position for your child, especially when your little on is travelling rearward facing. ... The Relax Insertt is suitable for our DUALFIX seats ranging from 61cm to 87cm of child size, but it does not replace a newborn insert and should not be used with any other insert simultaneously.",
+ "user_guide_link_in_page": "https://manuals.britax.com/product/P1070-1",
+ "findings": [
+  "Each model is named separately in the list (DUALFIX 5Z, PRO, PRO M, PLUS, M PLUS, SWINGFIX M PLUS); DUALFIX PLUS and DUALFIX M PLUS and PRO/PRO M are distinct entries, not inferred from each other.",
+  "Conditions: DUALFIX seats 61-87 cm child size; does not replace a newborn insert; do not use with any other insert -> LISTED_CONDITIONAL, not plain LISTED.",
+  "Uncertainty: SWINGFIX M PLUS is in the 'Available for these products' list while the description speaks only of 'our DUALFIX seats' (the 61-87 cm range is stated for DUALFIX) -> human review before the SWINGFIX M PLUS claim is treated as confirmed.",
+  "The page has no 'not compatible' / exclusion statement at all."
+ ]
+}
