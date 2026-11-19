@@ -1,0 +1,2152 @@
+{
+ "additional_documents_to_find": [
+  {
+   "need": "BeSafe SKU-to-article proof for 11006001 / 11006001par (the seed names sku_proof_url https://besafe.hr/proizvod/besafe-kisna-zastita/)",
+   "why": "binding of catalog SKU to the OEM article"
+  },
+  {
+   "need": "official Maxi-Cosi document for the Pocket (74203550) and RodiFix Air Protect; the seed only has a catalog control CSV",
+   "why": "claims 13 and 20 have no OEM document at all"
+  },
+  {
+   "need": "official document for the Maxi-Cosi Fame extension adapter named in the Coral Slide Pro interface (claim 11 has an unspecified extension)",
+   "why": "extension article unspecified: the relation stays held"
+  },
+  {
+   "need": "audited catalog join for Britax-Roemer ACCSFCC207 (seller SKU 2000040775 is unproven)",
+   "why": "unjoined article"
+  },
+  {
+   "need": "maker and official document for vehicle organiser 6900000016817 (seed maker 'unspecified')",
+   "why": "no manufacturer is known; a never-A/B class-C item"
+  }
+ ],
+ "article_bindings": [
+  {
+   "binding_id": "bnd:besafe:11006001",
+   "binding_note": "PR #167 joined this OEM article to the catalog SKU without document bytes",
+   "binding_status": "PROPOSED",
+   "catalog": null,
+   "catalog_sku": "11006001par",
+   "manufacturer_id": "besafe",
+   "mpn": "11006001",
+   "needs": "an ACCEPTED article_identity claim from original bytes AND a human review of this binding; the SKU/MPN join is not proof"
+  },
+  {
+   "binding_id": "bnd:britax-romer:2000030111",
+   "binding_note": "PR #167 joined this OEM article to the catalog SKU without document bytes",
+   "binding_status": "PROPOSED",
+   "catalog": {
+    "oem_base_sku": "2000030111",
+    "role": "comfort_insert",
+    "sku": "2000030111",
+    "title": "BRITAX-ROMER вкладыш для новорожденных (авто group 1)"
+   },
+   "catalog_sku": "2000030111",
+   "manufacturer_id": "britax-romer",
+   "mpn": "2000030111",
+   "needs": "an ACCEPTED article_identity claim from original bytes AND a human review of this binding; the SKU/MPN join is not proof"
+  },
+  {
+   "binding_id": "bnd:bugaboo:400003001",
+   "binding_note": "PR #167 joined this OEM article to the catalog SKU without document bytes",
+   "binding_status": "PROPOSED",
+   "catalog": null,
+   "catalog_sku": "400003001",
+   "manufacturer_id": "bugaboo",
+   "mpn": "400003001",
+   "needs": "an ACCEPTED article_identity claim from original bytes AND a human review of this binding; the SKU/MPN join is not proof"
+  },
+  {
+   "binding_id": "bnd:bugaboo:400019001",
+   "binding_note": "PR #167 joined this OEM article to the catalog SKU without document bytes",
+   "binding_status": "PROPOSED",
+   "catalog": null,
+   "catalog_sku": "400019001",
+   "manufacturer_id": "bugaboo",
+   "mpn": "400019001",
+   "needs": "an ACCEPTED article_identity claim from original bytes AND a human review of this binding; the SKU/MPN join is not proof"
+  },
+  {
+   "binding_id": "bnd:maxi-cosi:1166057110",
+   "binding_note": "PR #167 joined this OEM article to the catalog SKU without document bytes",
+   "binding_status": "PROPOSED",
+   "catalog": {
+    "oem_base_sku": "1166057110",
+    "role": "mechanical_adapter",
+    "sku": "1166057110",
+    "title": "Maxi-Cosi адаптеры Fame к автокреслу Coral Slide Pro"
+   },
+   "catalog_sku": "1166057110",
+   "manufacturer_id": "maxi-cosi",
+   "mpn": "1166057110",
+   "needs": "an ACCEPTED article_identity claim from original bytes AND a human review of this binding; the SKU/MPN join is not proof"
+  },
+  {
+   "binding_id": "bnd:maxi-cosi:74203550",
+   "binding_note": "PR #167 joined this OEM article to the catalog SKU without document bytes",
+   "binding_status": "PROPOSED",
+   "catalog": null,
+   "catalog_sku": "74203550",
+   "manufacturer_id": "maxi-cosi",
+   "mpn": "74203550",
+   "needs": "an ACCEPTED article_identity claim from original bytes AND a human review of this binding; the SKU/MPN join is not proof"
+  },
+  {
+   "binding_id": "bnd:unspecified:6900000016817",
+   "binding_note": "PR #167 joined this OEM article to the catalog SKU without document bytes",
+   "binding_status": "PROPOSED",
+   "catalog": null,
+   "catalog_sku": "6900000016817",
+   "manufacturer_id": "unspecified",
+   "mpn": "6900000016817",
+   "needs": "an ACCEPTED article_identity claim from original bytes AND a human review of this binding; the SKU/MPN join is not proof"
+  },
+  {
+   "binding_note": "PR #167: no audited OEM-article mapping; name similarity is insufficient",
+   "binding_status": "UNJOINED",
+   "manufacturer_id": "britax-romer",
+   "mpn": "ACCSFCC207",
+   "needs": "an audited catalog join (which catalog SKU is this OEM article?) - no document can prove it by itself"
+  }
+ ],
+ "documents": [
+  {
+   "blocker": "original bytes not captured; the seed URL was read on 2026-11-17 by an unattributed handoff and its content was never stored",
+   "bytes_state": "NO_BYTES",
+   "capture_requirements": {
+    "after_capture": "add-claim with a verbatim quote found in the stored bytes (HTML/text) or the page number (PDF); reviewer must be a different human:<id>",
+    "register_doc_fields": [
+     "file (the ORIGINAL bytes, unchanged)",
+     "issuer",
+     "media_type",
+     "url",
+     "document_version",
+     "document_date",
+     "market",
+     "language",
+     "retrieved_utc",
+     "captured_by=human:<id>"
+    ]
+   },
+   "claims": [
+    {
+     "assertion_type": "article_identity",
+     "claim_id": "clm:10cea0f6bc1b71bc",
+     "claim_index": 4,
+     "declared_status": "PROPOSED",
+     "effective_status": "PROPOSED",
+     "ends": {
+      "article": {
+       "maker_id": "maxi-cosi",
+       "mpn": "1166057110",
+       "role": "mechanical_adapter"
+      }
+     },
+     "original_document_must_show": "the OEM article number (MPN) printed next to the product role/name; plus a separate, reviewed catalog-SKU binding (a SKU is not proof)",
+     "reasons": [
+      "bytes_missing",
+      "claim_proposed_unverified"
+     ],
+     "relation_ids": [],
+     "relation_type": null,
+     "seed_locator_ref": "pr167:oem_evidence/maxi-cosi-carrier-adapter-1166057110#article"
+    },
+    {
+     "assertion_type": "compatible",
+     "claim_id": "clm:156beec5c65ff754",
+     "claim_index": 5,
+     "declared_status": "PROPOSED",
+     "effective_status": "PROPOSED",
+     "ends": {
+      "adapter": {
+       "maker_id": "maxi-cosi",
+       "mpn": "1166057110"
+      },
+      "chassis": {
+       "maker_id": "maxi-cosi",
+       "name": "Fame Cabin"
+      },
+      "seat": {
+       "maker_id": "maxi-cosi",
+       "name": "Coral Slide Pro"
+      }
+     },
+     "original_document_must_show": "a sentence/table row of the ORIGINAL document that names BOTH ends exactly (model + generation, article number); conditions, if any, verbatim",
+     "reasons": [
+      "bytes_missing",
+      "claim_proposed_unverified"
+     ],
+     "relation_ids": [
+      "rel:bf6b7978cbd99380"
+     ],
+     "relation_type": "adapter_between",
+     "seed_locator_ref": "pr167:oem_evidence/maxi-cosi-carrier-adapter-1166057110#interface/Coral Slide Pro/Fame Cabin"
+    },
+    {
+     "assertion_type": "compatible",
+     "claim_id": "clm:34ba1e41d9f243cd",
+     "claim_index": 11,
+     "declared_status": "PROPOSED",
+     "effective_status": "PROPOSED",
+     "ends": {
+      "adapter": {
+       "maker_id": "maxi-cosi",
+       "mpn": "1166057110"
+      },
+      "chassis": {
+       "maker_id": "maxi-cosi",
+       "name": "Fame"
+      },
+      "extension": {},
+      "seat": {
+       "maker_id": "maxi-cosi",
+       "name": "Coral Slide Pro"
+      }
+     },
+     "original_document_must_show": "a sentence/table row of the ORIGINAL document that names BOTH ends exactly (model + generation, article number); conditions, if any, verbatim",
+     "reasons": [
+      "bytes_missing",
+      "claim_proposed_unverified"
+     ],
+     "relation_ids": [
+      "rel:66eef64200958edd"
+     ],
+     "relation_type": "adapter_between",
+     "seed_locator_ref": "pr167:oem_evidence/maxi-cosi-carrier-adapter-1166057110#interface/Coral Slide Pro/Fame"
+    },
+    {
+     "assertion_type": "absent_from_list",
+     "claim_id": "clm:91134cc1c6557c54",
+     "claim_index": 33,
+     "declared_status": "PROPOSED",
+     "effective_status": "PROPOSED",
+     "ends": {
+      "adapter": {
+       "maker_id": "maxi-cosi",
+       "mpn": "1166057110"
+      },
+      "chassis": {
+       "maker_id": "maxi-cosi",
+       "name": "Fame Cabin"
+      },
+      "seat": {
+       "maker_id": "maxi-cosi",
+       "name": "Coral 360"
+      }
+     },
+     "original_document_must_show": "the document must state that its list is COMPLETE; otherwise the claim stays UNKNOWN. Absence from a list is never EXCLUDED",
+     "reasons": [
+      "bytes_missing",
+      "claim_proposed_unverified"
+     ],
+     "relation_ids": [
+      "rel:f07b5cc54c92340f"
+     ],
+     "relation_type": "adapter_between",
+     "seed_locator_ref": "pr167:oem_evidence/maxi-cosi-carrier-adapter-1166057110#interface/absent/Coral 360/Fame Cabin"
+    },
+    {
+     "assertion_type": "absent_from_list",
+     "claim_id": "clm:e8c4a3d2d28e4757",
+     "claim_index": 48,
+     "declared_status": "PROPOSED",
+     "effective_status": "PROPOSED",
+     "ends": {
+      "adapter": {
+       "maker_id": "maxi-cosi",
+       "mpn": "1166057110"
+      },
+      "chassis": {
+       "maker_id": "maxi-cosi",
+       "name": "Fame"
+      },
+      "seat": {
+       "maker_id": "maxi-cosi",
+       "name": "Coral 360"
+      }
+     },
+     "original_document_must_show": "the document must state that its list is COMPLETE; otherwise the claim stays UNKNOWN. Absence from a list is never EXCLUDED",
+     "reasons": [
+      "bytes_missing",
+      "claim_proposed_unverified"
+     ],
+     "relation_ids": [
+      "rel:da3e670ef5a3f798"
+     ],
+     "relation_type": "adapter_between",
+     "seed_locator_ref": "pr167:oem_evidence/maxi-cosi-carrier-adapter-1166057110#interface/absent/Coral 360/Fame"
+    }
+   ],
+   "doc_id": "doc:381465952729913b",
+   "issuer": "maxi-cosi",
+   "media_type": "text/html",
+   "official_manufacturer_document": true,
+   "seed_language": "en",
+   "seed_market": "GB",
+   "url": "https://www.maxi-cosi.co.uk/pushchairs/coral-slide-pro-carrier-adapter"
+  },
+  {
+   "blocker": "original bytes not captured; the seed URL was read on 2026-11-17 by an unattributed handoff and its content was never stored",
+   "bytes_state": "NO_BYTES",
+   "capture_requirements": {
+    "after_capture": "add-claim with a verbatim quote found in the stored bytes (HTML/text) or the page number (PDF); reviewer must be a different human:<id>",
+    "register_doc_fields": [
+     "file (the ORIGINAL bytes, unchanged)",
+     "issuer",
+     "media_type",
+     "url",
+     "document_version",
+     "document_date",
+     "market",
+     "language",
+     "retrieved_utc",
+     "captured_by=human:<id>"
+    ]
+   },
+   "claims": [
+    {
+     "assertion_type": "compatible",
+     "claim_id": "clm:1a7d94b18807ab88",
+     "claim_index": 8,
+     "declared_status": "PROPOSED",
+     "effective_status": "PROPOSED",
+     "ends": {
+      "accessory": {
+       "maker_id": "besafe",
+       "mpn": "11006001"
+      },
+      "model": {
+       "maker_id": "besafe",
+       "name": "iZi Go Modular X1"
+      }
+     },
+     "original_document_must_show": "a sentence/table row of the ORIGINAL document that names BOTH ends exactly (model + generation, article number); conditions, if any, verbatim",
+     "reasons": [
+      "bytes_missing",
+      "claim_proposed_unverified"
+     ],
+     "relation_ids": [
+      "rel:c9f8405e9d91ef87"
+     ],
+     "relation_type": "accessory_for_model",
+     "seed_locator_ref": "pr167:oem_evidence/besafe-rain-shield-11006001#confirmed_models/iZi Go Modular X1"
+    },
+    {
+     "assertion_type": "absent_from_list",
+     "claim_id": "clm:389fbfba4c8bb7e9",
+     "claim_index": 14,
+     "declared_status": "PROPOSED",
+     "effective_status": "PROPOSED",
+     "ends": {
+      "accessory": {
+       "maker_id": "besafe",
+       "mpn": "11006001"
+      },
+      "model": {
+       "maker_id": "besafe",
+       "name": "iZi Go Modular X2"
+      }
+     },
+     "original_document_must_show": "the document must state that its list is COMPLETE; otherwise the claim stays UNKNOWN. Absence from a list is never EXCLUDED",
+     "reasons": [
+      "bytes_missing",
+      "claim_proposed_unverified"
+     ],
+     "relation_ids": [
+      "rel:43724e77b03ec423"
+     ],
+     "relation_type": "accessory_for_model",
+     "seed_locator_ref": "pr167:oem_evidence/besafe-rain-shield-11006001#explicit_absent_models/iZi Go Modular X2"
+    },
+    {
+     "assertion_type": "article_identity",
+     "claim_id": "clm:cc3279303c9b05d3",
+     "claim_index": 41,
+     "declared_status": "PROPOSED",
+     "effective_status": "PROPOSED",
+     "ends": {
+      "article": {
+       "maker_id": "besafe",
+       "mpn": "11006001",
+       "role": "rain_shield",
+       "sku_alias": "11006001par"
+      }
+     },
+     "original_document_must_show": "the OEM article number (MPN) printed next to the product role/name; plus a separate, reviewed catalog-SKU binding (a SKU is not proof)",
+     "reasons": [
+      "bytes_missing",
+      "claim_proposed_unverified"
+     ],
+     "relation_ids": [],
+     "relation_type": null,
+     "seed_locator_ref": "pr167:oem_evidence/besafe-rain-shield-11006001#article"
+    },
+    {
+     "assertion_type": "compatible",
+     "claim_id": "clm:e4498fbdd47559d0",
+     "claim_index": 47,
+     "declared_status": "PROPOSED",
+     "effective_status": "PROPOSED",
+     "ends": {
+      "accessory": {
+       "maker_id": "besafe",
+       "mpn": "11006001"
+      },
+      "model": {
+       "maker_id": "besafe",
+       "name": "iZi Go Modular X1 i-Size"
+      }
+     },
+     "original_document_must_show": "a sentence/table row of the ORIGINAL document that names BOTH ends exactly (model + generation, article number); conditions, if any, verbatim",
+     "reasons": [
+      "bytes_missing",
+      "claim_proposed_unverified"
+     ],
+     "relation_ids": [
+      "rel:bfdbab3befdfd03e"
+     ],
+     "relation_type": "accessory_for_model",
+     "seed_locator_ref": "pr167:oem_evidence/besafe-rain-shield-11006001#confirmed_models/iZi Go Modular X1 i-Size"
+    }
+   ],
+   "doc_id": "doc:3d6c5125466e6847",
+   "issuer": "besafe",
+   "media_type": "application/pdf",
+   "official_manufacturer_document": true,
+   "seed_language": "en",
+   "seed_market": "manufacturer-manual",
+   "url": "https://www.besafe.com/4a4457/globalassets/inriverimages/commerce-besafe/2019_01_10_instruction_manual_rain_shield_-_web-manual-601.pdf"
+  },
+  {
+   "blocker": "no official document: the seed points at a catalog control CSV, which is not OEM evidence; an official manufacturer page/manual must be found for these claims",
+   "bytes_state": "NO_BYTES",
+   "capture_requirements": {
+    "after_capture": "add-claim with a verbatim quote found in the stored bytes (HTML/text) or the page number (PDF); reviewer must be a different human:<id>",
+    "register_doc_fields": [
+     "file (the ORIGINAL bytes, unchanged)",
+     "issuer",
+     "media_type",
+     "url",
+     "document_version",
+     "document_date",
+     "market",
+     "language",
+     "retrieved_utc",
+     "captured_by=human:<id>"
+    ]
+   },
+   "claims": [
+    {
+     "assertion_type": "compatible",
+     "claim_id": "clm:76cdc23051b3ba54",
+     "claim_index": 25,
+     "declared_status": "PROPOSED",
+     "effective_status": "PROPOSED",
+     "ends": {
+      "accessory": {
+       "maker_id": "unspecified",
+       "mpn": "6900000016817"
+      },
+      "note": "vehicle_general: maker unspecified in the seed; an OEM document may not exist"
+     },
+     "original_document_must_show": "a sentence/table row of the ORIGINAL document that names BOTH ends exactly (model + generation, article number); conditions, if any, verbatim",
+     "reasons": [
+      "bytes_missing",
+      "claim_proposed_unverified"
+     ],
+     "relation_ids": [
+      "rel:2c22ecae2a9c3e40"
+     ],
+     "relation_type": "vehicle_general",
+     "seed_locator_ref": "pr167:oem_evidence/vehicle-organiser-6900000016817#never_ab"
+    },
+    {
+     "assertion_type": "article_identity",
+     "claim_id": "clm:f3fa158296cfbceb",
+     "claim_index": 51,
+     "declared_status": "PROPOSED",
+     "effective_status": "PROPOSED",
+     "ends": {
+      "article": {
+       "maker_id": "unspecified",
+       "mpn": "6900000016817",
+       "role": "vehicle_organiser"
+      }
+     },
+     "original_document_must_show": "the OEM article number (MPN) printed next to the product role/name; plus a separate, reviewed catalog-SKU binding (a SKU is not proof)",
+     "reasons": [
+      "bytes_missing",
+      "claim_proposed_unverified"
+     ],
+     "relation_ids": [],
+     "relation_type": null,
+     "seed_locator_ref": "pr167:oem_evidence/vehicle-organiser-6900000016817#article"
+    }
+   ],
+   "doc_id": "doc:81bb8659a109e590",
+   "issuer": "unspecified",
+   "media_type": "text/plain",
+   "official_manufacturer_document": false,
+   "seed_language": "ru",
+   "seed_market": "catalog-control",
+   "url": "negative-control:NEGATIVE_AND_CONDITIONAL_CONTROLS.csv"
+  },
+  {
+   "blocker": "original bytes not captured; the seed URL was read on 2026-11-17 by an unattributed handoff and its content was never stored",
+   "bytes_state": "NO_BYTES",
+   "capture_requirements": {
+    "after_capture": "add-claim with a verbatim quote found in the stored bytes (HTML/text) or the page number (PDF); reviewer must be a different human:<id>",
+    "register_doc_fields": [
+     "file (the ORIGINAL bytes, unchanged)",
+     "issuer",
+     "media_type",
+     "url",
+     "document_version",
+     "document_date",
+     "market",
+     "language",
+     "retrieved_utc",
+     "captured_by=human:<id>"
+    ]
+   },
+   "claims": [
+    {
+     "assertion_type": "not_tested_at_time",
+     "claim_id": "clm:014746c9a9a4f1f2",
+     "claim_index": 0,
+     "declared_status": "PROPOSED",
+     "effective_status": "PROPOSED",
+     "ends": {
+      "adapter": {
+       "maker_id": "bugaboo",
+       "mpn": "400003001"
+      },
+      "chassis": {
+       "maker_id": "bugaboo",
+       "name": "Dragonfly Plus"
+      },
+      "seat": {
+       "maker_id": "maxi-cosi",
+       "name": "Pebble 360 Pro 2"
+      }
+     },
+     "original_document_must_show": "a dated manufacturer statement that the pair was not tested; time-bound, always a hold",
+     "reasons": [
+      "bytes_missing",
+      "claim_proposed_unverified"
+     ],
+     "relation_ids": [
+      "rel:8cd931d049d1d1b4"
+     ],
+     "relation_type": "adapter_between",
+     "seed_locator_ref": "pr167:fixtures/HOLDOUT_RESULTS.csv#N01_PEBBLE_PRO2_DRAGONFLY.oem_compatible_models_proof/Dragonfly Plus"
+    },
+    {
+     "assertion_type": "article_identity",
+     "claim_id": "clm:164f71eb56b3d7c0",
+     "claim_index": 6,
+     "declared_status": "PROPOSED",
+     "effective_status": "PROPOSED",
+     "ends": {
+      "article": {
+       "maker_id": "bugaboo",
+       "mpn": "400003001",
+       "role": "mechanical_adapter"
+      }
+     },
+     "original_document_must_show": "the OEM article number (MPN) printed next to the product role/name; plus a separate, reviewed catalog-SKU binding (a SKU is not proof)",
+     "reasons": [
+      "bytes_missing",
+      "claim_proposed_unverified"
+     ],
+     "relation_ids": [],
+     "relation_type": null,
+     "seed_locator_ref": "pr167:oem_evidence/bugaboo-dragonfly-adapter-400003001#article"
+    },
+    {
+     "assertion_type": "compatible",
+     "claim_id": "clm:2206525d7c7823db",
+     "claim_index": 9,
+     "declared_status": "PROPOSED",
+     "effective_status": "PROPOSED",
+     "ends": {
+      "adapter": {
+       "maker_id": "bugaboo",
+       "mpn": "400003001"
+      },
+      "chassis": {
+       "maker_id": "bugaboo",
+       "name": "Dragonfly Plus"
+      },
+      "seat": {
+       "maker_id": "maxi-cosi",
+       "name": "Pebble 360 Pro"
+      }
+     },
+     "original_document_must_show": "a sentence/table row of the ORIGINAL document that names BOTH ends exactly (model + generation, article number); conditions, if any, verbatim",
+     "reasons": [
+      "bytes_missing",
+      "claim_proposed_unverified"
+     ],
+     "relation_ids": [
+      "rel:105b35a3358e582c"
+     ],
+     "relation_type": "adapter_between",
+     "seed_locator_ref": "pr167:oem_evidence/bugaboo-dragonfly-adapter-400003001#lists/Dragonfly Plus/Pebble 360 Pro"
+    },
+    {
+     "assertion_type": "not_tested_at_time",
+     "claim_id": "clm:69dde1c28d69b7c7",
+     "claim_index": 21,
+     "declared_status": "PROPOSED",
+     "effective_status": "PROPOSED",
+     "ends": {
+      "adapter": {
+       "maker_id": "bugaboo",
+       "mpn": "400003001"
+      },
+      "chassis": {
+       "maker_id": "bugaboo",
+       "name": "Dragonfly"
+      },
+      "seat": {
+       "maker_id": "maxi-cosi",
+       "name": "Pebble 360 Pro 2"
+      }
+     },
+     "original_document_must_show": "a dated manufacturer statement that the pair was not tested; time-bound, always a hold",
+     "reasons": [
+      "bytes_missing",
+      "claim_proposed_unverified"
+     ],
+     "relation_ids": [
+      "rel:d48da9edacfa405c"
+     ],
+     "relation_type": "adapter_between",
+     "seed_locator_ref": "pr167:fixtures/HOLDOUT_RESULTS.csv#N01_PEBBLE_PRO2_DRAGONFLY.oem_compatible_models_proof/Dragonfly"
+    },
+    {
+     "assertion_type": "not_recommended",
+     "claim_id": "clm:6a43ab3d603e0d8a",
+     "claim_index": 22,
+     "declared_status": "PROPOSED",
+     "effective_status": "PROPOSED",
+     "ends": {
+      "adapter": {
+       "maker_id": "bugaboo",
+       "mpn": "400003001"
+      },
+      "chassis": {
+       "maker_id": "bugaboo",
+       "name": "Dragonfly"
+      },
+      "seat": {
+       "maker_id": "maxi-cosi",
+       "name": "CabrioFix"
+      }
+     },
+     "original_document_must_show": "an explicit, scoped manufacturer statement that the pair/model is not recommended or not compatible (quote verbatim)",
+     "reasons": [
+      "bytes_missing",
+      "claim_proposed_unverified"
+     ],
+     "relation_ids": [
+      "rel:c75f181a49fc0bd0"
+     ],
+     "relation_type": "adapter_between",
+     "seed_locator_ref": "pr167:oem_evidence/bugaboo-dragonfly-adapter-400003001#lists/Dragonfly/reject/CabrioFix"
+    },
+    {
+     "assertion_type": "absent_from_list",
+     "claim_id": "clm:7c820de148387ae9",
+     "claim_index": 28,
+     "declared_status": "PROPOSED",
+     "effective_status": "PROPOSED",
+     "ends": {
+      "adapter": {
+       "maker_id": "bugaboo",
+       "mpn": "400003001"
+      },
+      "chassis": {
+       "maker_id": "bugaboo",
+       "name": "Dragonfly"
+      },
+      "seat": {
+       "maker_id": "maxi-cosi",
+       "name": "Pebble 360 Pro 2"
+      }
+     },
+     "original_document_must_show": "the document must state that its list is COMPLETE; otherwise the claim stays UNKNOWN. Absence from a list is never EXCLUDED",
+     "reasons": [
+      "bytes_missing",
+      "claim_proposed_unverified"
+     ],
+     "relation_ids": [
+      "rel:d48da9edacfa405c"
+     ],
+     "relation_type": "adapter_between",
+     "seed_locator_ref": "pr167:oem_evidence/bugaboo-dragonfly-adapter-400003001#lists/Dragonfly/absent/Pebble 360 Pro 2"
+    },
+    {
+     "assertion_type": "compatible",
+     "claim_id": "clm:a9fa4b98947783cd",
+     "claim_index": 36,
+     "declared_status": "PROPOSED",
+     "effective_status": "PROPOSED",
+     "ends": {
+      "adapter": {
+       "maker_id": "bugaboo",
+       "mpn": "400003001"
+      },
+      "chassis": {
+       "maker_id": "bugaboo",
+       "name": "Dragonfly"
+      },
+      "seat": {
+       "maker_id": "maxi-cosi",
+       "name": "Pebble 360 Pro"
+      }
+     },
+     "original_document_must_show": "a sentence/table row of the ORIGINAL document that names BOTH ends exactly (model + generation, article number); conditions, if any, verbatim",
+     "reasons": [
+      "bytes_missing",
+      "claim_proposed_unverified"
+     ],
+     "relation_ids": [
+      "rel:8fbd9214a244feab"
+     ],
+     "relation_type": "adapter_between",
+     "seed_locator_ref": "pr167:oem_evidence/bugaboo-dragonfly-adapter-400003001#lists/Dragonfly/Pebble 360 Pro"
+    },
+    {
+     "assertion_type": "absent_from_list",
+     "claim_id": "clm:d9df1eebd5fdd544",
+     "claim_index": 44,
+     "declared_status": "PROPOSED",
+     "effective_status": "PROPOSED",
+     "ends": {
+      "adapter": {
+       "maker_id": "bugaboo",
+       "mpn": "400003001"
+      },
+      "chassis": {
+       "maker_id": "bugaboo",
+       "name": "Dragonfly Plus"
+      },
+      "seat": {
+       "maker_id": "maxi-cosi",
+       "name": "Pebble 360 Pro 2"
+      }
+     },
+     "original_document_must_show": "the document must state that its list is COMPLETE; otherwise the claim stays UNKNOWN. Absence from a list is never EXCLUDED",
+     "reasons": [
+      "bytes_missing",
+      "claim_proposed_unverified"
+     ],
+     "relation_ids": [
+      "rel:8cd931d049d1d1b4"
+     ],
+     "relation_type": "adapter_between",
+     "seed_locator_ref": "pr167:oem_evidence/bugaboo-dragonfly-adapter-400003001#lists/Dragonfly Plus/absent/Pebble 360 Pro 2"
+    },
+    {
+     "assertion_type": "not_recommended",
+     "claim_id": "clm:e8d009fb45255472",
+     "claim_index": 49,
+     "declared_status": "PROPOSED",
+     "effective_status": "PROPOSED",
+     "ends": {
+      "adapter": {
+       "maker_id": "bugaboo",
+       "mpn": "400003001"
+      },
+      "chassis": {
+       "maker_id": "bugaboo",
+       "name": "Dragonfly Plus"
+      },
+      "seat": {
+       "maker_id": "maxi-cosi",
+       "name": "CabrioFix"
+      }
+     },
+     "original_document_must_show": "an explicit, scoped manufacturer statement that the pair/model is not recommended or not compatible (quote verbatim)",
+     "reasons": [
+      "bytes_missing",
+      "claim_proposed_unverified"
+     ],
+     "relation_ids": [
+      "rel:7ae7780e588e9567"
+     ],
+     "relation_type": "adapter_between",
+     "seed_locator_ref": "pr167:oem_evidence/bugaboo-dragonfly-adapter-400003001#lists/Dragonfly Plus/reject/CabrioFix"
+    }
+   ],
+   "doc_id": "doc:8b27a7246e3541d0",
+   "issuer": "bugaboo",
+   "media_type": "text/html",
+   "official_manufacturer_document": true,
+   "seed_language": "en",
+   "seed_market": "GB",
+   "url": "https://www.bugaboo.com/gb-en/outlet/bugaboo-dragonfly-car-seat-adapters-400003001.html"
+  },
+  {
+   "blocker": "original bytes not captured; the seed URL was read on 2026-11-17 by an unattributed handoff and its content was never stored",
+   "bytes_state": "NO_BYTES",
+   "capture_requirements": {
+    "after_capture": "add-claim with a verbatim quote found in the stored bytes (HTML/text) or the page number (PDF); reviewer must be a different human:<id>",
+    "register_doc_fields": [
+     "file (the ORIGINAL bytes, unchanged)",
+     "issuer",
+     "media_type",
+     "url",
+     "document_version",
+     "document_date",
+     "market",
+     "language",
+     "retrieved_utc",
+     "captured_by=human:<id>"
+    ]
+   },
+   "claims": [
+    {
+     "assertion_type": "compatible",
+     "claim_id": "clm:2611e27496164090",
+     "claim_index": 10,
+     "declared_status": "PROPOSED",
+     "effective_status": "PROPOSED",
+     "ends": {
+      "adapter": {
+       "maker_id": "bugaboo",
+       "mpn": "400019001"
+      },
+      "chassis": {
+       "maker_id": "bugaboo",
+       "name": "Fox 5"
+      },
+      "seat": {
+       "maker_id": "besafe",
+       "name": "iZi Go Modular X1"
+      }
+     },
+     "original_document_must_show": "a sentence/table row of the ORIGINAL document that names BOTH ends exactly (model + generation, article number); conditions, if any, verbatim",
+     "reasons": [
+      "bytes_missing",
+      "claim_proposed_unverified"
+     ],
+     "relation_ids": [
+      "rel:f5e825cedd3d0cf9"
+     ],
+     "relation_type": "adapter_between",
+     "seed_locator_ref": "pr167:oem_evidence/bugaboo-fox-adapter-400019001#lists/Fox 5/iZi Go Modular X1"
+    },
+    {
+     "assertion_type": "compatible",
+     "claim_id": "clm:4819d97ce02b08a4",
+     "claim_index": 18,
+     "declared_status": "PROPOSED",
+     "effective_status": "PROPOSED",
+     "ends": {
+      "adapter": {
+       "maker_id": "bugaboo",
+       "mpn": "400019001"
+      },
+      "chassis": {
+       "maker_id": "bugaboo",
+       "name": "Fox 5 Renew"
+      },
+      "seat": {
+       "maker_id": "maxi-cosi",
+       "name": "Coral Slide Pro"
+      }
+     },
+     "original_document_must_show": "a sentence/table row of the ORIGINAL document that names BOTH ends exactly (model + generation, article number); conditions, if any, verbatim",
+     "reasons": [
+      "bytes_missing",
+      "claim_proposed_unverified"
+     ],
+     "relation_ids": [
+      "rel:f8578e3b0f9d0534"
+     ],
+     "relation_type": "adapter_between",
+     "seed_locator_ref": "pr167:oem_evidence/bugaboo-fox-adapter-400019001#lists/Fox 5 Renew/Coral Slide Pro"
+    },
+    {
+     "assertion_type": "compatible",
+     "claim_id": "clm:6f66fbb3a8e995fb",
+     "claim_index": 23,
+     "declared_status": "PROPOSED",
+     "effective_status": "PROPOSED",
+     "ends": {
+      "adapter": {
+       "maker_id": "bugaboo",
+       "mpn": "400019001"
+      },
+      "chassis": {
+       "maker_id": "bugaboo",
+       "name": "Fox 5 Renew"
+      },
+      "seat": {
+       "maker_id": "maxi-cosi",
+       "name": "Pebble 360 Pro 2"
+      }
+     },
+     "original_document_must_show": "a sentence/table row of the ORIGINAL document that names BOTH ends exactly (model + generation, article number); conditions, if any, verbatim",
+     "reasons": [
+      "bytes_missing",
+      "claim_proposed_unverified"
+     ],
+     "relation_ids": [
+      "rel:595f8589c89c6586"
+     ],
+     "relation_type": "adapter_between",
+     "seed_locator_ref": "pr167:oem_evidence/bugaboo-fox-adapter-400019001#lists/Fox 5 Renew/Pebble 360 Pro 2"
+    },
+    {
+     "assertion_type": "absent_from_list",
+     "claim_id": "clm:8e9ddb1eae3c5a2e",
+     "claim_index": 32,
+     "declared_status": "PROPOSED",
+     "effective_status": "PROPOSED",
+     "ends": {
+      "adapter": {
+       "maker_id": "bugaboo",
+       "mpn": "400019001"
+      },
+      "chassis": {
+       "maker_id": "bugaboo",
+       "name": "Fox 2"
+      },
+      "seat": {
+       "maker_id": "maxi-cosi",
+       "name": "Pebble 360 Pro 2"
+      }
+     },
+     "original_document_must_show": "the document must state that its list is COMPLETE; otherwise the claim stays UNKNOWN. Absence from a list is never EXCLUDED",
+     "reasons": [
+      "bytes_missing",
+      "claim_proposed_unverified"
+     ],
+     "relation_ids": [
+      "rel:7888efcdf7102f63"
+     ],
+     "relation_type": "adapter_between",
+     "seed_locator_ref": "pr167:oem_evidence/bugaboo-fox-adapter-400019001#lists/Fox 2/absent/Pebble 360 Pro 2"
+    },
+    {
+     "assertion_type": "compatible",
+     "claim_id": "clm:a741efb866d18b6a",
+     "claim_index": 35,
+     "declared_status": "PROPOSED",
+     "effective_status": "PROPOSED",
+     "ends": {
+      "adapter": {
+       "maker_id": "bugaboo",
+       "mpn": "400019001"
+      },
+      "chassis": {
+       "maker_id": "bugaboo",
+       "name": "Fox 5"
+      },
+      "seat": {
+       "maker_id": "maxi-cosi",
+       "name": "Pebble 360 Pro 2"
+      }
+     },
+     "original_document_must_show": "a sentence/table row of the ORIGINAL document that names BOTH ends exactly (model + generation, article number); conditions, if any, verbatim",
+     "reasons": [
+      "bytes_missing",
+      "claim_proposed_unverified"
+     ],
+     "relation_ids": [
+      "rel:fd9ff73a09ba0d97"
+     ],
+     "relation_type": "adapter_between",
+     "seed_locator_ref": "pr167:oem_evidence/bugaboo-fox-adapter-400019001#lists/Fox 5/Pebble 360 Pro 2"
+    },
+    {
+     "assertion_type": "compatible",
+     "claim_id": "clm:ae44bd0fbe028eba",
+     "claim_index": 37,
+     "declared_status": "PROPOSED",
+     "effective_status": "PROPOSED",
+     "ends": {
+      "adapter": {
+       "maker_id": "bugaboo",
+       "mpn": "400019001"
+      },
+      "chassis": {
+       "maker_id": "bugaboo",
+       "name": "Fox 5 Renew"
+      },
+      "seat": {
+       "maker_id": "besafe",
+       "name": "iZi Go Modular X1 i-Size"
+      }
+     },
+     "original_document_must_show": "a sentence/table row of the ORIGINAL document that names BOTH ends exactly (model + generation, article number); conditions, if any, verbatim",
+     "reasons": [
+      "bytes_missing",
+      "claim_proposed_unverified"
+     ],
+     "relation_ids": [
+      "rel:7b289bd096acd98c"
+     ],
+     "relation_type": "adapter_between",
+     "seed_locator_ref": "pr167:oem_evidence/bugaboo-fox-adapter-400019001#lists/Fox 5 Renew/iZi Go Modular X1 i-Size"
+    },
+    {
+     "assertion_type": "compatible",
+     "claim_id": "clm:b9d355c13b36d0a9",
+     "claim_index": 39,
+     "declared_status": "PROPOSED",
+     "effective_status": "PROPOSED",
+     "ends": {
+      "adapter": {
+       "maker_id": "bugaboo",
+       "mpn": "400019001"
+      },
+      "chassis": {
+       "maker_id": "bugaboo",
+       "name": "Fox 5 Renew"
+      },
+      "seat": {
+       "maker_id": "besafe",
+       "name": "iZi Go Modular X1"
+      }
+     },
+     "original_document_must_show": "a sentence/table row of the ORIGINAL document that names BOTH ends exactly (model + generation, article number); conditions, if any, verbatim",
+     "reasons": [
+      "bytes_missing",
+      "claim_proposed_unverified"
+     ],
+     "relation_ids": [
+      "rel:ef8a9da40a49eb97"
+     ],
+     "relation_type": "adapter_between",
+     "seed_locator_ref": "pr167:oem_evidence/bugaboo-fox-adapter-400019001#lists/Fox 5 Renew/iZi Go Modular X1"
+    },
+    {
+     "assertion_type": "compatible",
+     "claim_id": "clm:c16de7388aa7d5a4",
+     "claim_index": 40,
+     "declared_status": "PROPOSED",
+     "effective_status": "PROPOSED",
+     "ends": {
+      "adapter": {
+       "maker_id": "bugaboo",
+       "mpn": "400019001"
+      },
+      "chassis": {
+       "maker_id": "bugaboo",
+       "name": "Fox 5"
+      },
+      "seat": {
+       "maker_id": "besafe",
+       "name": "iZi Go Modular X1 i-Size"
+      }
+     },
+     "original_document_must_show": "a sentence/table row of the ORIGINAL document that names BOTH ends exactly (model + generation, article number); conditions, if any, verbatim",
+     "reasons": [
+      "bytes_missing",
+      "claim_proposed_unverified"
+     ],
+     "relation_ids": [
+      "rel:5a066121edd0a2bc"
+     ],
+     "relation_type": "adapter_between",
+     "seed_locator_ref": "pr167:oem_evidence/bugaboo-fox-adapter-400019001#lists/Fox 5/iZi Go Modular X1 i-Size"
+    },
+    {
+     "assertion_type": "article_identity",
+     "claim_id": "clm:d5696c476f1f8442",
+     "claim_index": 42,
+     "declared_status": "PROPOSED",
+     "effective_status": "PROPOSED",
+     "ends": {
+      "article": {
+       "maker_id": "bugaboo",
+       "mpn": "400019001",
+       "role": "mechanical_adapter"
+      }
+     },
+     "original_document_must_show": "the OEM article number (MPN) printed next to the product role/name; plus a separate, reviewed catalog-SKU binding (a SKU is not proof)",
+     "reasons": [
+      "bytes_missing",
+      "claim_proposed_unverified"
+     ],
+     "relation_ids": [],
+     "relation_type": null,
+     "seed_locator_ref": "pr167:oem_evidence/bugaboo-fox-adapter-400019001#article"
+    },
+    {
+     "assertion_type": "compatible",
+     "claim_id": "clm:ee92f448d4fb4c93",
+     "claim_index": 50,
+     "declared_status": "PROPOSED",
+     "effective_status": "PROPOSED",
+     "ends": {
+      "adapter": {
+       "maker_id": "bugaboo",
+       "mpn": "400019001"
+      },
+      "chassis": {
+       "maker_id": "bugaboo",
+       "name": "Fox 5"
+      },
+      "seat": {
+       "maker_id": "maxi-cosi",
+       "name": "Coral Slide Pro"
+      }
+     },
+     "original_document_must_show": "a sentence/table row of the ORIGINAL document that names BOTH ends exactly (model + generation, article number); conditions, if any, verbatim",
+     "reasons": [
+      "bytes_missing",
+      "claim_proposed_unverified"
+     ],
+     "relation_ids": [
+      "rel:de5f13143bdf4074"
+     ],
+     "relation_type": "adapter_between",
+     "seed_locator_ref": "pr167:oem_evidence/bugaboo-fox-adapter-400019001#lists/Fox 5/Coral Slide Pro"
+    }
+   ],
+   "doc_id": "doc:b00a78102f589f76",
+   "issuer": "bugaboo",
+   "media_type": "text/html",
+   "official_manufacturer_document": true,
+   "seed_language": "en",
+   "seed_market": "GB",
+   "url": "https://www.bugaboo.com/gb-en/accessories/adapters/bugaboo-fox-kangaroo-car-seat-adapters-black-400019001.html"
+  },
+  {
+   "blocker": "original bytes not captured; the seed URL was read on 2026-11-17 by an unattributed handoff and its content was never stored",
+   "bytes_state": "NO_BYTES",
+   "capture_requirements": {
+    "after_capture": "add-claim with a verbatim quote found in the stored bytes (HTML/text) or the page number (PDF); reviewer must be a different human:<id>",
+    "register_doc_fields": [
+     "file (the ORIGINAL bytes, unchanged)",
+     "issuer",
+     "media_type",
+     "url",
+     "document_version",
+     "document_date",
+     "market",
+     "language",
+     "retrieved_utc",
+     "captured_by=human:<id>"
+    ]
+   },
+   "claims": [
+    {
+     "assertion_type": "compatible",
+     "claim_id": "clm:063a57f2c4bfa10a",
+     "claim_index": 1,
+     "declared_status": "PROPOSED",
+     "effective_status": "PROPOSED",
+     "ends": {
+      "accessory": {
+       "maker_id": "britax-romer",
+       "mpn": "ACCSFCC207"
+      },
+      "model": {
+       "maker_id": "britax-romer",
+       "name": "SWINGFIX M PLUS"
+      }
+     },
+     "original_document_must_show": "a sentence/table row of the ORIGINAL document that names BOTH ends exactly (model + generation, article number); conditions, if any, verbatim",
+     "reasons": [
+      "bytes_missing",
+      "claim_proposed_unverified"
+     ],
+     "relation_ids": [
+      "rel:5889f8a94282a1a5"
+     ],
+     "relation_type": "accessory_for_model",
+     "seed_locator_ref": "pr167:oem_evidence/britax-relax-insert-ACCSFCC207#confirmed_models/SWINGFIX M PLUS"
+    },
+    {
+     "assertion_type": "compatible",
+     "claim_id": "clm:5bdfae6d9e473ced",
+     "claim_index": 19,
+     "declared_status": "PROPOSED",
+     "effective_status": "PROPOSED",
+     "ends": {
+      "accessory": {
+       "maker_id": "britax-romer",
+       "mpn": "ACCSFCC207"
+      },
+      "model": {
+       "maker_id": "britax-romer",
+       "name": "DUALFIX PRO"
+      }
+     },
+     "original_document_must_show": "a sentence/table row of the ORIGINAL document that names BOTH ends exactly (model + generation, article number); conditions, if any, verbatim",
+     "reasons": [
+      "bytes_missing",
+      "claim_proposed_unverified"
+     ],
+     "relation_ids": [
+      "rel:74d6b05ac61156e8"
+     ],
+     "relation_type": "accessory_for_model",
+     "seed_locator_ref": "pr167:oem_evidence/britax-relax-insert-ACCSFCC207#confirmed_models/DUALFIX PRO"
+    },
+    {
+     "assertion_type": "compatible",
+     "claim_id": "clm:75e10be0b143f03e",
+     "claim_index": 24,
+     "declared_status": "PROPOSED",
+     "effective_status": "PROPOSED",
+     "ends": {
+      "accessory": {
+       "maker_id": "britax-romer",
+       "mpn": "ACCSFCC207"
+      },
+      "model": {
+       "maker_id": "britax-romer",
+       "name": "DUALFIX 5Z"
+      }
+     },
+     "original_document_must_show": "a sentence/table row of the ORIGINAL document that names BOTH ends exactly (model + generation, article number); conditions, if any, verbatim",
+     "reasons": [
+      "bytes_missing",
+      "claim_proposed_unverified"
+     ],
+     "relation_ids": [
+      "rel:6f838b667045eb6f"
+     ],
+     "relation_type": "accessory_for_model",
+     "seed_locator_ref": "pr167:oem_evidence/britax-relax-insert-ACCSFCC207#confirmed_models/DUALFIX 5Z"
+    },
+    {
+     "assertion_type": "compatible",
+     "claim_id": "clm:7b4898f3eb6812ae",
+     "claim_index": 27,
+     "declared_status": "PROPOSED",
+     "effective_status": "PROPOSED",
+     "ends": {
+      "accessory": {
+       "maker_id": "britax-romer",
+       "mpn": "ACCSFCC207"
+      },
+      "model": {
+       "maker_id": "britax-romer",
+       "name": "DUALFIX PLUS"
+      }
+     },
+     "original_document_must_show": "a sentence/table row of the ORIGINAL document that names BOTH ends exactly (model + generation, article number); conditions, if any, verbatim",
+     "reasons": [
+      "bytes_missing",
+      "claim_proposed_unverified"
+     ],
+     "relation_ids": [
+      "rel:28a660593040e9b0"
+     ],
+     "relation_type": "accessory_for_model",
+     "seed_locator_ref": "pr167:oem_evidence/britax-relax-insert-ACCSFCC207#confirmed_models/DUALFIX PLUS"
+    },
+    {
+     "assertion_type": "article_identity",
+     "claim_id": "clm:82c6de686e1b9f77",
+     "claim_index": 29,
+     "declared_status": "PROPOSED",
+     "effective_status": "PROPOSED",
+     "ends": {
+      "article": {
+       "maker_id": "britax-romer",
+       "mpn": "ACCSFCC207",
+       "role": "relax_insert"
+      }
+     },
+     "original_document_must_show": "the OEM article number (MPN) printed next to the product role/name; plus a separate, reviewed catalog-SKU binding (a SKU is not proof)",
+     "reasons": [
+      "bytes_missing",
+      "claim_proposed_unverified"
+     ],
+     "relation_ids": [],
+     "relation_type": null,
+     "seed_locator_ref": "pr167:oem_evidence/britax-relax-insert-ACCSFCC207#article"
+    },
+    {
+     "assertion_type": "compatible",
+     "claim_id": "clm:83a1619075d01648",
+     "claim_index": 30,
+     "declared_status": "PROPOSED",
+     "effective_status": "PROPOSED",
+     "ends": {
+      "accessory": {
+       "maker_id": "britax-romer",
+       "mpn": "ACCSFCC207"
+      },
+      "model": {
+       "maker_id": "britax-romer",
+       "name": "DUALFIX M PLUS"
+      }
+     },
+     "original_document_must_show": "a sentence/table row of the ORIGINAL document that names BOTH ends exactly (model + generation, article number); conditions, if any, verbatim",
+     "reasons": [
+      "bytes_missing",
+      "claim_proposed_unverified"
+     ],
+     "relation_ids": [
+      "rel:080c2e1d86f7f5a1"
+     ],
+     "relation_type": "accessory_for_model",
+     "seed_locator_ref": "pr167:oem_evidence/britax-relax-insert-ACCSFCC207#confirmed_models/DUALFIX M PLUS"
+    },
+    {
+     "assertion_type": "compatible",
+     "claim_id": "clm:d969ec11280213d4",
+     "claim_index": 43,
+     "declared_status": "PROPOSED",
+     "effective_status": "PROPOSED",
+     "ends": {
+      "accessory": {
+       "maker_id": "britax-romer",
+       "mpn": "ACCSFCC207"
+      },
+      "model": {
+       "maker_id": "britax-romer",
+       "name": "DUALFIX PRO M"
+      }
+     },
+     "original_document_must_show": "a sentence/table row of the ORIGINAL document that names BOTH ends exactly (model + generation, article number); conditions, if any, verbatim",
+     "reasons": [
+      "bytes_missing",
+      "claim_proposed_unverified"
+     ],
+     "relation_ids": [
+      "rel:5df39aa04cfbfbf1"
+     ],
+     "relation_type": "accessory_for_model",
+     "seed_locator_ref": "pr167:oem_evidence/britax-relax-insert-ACCSFCC207#confirmed_models/DUALFIX PRO M"
+    }
+   ],
+   "doc_id": "doc:bac1a286d1860ffb",
+   "issuer": "britax-romer",
+   "media_type": "text/html",
+   "official_manufacturer_document": true,
+   "seed_language": "en",
+   "seed_market": "manufacturer-com",
+   "url": "https://www.britax-roemer.com/accessories/car-seat-accessories/relax-insert/ACCSFCC207.html"
+  },
+  {
+   "blocker": "original bytes not captured; the seed URL was read on 2026-11-17 by an unattributed handoff and its content was never stored",
+   "bytes_state": "NO_BYTES",
+   "capture_requirements": {
+    "after_capture": "add-claim with a verbatim quote found in the stored bytes (HTML/text) or the page number (PDF); reviewer must be a different human:<id>",
+    "register_doc_fields": [
+     "file (the ORIGINAL bytes, unchanged)",
+     "issuer",
+     "media_type",
+     "url",
+     "document_version",
+     "document_date",
+     "market",
+     "language",
+     "retrieved_utc",
+     "captured_by=human:<id>"
+    ]
+   },
+   "claims": [
+    {
+     "assertion_type": "absent_from_list",
+     "claim_id": "clm:0964db5731167e0f",
+     "claim_index": 2,
+     "declared_status": "PROPOSED",
+     "effective_status": "PROPOSED",
+     "ends": {
+      "accessory": {
+       "maker_id": "britax-romer",
+       "mpn": "2000030111"
+      },
+      "model": {
+       "maker_id": "britax-romer",
+       "name": "KIDFIX PRO"
+      }
+     },
+     "original_document_must_show": "the document must state that its list is COMPLETE; otherwise the claim stays UNKNOWN. Absence from a list is never EXCLUDED",
+     "reasons": [
+      "bytes_missing",
+      "claim_proposed_unverified"
+     ],
+     "relation_ids": [
+      "rel:54e1afd0bfa37816"
+     ],
+     "relation_type": "accessory_for_model",
+     "seed_locator_ref": "pr167:oem_evidence/britax-comfort-insert-2000030111#explicit_absent_models/KIDFIX PRO"
+    },
+    {
+     "assertion_type": "compatible",
+     "claim_id": "clm:102d3d27d0fd88fb",
+     "claim_index": 3,
+     "declared_status": "PROPOSED",
+     "effective_status": "PROPOSED",
+     "ends": {
+      "accessory": {
+       "maker_id": "britax-romer",
+       "mpn": "2000030111"
+      },
+      "model": {
+       "maker_id": "britax-romer",
+       "name": "DUALFIX 5Z"
+      }
+     },
+     "original_document_must_show": "a sentence/table row of the ORIGINAL document that names BOTH ends exactly (model + generation, article number); conditions, if any, verbatim",
+     "reasons": [
+      "bytes_missing",
+      "claim_proposed_unverified"
+     ],
+     "relation_ids": [
+      "rel:11e9c08274ef0694"
+     ],
+     "relation_type": "accessory_for_model",
+     "seed_locator_ref": "pr167:oem_evidence/britax-comfort-insert-2000030111#confirmed_models/DUALFIX 5Z"
+    },
+    {
+     "assertion_type": "compatible",
+     "claim_id": "clm:1a21958934dafcba",
+     "claim_index": 7,
+     "declared_status": "PROPOSED",
+     "effective_status": "PROPOSED",
+     "ends": {
+      "accessory": {
+       "maker_id": "britax-romer",
+       "mpn": "2000030111"
+      },
+      "model": {
+       "maker_id": "britax-romer",
+       "name": "MAX-SAFE PRO"
+      }
+     },
+     "original_document_must_show": "a sentence/table row of the ORIGINAL document that names BOTH ends exactly (model + generation, article number); conditions, if any, verbatim",
+     "reasons": [
+      "bytes_missing",
+      "claim_proposed_unverified"
+     ],
+     "relation_ids": [
+      "rel:52fd81e2c75f18bd"
+     ],
+     "relation_type": "accessory_for_model",
+     "seed_locator_ref": "pr167:oem_evidence/britax-comfort-insert-2000030111#confirmed_models/MAX-SAFE PRO"
+    },
+    {
+     "assertion_type": "compatible",
+     "claim_id": "clm:352e86e384a03755",
+     "claim_index": 12,
+     "declared_status": "PROPOSED",
+     "effective_status": "PROPOSED",
+     "ends": {
+      "accessory": {
+       "maker_id": "britax-romer",
+       "mpn": "2000030111"
+      },
+      "model": {
+       "maker_id": "britax-romer",
+       "name": "SAFE-WAY M"
+      }
+     },
+     "original_document_must_show": "a sentence/table row of the ORIGINAL document that names BOTH ends exactly (model + generation, article number); conditions, if any, verbatim",
+     "reasons": [
+      "bytes_missing",
+      "claim_proposed_unverified"
+     ],
+     "relation_ids": [
+      "rel:ecc86358ad645abf"
+     ],
+     "relation_type": "accessory_for_model",
+     "seed_locator_ref": "pr167:oem_evidence/britax-comfort-insert-2000030111#confirmed_models/SAFE-WAY M"
+    },
+    {
+     "assertion_type": "article_identity",
+     "claim_id": "clm:3b321c43ee8ff318",
+     "claim_index": 15,
+     "declared_status": "PROPOSED",
+     "effective_status": "PROPOSED",
+     "ends": {
+      "article": {
+       "maker_id": "britax-romer",
+       "mpn": "2000030111",
+       "role": "comfort_insert"
+      }
+     },
+     "original_document_must_show": "the OEM article number (MPN) printed next to the product role/name; plus a separate, reviewed catalog-SKU binding (a SKU is not proof)",
+     "reasons": [
+      "bytes_missing",
+      "claim_proposed_unverified"
+     ],
+     "relation_ids": [],
+     "relation_type": null,
+     "seed_locator_ref": "pr167:oem_evidence/britax-comfort-insert-2000030111#article"
+    },
+    {
+     "assertion_type": "compatible",
+     "claim_id": "clm:3ef7fae5f8e22014",
+     "claim_index": 16,
+     "declared_status": "PROPOSED",
+     "effective_status": "PROPOSED",
+     "ends": {
+      "accessory": {
+       "maker_id": "britax-romer",
+       "mpn": "2000030111"
+      },
+      "model": {
+       "maker_id": "britax-romer",
+       "name": "DUALFIX M PLUS"
+      }
+     },
+     "original_document_must_show": "a sentence/table row of the ORIGINAL document that names BOTH ends exactly (model + generation, article number); conditions, if any, verbatim",
+     "reasons": [
+      "bytes_missing",
+      "claim_proposed_unverified"
+     ],
+     "relation_ids": [
+      "rel:f8c6811cf2148620"
+     ],
+     "relation_type": "accessory_for_model",
+     "seed_locator_ref": "pr167:oem_evidence/britax-comfort-insert-2000030111#confirmed_models/DUALFIX M PLUS"
+    },
+    {
+     "assertion_type": "compatible",
+     "claim_id": "clm:478ee31e95da57aa",
+     "claim_index": 17,
+     "declared_status": "PROPOSED",
+     "effective_status": "PROPOSED",
+     "ends": {
+      "accessory": {
+       "maker_id": "britax-romer",
+       "mpn": "2000030111"
+      },
+      "model": {
+       "maker_id": "britax-romer",
+       "name": "DUALFIX PLUS"
+      }
+     },
+     "original_document_must_show": "a sentence/table row of the ORIGINAL document that names BOTH ends exactly (model + generation, article number); conditions, if any, verbatim",
+     "reasons": [
+      "bytes_missing",
+      "claim_proposed_unverified"
+     ],
+     "relation_ids": [
+      "rel:0909bb3f15adc5bb"
+     ],
+     "relation_type": "accessory_for_model",
+     "seed_locator_ref": "pr167:oem_evidence/britax-comfort-insert-2000030111#confirmed_models/DUALFIX PLUS"
+    },
+    {
+     "assertion_type": "compatible",
+     "claim_id": "clm:7ab6a834f89c933b",
+     "claim_index": 26,
+     "declared_status": "PROPOSED",
+     "effective_status": "PROPOSED",
+     "ends": {
+      "accessory": {
+       "maker_id": "britax-romer",
+       "mpn": "2000030111"
+      },
+      "model": {
+       "maker_id": "britax-romer",
+       "name": "ADVANSAFIX PRO"
+      }
+     },
+     "original_document_must_show": "a sentence/table row of the ORIGINAL document that names BOTH ends exactly (model + generation, article number); conditions, if any, verbatim",
+     "reasons": [
+      "bytes_missing",
+      "claim_proposed_unverified"
+     ],
+     "relation_ids": [
+      "rel:61f8586556fbb75b"
+     ],
+     "relation_type": "accessory_for_model",
+     "seed_locator_ref": "pr167:oem_evidence/britax-comfort-insert-2000030111#confirmed_models/ADVANSAFIX PRO"
+    },
+    {
+     "assertion_type": "compatible",
+     "claim_id": "clm:8b779d5f19ed28b2",
+     "claim_index": 31,
+     "declared_status": "PROPOSED",
+     "effective_status": "PROPOSED",
+     "ends": {
+      "accessory": {
+       "maker_id": "britax-romer",
+       "mpn": "2000030111"
+      },
+      "model": {
+       "maker_id": "britax-romer",
+       "name": "EVOLVAFIX"
+      }
+     },
+     "original_document_must_show": "a sentence/table row of the ORIGINAL document that names BOTH ends exactly (model + generation, article number); conditions, if any, verbatim",
+     "reasons": [
+      "bytes_missing",
+      "claim_proposed_unverified"
+     ],
+     "relation_ids": [
+      "rel:5be44445bd1afa78"
+     ],
+     "relation_type": "accessory_for_model",
+     "seed_locator_ref": "pr167:oem_evidence/britax-comfort-insert-2000030111#confirmed_models/EVOLVAFIX"
+    },
+    {
+     "assertion_type": "compatible",
+     "claim_id": "clm:9b5132c8837ec883",
+     "claim_index": 34,
+     "declared_status": "PROPOSED",
+     "effective_status": "PROPOSED",
+     "ends": {
+      "accessory": {
+       "maker_id": "britax-romer",
+       "mpn": "2000030111"
+      },
+      "model": {
+       "maker_id": "britax-romer",
+       "name": "KING PRO"
+      }
+     },
+     "original_document_must_show": "a sentence/table row of the ORIGINAL document that names BOTH ends exactly (model + generation, article number); conditions, if any, verbatim",
+     "reasons": [
+      "bytes_missing",
+      "claim_proposed_unverified"
+     ],
+     "relation_ids": [
+      "rel:e8dd0bfe6f0d9a82"
+     ],
+     "relation_type": "accessory_for_model",
+     "seed_locator_ref": "pr167:oem_evidence/britax-comfort-insert-2000030111#confirmed_models/KING PRO"
+    },
+    {
+     "assertion_type": "compatible",
+     "claim_id": "clm:afd88cbe4e69c2ec",
+     "claim_index": 38,
+     "declared_status": "PROPOSED",
+     "effective_status": "PROPOSED",
+     "ends": {
+      "accessory": {
+       "maker_id": "britax-romer",
+       "mpn": "2000030111"
+      },
+      "model": {
+       "maker_id": "britax-romer",
+       "name": "SWIVEL 2"
+      }
+     },
+     "original_document_must_show": "a sentence/table row of the ORIGINAL document that names BOTH ends exactly (model + generation, article number); conditions, if any, verbatim",
+     "reasons": [
+      "bytes_missing",
+      "claim_proposed_unverified"
+     ],
+     "relation_ids": [
+      "rel:1c81c0d851450df5"
+     ],
+     "relation_type": "accessory_for_model",
+     "seed_locator_ref": "pr167:oem_evidence/britax-comfort-insert-2000030111#confirmed_models/SWIVEL 2"
+    },
+    {
+     "assertion_type": "absent_from_list",
+     "claim_id": "clm:dbff243f6d5ca32b",
+     "claim_index": 45,
+     "declared_status": "PROPOSED",
+     "effective_status": "PROPOSED",
+     "ends": {
+      "accessory": {
+       "maker_id": "britax-romer",
+       "mpn": "2000030111"
+      },
+      "model": {
+       "maker_id": "britax-romer",
+       "name": "SWIVEL"
+      }
+     },
+     "original_document_must_show": "the document must state that its list is COMPLETE; otherwise the claim stays UNKNOWN. Absence from a list is never EXCLUDED",
+     "reasons": [
+      "bytes_missing",
+      "claim_proposed_unverified"
+     ],
+     "relation_ids": [
+      "rel:99d38498de3a17ff"
+     ],
+     "relation_type": "accessory_for_model",
+     "seed_locator_ref": "pr167:oem_evidence/britax-comfort-insert-2000030111#explicit_absent_models/SWIVEL"
+    },
+    {
+     "assertion_type": "compatible",
+     "claim_id": "clm:e21924e870b2476b",
+     "claim_index": 46,
+     "declared_status": "PROPOSED",
+     "effective_status": "PROPOSED",
+     "ends": {
+      "accessory": {
+       "maker_id": "britax-romer",
+       "mpn": "2000030111"
+      },
+      "model": {
+       "maker_id": "britax-romer",
+       "name": "DUALFIX PRO M"
+      }
+     },
+     "original_document_must_show": "a sentence/table row of the ORIGINAL document that names BOTH ends exactly (model + generation, article number); conditions, if any, verbatim",
+     "reasons": [
+      "bytes_missing",
+      "claim_proposed_unverified"
+     ],
+     "relation_ids": [
+      "rel:c8cdb2ad7e178b34"
+     ],
+     "relation_type": "accessory_for_model",
+     "seed_locator_ref": "pr167:oem_evidence/britax-comfort-insert-2000030111#confirmed_models/DUALFIX PRO M"
+    },
+    {
+     "assertion_type": "compatible",
+     "claim_id": "clm:f621c6714a6e1fef",
+     "claim_index": 52,
+     "declared_status": "PROPOSED",
+     "effective_status": "PROPOSED",
+     "ends": {
+      "accessory": {
+       "maker_id": "britax-romer",
+       "mpn": "2000030111"
+      },
+      "model": {
+       "maker_id": "britax-romer",
+       "name": "DUALFIX PRO"
+      }
+     },
+     "original_document_must_show": "a sentence/table row of the ORIGINAL document that names BOTH ends exactly (model + generation, article number); conditions, if any, verbatim",
+     "reasons": [
+      "bytes_missing",
+      "claim_proposed_unverified"
+     ],
+     "relation_ids": [
+      "rel:a5ade3135ec1024f"
+     ],
+     "relation_type": "accessory_for_model",
+     "seed_locator_ref": "pr167:oem_evidence/britax-comfort-insert-2000030111#confirmed_models/DUALFIX PRO"
+    }
+   ],
+   "doc_id": "doc:c2ef54b501b55631",
+   "issuer": "britax-romer",
+   "media_type": "text/html",
+   "official_manufacturer_document": true,
+   "seed_language": "en",
+   "seed_market": "manufacturer-com",
+   "url": "https://www.britax-roemer.com/accessories/car-seat-accessories/comfort-insert/2000030111.html"
+  },
+  {
+   "blocker": "no official document: the seed points at a catalog control CSV, which is not OEM evidence; an official manufacturer page/manual must be found for these claims",
+   "bytes_state": "NO_BYTES",
+   "capture_requirements": {
+    "after_capture": "add-claim with a verbatim quote found in the stored bytes (HTML/text) or the page number (PDF); reviewer must be a different human:<id>",
+    "register_doc_fields": [
+     "file (the ORIGINAL bytes, unchanged)",
+     "issuer",
+     "media_type",
+     "url",
+     "document_version",
+     "document_date",
+     "market",
+     "language",
+     "retrieved_utc",
+     "captured_by=human:<id>"
+    ]
+   },
+   "claims": [
+    {
+     "assertion_type": "absent_from_list",
+     "claim_id": "clm:3765db0a7f5edeef",
+     "claim_index": 13,
+     "declared_status": "PROPOSED",
+     "effective_status": "PROPOSED",
+     "ends": {
+      "accessory": {
+       "maker_id": "maxi-cosi",
+       "mpn": "74203550"
+      },
+      "model": {
+       "maker_id": "maxi-cosi",
+       "name": "RodiFix Air Protect"
+      }
+     },
+     "original_document_must_show": "the document must state that its list is COMPLETE; otherwise the claim stays UNKNOWN. Absence from a list is never EXCLUDED",
+     "reasons": [
+      "bytes_missing",
+      "claim_proposed_unverified"
+     ],
+     "relation_ids": [
+      "rel:7676875887ade0d7"
+     ],
+     "relation_type": "accessory_for_model",
+     "seed_locator_ref": "pr167:fixtures/NEGATIVE_AND_CONDITIONAL_CONTROLS.csv#Maxi Cosi Pocket"
+    },
+    {
+     "assertion_type": "article_identity",
+     "claim_id": "clm:696cd8bdf49d2f76",
+     "claim_index": 20,
+     "declared_status": "PROPOSED",
+     "effective_status": "PROPOSED",
+     "ends": {
+      "article": {
+       "maker_id": "maxi-cosi",
+       "mpn": "74203550",
+       "role": "pocket"
+      }
+     },
+     "original_document_must_show": "the OEM article number (MPN) printed next to the product role/name; plus a separate, reviewed catalog-SKU binding (a SKU is not proof)",
+     "reasons": [
+      "bytes_missing",
+      "claim_proposed_unverified"
+     ],
+     "relation_ids": [],
+     "relation_type": null,
+     "seed_locator_ref": "pr167:oem_evidence/maxi-cosi-pocket-74203550#article"
+    }
+   ],
+   "doc_id": "doc:f554312a10c64b6e",
+   "issuer": "maxi-cosi",
+   "media_type": "text/plain",
+   "official_manufacturer_document": false,
+   "seed_language": "ru",
+   "seed_market": "catalog-control",
+   "url": "negative-control:NEGATIVE_AND_CONDITIONAL_CONTROLS.csv"
+  }
+ ],
+ "generation_sensitive_pairs": [
+  {
+   "longer": "iZi Go Modular X1 i-Size",
+   "maker_id": "besafe",
+   "rule": "separate models/generations: each needs its own sentence in the document; no automatic transfer of compatibility, absence or exclusion",
+   "shorter": "iZi Go Modular X1"
+  },
+  {
+   "longer": "DUALFIX PRO M",
+   "maker_id": "britax-romer",
+   "rule": "separate models/generations: each needs its own sentence in the document; no automatic transfer of compatibility, absence or exclusion",
+   "shorter": "DUALFIX PRO"
+  },
+  {
+   "longer": "SWIVEL 2",
+   "maker_id": "britax-romer",
+   "rule": "separate models/generations: each needs its own sentence in the document; no automatic transfer of compatibility, absence or exclusion",
+   "shorter": "SWIVEL"
+  },
+  {
+   "longer": "Dragonfly Plus",
+   "maker_id": "bugaboo",
+   "rule": "separate models/generations: each needs its own sentence in the document; no automatic transfer of compatibility, absence or exclusion",
+   "shorter": "Dragonfly"
+  },
+  {
+   "longer": "Fox 5 Renew",
+   "maker_id": "bugaboo",
+   "rule": "separate models/generations: each needs its own sentence in the document; no automatic transfer of compatibility, absence or exclusion",
+   "shorter": "Fox 5"
+  },
+  {
+   "longer": "Fame Cabin",
+   "maker_id": "maxi-cosi",
+   "rule": "separate models/generations: each needs its own sentence in the document; no automatic transfer of compatibility, absence or exclusion",
+   "shorter": "Fame"
+  },
+  {
+   "longer": "Pebble 360 Pro 2",
+   "maker_id": "maxi-cosi",
+   "rule": "separate models/generations: each needs its own sentence in the document; no automatic transfer of compatibility, absence or exclusion",
+   "shorter": "Pebble 360 Pro"
+  }
+ ],
+ "holdout_physical_pairs": [
+  {
+   "accessory_nids": {
+    "ru": 138671,
+    "uk": 138672
+   },
+   "accessory_sku": "400003001",
+   "case_id": "H01_PEBBLE_PRO_DRAGONFLY",
+   "endpoints": {
+    "adapter": [
+     "bugaboo",
+     "400003001"
+    ],
+    "chassis": [
+     [
+      "bugaboo",
+      "Dragonfly"
+     ],
+     [
+      "bugaboo",
+      "Dragonfly Plus"
+     ]
+    ],
+    "lock_expected_proposed_state": [
+     "LISTED",
+     "LISTED_CONDITIONAL"
+    ],
+    "relation_type": "adapter_between",
+    "seat": [
+     "maxi-cosi",
+     "Pebble 360 Pro"
+    ]
+   },
+   "source_catalog_model_string": "Pebble 360 Pro",
+   "source_nids": {
+    "ru": 137405,
+    "uk": 137407
+   }
+  },
+  {
+   "accessory_nids": {
+    "ru": 144145,
+    "uk": 144146
+   },
+   "accessory_sku": "400019001",
+   "case_id": "H02_PEBBLE_PRO2_FOX5",
+   "endpoints": {
+    "adapter": [
+     "bugaboo",
+     "400019001"
+    ],
+    "chassis": [
+     [
+      "bugaboo",
+      "Fox 5"
+     ],
+     [
+      "bugaboo",
+      "Fox 5 Renew"
+     ]
+    ],
+    "lock_expected_proposed_state": [
+     "LISTED",
+     "LISTED_CONDITIONAL"
+    ],
+    "relation_type": "adapter_between",
+    "seat": [
+     "maxi-cosi",
+     "Pebble 360 Pro 2"
+    ]
+   },
+   "source_catalog_model_string": "Pebble 360 Pro 2",
+   "source_nids": {
+    "ru": 139524,
+    "uk": 139663
+   }
+  },
+  {
+   "accessory_nids": {
+    "ru": 144145,
+    "uk": 144146
+   },
+   "accessory_sku": "400019001",
+   "case_id": "H03_BESAFE_X1_FOX5_SKU_HOLDOUT",
+   "endpoints": {
+    "adapter": [
+     "bugaboo",
+     "400019001"
+    ],
+    "chassis": [
+     [
+      "bugaboo",
+      "Fox 5"
+     ],
+     [
+      "bugaboo",
+      "Fox 5 Renew"
+     ]
+    ],
+    "lock_expected_proposed_state": [
+     "LISTED",
+     "LISTED_CONDITIONAL"
+    ],
+    "relation_type": "adapter_between",
+    "seat": [
+     "besafe",
+     "iZi Go Modular X1 i-Size"
+    ]
+   },
+   "source_catalog_model_string": "iZi Go Modular X-1 iSize",
+   "source_nids": {
+    "ru": 133428,
+    "uk": 133778
+   }
+  },
+  {
+   "accessory_nids": {
+    "ru": 144145,
+    "uk": 144146
+   },
+   "accessory_sku": "400019001",
+   "case_id": "H04_CORAL_SLIDE_PRO_FOX5_SKU_HOLDOUT",
+   "endpoints": {
+    "adapter": [
+     "bugaboo",
+     "400019001"
+    ],
+    "chassis": [
+     [
+      "bugaboo",
+      "Fox 5"
+     ],
+     [
+      "bugaboo",
+      "Fox 5 Renew"
+     ]
+    ],
+    "lock_expected_proposed_state": [
+     "LISTED",
+     "LISTED_CONDITIONAL"
+    ],
+    "relation_type": "adapter_between",
+    "seat": [
+     "maxi-cosi",
+     "Coral Slide Pro"
+    ]
+   },
+   "source_catalog_model_string": "Coral Slide Pro",
+   "source_nids": {
+    "ru": 144473,
+    "uk": 144474
+   }
+  },
+  {
+   "accessory_nids": {
+    "ru": 138671,
+    "uk": 138672
+   },
+   "accessory_sku": "400003001",
+   "case_id": "N01_PEBBLE_PRO2_DRAGONFLY",
+   "endpoints": {
+    "adapter": [
+     "bugaboo",
+     "400003001"
+    ],
+    "chassis": [
+     [
+      "bugaboo",
+      "Dragonfly"
+     ],
+     [
+      "bugaboo",
+      "Dragonfly Plus"
+     ]
+    ],
+    "lock_expected_proposed_state": [
+     "CONFLICT_HOLD"
+    ],
+    "relation_type": "adapter_between",
+    "seat": [
+     "maxi-cosi",
+     "Pebble 360 Pro 2"
+    ]
+   },
+   "source_catalog_model_string": "Pebble 360 Pro 2",
+   "source_nids": {
+    "ru": 139524,
+    "uk": 139663
+   }
+  },
+  {
+   "accessory_nids": {
+    "ru": 144145,
+    "uk": 144146
+   },
+   "accessory_sku": "400019001",
+   "case_id": "N02_PEBBLE_PRO2_FOX2",
+   "endpoints": {
+    "adapter": [
+     "bugaboo",
+     "400019001"
+    ],
+    "chassis": [
+     [
+      "bugaboo",
+      "Fox 2"
+     ]
+    ],
+    "lock_expected_proposed_state": [
+     "UNKNOWN"
+    ],
+    "relation_type": "adapter_between",
+    "seat": [
+     "maxi-cosi",
+     "Pebble 360 Pro 2"
+    ]
+   },
+   "source_catalog_model_string": "Pebble 360 Pro 2",
+   "source_nids": {
+    "ru": 139524,
+    "uk": 139663
+   }
+  },
+  {
+   "accessory_nids": {
+    "ru": 138671,
+    "uk": 138672
+   },
+   "accessory_sku": "400003001",
+   "case_id": "N03_CABRIOFIX_DRAGONFLY",
+   "endpoints": {
+    "adapter": [
+     "bugaboo",
+     "400003001"
+    ],
+    "chassis": [
+     [
+      "bugaboo",
+      "Dragonfly"
+     ],
+     [
+      "bugaboo",
+      "Dragonfly Plus"
+     ]
+    ],
+    "lock_expected_proposed_state": [
+     "EXCLUDED"
+    ],
+    "relation_type": "adapter_between",
+    "seat": [
+     "maxi-cosi",
+     "CabrioFix"
+    ]
+   },
+   "source_catalog_model_string": "Cabriofix",
+   "source_nids": {
+    "ru": 14139,
+    "uk": 15227
+   }
+  },
+  {
+   "accessory_nids": {
+    "ru": 139830,
+    "uk": 139831
+   },
+   "accessory_sku": "2000040775",
+   "case_id": "N04_RELAX_INSERT_IDENTITY",
+   "endpoints": {
+    "accessory": [
+     "britax-romer",
+     "ACCSFCC207"
+    ],
+    "lock_expected_proposed_state": [
+     "LISTED",
+     "LISTED_CONDITIONAL"
+    ],
+    "model": [
+     "britax-romer",
+     "DUALFIX PLUS"
+    ],
+    "relation_type": "accessory_for_model"
+   },
+   "source_catalog_model_string": "Dualfix Plus",
+   "source_nids": {
+    "ru": 134912,
+    "uk": 136278
+   }
+  }
+ ],
+ "inputs": {
+  "outputs": "rehearsal/v421-oem-stage-b/out",
+  "seeds": "rehearsal/v421-oem-stage-b/data/seeds"
+ },
+ "notice": "Worklist only. No document was fetched, no claim status was changed, nothing here is evidence, a recommendation or an approval.",
+ "schema": "bp-oem-acquisition-worklist-v1"
+}

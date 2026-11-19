@@ -1,0 +1,65 @@
+{
+ "captures": [
+  {
+   "bytes": 1345058,
+   "bytes_in_repo": false,
+   "capture_file": "CAPTURE_besafe_rain_shield_manual_pdf.json",
+   "downloaded_file_name": "bp-oem-acq-20261119__besafe-rain-shield-manual-11006001__en.pdf",
+   "retrieved_http_date": "Thu, 19 Nov 2026 07:37:08 GMT",
+   "seed_doc_id": "doc:3d6c5125466e6847",
+   "sha256": "47b860d5ab0976f6f9de9ee94d908e3f1901412261ebefc3285bec554e2e3896",
+   "url_final": "https://www.besafe.com/4a4457/globalassets/inriverimages/commerce-besafe/2019_01_10_instruction_manual_rain_shield_-_web-manual-601.pdf"
+  },
+  {
+   "bytes": 76540,
+   "bytes_in_repo": false,
+   "capture_file": "CAPTURE_britax_comfort_insert_2000030111_en-ME.json",
+   "downloaded_file_name": "bp-oem-acq-20261119__britax-comfort-insert-2000030111__en-ME.html",
+   "retrieved_http_date": "Thu, 19 Nov 2026 07:36:10 GMT",
+   "seed_doc_id": "doc:c2ef54b501b55631",
+   "sha256": "85afa342e16241afcb4e96f854377e85b20139a6bc6e0bb9a25cb68812bdea9a",
+   "url_final": "https://www.britax-roemer.com/accessories/car-seat-accessories/comfort-insert/2000030111.html"
+  },
+  {
+   "bytes": 80284,
+   "bytes_in_repo": false,
+   "capture_file": "CAPTURE_britax_relax_insert_ACCSFCC207_en-ME.json",
+   "downloaded_file_name": "bp-oem-acq-20261119__britax-relax-insert-ACCSFCC207__en-ME.html",
+   "retrieved_http_date": "Thu, 19 Nov 2026 07:35:42 GMT",
+   "seed_doc_id": "doc:bac1a286d1860ffb",
+   "sha256": "3da562db69fd193862ccc70a377e9bb1ee3a53c05aa807d7a73859b4b967285b",
+   "url_final": "https://www.britax-roemer.com/accessories/car-seat-accessories/relax-insert/ACCSFCC207.html"
+  },
+  {
+   "bytes": 632960,
+   "bytes_in_repo": false,
+   "capture_file": "CAPTURE_bugaboo_dragonfly_400003001_gb-en.json",
+   "downloaded_file_name": "bp-oem-acq-20261119__bugaboo-dragonfly-400003001__gb-en.html",
+   "retrieved_http_date": "Thu, 19 Nov 2026 07:33:18 GMT",
+   "seed_doc_id": "doc:8b27a7246e3541d0",
+   "sha256": "f1982e17c6a01663e1407b4b061961c0607e7ed474b7bec0f5e7ea12fb838f61",
+   "url_final": "https://www.bugaboo.com/gb-en/outlet/bugaboo-dragonfly-car-seat-adapters-400003001.html"
+  },
+  {
+   "bytes": 635815,
+   "bytes_in_repo": false,
+   "capture_file": "CAPTURE_bugaboo_fox_400019001_gb-en.json",
+   "downloaded_file_name": "bp-oem-acq-20261119__bugaboo-fox-400019001__gb-en.html",
+   "retrieved_http_date": "Thu, 19 Nov 2026 07:34:29 GMT",
+   "seed_doc_id": "doc:b00a78102f589f76",
+   "sha256": "9e5c549a86fb0aff004d60ed7f7f1538f721fc46b326c60bb18e6181364d1a28",
+   "url_final": "https://www.bugaboo.com/gb-en/accessories/adapters/bugaboo-fox-kangaroo-car-seat-adapters-black-400019001.html"
+  },
+  {
+   "bytes": 206641,
+   "bytes_in_repo": false,
+   "capture_file": "CAPTURE_maxicosi_coral_carrier_adapter_fame_1166057110_uk-en.json",
+   "downloaded_file_name": "bp-oem-acq-20261119__maxi-cosi-coral-carrier-adapter-fame-1166057110__uk-en.html",
+   "retrieved_http_date": "Thu, 19 Nov 2026 07:36:36 GMT",
+   "seed_doc_id": "doc:381465952729913b",
+   "sha256": "992892836508710d0ec6aa214c321e4bfbda2c2f4891f15838b2fe48d2e4a7a3",
+   "url_final": "https://www.maxi-cosi.co.uk/pushchairs/coral-carrier-adapter-fame"
+  }
+ ],
+ "schema": "bp-oem-capture-index-v1"
+}

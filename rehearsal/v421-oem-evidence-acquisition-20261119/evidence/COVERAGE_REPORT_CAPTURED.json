@@ -1,0 +1,95 @@
+{
+ "assessment_counts": {
+  "ABSENCE_ONLY": 5,
+  "ABSENCE_ONLY_WITH_CONFLICTING_QA": 2,
+  "IDENTITY_MISMATCH_NEEDS_DECISION": 1,
+  "LISTED_UNDER_DIFFERENT_NAME_NEEDS_IDENTITY_DECISION": 2,
+  "LISTED_WITH_INTERNAL_PAGE_INCONSISTENCY": 1,
+  "NOT_SUPPORTED_BY_DOCUMENT": 4,
+  "NOT_SUPPORTED_FOR_THIS_GENERATION": 1,
+  "NO_OEM_DOCUMENT": 4,
+  "STATEMENT_SEEN_NOT_BYTE_BACKED": 1,
+  "STATEMENT_SEEN_NOT_BYTE_BACKED_AND_CONFLICTING": 2,
+  "SUPPORTED_ARTICLE_IDENTITY": 3,
+  "SUPPORTED_ARTICLE_IDENTITY_WITH_SKU_EVIDENCE": 1,
+  "SUPPORTED_BY_LIST_WITH_CONDITIONS": 16,
+  "SUPPORTED_BY_PER_CHASSIS_LIST": 4,
+  "SUPPORTED_BY_PER_CHASSIS_LIST_PUNCTUATION_VARIANT": 2,
+  "SUPPORTED_EXPLICIT_SENTENCE": 1,
+  "SUPPORTED_PAGE_LEVEL_CROSS_LIST": 2,
+  "SUPPORTED_WITH_EXTENSION_CONDITION": 1
+ },
+ "by_document": {
+  "doc:381465952729913b": {
+   "capture_file": "CAPTURE_maxicosi_coral_carrier_adapter_fame_1166057110_uk-en.json",
+   "capture_sha256": "992892836508710d0ec6aa214c321e4bfbda2c2f4891f15838b2fe48d2e4a7a3",
+   "claims": 5,
+   "hold": 0,
+   "sufficient_for_human_review": 5
+  },
+  "doc:3d6c5125466e6847": {
+   "capture_file": "CAPTURE_besafe_rain_shield_manual_pdf.json",
+   "capture_sha256": "47b860d5ab0976f6f9de9ee94d908e3f1901412261ebefc3285bec554e2e3896",
+   "claims": 4,
+   "hold": 4,
+   "sufficient_for_human_review": 0
+  },
+  "doc:81bb8659a109e590": {
+   "capture_file": null,
+   "capture_sha256": null,
+   "claims": 2,
+   "hold": 2,
+   "sufficient_for_human_review": 0
+  },
+  "doc:8b27a7246e3541d0": {
+   "capture_file": "CAPTURE_bugaboo_dragonfly_400003001_gb-en.json",
+   "capture_sha256": "f1982e17c6a01663e1407b4b061961c0607e7ed474b7bec0f5e7ea12fb838f61",
+   "claims": 9,
+   "hold": 6,
+   "sufficient_for_human_review": 3
+  },
+  "doc:b00a78102f589f76": {
+   "capture_file": "CAPTURE_bugaboo_fox_400019001_gb-en.json",
+   "capture_sha256": "9e5c549a86fb0aff004d60ed7f7f1538f721fc46b326c60bb18e6181364d1a28",
+   "claims": 10,
+   "hold": 2,
+   "sufficient_for_human_review": 8
+  },
+  "doc:bac1a286d1860ffb": {
+   "capture_file": "CAPTURE_britax_relax_insert_ACCSFCC207_en-ME.json",
+   "capture_sha256": "3da562db69fd193862ccc70a377e9bb1ee3a53c05aa807d7a73859b4b967285b",
+   "claims": 7,
+   "hold": 1,
+   "sufficient_for_human_review": 6
+  },
+  "doc:c2ef54b501b55631": {
+   "capture_file": "CAPTURE_britax_comfort_insert_2000030111_en-ME.json",
+   "capture_sha256": "85afa342e16241afcb4e96f854377e85b20139a6bc6e0bb9a25cb68812bdea9a",
+   "claims": 14,
+   "hold": 1,
+   "sufficient_for_human_review": 13
+  },
+  "doc:f554312a10c64b6e": {
+   "capture_file": null,
+   "capture_sha256": null,
+   "claims": 2,
+   "hold": 2,
+   "sufficient_for_human_review": 0
+  }
+ },
+ "bytes_in_repo": 0,
+ "claims_accepted_by_o1": 0,
+ "claims_total": 53,
+ "claims_verified": 0,
+ "documents_captured_in_browser_with_sha256": 6,
+ "documents_in_seed": 8,
+ "notice": "Sufficiency here means 'the located official text is enough for a human to review the claim once the bytes are registered'. No claim is accepted or verified; O1 accepts none until byte-backed registration and a human review (reviewer != extractor).",
+ "oem_documents_missing": 4,
+ "schema": "bp-oem-coverage-captured-v1",
+ "sufficiency_counts": {
+  "HOLD": 8,
+  "HOLD_MISSING_DOCUMENT": 8,
+  "HOLD_UNTIL_HUMAN_DECISION": 2,
+  "SUFFICIENT_FOR_HUMAN_REVIEW": 35
+ }
+}

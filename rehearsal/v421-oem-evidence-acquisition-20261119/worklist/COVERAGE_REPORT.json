@@ -1,0 +1,53 @@
+{
+ "article_bindings": {
+  "total": 7,
+  "unjoined": 1,
+  "verified": 0
+ },
+ "claims": {
+  "accepted": 0,
+  "by_assertion_type": {
+   "absent_from_list": 9,
+   "article_identity": 8,
+   "compatible": 32,
+   "not_recommended": 2,
+   "not_tested_at_time": 2
+  },
+  "by_issuer": {
+   "besafe": 4,
+   "britax-romer": 21,
+   "bugaboo": 19,
+   "maxi-cosi": 7,
+   "unspecified": 2
+  },
+  "byte_backed": 0,
+  "total": 53
+ },
+ "documents": {
+  "not_official_catalog_control": 2,
+  "official_documents": 6,
+  "total": 8,
+  "with_original_bytes": 0
+ },
+ "notice": "Worklist only. No document was fetched, no claim status was changed, nothing here is evidence, a recommendation or an approval.",
+ "physical_relations": {
+  "holdouts": 8,
+  "locale_cases": 26,
+  "publishable_now": 0,
+  "seed_physical_relations": 13
+ },
+ "schema": "bp-oem-coverage-report-v1",
+ "stage_b_review_queue_counts": {
+  "aliases_pending_review": 3,
+  "bindings_pending_review": 7,
+  "canonical_models_key_collisions": 0,
+  "catalog_identity_holds": 6,
+  "conflict_holds_needing_adjudication": 2,
+  "documents_needing_bytes_or_review": 8,
+  "relations_with_unreviewed_conditions": 8,
+  "relations_with_unspecified_extension": 1,
+  "unjoined_article_candidates": 1,
+  "veto_pending_verification": 2
+ },
+ "sufficiency": "no claim has sufficient evidence today: all 53 are PROPOSED and bytes_missing; reasons claim_proposed_unverified and bytes_missing for all 53"
+}

@@ -1,0 +1,31 @@
+{
+ "schema": "bp-oem-browser-capture-v1",
+ "seed_doc_id": "doc:b00a78102f589f76",
+ "capture_note": "Original response body fetched in the Claude desktop built-in browser (fetch, credentials omit, cache no-store). SHA-256 over the decoded body. The browser saved the same bytes to the user's Downloads folder; the sandbox cannot read them (folder access denied), so bytes_in_repo is false and register-doc --file is NOT yet done.",
+ "issuer": "bugaboo",
+ "url_requested": "https://www.bugaboo.com/gb-en/accessories/adapters/bugaboo-fox-kangaroo-car-seat-adapters-black-400019001.html",
+ "url_final": "https://www.bugaboo.com/gb-en/accessories/adapters/bugaboo-fox-kangaroo-car-seat-adapters-black-400019001.html",
+ "canonical_url_in_page": "https://www.bugaboo.com/gb-en/accessories/adapters/bugaboo-fox-5-renew-car-seat-adapters-400019MI.html",
+ "page_title": "Bugaboo Fox 5 Renew car seat adapters Black | Bugaboo",
+ "market": "GB", "language": "en-gb", "document_version": null,
+ "retrieved_http_date": "Thu, 19 Nov 2026 07:34:29 GMT",
+ "http_status": 200, "content_type": "text/html;charset=UTF-8",
+ "bytes": 635815,
+ "sha256": "9e5c549a86fb0aff004d60ed7f7f1538f721fc46b326c60bb18e6181364d1a28",
+ "downloaded_file_name": "bp-oem-acq-20261119__bugaboo-fox-400019001__gb-en.html",
+ "page_product_code_text": "Product Code: 400019001",
+ "raw_byte_offsets": {"heading_Fox_5_and_5_Renew": 464229, "heading_Fox_Cub": 465231, "heading_Fox_2": 466728},
+ "raw_markup_pattern": "<strong>Fox 5 & 5 Renew:</strong><li>...</li>  (one <strong> heading per chassis group, then <li> seat entries)",
+ "compatible_products_accordion": ["Bugaboo Cub","Bugaboo Fox","Bugaboo Fox 2","Bugaboo Fox 3","Bugaboo Fox 5","Bugaboo Fox 5 Renew","Bugaboo Fox Cub","Bugaboo Kangaroo","Bugaboo Lynx"],
+ "car_seat_lists_by_chassis_heading": {
+  "Fox 5 & 5 Renew:": ["Bugaboo Otter by Nuna","Bugaboo Turtle Air by Nuna EU","Axkid Modukid Infant","BeSafe Go Beyond","BeSafe iZi Go Modular X1","BeSafe iZi Go Modular X1 i Size","BeSafe iZi Go X1","Britax Baby-Safe Pro","Britax Römer Baby Safe isense","Britax Römer Baby Safe3 i Size","Cybex Aton 5","Cybex Aton B2 i-Size","Cybex Aton M i-Size","Cybex Cloud G","Cybex Cloud T","Cybex Cloud Z 2 i-size","Cybex Cloud Z i-size","Joie i-Gemm 3","Kiddy Evoluna i-size2","Kiddy Evolution Pro2","Maxi-Cosi Cabriofix i-size / tinca","Maxi-Cosi Coral 360 i Size","Maxi-Cosi Coral Slide Pro","Maxi-Cosi Pebble 360 i Size","Maxi-Cosi Pebble 360 Pro","Maxi-Cosi Pebble 360 Pro 2 i Size","Maxi-Cosi Pebble Pro","Nuna Arra Flex 2025","Nuna Pipa Lite","Nuna Pipa Next","Thule Maple","Thule Maple i-Size"],
+  "Fox 2:": ["Bugaboo Turtle Air by Nuna EU","Bugaboo Turtle by Nuna EU","Axkid Modukid Infant","BeSafe iZi Go Modular","BeSafe iZi Go X1","Cybex Aton 5","Cybex Aton M i-size","Cybex Aton Q","Cybex Aton Q i-Size","Cybex Cloud Q","Cybex Cloud Z 2 i-size","Cybex Cloud Z i-size","Kiddy Evolution Pro2","Maxi-Cosi Cabriofix","Maxi-Cosi Pebble","Maxi-Cosi Pebble Plus","Maxi-Cosi Rock","Nuna Pipa Icon","Nuna Pipa Lite","Nuna Pipa Lite LX"]
+ },
+ "headings_present_not_transcribed": ["Cub", "Fox Cub:", "Fox 3:", "Lynx (list cut off in this read; not needed for the 53 claims)"],
+ "findings": [
+  "Heading 'Fox 5 & 5 Renew:' names both chassis explicitly in one heading; no transfer from other generations is needed for Fox 5 / Fox 5 Renew pairs.",
+  "Seat names on this page: 'BeSafe iZi Go Modular X1' and 'BeSafe iZi Go Modular X1 i Size' are separate entries; 'Maxi-Cosi Pebble 360 Pro' and 'Maxi-Cosi Pebble 360 Pro 2 i Size' are separate entries; 'Maxi-Cosi Coral Slide Pro' present.",
+  "The seed claims say 'Pebble 360 Pro 2'; the page says 'Pebble 360 Pro 2 i Size' -> naming bridge needs a human/OEM identity decision (Maxi-Cosi product page), not an automatic alias.",
+  "Fox 2 list contains no Pebble 360 Pro / Pro 2 -> absence from list only."
+ ]
+}

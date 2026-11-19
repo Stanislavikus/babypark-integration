@@ -1,0 +1,38 @@
+{
+ "schema": "bp-oem-browser-capture-v1",
+ "seed_doc_id": "doc:8b27a7246e3541d0",
+ "capture_note": "Original response body fetched in the Claude desktop built-in browser (fetch, credentials omit, cache no-store). SHA-256 computed in the browser over the decoded body (Content-Encoding br decoded by the browser). The same bytes were saved by the browser to the user's Downloads folder; the sandbox cannot read them (folder access denied), so bytes_in_repo is false and the Stage B CLI register-doc --file step is NOT yet done.",
+ "issuer": "bugaboo",
+ "url_requested": "https://www.bugaboo.com/gb-en/outlet/bugaboo-dragonfly-car-seat-adapters-400003001.html",
+ "url_final": "https://www.bugaboo.com/gb-en/outlet/bugaboo-dragonfly-car-seat-adapters-400003001.html",
+ "canonical_url_in_page": "https://www.bugaboo.com/gb-en/accessories/adapters/bugaboo-dragonfly-adapters-for-maxi-cosi-car-seats-400003MI.html",
+ "page_title": "Bugaboo Dragonfly adapters for Maxi-Cosi® car seats Black | Bugaboo",
+ "market": "GB", "language": "en-gb", "document_version": null,
+ "retrieved_http_date": "Thu, 19 Nov 2026 07:33:18 GMT",
+ "http_status": 200, "content_type": "text/html;charset=UTF-8",
+ "bytes": 632960,
+ "sha256": "f1982e17c6a01663e1407b4b061961c0607e7ed474b7bec0f5e7ea12fb838f61",
+ "downloaded_file_name": "bp-oem-acq-20261119__bugaboo-dragonfly-400003001__gb-en.html",
+ "page_product_code_text": "Product Code: 400003001",
+ "sections_in_raw_bytes": {
+  "compatible_products_accordion": ["Bugaboo Dragonfly", "Bugaboo Dragonfly Plus"],
+  "car_seat_compatibility_accordion": ["Bugaboo Turtle Air by Nuna EU","Axkid Modukid Infant","BeSafe Go Beyond","BeSafe iZi Go Modular X1 i Size","Britax Römer Baby Safe 3 i Size","Britax Romer BABY SAFE- 5Z","Cybex Aton 5","Cybex Aton M i-Size","Cybex Cloud T","Cybex Cloud Z 2 i-size","Cybex Cloud Z i-size","Joie i-Gemm","Joie i-Gemm 3","Kiddy Evoluna i-size2","Kiddy Evolution Pro2","Maxi-Cosi Coral","Maxi-Cosi Marble i-size","Maxi-Cosi Pebble 360 i Size","Maxi-Cosi Pebble 360 Pro","Maxi-Cosi Pebble Pro","Nuna Pipa Lite","Nuna Pipa Next","Thule Maple"],
+  "not_in_car_seat_list": ["Maxi-Cosi Pebble 360 Pro 2", "Maxi-Cosi CabrioFix"],
+  "page_structure_note": "One flat seat list and one flat chassis list for the adapter; there is no per-chassis sub-list, so every seat x chassis pair is implied by the product-level lists, not stated per pair."
+ },
+ "qa_widget_text_not_in_page_bytes": {
+  "provenance": "Bazaarvoice Q&A widget rendered after load (separate network source); statements are signed 'Bugaboo Service'; dates are relative to retrieval and not captured as bytes. Evidence of the statements exists only as rendered text read in the browser until that source is byte-captured separately.",
+  "entries": [
+   {"asked_by":"Emro","age":"10 days ago","answered":"Bugaboo Service, 7 days ago","statement":"The Bugaboo Dragonfly car seat adapters has not been tested with the car seat Maxi Cosi pebble 360 pro v2, therefore are the Bugaboo Dragonfly car seat adapters not compatible with the car seat.","bearing":"Pebble 360 Pro 2: not_tested + 'not compatible' (scope: Dragonfly adapter, 'v2' naming)"},
+   {"asked_by":"Billy Bob","age":"3 months ago","answered":"Bugaboo Service, 3 months ago","statement":"They will be happy to help you find the right adapters for the Bugaboo Dragonfly and advise you on compatibility with the Maxi-Cosi Pebble 360 Pro 2 car seat.","bearing":"no compatibility statement (referral to customer service)"},
+   {"asked_by":"CK60","age":"a year ago","answered":"Bugaboo Service, a year ago","statement":"The Maxi-Cosi CabrioFix car seat is not listed as compatible with the Bugaboo Dragonfly adapter because it has not been tested by Bugaboo. As we cannot confirm its safety or performance, we do not recommend using it with the Dragonfly.","bearing":"CabrioFix: not_recommended (scoped to Dragonfly adapter, because untested)"},
+   {"asked_by":"CK60","age":"a year ago","answered":"Bugaboo Service, a year ago","statement":"list of Maxi-Cosi seats 'we have tested and confirmed as compatible' in the same answer: Maxi-Cosi Pebble Pro; Marble i-size; Coral; Pebble 360 i Size; Pebble 360 Pro; Pebble 360 Pro 2; Coral 360 Pro i Size","bearing":"names Pebble 360 Pro 2 as tested/compatible, which contradicts the newer (7 days ago) answer and the page list -> CONFLICT"},
+   {"asked_by":"Ellie123","age":"2 years ago","answered":"Bugaboo Service, 2 years ago","statement":"The car seat Maxi-Cosi Cabriofix isn't listed as compatible for the Bugaboo Dragonfly, therefore the adapters won't fit with that car seat model.","bearing":"CabrioFix: negative (inference from not being listed)"}
+  ]
+ },
+ "findings": [
+  "Chassis Dragonfly and Dragonfly Plus are both named in 'Compatible products' (two separate names; neither is inferred from the other).",
+  "Pebble 360 Pro is in the seat list; Pebble 360 Pro 2 is not -> absence from the list only; Q&A gives a recent 'not tested, not compatible' answer and an older answer listing it as tested: conflicting.",
+  "CabrioFix is not in the list; Bugaboo Service says (Q&A) it is not recommended because untested."
+ ]
+}

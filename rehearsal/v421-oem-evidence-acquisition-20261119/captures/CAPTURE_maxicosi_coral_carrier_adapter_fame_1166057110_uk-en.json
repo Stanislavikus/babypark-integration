@@ -1,0 +1,30 @@
+{
+ "schema": "bp-oem-browser-capture-v1",
+ "seed_doc_id": "doc:381465952729913b",
+ "capture_note": "Original response body fetched in the Claude desktop built-in browser (fetch, credentials omit, cache no-store). SHA-256 over the decoded body. The browser saved the same bytes to the user's Downloads folder; the sandbox cannot read them (folder access denied), so bytes_in_repo is false and register-doc --file is NOT yet done.",
+ "issuer": "maxi-cosi",
+ "url_requested": "https://www.maxi-cosi.co.uk/pushchairs/coral-slide-pro-carrier-adapter",
+ "url_final": "https://www.maxi-cosi.co.uk/pushchairs/coral-carrier-adapter-fame",
+ "redirected": true,
+ "redirect_note": "The seed URL no longer serves its own page: it redirects to the 'Coral Carrier adapter - Fame' page. The seed document record therefore describes a URL whose content/name changed; the new URL must be recorded as the document URL.",
+ "canonical_url_in_page": "https://www.maxi-cosi.co.uk/pushchairs/coral-carrier-adapter-fame",
+ "page_title": "Coral Carrier adapter - Fame",
+ "market": "GB (maxi-cosi.co.uk, store view mc_uk_en_store_view)", "language": "en", "document_version": null,
+ "retrieved_http_date": "Thu, 19 Nov 2026 07:36:36 GMT",
+ "http_status": 200, "content_type": "text/html; charset=UTF-8",
+ "bytes": 206641,
+ "sha256": "992892836508710d0ec6aa214c321e4bfbda2c2f4891f15838b2fe48d2e4a7a3",
+ "downloaded_file_name": "bp-oem-acq-20261119__maxi-cosi-coral-carrier-adapter-fame-1166057110__uk-en.html",
+ "article_identity_in_raw_bytes": {"SKU": "1166057110", "EAN": "3220660010097", "name": "Coral Carrier adapter - Fame", "evidence_text": "Specification SKU: 1166057110 ... General SKU: 1166057110 EAN: 3220660010097"},
+ "raw_byte_offsets": {"description": 53876, "manual_link": 128862, "faq_which_products": 129904, "sku_spec": 206640},
+ "description_text_verbatim": "Enjoy next-level lightness when attaching Coral Slide Pro’s ultra-lightweight carrier to your Fame or Fame Cabin pushchair.",
+ "faq_text_verbatim": "The Coral Slide Pro Carrier adapter allows you to create a unique combination of the Coral Slide Pro soft carrier, and the Fame OR Fame Cabin pushchair. The adapter clicks directly onto the Fame Cabin frame or can be installed on the Fame by attaching the included adapter-extension set.",
+ "manual_pdf_link_in_page": "https://images.maxi-cosi.co.uk/dorel-public-storage-prod/manuals/MC1166_coralslideprocarrieradapters_UM_LR.pdf",
+ "findings": [
+  "Fame Cabin: adapter 'clicks directly onto the Fame Cabin frame' -> unconditional pair Coral Slide Pro x Fame Cabin.",
+  "Fame: only 'by attaching the included adapter-extension set' -> conditional pair (extension is part of the delivered set; the seed has an unknown extension article '?|None' -> the extension's own MPN/SKU must come from the manual or box contents, not be guessed).",
+  "'Fame' and 'Fame Cabin' are both named separately in the same sentence; there is no transfer between them.",
+  "'Coral 360' does not occur anywhere on the page (0 hits) -> the two absent_from_list claims (Coral 360 x Fame Cabin / Fame) rest on absence only and can never become EXCLUDED from this page.",
+  "A separate user-manual PDF is linked (MC1166_coralslideprocarrieradapters_UM_LR.pdf) and is a second candidate source for the interface and extension details."
+ ]
+}

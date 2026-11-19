@@ -1,0 +1,519 @@
+{
+ "additional_documents_to_find": [
+  {
+   "need": "BeSafe SKU-to-article proof for 11006001 / 11006001par (the seed names sku_proof_url https://besafe.hr/proizvod/besafe-kisna-zastita/)",
+   "why": "binding of catalog SKU to the OEM article"
+  },
+  {
+   "need": "official Maxi-Cosi document for the Pocket (74203550) and RodiFix Air Protect; the seed only has a catalog control CSV",
+   "why": "claims 13 and 20 have no OEM document at all"
+  },
+  {
+   "need": "official document for the Maxi-Cosi Fame extension adapter named in the Coral Slide Pro interface (claim 11 has an unspecified extension)",
+   "why": "extension article unspecified: the relation stays held"
+  },
+  {
+   "need": "audited catalog join for Britax-Roemer ACCSFCC207 (seller SKU 2000040775 is unproven)",
+   "why": "unjoined article"
+  },
+  {
+   "need": "maker and official document for vehicle organiser 6900000016817 (seed maker 'unspecified')",
+   "why": "no manufacturer is known; a never-A/B class-C item"
+  }
+ ],
+ "can_be_confirmed_now": [],
+ "can_be_confirmed_now_reason": "nothing: no original bytes exist, so no claim can be offered to a human reviewer (the module refuses bytes-less claims)",
+ "missing_documents": [
+  {
+   "claims_waiting": 5,
+   "doc_id": "doc:381465952729913b",
+   "issuer": "maxi-cosi",
+   "official_manufacturer_document": true,
+   "url": "https://www.maxi-cosi.co.uk/pushchairs/coral-slide-pro-carrier-adapter"
+  },
+  {
+   "claims_waiting": 4,
+   "doc_id": "doc:3d6c5125466e6847",
+   "issuer": "besafe",
+   "official_manufacturer_document": true,
+   "url": "https://www.besafe.com/4a4457/globalassets/inriverimages/commerce-besafe/2019_01_10_instruction_manual_rain_shield_-_web-manual-601.pdf"
+  },
+  {
+   "claims_waiting": 2,
+   "doc_id": "doc:81bb8659a109e590",
+   "issuer": "unspecified",
+   "official_manufacturer_document": false,
+   "url": "negative-control:NEGATIVE_AND_CONDITIONAL_CONTROLS.csv"
+  },
+  {
+   "claims_waiting": 9,
+   "doc_id": "doc:8b27a7246e3541d0",
+   "issuer": "bugaboo",
+   "official_manufacturer_document": true,
+   "url": "https://www.bugaboo.com/gb-en/outlet/bugaboo-dragonfly-car-seat-adapters-400003001.html"
+  },
+  {
+   "claims_waiting": 10,
+   "doc_id": "doc:b00a78102f589f76",
+   "issuer": "bugaboo",
+   "official_manufacturer_document": true,
+   "url": "https://www.bugaboo.com/gb-en/accessories/adapters/bugaboo-fox-kangaroo-car-seat-adapters-black-400019001.html"
+  },
+  {
+   "claims_waiting": 7,
+   "doc_id": "doc:bac1a286d1860ffb",
+   "issuer": "britax-romer",
+   "official_manufacturer_document": true,
+   "url": "https://www.britax-roemer.com/accessories/car-seat-accessories/relax-insert/ACCSFCC207.html"
+  },
+  {
+   "claims_waiting": 14,
+   "doc_id": "doc:c2ef54b501b55631",
+   "issuer": "britax-romer",
+   "official_manufacturer_document": true,
+   "url": "https://www.britax-roemer.com/accessories/car-seat-accessories/comfort-insert/2000030111.html"
+  },
+  {
+   "claims_waiting": 2,
+   "doc_id": "doc:f554312a10c64b6e",
+   "issuer": "maxi-cosi",
+   "official_manufacturer_document": false,
+   "url": "negative-control:NEGATIVE_AND_CONDITIONAL_CONTROLS.csv"
+  }
+ ],
+ "must_hold": [
+  {
+   "assertion_type": "not_tested_at_time",
+   "claim_id": "clm:014746c9a9a4f1f2",
+   "reasons": [
+    "bytes_missing",
+    "claim_proposed_unverified"
+   ]
+  },
+  {
+   "assertion_type": "compatible",
+   "claim_id": "clm:063a57f2c4bfa10a",
+   "reasons": [
+    "bytes_missing",
+    "claim_proposed_unverified"
+   ]
+  },
+  {
+   "assertion_type": "absent_from_list",
+   "claim_id": "clm:0964db5731167e0f",
+   "reasons": [
+    "bytes_missing",
+    "claim_proposed_unverified"
+   ]
+  },
+  {
+   "assertion_type": "compatible",
+   "claim_id": "clm:102d3d27d0fd88fb",
+   "reasons": [
+    "bytes_missing",
+    "claim_proposed_unverified"
+   ]
+  },
+  {
+   "assertion_type": "article_identity",
+   "claim_id": "clm:10cea0f6bc1b71bc",
+   "reasons": [
+    "bytes_missing",
+    "claim_proposed_unverified"
+   ]
+  },
+  {
+   "assertion_type": "compatible",
+   "claim_id": "clm:156beec5c65ff754",
+   "reasons": [
+    "bytes_missing",
+    "claim_proposed_unverified"
+   ]
+  },
+  {
+   "assertion_type": "article_identity",
+   "claim_id": "clm:164f71eb56b3d7c0",
+   "reasons": [
+    "bytes_missing",
+    "claim_proposed_unverified"
+   ]
+  },
+  {
+   "assertion_type": "compatible",
+   "claim_id": "clm:1a21958934dafcba",
+   "reasons": [
+    "bytes_missing",
+    "claim_proposed_unverified"
+   ]
+  },
+  {
+   "assertion_type": "compatible",
+   "claim_id": "clm:1a7d94b18807ab88",
+   "reasons": [
+    "bytes_missing",
+    "claim_proposed_unverified"
+   ]
+  },
+  {
+   "assertion_type": "compatible",
+   "claim_id": "clm:2206525d7c7823db",
+   "reasons": [
+    "bytes_missing",
+    "claim_proposed_unverified"
+   ]
+  },
+  {
+   "assertion_type": "compatible",
+   "claim_id": "clm:2611e27496164090",
+   "reasons": [
+    "bytes_missing",
+    "claim_proposed_unverified"
+   ]
+  },
+  {
+   "assertion_type": "compatible",
+   "claim_id": "clm:34ba1e41d9f243cd",
+   "reasons": [
+    "bytes_missing",
+    "claim_proposed_unverified"
+   ]
+  },
+  {
+   "assertion_type": "compatible",
+   "claim_id": "clm:352e86e384a03755",
+   "reasons": [
+    "bytes_missing",
+    "claim_proposed_unverified"
+   ]
+  },
+  {
+   "assertion_type": "absent_from_list",
+   "claim_id": "clm:3765db0a7f5edeef",
+   "reasons": [
+    "bytes_missing",
+    "claim_proposed_unverified"
+   ]
+  },
+  {
+   "assertion_type": "absent_from_list",
+   "claim_id": "clm:389fbfba4c8bb7e9",
+   "reasons": [
+    "bytes_missing",
+    "claim_proposed_unverified"
+   ]
+  },
+  {
+   "assertion_type": "article_identity",
+   "claim_id": "clm:3b321c43ee8ff318",
+   "reasons": [
+    "bytes_missing",
+    "claim_proposed_unverified"
+   ]
+  },
+  {
+   "assertion_type": "compatible",
+   "claim_id": "clm:3ef7fae5f8e22014",
+   "reasons": [
+    "bytes_missing",
+    "claim_proposed_unverified"
+   ]
+  },
+  {
+   "assertion_type": "compatible",
+   "claim_id": "clm:478ee31e95da57aa",
+   "reasons": [
+    "bytes_missing",
+    "claim_proposed_unverified"
+   ]
+  },
+  {
+   "assertion_type": "compatible",
+   "claim_id": "clm:4819d97ce02b08a4",
+   "reasons": [
+    "bytes_missing",
+    "claim_proposed_unverified"
+   ]
+  },
+  {
+   "assertion_type": "compatible",
+   "claim_id": "clm:5bdfae6d9e473ced",
+   "reasons": [
+    "bytes_missing",
+    "claim_proposed_unverified"
+   ]
+  },
+  {
+   "assertion_type": "article_identity",
+   "claim_id": "clm:696cd8bdf49d2f76",
+   "reasons": [
+    "bytes_missing",
+    "claim_proposed_unverified"
+   ]
+  },
+  {
+   "assertion_type": "not_tested_at_time",
+   "claim_id": "clm:69dde1c28d69b7c7",
+   "reasons": [
+    "bytes_missing",
+    "claim_proposed_unverified"
+   ]
+  },
+  {
+   "assertion_type": "not_recommended",
+   "claim_id": "clm:6a43ab3d603e0d8a",
+   "reasons": [
+    "bytes_missing",
+    "claim_proposed_unverified"
+   ]
+  },
+  {
+   "assertion_type": "compatible",
+   "claim_id": "clm:6f66fbb3a8e995fb",
+   "reasons": [
+    "bytes_missing",
+    "claim_proposed_unverified"
+   ]
+  },
+  {
+   "assertion_type": "compatible",
+   "claim_id": "clm:75e10be0b143f03e",
+   "reasons": [
+    "bytes_missing",
+    "claim_proposed_unverified"
+   ]
+  },
+  {
+   "assertion_type": "compatible",
+   "claim_id": "clm:76cdc23051b3ba54",
+   "reasons": [
+    "bytes_missing",
+    "claim_proposed_unverified"
+   ]
+  },
+  {
+   "assertion_type": "compatible",
+   "claim_id": "clm:7ab6a834f89c933b",
+   "reasons": [
+    "bytes_missing",
+    "claim_proposed_unverified"
+   ]
+  },
+  {
+   "assertion_type": "compatible",
+   "claim_id": "clm:7b4898f3eb6812ae",
+   "reasons": [
+    "bytes_missing",
+    "claim_proposed_unverified"
+   ]
+  },
+  {
+   "assertion_type": "absent_from_list",
+   "claim_id": "clm:7c820de148387ae9",
+   "reasons": [
+    "bytes_missing",
+    "claim_proposed_unverified"
+   ]
+  },
+  {
+   "assertion_type": "article_identity",
+   "claim_id": "clm:82c6de686e1b9f77",
+   "reasons": [
+    "bytes_missing",
+    "claim_proposed_unverified"
+   ]
+  },
+  {
+   "assertion_type": "compatible",
+   "claim_id": "clm:83a1619075d01648",
+   "reasons": [
+    "bytes_missing",
+    "claim_proposed_unverified"
+   ]
+  },
+  {
+   "assertion_type": "compatible",
+   "claim_id": "clm:8b779d5f19ed28b2",
+   "reasons": [
+    "bytes_missing",
+    "claim_proposed_unverified"
+   ]
+  },
+  {
+   "assertion_type": "absent_from_list",
+   "claim_id": "clm:8e9ddb1eae3c5a2e",
+   "reasons": [
+    "bytes_missing",
+    "claim_proposed_unverified"
+   ]
+  },
+  {
+   "assertion_type": "absent_from_list",
+   "claim_id": "clm:91134cc1c6557c54",
+   "reasons": [
+    "bytes_missing",
+    "claim_proposed_unverified"
+   ]
+  },
+  {
+   "assertion_type": "compatible",
+   "claim_id": "clm:9b5132c8837ec883",
+   "reasons": [
+    "bytes_missing",
+    "claim_proposed_unverified"
+   ]
+  },
+  {
+   "assertion_type": "compatible",
+   "claim_id": "clm:a741efb866d18b6a",
+   "reasons": [
+    "bytes_missing",
+    "claim_proposed_unverified"
+   ]
+  },
+  {
+   "assertion_type": "compatible",
+   "claim_id": "clm:a9fa4b98947783cd",
+   "reasons": [
+    "bytes_missing",
+    "claim_proposed_unverified"
+   ]
+  },
+  {
+   "assertion_type": "compatible",
+   "claim_id": "clm:ae44bd0fbe028eba",
+   "reasons": [
+    "bytes_missing",
+    "claim_proposed_unverified"
+   ]
+  },
+  {
+   "assertion_type": "compatible",
+   "claim_id": "clm:afd88cbe4e69c2ec",
+   "reasons": [
+    "bytes_missing",
+    "claim_proposed_unverified"
+   ]
+  },
+  {
+   "assertion_type": "compatible",
+   "claim_id": "clm:b9d355c13b36d0a9",
+   "reasons": [
+    "bytes_missing",
+    "claim_proposed_unverified"
+   ]
+  },
+  {
+   "assertion_type": "compatible",
+   "claim_id": "clm:c16de7388aa7d5a4",
+   "reasons": [
+    "bytes_missing",
+    "claim_proposed_unverified"
+   ]
+  },
+  {
+   "assertion_type": "article_identity",
+   "claim_id": "clm:cc3279303c9b05d3",
+   "reasons": [
+    "bytes_missing",
+    "claim_proposed_unverified"
+   ]
+  },
+  {
+   "assertion_type": "article_identity",
+   "claim_id": "clm:d5696c476f1f8442",
+   "reasons": [
+    "bytes_missing",
+    "claim_proposed_unverified"
+   ]
+  },
+  {
+   "assertion_type": "compatible",
+   "claim_id": "clm:d969ec11280213d4",
+   "reasons": [
+    "bytes_missing",
+    "claim_proposed_unverified"
+   ]
+  },
+  {
+   "assertion_type": "absent_from_list",
+   "claim_id": "clm:d9df1eebd5fdd544",
+   "reasons": [
+    "bytes_missing",
+    "claim_proposed_unverified"
+   ]
+  },
+  {
+   "assertion_type": "absent_from_list",
+   "claim_id": "clm:dbff243f6d5ca32b",
+   "reasons": [
+    "bytes_missing",
+    "claim_proposed_unverified"
+   ]
+  },
+  {
+   "assertion_type": "compatible",
+   "claim_id": "clm:e21924e870b2476b",
+   "reasons": [
+    "bytes_missing",
+    "claim_proposed_unverified"
+   ]
+  },
+  {
+   "assertion_type": "compatible",
+   "claim_id": "clm:e4498fbdd47559d0",
+   "reasons": [
+    "bytes_missing",
+    "claim_proposed_unverified"
+   ]
+  },
+  {
+   "assertion_type": "absent_from_list",
+   "claim_id": "clm:e8c4a3d2d28e4757",
+   "reasons": [
+    "bytes_missing",
+    "claim_proposed_unverified"
+   ]
+  },
+  {
+   "assertion_type": "not_recommended",
+   "claim_id": "clm:e8d009fb45255472",
+   "reasons": [
+    "bytes_missing",
+    "claim_proposed_unverified"
+   ]
+  },
+  {
+   "assertion_type": "compatible",
+   "claim_id": "clm:ee92f448d4fb4c93",
+   "reasons": [
+    "bytes_missing",
+    "claim_proposed_unverified"
+   ]
+  },
+  {
+   "assertion_type": "article_identity",
+   "claim_id": "clm:f3fa158296cfbceb",
+   "reasons": [
+    "bytes_missing",
+    "claim_proposed_unverified"
+   ]
+  },
+  {
+   "assertion_type": "compatible",
+   "claim_id": "clm:f621c6714a6e1fef",
+   "reasons": [
+    "bytes_missing",
+    "claim_proposed_unverified"
+   ]
+  }
+ ],
+ "notice": "Worklist only. No document was fetched, no claim status was changed, nothing here is evidence, a recommendation or an approval.",
+ "review_rules": [
+  "reviewer is human:<id> and differs from the extractor",
+  "the reviewer reads the ORIGINAL document, not this queue",
+  "absence from a list is UNKNOWN, never EXCLUDED",
+  "no transfer between generations/models named differently",
+  "a review is not owner approval and does not publish anything"
+ ],
+ "schema": "bp-oem-human-review-queue-v1"
+}

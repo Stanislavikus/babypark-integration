@@ -1,0 +1,29 @@
+{
+ "schema": "bp-oem-browser-capture-v1",
+ "seed_doc_id": "doc:3d6c5125466e6847",
+ "capture_note": "Original PDF bytes fetched in the Claude desktop built-in browser (fetch, credentials omit, cache no-store); Content-Length (1345058) equals the received byte count; no Content-Encoding; SHA-256 computed in the browser over those bytes. The browser saved the same bytes to the user's Downloads folder; the sandbox cannot read them (folder access denied), so bytes_in_repo is false and register-doc --file is NOT yet done. Text was read by decoding the PDF content streams in the page with built-in APIs only (DecompressionStream); the PDF viewer pane was not paintable, so no screenshot-based reading was done.",
+ "issuer": "besafe",
+ "url_requested": "https://www.besafe.com/4a4457/globalassets/inriverimages/commerce-besafe/2019_01_10_instruction_manual_rain_shield_-_web-manual-601.pdf",
+ "url_final": "https://www.besafe.com/4a4457/globalassets/inriverimages/commerce-besafe/2019_01_10_instruction_manual_rain_shield_-_web-manual-601.pdf",
+ "market": "manufacturer-manual (multi-language)", "language": "multi (en, no, sv, fi, de, nl, fr, es, it, pt, hu, cs, ro, tr, el, he, ar, fa, ja, ko, zh ...)", "document_version": "file name '2019_01_10_instruction_manual_rain_shield_-_web-manual-601'; PDF CreationDate D:20190110155404+01'00'; ModDate D:20190110155415+01'00'",
+ "retrieved_http_date": "Thu, 19 Nov 2026 07:37:08 GMT",
+ "http_status": 200, "content_type": "application/pdf",
+ "http_last_modified": "Thu, 22 Aug 2024 10:38:14 GMT", "http_etag": "\"1daf47f64276922\"",
+ "bytes": 1345058,
+ "sha256": "47b860d5ab0976f6f9de9ee94d908e3f1901412261ebefc3285bec554e2e3896",
+ "pdf_structure": {"pdf_version": "1.7", "pages": 2, "page_size_pt": "1258.58 x 595.276 (poster-style sheet)", "creator": "Adobe InDesign CC 14.0 (Windows)", "producer": "Adobe PDF Library 15.0"},
+ "downloaded_file_name": "bp-oem-acq-20261119__besafe-rain-shield-manual-11006001__en.pdf",
+ "english_text_found_page_1": [
+  "Contents: Rain shield - 1 part",
+  "Wipe clean using a damp cloth and mild detergent.",
+  "Warning: do not use the Rain shield on the BeSafe iZi Go inside the car.",
+  "Warranty: for details please visit www.besafe.com"
+ ],
+ "page_2_text": "CJK translations of the same warning, cleaning, contents and warranty lines (Japanese, Korean, Chinese); same product name 'BeSafe iZi Go'.",
+ "terms_NOT_found_in_document": ["Modular", "X1", "X2", "i-Size", "11006001", "11006001par"],
+ "findings": [
+  "The manual names only 'BeSafe iZi Go' (no Modular / X1 / X2 / i-Size, no article number). It therefore does NOT confirm that the rain shield fits 'iZi Go Modular X1' or 'iZi Go Modular X1 i-Size' as separate models, and it contains no model list from which X2 could be 'absent' or 'excluded'.",
+  "The one safety sentence is a USE restriction ('do not use ... inside the car'), not a compatibility list. Whether it applies to Modular X1 is a model-identity question for a human; no generation transfer was made.",
+  "Article number 11006001 / catalog SKU 11006001par are not present in this PDF; the SKU binding needs another OEM source (product page) -- see additional_documents_to_find in the worklist."
+ ]
+}

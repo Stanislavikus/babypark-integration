@@ -1,0 +1,31 @@
+{
+ "schema": "bp-oem-browser-capture-v1",
+ "seed_doc_id": "doc:c2ef54b501b55631",
+ "capture_note": "Original response body fetched in the Claude desktop built-in browser (fetch, credentials omit, cache no-store). SHA-256 over the decoded body. The browser saved the same bytes to the user's Downloads folder; the sandbox cannot read them (folder access denied), so bytes_in_repo is false and register-doc --file is NOT yet done.",
+ "issuer": "britax-romer",
+ "url_requested": "https://www.britax-roemer.com/accessories/car-seat-accessories/comfort-insert/2000030111.html",
+ "url_final": "https://www.britax-roemer.com/accessories/car-seat-accessories/comfort-insert/2000030111.html",
+ "page_title": "Comfort Insert | Britax Römer - Cosmos Black / n.a. / 4406",
+ "market": "ME (Britax-EU site, locale en_ME, currency EUR)", "language": "en-ME", "document_version": null,
+ "retrieved_http_date": "Thu, 19 Nov 2026 07:36:10 GMT",
+ "http_status": 200, "content_type": "text/html;charset=UTF-8",
+ "bytes": 76540,
+ "sha256": "85afa342e16241afcb4e96f854377e85b20139a6bc6e0bb9a25cb68812bdea9a",
+ "downloaded_file_name": "bp-oem-acq-20261119__britax-comfort-insert-2000030111__en-ME.html",
+ "article_identity_in_raw_bytes": {
+  "product_master_id": "4406",
+  "product_id / sku": "2000030111",
+  "product_ean": "4000984194777",
+  "colour": "Cosmos Black",
+  "DISCREPANCY": "The seed article_identity claim uses mpn='2000030111'. The manufacturer page shows 2000030111 as the variant SKU (product_id / data-variations sku) and 4406 as the product master id (the page title ends '/ 4406'). Which one is the MPN for this repository's identity model is a human decision; the seed value must NOT be silently rewritten."
+ },
+ "raw_byte_offsets": {"available_for_these_products": 40797, "product_content_details": 44335},
+ "available_for_these_products_text": ["ADVANSAFIX PRO","DUALFIX 5Z","DUALFIX PRO","DUALFIX PRO M","DUALFIX PLUS","DUALFIX M PLUS","SWINGFIX M PLUS","SWIVEL 2","KING PRO","EVOLVAFIX","VERSAFIX","MAX-SAFE PRO","SAFE-WAY M"],
+ "conditions_text_verbatim": "It can be used for ECE R44 car seats with an integral harness from 9 kg, and for ECE R129 (i-Size) approved car seats with an integral harness from 60 cm rearward facing or 76 cm forward facing. The comfort insert does not replace a newborn insert and must not be used in infant carriers.",
+ "findings": [
+  "Every model in the seed's confirmed list is named separately in the 'Available for these products' list (ADVANSAFIX PRO, DUALFIX 5Z, DUALFIX PRO, DUALFIX PRO M, DUALFIX PLUS, DUALFIX M PLUS, SWIVEL 2, KING PRO, EVOLVAFIX, MAX-SAFE PRO, SAFE-WAY M).",
+  "KIDFIX PRO does not appear in the list -> absent_from_list only (the page has no exclusion sentence).",
+  "SWIVEL (first generation) is not in the list while 'SWIVEL 2' is: the listing must not be transferred from SWIVEL 2 to SWIVEL, and absence of SWIVEL is not EXCLUDED.",
+  "Conditions present: R44 integral harness from 9 kg; R129 harness from 60 cm rearward / 76 cm forward; not a newborn insert; must not be used in infant carriers -> LISTED_CONDITIONAL with constraints, human review of how the engine should carry the conditions."
+ ]
+}
