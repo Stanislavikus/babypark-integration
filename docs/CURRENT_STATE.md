@@ -3,9 +3,34 @@
 Status: EVIDENCE — operational/current-state record; not normative contract authority.
 Applies to: repository-wide operational and campaign state tracking.
 Supersedes: `docs/CURRENT_STATE.md` at canonical main `a45a8644e05df2584a2b75f2a3b47446811ae984`.
-Last updated: 2026-11-06
+Last updated: 2026-11-27
 Owner: BabyPark
 Source of truth for operational facts: production runtime + verified repository evidence.
+
+## 2026-11-27 — Chatwoot 4.20.1 production stock upgrade (DEPLOYED, HTTP SMOKE PASS)
+
+The owner separately approved production stock-native upgrade of Chatwoot 4.18.0
+(`9f920b549c14491a4e587687a3eed5d21c6ccc7d`) to official 4.20.1
+(`b2f94636d325a126a67c6c4c808303d8aa8cbeea`) on `chatwoot-fra1-01`.
+Source and Ruby runtime (3.4.13) are pinned; Node is 24.22.1. The original
+checkout and systemd configuration preimages are retained. Existing Nginx,
+BabyPark systemd drop-ins and other integration services were left unchanged.
+The final database/storage/config backup was frozen after stopping Web/Worker,
+`/var/backups/chatwoot-finalcutover-20261127T102015Z` (SHA256 6/6).
+Independent 4.18.0 restore and 4.20.1 migrations with pgvector 0.6.0
+passed on an isolated temporary Droplet; production migrated 180→219 and
+Web/Worker, external API/login/Widget SDK and Widget OPTIONS checks passed.
+The temporary Droplet `623931933` and SSH key `61204298` were deleted as
+the owner required. The retained local backup and original source are
+recovery evidence, not authorization for a blind post-migration downgrade.
+**Actual two-way channel messages / transcript-producing Callback tests were
+NOT performed**; this is not a claim of full Facebook, Instagram, Viber,
+Telegram, WhatsApp or SES Email Continuity end-to-end acceptance.
+Full protected host instructions are in
+`/var/backups/babypark-integration/operations/customizations/integrations/chatwoot-upgrade/README.md`.
+n8n production installation and real-customer AI activation remain separate
+unauthorized releases. This documentation-only PR is evidence, not merge
+authority or an amendment of the Agreement.
 
 ## 2026-11-06 — PR #166 compact-viewport launcher candidate (NOT DEPLOYED)
 
