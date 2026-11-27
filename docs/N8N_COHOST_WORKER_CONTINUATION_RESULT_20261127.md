@@ -73,4 +73,3 @@ Then, without touching the old DEV container:
 ## Current release boundary
 
 This continuation did not create a Compose file, storage-policy entry, host path, service unit, backup, credential, container or production change. The fit note remains draft/unfrozen; no `integrate` authorization is requested because the mandatory runtime and recovery evidence is still missing. Release 3 customer traffic remains outside scope and requires separate authorization.
-
