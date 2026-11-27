@@ -126,6 +126,16 @@ Do not repoint or reuse this hostname for Knowledge Authority.
 
 Current public/origin IPv4 used by `ai.babypark.ua`: `161.35.78.167`.
 
+### Chatwoot 4.20.1 stock-native upgrade — 2026-11-27 (observed)
+
+- Runtime: Chatwoot **4.20.1**, upstream Git commit `b2f94636d325a126a67c6c4c808303d8aa8cbeea` on `chatwoot-fra1-01`; previous 4.18.0 commit `9f920b549c14491a4e587687a3eed5d21c6ccc7d`.
+- Vendor source: `/home/chatwoot/chatwoot`; preserved old source: `/home/chatwoot/chatwoot-pre4201-20261127`. Runtime RVM Ruby 3.4.13, Node 24.22.1. Official prebuilt image asset digest `sha256:49cf2b0dbbe5610417769bee15ae8a7d0474eab331ea8dbd9f3aae06d07b42cb`, 648 public files.
+- Service ownership unchanged: `chatwoot-web.1.service` and `chatwoot-worker.1.service`, existing BabyPark systemd drop-ins retained; PostgreSQL 16.15/pgvector 0.6.0 and Redis 8 retained. Nginx CORS and provider integrations not reconfigured. Production migrations 180 → 219 PASS.
+- **Current pre-migration recovery backup:** `/var/backups/chatwoot-finalcutover-20261127T102015Z` (6 SHA256-verified objects, made while Web/Worker were stopped). Earlier prechecks retained under `/var/backups/chatwoot-upgrade-20261127T0932Z` and `/var/backups/chatwoot-upgrade-cutover-20261127T101823Z`. Post-migration rollback is NOT a safe source-only downgrade; requires owner-controlled restore and reconciliation.
+- Independent restore/migration drill previously ran on temporary DigitalOcean Droplet `623931933`; **Droplet and temporary SSH key `61204298` were deleted** after production technical smoke acceptance. Do not reference them as available rollback resources.
+- Production technical smoke: Web/Worker active, public API/login/Widget SDK HTTP 200, expected CORS OPTIONS 204, native 6 inboxes/2 automation rules retained, local attachments 96. **No customer-channel E2E sends were performed**; native provider channel roundtrips remain unverified for target 4.20.1.
+- Detailed protected host handbook: `/var/backups/babypark-integration/operations/customizations/integrations/chatwoot-upgrade/README.md`; host `SOURCE_MANIFEST.json` SHA256 `0f86346862a51530a21308224cc41a3ee97df90aa0e1fd7ba9cf25b6936815f0` (noncanonical operational evidence). New independent n8n runtime not installed.
+
 ### Nginx — BabyPark AI
 
 Config: `/etc/nginx/sites-available/babypark_ai.conf`
