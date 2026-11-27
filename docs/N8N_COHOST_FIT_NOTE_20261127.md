@@ -80,4 +80,3 @@ Owner integrate decision must bind:
 - permission to prepare implementation only, not merge or deploy.
 
 After the implementation tests and independent review pass, request one separate exact-basis release GO before merge/deployment. No automatic merge. After production acceptance, update the fit/registry/current-state record with observed peak and exact server handbook checksum.
-\n
