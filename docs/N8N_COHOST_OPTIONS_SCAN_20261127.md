@@ -2,10 +2,12 @@
 
 Status: EVIDENCE — NON-NORMATIVE / FROZEN for this bounded owner decision; no implementation or release authorization by itself.
 Applies to: the single bounded stage of installing a new, inactive n8n instance alongside Chatwoot 4.20.1 and independently owned Viber Gateway on `chatwoot-fra1-01`; later migration together to Hetzner alongside Odoo.
-Supersedes: prior alternatives scan blob `bb4e037fe145389675eb0f302d248b1a879290c3` at campaign HEAD `9ad65a9392279216dbb5da17628eccbb8057774f`; refreshes the owner-scoped rollout and evidence boundary only.
+Supersedes: prior alternatives scan SHA-256 `5009e0ee5a6760dcc959f8957c5d31db99b540a84c5289a06e628efeb1573135` at HEAD `8a487e13b2fb51949960cd37159d6950f5b5a282`, plus prior alternatives scan blob `bb4e037fe145389675eb0f302d248b1a879290c3` at starting campaign HEAD `9ad65a9392279216dbb5da17628eccbb8057774f`; refreshes owner-scoped rollout and adds required HEAVY classification only.
 UTC evidence collection: 2026-11-27; owner-scoped rollout delta revalidated 2026-11-27.
 Governance: `Stanislavikus/babypark-integration` canonical main `2ae02a0ea8898f5d5b341fca6ed230a34fecce58`; `docs/AI_WORKING_AGREEMENT.md` blob `e2d64856e85716d5c55e724e1babce441ae348ba`.
 Scan type: new independent product/runtime under Agreement §§1, 1.1(3), 3, 2.0a, 4 and 7. Owner has chosen co-location, not a separate n8n production machine.
+RISK CLASSIFICATION: HEAVY
+Risk basis: Agreement §7.0 and §13 classify a new independent runtime that changes storage, network isolation and recovery behavior as HEAVY; this campaign introduces n8n-owned durable SQLite/key state, a host tmpfs/systemd fail-closed dependency, Docker bridge/firewall effects, and backup/restore semantics, rather than composing only already-proven primitives.
 Implementation boundary: **stock official installation/configuration only**, no Chatwoot core modifications, no custom workflow runner/connector, no production Chatwoot/n8n integration or customer processing in this installation stage.
 
 ## Bounded requirements used for fitness

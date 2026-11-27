@@ -2,10 +2,10 @@
 
 Status: EVIDENCE — FROZEN FOR THIS OWNER DECISION; NON-NORMATIVE; does not authorize implementation, production installation, merge, or customer traffic.
 Applies to: one inactive n8n 2.49.8 instance on chatwoot-fra1-01 beside Chatwoot 4.20.1 and the existing Viber Gateway; no buyer data, real integration credentials, public UI/webhook, or activated workflow.
-Supersedes: prior draft blob `bd5c2fd77a6652e75e58feb4c21554349da4039e` at campaign HEAD `9ad65a9392279216dbb5da17628eccbb8057774f`; the production-install decision in continuation result SHA-256 7d670348f9790b9ec79595f45116dacc312559f77b6a03b2114cbbfecb2e6c94 only. Earlier measurements and the already successful 22+6 workflow import remain historical evidence.
+Supersedes: prior fit artifact SHA-256 `e7ae443c608d19921770d6d8f393a6afdf460300e434d369e20f2e0e9de963f7` at HEAD `8a487e13b2fb51949960cd37159d6950f5b5a282`, plus prior draft blob `bd5c2fd77a6652e75e58feb4c21554349da4039e` at campaign HEAD `9ad65a9392279216dbb5da17628eccbb8057774f`; the production-install decision in continuation result SHA-256 7d670348f9790b9ec79595f45116dacc312559f77b6a03b2114cbbfecb2e6c94 only. Earlier measurements and the already successful 22+6 workflow import remain historical evidence.
 Canonical governance: main 2ae02a0ea8898f5d5b341fca6ed230a34fecce58; Agreement blob e2d64856e85716d5c55e724e1babce441ae348ba.
 Campaign input: Draft PR #173, starting HEAD 9ad65a9392279216dbb5da17628eccbb8057774f, tree 27c0b730cda4d6a7baa9c8709b84f47b0f8d1677, base 2ae02a0ea8898f5d5b341fca6ed230a34fecce58.
-Alternatives scan: docs/N8N_COHOST_OPTIONS_SCAN_20261127.md, UTF-8/LF/final-newline SHA-256 5009e0ee5a6760dcc959f8957c5d31db99b540a84c5289a06e628efeb1573135.
+Alternatives scan: docs/N8N_COHOST_OPTIONS_SCAN_20261127.md, UTF-8/LF/final-newline SHA-256 7880c8eacc965d6860f2b6e776eab343e0d34ec880be6bd848538077d06f16ba.
 Production capacity evidence: continuation result above; it summarizes read-only sysstat, proc/cgroup and low-rate request observations, and explicitly notes raw host output was not retained as an independent artifact.
 
 ## Decision
@@ -14,7 +14,7 @@ Exactly one recommendation: integrate the official n8n 2.49.8 runtime/configurat
 
 The reported 1,200-MiB value was a cgroup limit, not an observed memory peak. Production feasibility is therefore not represented as a pre-install PASS or FAIL. It will be measured during the authorized bounded production run, with a 1-vCPU and 1,200-MiB hard cap, container swap disabled, live monitoring, and immediate stop conditions below. The earlier 6-GiB suggestion is withdrawn.
 
-The required owner integrate approval is still pending and must bind this exact fit-note digest and the alternatives-scan digest. It also records acceptance of the SUL internal-use restriction below. That approval permits preparation of one implementation PR only. A separate exact-basis release GO is required after implementation tests and independent review. No merge or production write is authorized by this note.
+The owner approved the prior fit SHA-256 `e7ae443c608d19921770d6d8f393a6afdf460300e434d369e20f2e0e9de963f7` with alternatives scan SHA-256 `5009e0ee5a6760dcc959f8957c5d31db99b540a84c5289a06e628efeb1573135`. That scan omitted the required exact risk-classification line, so this corrected scan/fit pair supersedes those bytes and the prior implementation-only authorization does not bind the corrected pair. The owner must rebind `integrate` to the new exact digests. The separately accepted SUL internal-use restriction remains recorded. A separate exact-basis release GO is required after implementation tests and independent review. No merge or production write is authorized by this note.
 
 ## Bounded use and license
 
