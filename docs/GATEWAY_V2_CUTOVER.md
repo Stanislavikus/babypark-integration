@@ -5,6 +5,17 @@ Last verified: 2026-09-24
 Owner: BabyPark
 Source of truth: deploy/chatwoot-host/, src/gateway/, scripts/backup-bridge.mjs
 
+> **Chatwoot vendor upgrade is a different operation.** This document covers the
+> historical Gateway v1→v2 cutover, not repeated Viber deployment after every
+> Chatwoot upgrade. For stock Chatwoot updates, first read
+> [Viber independent runtime](VIBER_GATEWAY.md) and
+> [mandatory Chatwoot↔Viber upgrade gate](CHATWOOT_UPGRADE_RUNBOOK.md).
+> Preflight must flag any saved Gateway session with a missing Chatwoot
+> contact or contact-inbox source and block release pending verified recovery.
+> Post-upgrade Chatwoot/Gateway health is insufficient without separately
+> authorized Viber inbound and outbound functional acceptance.
+
+
 ## Goal
 
 Replace the live one-file Viber gateway with the modular v2 gateway without losing
