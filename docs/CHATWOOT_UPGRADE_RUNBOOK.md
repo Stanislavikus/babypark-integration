@@ -55,7 +55,7 @@ Do not replay failed real-customer events or reset idempotency to make tests pas
 
 ## 2026-11-27 observed regression — why Gate A matters
 
-On Chatwoot 4.20.1, the unchanged gateway returned provider HTTP 500 when a stale session's Chatwoot GET and POST conversations returned HTTP 404. The saved contact/conversation did **not** exist even in the pre-migration 4.18.0 backup, so this was a pre-existing orphan, not demonstrated new vendor API breakage. The normal recovery dry-run enumerated 25 other contact-driven actions but could not repair the missing-contact session. After explicit owner authorization, exactly one orphaned `sessions` row was removed using verified online backup, fenced writer, guarded transaction, post-integrity check and original Gateway restart; all other sessions/outgoing/dedupe persisted. Follow-up live delivery and outbound acceptance remain separately necessary.
+On Chatwoot 4.20.1, the unchanged gateway returned provider HTTP 500 when a stale session's Chatwoot GET and POST conversations returned HTTP 404. The saved contact/conversation did **not** exist even in the pre-migration 4.18.0 backup, so this was a pre-existing orphan, not demonstrated new vendor API breakage. The normal recovery dry-run enumerated 25 other contact-driven actions but could not repair the missing-contact session. After explicit owner authorization, exactly one orphaned `sessions` row was removed using verified online backup, fenced writer, guarded transaction, post-integrity check and original Gateway restart; all other sessions/outgoing/dedupe persisted. Follow-up real provider testing completed for the repaired sender: exactly two distinct incoming messages in its new Chatwoot conversation, one controlled outgoing Chatwoot API message reaching Viber provider `read`, and two other distinct User-originating outbound messages reaching `delivered`. This is bounded two-way PASS for the affected sender, not blanket proof for all remaining sessions or future vendor versions.
 
 This demonstrates why **pre-upgrade session-reference integrity and actual provider E2E**, not merely health endpoints, are release gates.
 
@@ -67,7 +67,7 @@ This demonstrates why **pre-upgrade session-reference integrity and actual provi
 | Restore point before upgrades | Gate A.2 | Existing maintained SQLite online backup verified integrity/standalone | Stop before vendor change | Backup only, no live state mutation | DONE |
 | Pre-existing orphan caught | Gate A.3 | Known orphan confirmed against pre-migration backup, 2026-11-27 | BLOCKER / HUMAN | Read-only scan | DONE |
 | API and synthetic provider flow | Gate A.4 | Existing v2 full signed synthetic inbound 200/200/200 tested on isolated DB, 2026-11-27 | NO-GO if missing/failing | Synthetic only | DONE |
-| Live provider acceptance is explicit | Gate C | Current inbound real-state repair pending fresh owner test | FAIL/UNVERIFIED instead of PASS | No automatic sends/replay | DONE |
+| Live provider acceptance is explicit | Gate C | Live real owner sender 2 incoming and 1 controlled outgoing provider-read PASS on 2026-11-27 (2 other distinct User outbound delivered) | FAIL/UNVERIFIED instead of PASS | No automatic sends/replay | DONE |
 | Rollback and privacy preserved | Gates B–C | Existing frozen Gate v2 Cutover/Session Recovery contracts | Stop, preserve evidence | No production code/schema change from proposal | DONE |
 
 A production upgrade campaign must produce **fresh** evidence; the listed November 27 observations are historical examples, not standing blanket PASS.
