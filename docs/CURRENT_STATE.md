@@ -22,10 +22,14 @@ The proposal records the owner's stock-product rule: study official functions
 and terms of use; do not security-test vendor products; install a suitable
 official product on the production target; update by reading the vendor's
 requirements and comparing only with the product's already accepted function
-record. An explicit restriction, incompatible change to a recorded function,
-terms change, express unknown-impact notice, or required manual rehearsal
-selects Path B: automatic test-installation update, focused functional check,
-then operator-controlled production update of the identical release.
+record. Path B is only an explicit restriction, removal, rename, or incompatible
+change of a recorded function; a change of what BabyPark is permitted to do;
+a statement that the impact on a recorded function is unknown; or a manual
+migration or rehearsal required before the new version can run. That path is
+an automatic test-installation update, a focused functional check, then an
+operator-controlled production update of the identical release.
+A notice that says only that terms were updated, and a license notice that
+does not change permitted use, stay on Path A.
 All other official releases, including a short changelog, silence on a recorded
 function and a vendor-managed ordinary database/API/webhook migration, use
 Path A: official backup, operator-controlled production update and a focused
