@@ -21,10 +21,17 @@ commit that contains this snapshot. Do not treat any future merge SHA as known.
 The proposal records the owner's stock-product rule: study official functions
 and terms of use; do not security-test vendor products; install a suitable
 official product on the production target; update by reading the vendor's
-requirements, backing up, and applying the official update when those
-requirements state no restriction and do not change a relied-on behavior, or by
-an automatic test-installation check and an operator-controlled production
-update of the same release when they leave doubt or change relied-on behavior;
+requirements and comparing only with the product's already accepted function
+record. An explicit restriction, incompatible change to a recorded function,
+terms change, express unknown-impact notice, or required manual rehearsal
+selects Path B: automatic test-installation update, focused functional check,
+then operator-controlled production update of the identical release.
+All other official releases, including a short changelog, silence on a recorded
+function and a vendor-managed ordinary database/API/webhook migration, use
+Path A: official backup, operator-controlled production update and a focused
+check of the recorded functions, automated/native where available.
+Neither path triggers HEAVY, two-pass ZERO-BLOCKER review or vendor security
+research; production is never updated unattended;
 use official nodes, including official n8n nodes with Chatwoot's official API,
 as stock configuration; write BabyPark code only when stock cannot do the job
 or is very inconvenient or slow, and keep that code outside the vendor image
