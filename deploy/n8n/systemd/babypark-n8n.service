@@ -1,0 +1,32 @@
+[Unit]
+Description=BabyPark isolated n8n 2.49.8 service
+Requires=docker.service run-babypark\x2dn8n\x2druntime.mount
+After=docker.service run-babypark\x2dn8n\x2druntime.mount
+BindsTo=run-babypark\x2dn8n\x2druntime.mount
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+Group=root
+WorkingDirectory=/opt/babypark-n8n
+EnvironmentFile=/etc/babypark-n8n/n8n.env
+UnsetEnvironment=DOCKER_CONTEXT DOCKER_HOST
+ExecStartPre=/bin/sh -ec 'set -f; row=$$(/usr/bin/findmnt --mountpoint /run/babypark-n8n-runtime --types tmpfs --noheadings --bytes --output FSTYPE,OPTIONS,SIZE) && set -- $$row && test "$$#" -eq 3 && test "$$1" = tmpfs && test "$$3" = 134217728 && opts=,$$2, && for required in rw uid=1000 gid=1000 noswap nodev nosuid noexec; do case "$$opts" in *,"$$required",*) ;; *) exit 1 ;; esac; done && case "$$opts" in *,mode=700,*|*,mode=0700,*) ;; *) exit 1 ;; esac'
+ExecStartPre=/bin/sh -ec 'test "$$(/usr/bin/stat -c "%%U:%%G:%%a" /etc/babypark-n8n/n8n.env)" = "root:root:600" && test "$$(/usr/bin/stat -c "%%U:%%G:%%a" /etc/babypark-n8n)" = "root:root:700"'
+ExecStartPre=/bin/sh -ec 'printf "%%s\n" "$$N8N_ENCRYPTION_KEY" | /usr/bin/grep -Eq "^[0-9a-fA-F]{64}$$" && printf "%%s\n" "$$POSTGRES_PASSWORD" | /usr/bin/grep -Eq "^[0-9a-fA-F]{64}$$" && test "$$N8N_ENCRYPTION_KEY" != "$$POSTGRES_PASSWORD"'
+ExecStartPre=/bin/sh -ec 'test -S /var/run/docker.sock && test "$$(/usr/bin/stat -c "%%U" /var/run/docker.sock)" = root && /usr/bin/docker --host=unix:///var/run/docker.sock info --format="%%s" >/dev/null'
+ExecStartPre=/usr/bin/install -d -o 1000 -g 1000 -m 0700 /run/babypark-n8n-runtime/storage /run/babypark-n8n-runtime/events
+ExecStart=/usr/bin/docker --host=unix:///var/run/docker.sock compose --project-directory /opt/babypark-n8n -f /opt/babypark-n8n/compose.yaml up --no-color --detach
+ExecStop=/usr/bin/docker --host=unix:///var/run/docker.sock compose --project-directory /opt/babypark-n8n -f /opt/babypark-n8n/compose.yaml stop --timeout 30
+RemainAfterExit=true
+Restart=no
+TimeoutStartSec=0
+TimeoutStopSec=60s
+KillMode=mixed
+NoNewPrivileges=true
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

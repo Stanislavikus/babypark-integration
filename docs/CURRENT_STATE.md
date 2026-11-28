@@ -3,7 +3,7 @@
 Status: EVIDENCE — operational/current-state record; not normative contract authority.
 Applies to: repository-wide operational and campaign state tracking.
 Supersedes: `docs/CURRENT_STATE.md` at canonical main `a45a8644e05df2584a2b75f2a3b47446811ae984`.
-Last updated: 2026-11-06
+Last updated: 2026-11-28
 Owner: BabyPark
 Source of truth for operational facts: production runtime + verified repository evidence.
 
@@ -1146,3 +1146,15 @@ PR #35 sender/control closure evidence:
   21 objects / 6 durable all passed on the reviewed tree;
 - no production deployment, production spool, CatalogService mutation, FULL, Link A
   or acceptance package occurred as part of PR #35.
+
+## n8n 2.49.8 co-host implementation package — not deployed
+
+As of 2026-11-28, Draft PR #173 at its stated SQLite package parent is being updated in a bounded package for the owner's selected official PostgreSQL architecture. The candidate uses official n8n 2.49.8 and PostgreSQL 16.16 images pinned by digest, independent PostgreSQL PGDATA and n8n user state, a separate key, loopback-only editor, an internal-only Compose bridge, and registered durable and tmpfs paths. The current 4-GiB host remains the target; capacity is UNVERIFIED until the separately authorized release test measures the concurrent n8n and PostgreSQL peaks and Chatwoot health.
+
+The prior SHA-bound `integrate` referred to the superseded SQLite fit and alternatives scan. The current PostgreSQL fit note is SHA-256 `ac1dd98742adc2f695b02d569f3c22eea432c7e126e17cc41c8c40763dc08ee1`; the current alternatives scan is SHA-256 `be27d1b313e72d655017c11726b27e598f92cfb97ee2753dcc29a303781181af`. Both await a new exact-SHA `integrate` rebind before implementation acceptance. No session-only SQLite exception or n8n source change is included. The SQLite `busy_timeout` finding remains in a non-normative historical evidence note. The SQLite workflow import (22 + 6 nodes) is not repeated; only a later separately authorized PostgreSQL compatibility check may import the same exact definitions once and must verify both remain OFF.
+
+The candidate package adds independent PostgreSQL backup/restore with the matching n8n encryption-key file and one synthetic credential check, explicit Docker CLI pinning to `/var/run/docker.sock`, context override failure checks, and dated official support/activity evidence for the alternatives. Static implementation tests and independent HEAVY acceptance are required before the owner is asked for a separate `release GO`. The release test must measure actual PostgreSQL and n8n resource use on the existing host. This package does not install Docker, create production paths, start a container, change Chatwoot/Viber, merge the PR, or authorize buyer data, real credentials, public endpoints or workflow activation.
+
+No Docker package, n8n or PostgreSQL container, n8n host path, systemd unit, backup, key, credential, or workflow has been created on `chatwoot-fra1-01`. Chatwoot 4.20.1 and Viber remain untouched. The existing approved 22-node and 6-node import is historical SQLite evidence only and is not repeated in this campaign.
+
+Preflight candidate verification after the PostgreSQL package corrections: focused n8n/storage tests 62/62; `npm test` passed storage validation (37 objects / 31 planned / 12 durable), unit (1,322/1,322), legacy characterization (13/13), and refactor characterization (13/13). Systemd unit syntax passed `systemd-analyze verify` in an inert temporary root. Official Docker Compose v5.8.1 rendered and validated both primary and restore configurations without a Docker Engine; the separate immutable final-gate manifest will bind fresh reruns to the final exact tree. PostgreSQL execution, PG-backed workflow compatibility, memory/pressure, host mount behavior and restore remain release-GO measurements.

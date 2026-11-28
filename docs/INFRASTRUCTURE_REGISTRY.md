@@ -309,3 +309,25 @@ Before changing any object in this registry:
 7. never put secrets into Git.
 
 For future automation, this registry should become machine-readable in addition to this human document, but the first implementation must preserve the same explicit ownership and authority boundaries.
+
+## 2026-11-27 — proposed n8n 2.49.8 co-host package (not deployed)
+
+Source: owner-authorized implementation scope in Draft PR #173; current PostgreSQL fit note SHA-256 `ac1dd98742adc2f695b02d569f3c22eea432c7e126e17cc41c8c40763dc08ee1`; current alternatives scan SHA-256 `be27d1b313e72d655017c11726b27e598f92cfb97ee2753dcc29a303781181af`. Both are pending the owner's exact `integrate` rebind. This is a planned inventory only. No listed object currently exists on `chatwoot-fra1-01`; no production Docker or n8n installation is implied.
+
+| Storage-policy ID | Planned path | Owner / purpose | State |
+| --- | --- | --- | --- |
+| `n8n_compose_project` | `/opt/babypark-n8n` | `root:root`; non-secret Compose release files | PLANNED |
+| `n8n_systemd_units` | `/etc/systemd/system/babypark-n8n.service` and escaped runtime `.mount` unit | `root:root`; n8n lifecycle and mount guard | PLANNED |
+| `n8n_state_root` | `/var/lib/babypark-n8n` | `root:root`, mode `0755`; namespace for independent user, PostgreSQL and restore paths | PLANNED |
+| `n8n_user_state` | `/var/lib/babypark-n8n/user` | UID/GID 1000; independent n8n instance settings, no database | PLANNED |
+| `n8n_postgres_data` | `/var/lib/babypark-n8n/postgres` | Official PostgreSQL 16.16 data for n8n only; verify pinned image UID/GID before creation | PLANNED |
+| `n8n_runtime_tmpfs` | `/run/babypark-n8n-runtime` | UID/GID 1000; 128-MiB `tmpfs,noswap` execution/event data | PLANNED |
+| `n8n_runtime_key` | `/etc/babypark-n8n/n8n.env` | `root:root`; independent n8n encryption key and PostgreSQL password | PLANNED |
+| `n8n_local_backups` | `/var/backups/babypark-n8n` | `root:root`; seven verified generations of PostgreSQL dump, user settings and matching secrets | PLANNED |
+| `n8n_restore_scratch` | `/var/lib/babypark-n8n/restore-test` | `root:root`; isolated restore parent | PLANNED |
+| `n8n_user_restore_scratch` | `/var/lib/babypark-n8n/restore-test/user` | UID/GID 1000; disposable n8n settings restore on loopback port 5679 | PLANNED |
+| `n8n_postgres_restore_data` | `/var/lib/babypark-n8n/restore-test/postgres` | Official PostgreSQL 16.16 isolated restore target; verify pinned image UID/GID | PLANNED |
+| `n8n_docker_layers` | `/var/lib/docker` | `root:root`; Docker metadata can contain both environment-delivered secret values; verify file modes and approved rootful socket users before start | PLANNED |
+| `n8n_containerd_layers` | `/var/lib/containerd` | `root:root`; image content/snapshots when Docker's containerd image store is active; never prune shared data as n8n rollback | PLANNED |
+
+Docker daemon access is root-equivalent, and container metadata may contain the environment-delivered encryption key. Verify the actual data root, containerd image-store path when enabled, metadata file owner/mode, socket owner/group, no world access, and approved effective socket membership including primary-GID accounts before creating the container. Do not blanket-change permissions on the shared Docker root or socket. No key value, live endpoint, external backup destination or n8n object identity has been created. After an authorized successful production launch, record observed IDs, installed package/image identities, backups and exact permissions in a new evidence update.
