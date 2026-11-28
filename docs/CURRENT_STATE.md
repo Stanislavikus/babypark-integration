@@ -22,10 +22,8 @@ The proposal records the owner's stock-product rule: study official functions
 and terms of use; do not security-test vendor products; install a suitable
 official product on the production target; update by reading the vendor's
 requirements and comparing only with the product's already accepted function
-record. Path B is only an explicit restriction, removal, rename, or incompatible
-change of a recorded function; a change of what BabyPark is permitted to do;
-a statement that the impact on a recorded function is unknown; or a manual
-migration or rehearsal required before the new version can run. That path is
+record. Path B is only when the documents explicitly restrict, remove, rename, or incompatibly change a function named in that record; change what BabyPark is permitted to do; state that the impact on a recorded function is unknown; or require a manual migration or rehearsal before the new version can run.
+That path is
 an automatic test-installation update, a focused functional check, then an
 operator-controlled production update of the identical release.
 A notice that says only that terms were updated, and a license notice that
