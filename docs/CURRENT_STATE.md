@@ -18,6 +18,19 @@ The campaign is one docs change on branch
 `2ae02a0ea8898f5d5b341fca6ed230a34fecce58`. Exact HEAD and tree are the git
 commit that contains this snapshot. Do not treat any future merge SHA as known.
 
+The latest proposal adds §1.5 STOCK-OPS-60: first installation, native
+relocation/migration, stock workflow import and ordinary vendor upgrades are
+one operations job targeting at most 60 minutes end-to-end elapsed time when
+required access and host resources are available. This objective counts backup,
+official install/move/update commands, a focused functional check and a short
+existing handbook note. It forbids moving the same work into an unbounded
+research/preflight campaign, a new custom-code project, or repeated HEAVY,
+two-pass ZERO-BLOCKER or vendor-security testing. A concrete missing operator
+dependency is addressed through the shortest official remedy without claiming
+an unobserved PASS, bypassing required controls or disturbing Chatwoot/Viber.
+Historical n8n worker tasks are non-normative evidence after merger and cannot
+reopen the already accepted 22+6 offline workflow import merely for research.
+
 The proposal records the owner's stock-product rule: study official functions
 and terms of use; do not security-test vendor products; install a suitable
 official product on the production target; update by reading the vendor's
