@@ -1,0 +1,10 @@
+[Unit]
+Description=No-swap temporary runtime storage for BabyPark n8n
+Before=babypark-n8n.service
+PartOf=babypark-n8n.service
+
+[Mount]
+What=tmpfs
+Where=/run/babypark-n8n-runtime
+Type=tmpfs
+Options=mode=0700,uid=1000,gid=1000,size=128M,noswap,nodev,nosuid,noexec

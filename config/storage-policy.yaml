@@ -840,6 +840,478 @@
         "status": "SOURCE_IS_GIT"
       },
       "pii": "none"
+    },
+    {
+      "id": "n8n_compose_project",
+      "host_role": "integration",
+      "status": "PLANNED",
+      "scope": "directory",
+      "location": "/opt/babypark-n8n",
+      "owner": "root:root",
+      "purpose": "Non-secret official Compose release files and example environment for the isolated n8n service.",
+      "state_class": "rebuildable",
+      "thresholds": {
+        "metric": "bytes_total",
+        "basis": "small pinned Compose package; measure on first approved deployment",
+        "expected": 65536,
+        "warning": 1048576,
+        "critical": 5242880
+      },
+      "retention": {
+        "mode": "current_plus_previous_reviewed_release",
+        "ttl_days": null
+      },
+      "cleanup": {
+        "automatic": false,
+        "mechanism": "Replace only through a reviewed release; retain the previous pinned release for rollback.",
+        "dry_run_required": true,
+        "delete_guard": "Never remove the active Compose/service configuration or its pinned rollback copy."
+      },
+      "recovery": "Re-copy the reviewed versioned files from Git and verify their release checksum.",
+      "backup": {
+        "required": false,
+        "off_host": false,
+        "status": "REBUILDABLE_FROM_GIT"
+      },
+      "pii": "none_expected"
+    },
+    {
+      "id": "n8n_systemd_units",
+      "host_role": "integration",
+      "status": "PLANNED",
+      "scope": "files",
+      "location": "/etc/systemd/system/babypark-n8n.service and /etc/systemd/system/run-babypark\\x2dn8n\\x2druntime.mount",
+      "owner": "root:root",
+      "purpose": "n8n-only service lifecycle and explicit no-swap tmpfs mount dependency.",
+      "state_class": "rebuildable",
+      "thresholds": {
+        "metric": "bytes_total",
+        "basis": "two small systemd unit files",
+        "expected": 8192,
+        "warning": 32768,
+        "critical": 131072
+      },
+      "retention": {
+        "mode": "current_plus_previous_reviewed_release",
+        "ttl_days": null
+      },
+      "cleanup": {
+        "automatic": false,
+        "mechanism": "Change only through an n8n-only reviewed release and systemd daemon reload.",
+        "dry_run_required": true,
+        "delete_guard": "Never remove the active service or mount gate while n8n is running."
+      },
+      "recovery": "Restore the reviewed unit files from Git, verify with systemd-analyze, and reload systemd while preserving Chatwoot/Viber units.",
+      "backup": {
+        "required": false,
+        "off_host": false,
+        "status": "REBUILDABLE_FROM_GIT"
+      },
+      "pii": "none_expected"
+    },
+    {
+      "id": "n8n_state_root",
+      "host_role": "integration",
+      "status": "PLANNED",
+      "scope": "directory",
+      "location": "/var/lib/babypark-n8n",
+      "owner": "root:root",
+      "purpose": "Protected namespace for separately registered n8n app state, PostgreSQL data and restore scratch; no files are stored directly in the parent.",
+      "state_class": "rebuildable",
+      "thresholds": {
+        "metric": "directory_entries",
+        "basis": "empty namespace with separately registered user, database and restore directories",
+        "expected": 3,
+        "warning": 4,
+        "critical": 6
+      },
+      "retention": {
+        "mode": "keep_while_registered_children_exist",
+        "ttl_days": null
+      },
+      "cleanup": {
+        "automatic": false,
+        "mechanism": "Remove only after n8n app state, PostgreSQL data and restore scratch are stopped and independently verified absent.",
+        "dry_run_required": true,
+        "delete_guard": "Never remove this parent while any n8n child storage class exists."
+      },
+      "recovery": "Recreate as root:root mode 0755 before creating separately registered child paths.",
+      "backup": {
+        "required": false,
+        "off_host": false,
+        "status": "REBUILDABLE_EMPTY_NAMESPACE"
+      },
+      "pii": "none_expected",
+      "permissions": {
+        "directory_mode": "0755"
+      }
+    },
+    {
+      "id": "n8n_user_state",
+      "host_role": "integration",
+      "status": "PLANNED",
+      "scope": "directory",
+      "location": "/var/lib/babypark-n8n/user",
+      "owner": "1000:1000",
+      "purpose": "Independent official n8n user folder and instance settings; PostgreSQL owns workflow, execution and encrypted credential rows. Release 2 has only synthetic state.",
+      "state_class": "durable",
+      "thresholds": {
+        "metric": "bytes_total",
+        "basis": "Initial bounded n8n application-state budget; remeasure before release",
+        "expected": 67108864,
+        "warning": 268435456,
+        "critical": 536870912
+      },
+      "retention": {
+        "mode": "durable_until_reviewed_cleanup",
+        "ttl_days": null
+      },
+      "cleanup": {
+        "automatic": false,
+        "mechanism": "No automatic deletion; clean only after verified backup and controlled n8n stop.",
+        "dry_run_required": true,
+        "delete_guard": "Never remove instance settings or the only known-good recovery source."
+      },
+      "recovery": "Restore the complete same-version n8n user folder and matching protected N8N_ENCRYPTION_KEY; verify the restored instance through the official CLI. ",
+      "backup": {
+        "required": true,
+        "off_host": false,
+        "status": "LOCAL_ONLY_RESTORE_TEST_REQUIRED"
+      },
+      "pii": "synthetic_only_release_2_no_buyer_data",
+      "permissions": {
+        "directory_mode": "0700"
+      }
+    },
+    {
+      "id": "n8n_postgres_data",
+      "host_role": "integration",
+      "status": "PLANNED",
+      "scope": "directory",
+      "location": "/var/lib/babypark-n8n/postgres",
+      "owner": "999:999 (verify UID/GID from the pinned official image)",
+      "purpose": "Independent PostgreSQL 16.16 PGDATA for this n8n instance only; never shared with Chatwoot or an existing cluster.",
+      "state_class": "durable",
+      "thresholds": {
+        "metric": "bytes_total",
+        "basis": "Initial bounded PostgreSQL data budget; observe migration and remeasure before release",
+        "expected": 268435456,
+        "warning": 536870912,
+        "critical": 1073741824
+      },
+      "retention": {
+        "mode": "durable_until_reviewed_cleanup",
+        "ttl_days": null
+      },
+      "cleanup": {
+        "automatic": false,
+        "mechanism": "No automatic deletion; stop only the n8n/PostgreSQL Compose project before controlled recovery.",
+        "dry_run_required": true,
+        "delete_guard": "Never delete or overwrite the live PGDATA or only known-good logical dump."
+      },
+      "recovery": "Restore the verified custom-format pg_dump into empty isolated PostgreSQL 16.16 PGDATA using the matching POSTGRES_PASSWORD and N8N_ENCRYPTION_KEY. ",
+      "backup": {
+        "required": true,
+        "off_host": false,
+        "status": "LOCAL_ONLY_RESTORE_TEST_REQUIRED"
+      },
+      "pii": "synthetic_only_release_2_no_buyer_data",
+      "permissions": {
+        "directory_mode": "0700"
+      }
+    },
+    {
+      "id": "n8n_runtime_tmpfs",
+      "host_role": "integration",
+      "status": "PLANNED",
+      "scope": "mount",
+      "location": "/run/babypark-n8n-runtime",
+      "owner": "1000:1000",
+      "purpose": "128-MiB host tmpfs,noswap for filesystem execution/binary storage and event-bus log only.",
+      "state_class": "transient",
+      "thresholds": {
+        "metric": "bytes_peak",
+        "basis": "128-MiB tmpfs ceiling; validate under exact-version synthetic run",
+        "expected": 33554432,
+        "warning": 100663296,
+        "critical": 134217728
+      },
+      "retention": {
+        "mode": "ephemeral_until_service_or_mount_stop_or_reboot",
+        "ttl_days": 1
+      },
+      "cleanup": {
+        "automatic": true,
+        "mechanism": "Stopping babypark-n8n.service propagates to its PartOf runtime mount; an explicitly started restore mount is stopped after restore; memory-backed data disappears on unmount/reboot.",
+        "dry_run_required": true,
+        "delete_guard": "Stop only babypark-n8n.service before testing or unmounting; never use a swap-capable substitute."
+      },
+      "recovery": "Ephemeral execution artifacts are intentionally discarded; n8n restarts from durable user state.",
+      "backup": {
+        "required": false,
+        "off_host": false,
+        "status": "EPHEMERAL_NOT_BACKED_UP"
+      },
+      "pii": "synthetic_execution_data_only_release_2"
+    },
+    {
+      "id": "n8n_runtime_key",
+      "host_role": "integration",
+      "status": "PLANNED",
+      "scope": "file",
+      "location": "/etc/babypark-n8n/n8n.env",
+      "owner": "root:root",
+      "purpose": "Separate root-only environment file containing independent N8N_ENCRYPTION_KEY and POSTGRES_PASSWORD values for the n8n-owned database pair; values are never committed or printed.",
+      "state_class": "durable",
+      "thresholds": {
+        "metric": "bytes",
+        "basis": "one small environment file; no value recorded",
+        "expected": 4096,
+        "warning": 16384,
+        "critical": 65536
+      },
+      "retention": {
+        "mode": "durable_until_key_rotation_and_verified_recovery",
+        "ttl_days": null
+      },
+      "cleanup": {
+        "automatic": false,
+        "mechanism": "Replace only through a coordinated credential-preserving key migration with verified pre-change backup.",
+        "dry_run_required": true,
+        "delete_guard": "Never delete or rotate the sole key for a database containing encrypted credential rows."
+      },
+      "recovery": "Restore the matching environment file from a root-only protected backup; verify n8n credential decryption only with the disposable synthetic fixture.",
+      "backup": {
+        "required": true,
+        "off_host": false,
+        "status": "LOCAL_ONLY_ENCRYPTED_CHANNEL_NOT_CONFIGURED"
+      },
+      "pii": "encryption_key_secret_no_buyer_data",
+      "permissions": {
+        "directory_mode": "0700",
+        "file_mode": "0600"
+      }
+    },
+    {
+      "id": "n8n_local_backups",
+      "host_role": "integration",
+      "status": "PLANNED",
+      "scope": "directory",
+      "location": "/var/backups/babypark-n8n",
+      "owner": "root:root",
+      "purpose": "Seven retained local verified generations containing PostgreSQL custom-format dump, n8n user-folder archive, and the matching protected environment/key file.",
+      "state_class": "durable",
+      "thresholds": {
+        "metric": "bytes_total",
+        "basis": "initial seven-generation estimate; measure after first full backup",
+        "expected": 1073741824,
+        "warning": 2147483648,
+        "critical": 4294967296
+      },
+      "retention": {
+        "mode": "retain_seven_verified_generations",
+        "ttl_days": null
+      },
+      "cleanup": {
+        "automatic": false,
+        "mechanism": "Manual verified rotation only after integrity and at least one restore-ready generation are confirmed.",
+        "dry_run_required": true,
+        "delete_guard": "Never delete the only known-good backup or its matching key/config pair."
+      },
+      "recovery": "Restore the matching dump, n8n user-folder archive and protected environment file into separate same-version scratch paths; verify PostgreSQL and n8n credential decryption before use.",
+      "backup": {
+        "required": true,
+        "off_host": false,
+        "status": "SAME_HOST_ONLY_OFF_HOST_TARGET_NOT_APPROVED"
+      },
+      "pii": "synthetic_n8n_state_and_two_independent_secret_values",
+      "permissions": {
+        "directory_mode": "0700",
+        "file_mode": "0600"
+      }
+    },
+    {
+      "id": "n8n_restore_scratch",
+      "host_role": "integration",
+      "status": "PLANNED",
+      "scope": "directory",
+      "location": "/var/lib/babypark-n8n/restore-test",
+      "owner": "root:root",
+      "purpose": "Disposable parent namespace for separate n8n user-state and PostgreSQL PGDATA restore rehearsals.",
+      "state_class": "transient",
+      "thresholds": {
+        "metric": "bytes_total",
+        "basis": "Temporary restore instance only; remove after verified rehearsal",
+        "expected": 536870912,
+        "warning": 1073741824,
+        "critical": 2147483648
+      },
+      "retention": {
+        "mode": "restore_rehearsal_only",
+        "ttl_days": null
+      },
+      "cleanup": {
+        "automatic": false,
+        "mechanism": "Remove manually after stopping only the restore Compose project and recording verification results.",
+        "dry_run_required": true,
+        "delete_guard": "Never reuse existing restore state or point restore Compose at live paths."
+      },
+      "recovery": "Recreate only from a verified backup in the explicitly registered child targets.",
+      "backup": {
+        "required": false,
+        "off_host": false,
+        "status": "TRANSIENT_NOT_BACKED_UP"
+      },
+      "pii": "synthetic_n8n_state_only",
+      "permissions": {
+        "directory_mode": "0700"
+      }
+    },
+    {
+      "id": "n8n_user_restore_scratch",
+      "host_role": "integration",
+      "status": "PLANNED",
+      "scope": "directory",
+      "location": "/var/lib/babypark-n8n/restore-test/user",
+      "owner": "1000:1000",
+      "purpose": "Disposable n8n application-state folder for the isolated PostgreSQL/key restore rehearsal on loopback port 5679.",
+      "state_class": "transient",
+      "thresholds": {
+        "metric": "bytes_total",
+        "basis": "One temporary n8n settings folder; remove after verified rehearsal",
+        "expected": 67108864,
+        "warning": 268435456,
+        "critical": 536870912
+      },
+      "retention": {
+        "mode": "restore_rehearsal_only",
+        "ttl_days": null
+      },
+      "cleanup": {
+        "automatic": false,
+        "mechanism": "Remove only after stopping restore n8n and verifying no process references the path.",
+        "dry_run_required": true,
+        "delete_guard": "Never point restore Compose at live n8n user state."
+      },
+      "recovery": "Recreate only from the matching verified n8n user-folder archive.",
+      "backup": {
+        "required": false,
+        "off_host": false,
+        "status": "TRANSIENT_NOT_BACKED_UP"
+      },
+      "pii": "dummy_credential_only_no_buyer_data",
+      "permissions": {
+        "directory_mode": "0700"
+      }
+    },
+    {
+      "id": "n8n_postgres_restore_data",
+      "host_role": "integration",
+      "status": "PLANNED",
+      "scope": "directory",
+      "location": "/var/lib/babypark-n8n/restore-test/postgres",
+      "owner": "999:999 (verify UID/GID from the pinned official image)",
+      "purpose": "Disposable independent PostgreSQL 16.16 PGDATA for restoring the verified n8n dump and testing key recovery.",
+      "state_class": "transient",
+      "thresholds": {
+        "metric": "bytes_total",
+        "basis": "One temporary PostgreSQL restore database; remove after verified rehearsal",
+        "expected": 268435456,
+        "warning": 536870912,
+        "critical": 1073741824
+      },
+      "retention": {
+        "mode": "restore_rehearsal_only",
+        "ttl_days": null
+      },
+      "cleanup": {
+        "automatic": false,
+        "mechanism": "Remove only after stopping restore PostgreSQL and verifying no process references the path.",
+        "dry_run_required": true,
+        "delete_guard": "Never use live n8n PostgreSQL PGDATA as restore target."
+      },
+      "recovery": "Initialize empty same-version PostgreSQL PGDATA and restore only a verified n8n pg_dump plus matching test key.",
+      "backup": {
+        "required": false,
+        "off_host": false,
+        "status": "TRANSIENT_NOT_BACKED_UP"
+      },
+      "pii": "dummy_credential_only_no_buyer_data",
+      "permissions": {
+        "directory_mode": "0700"
+      }
+    },
+    {
+      "id": "n8n_docker_layers",
+      "host_role": "integration",
+      "status": "PLANNED",
+      "scope": "directory_subtree",
+      "location": "/var/lib/docker",
+      "owner": "root:root",
+      "purpose": "Docker image/container metadata and layers for n8n and its independent PostgreSQL service; root-controlled container metadata may include both environment-delivered secret values; no n8n named data volume.",
+      "state_class": "rebuildable",
+      "thresholds": {
+        "metric": "bytes_total",
+        "basis": "official pinned image/layers and n8n metadata; measure after pull",
+        "expected": 3221225472,
+        "warning": 5368709120,
+        "critical": 8589934592
+      },
+      "retention": {
+        "mode": "rebuild_pinned_image_preserve_shared_docker_state",
+        "ttl_days": null
+      },
+      "cleanup": {
+        "automatic": false,
+        "mechanism": "Docker-managed lifecycle only; n8n-specific cleanup after verifying no dependent container.",
+        "dry_run_required": true,
+        "delete_guard": "Never prune or delete the global Docker root as n8n rollback; preserve Chatwoot/Viber containers, layers and volumes."
+      },
+      "recovery": "Re-pull the exact official n8n and PostgreSQL image digests and recreate only this n8n/PostgreSQL Compose project; restore user state, PostgreSQL dump and protected environment file separately.",
+      "backup": {
+        "required": false,
+        "off_host": false,
+        "status": "REBUILDABLE_PINNED_IMAGE"
+      },
+      "pii": "may_contain_n8n_encryption_key_and_postgres_password_in_container_metadata",
+      "access_control": {
+        "filesystem": "Docker-managed root-owned metadata; verify actual per-file owner/mode before release; do not chmod or chown the shared Docker root.",
+        "daemon": "Access to a rootful Docker socket is root-equivalent; compare every socket-group member with the owner-approved host-admin roster before release."
+      }
+    },
+    {
+      "id": "n8n_containerd_layers",
+      "host_role": "integration",
+      "status": "PLANNED",
+      "scope": "directory_subtree",
+      "location": "/var/lib/containerd",
+      "owner": "root:root",
+      "purpose": "Docker image content and snapshots when the containerd image store is enabled; no n8n user state or encryption key.",
+      "state_class": "rebuildable",
+      "thresholds": {
+        "metric": "bytes_total",
+        "basis": "official pinned image content and snapshots; measure after pull if this store is active",
+        "expected": 3221225472,
+        "warning": 5368709120,
+        "critical": 8589934592
+      },
+      "retention": {
+        "mode": "rebuild_pinned_image_preserve_shared_containerd_state",
+        "ttl_days": null
+      },
+      "cleanup": {
+        "automatic": false,
+        "mechanism": "Docker/containerd-managed lifecycle only; n8n-specific cleanup after verifying no dependent container or image reference.",
+        "dry_run_required": true,
+        "delete_guard": "Never prune or delete the shared containerd root as n8n rollback; preserve Chatwoot/Viber images, snapshots and containers."
+      },
+      "recovery": "Re-pull the exact official n8n image digest and recreate only n8n containers; preserve all shared containerd state.",
+      "backup": {
+        "required": false,
+        "off_host": false,
+        "status": "REBUILDABLE_PINNED_IMAGE"
+      },
+      "pii": "no_n8n_credentials_or_buyer_data_expected"
     }
   ],
   "shared_or_legacy": [
