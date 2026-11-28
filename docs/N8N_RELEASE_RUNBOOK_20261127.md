@@ -205,7 +205,7 @@ unset DOCKER_CONTEXT DOCKER_HOST
   | python3 -c 'import json,sys; c=json.load(sys.stdin); n=c["services"]["n8n"]; p=c["services"]["postgres"]; networks=n.get("networks",{}); assert len(networks)==1; name=next(iter(networks)); assert c["networks"][name]["internal"] is True; assert n["environment"]["DB_TYPE"]=="postgresdb" and n["environment"]["DB_POSTGRESDB_HOST"]=="postgres"; assert not p.get("ports"); assert n["mem_limit"]=="1200m" and n["memswap_limit"]=="1200m"; assert p["mem_limit"]=="512m" and p["memswap_limit"]=="512m"; print("n8n image:",n["image"]); print("PostgreSQL image:",p["image"]); [print("port:",x.get("host_ip"),x.get("published"),"->",x.get("target"),x.get("protocol")) for x in n.get("ports",[])]; [print("bind:",v.get("source"),"->",v.get("target")) for s in (n,p) for v in s.get("volumes",[]) if v.get("type")=="bind"]; print("network count:",len(networks),"internal:",c["networks"][name]["internal"]); print("memory caps: n8n",n["mem_limit"],"PostgreSQL",p["mem_limit"])'
 ```
 
-Require output to show the pinned n8n/PostgreSQL image digests, `127.0.0.1:5678`, `/var/lib/babypark-n8n/user -> /home/node/.n8n`, `/var/lib/babypark-n8n/postgres -> /var/lib/postgresql/data`, `/run/babypark-n8n-runtime -> /vol`, both hard memory caps and equal memory-swap caps, and exactly one service network marked `internal: true`; do not print rendered environment values. PostgreSQL has no published port. The restore overlay inherits the private bridge and overrides only the registered user/PGDATA restore paths, tmpfs paths and loopback UI port. Verify after start that each service has exactly one network attachment and `/usr/bin/docker --host=unix:///var/run/docker.sock network inspect` reports `Internal=true`; the editor answers only on `127.0.0.1:5678`. Verify the exact host `tmpfs,noswap` mount. Run the negative start test against only the new n8n units: stop the n8n service/runtime mount, temporarily mask `run-babypark\x2dn8n\x2druntime.mount`, and require the service to fail before a container appears. Unmask/reset only these n8n units. Then perform one positive start; do not repeat the successful workflow import. Never test against Chatwoot, Viber or DEV n8n units.
+Require output to show the pinned n8n/PostgreSQL image digests, `127.0.0.1:5678`, `/var/lib/babypark-n8n/user -> /home/node/.n8n`, `/var/lib/babypark-n8n/postgres -> /var/lib/postgresql/data`, `/run/babypark-n8n-runtime -> /vol`, both hard memory caps and equal memory-swap caps, and exactly one service network marked `internal: true`; do not print rendered environment values. PostgreSQL has no published port. The restore overlay inherits the private bridge and overrides only the registered user/PGDATA restore paths, tmpfs paths and loopback UI port. Verify after start that each service has exactly one network attachment and `/usr/bin/docker --host=unix:///var/run/docker.sock network inspect` reports `Internal=true`; the editor answers only on `127.0.0.1:5678`. Verify the exact host `tmpfs,noswap` mount. Run the negative start test against only the new n8n units: stop the n8n service/runtime mount, temporarily mask `run-babypark\\x2dn8n\\x2druntime.mount`, and require the service to fail before a container appears. Unmask/reset only these n8n units. Before a positive start, jump to **Record resource peaks and Chatwoot latency**, complete its setup and explicit image-pull captures, then return here. Do not let the positive `systemctl start` implicitly pull an image before `before-image-pull` and `after-image-pull` have been recorded. Then perform one positive start; do not repeat the successful workflow import. Never test against Chatwoot, Viber or DEV n8n units.
 
 Immediately after the successful start, check the actual container attachment rather than relying on the rendered file alone. This inspects only the new n8n container/network and emits no credentials:
 
@@ -316,12 +316,13 @@ This is the only PostgreSQL-backed compatibility import; the earlier successful 
 
 ### Record resource peaks and Chatwoot latency
 
-Before the image pull, create one root-only evidence file below the registered `/var/backups/babypark-n8n` path. Set `CHATWOOT_TTFB_URL` to the exact same low-rate, unauthenticated Chatwoot route used in the approved pre-install baseline; do not invent a route or send customer content. Run `capture_phase` before and after image pull, PostgreSQL initialization/migration, n8n start, the single PostgreSQL workflow import, restart, backup, and restore. Each container's cgroup `memory.peak` and `memory.events` retain the actual maximum/OOM counts for that container lifetime; the host samples capture Docker daemon and total-host overhead too.
+Before the image pull, create one root-only evidence file below the registered `/var/backups/babypark-n8n` path. Set `CHATWOOT_TTFB_URL` to the exact same low-rate, unauthenticated Chatwoot route used in the approved pre-install baseline; do not invent a route or send customer content. Run `capture_phase` before and after image pull, PostgreSQL initialization/migration, n8n start, the single PostgreSQL workflow import, restart, backup, and restore. The expected container set is explicit at each phase: no containers before the first pull, both services running at active primary/restore checkpoints, and only PostgreSQL running during the online-dump part of backup. Every required container sample must be present and readable; command failure, missing/stopped containers, a non-positive PID, an OOM-killed container, unreadable cgroup files, or a nonzero OOM/limit event aborts the measurement. Each container's cgroup `memory.peak` and `memory.events` retain the actual maximum/OOM counts for that container lifetime; the host samples capture Docker daemon and total-host overhead too.
 
 ```sh
 set -euo pipefail
 set +x
 unset DOCKER_CONTEXT DOCKER_HOST
+test -r /sys/fs/cgroup/cgroup.controllers
 : "${CHATWOOT_TTFB_URL:?Use the identical Chatwoot route recorded in the pre-install baseline}"
 install -d -o root -g root -m 0700 /var/backups/babypark-n8n
 resource_log="/var/backups/babypark-n8n/resource-trial-$(date -u +%Y%m%dT%H%M%SZ).tsv"
@@ -330,6 +331,9 @@ chmod 0600 "$resource_log"
 capture_phase() {
   phase=$1
   scope=${2:-primary}
+  expected=${3:-running}
+  case "$scope" in primary|restore) ;; *) printf '%s\n' 'STOP: invalid Compose scope.' >&2; return 1;; esac
+  case "$expected" in running|absent|postgres-only) ;; *) printf '%s\n' 'STOP: invalid expected service state.' >&2; return 1;; esac
   compose_args=(--env-file /etc/babypark-n8n/n8n.env --project-directory /opt/babypark-n8n -f /opt/babypark-n8n/compose.yaml)
   if test "$scope" = restore; then
     : "${backup_dir:?Set to the exact verified synthetic-only backup generation}"
@@ -343,14 +347,44 @@ capture_phase() {
   cat /proc/loadavg | awk '{print "load\t" $0}' >> "$resource_log"
   awk '{print "diskstats\t" $0}' /proc/diskstats >> "$resource_log"
   for service_name in postgres n8n; do
-    container_id=$(/usr/bin/docker --host=unix:///var/run/docker.sock compose "${compose_args[@]}" ps --all --quiet "$service_name" 2>/dev/null || true)
-    test -n "$container_id" || continue
-    container_pid=$(/usr/bin/docker --host=unix:///var/run/docker.sock inspect --format '{{.State.Pid}}' "$container_id")
-    test "$container_pid" -gt 0 || continue
+    container_list=$(/usr/bin/docker --host=unix:///var/run/docker.sock compose "${compose_args[@]}" ps --all --quiet "$service_name")
+    if test "$expected" = absent; then
+      test -z "$container_list"
+      printf 'container\t%s\tstate\tabsent\n' "$service_name" >> "$resource_log"
+      continue
+    fi
+    if test "$expected" = postgres-only && test "$service_name" = n8n; then
+      test -n "$container_list"
+      case "$container_list" in *$'\n'*) printf '%s\n' 'STOP: expected one stopped n8n container during backup.' >&2; return 1;; esac
+      inspect_state=$(/usr/bin/docker --host=unix:///var/run/docker.sock inspect --format '{{.State.Status}} {{.State.Pid}} {{.State.OOMKilled}}' "$container_list")
+      read -r container_state container_pid oom_killed <<< "$inspect_state"
+      test "$container_state" = exited && test "$container_pid" = 0 && test "$oom_killed" = false
+      printf 'container\t%s\tid\t%s\tstate\tstopped\n' "$service_name" "$container_list" >> "$resource_log"
+      continue
+    fi
+    test -n "$container_list"
+    case "$container_list" in *$'\n'*) printf '%s\n' "STOP: expected one $service_name container, found multiple." >&2; return 1;; esac
+    container_id=$container_list
+    inspect_state=$(/usr/bin/docker --host=unix:///var/run/docker.sock inspect --format '{{.State.Status}} {{.State.Pid}} {{.State.OOMKilled}}' "$container_id")
+    read -r container_state container_pid oom_killed <<< "$inspect_state"
+    test "$container_state" = running
+    [[ "$container_pid" =~ ^[0-9]+$ ]] && test "$container_pid" -gt 0
+    test "$oom_killed" = false
     cgroup_rel=$(awk -F: '$1 == "0" {print $3}' "/proc/$container_pid/cgroup")
+    test -n "$cgroup_rel"
+    case "$cgroup_rel" in /*) ;; *) printf '%s\n' 'STOP: container cgroup path is not absolute.' >&2; return 1;; esac
+    case "/$cgroup_rel/" in */../*) printf '%s\n' 'STOP: container cgroup path is invalid.' >&2; return 1;; esac
     cgroup_dir="/sys/fs/cgroup$cgroup_rel"
     test -r "$cgroup_dir/memory.current" && test -r "$cgroup_dir/memory.peak" && test -r "$cgroup_dir/memory.events"
-    printf 'container\t%s\tid\t%s\tcurrent\t%s\tpeak\t%s\tevents\t%s\n' "$service_name" "$container_id" "$(cat "$cgroup_dir/memory.current")" "$(cat "$cgroup_dir/memory.peak")" "$(tr '\n' ';' < "$cgroup_dir/memory.events")" >> "$resource_log"
+    memory_current=$(cat "$cgroup_dir/memory.current")
+    memory_peak=$(cat "$cgroup_dir/memory.peak")
+    memory_events=$(cat "$cgroup_dir/memory.events")
+    [[ "$memory_current" =~ ^[0-9]+$ && "$memory_peak" =~ ^[0-9]+$ ]]
+    printf 'container\t%s\tid\t%s\tstate\t%s\tcurrent\t%s\tpeak\t%s\tevents\t%s\n' "$service_name" "$container_id" "$container_state" "$memory_current" "$memory_peak" "$(tr '\n' ';' <<< "$memory_events")" >> "$resource_log"
+    for event_name in max oom oom_kill oom_group_kill; do
+      event_value=$(awk -v key="$event_name" '$1 == key {print $2}' <<< "$memory_events")
+      [[ "$event_value" =~ ^[0-9]+$ ]] && test "$event_value" -eq 0
+    done
   done
   ttfb=$(curl --fail --silent --show-error --max-time 5 --output /dev/null --write-out '%{http_code} %{time_starttransfer}' "$CHATWOOT_TTFB_URL")
   printf 'chatwoot_ttfb\t%s\t%s\n' "$phase" "$ttfb" >> "$resource_log"
@@ -358,7 +392,7 @@ capture_phase() {
 capture_phase before-image-pull
 ```
 
-Require cgroup v2 (`test -r /sys/fs/cgroup/cgroup.controllers`) before relying on these measurements. In the same root Bash session, run `capture_phase after-image-pull` after `docker compose pull`; run `capture_phase after-first-start` after PostgreSQL initialization and n8n's initial schema migration; run `capture_phase after-postgres-import` after the sole PG-backed workflow import; run `capture_phase after-restart` after the n8n/PostgreSQL restart; then use `capture_phase before-restore restore`, `capture_phase after-restore-start restore` and `capture_phase after-restore-stop primary` around the clean restore. At each phase also record the exact command exit status and elapsed seconds. The file contains measurements only; keep owner/mode `root:root 0600`. Require host `MemAvailable` to remain at least 1 GiB, no OOM/limit events, no sustained PSI/swap churn, healthy PostgreSQL, and no repeatable Chatwoot TTFB/health regression. A failed threshold means stop only `babypark-n8n.service`, retain this evidence file, and do not resize RAM in this campaign. Include before/after readings for both services' peaks and report the numeric result before any release decision.
+Require cgroup v2 (`test -r /sys/fs/cgroup/cgroup.controllers`) before relying on these measurements. In the same root Bash session, capture `before-image-pull` and `after-image-pull` while both services are expected absent, using `capture_phase before-image-pull primary absent` and `capture_phase after-image-pull primary absent`. Pull with `/usr/bin/docker --host=unix:///var/run/docker.sock compose --env-file /etc/babypark-n8n/n8n.env --project-directory /opt/babypark-n8n -f /opt/babypark-n8n/compose.yaml pull`. Then use `capture_phase after-first-start primary running` after PostgreSQL initialization and n8n's initial schema migration; `capture_phase after-postgres-import primary running` after the sole PG-backed workflow import; `capture_phase after-restart primary running` after the n8n/PostgreSQL restart; `capture_phase before-backup primary running`, `capture_phase during-backup primary postgres-only` after n8n is stopped and PostgreSQL is ready for `pg_dump`, and `capture_phase after-backup primary running` after service restart and health checks. For restore, capture `before-restore primary running`, `after-restore-start restore running`, then `after-restore-stop primary running` only after the restore project and its isolated state are removed and the primary service has been restarted and verified healthy. At each phase also record the exact command exit status and elapsed seconds. The file contains measurements only; keep owner/mode `root:root 0600`. Require host `MemAvailable` to remain at least 1 GiB, no OOM/limit events, no sustained PSI/swap churn, healthy PostgreSQL, and no repeatable Chatwoot TTFB/health regression. A failed threshold means stop only `babypark-n8n.service`, retain this evidence file, and do not resize RAM in this campaign. Include before/after readings for both services' peaks and report the numeric result before any release decision.
 
 ## Independent backup
 
@@ -406,11 +440,11 @@ If any command fails, leave the service stopped, preserve the incomplete generat
 
 Perform this only under the release GO using synthetic state and exactly one unreferenced Basic Auth dummy credential named `BabyPark restore dummy (synthetic)`, username `restore-test-user`, password `NOT-A-REAL-CREDENTIAL-restore-test-2026-11-27`. Do not attach it to a workflow or execute a request. The values are public test fixtures, not real credentials. Use a verified backup from that synthetic-only instance.
 
-1. Set `backup_dir` to one exact verified generation, stop the n8n service, verify the checksum manifest, and require the existing `/var/lib/babypark-n8n/restore-test` path to be absent including as a symlink. Never clear or reuse occupied restore state.
+1. Set `backup_dir` to one exact verified generation. Verify its checksum manifest, PostgreSQL dump listing and user-folder archive before interrupting the primary service. Require `/var/lib/babypark-n8n/restore-test` to be absent including as a symlink. Then confirm the primary service is active, stop `babypark-n8n.service` so its PostgreSQL and n8n containers stop and its bound runtime mount unmounts, and verify the unit is inactive. Never clear or reuse occupied restore state.
 2. Create `/var/lib/babypark-n8n/restore-test` root-owned mode `0700`; create `user` owned by UID/GID 1000 mode `0700`. Create `postgres` with the verified PostgreSQL image UID/GID and mode `0700`. Extract the complete user-folder archive with numeric ownership. The live paths remain untouched.
 3. Start only the restore PostgreSQL service with project name `babypark-n8n-restore`, both Compose files, the matching backup `n8n.env`, and `compose.restore.yaml`. It uses the separate registered `restore-test/postgres` path and no host database port. Wait for `pg_isready`, then restore the custom dump into its newly initialized empty `n8n` database using `pg_restore --exit-on-error --no-owner --username=n8n --dbname=n8n`. Verify PostgreSQL accepts a read-only connection and record schema/table counts without values.
 4. Start the restore n8n service on `127.0.0.1:5679`, after explicitly starting the registered restore tmpfs root and subdirectories. Verify only the two approved workflows exist, expected node counts match, and both are `active=false`. Use the official n8n CLI to export the single dummy credential decrypted only into `/run/babypark-n8n-runtime/restore-test/`, validate its known synthetic name/type/fixture in-memory without printing values, and immediately remove the plaintext file. A key mismatch, export error, wrong fixture or cleanup failure is STOP.
-5. Record both image digests, PostgreSQL restore exit status, table/workflow/credential counts, matching environment-file checksum, dump/archive hashes, permissions and elapsed time. Stop and remove only the restore Compose project; never add `-v`. Remove only the isolated restore directories after recording checksums and confirming the live DB/backups are untouched. If the main service remains stopped, run systemctl stop 'run-babypark\x2dn8n\x2druntime.mount' to clear the isolated restore tmpfs.
+5. Record both image digests, PostgreSQL restore exit status, table/workflow/credential counts, matching environment-file checksum, dump/archive hashes, permissions and elapsed time. Stop and remove only the restore Compose project; never add `-v`. Remove only the isolated restore directories after recording checksums and confirming the live DB/backups are untouched. Restart `babypark-n8n.service`, verify PostgreSQL healthy, n8n running, the matching mount/key preflights passed, and the two approved workflows remain OFF. Capture the post-restore primary sample only after these checks. If cleanup, restart, health or workflow-state verification fails, stop only the n8n service, preserve the evidence, and do not accept the trial.
 
 Restore failure, PostgreSQL corruption/error, key mismatch, wrong workflow state, or inability to decrypt the synthetic credential blocks acceptance. Do not run both projects against one PGDATA or user directory. Retain the restore evidence without recording secret values.
 
@@ -429,6 +463,9 @@ postgres_uid=$(/usr/bin/docker --host=unix:///var/run/docker.sock run --rm --ent
 postgres_gid=$(/usr/bin/docker --host=unix:///var/run/docker.sock run --rm --entrypoint id "$postgres_image" -g postgres)
 [[ "$postgres_uid" =~ ^[0-9]+$ && "$postgres_gid" =~ ^[0-9]+$ ]]
 test ! -e /var/lib/babypark-n8n/restore-test && test ! -L /var/lib/babypark-n8n/restore-test
+systemctl is-active --quiet babypark-n8n.service
+systemctl stop babypark-n8n.service
+test "$(systemctl show --property=ActiveState --value babypark-n8n.service)" = inactive
 mkdir -m 0700 /var/lib/babypark-n8n/restore-test
 chown root:root /var/lib/babypark-n8n/restore-test
 install -d -o 1000 -g 1000 -m 0700 /var/lib/babypark-n8n/restore-test/user
@@ -468,7 +505,51 @@ test ! -e "$plaintext"
 trap - EXIT HUP INT TERM
 ```
 
-After the checks, stop only the restore project with the matching files and without `-v`, remove only its registered restore targets, and clear the temporary tmpfs path. If the main service remains stopped, stop the runtime mount after the restore project is down. The original live PostgreSQL and user-state paths are not cleanup targets.
+After recording restore evidence, stop and remove only the restore project and clean its two exact registered scratch locations. This separate command block contains no volume removal and refuses unknown/symlinked entries. It rechecks the exact tmpfs mount before removing runtime scratch, then restarts and checks only the primary n8n service. If a command fails, stop only `babypark-n8n.service` and the `babypark-n8n-restore` Compose project, preserve evidence and remaining isolated state for inspection, and do not continue cleanup.
+
+```sh
+set -euo pipefail
+set +x
+unset DOCKER_CONTEXT DOCKER_HOST
+backup_dir=/var/backups/babypark-n8n/REPLACE_WITH_VERIFIED_GENERATION
+restore_args=(--env-file "$backup_dir/n8n.env" -p babypark-n8n-restore -f /opt/babypark-n8n/compose.yaml -f /opt/babypark-n8n/compose.restore.yaml)
+restore_state=/var/lib/babypark-n8n/restore-test
+restore_runtime=/run/babypark-n8n-runtime/restore-test
+plaintext="$restore_runtime/decrypted-credentials.json"
+test "$restore_state" = /var/lib/babypark-n8n/restore-test
+test "$restore_runtime" = /run/babypark-n8n-runtime/restore-test
+test ! -e "$plaintext" && test ! -L "$plaintext"
+mount_row=$(findmnt --mountpoint /run/babypark-n8n-runtime --types tmpfs --noheadings --bytes --output FSTYPE,OPTIONS,SIZE)
+set -f; set -- $mount_row
+test "$#" -eq 3 && test "$1" = tmpfs && test "$3" = 134217728
+opts=,$2,
+for required in rw uid=1000 gid=1000 noswap nodev nosuid noexec; do case "$opts" in *,"$required",*) ;; *) exit 1;; esac; done
+case "$opts" in *,mode=700,*|*,mode=0700,*) ;; *) exit 1;; esac
+/usr/bin/docker --host=unix:///var/run/docker.sock compose "${restore_args[@]}" down --remove-orphans
+remaining=$(/usr/bin/docker --host=unix:///var/run/docker.sock compose "${restore_args[@]}" ps --all --quiet)
+test -z "$remaining"
+test -d "$restore_state" && test ! -L "$restore_state"
+test -d "$restore_state/user" && test ! -L "$restore_state/user"
+test -d "$restore_state/postgres" && test ! -L "$restore_state/postgres"
+state_entries=$(find "$restore_state" -mindepth 1 -maxdepth 1 -printf '%f\n' | sort)
+test "$state_entries" = $'postgres\nuser'
+test -d "$restore_runtime" && test ! -L "$restore_runtime"
+test -d "$restore_runtime/storage" && test ! -L "$restore_runtime/storage"
+test -d "$restore_runtime/events" && test ! -L "$restore_runtime/events"
+runtime_entries=$(find "$restore_runtime" -mindepth 1 -maxdepth 1 -printf '%f\n' | sort)
+test "$runtime_entries" = $'events\nstorage'
+rm -r -- "$restore_state/postgres" "$restore_state/user"
+rmdir -- "$restore_state"
+rm -r -- "$restore_runtime/storage" "$restore_runtime/events"
+rmdir -- "$restore_runtime"
+systemctl start babypark-n8n.service
+systemctl is-active --quiet babypark-n8n.service
+/usr/bin/docker --host=unix:///var/run/docker.sock compose --env-file /etc/babypark-n8n/n8n.env --project-directory /opt/babypark-n8n -f /opt/babypark-n8n/compose.yaml ps --all
+/usr/bin/docker --host=unix:///var/run/docker.sock compose --env-file /etc/babypark-n8n/n8n.env --project-directory /opt/babypark-n8n -f /opt/babypark-n8n/compose.yaml exec -T postgres pg_isready -U n8n -d n8n
+curl --fail --silent --show-error --max-time 5 http://127.0.0.1:5678/ >/dev/null
+```
+
+After this block, verify PostgreSQL health and the exact workflow identities, node counts and inactive states in the local UI/database. Only then run `capture_phase after-restore-stop primary running`. The original live PostgreSQL and user-state paths are not cleanup targets.
 
 ## Upgrade, rollback, and Hetzner move
 

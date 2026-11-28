@@ -26,6 +26,13 @@ function blockContaining(fragment) {
   return block;
 }
 
+function capturePhaseFunction() {
+  const start = runbook.indexOf('capture_phase() {');
+  const end = runbook.indexOf('\n}', start);
+  assert.ok(start >= 0 && end > start, 'resource capture function is present');
+  return runbook.slice(start, end + 2);
+}
+
 function withTempDir(callback) {
   const temp = mkdtempSync(join(tmpdir(), 'babypark-n8n-release-test-'));
   try {
@@ -299,9 +306,8 @@ test('stopping n8n stops and clears its runtime tmpfs while restore remounts exp
   assert.match(runtimeMount, /^PartOf=babypark-n8n\.service$/m);
   assert.ok(runbook.includes('normal service stop clears execution/event data from tmpfs'));
   const mountStartCommand = "systemctl start '" + runtimeMountName + "'";
-  const mountStopCommand = "systemctl stop '" + runtimeMountName + "'";
   const restoreMountStart = runbook.indexOf(mountStartCommand);
-  const restoreMountCheck = runbook.lastIndexOf('findmnt --mountpoint /run/babypark-n8n-runtime --types tmpfs');
+  const restoreMountCheck = runbook.indexOf('findmnt --mountpoint /run/babypark-n8n-runtime --types tmpfs', restoreMountStart);
   const restoreScratchCreate = runbook.indexOf('install -d -o 1000 -g 1000 -m 0700 /run/babypark-n8n-runtime/restore-test\n', restoreMountCheck);
   const restoreScratchSubdirs = runbook.indexOf('install -d -o 1000 -g 1000 -m 0700 /run/babypark-n8n-runtime/restore-test/storage', restoreScratchCreate);
   const restoreScratchModeCheck = runbook.indexOf('test \"$(stat -c \'%u:%g:%a\' \"$path\")\" = 1000:1000:700', restoreScratchSubdirs);
@@ -311,7 +317,10 @@ test('stopping n8n stops and clears its runtime tmpfs while restore remounts exp
   assert.ok(restoreScratchCreate < restoreScratchSubdirs);
   assert.ok(restoreScratchSubdirs < restoreScratchModeCheck);
   assert.ok(restoreScratchModeCheck < restoreContainerStart);
-  assert.ok(runbook.includes(mountStopCommand));
+  assert.match(service, /BindsTo=run-babypark\\x2dn8n\\x2druntime\.mount/);
+  const restoreSection = runbook.indexOf('## Clean PostgreSQL and encryption-key restore');
+  const primaryStop = runbook.indexOf('systemctl stop babypark-n8n.service', restoreSection);
+  assert.ok(primaryStop >= 0 && primaryStop < restoreMountStart);
 });
 
 test('restore start rejects a missing runtime tmpfs option or a size mismatch', () => {
@@ -730,6 +739,148 @@ test('restore checks only the synthetic credential through the registered tmpfs'
   assert.match(runbook, /bpAiSilenceWatchdogNov23/);
 });
 
+test('resource capture fails closed on missing, failed, stopped, and OOM samples', () => {
+  const functionSource = capturePhaseFunction();
+  assert.doesNotMatch(functionSource, /\|\|\s*true/);
+  assert.ok(functionSource.includes('${compose_args[@]}" ps --all --quiet'));
+  assert.match(functionSource, /State\.Status\}\} \{\{\.State\.Pid\}\} \{\{\.State\.OOMKilled\}\}/);
+  assert.match(functionSource, /for event_name in max oom oom_kill oom_group_kill/);
+
+  withTempDir((temp) => {
+    const proc = join(temp, 'proc');
+    const cgroupRoot = join(temp, 'cgroup');
+    const fakeBin = join(temp, 'bin');
+    const resourceLog = join(temp, 'resource.tsv');
+    mkdirSync(fakeBin);
+    for (const [file, body] of [
+      ['meminfo', 'MemAvailable: 123456 kB\n'],
+      ['pressure/memory', 'some avg10=0.00 avg60=0.00 avg300=0.00 total=0\n'],
+      ['vmstat', 'pswpin 0\npswpout 0\n'],
+      ['stat', 'cpu 1 2 3 4 5 6 7 8 9 10\n'],
+      ['loadavg', '0 0 0 1/1 1\n'],
+      ['diskstats', '8 0 sda 0 0 0 0 0 0 0 0 0 0 0\n'],
+    ]) {
+      const path = join(proc, file);
+      mkdirSync(path.slice(0, path.lastIndexOf('/')), { recursive: true });
+      writeFileSync(path, body);
+    }
+    for (const [id, pid] of [['postgres-id', '111'], ['n8n-id', '222']]) {
+      const rel = `/docker/${id}`;
+      const cgroupDir = join(cgroupRoot, rel);
+      mkdirSync(cgroupDir, { recursive: true });
+      mkdirSync(join(proc, pid), { recursive: true });
+      writeFileSync(join(proc, pid, 'cgroup'), `0::${rel}\n`);
+      writeFileSync(join(cgroupDir, 'memory.current'), '1000\n');
+      writeFileSync(join(cgroupDir, 'memory.peak'), '2000\n');
+      writeFileSync(join(cgroupDir, 'memory.events'), 'low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0\n');
+    }
+    writeExecutable(join(fakeBin, 'docker'), `#!/bin/bash
+test "$1" = --host=unix:///var/run/docker.sock || exit 31
+shift
+case "$1" in
+  compose)
+    case "$TEST_DOCKER_FAIL" in ps) exit 42;; esac
+    case " $* " in *" ps --all --quiet "*)
+      service_name="${'${!#}'}"
+      if [ "$TEST_EXPECT_ABSENT" = yes ] || [ "$TEST_MISSING" = "$service_name" ]; then exit 0; fi
+      if [ "$TEST_MULTIPLE" = "$service_name" ]; then printf '%s\\n' "${'${service_name}'}-id-a" "${'${service_name}'}-id-b"; exit 0; fi
+      printf '%s\\n' "${'${service_name}'}-id"
+      exit 0;;
+    esac
+    exit 43;;
+  inspect)
+    id="${'${!#}'}"
+    service_name="${'${id%-id}'}"
+    status=running; pid=111; oom=false
+    [ "$service_name" = n8n ] && pid=222
+    [ "$TEST_STOPPED" = "$service_name" ] && { status=exited; pid=0; }
+    [ "$TEST_OOM_KILLED" = "$service_name" ] && oom=true
+    printf '%s %s %s\\n' "$status" "$pid" "$oom"
+    exit 0;;
+  *) exit 44;;
+esac
+`);
+    writeExecutable(join(fakeBin, 'curl'), '#!/bin/sh\nprintf "200 0.010\\n"\n');
+    let script = functionSource + '\ncapture_phase resource-test primary "$TEST_EXPECTED"\n';
+    script = localSocketDocker(script)
+      .replaceAll('/proc', proc)
+      .replaceAll('/sys/fs/cgroup', cgroupRoot);
+    const baseEnv = {
+      PATH: `${fakeBin}:${process.env.PATH}`,
+      resource_log: resourceLog,
+      CHATWOOT_TTFB_URL: 'http://127.0.0.1/',
+      TEST_EXPECTED: 'running',
+      TEST_EXPECT_ABSENT: '',
+      TEST_DOCKER_FAIL: '',
+      TEST_MISSING: '',
+      TEST_STOPPED: '',
+      TEST_OOM_KILLED: '',
+      TEST_MULTIPLE: '',
+    };
+    const good = runBash(script, baseEnv);
+    assert.equal(good.status, 0, good.stderr);
+    assert.match(readFileSync(resourceLog, 'utf8'), /container\tpostgres\tid\tpostgres-id/);
+    assert.match(readFileSync(resourceLog, 'utf8'), /container\tn8n\tid\tn8n-id/);
+
+    const failedCases = [
+      { TEST_EXPECTED: 'running', TEST_MISSING: 'postgres' },
+      { TEST_EXPECTED: 'running', TEST_DOCKER_FAIL: 'ps' },
+      { TEST_EXPECTED: 'running', TEST_STOPPED: 'n8n' },
+      { TEST_EXPECTED: 'running', TEST_OOM_KILLED: 'n8n' },
+      { TEST_EXPECTED: 'running', TEST_MULTIPLE: 'postgres' },
+      { TEST_EXPECTED: 'absent', TEST_EXPECT_ABSENT: '' },
+    ];
+    for (const overrides of failedCases) {
+      const result = runBash(script, { ...baseEnv, ...overrides });
+      assert.notEqual(result.status, 0, JSON.stringify(overrides));
+    }
+
+    const oomDir = join(cgroupRoot, 'docker', 'n8n-id');
+    writeFileSync(join(oomDir, 'memory.events'), 'low 0\nhigh 0\nmax 0\noom 1\noom_kill 1\noom_group_kill 0\n');
+    const oomEvent = runBash(script, baseEnv);
+    assert.notEqual(oomEvent.status, 0);
+
+    const peakFile = join(cgroupRoot, 'docker', 'postgres-id', 'memory.peak');
+    rmSync(peakFile);
+    const missingCgroupMetric = runBash(script, baseEnv);
+    assert.notEqual(missingCgroupMetric.status, 0);
+    writeFileSync(peakFile, '2000\n');
+
+    const noContainers = runBash(script, { ...baseEnv, TEST_EXPECTED: 'absent', TEST_EXPECT_ABSENT: 'yes' });
+    assert.equal(noContainers.status, 0, noContainers.stderr);
+
+    const backupMode = runBash(script, { ...baseEnv, TEST_EXPECTED: 'postgres-only', TEST_STOPPED: 'n8n' });
+    assert.equal(backupMode.status, 0, backupMode.stderr);
+  });
+});
+
+test('Docker pull pins the local socket and restore cleanup returns to primary n8n', () => {
+  assert.match(runbook, /\/usr\/bin\/docker --host=unix:\/\/\/var\/run\/docker\.sock compose --env-file \/etc\/babypark-n8n\/n8n\.env --project-directory \/opt\/babypark-n8n -f \/opt\/babypark-n8n\/compose\.yaml pull/);
+  const resourceSetup = runbook.indexOf('Before a positive start, jump to **Record resource peaks');
+  const positiveStart = runbook.indexOf('Then perform one positive start');
+  assert.ok(resourceSetup > 0 && resourceSetup < positiveStart);
+  const restoreSection = runbook.indexOf('## Clean PostgreSQL and encryption-key restore');
+  const stopPrimary = runbook.indexOf('systemctl stop babypark-n8n.service', restoreSection);
+  const backupVerify = runbook.indexOf('sha256sum -c SHA256SUMS >/dev/null', restoreSection);
+  const restoreStart = runbook.indexOf('up -d postgres', stopPrimary);
+  const restoreDown = runbook.indexOf('compose "${restore_args\[@\]}" down --remove-orphans');
+  const stateDelete = runbook.indexOf('rm -r -- "$restore_state/postgres" "$restore_state/user"');
+  const runtimeDelete = runbook.indexOf('rm -r -- "$restore_runtime/storage" "$restore_runtime/events"');
+  const primaryStart = runbook.indexOf('systemctl start babypark-n8n.service', restoreDown);
+  assert.ok(stopPrimary >= 0 && restoreStart > stopPrimary);
+  assert.ok(backupVerify < stopPrimary);
+  assert.ok(restoreDown > restoreStart);
+  assert.ok(stateDelete > restoreDown && runtimeDelete > stateDelete && primaryStart > runtimeDelete);
+  assert.match(runbook.slice(restoreDown, primaryStart), /test -z "\$remaining"/);
+  assert.match(runbook.slice(restoreDown, stateDelete), /findmnt --mountpoint \/run\/babypark-n8n-runtime --types tmpfs/);
+  assert.match(runbook.slice(restoreDown, stateDelete), /state_entries=\$\(find "\$restore_state"/);
+  assert.match(runbook.slice(restoreDown, runtimeDelete), /runtime_entries=\$\(find "\$restore_runtime"/);
+  assert.doesNotMatch(runbook.slice(restoreDown, primaryStart), /rm\s+-rf/);
+  assert.doesNotMatch(runbook.slice(restoreDown, primaryStart), /compose[^\n]*\s-v(?:\s|$)/);
+  assert.match(runbook.slice(primaryStart, primaryStart + 500), /systemctl is-active --quiet babypark-n8n\.service/);
+  assert.ok(runbook.indexOf('exec -T postgres pg_isready -U n8n -d n8n', primaryStart) > primaryStart);
+});
+
 test('backup collision aborts without changing a verified generation', () => {
   withTempDir((temp) => {
     const backupRoot = join(temp, 'backups');
@@ -817,6 +968,7 @@ test('restore refuses an occupied durable target without changing its files', ()
     mkdirSync(restoreTarget);
     writeFileSync(join(restoreTarget, 'sentinel'), 'preserve this unknown state');
     const fakeBin = fakeDockerBin(temp, composeBackupDockerStub());
+    writeExecutable(join(fakeBin, 'systemctl'), '#!/bin/sh\ncase "$1" in is-active) exit 0;; stop) exit 0;; show) printf inactive;; *) exit 2;; esac\n');
     const script = restorePreflightBlock()
       .replaceAll('/var/lib/babypark-n8n/restore-test', restoreTarget)
       .replace('REPLACE_WITH_VERIFIED_GENERATION', backupDir);
@@ -838,6 +990,7 @@ test('corrupt restore archive aborts before creating restore state', () => {
     writeFileSync(join(backupDir, 'SHA256SUMS'), hashes);
     const restoreTarget = join(temp, 'restore-test');
     const fakeBin = fakeDockerBin(temp, composeBackupDockerStub());
+    writeExecutable(join(fakeBin, 'systemctl'), '#!/bin/sh\ncase "$1" in is-active) exit 0;; stop) exit 0;; show) printf inactive;; *) exit 2;; esac\n');
     const script = restorePreflightBlock()
       .replaceAll('/var/lib/babypark-n8n/restore-test', restoreTarget)
       .replace('REPLACE_WITH_VERIFIED_GENERATION', backupDir);
