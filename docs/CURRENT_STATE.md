@@ -3,9 +3,63 @@
 Status: EVIDENCE — operational/current-state record; not normative contract authority.
 Applies to: repository-wide operational and campaign state tracking.
 Supersedes: `docs/CURRENT_STATE.md` at canonical main `a45a8644e05df2584a2b75f2a3b47446811ae984`.
-Last updated: 2026-11-06
+Last updated: 2026-11-28
 Owner: BabyPark
 Source of truth for operational facts: production runtime + verified repository evidence.
+
+## 2026-11-28 — Draft PR #174 stock-vendor governance amendment (NOT MERGED)
+
+This is the current campaign-boundary snapshot. It is not normative policy and it
+does not authorize a merge, a production write, or a change to Draft PR #173,
+Chatwoot, or Viber.
+
+The campaign is one docs change on branch
+`docs/stock-vendor-production-first-20261128`, based on canonical main
+`2ae02a0ea8898f5d5b341fca6ed230a34fecce58`. Exact HEAD and tree are the git
+commit that contains this snapshot. Do not treat any future merge SHA as known.
+
+The latest proposal adds §1.5 STOCK-OPS: installation, native
+relocation/migration, vendor-native workflow import and ordinary vendor
+upgrades are routine operator actions, equivalent to using the product's
+documented "Update" control or supported CLI. There is no artificial duration
+limit or separate "development after a deadline" classification.
+The operator uses one sequence: read the vendor requirements, compare them
+with the recorded functions and the host, apply any ordinary preparation those
+requirements state, take the backup, run the official update or import command,
+check the recorded functions, and continue work. Refusing that official command
+because an unattended updater is forbidden is a violation of the proposal.
+Historical n8n worker tasks, alternatives scans, synthetic retention matrices,
+HEAVY/two-pass ZERO-BLOCKER checks and repeated 22+6 import trials cannot
+become new prerequisites for an unchanged vendor action.
+A concrete missing access/resource/backup is solved with a supported operator
+step, not a new custom-code/architecture-research campaign. Actual required
+protections remain; do not claim a false PASS or disturb Chatwoot/Viber.
+
+The proposal records the owner's stock-product rule: study official functions
+and terms of use; do not security-test vendor products; install a suitable
+official product on the production target; update by reading the vendor's
+requirements and comparing only with the product's already accepted function
+record. Path B is only when the documents explicitly restrict, remove, rename, or incompatibly change a function named in that record; change what BabyPark is permitted to do; state that the impact on a recorded function is unknown; or require a manual migration or rehearsal before the new version can run.
+That path is
+an automatic test-installation update, a focused functional check, then an
+operator-controlled production update of the identical release.
+A notice that says only that terms were updated, and a license notice that
+does not change permitted use, stay on Path A.
+All other official releases, including a short changelog, silence on a recorded
+function and a vendor-managed ordinary database/API/webhook migration, use
+Path A: official backup, operator-controlled production update and a focused
+check of the recorded functions, automated/native where available.
+Neither path triggers HEAVY, two-pass ZERO-BLOCKER review or vendor security
+research; production is never updated unattended;
+use official nodes, including official n8n nodes with Chatwoot's official API,
+as stock configuration; write BabyPark code only when stock cannot do the job
+or is very inconvenient or slow, and keep that code outside the vendor image
+with an update-instruction record.
+
+Until a separate exact-tree HEAVY closure and a new owner merge GO, the
+Agreement on canonical main remains the only governance authority. After that
+GO, n8n delivery stays a separate campaign. No production install is authorized
+here.
 
 ## 2026-11-06 — PR #166 compact-viewport launcher candidate (NOT DEPLOYED)
 
