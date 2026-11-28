@@ -23,8 +23,11 @@ relocation/migration, vendor-native workflow import and ordinary vendor
 upgrades are routine operator actions, equivalent to using the product's
 documented "Update" control or supported CLI. There is no artificial duration
 limit or separate "development after a deadline" classification.
-The operator uses the official commands, existing recoverable backup/key,
-required configuration and a short check of already accepted functions.
+The operator uses one sequence: read the vendor requirements, compare them
+with the recorded functions and the host, apply any ordinary preparation those
+requirements state, take the backup, run the official update or import command,
+check the recorded functions, and continue work. Refusing that official command
+because an unattended updater is forbidden is a violation of the proposal.
 Historical n8n worker tasks, alternatives scans, synthetic retention matrices,
 HEAVY/two-pass ZERO-BLOCKER checks and repeated 22+6 import trials cannot
 become new prerequisites for an unchanged vendor action.
