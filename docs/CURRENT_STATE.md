@@ -3,9 +3,36 @@
 Status: EVIDENCE — operational/current-state record; not normative contract authority.
 Applies to: repository-wide operational and campaign state tracking.
 Supersedes: `docs/CURRENT_STATE.md` at canonical main `a45a8644e05df2584a2b75f2a3b47446811ae984`.
-Last updated: 2026-11-06
+Last updated: 2026-11-28
 Owner: BabyPark
 Source of truth for operational facts: production runtime + verified repository evidence.
+
+## 2026-11-28 — Draft PR #174 stock-vendor governance amendment (NOT MERGED)
+
+This is the current campaign-boundary snapshot. It is not normative policy and it
+does not authorize a merge, a production write, or a change to Draft PR #173,
+Chatwoot, or Viber.
+
+The campaign is one docs change on branch
+`docs/stock-vendor-production-first-20261128`, based on canonical main
+`2ae02a0ea8898f5d5b341fca6ed230a34fecce58`. Exact HEAD and tree are the git
+commit that contains this snapshot. Do not treat any future merge SHA as known.
+
+The proposal records the owner's stock-product rule: study official functions
+and terms of use; do not security-test vendor products; install a suitable
+official product on the production target; update by reading the vendor's
+requirements, backing up, and applying the official update when those
+requirements state no restriction, or by an automatic test-installation check
+and a controlled production update of the same release when they leave doubt;
+use official nodes, including official n8n nodes with Chatwoot's official API,
+as stock configuration; write BabyPark code only when stock cannot do the job
+or is very inconvenient or slow, and keep that code outside the vendor image
+with an update-instruction record.
+
+Until a separate exact-tree HEAVY closure and a new owner merge GO, the
+Agreement on canonical main remains the only governance authority. After that
+GO, n8n delivery stays a separate campaign. No production install is authorized
+here.
 
 ## 2026-11-06 — PR #166 compact-viewport launcher candidate (NOT DEPLOYED)
 
