@@ -1,4 +1,12 @@
 services:
+  postgres:
+    volumes: !override
+      - type: bind
+        source: /var/lib/babypark-n8n/restore-test/postgres
+        target: /var/lib/postgresql/data
+        bind:
+          create_host_path: false
+
   n8n:
     ports: !override
       - target: 5678
@@ -8,9 +16,14 @@ services:
     environment:
       N8N_STORAGE_PATH: /vol/restore-test/storage
       N8N_EVENTBUS_LOGWRITER_LOGFULLPATH: /vol/restore-test/events/n8nEventLog.log
-    volumes:
+    volumes: !override
       - type: bind
-        source: /var/lib/babypark-n8n/restore-test
+        source: /var/lib/babypark-n8n/restore-test/user
         target: /home/node/.n8n
+        bind:
+          create_host_path: false
+      - type: bind
+        source: /run/babypark-n8n-runtime
+        target: /vol
         bind:
           create_host_path: false

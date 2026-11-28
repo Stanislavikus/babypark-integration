@@ -15,6 +15,7 @@ const runtimeMountName = readdirSync(new URL('deploy/n8n/systemd/', root)).find(
 const runtimeMount = readFileSync(join(fileURLToPath(new URL('deploy/n8n/systemd/', root)), runtimeMountName), 'utf8');
 const runbook = readFileSync(new URL('docs/N8N_RELEASE_RUNBOOK_20261127.md', root), 'utf8');
 const traceability = readFileSync(new URL('docs/N8N_COHOST_IMPLEMENTATION_TRACEABILITY_20261127.md', root), 'utf8');
+const optionsScan = readFileSync(new URL('docs/N8N_COHOST_OPTIONS_SCAN_20261127.md', root), 'utf8');
 const sqliteCompatibility = readFileSync(new URL('docs/N8N_SQLITE_BUSY_TIMEOUT_COMPATIBILITY_20261128.md', root), 'utf8');
 const normalizedRunbook = runbook.replace(/^ {3}/gm, '');
 const shellBlocks = [...normalizedRunbook.matchAll(/```sh\n([\s\S]*?)\n```/g)].map((match) => match[1]);
@@ -47,6 +48,17 @@ function runBash(script, env = {}) {
   });
 }
 
+function localSocketDocker(script) {
+  return script.replaceAll('/usr/bin/docker', 'docker');
+}
+
+function fakeDockerBin(dir, body) {
+  const fakeBin = join(dir, 'bin');
+  mkdirSync(fakeBin, { recursive: true });
+  writeExecutable(join(fakeBin, 'docker'), body);
+  return fakeBin;
+}
+
 function systemdExpandedExecStartPreLines() {
   return service.split('\n')
     .filter((line) => line.startsWith('ExecStartPre=/bin/sh -ec '))
@@ -77,10 +89,11 @@ function prepareSyntheticBackup(dir) {
   const backupDir = join(dir, 'backup', 'verified');
   mkdirSync(userDir, { recursive: true });
   mkdirSync(backupDir, { recursive: true });
-  writeFileSync(join(userDir, 'database.sqlite'), 'synthetic sqlite bytes');
-  writeFileSync(join(backupDir, 'n8n.env'), 'N8N_ENCRYPTION_KEY=' + 'a'.repeat(64) + '\n');
+  writeFileSync(join(userDir, 'config'), 'synthetic n8n settings');
+  writeFileSync(join(backupDir, 'n8n.pgdump'), 'synthetic PostgreSQL custom dump bytes');
+  writeFileSync(join(backupDir, 'n8n.env'), 'N8N_ENCRYPTION_KEY=' + 'a'.repeat(64) + '\nPOSTGRES_PASSWORD=' + 'b'.repeat(64) + '\n');
   execFileSync('tar', ['-czf', join(backupDir, 'user-folder.tar.gz'), '-C', userDir, '.']);
-  execFileSync('sha256sum', [join(backupDir, 'user-folder.tar.gz'), join(backupDir, 'n8n.env')], {
+  execFileSync('sha256sum', [join(backupDir, 'n8n.pgdump'), join(backupDir, 'user-folder.tar.gz'), join(backupDir, 'n8n.env')], {
     encoding: 'utf8',
     stdio: ['ignore', 'pipe', 'inherit'],
   }).trim().split('\n').forEach((line) => {
@@ -89,6 +102,33 @@ function prepareSyntheticBackup(dir) {
     writeFileSync(join(backupDir, 'SHA256SUMS'), `${digest}  ${name}\n`, { flag: 'a' });
   });
   return backupDir;
+}
+
+function composeBackupDockerStub() {
+  return `#!/bin/sh
+[ "$1" = --host=unix:///var/run/docker.sock ] && shift
+case "$1" in
+  compose)
+    case " $* " in
+      *" pg_dump "*) printf 'synthetic PostgreSQL custom dump bytes\\n';;
+      *" pg_restore "*) printf 'synthetic pg_restore list\\n';;
+    esac
+    exit 0
+    ;;
+  run)
+    case " $* " in *" -u postgres "*|*" -g postgres "*) printf '999\\n';; *" pg_restore "*) printf 'synthetic pg_restore list\\n';; esac
+    exit 0
+    ;;
+  *) exit 0;;
+esac
+`;
+}
+
+function restorePreflightBlock() {
+  const block = blockContaining('backup_dir=/var/backups/babypark-n8n/REPLACE_WITH_VERIFIED_GENERATION');
+  const stateCreate = block.indexOf('mkdir -m 0700 /var/lib/babypark-n8n/restore-test');
+  assert.ok(stateCreate > 0, 'restore target creation is present');
+  return localSocketDocker(block.slice(0, stateCreate));
 }
 
 test('n8n runtime directories are created only after the verified mount and key checks', () => {
@@ -107,14 +147,18 @@ test('n8n runtime directories are created only after the verified mount and key 
 test('systemd-expanded mount and key guards preserve shell printf conversions', () => {
   const sourceLines = service.split('\n').filter((line) => line.startsWith('ExecStartPre='));
   const commands = systemdExpandedExecStartPreLines();
-  assert.equal(sourceLines.length, 4);
-  assert.equal(commands.length, 3);
+  assert.equal(sourceLines.length, 5);
+  assert.equal(commands.length, 4);
   assert.match(sourceLines[0], /--bytes --output FSTYPE,OPTIONS,SIZE/);
   assert.match(sourceLines[2], /printf "%%s\\n" "\$\$N8N_ENCRYPTION_KEY"/);
   assert.match(commands[0], /test "\$1" = tmpfs/);
   assert.match(commands[0], /test "\$3" = 134217728/);
   assert.match(commands[0], /uid=1000 gid=1000 noswap nodev nosuid noexec/);
   assert.match(commands[2], /printf "%s\\n" "\$N8N_ENCRYPTION_KEY"/);
+  assert.match(commands[2], /POSTGRES_PASSWORD/);
+  assert.match(commands[2], /test "\$N8N_ENCRYPTION_KEY" != "\$POSTGRES_PASSWORD"/);
+  assert.match(commands[3], /--host=unix:\/\/\/var\/run\/docker\.sock/);
+  assert.match(service, /UnsetEnvironment=DOCKER_CONTEXT DOCKER_HOST/);
 
   withTempDir((temp) => {
     const findmnt = join(temp, 'findmnt');
@@ -139,7 +183,7 @@ test('systemd-expanded mount and key guards preserve shell printf conversions', 
     }
   });
 
-  const validKey = runSystemdExpandedPre(commands[2], { N8N_ENCRYPTION_KEY: 'a'.repeat(64) });
+  const validKey = runSystemdExpandedPre(commands[2], { N8N_ENCRYPTION_KEY: 'a'.repeat(64), POSTGRES_PASSWORD: 'b'.repeat(64) });
   const invalidKey = runSystemdExpandedPre(commands[2], { N8N_ENCRYPTION_KEY: 'malformed' });
   assert.equal(validKey.status, 0, validKey.stderr);
   assert.notEqual(invalidKey.status, 0);
@@ -167,18 +211,48 @@ test('systemd-expanded mount and key guards preserve shell printf conversions', 
 });
 
 test('primary and restore Compose services inherit exactly one internal network', () => {
-  assert.match(compose, /services:\n  n8n:[\s\S]*?    networks:\n      - n8n_private\n/);
+  assert.match(compose, /services:\n  postgres:[\s\S]*?    networks:\n      - n8n_private[\s\S]*?\n  n8n:[\s\S]*?    networks:\n      - n8n_private\n/);
   assert.match(compose, /\nnetworks:\n  n8n_private:\n    internal: true\n?$/);
   assert.doesNotMatch(compose, /network_mode:|external:\s*true/);
   assert.doesNotMatch(restoreCompose, /networks:|network_mode:/);
   assert.match(runbook, /exactly one service network marked `internal: true`/);
-  assert.match(runbook, /docker network inspect --format '\{\{\.Internal\}\}' "\$network_id"\)" = true/);
-  assert.match(runbook, /docker inspect --format '\{\{len \.NetworkSettings\.Networks\}\}' "\$container_id"\)" = 1/);
+  assert.match(runbook, /docker --host=unix:\/\/\/var\/run\/docker\.sock network inspect --format '\{\{\.Internal\}\}' "\$network_id"\)" = true/);
+  assert.match(runbook, /docker --host=unix:\/\/\/var\/run\/docker\.sock inspect --format '\{\{len \.NetworkSettings\.Networks\}\}' "\$container_id"\)" = 1/);
   assert.match(runbook, /curl --fail --silent --show-error --max-time 5 --output \/dev\/null http:\/\/127\.0\.0\.1:5678\//);
   assert.match(runbook, /check\("203\.0\.113\.1", 4\), check\("2001:db8::1", 6\)/);
   assert.match(runbook, /\["ENETUNREACH", "EHOSTUNREACH", "EAFNOSUPPORT"\]/);
   assert.match(runbook, /Do not replace this check with a live URL or a real customer\/partner endpoint/);
   assert.match(traceability, /exactly one `internal: true` project bridge/);
+});
+
+test('official PostgreSQL is independent, private, capped and separately restorable', () => {
+  const postgresService = compose.slice(compose.indexOf('  postgres:'), compose.indexOf('  n8n:'));
+  assert.match(compose, /image: postgres:16\.16@sha256:ce81150802644ddfac1db4da9e63be6f2a3818aa6ee98a7a28838aeea65dc37a/);
+  assert.match(compose, /DB_TYPE: postgresdb/);
+  assert.match(compose, /DB_POSTGRESDB_HOST: postgres/);
+  assert.match(compose, /source: \/var\/lib\/babypark-n8n\/postgres\n        target: \/var\/lib\/postgresql\/data/);
+  assert.match(compose, /source: \/var\/lib\/babypark-n8n\/user\n        target: \/home\/node\/\.n8n/);
+  assert.match(compose, /POSTGRES_PASSWORD: \$\{POSTGRES_PASSWORD:\?Load POSTGRES_PASSWORD/);
+  assert.match(compose, /N8N_ENCRYPTION_KEY: \$\{N8N_ENCRYPTION_KEY:\?Load N8N_ENCRYPTION_KEY/);
+  assert.match(compose, /mem_limit: 512m\n    memswap_limit: 512m\n    cpus: 0\.5/);
+  assert.match(compose, /mem_limit: 1200m\n    memswap_limit: 1200m\n    cpus: 1\.0/);
+  assert.match(compose, /logging:\n      driver: none/);
+  assert.doesNotMatch(postgresService, /\n    ports:/);
+  assert.match(compose, /host_ip: 127\.0\.0\.1/);
+  assert.match(restoreCompose, /source: \/var\/lib\/babypark-n8n\/restore-test\/postgres/);
+  assert.match(restoreCompose, /source: \/var\/lib\/babypark-n8n\/restore-test\/user/);
+  assert.match(restoreCompose, /published: "5679"/);
+});
+
+test('alternatives scan records dated official activity, support and license evidence', () => {
+  assert.match(optionsScan, /Candidate support and current activity evidence/);
+  assert.match(optionsScan, /0\.94\.0.*Latest.*2026-11-25/);
+  assert.match(optionsScan, /5\.0\.10.*maintenance release.*2026-11-17/);
+  assert.match(optionsScan, /v4\.20\.2.*published 2026-11-28/);
+  assert.match(optionsScan, /Signed official `2\.49\.8` release published 2026-11-27/);
+  assert.match(optionsScan, /Community core is MIT-licensed/);
+  assert.match(optionsScan, /Official product-update page lists a 2026-09-24 update/);
+  assert.match(optionsScan, /PostgreSQL 16 as a supported compatibility major/);
 });
 
 test('synthetic external-egress check passes only for an explicit no-route result', () => {
@@ -228,15 +302,13 @@ test('stopping n8n stops and clears its runtime tmpfs while restore remounts exp
   const mountStopCommand = "systemctl stop '" + runtimeMountName + "'";
   const restoreMountStart = runbook.indexOf(mountStartCommand);
   const restoreMountCheck = runbook.lastIndexOf('findmnt --mountpoint /run/babypark-n8n-runtime --types tmpfs');
-  const restoreScratchCreate = runbook.indexOf('mkdir -m 0700 -- /run/babypark-n8n-runtime/restore-test', restoreMountCheck);
-  const restoreScratchChown = runbook.indexOf('chown 1000:1000 /run/babypark-n8n-runtime/restore-test', restoreScratchCreate);
-  const restoreScratchSubdirs = runbook.indexOf('install -d -o 1000 -g 1000 -m 0700 /run/babypark-n8n-runtime/restore-test/storage', restoreScratchChown);
-  const restoreScratchModeCheck = runbook.indexOf("test \"$(stat -c '%u:%g:%a' \"$path\")\" = 1000:1000:700", restoreScratchSubdirs);
+  const restoreScratchCreate = runbook.indexOf('install -d -o 1000 -g 1000 -m 0700 /run/babypark-n8n-runtime/restore-test\n', restoreMountCheck);
+  const restoreScratchSubdirs = runbook.indexOf('install -d -o 1000 -g 1000 -m 0700 /run/babypark-n8n-runtime/restore-test/storage', restoreScratchCreate);
+  const restoreScratchModeCheck = runbook.indexOf('test \"$(stat -c \'%u:%g:%a\' \"$path\")\" = 1000:1000:700', restoreScratchSubdirs);
   const restoreContainerStart = runbook.indexOf('-p babypark-n8n-restore', restoreMountStart);
   assert.ok(restoreMountStart >= 0 && restoreMountStart < restoreMountCheck);
   assert.ok(restoreMountCheck < restoreScratchCreate);
-  assert.ok(restoreScratchCreate < restoreScratchChown);
-  assert.ok(restoreScratchChown < restoreScratchSubdirs);
+  assert.ok(restoreScratchCreate < restoreScratchSubdirs);
   assert.ok(restoreScratchSubdirs < restoreScratchModeCheck);
   assert.ok(restoreScratchModeCheck < restoreContainerStart);
   assert.ok(runbook.includes(mountStopCommand));
@@ -244,7 +316,10 @@ test('stopping n8n stops and clears its runtime tmpfs while restore remounts exp
 
 test('restore start rejects a missing runtime tmpfs option or a size mismatch', () => {
   const block = blockContaining('runtime tmpfs mount verification: PASS');
-  const check = block;
+  const mountStart = block.indexOf('mount_row=$(findmnt --mountpoint');
+  const checkEnd = block.indexOf("printf '%s\\n' 'restore runtime tmpfs mount verification: PASS'", mountStart);
+  assert.ok(mountStart >= 0 && checkEnd > mountStart);
+  const check = 'set -euo pipefail\n' + block.slice(mountStart, checkEnd);
   assert.match(check, /--bytes --output FSTYPE,OPTIONS,SIZE/);
   assert.match(check, /test "\$1" = tmpfs/);
   assert.match(check, /test "\$3" = 134217728/);
@@ -270,16 +345,17 @@ test('restore start rejects a missing runtime tmpfs option or a size mismatch', 
 
 test('release instructions reload systemd and inspect the generated Compose container ID', () => {
   assert.match(runbook, /systemctl daemon-reload/);
-  assert.match(runbook, /docker compose --env-file \/etc\/babypark-n8n\/n8n\.env --project-directory \/opt\/babypark-n8n -f \/opt\/babypark-n8n\/compose\.yaml ps --all --quiet n8n/);
+  assert.match(runbook, /\/usr\/bin\/docker --host=unix:\/\/\/var\/run\/docker\.sock compose --env-file \/etc\/babypark-n8n\/n8n\.env --project-directory \/opt\/babypark-n8n -f \/opt\/babypark-n8n\/compose\.yaml ps --all --quiet n8n/);
   assert.match(runbook, /config --format json/);
-  assert.match(runbook, /print\("image:/);
+  assert.match(runbook, /print\("n8n image:/);
+  assert.match(runbook, /print\("PostgreSQL image:/);
   assert.match(runbook, /print\("bind:/);
-  assert.doesNotMatch(runbook, /docker inspect --format '\{\{\.Id\}\}' babypark-n8n/);
-  const keyGeneration = runbook.indexOf('key=$(openssl rand -hex 32)');
-  const positiveStart = runbook.indexOf('Then start `babypark-n8n.service` as the positive test');
-  const metadataInspection = runbook.indexOf('Immediately after the first successful start');
-  const workflowImport = runbook.indexOf('After this blank-database metadata check passes');
-  const restoreRehearsal = runbook.indexOf('Run a restore rehearsal before accepting the service');
+  assert.doesNotMatch(runbook, /\/usr\/bin\/docker --host=unix:\/\/\/var\/run\/docker\.sock inspect --format '\{\{\.Id\}\}' babypark-n8n/);
+  const keyGeneration = runbook.indexOf('key_file=/etc/babypark-n8n/n8n.env');
+  const positiveStart = runbook.indexOf('Then perform one positive start');
+  const metadataInspection = runbook.indexOf('Immediately after the successful start');
+  const workflowImport = runbook.indexOf('Before creating credentials or workflows');
+  const restoreRehearsal = runbook.indexOf('## Clean PostgreSQL and encryption-key restore');
   const finalAcceptance = runbook.indexOf('After every listed gate passes');
   const enableBoot = runbook.indexOf('systemctl enable babypark-n8n.service');
   assert.ok(keyGeneration >= 0 && positiveStart > keyGeneration);
@@ -297,17 +373,21 @@ test('first install creates only a registered root-owned n8n state namespace', (
   assert.match(block, /mkdir -m 0755 -- "\$state_root"/);
   assert.match(block, /test "\$\(stat -c '%U:%G:%a' "\$state_root"\)" = root:root:755/);
   assert.match(block, /test ! -e "\$state_root\/user" && test ! -L "\$state_root\/user"/);
+  assert.match(block, /test ! -e "\$state_root\/postgres" && test ! -L "\$state_root\/postgres"/);
+  assert.match(block, /chown "\$postgres_uid:\$postgres_gid" "\$state_root\/postgres"/);
   assert.match(block, /test "\$\(stat -c '%u:%g:%a' "\$state_root\/user"\)" = 1000:1000:700/);
+  assert.match(block, /test "\$\(stat -c '%u:%g:%a' "\$state_root\/postgres"\)" = "\$postgres_uid:\$postgres_gid:700"/);
 });
 
 test('runbook rejects Docker Engine server versions below 28.0.0 and malformed versions', () => {
-  const block = blockContaining('engine_version=$(docker version --format');
+  const block = localSocketDocker(blockContaining('engine_version=$(/usr/bin/docker --host=unix:///var/run/docker.sock version --format'));
   assert.match(block, /Docker Engine server must be an unsuffixed version >= 28\.0\.0/);
+  assert.match(runbook, /DOCKER_CONTEXT=babypark-n8n-invalid DOCKER_HOST=tcp:\/\/127\.0\.0\.1:1 \/usr\/bin\/docker --host=unix:\/\/\/var\/run\/docker\.sock info/);
 
   withTempDir((temp) => {
     const fakeBin = join(temp, 'bin');
     mkdirSync(fakeBin);
-    writeExecutable(join(fakeBin, 'docker'), '#!/bin/sh\nprintf \'%s\\n\' "$TEST_DOCKER_SERVER_VERSION"\n');
+    writeExecutable(join(fakeBin, 'docker'), '#!/bin/sh\n[ "$1" = --host=unix:///var/run/docker.sock ] && shift\ncase "$1" in version) printf \'%s\\n\' "$TEST_DOCKER_SERVER_VERSION";; compose) if [ "$2" = version ]; then printf \'5.8.1\\n\'; else exit 2; fi;; info) test "$DOCKER_CONTEXT" = babypark-n8n-invalid && test "$DOCKER_HOST" = tcp://127.0.0.1:1 && printf \'local-socket\\n\';; *) exit 2;; esac\n');
     for (const version of ['28.0.0', '29.1.3']) {
       const result = runBash(block, { PATH: `${fakeBin}:${process.env.PATH}`, TEST_DOCKER_SERVER_VERSION: version });
       assert.equal(result.status, 0, `${version}: ${result.stderr}`);
@@ -320,15 +400,27 @@ test('runbook rejects Docker Engine server versions below 28.0.0 and malformed v
   });
 });
 
+test('invalid Docker context and TCP host cannot override the pinned Unix socket', () => {
+  const block = runbook.match(/^if DOCKER_CONTEXT=babypark-n8n-invalid DOCKER_HOST=tcp:\/\/127\.0\.0\.1:1 [^\n]+\n[\s\S]*?^fi$/m)?.[0];
+  assert.ok(block, 'wrong-context injection check is present');
+  const command = localSocketDocker(block);
+  withTempDir((temp) => {
+    const fakeBin = fakeDockerBin(temp, '#!/bin/sh\ntest "$1" = --host=unix:///var/run/docker.sock || exit 31\ntest "$2" = info || exit 32\ntest "$DOCKER_CONTEXT" = babypark-n8n-invalid || exit 33\ntest "$DOCKER_HOST" = tcp://127.0.0.1:1 || exit 34\nprintf local-socket\n');
+    const result = runBash(command, { PATH: `${fakeBin}:${process.env.PATH}` });
+    assert.equal(result.status, 0, result.stderr);
+    assert.match(result.stdout, /wrong-context override check: PASS/);
+  });
+});
+
 test('runbook rejects Docker Compose CLI versions below 5.8.1 and malformed versions', () => {
-  const block = blockContaining('Docker Compose plugin version gate: PASS');
-  assert.match(runbook, /official Docker Compose plugin version 5\.8\.1 or newer/);
-  assert.match(block, /docker compose version --short/);
+  const block = localSocketDocker(blockContaining('Docker Compose plugin version gate: PASS'));
+  assert.match(runbook, /Docker Compose plugin 5\.8\.1 or newer/);
+  assert.match(block, /docker --host=unix:\/\/\/var\/run\/docker\.sock compose version --short/);
 
   withTempDir((temp) => {
     const fakeBin = join(temp, 'bin');
     mkdirSync(fakeBin);
-    writeExecutable(join(fakeBin, 'docker'), '#!/bin/sh\ncase "$1" in version) printf "%s\\n" "$TEST_ENGINE_VERSION";; compose) printf "%s\\n" "$TEST_COMPOSE_VERSION";; *) exit 2;; esac\n');
+    writeExecutable(join(fakeBin, 'docker'), '#!/bin/sh\n[ "$1" = --host=unix:///var/run/docker.sock ] && shift\ncase "$1" in version) printf "%s\\n" "$TEST_ENGINE_VERSION";; compose) if [ "$2" = version ]; then printf "%s\\n" "$TEST_COMPOSE_VERSION"; else exit 2; fi;; info) printf \'local-socket\\n\';; *) exit 2;; esac\n');
     const env = {
       PATH: fakeBin + ':' + process.env.PATH,
       TEST_ENGINE_VERSION: '28.0.0',
@@ -461,15 +553,17 @@ test('runbook requires a same-L2 peer probe before accepting loopback-only reach
 });
 
 test('traceability binds storage count, loopback and Docker key-boundary gates', () => {
-  assert.match(traceability, /all 11 storage registrations/);
+  assert.match(traceability, /all 13 classes/);
   assert.match(traceability, /Docker Engine server `>=28\.0\.0`/);
   assert.match(traceability, /same-L2 peer TCP probe/);
-  assert.match(traceability, /explicit SQLite writer busy timeout/);
-  assert.match(traceability, /IN PROGRESS — OPEN BLOCKER/);
+  assert.match(traceability, /official PostgreSQL 16\.16 service/);
+  assert.doesNotMatch(traceability, /OPEN BLOCKER/);
   assert.match(sqliteCompatibility, /62bb4c7aebe268e748cccc73cb9a4c2cd52d4524/);
-  assert.match(sqliteCompatibility, /OPEN BLOCKER/);
+  assert.match(sqliteCompatibility, /EVIDENCE — NON-NORMATIVE/);
+  assert.doesNotMatch(sqliteCompatibility, /Status: \*\*OPEN BLOCKER\*\*/);
   assert.match(sqliteCompatibility, /does not expose a busy-timeout setting/);
   assert.match(sqliteCompatibility, /no custom n8n code or unsupported environment variable/);
+  assert.match(sqliteCompatibility, /The owner selected official PostgreSQL/);
   assert.match(traceability, /named socket ACL entries/);
   assert.match(traceability, /missing `getfacl`/);
 });
@@ -529,17 +623,15 @@ test('Compose render pipeline fails if the producer emits valid JSON and exits n
   assert.match(block, /^set -euo pipefail/m);
 
   withTempDir((temp) => {
-    const fakeBin = join(temp, 'bin');
-    mkdirSync(fakeBin);
-    writeExecutable(join(fakeBin, 'docker'), '#!/bin/sh\nprintf \'{"services":{"n8n":{"image":"synthetic","networks":{"n8n_private":null},"ports":[],"volumes":[]}},"networks":{"n8n_private":{"internal":true}}}\\n\'\nexit 23\n');
-    const result = runBash(block, { PATH: `${fakeBin}:${process.env.PATH}` });
+    const fakeBin = fakeDockerBin(temp, '#!/bin/sh\nprintf \'{"services":{"n8n":{"image":"n8n@sha256:x","networks":{"n8n_private":null},"ports":[],"volumes":[],"mem_limit":"1200m","memswap_limit":"1200m","environment":{"DB_TYPE":"postgresdb","DB_POSTGRESDB_HOST":"postgres"}},"postgres":{"image":"postgres@sha256:p","networks":{"n8n_private":null},"ports":[],"volumes":[],"mem_limit":"512m","memswap_limit":"512m"}},"networks":{"n8n_private":{"internal":true}}}\\n\'\nexit 23\n');
+    const result = runBash(localSocketDocker(block), { PATH: `${fakeBin}:${process.env.PATH}` });
     assert.equal(result.status, 23, result.stderr);
     assert.doesNotMatch(result.stdout, /N8N_ENCRYPTION_KEY/);
   });
 });
 
 function keyGenerationBlock(keyDir) {
-  return blockContaining('key=$(openssl rand -hex 32)')
+  return blockContaining('key_file=/etc/babypark-n8n/n8n.env')
     .replaceAll('/etc/babypark-n8n', keyDir);
 }
 
@@ -609,26 +701,31 @@ test('key generation publishes only a validated 64-hex key with mode 0600', () =
   withTempDir((temp) => {
     const dir = join(temp, 'etc');
     const key = 'c'.repeat(64);
-    const fakeBin = keyGenerationBin(temp, `#!/bin/sh\nprintf "%s\\n" "${key}"\n`);
-    const result = runBash(keyGenerationBlock(dir), { PATH: `${fakeBin}:${process.env.PATH}` });
+    const pgPassword = 'd'.repeat(64);
+    const counter = join(temp, 'openssl-count');
+    const fakeOpenSsl = ['#!/bin/sh', 'count=0', 'test ! -e "$OPENSSL_COUNTER" || count=$(cat "$OPENSSL_COUNTER")', 'count=$((count + 1))', 'printf "%s" "$count" > "$OPENSSL_COUNTER"', `if [ "$count" = 1 ]; then printf "%s\\n" "${key}"; else printf "%s\\n" "${pgPassword}"; fi`].join('\n');
+    const fakeBin = keyGenerationBin(temp, fakeOpenSsl);
+    const result = runBash(keyGenerationBlock(dir), { OPENSSL_COUNTER: counter, PATH: `${fakeBin}:${process.env.PATH}` });
     const keyFile = join(dir, 'n8n.env');
     assert.equal(result.status, 0, result.stderr);
-    assert.equal(readFileSync(keyFile, 'utf8'), `N8N_ENCRYPTION_KEY=${key}\n`);
+    assert.equal(readFileSync(keyFile, 'utf8'), `N8N_ENCRYPTION_KEY=${key}\nPOSTGRES_PASSWORD=${pgPassword}\n`);
     assert.equal(readFileSync(keyFile, 'utf8').match(/N8N_ENCRYPTION_KEY=/g)?.length, 1);
-    assert.match(readFileSync(keyFile, 'utf8'), /^N8N_ENCRYPTION_KEY=([0-9a-f]{64})\n$/);
+    assert.match(readFileSync(keyFile, 'utf8'), /^N8N_ENCRYPTION_KEY=([0-9a-f]{64})\nPOSTGRES_PASSWORD=([0-9a-f]{64})\n$/);
+    assert.notEqual(key, pgPassword);
     assert.equal((statSync(keyFile).mode & 0o777), 0o600);
     assert.doesNotMatch(result.stdout + result.stderr, new RegExp(key));
+    assert.doesNotMatch(result.stdout + result.stderr, new RegExp(pgPassword));
   });
 });
 
 test('restore checks only the synthetic credential through the registered tmpfs', () => {
   assert.match(runbook, /BabyPark restore dummy \(synthetic\)/);
-  assert.match(runbook, /--decrypted --output=\/vol\/restore-test\/decrypted-credentials\.json/);
+  assert.match(runbook, /--id="\$credential_id" --decrypted --output=\/vol\/restore-test\/decrypted-credentials\.json/);
   assert.match(runbook, /dummy credential decryptability: PASS/);
-  assert.match(runbook, /rm -f \/vol\/restore-test\/decrypted-credentials\.json/);
-  assert.match(runbook, /test ! -e \/run\/babypark-n8n-runtime\/restore-test\/decrypted-credentials\.json/);
+  assert.match(runbook, /plaintext=\/run\/babypark-n8n-runtime\/restore-test\/decrypted-credentials\.json\ntest ! -e "\$plaintext" && test ! -L "\$plaintext"/);
+  assert.match(runbook, /rm -f -- "\$plaintext"\ntest ! -e "\$plaintext"/);
   assert.doesNotMatch(runbook, /--decrypted --output=\/(?:var\/lib|var\/backups)\//);
-  assert.match(runbook, /restored instance contains exactly[\s\S]*?active=false/);
+  assert.match(runbook, /Verify only the two approved workflows exist, expected node counts match, and both are `active=false`/);
   assert.match(runbook, /bpAiSellerChatwootHandoffShadowNov23/);
   assert.match(runbook, /bpAiSilenceWatchdogNov23/);
 });
@@ -639,22 +736,21 @@ test('backup collision aborts without changing a verified generation', () => {
     const generation = join(backupRoot, '20261127T220000Z');
     const userDir = join(temp, 'user');
     const keyFile = join(temp, 'n8n.env');
-    const fakeBin = join(temp, 'bin');
     mkdirSync(generation, { recursive: true });
     mkdirSync(userDir);
-    mkdirSync(fakeBin);
-    writeFileSync(join(userDir, 'database.sqlite'), 'synthetic source');
-    writeFileSync(keyFile, 'N8N_ENCRYPTION_KEY=' + 'b'.repeat(64) + '\n');
+    const fakeBin = fakeDockerBin(temp, composeBackupDockerStub());
+    writeFileSync(join(userDir, 'config'), 'synthetic source');
+    writeFileSync(keyFile, 'N8N_ENCRYPTION_KEY=' + 'b'.repeat(64) + '\nPOSTGRES_PASSWORD=' + 'c'.repeat(64) + '\n');
     const original = new Map([
+      ['n8n.pgdump', 'previous verified PostgreSQL dump'],
       ['user-folder.tar.gz', 'previous verified archive'],
-      ['n8n.env', 'previous matching key bytes'],
+      ['n8n.env', 'previous matching environment bytes'],
       ['SHA256SUMS', 'previous verified checksums'],
     ]);
     for (const [name, bytes] of original) writeFileSync(join(generation, name), bytes);
     writeExecutable(join(fakeBin, 'date'), '#!/bin/sh\nprintf "%s\\n" 20261127T220000Z\n');
-    writeExecutable(join(fakeBin, 'sqlite3'), '#!/bin/sh\nprintf "ok\\n"\n');
 
-    const script = substituteBackupPaths(blockContaining('stamp=$(date'), backupRoot, userDir, keyFile);
+    const script = localSocketDocker(substituteBackupPaths(blockContaining('stamp=$(date'), backupRoot, userDir, keyFile));
     const result = runBash(script, { PATH: `${fakeBin}:${process.env.PATH}` });
 
     assert.notEqual(result.status, 0);
@@ -668,23 +764,21 @@ test('successful backup publishes portable relative checksums only after archive
     const backupRoot = join(temp, 'backups');
     const userDir = join(temp, 'user');
     const keyFile = join(temp, 'n8n.env');
-    const fakeBin = join(temp, 'bin');
     mkdirSync(backupRoot);
     mkdirSync(userDir);
-    mkdirSync(fakeBin);
-    writeFileSync(join(userDir, 'database.sqlite'), 'synthetic source');
-    writeFileSync(keyFile, 'N8N_ENCRYPTION_KEY=' + 'd'.repeat(64) + '\n');
+    const fakeBin = fakeDockerBin(temp, composeBackupDockerStub());
+    writeFileSync(join(userDir, 'config'), 'synthetic source');
+    writeFileSync(keyFile, 'N8N_ENCRYPTION_KEY=' + 'd'.repeat(64) + '\nPOSTGRES_PASSWORD=' + 'e'.repeat(64) + '\n');
     writeExecutable(join(fakeBin, 'date'), '#!/bin/sh\nprintf "%s\\n" 20261127T220002Z\n');
-    writeExecutable(join(fakeBin, 'sqlite3'), '#!/bin/sh\nprintf "ok\\n"\n');
     writeExecutable(join(fakeBin, 'install'), '#!/bin/sh\nwhile [ "$#" -gt 0 ]; do case "$1" in -o|-g|-m) shift 2;; *) source="$1"; shift; destination="$1"; shift; break;; esac; done\ncp "$source" "$destination"\nchmod 0600 "$destination"\n');
 
-    const script = substituteBackupPaths(blockContaining('stamp=$(date'), backupRoot, userDir, keyFile);
+    const script = localSocketDocker(substituteBackupPaths(blockContaining('stamp=$(date'), backupRoot, userDir, keyFile));
     const result = runBash(script, { PATH: `${fakeBin}:${process.env.PATH}` });
     const generation = join(backupRoot, '20261127T220002Z');
 
     assert.equal(result.status, 0, result.stderr);
     const manifest = readFileSync(join(generation, 'SHA256SUMS'), 'utf8');
-    assert.deepEqual(manifest.trim().split('\n').map((line) => line.split('  ')[1]).sort(), ['n8n.env', 'user-folder.tar.gz']);
+    assert.deepEqual(manifest.trim().split('\n').map((line) => line.split('  ')[1]).sort(), ['n8n.env', 'n8n.pgdump', 'user-folder.tar.gz']);
     const verification = spawnSync('bash', ['-eu', '-c', 'cd "$1" && sha256sum -c SHA256SUMS >/dev/null', 'bash', generation], { encoding: 'utf8' });
     assert.equal(verification.status, 0, verification.stderr);
     assert.equal(existsSync(join(generation, 'SHA256SUMS.partial')), false);
@@ -696,17 +790,15 @@ test('failed archive creation leaves no accepted checksum manifest', () => {
     const backupRoot = join(temp, 'backups');
     const userDir = join(temp, 'user');
     const keyFile = join(temp, 'n8n.env');
-    const fakeBin = join(temp, 'bin');
     mkdirSync(backupRoot);
     mkdirSync(userDir);
-    mkdirSync(fakeBin);
-    writeFileSync(join(userDir, 'database.sqlite'), 'synthetic source');
-    writeFileSync(keyFile, 'N8N_ENCRYPTION_KEY=' + 'c'.repeat(64) + '\n');
+    const fakeBin = fakeDockerBin(temp, composeBackupDockerStub());
+    writeFileSync(join(userDir, 'config'), 'synthetic source');
+    writeFileSync(keyFile, 'N8N_ENCRYPTION_KEY=' + 'c'.repeat(64) + '\nPOSTGRES_PASSWORD=' + 'f'.repeat(64) + '\n');
     writeExecutable(join(fakeBin, 'date'), '#!/bin/sh\nprintf "%s\\n" 20261127T220001Z\n');
-    writeExecutable(join(fakeBin, 'sqlite3'), '#!/bin/sh\nprintf "ok\\n"\n');
     writeExecutable(join(fakeBin, 'tar'), '#!/bin/sh\nprevious=0\nfor arg do if [ "$previous" = 1 ]; then printf partial > "$arg"; exit 17; fi; if [ "$arg" = "-czf" ]; then previous=1; fi; done\nexit 18\n');
 
-    const script = substituteBackupPaths(blockContaining('stamp=$(date'), backupRoot, userDir, keyFile);
+    const script = localSocketDocker(substituteBackupPaths(blockContaining('stamp=$(date'), backupRoot, userDir, keyFile));
     const result = runBash(script, { PATH: `${fakeBin}:${process.env.PATH}` });
     const generation = join(backupRoot, '20261127T220001Z');
 
@@ -724,10 +816,11 @@ test('restore refuses an occupied durable target without changing its files', ()
     const restoreTarget = join(temp, 'restore-test');
     mkdirSync(restoreTarget);
     writeFileSync(join(restoreTarget, 'sentinel'), 'preserve this unknown state');
-    const preflight = blockContaining('archive_members=$(tar -tzf');
-    const extract = blockContaining('test ! -e /var/lib/babypark-n8n/restore-test');
-    const script = `${preflight}\n${extract}`.replaceAll('/var/lib/babypark-n8n/restore-test', restoreTarget);
-    const result = runBash(script, { backup_dir: backupDir });
+    const fakeBin = fakeDockerBin(temp, composeBackupDockerStub());
+    const script = restorePreflightBlock()
+      .replaceAll('/var/lib/babypark-n8n/restore-test', restoreTarget)
+      .replace('REPLACE_WITH_VERIFIED_GENERATION', backupDir);
+    const result = runBash(script, { PATH: `${fakeBin}:${process.env.PATH}` });
 
     assert.notEqual(result.status, 0);
     assert.deepEqual(readdirSync(restoreTarget), ['sentinel']);
@@ -739,17 +832,19 @@ test('corrupt restore archive aborts before creating restore state', () => {
   withTempDir((temp) => {
     const backupDir = prepareSyntheticBackup(temp);
     const archive = join(backupDir, 'user-folder.tar.gz');
-    writeFileSync(archive, Buffer.concat([readFileSync(archive), Buffer.from('corrupt')]));
-    const archiveDigest = execFileSync('sha256sum', [archive], { encoding: 'utf8' }).slice(0, 64);
-    const keyDigest = execFileSync('sha256sum', [join(backupDir, 'n8n.env')], { encoding: 'utf8' }).slice(0, 64);
-    writeFileSync(join(backupDir, 'SHA256SUMS'), `${archiveDigest}  user-folder.tar.gz\n${keyDigest}  n8n.env\n`);
+    writeFileSync(archive, Buffer.from('not a gzip tar archive'));
+    const hashes = execFileSync('sha256sum', [join(backupDir, 'n8n.pgdump'), archive, join(backupDir, 'n8n.env')], { encoding: 'utf8' })
+      .trim().split('\n').map(line => `${line.slice(0, 64)}  ${line.slice(line.indexOf('  ') + 2).split('/').at(-1)}`).join('\n') + '\n';
+    writeFileSync(join(backupDir, 'SHA256SUMS'), hashes);
     const restoreTarget = join(temp, 'restore-test');
-    const preflight = blockContaining('archive_members=$(tar -tzf');
-    const extract = blockContaining('test ! -e /var/lib/babypark-n8n/restore-test');
-    const script = `${preflight}\n${extract}`.replaceAll('/var/lib/babypark-n8n/restore-test', restoreTarget);
-    const result = runBash(script, { backup_dir: backupDir });
+    const fakeBin = fakeDockerBin(temp, composeBackupDockerStub());
+    const script = restorePreflightBlock()
+      .replaceAll('/var/lib/babypark-n8n/restore-test', restoreTarget)
+      .replace('REPLACE_WITH_VERIFIED_GENERATION', backupDir);
+    const result = runBash(script, { PATH: `${fakeBin}:${process.env.PATH}` });
 
     assert.notEqual(result.status, 0);
     assert.equal(existsSync(restoreTarget), false);
+    assert.doesNotMatch(result.stdout + result.stderr, /restore state created/);
   });
 });

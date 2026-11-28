@@ -1,15 +1,15 @@
 # BabyPark — portable n8n migration and upgrade plan
 
-Status: EVIDENCE — NON-NORMATIVE / PROPOSED operational plan, **not permission to deploy**.
+Status: HISTORICAL EVIDENCE — NON-NORMATIVE; its SQLite Release 2 implementation choice is superseded by the owner-selected PostgreSQL package in Draft PR #173, **not permission to deploy**.
 Owner's placement decision confirmed 2026-11-27: **n8n must be co-located with Chatwoot**, first on `chatwoot-fra1-01`, later migrated together to the planned Hetzner host, where Odoo will also run. The separate DEV host is the source of the workflow candidates, not the target production placement. This placement choice supersedes any fallback recommendation elsewhere in this document to run n8n on a separate production VM; resizing the shared host as demand grows is preferred, with an isolated service lifecycle throughout.
 Applies to: isolated n8n DEV → fresh production n8n deployment, Chatwoot AI First Line only.
-Supersedes: none.
+Supersedes: the SQLite-backed Release 2 choice below, only for the 2026-11-28 Draft PR #173 package; use `docs/N8N_COHOST_FIT_NOTE_20261127.md`, `docs/N8N_COHOST_OPTIONS_SCAN_20261127.md`, and `docs/N8N_RELEASE_RUNBOOK_20261127.md` for the current PostgreSQL selection and release boundary.
 Date: 2026-11-27 UTC. Owner requested server portability and safe future Chatwoot/n8n upgrades.
 Canonical governing process: `Stanislavikus/babypark-integration/docs/AI_WORKING_AGREEMENT.md` from current `main`; base at proposal `2ae02a0ea8898f5d5b341fca6ed230a34fecce58`, agreement blob `e2d64856e85716d5c55e724e1babce441ae348ba`.
 
-## Current Release 2 implementation decision
+## Historical Release 2 implementation proposal — superseded
 
-The owner-approved fit note SHA-256 is `d63c784e58cd5e948119b0c63d9c35a0d4500d59c7fb4560211546d862860556`; the bound alternatives scan SHA-256 is `7880c8eacc965d6860f2b6e776eab343e0d34ec880be6bd848538077d06f16ba`. Those frozen artifacts select the official n8n 2.49.8 Compose package with SQLite on the existing 4-GiB Chatwoot host. This resolves the earlier PostgreSQL-first proposal in §3. Do not repeat the completed product scan or use the older PostgreSQL preference as the current choice unless a material requirement or candidate fact changes.
+This section records the earlier SQLite candidate decision and its former fit/scan hashes. The owner has since rejected a session-only SQLite exception and selected an independent official PostgreSQL 16.16 service for Draft PR #173. The current PostgreSQL fit note, options scan and release runbook named above supersede the SQLite deployment details here. The earlier successful SQLite workflow import remains historical evidence and must not be repeated.
 
 The candidate uses a separate bind-mounted user folder and key file, a unique Compose project network, and an n8n-only systemd unit. The container has no restart policy; the `Type=oneshot` systemd unit starts and stops the Compose service but does not supervise container health. Restart the n8n unit after a Docker daemon restart. This resolves the earlier generic “service restart policy” proposal in §3. No service is installed or enabled before a separate exact-basis `release GO`.
 
@@ -34,13 +34,13 @@ The candidate uses a separate bind-mounted user folder and key file, a unique Co
 
 ## 3. Official implementation choice and lifecycle
 
-**Owner-selected colocated architecture:** the current bounded package uses the official n8n 2.49.8 image at the immutable digest in `deploy/n8n/compose.yaml`, SQLite in `/var/lib/babypark-n8n/user`, loopback-only port 5678, a 1-vCPU cap, a 1,200-MiB hard memory ceiling with equal memory/swap ceiling, and a configured host `tmpfs,noswap` mount for execution/event data. Target-kernel support and runtime behavior are not yet verified and remain release gates. The project uses its own Compose network and host bind paths; it does not share Chatwoot's database, Docker Compose project, systemd units or lifecycle. The 1,200-MiB limit is not a measured peak. Actual install, migration and startup measurements remain release gates.
+**Historical SQLite candidate:** the previous bounded package proposed the official n8n 2.49.8 image with SQLite under `/var/lib/babypark-n8n/user`, loopback-only port 5678 and a host `tmpfs,noswap` mount. The active Draft PR #173 package instead uses an independent official PostgreSQL 16.16 service with separate PGDATA; see the current fit note and release runbook. Target-kernel support and runtime behavior are not yet verified and remain release gates. The project uses its own Compose network and host bind paths; it does not share Chatwoot's database, Docker Compose project, systemd units or lifecycle. The 1,200-MiB limit is not a measured peak. Actual install, migration and startup measurements remain release gates.
 
-The prior official `withPostgres` suggestion remains a future option only if scope or measured workload changes. This release uses SQLite because that is the exact database choice in the owner-approved fit and alternatives scan; the separately registered user folder, matching key and backup/restore path remain required. The Compose container has no automatic restart policy, and its systemd `Type=oneshot` unit does not supervise it. This bounded behavior is explicit in the release runbook; it must not be described as automatic recovery.
+**Historical decision superseded:** an earlier owner-approved candidate selected SQLite and recorded the old fit/scan hashes above. On 2026-11-28, the owner selected the official PostgreSQL backend and rejected a session-only SQLite exception. For the current PR #173 package, use only the independent PostgreSQL service, separate PGDATA, user folder, key and PostgreSQL backup/restore path in the current fit note and runbook. The Compose container has no automatic restart policy, and its systemd `Type=oneshot` unit does not supervise it. This bounded behavior is explicit in the release runbook; it must not be described as automatic recovery.
 
 **Rejected coupling:** npm/RVM install inside Chatwoot app, shared Chatwoot database, Viber Gateway process, implicit upgrade scripts, unpinned `latest`, blindly copying DEV persistent SQLite or plaintext credential exports.
 
-The bounded scan for this implementation stage is frozen in `docs/N8N_COHOST_OPTIONS_SCAN_20261127.md` at SHA-256 `7880c8eacc965d6860f2b6e776eab343e0d34ec880be6bd848538077d06f16ba`; the exact chosen fit is frozen in `docs/N8N_COHOST_FIT_NOTE_20261127.md` at SHA-256 `d63c784e58cd5e948119b0c63d9c35a0d4500d59c7fb4560211546d862860556`. The owner accepted SUL v1.0 for this internal-only scope. Do not refresh those artifacts absent a material requirement/candidate/terms change. Revalidate mutable license/package facts immediately before any release decision. No custom n8n production code is part of this package.
+The current implementation fit and alternatives scan are being reissued once for the owner-selected PostgreSQL backend; their final exact SHA-256 values and owner `integrate` rebind are recorded in those artifacts. The earlier approval bound to the SQLite fit/scan does not authorize this materially revised backend. The owner accepted SUL v1.0 for internal-only use. Revalidate mutable license/package facts immediately before any release decision. No custom n8n production code is part of this package.
 
 ### 2026-11-27 — official 2.49.8 native import on offline rehearsal
 
@@ -60,7 +60,7 @@ Directory map reflects the current implementation candidate, not a claim these p
   n8n.env.example                      # placeholder only; versioned in Git
 /etc/babypark-n8n/n8n.env              # root-only 0600 key file, never Git
 /var/lib/babypark-n8n/                  # separately declared durable state
-  user/                                # SQLite and independent n8n user folder
+  user/                                # independent n8n user folder and settings
   restore-test/                        # disposable synthetic restore target
 /run/babypark-n8n-runtime/               # 128-MiB host tmpfs,noswap; NOT in durable backups
 /var/backups/babypark-n8n/               # restricted local generations with matching key
@@ -74,10 +74,10 @@ Every writable class above is registered as `PLANNED` in `config/storage-policy.
 
 1. Freeze canonical Git/Agreement, declared target capacity and two exact workflow candidates (names, IDs, node counts, SHA of export, version). Determine *which* 22-node primary and 6-node watchdog are authoritative; never import temporary Stage E test variants based on filename alone.
 2. Stop/disable only temporary **DEV test triggers** if required; take protected consistent DEV backup as a recovery preimage, but **do not move its database/exec history/event logs/raw credentials wholesale into production**.
-3. Bring up an **independent blank n8n 2.49.8** with a new persistent encryption key and its own empty database. Keep editor/port private, no live webhooks, no Chatwoot API token and no published workflow.
+3. Bring up an **independent blank n8n 2.49.8** with a new persistent encryption key and its own empty official PostgreSQL 16.16 database. Keep editor/port private, no live webhooks, no Chatwoot API token and no published workflow.
 4. Import the selected official n8n JSON workflows via supported UI/CLI, inactive by default. Handle credential references by creating **new production credentials through the official UI** or approved secure secret delivery; never copy legacy DEV keys or decrypt exports to durable plaintext. Map production Chatwoot 4.20.1 API endpoints/ownership explicitly, not a DEV Chatwoot host.
 5. Repeat only the **specific** synthetic real-world end-to-end paths from DEV on this exact version and approved target environment: AI answer, native specialist handoff, private note, SKIP, 45s silence/watchdog and error-to-HUMAN. Capture synthetic sentinel persistence in the exact persistent volume, DB/WAL, event logs and Docker logs, checking storage mode `filesystem` + noswap tmpfs on the target version. If anything unknown, **do not activate**; no real customer data used.
-6. Freeze a GOOD known `compose.yaml`, env-schema, image digests, workflow exports, encrypted-credential identity, storage manifest + SHA and a protected off-host backup. Rebuild from scratch on a separate isolated host/VM to prove restore, including credential decryption **without printing secret values**, host/mount recreation and health. Only after independent owner GO connect production Chatwoot AgentBot/webhook and enable exact workflows with duplicate trigger guards.
+6. Freeze a GOOD known `compose.yaml`, env-schema, image digests, workflow exports, encrypted-credential identity, storage manifest + SHA and a protected off-host backup. Rebuild from scratch on a separate isolated host/VM to prove PostgreSQL restore, including credential decryption **without printing secret values**, host/mount recreation and health. Only after independent owner GO connect production Chatwoot AgentBot/webhook and enable exact workflows with duplicate trigger guards.
 
 ## 6. Planned Hetzner move (Chatwoot + n8n + Odoo) and future host-to-host migration
 
@@ -100,7 +100,7 @@ The owner intends to consolidate **Chatwoot, the independent Viber Gateway, n8n 
 
 **Implementation decision:** owner `integrate` authorizes preparation of this bounded implementation PR only. Passing repository tests and independent implementation review do not authorize merge, Docker installation, or production service start.
 
-**NO-GO to production installation until a separate exact-basis release GO:** verify Chatwoot/Viber backups and baseline, install Docker only from official packages without changing their configuration, test the target kernel's `tmpfs,noswap` positive/negative start behavior, measure actual n8n cgroup peak/OOM and host reserve through install/migration/startup on the existing 4-GiB host, run the exact-version persistence sentinel and independent SQLite/key/dummy-credential restore, inspect Docker key-bearing metadata access, and confirm unchanged Chatwoot/Viber health. The package's Compose/storage declarations and static checks do not satisfy these target runtime gates. Do not change the placement to a separate VM or increase RAM without separate owner approval.
+**NO-GO to production installation until a separate exact-basis release GO:** verify Chatwoot/Viber backups and baseline, install Docker only from official packages without changing their configuration, test the target kernel's `tmpfs,noswap` positive/negative start behavior, measure actual n8n and PostgreSQL cgroup peaks/OOM and host reserve through install/migration/startup on the existing 4-GiB host, run the exact-version persistence sentinel and independent PostgreSQL/key/dummy-credential restore, inspect Docker key-bearing metadata access, and confirm unchanged Chatwoot/Viber health. The package's Compose/storage declarations and static checks do not satisfy these target runtime gates. Do not change the placement to a separate VM or increase RAM without separate owner approval.
 
 **NO-GO to real customer AI until separately owner-approved:** exact synthetic functional paths PASS on version and environment, no customer payload persistence, Chatwoot ownership/semantic/handoff safeguards and actual recovery constraints accepted, monitored HUMAN fallback, and frozen complete deployment/rollback evidence.
 
