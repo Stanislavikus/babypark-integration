@@ -872,7 +872,9 @@ test('Docker pull pins the local socket and restore cleanup returns to primary n
   assert.ok(restoreDown > restoreStart);
   assert.ok(stateDelete > restoreDown && runtimeDelete > stateDelete && primaryStart > runtimeDelete);
   assert.match(runbook.slice(restoreDown, primaryStart), /test -z "\$remaining"/);
-  assert.match(runbook.slice(restoreDown, stateDelete), /findmnt --mountpoint \/run\/babypark-n8n-runtime --types tmpfs/);
+  const runtimeMountRecheck = runbook.lastIndexOf('mount_row=$(findmnt --mountpoint /run/babypark-n8n-runtime --types tmpfs', restoreDown);
+  assert.ok(runtimeMountRecheck > 0 && runtimeMountRecheck < restoreDown);
+  assert.match(runbook.slice(runtimeMountRecheck, restoreDown), /--bytes --output FSTYPE,OPTIONS,SIZE/);
   assert.match(runbook.slice(restoreDown, stateDelete), /state_entries=\$\(find "\$restore_state"/);
   assert.match(runbook.slice(restoreDown, runtimeDelete), /runtime_entries=\$\(find "\$restore_runtime"/);
   assert.doesNotMatch(runbook.slice(restoreDown, primaryStart), /rm\s+-rf/);
