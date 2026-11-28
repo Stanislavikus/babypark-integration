@@ -22,8 +22,9 @@ The proposal records the owner's stock-product rule: study official functions
 and terms of use; do not security-test vendor products; install a suitable
 official product on the production target; update by reading the vendor's
 requirements, backing up, and applying the official update when those
-requirements state no restriction, or by an automatic test-installation check
-and a controlled production update of the same release when they leave doubt;
+requirements state no restriction and do not change a relied-on behavior, or by
+an automatic test-installation check and an operator-controlled production
+update of the same release when they leave doubt or change relied-on behavior;
 use official nodes, including official n8n nodes with Chatwoot's official API,
 as stock configuration; write BabyPark code only when stock cannot do the job
 or is very inconvenient or slow, and keep that code outside the vendor image
