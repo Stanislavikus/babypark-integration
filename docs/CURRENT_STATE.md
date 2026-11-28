@@ -1,1 +1,1160 @@
-YªçŠx-®éÜj×¢ëiºÚ+Š§j[h‘éÜ¢éíÛnµå:-jZ.¶›­–)Ş³R25U%$TåEõ5DDP ¥7FGW3¢Ud”DTä4R(	B÷W&F–öæÂö7W'&VçB×7FFR&V6÷&C²æ÷Bæ÷&ÖF—fR6öçG&7BWF†÷&—G’à¤Æ–W2Fó¢&W÷6—F÷'’×v–FR÷W&F–öæÂæB6×–vâ7FFRG&6¶–ærà¥7WW'6VFW3¢Fö72ô5U%$TåEõ5DDRæÖFB6æöæ–6ÂÖ–âCVƒcCFSVFc#SƒF&#sVc&6#CsCCcƒS“ƒFà¤Æ7BWFFVC¢##bÓÓ#€¤÷væW#¢&'•&°¥6÷W&6RöbG'WF‚f÷"÷W&F–öæÂf7G3¢&öGV7F–öâ'VçF–ÖR²fW&–f–VB&W÷6—F÷'’Wf–FVæ6Rà ¢22##bÓÓb(	B"3cb6ö×7B×f–Ww÷'BÆVæ6†W"6æF–FFR„äõBDUÄõ”TB ¥F†R÷væW"&÷fVBcG‚Öö&–ÆRG&–vvW"òcG‚–ÆÂ†V–v‡BæB#‡‚G&–vvW ¦–6öç2ÂÇW2Æ÷vW"÷6—F–öæ–ærBf–Ww÷'B†V–v‡BÃÓc3—‚–âV—F†W"÷&–VçFF–öâà¤B†V–v‡BãÓcC‚F†R÷&–v–æÂ&÷GFöÒöfg6WG2&WGW&ã²&–v‡Böfg6WG2ÂFW‡BÀ§G—öw&‡’Â¥2Â6†ææVÇ2Â6ÆÆ&6²F–ÖVç6–öç2æBÒÖ'Ö6ö×7BÖ&÷GFöÖ&VÖ–à§Væ6†ævVBâF†—2&WÆ6W2F†R–æ6ö×ÆWFRÃÓCS‚ÆæG66RW†6WF–öâ&V†–æ@§F†R–æFWVæFVçB#6Æ—–ærf–æF–ærCCS‚æB–âÆ÷r÷'G&—Bv–æF÷w2à ¥6÷W&6RöFV6—6–öâWf–FVæ6R—0¦Fö72ô4ôåD5EôÄTä4„U%õ4•¤UôÄô4ÄUõcôõD”ôå5ó##cbæÖF²Ö–çF–æVB&Vw&W76–öç0¦–æ6ÇVFRÆ÷rFW6·F÷Â÷'G&—BÃc3’ócC&÷VæF&–W2æB&÷F‚Ö÷F–öâ&VfW&Væ6W2à¤W†7Bf–æÂ„TB÷G&VRÂ–Ö×WF&ÆR6†V6²&W7VÇG2ÂG&6V&–Æ—G’æB–æFWVæFVç@¥5DäD$B&Wf–Wr&VÆöærFòF†R6×–vâWf–FVæ6R'VæFÆRgFW"6÷W&6Rg&VW¦Rà¥F†—2VçG'’—26æF–FFR7FFRÂæ÷BÖW&vR÷"&öGV7F–öâ6Æ–ÒâG&gB"3c`§7F–ÆÂæVVG26ö×ÆWFVBW†7BÖ&6—26Æ÷7W&RæB6W&FR÷væW"ÖW&vR&÷fÃ°§&öGV7F–öâFWÆ÷–ÖVçBæB—G2FWf–6Rö&6·W÷&öÆÆ&6²6†V6·2&R6W&FRà¤æò&öGV7F–öâf–ÆW2Â6†Gvö÷B6WGF–æw2÷"7W7FöÖW"FFvW&R6†ævVB†W&Rà ¢22##bÓÓ#b(	B6ÆÆ&6²c"#"6÷'&V7F–öâ6æF–FFR„G&gB"3SBÂäõB4Äõ4TB ¥7F'F–ær&Wf–WvVB6÷W&6S¢„TBFCfcSsvSccv3f#f#“VS&c&cc““c–fSfFÀ¥E$TR†3fFV3f#&3–V6&&s#f3C“C#–&fVc&V6&#&cc3VÂ$4R6æöæ–6ÂÖ–à¦CVC†3#vfF6F#SFc3sC†Vc“33C#“&fCcâF†—26÷'&V7F–öâ—2æ÷B¦FWÆ÷–VB6÷W&6R÷"6Æ–ÒöbgWGW&RÖW&vR–FVçF—G’â—G2f–æÂ6öÖÖ—GFV@¤„TBõE$TRÂÖæ–fW7BæBfW&–f–6F–öâ&W7VÇG2&VÆöær–âF†R"Wf–FVæ6Rà ¥c"÷F–öæÂ&VfW'&VBæÖRÆÆ÷w2Væ–6öFRÆWGFW'2ö6öÖ&–æ–ærÖ&·2Â76W2À¦÷7G&÷†W2æB‡—†Vç3²¢¦F–v—G2&R&VÖ÷fVBöâ–çWBæB&Vf÷&Rõ5B¢¢à¥F†R6—2ƒUDbÓbVæ—G2v—F‚&VÖ–æ–ær6÷VçFW"â—BFöW2æ÷B×WFFP¤6öçF7BææÖRâ6öÖÖVçB&VÖ–ç26VBBSVæ—G2â#6÷'&V7F–öâ&W6W'fW0§F†RæF–öæÂ&Vf—‚3ƒöâÆ–â×G—VBÖ–BÖ6&WBô&6·76R÷&ævRVF—G2v†–ÆP§&WF–æ–ærgVÆÂV·&–æ–â6÷W&6RG—–æræBw&öær×&V6—–VçBwV&G2à ¤f—fR&Wf–Ww2vW&R6öæf—&ÖVB&W6VçB'’F†R÷væW"w2–æFWVæFVçB&VBÖöæÇ§&öGV7F–öâf–ÆW7—7FVÒ6†V6²Â"3SB6öÖÖVçB3cC#3#csS3 ¦&Wf–WrÖ6ÆÆ&6²×cÓV3cSƒfC–À¦&Wf–WrÖ6ÆÆ&6²×cÓCC3&CFƒ“SSCf3#–6Sc3S3csVF3S–À¦&Wf–WrÖ6ÆÆ&6²×f—7VÂÖ&÷fVBÓ##c#fÀ¦&Wf–WrÖ6ÆÆ&6²×f—7VÂÖ6†Gvö÷BÖföçBÓ##c#fÂæ@¦&Wf–WrÖ6ÆÆ&6²×f—7VÂÖ6†Gvö÷BÖVÖ&ÆVÒÓ##c#fà¥F†RVÖ&ÆVÒ&Wf–Wr—2F†R&÷fVB¢§f—7VÂ&VfW&Væ6R¢¢Âæ÷B&öGV7F–öà§6VæB×F‚&ööbâW†7BF‡2Âö'6W'fVB4„Ó#SbÂ&÷fVææ6RæBwV&FVBgWGW&P¦6ÆVçW÷&V6÷fW'’7G&FVw’&R–âFö72ô”äe$5E%T5EU$Uõ$Tt•5E%’æÖFà¥F†R3ƒvSf#62c&Wf–Wr&VÆ÷r—2†—7F÷&–6ÂÂæ÷BF†RÆFW7Bc"6÷W&6Rà¤ÆÂf—fRföÆFW'2&VÖ–â&WF–æVC²æò6ÆVçWöFVÆWF–öâ÷"æWrFWÆ÷–ÖVçBv0§W&f÷&ÖVBâF†R6ÖRWf–FVæ6R6öæf—&×27F—fRÆ—fRÃ¥2ô552Væ6†ævVBà ¤æW‡B7FW¢æWrW†7BÖ&6—2fö7W6VB÷&ö÷BöæF—fRÖ'&÷w6W"Wf–FVæ6RæB–æFWVæFVç@¤„Te’#ÂföÆÆ÷vVBöæÇ’gFW"¤U$ò$Äô4´U%2'’6W&FR6öçFW‡BÖ—6öÆFVB#"à¬*sb&—f7’÷6V7W&—G’æB7WF÷fW"&÷w2&VÖ–â÷Vã²F†R÷væW"Ög&÷¦Vâ7Fö6²6†Gvö÷B&÷WF–ærFöW2æ÷B&WV—&RæWrÆW'F–ær÷"6V6öæBgVÆÂ×6W'fW"&W7F÷&P§VæÆW727W÷'FVB'’æWrWf–FVæ6R÷"âÆ–6&ÆRg&÷¦VâæöâÖvöÂâæò7V6€§&ööb—2–æfW'&VBg&öÒf—7VÂ&÷fÂâæòÖW&vRÂ&öGV7F–öâFWÆ÷’÷"&VÀ¤6†Gvö÷Bõ5B—2WF†÷&—¦VB'’F†—26÷'&V7F–öâà ¢22†—7F÷&–6Â##bÓÓ#R(	B6ÆÆ&6²c&Wf–WrÖVæFÖVçB‡7WW'6VFVB'’c"&÷fR ¥F†RW6W"6öæf—&ÖVBF†R&VÂGvòÖÆ–æR6ÆÆ&6²æ÷FRÂ‡VÖâÖW76vRF—FÆRæBæF—fR6ÆÆ&6¶Æ&VÂ–â6†Gvö÷BÂF†Vâ6¶VB&÷WBæÖRF–v—G2æB†–FFVâFW‡F&VÆ–Ö—G2âfW&–f–VB7Fö6²6†Gvö÷BBã‚ãv–FvWB&RÖ6†BgVÆÄæÖV—2æ÷&ÖÂFW‡Bf–VÆBv—F‚æòÆWGFW'2ÖöæÇ’&VvWƒ²6öçF7BææÖRÖöFVÂÇ6òFöW2æ÷B&WV—&RÆWGFW'2ÖöæÇ’âBF†B†—7F÷&–6Â7FvRF†R÷F–öæÂ&VfW'&VBæÖR66WFVBF–v—G2öæ–6¶æÖW3²c"7WW'6VFW2F†B'VÆR2&V6÷&FVB&÷fRÂ7F–ÆÂv—F†÷WB6öçF7B–FVçF—G’×WFF–öââ7Fö6²6†Gvö÷BÖW76vRÖöFVÂÖ†–×VÒ—2SÃ6†&7FW'2Âv†W&V2&'•&²6ÆÆ&6²Ç&VG’†BF—7F–æ7BS×Væ—BæF—fR…DÔÂÖ†ÆVæwF‚æB7V&Ö—BwV&BâF†RG&gB"æ÷r6†÷w2æWWG&Â6†Gvö÷B6ÆFRÓ6÷VçFW"VæFW"F†B6ÖRSÖÆ–Ö—FVBFW‡F&VÂv—F‚æò'VçF–ÖR6¶vRâV&Æ–W"Fs“S3’&VÂ×6–væVBv–FvWBõ5G2&VÖ–â†—7F÷&–6Â&ööbf÷"F†BW†7B6÷W&6RæB&RäõBgVÆÂVæB×FòÖVæB&ööbf÷"F†R&Vg&W6†VB6÷VçFW"6÷W&6Râ¢¤†—7F÷&–6ÂFW7F–ærÖöæÇ’&Wf–Wr6÷W&6R¢¢v2¥2ô552g&öÒ3ƒvSf#636Sƒs&C&fF#6VcFSCCcScFF&S“fÂv—F‚fW&–f–VB6W'fVB¥24„#SbcCcS#fSS&&f&Vfc63SFcs##CfVcs†S63VcS3c#f3CVS–#c“Fcƒ†&6Â552v#&S–c“f6C†cCvfv6S#&&S†f3“†6#&FCƒCS“V3fVS†S&V3F#S&Â6ÖRVæÆ–æ¶VB&Wf–WrföÆFW"&V6÷&FVB–âFö72ô”äe$5E%T5EU$Uõ$Tt•5E%’æÖFâF†—2v2æ÷BV&Æ–2Ã6†ævR÷"â&÷fÂFòÖW&vRöFWÆ÷’âF†RæWr–×ÆVÖVçFF–öâ6öFRô¥2ô552†BgVÆÂ–Ö×WF&ÆRFW7G2öâ—G2W†7B3ƒvSf#66G&VR‡&ö÷B#3’³2³2Âfö7W6VBCrÂÆÂ52’Â'WBFF–ærF†RÆFW7B–çfVçF÷'’ö7W'&VçB×7FFRFö72gFW'v&B6†ævW2F†R÷fW&ÆÂ"„TC²&VÆV6RvFR×W7B&R×–âæB&WVB2F–7FFVB'’F†Rv—Bw&VVÖVçBæBg&VW¦Rg&W6‚W†7BÖæ–fW7Bâ–æFWVæFVçB#õ#"¤U$òæB6W&FR÷væW"&öGV7F–öâtò&R7F–ÆÂÖ—76–ærà ¢22##bÓÓ#R(	B6ÆÆ&6²cFV×÷&'’Æ—fRÖ÷&–v–â7Fv–ær‡7WW'6VFW2#Bö7B6æ6†÷B&VÆ÷r ¢¢¥7FGW3¢5Dt”ärdU$”d”TBÂäõB5U5DôÔU"5D•dDTBâ¢¢÷væW"WF†÷&—¦VB7&VF–ærFV×÷&'’6ÖRÖ÷&–v–âFW7BvRæB6V6öæB7Fö6²6†Gvö÷BWFöÖF–öâöâ##bÓÓ#S²F†—2—2æ÷BW‡Æ–6—BtòFòÖW&vR"3SB÷"GW&âöâ6ÆÆ&6²–âF†RV&Æ–2ÃÆVæ6†W"âW†—7F–ærV&Æ–2Ã¥2ô552ö6öæf–r&VÖ–â'—FRÖ–FVçF–6ÂFò4„#Sb#sc6#6FVVffFF3C&63ƒ†#&CcSƒ–#Scs6“33cƒVC#F3##FVcvVF†f&F3Fcvò363#&3333&6Ss&s6fC#–3#“f#fSFcv3v#sfCVV#C““sƒ#Cò&C3ƒSv#&CVf3s33&c“3ƒc3cF3#SFCscfFSvcc3fCvFcsccs†â†öÖWvR&WGW&ç2#â†—7F÷&–6ÂFVÆWFVB&Wf–Ww2&VÖ–âCBâ¢¥F†RÖ–â6—FRw26ÆÆ&6²6†ææVÂ—2ôdbâ¢  ¢¢¤6†Gvö÷BcBã‚ã66÷VçB3æF—fRWFöÖF–öã¢¢¢'VÆR3&VÖ–ç25D•dR†ÖW76vUö7&VFVF–æ6öÖ–ær6öçFVçB6öçF–ç2$%•$µô4ÄÄ$4µõc(i"6öÆRFEöÆ&VÂ6ÆÆ&6¶’â6V6öæB÷væW"ÖWF†÷&—¦VB'VÆR¢¢3"¢¢—2æ÷r5D•dRÂæÖVB&'•&²(	B6ÆÆ&6²†g&–VæFÇ’6öæf—&ÖF–öâcÂ7Fv–ær–¢–æ6öÖ–ær6öçFVçB6öçF–ç2F†R¢¦7GVÂæWvÆ–æR¢¢7G&–ær	-‚}Íí-½‚M}-mİí¥Æí	}-íí-İ’M}-mİí£¢(i"6öÆRFEöÆ&VÂ6ÆÆ&6¶ÂæòFVÒö–æ&÷‚övVçB7&—FW&–ÂæòW†V7WF–öâFVÆ’âÆVv7’'VÆRæB'W6–æW72†÷W'2öWFò×&WÇ’õVæ76–væVBVWVR&RVæ6†ævVBâ'VÆRf—‡GW&R–âF†RG&gB"—2æ÷B—G6VÆbÆ—fR–ç7FÆÆF–öã²3"v26W&FVÇ’–ç7FÆÆVBæBfW&–f–VB'’7Fö6²6†Gvö÷B&–Ç2ÖöFVÂöâF†R†÷7Bà ¢¢¥&VÂ'&÷w6W"æB6†Gvö÷BWf–FVæ6S¢¢¢g&öÒ—6öÆFVB6‡&öÖ—VÒBâ÷væW"Ö&÷fVBVæÆ–æ¶VBFW7BvRöâF†R&'—&²çV÷&–v–âÂW†7B6æF–FFR¥2ô552B"3SB„TBFs“S3“3SFfS†c&ccS#SSsC#sCSSSCcf…E$TR6S#VS#“cs&“#†CFCv#3C#ƒVcfVFcfv’ÂV6‚æWrö÷Vâ÷&W6öÇfVB6–væVBv–FvWBõ5B&WGW&æVB…EE#Â÷6—F—fRÖW76vRö6öçfW'6F–öâ”G2ÂöæRFWeFööÇ2ÖW‡÷6VB66W72Ô6öçG&öÂÔÆÆ÷rÔ÷&–v–ã¢‡GG3¢òö&'—&²çVÂ7V66W76gVÂT’æBæòvRW'&÷'2âfW&–f–VB–âD#¢æWrÖW76vR3Cò6öçfW'6F–öâ3CC²7V'6WVVçB÷VâÖW76vR3Cò6ÖR6öçfW'6F–öâ3CBv—F‚FVÆ–&W&FVÇ’6ÆV&VB7–çF†WF–2Æ&VÂ&RÖÆ–VC²gFW"æF—fRFW7BÖöæÇ’7FGW2&W6öÇfVFæBæ÷F†W"FW7BÖöæÇ’Æ&VÂ6ÆV"ÂÖW76vR3C‚ò6ÖR6öçfW'6F–öâ3CB&RÖÆ–VB6ÆÆ&6¶æB&V÷VæVBF†R6öçfW'6F–öââ–æFWVæFVçBV&Æ–W"æWrÖW76vR33’ò6öçfW'6F–öâ3C2&÷fVB†öæR7W7FöÒGG&–'WFRöâæWvÇ’7&VFVB6öçfW'6F–öã²÷F–öæÂæÖR&VÖ–æVBÖW76vRÖöæÇ’Â6öçF7BææÖVæ÷B&WÆ6VBâÆÂFW7G2W6VB6öÆVÇ’–çFVçF–öæÆÇ’f–7F—F–÷W2FFv—F‚âW‡Æ–6—BİRM}-íİ-†æ÷FRâFV×÷&'’6‡&öÖ—VÒf—6—F÷"&öf–ÆW2vW&RFVÆWFVBgFW"FW7G2â…EEó"'&÷w6W"FWeFööÇ26†÷vVBöæRf—6–&ÆR4ò¶W’v—F†÷WBF†R&rv—&R&Æö6²â7V'6WVVçB¢¦7GVÂWF†VçF–6FVB7–çF†WF–2…EEóãõ5B¢¢FòF†R6ÖRv–FvWBVæGö–çB†ÖW76vR3Sò6öçfW'6F–öâ3CRÂW6–ærg&W6‚7Fö6²4D²f—6—F÷"¥uB–âÖVÖ÷'’ÂFVÆWFVBgFW"F†RFW7B’&WGW&æVB…EE#Â÷6—F—fR”G2æB¢¦W†7FÇ’öæR&r66W72Ô6öçG&öÂÔÆÆ÷rÔ÷&–v–æ†VFW"¢¢v—F‚fÇVR‡GG3¢òö&'—&²çV†6÷VçFVBg&öÒ…EE6Æ–VçBw2VæÖW&vVB&t†VFW'6’âF†Ræv–ç‚öæR×w&—FW"'VÆRæB'6VçB&–Ç2Tä$ÄUô•ô4õ%6×W7B7F–ÆÂ&R&WFW7FVBgFW"âWw&FRà ¢¢¥VæF–ær&Vf÷&RvVæW&Â&öÆÆ÷WC¢¢¢g&VW¦RWFFVBW†7B„TB÷G&VRö&6RöÖæ–fW7C²–æFWVæFVçBW††W7F—fR#F†Vâ6öçFW‡BÖ—6öÆFVB#"¤U$ò$Äô4´U%2Âf–æÂWf–FVæ6R'VæFÆRæB6W&FR÷væW"W†7BÖvòf÷"ÖW&vRæBG'WÂFWÆ÷–ÖVçBÂFWF–ÆVB÷7B×&VÆV6R6W'fW"Fö7VÖVçFF–öâæBgWGW&R6†Gvö÷BWw&FR6Öö¶Rât$âôU%$õ"7W7FöÖW"”’&W6–GVÂ÷&—f7’66WFæ6RæBf–æÂW6W"ÖFWf–6RfW&–f–6F–öâ&VÖ–â&VÆV6R–çWG2âFòæ÷B6†ævRæF—fR6†Gvö÷B'VÆR3Â'VÆR3"ÂvÆö&Â'W6–æW72†÷W'2÷"6—FR6öæf–rv—F†÷WB6W&FRW‡Æ–6—B&÷fÃ²&VÖ÷fRF†R7W'&VçBFV×÷&'’&Wf–WrföÆFW"gFW"÷væW"FW7BæB&V6÷&BF†R6ÆVçWâ÷W&F÷"–ç7G'V7F–öâWFFR—2FVfW'&VBVçF–ÂF†R÷væW"7WÆ–W2F†R7GVÂV&Æ—6†VB–ç7G'V7F–öâà ¢22##bÓÓ#B(	B6ÆÆ&6²c&VÆV6R&W&F–öâ‡&VÂ÷W&F–öæÂ7FGW2 ¥F†—2—2â÷W&F–öæÂ6æ6†÷BÂ¢¦æ÷B¢¢âÖVæFÖVçBFòF†RWF†÷&—FF—fRw&VVÖVçB÷"W&Ö—76–öâFòÖW&vRöFWÆ÷’â&'•&²vV'6—FRÆVæ6†W"¢¤ÃÇ&VG’'Vç2öâV&Æ–2G'WÂ¢¢VæFW"F†R7F—fR&'—&³&F†VÖR6–æ6R##bÓÓ#"Â&Vv&FÆW72öb—G2VæÖW&vVBG&gB"3C"7FGW2‡6VR&öGV7F–öâWf–FVæ6R–âG&gB"3C‚æBF†R–æg&7G'V7GW&R&Vv—7G'’’âvV'6—FR6†BÂFVÆVw&ÒÂf–&W"æB†öæR&R7F—fS²v†G4&VÖ–ç2öfbâ¢¥F†R6ÆÆ&6²f÷&Ò—2äõB7F—fRf÷"7W7FöÖW'2¢¢âFW6—&VB6ÆÂF–ÖRÂ'W6–æW72Ö†÷W'2'VÆW2æB&VÖ–æFW'2&VÖ–âgWGW&R6ÆÆ&6²c"&WV—&VÖVçG2â6†ææVÂW‡ç6–öâæBæF—fR76–væÖVçBöÆ–7’&–÷&—F–W2&RÆFW"F—7F–æ7Bv÷&²à ¤6†Gvö÷BBã‚ã&öGV7F–öâ66÷VçB†2æF—fR6ÆÆ&6¶Æ&VÂæBW†7FÇ’öæR7F—fR66÷VçB×66÷VBÖW76vUö7&VFVFWFöÖF–öã¢–æ6öÖ–ærÖW76vR6öçFVçB6öçF–æ–ær$%•$µô4ÄÄ$4µõc(i"FEöÆ&VÂ6ÆÆ&6¶Âæòf—†VBFVÒÂ–æ&÷‚÷"76–væVRâW†—7F–ær6VÆÆW'2†æFÆR6ÆÆ&6²F‡&÷Vv‚F†R¢§6ÖRæ÷&ÖÂ–æ&÷‚õVæ76–væVBööÂ¢¢2÷&F–æ'’ÖW76vW2âfW&–f–VB÷væW"v–FvWBÖW76vR33–â6öçfW'6F–öâ3C"v2Ö&¶VB6ÆÆ&6¶æBf—6–&ÆRFòâvVçC²F†—2fW&–f–W2F†R÷&F–æ'’6†Bv–FvWBF‚Â¢¦æ÷B¢¢F†RVçV&Æ—6†VBÃ"f÷&Òw2õ5Bö7W7FöÕöGG&–'WFW2ô4²âæ'&÷ræv–ç‚4õ%2&VfÆ–v‡B—2Æ—fRf÷"&'—&²çVæBwwræ&'—&²çV²æV—F†W"7V66W76gVÂ&VÂÃ"f÷&Ò7V&Ö—76–öâæ÷"t$âôU%$õ"”’6fWG’v26–væVBöfbâF†R6—FR7W'&VçFÇ’6W'fW2&Wf–÷W2Ã¥2ô552à ¤÷væW"Ö&÷fVB&öGV7F–öâÆör6öçG&öÃ¢vV"õv÷&¶W"ÄôuôÄUdTÃ×v&æ–â6†&VBæVçfæB&÷F‚W‡FW&æÂ7—7FVÖBVæ—BG&÷Ö–ç2ÂVffV7F—fR&–Ç2æB7F—fT¦ö"ÆövvW"ÆWfVÂ"âF†—27W&W76W2&÷WF–æR”ädò&ÖWFW'2ö¦ö"Ö&wVÖVçBVçG&–W3²—BFöW2æ÷B67'V"öÆBÆöw2÷"W'&÷"×F‚ÖW76vRFFâ6VRFö72ô”äe$5E%T5EU$Uõ$Tt•5E%’æÖFf÷"ö&¦V7BF‡2æB&öÆÆ&6²âG&gB¢§&VÆV6R"3SB¢¢—2F†R6öÆR6öÖ&–æVBÆVæ6‚6æF–FFRöâ7W'&VçB6æöæ–6ÂÖ–ã²—B×W7B72w&VVÖVçB*srãÖæ–fW7BæB„Te’#õ#"æBW†7BÖ&6—2÷væW"&÷fÂ&Vf÷&RÖW&vR÷V&Æ–6F–öââF†R÷væW"w27FvVB&öGV7F–öâ6WGF–æw2&Ræ÷B&ööböbâ7F—fR6ÆÆ&6²f÷&Òà ¢227W'&VçB6×–vâöæf–vF–öâ6æ6†÷Bƒ##bÓÓ#2 ¥F†—2F÷6V7F–öâ—2F†R7W'&VçB6×–vâöæf–vF–öâ6æ6†÷BâW†7B–×ÆVÖVçFF–öâæBÖW&vRG'WF‚&VÖ–ç26æöæ–6Âv—C²æ÷&ÖF—fR&ö6W72öv÷fW&ææ6RWF†÷&—G’&VÖ–ç2Fö72ô•õtõ$´”äuôu$TTÔTåBæÖFâ'VçF–ÖRf7G2F†B&Ræ÷B&W7FFVB†W&R×W7B&Rg&W6†Ç’fW&–f–VBg&öÒF†V—"WF†÷&—FF—fR'VçF–ÖR÷6÷W&6R&Vf÷&RW6Rà ¢2227W'&VçB&÷VæFVB6×–vã¢’6VÆÆW"ô2Ó(	B"3C’‡&÷÷6ÂÂæ÷BÖW&vVB ¢Ò¢¥&W÷6—F÷'’WF†÷&—G“¢¢¢öæÇ’7Fæ—6Æf–·W2ö&'—&²Ö–çFVw&F–öæ6æöæ–6ÂÖ–âæBFö72ô•õtõ$´”äuôu$TTÔTåBæÖFâ"3C’—26W&FR„Te’Fö72ÖöæÇ’&÷÷6ÂFò&V÷Vâ&V6—6VÇ’F†RöffÆ–æR’6VÆÆW"ô2Ó&W6V&6‚W†6WF–öâVæFW"w&VVÖVçB*s²v†–ÆRVæÖW&vVB—B¢¦WF†÷&—¦W2æ÷F†–ær¢¢à¢Ò¢¥7FFR–b"3C’ÖW&vW2gFW"–æFWVæFVçBW†7B×G&VR„Te’#õ#"ÂæWr–Ö×WF&ÆRf–æÂÖvFR'VæFÆRÂæBW‡Æ–6—B÷væW"&÷fÃ¢¢¢—G26–ævÆR&÷VæFVB•õ4TÄÄU%õô3õ44õUô4„ätRæÖF&V6öÖW26æöæ–6Â66÷RWF†÷&—G’f÷"F†—2&W6V&6‚Â¢¦æ÷B¢¢FWÆ÷–VB÷"7F—fFVBW‡W&–ÖVçBà¢Ò¢¤æW‡B–çFVæFVBô2Ó7FWgFW"6W&FVÇ’&÷fVBÖW&vS¢¢¢f–æ—6‚f—BÖæ÷FR4„Ö&÷VæBT#(	4T#bÂ÷væW"ôBÓ(	4ôBÓ–æ6ÇVF–ærôBÓ26ö†÷'BWF†÷&—¦F–öâÂT#2S#"fW&–f–6F–öâÂæöâ×&öGV7F–öâ&÷f–FW"¶W’v—F‚Væf÷&6V&ÆRôBÓb7VæB6ÂW†7B–çWB÷Fö¶VâÖV7W&W2ÂÆ—fRã†â6öæf–wW&F–öâÂæBF†Vâö'F–âF—7F–æ7B4„Ö&÷VæB÷væW"tò&Vf÷&Rç’–BÖöFVÂ6ÆÂâæò7W7FöÖW"Öf6–ær6†Gvö÷BF‚÷"&öGV7F–öâFWÆ÷–ÖVçB—2WF†÷&—¦VB'’F†W6RFö72à¢Ò¢¥Væ6†ævVB&öGV7F–öâ7FFS¢¢¢"3C’6öçF–ç2æò'VçF–ÖR6öFRÂ&öGV7F–öâFWÆ÷–ÖVçBÂfW&–f–VBÆ—fR&÷f–FW"6öæf–wW&F–öâ÷"–BÖöFVÂ'Vââ&ÆÆVÂ3b'VçF–ÖR÷&V6÷fW'’v÷&²&VÖ–ç2v÷fW&æVB'’—G26W&FR6öÖÖ—GFVB6öçG&7G2æBW&Ö—76–öç2à ¢222&–÷"3bÔ#æf–vF–öâ6æ6†÷B‡&V6÷&FVB##bÓÓ²†—7F÷&–6ÂÂæ÷B7W'&VçBô27F—fF–öâ ¥7FFRW‡V7FVBgFW"7V66W76gVÂÖW&vRöb3bÔ#"3ƒ  ¢Ò3ò3&ò3&"ò3&2ò32ò3Bò3S¢ÖW&vVBà¢Ò3RFWFW&Ö–æ—7F–2&VæFW&W"–×ÆVÖVçFF–öã¢ÖW&vVBf–"33²–çFVçF–öæÆÇ’Væ6öææV7FVBöæ÷BFWÆ÷–VBVçF–ÂF÷vç7G&VÒ3bv—&–æröWF†÷&—¦F–öâ—2–×ÆVÖVçFVBà¢Ò3b7FvR6öçG&7C¢ÖW&vVBà¢Ò3bÕGW&&ÆR7FFR×7F÷&R–×ÆVÖVçFF–öã¢ÖW&vVBà¢Ò3bÕƒFVfW'&VB×&VçB†—7F÷&–6ÂÖ7WB†&FVæ–æs¢ÖW&vVBf–"3’gFW"„Te’#²—6öÆFVB#"&÷F‚&W÷'FVB¤U$ò$Äô4´U%2öâöæRW†7B6öçG&öÆÆ–ærÖæ–fW7B&6—2à¢Ò&Wf–WrÖöæÇ’"3#¢6Æ÷6VBv—F†÷WBÖW&vRgFW"—6öÆFVB##²†—7F÷&–6Â&Wf–WrG&ç7÷'BöæÇ’à¢Ò&—6²×&÷÷'F–öæÂ6Æ÷7W&R&ö6W72÷'Væ&öö²÷FV×ÆFW3¢ÖW&vVBf–"3#à¢Òw&VVB7FÆR3R'&æ6‚‡–v–VæS¢6ö×ÆWFVBæB–æFWVæFVçFÇ’6öæf—&ÖVBgFW"g&W6‚fWF6‚÷'VæRà¢Ò3bÔ#GW&&ÆR&6·W÷&V6÷fW'’&öf–ÆS¢&W÷6—F÷'’–×ÆVÖVçFF–öâ&÷f–FVB'’"3ƒ²—B&WW6W2F†RW†—7F–ærvVæW&–2Væ7'—FVB5Æ—FR&6·W6÷&RÂFG2f—'7BÆ–æR6VÖçF–2&W7F÷&RfW&–f–6F–öâÇW2F†–â&6·W÷&W7F÷&R4Ä’ÂFG2¦W&ò'VçF–ÖRFWVæFVæ6–W2æB¦W&òGW&&ÆR7—7FV×2ÂW&f÷&×2æò&öGV7F–öâw&—FRÂæB—2æ÷B&öGV7F–öâFWÆ÷–ÖVçBö7F—fF–öâà¢Ò3bÔ#&V6÷fW'’fW&–f–6F–öâ–æ6ÇVFW2F†R3bÕƒò3’6VÖçF–2Ö6÷''WF–öâ6Æ73¢5Æ—FR–çFVw&—G’ÆöæR—2–ç7Vff–6–VçC²f÷&vVBFVfW'&VB×&VçB†—7F÷'’×W7Bf–ÂF†Rf—'7BÆ–æR6VÖçF–2fW&–f–W"à¢ÒW†—7F–ær¶æ÷vÆVFvR&V6÷fW'’&Vw&W76–öâ&VÖ–ç2'BöbF†R6÷VçFVB&V6÷fW'’fW&–f–6F–öâ7W&f6Rà ¤æW‡B–çFVæFVB6WVVæ6RgFW"7V66W76g]vë^m¢G§²ÚîÆ­yÒÒæ÷F–f–6F–öç2ö†æFöfc°¢Ò‡VÖâ&W6öÇWF–öã°¢Ò&Wf–WvVB&WfVçF–öâ'VÆW3°¢ÒgWGW&RFFVÆ—G’ò&WV—&W2GFVçF–öâ62T’à¢Ò6÷W&6RöbG'WFƒ ¢Fö72ô4DÄôuô”DTåD•E•ôäôÔÅ•ôÔätTÔTåBæÖF  £"â¢¥&öGV7B&W6VçFF–öâ&ö¦V7F–öâ¢ ¢Ò&÷f–FW"ÖæWWG&Â&WW6&ÆR&öGV7B6&G2÷FV×ÆFW3°¢Ò&Wf–Wr–ÖvW3°¢ÒG'W7FVB&–6S°¢Òf–Æ&–Æ—G“°¢Ò6†ææVÂ&VæFW&–æs°¢Ò66†–ærô4Dâ&V†f–÷#°¢Òç7vW"÷f—7VÂVÆ—G“°¢Ò6Æ–6²÷6VÆV7BÆ–¶VÆ–†ööC°¢ÒÆFVæ7’æBF÷FÂFVÆ—fW'’öÖöFVÂö6†ææVÂ6÷7Bà¢Ò÷fW'f–Ws ¢Fö72õ5•5DTÕôÔæÖF  ¤–FVçF—G’öæöÖÇ’&W6öÇWF–öâÆöv–6ÆÇ’&V6VFW2&öGV7B&W6VçFF–öã¢âÖ&–wV÷W0¦–FVçF—G’6WB×W7Bæ÷B&V6öÖRöÆ—6†VB’&V6öÖÖVæFF–öâö6&Bà ¤æV—F†W"gWGW&R&6†—FV7GW&R6†÷VÆB&R†–FFVâöæÇ’–ââÄÄÒ&ö×BâFWFW&Ö–æ—7F–0¦'W6–æW72öÆ–7’&VÆöæw2–â7G'V7GW&VB÷fW'6–öæVB6öæf–wW&F–öâæBVÇF–ÖFVÇ’F†P¥62T“²6†Gvö÷BöVÖ–Â&R÷W&F–öæÂ7W&f6W2&F†W"F†âF†RöÆ–7’6÷W&6Rö`§G'WF‚à ¤w&VVBæöÖÇ’v÷fW&ææ6R—2Ç&VG’–æFW†VBg&öÓ ¢Ò6öæf–rö6FÆörÖæöÖÆ–W2õ$TDÔRæÖF ¢Ò6öæf–rö6FÆörÖæöÖÆ–W2õôÄ”5•ô4DÄôræÖF ¢ÒFö72ô4DÄôuôäôÔÅ•õ%TåD”ÔUõcæÖF  ¥F†W6Rv÷fW&ææ6Rf–ÆW2&R–æFW†VB–âv—BâF†R&öGV7F–öâW‡÷'FW"æ÷rÆöG2F†P§&Wf–WvVBV&Æ–6F–öâö6öÆÆ—6–öâWF†÷&—G’GW&–ær6öçG&öÆÆVB&F6‚'Vç3²W'6—7FVç@¤6FÆöræöÖÇ’×7F÷&RöÆ–6F–öâ'VçF–ÖR&VÖ–ç2ÆFW"FWÆ÷–ÖVçBà ¥F†RGvò–FVçF–f–W'2SæBƒCÖ3&&VÖ–â–çFVçF–öæÆÇ’VæÖVB–à¦6öæf–wW&F–öâæBW6VgVÂ†—7F÷&–6Â66WFæ6R66W2âF†W’&RæòÆöævW"&÷F‚Æ—fP¦GWÆ–6FR–æ6–FVçG3¢F†R##bÓ’Ó#‚&VBÖöæÇ’6÷W&6R&ö&Rf÷VæBF†Rf÷&ÖW"¦ööÇ ¦GWÆ–6FRw&÷W3“#f'6VçBÂv†–ÆRF†R66WFVBf—'7BÔeTÄÂ6÷W&6RWf–FVæ6R&WF–ç0¦ƒCÖ3&2F†R&W6–GVÂV&çF–æVB–æ6–FVçBVæFW"w&÷W2ƒcsö#cVà ¤7W'&VçBFW6–vâ6Æ–6S ¢ÒFö72õ$ôET5Eô”DTåD•E•õ$U4ôÅUD”ôåõcæÖF°¢Ò¦ööÇ¢S¢66WFæ6R66Rf÷"6æF–FFR6ÖR×&öGV7B&W6öÇWF–öâv†W&P¢W6VgVÂ6öçFVçBÂ6FVv÷'’æBU$Âf7G2&R7Æ—B7&÷72ÆVv7’6&G3°¢Ò'Vv&öòƒCÖ3&¢66WFæ6R66Rf÷"6æF–FFR6ÖR×&öGV7B&W6öÇWF–öà¢–çföÇf–ær×VÇF—ÆR7WÆ–W'2æB66R×f&–çB6÷W&6R'F–6ÆW3°¢Ò&öGV7B÷f&–çB–FVçF—G’Â&ö÷B6W6RÂ–FVçF–f–W"W†6WF–öâæB7F–öâÆâ&P¢6W&FR7G'V7GW&VBFV6—6–öç3°¢Ò&÷fÂ&–æG2W†7BÖFW&–ÂWf–FVæ6RæB6öÆÆ–FW"÷6÷W&6RÖVçF—G’6WC°¢Ò’Ö’&÷÷6S²VçF–ÂWF†VçF–6FVBFÖ–â&÷fÂW†—7G2Â&Wf–WvVBF–vW7BÖ&÷Væ@¢&Vv—7G'’6†ævW2&RF†RGW&&ÆRWF†÷&—G’à ¤æò&öGV7F–öâFWÆ÷–ÖVçB÷"eTÄÂ—2'BöbF†—2FW6–vâ6Æ–6Rà ¢22C&"òf—'7B6öçG&öÆÆVBeTÄÀ ¥7FGW3¢¢¥$ôET5D”ôâeTÄÂ44UDTBò$T4õdU%’²Ä”ä²²Ä”ä²"52òõtäU"44UDTBò4äôä”4Â4ä4„õBdU$”d”TB¢  ¤FW6–vâ6÷W&6S ¦Fö72ôE%UÅôU…õ%EôC$"æÖF  ¤†—7F÷&–6Â&RÔeTÄÂ&W6V&6‚gFW"&öGV7B–FVçF—G’&W6öÇWF–öâc–FVçF–f–VBf÷W ¦ÖFW&–ÂvFW2öâF†R7&—F–6Â–ævW7F–öâFƒ²ÆÂf÷W"vW&R7V'6WVVçFÇ’6Æ÷6VBf÷ §F†R66WFVBf—'7B&öGV7F–öâeTÄÃ  £â&Vf÷&RF†RC&"7WF÷fW"Â&öGV7F–öâ6FÆöu6W'f–6Rv2öâeTÄÂ&V6÷&Bcğ¢6FÆör66†VÖRò&öGV7F–öâÖW"Âv†–ÆRF†R6æF–FFRW‡÷'FW"VÖ—GFVBeTÄÀ¢&V6÷&Bc"æB&WV—&VB6FÆör66†VÖbòÖW"#²&V6V—fW"6ö×F–&–Æ—G’F†W&Vf÷&P¢†BFò&RFWÆ÷–VBv—F‚F†RÆææVB7WF÷fW#°£"âW‡÷'FW"–ÆöB7ööÂÆ–fV7–6ÆR†B&VVâ&W&W6VçFVB–â&W÷6—F÷'’7F÷&vRöÆ–7¢'’FVF–6FVBG&ç6–VçBW‡÷'FW%÷&VG•÷7ööÇ6æB6FÆöuöÆ–æµö÷7Fv–æv ¢ö&¦V7G2&Vf÷&RF†V—"&öGV7F–öâ7F—fF–öã°£2â6VæFW"&WG'’GW&&–Æ—G’†B&VVâ–×ÆVÖVçFVB'’"33S ¢'æG'WÂÖC&"ç'Vâ×7FFRóg&VW¦W2öæR'Vâ”BÇW2W†7B†VFW"ö6‡Væ²÷G&–ÆW ¢6VÖçF–727&÷72&W7F'BÂæBöæR7&÷72×&ö6W726VæFW"Æö6²÷vç2V6‚&VG’7ööÃ°£BâF†R$ôõE5E$6öæf–r×7FFR&V6÷fW'’v†B&VVâ6÷'&V7FVB'’"333¢fW&–f–V@¢&V6÷fW'’6WG2FW&—fRF†R6æ6†÷B6öæf–r×7FFRF–vW7BæBÆ—fR$ôõE5E$ ¢FÖ—76–öâ÷7FFR&WfÆ–FFW2—C²&öGV7F–öâ6FÆöu6W'f–6R7F–VBöâF†R&Wf–÷W0¢&VÆV6RVçF–ÂF†RÆææVBC&"7WF÷fW"à ¤7W'&VçB&öGV7F–öâ6&–Æ—G’f7G3 ¢Ò6FÆöu6W'f–6R†÷7B7W÷'G2æöFS§7Æ—FVæB5Æ—FReE3S°¢Ò6FÆöu6W'f–6R—25U%$TåFÂö†VÇF†—2w&VVâÂ–ævW7B—2Væ&ÆVBæBF†W&R&P¢æò7W'&VçB†VÇF‚&Æö6¶W'3°¢Ò7W'&VçB6W'f–6R†2æò7—7FVÖBÖVÖ÷'”Ö†öÖVÖ÷'”†–v†VçfVÆ÷S°¢Ò6FÆöræv–ç‚&÷‡•÷&VE÷F–ÖV÷WF—236V6öæG3°¢ÒF†R&öGV7F–öâeTÄÂÂ6W'F–f–6F–öâ÷6VÂ÷V&Æ–6F–öâæB÷7BÔ4²66WFæ6RF€¢†fR6ö×ÆWFVB7V66W76gVÆÇ’f÷"F†R66WFVBvVæW&F–öâà ¥&V6V—fW"–×ÆVÖVçFF–öâ7FGW3 ¢Ò"332ÖW&vVBBSCsc3ƒFf&6V#3F#vC“FCCF&Fc““6#S–C3S&°¢Ò7G'V7GW&Â†—7F÷&–6Â'æ6FÆörç'VâÖ†VFW"ó'6–ær—2&WF–æVC°¢ÒæWr&öGV7F–öâeTÄÂFÖ—76–öâ&WV—&W2W†7B'æ6FÆörç'VâÖ†VFW"ó&°¢Ò6–væVB'æ6FÆörçV&Æ–6F–öâÖWF†÷&—G’ó—2fÆ–FFVBv–ç7BF†RW†7BGvòÖ¶W¢–FVçF—G•7F÷&R6öæf–rÖ&Vf÷&RäUr6WGW&&ÆRFÖ—76–öâæBöâc"6W&WG'“°¢Ò6öæf–r†6‚×WFF–öâæBFV6—6—fR6WFÖ—76–öâ6†&P¢6FÆöuV&Æ–6F–öäÆö6¶Â6Æ÷6–ærF†R7&÷72×&ö6W726öæf–röFÖ—76–öâ&6S°¢Ò66WFVBvVæW&F–öâÖæ–fW7G2&–æBF†RW†7BWF†÷&—G’&V6÷fW&VBg&öÒGW&&ÆR6WÀ¢–æ6ÇVF–ær6VÂ÷&V6÷fW'’÷V&Æ–6F–öâF×W"6†V6·3°¢Ò$ôõE5E$&V6÷fW'’6÷fW&vR&–æG26æ6†÷BöÆ—fR6öæf–r×7FFRF–vW7BæB66†V@¢6÷fW&vR—2–çfÆ–FFVBÆ—fS²5U%$TåB&V6÷fW'’6VÖçF–72&VÖ–âVæ6†ævVC°¢ÒW‡Æ–6—BC&"…EEWF†÷&—G’ö6öæf–r÷fW'6–öâW'&÷'2&RæöâÓS°¢Òæò&WÆ•7F÷&RÂ&V6÷fW'’×6WBÂ6FÆörD"÷"–FVçF—G•7F÷&R66†VÖ'V×v2&WV—&VC°¢ÒF†—2&V6V—fW"7W÷'B—2FWÆ÷–VB–âF†R7W'&VçB&öGV7F–öâ6FÆöu6W'f–6R&VÆV6P¢æBv2W†W&6—6VB'’F†R66WFVBf—'7BeTÄÂà ¤g&÷¦VâF—&V7F–öâW6VBf÷"F†R6ö×ÆWFVBf—'7BÔeTÄÂ6×–vâ††—7F÷&–6ÂFW6–vâ&V6÷&B“ ¢Ò¶VW%G&ç7÷'BcæBW†—7F–ærö’ö6FÆörö–ævW7B÷cögVÆÆ&÷WFS°¢Ò–çG&öGV6RW†7B6–væVB'æ6FÆörç'VâÖ†VFW"ó&v—F€¢'æ6FÆörçV&Æ–6F–öâÖWF†÷&—G’ó°¢Ò&W6W'fRW†—7F–ærC&'æG'WÂÖW‡÷'FW"ç7ööÂó&6VÖçF–72æB–çG&öGV6P¢C&"×G&ç7÷'F&ÆR'æG'WÂÖW‡÷'FW"ç7ööÂó6v—F‚&öGV6W"&÷fVææ6Ræ@¢6÷W&6RÖ66WFæ6Ræ§6öæ†6‚&–æF–æs°¢ÒV&Æ–6F–öâWF†÷&—G’W6W2fW'6–öæVB6öæf–uöF–vW7G6ÖÂ7ööÂöæöÖÇ’†6†W2À¢6÷W&6R6öçG&7BfW'6–öç2ÂæF—fUö–FVçF—G•÷66†VÖVÂ&öGV6W"6öÖÖ—BæB&VÆV6P¢&÷fVææ6RF–vW7C°¢Ò6FÆöu6W'f–6R6ö×&W2F†R6–væVB6öæf–rÖFòW†7B7W'&VçB6öæf–u÷7FFV&Vf÷&P¢66WF–ær6W²v†–ÆR6FÆörWF†÷&—G’—2$ôõE5E$Â&V6÷fW'’vFRÇ6ò&WfÆ–FFW0¢F†R6÷fW&–ær×g2ÖÆ—fR6öæf–r×7FFRF–vW7BöâWfW'’–ævW7BFÖ—76–öâö÷7FFV&Æö6¶W ¢6ö×WFF–öã²5U%$TåB&V6÷fW'’6VÖçF–72&R–çFVçF–öæÆÇ’Væ6†ævVB–âC&#°¢ÒC&¶VW2F†RæòÔ…EE–çf&–çC²C&"—26W&FR6VæFW"ö6öçG&öÂÖöGVÆRv—F‚FöÖ–0¢'Vâ×7FFRæBâW†6ÇW6—fRW"×7ööÂ6VæFW"Æö6³°¢Ò66WFVBWF†÷&—G’—2&W6W'fVB–âvVæW&F–öâÖæ–fW7BW‡G&ÇW26ÖÆÂ&öGV6W ¢66WFæ6RÖVF—B6¶vS°¢ÒgVÆÂ×66ÆR&V†V'6Â'Vç2öâF—7÷6&ÆRFVF–6FVB&öGV7F–öâÖ6Æ72dÒgFW"C& ¢–×ÆVÖVçFF–öâÂv—F‚&VFV6Æ&VB32æöæf–æÂòƒ2f–æÂvFW2Âf–ÇW&RG&–ÆÇ2æ@¢F†R6ö×ÆWFRÆ–æ²7Fv–æröW††W7F—fRfW&–f–W"VæFW"6W&FRS"ó3ƒBÖ” ¢Æ÷r×&–÷&—G’G&ç6–VçB×Væ—BVçfVÆ÷S°¢Ò&öGV7F–öâÆ–æ²W6W2F†R6ÖR÷"7G&–7FW"&V†V'6VB&÷VæFVBÖÖVÖ÷'’G&ç6–VçB×Væ—@¢VçfVÆ÷RöâF†R6FÆöu6W'f–6R†÷7BæB—26fVÇ’&÷'F&ÆR÷&VBÖöæÇ“°¢Ò&V†V'6Â7ööÂ—2æWfW"&WW6VB2&öGV7F–öã¢gFW"f–æÂ&VÆV6Rg&VW¦RÂ&öGV7F–öà¢'V–ÆG2g&W6‚7ööÂg&öÒF†R6ÖR–Ö×WF&ÆR&öGV6W"÷6VæFW"6öÖÖ—BæB7F'G26W ¢v—F†–â3Ö–çWFW2öbF†R6æ6†÷BvFW&Ö&³°¢Ò†Vg’7ööÂFF&VÖ–ç2f–Æ&ÆRF‡&÷Vv‚4²÷7FFRÂÆ–æ²æB÷væW"66WB÷&W6W@¢FV6—6–öã²6FÆöu6W'f–6RÆ–æ²7Fv–ær—26W&FRG&ç6–VçB7F÷&vR×öÆ–7¢ö&¦V7C°¢Ò66WFæ6R—2GvòÖÆ–æ³¢W††W7F—fR7ööÂ×FòÖ6FÆörÇW2–æFWVæFVçB&WF–æV@¢6÷W&6R×6æ6†÷B×Fò×7ööÂWf–FVæ6S²Æ—fRG'WÂ—2öæÇ’&V6†V6¶VBv†VâVæ6†ævV@¢7FGW26â&R&÷fVâ'’6÷W&6RÖ&¶W'3°¢ÒöæR&öGV7F–öâ6FÆöu6W'f–6R7WF÷fW"ö67W'2öæÇ’gFW"&V†V'6Ã°¢ÒöfbÖ†÷7B–FVçF—G’÷&V6÷fW'’6÷’²&W7F÷&RG&–ÆÂæBGvòÖÆ–æ²66WFæ6R&RvFW0¢&Vf÷&R6VÆÆW"’ö6FÆör6öç7VÖW'2&RVæ&ÆVBà ¤–×ÆVÖVçFF–öâ6Æ–6Ræ÷r6†ævW2&W÷6—F÷'’W‡÷'FW"÷7F÷&vR×öÆ–7’6öFRöæÇ“ ¢ÒW‡÷'FW"w&—FW2W†7B'æG'WÂÖW‡÷'FW"ç7ööÂó6v—F‚&öGV6W"&VÆV6R&÷fVææ6P¢æB6÷W&6RÖ66WFæ6Ræ§6öæ†6†W3°¢Ò&öGV7F–öâ6÷W&6RÖ66WFæ6RWf–FVæ6R—2vF†W&VB'’6W&FRF&vWFVB4TÄT5G2–ç6–FP¢F†R6ÖR&WVF&ÆR×&VB6æ6†÷BG&ç67F–öâÂv—F‚W†7B6FÆör×fö6'VÆ'¢F†öæö×’ö†–W&&6‡’Â&÷f–FW"'&æBFW&×2æBäd2Ö6÷'&V7B7G&VÖVB7Fö6²ÖF6†–æs°¢Ò&Wf–WvVB66WFæ6R66W2&R&÷VæFVBFò#‚&öGV7BÖw&÷W”G3°¢Ò&VfÆ–v‡B÷7ööÂf–Â6Æ÷6VBöâW‡Æ–6—BW†—7F–ærFV×÷7ööÂôÖ&–D"F—&V7F÷'¢g&VR×76RvFW3°¢Ò–Ö×WF&ÆR$TÄT4Ræ§6öæ7&VF–öâ÷fÆ–FF–öâ—26æöæ–6ÂæB&V¦V7G2F—'G’÷ ¢æöâÖæ÷&ÖÂv—B–æFW‚7FFRÇW26÷W&6R×G&VR÷WGWBF‡3°¢Ò&VG’×7ööÂæBgWGW&R6FÆöu6W'f–6RÆ–æ²7Fv–ær&R&WV—&VBG&ç6–VçB7F÷&vP¢6Æ76W2v—F‚g&÷¦Vâ&—fFRsócW&Ö—76–öç3°¢Ò&öGV7F–öâ7F÷&vR÷væW'6†——2&V6÷&FVB0¢&'—&²ÖW‡÷'FW#¦&'—&²ÖW‡÷'FW&à ¥F†R÷&–v–æÂf—'7BÔeTÄÂ7&—F–6ÂF‚—26ö×ÆWFRâ&V†V'6Â†&FVæ–ærÂ&öGV7F–öà¤6FÆöu6W'f–6R7WF÷fW"ÂF†R6öçG&öÆÆVBeTÄÂÂ÷7BÔ4²GvòÖÆ–æ²66WFæ6RÂöfbÖ†÷7@§&V6÷fW'’÷&W7F÷&RæB÷væW"66WFæ6R†fRÆÂ&VVâ6ö×ÆWFVBâgWGW&R–ævW7F–öâ'Vç0¦&R6W&FR÷væW"ö÷W&F÷"FV6—6–öç2æB×W7B&W6W'fRF†R66WFVBWF†÷&—G’æ@§&V6÷fW'’–çf&–çG2à ¥&W÷6—F÷'’&V6V—fW"7W÷'Bf÷"'VâÖ†VFW"ó"ÂV&Æ–6F–öâÖWF†÷&—G’fÆ–FF–öâÀ¦66WFVBÖvVæW&F–öâWF†÷&—G’&–æF–æræB$ôõE5E$&V6÷fW'’6÷'&V7F–öâv2ÖW&vVB'¥"332â&W÷6—F÷'’6VæFW"ö6öçG&öÂ7W÷'Bv—F‚W†7BGW&&ÆR'Vâ×7FFRÂW†6ÇW6—fP§W"×7ööÂ÷væW'6†—Â&÷VæFVB&WG'’÷&W7VÖRæBWF†VçF–6FVB%G&ç7÷'Bv2ÖW&vV@¦'’"33RâF†W6R6&–Æ—F–W2vW&R7V'6WVVçFÇ’FWÆ÷–VBöW†W&6—6VBf÷"F†R66WFV@¦f—'7B&öGV7F–öâeTÄÃ²F†V—"÷&–v–æÂ"ÖÆWfVÂæöâ×&öGV7F–öâ6Æ–×2&VÆ÷r&VÖ–à¦†—7F÷&–6Â6Æ÷7W&RWf–FVæ6Rf÷"F†÷6R–æF—f–GVÂ'2à ¥&öGV7F–öâW‡÷'FW"7WF÷fW"&VÖ–ç2@¦ö÷Bö&'—&²ÖW‡÷'FW"÷&VÆV6W2ó##c“#…C“S3CE¢Ó†3s†&CV ¢†6öÖÖ—B†3s†&CSv#s6#“#–CVcf3C6cfc6C–&36’â&÷F‚&RÖ7WF÷fW"æ@§÷7B×7v—F6‚&VfÆ–v‡B76VBv—F‚F†RW7F&Æ—6†VBÆ—fR×6÷W&6R&6VÆ–æRâÆFW ¦÷væW"ÖWF†÷&—¦VBC&"&öGV6W"÷6VæFW"&VÆV6R6VçBF†R66WFVBf—'7BeTÄÃ²6FÆöu6W'f–6P¦—2æ÷r5U%$TåBBvVæW&F–öà¦uó6cƒ&##Cƒsƒfcf6V“VC–6“CSS&c&VV#3“ƒCF&FSƒvà ¥"332&V6V—fW"6Æ÷7W&RWf–FVæ6S ¢Ò&Wf–WvVB"„TBC3“sFcV&c#sfF&S#F6FcvSs6#ƒS“3S†6CÀ¢G&VRVFC6ff33F6FVS3Cc†3ƒF#&S6†#FF°¢ÒÖW&vR6öÖÖ—BSCsc3ƒFf&6V#3F#vC“FCCF&Fc““6#S–C3S&°¢Ò–æFWVæFVçBW†7B7&6‚×v–æF÷r&W&öGV7F–öâ&÷fW26öæf–rÓâVæF–ær6WÓà¢6öæf–r"ÓâW†7B&WG'’æ÷rf–Ç24ôäd”uôUD„õ$•E•ôÔ•4ÔD4†&Vf÷&R'V–ÆFW"÷7FvS°¢Ò&ö÷BVæ—B33ó33Âfö7W6VB6÷'&V7F–öâsRósRÂÆVv7’2ó2Â&Vf7F÷"2ó2À¢W‡÷'FW"ƒóƒæB7F÷&vR×öÆ–7’fÆ–FF–öâÆÂ76VBöâF†R&Wf–WvVBG&VS°¢Òæò&öGV7F–öâFWÆ÷–ÖVçBÂ6FÆöu6W'f–6R×WFF–öâ÷"eTÄÂö67W'&VB2'Böb"332à ¥"33R6VæFW"ö6öçG&öÂ6Æ÷7W&RWf–FVæ6S ¢Ò&Wf–WvVB"„TB#vf6csƒfCf#3S#“ssS3V#†SVv&CS–3cC–S3–À¢G&VRS–#sfFf##cvF3V3S†6cCfF3C3sssFcCSCF°¢ÒÖW&vR6öÖÖ—BCf63–S33ƒ–VfFc#&&SfC†VC#3V3CV3c“6°¢ÒW†7B7ööÂó2fW&–f–6F–öâ&WW6W2eTÄÂFV6öF–ær÷&V6÷&BfÆ–FF–öâ&Vf÷&RæWGv÷&³°¢ÒGW&&ÆR'æG'WÂÖC&"ç'Vâ×7FFRóg&VW¦W2'Vâö†VFW"ö6‡Væ²÷G&–ÆW"Wf–FVæ6S°¢Ò'æG'WÂÖC&"ç6VæFW"ÖÆö6²óf–Ç26Æ÷6VBöâÖÆf÷&ÖVB÷væW"Wf–FVæ6RæB&WV—&W0¢W‡Æ–6—B7FÆRÖÆö6²'&V¶–æröæÇ’gFW"FVB÷væW'6†——2&÷fVã°¢Ò&VF—&V7G2&Ræöâ×&WG'–&ÆRC$%õ$TD•$T5Eõ$T¤T5DTF²fÆ–B6FÆöu6W'f–6RFW&Ö–æÀ¢W'&÷'2&W6W'fR&VÖ÷FR6öFRö7F–öâ÷&WVW7Eö–FF‡&÷Vv‚C$%ô4DÄôuôU%$õ&°¢Òfö7W6VB6VæFW"÷7F÷&vRc"óc"Â—6öÆFVB&VÂ4”t´”ÄÂóÂ&ö÷BVæ—B3sró3srÀ¢ÆVv7’2ó2Â&Vf7F÷"2ó2ÂW‡÷'FW"ƒóƒæB7F÷&vR×öÆ–7’fÆ–FF–öà¢#ö&¦V7G2òbGW&&ÆRÆÂ76VBöâF†R&Wf–WvVBG&VS°¢Òæò&öGV7F–öâFWÆ÷–ÖVçBÂ&öGV7F–öâ7ööÂÂ6FÆöu6W'f–6R×WFF–öâÂeTÄÂÂÆ–æ²¢÷"66WFæ6R6¶vRö67W'&VB2'Böb"33Rà ¢22ã†â"ãC’ã‚6òÖ†÷7B–×ÆVÖVçFF–öâ6¶vR(	Bæ÷BFWÆ÷–V@ ¤2öb##bÓÓ#‚ÂG&gB"3s2B—G27FFVB5Æ—FR6¶vR&VçB—2&V–ærWFFVB–â&÷VæFVB6¶vRf÷"F†R÷væW"w26VÆV7FVBöff–6–Â÷7Fw&U5Â&6†—FV7GW&RâF†R6æF–FFRW6W2öff–6–Âã†â"ãC’ã‚æB÷7Fw&U5Âbãb–ÖvW2–ææVB'’F–vW7BÂ–æFWVæFVçB÷7Fw&U5ÂtDDæBã†âW6W"7FFRÂ6W&FR¶W’ÂÆö÷&6²ÖöæÇ’VF—F÷"Ââ–çFW&æÂÖöæÇ’6ö×÷6R'&–FvRÂæB&Vv—7FW&VBGW&&ÆRæBF×g2F‡2âF†R7W'&VçBBÔv”"†÷7B&VÖ–ç2F†RF&vWC²66—G’—2TådU$”d”TBVçF–ÂF†R6W&FVÇ’WF†÷&—¦VB&VÆV6RFW7BÖV7W&W2F†R6öæ7W'&VçBã†âæB÷7Fw&U5ÂV·2æB6†Gvö÷B†VÇF‚à ¥F†R&–÷"4„Ö&÷VæB–çFVw&FV&VfW'&VBFòF†R7WW'6VFVB5Æ—FRf—BæBÇFW&æF—fW266ââF†RWFFVB÷7Fw&U5Âf—Bæ÷FRæB÷F–öç266â×W7B&R&÷VæB'’æWrW†7BÕ4„–çFVw&FVFV6—6–öââæò6W76–öâÖöæÇ’5Æ—FRW†6WF–öâ÷"ã†â6÷W&6R6†ævR—2–æ6ÇVFVBâF†R5Æ—FR'W7•÷F–ÖV÷WFf–æF–ær&VÖ–ç2–âæöâÖæ÷&ÖF—fR†—7F÷&–6ÂWf–FVæ6Ræ÷FRâF†R5Æ—FRv÷&¶fÆ÷r–×÷'Bƒ#"²bæöFW2’—2æ÷B&WVFVC²öæÇ’ÆFW"6W&FVÇ’WF†÷&—¦VB÷7Fw&U5Â6ö×F–&–Æ—G’6†V6²Ö’–×÷'BF†R6ÖRW†7BFVf–æ—F–öç2öæ6RæB×W7BfW&–g’&÷F‚&VÖ–âôdbà ¥F†R6æF–FFR6¶vRFG2–æFWVæFVçB÷7Fw&U5Â&6·W÷&W7F÷&Rv—F‚F†RÖF6†–ærã†âVæ7'—F–öâÖ¶W’f–ÆRæBöæR7–çF†WF–27&VFVçF–Â6†V6²ÂW‡Æ–6—BFö6¶W"4Ä’–ææ–ærFò÷f"÷'VâöFö6¶W"ç6ö6¶Â6öçFW‡B÷fW'&–FRf–ÇW&R6†V6·2ÂæBFFVBöff–6–Â7W÷'Bö7F—f—G’Wf–FVæ6Rf÷"F†RÇFW&æF—fW2â7FF–2–×ÆVÖVçFF–öâFW7G2æB–æFWVæFVçB„Te’66WFæ6R&R&WV—&VB&Vf÷&RF†R÷væW"—26¶VBf÷"6W&FR&VÆV6RtöâF†R&VÆV6RFW7B×W7BÖV7W&R7GVÂ÷7Fw&U5ÂæBã†â&W6÷W&6RW6RöâF†RW†—7F–ær†÷7BâF†—26¶vRFöW2æ÷B–ç7FÆÂFö6¶W"Â7&VFR&öGV7F–öâF‡2Â7F'B6öçF–æW"Â6†ævR6†Gvö÷Bõf–&W"ÂÖW&vRF†R"Â÷"WF†÷&—¦R'W–W"FFÂ&VÂ7&VFVçF–Ç2ÂV&Æ–2VæGö–çG2÷"v÷&¶fÆ÷r7F—fF–öâà ¤æòFö6¶W"6¶vRÂã†â÷"÷7Fw&U5Â6öçF–æW"Âã†â†÷7BF‚Â7—7FVÖBVæ—BÂ&6·WÂ¶W’Â7&VFVçF–ÂÂ÷"v÷&¶fÆ÷r†2&VVâ7&VFVBöâ6†Gvö÷BÖg&Óâ6†Gvö÷BBã#ãæBf–&W"&VÖ–âVçF÷V6†VBâF†RW†—7F–ær&÷fVB#"ÖæöFRæBbÖæöFR–×÷'B—2†—7F÷&–6Â5Æ—FRWf–FVæ6RöæÇ’æB—2æ÷B&WVFVB–âF†—26×–vâà ¤6æF–FFRfW&–f–6F–öâgFW"F†R÷7Fw&U5Â6¶vR6÷'&V7F–öç3¢fö7W6VBã†â÷7F÷&vRFW7G2c"óc#²çÒFW7F76VB7F÷&vRfÆ–FF–öâƒ3rö&¦V7G2ò3ÆææVBò"GW&&ÆR’ÂVæ—BƒÃ3#"óÃ3#"’ÂÆVv7’6†&7FW&—¦F–öâƒ2ó2’ÂæB&Vf7F÷"6†&7FW&—¦F–öâƒ2ó2’â7—7FVÖBVæ—B7–çF‚76VB7—7FVÖBÖæÇ—¦RfW&–g––ââ–æW'BFV×÷&'’&ö÷Bâöff–6–ÂFö6¶W"6ö×÷6RcRã‚ãv2fW&–f–VBv–ç7B—G2V&Æ—6†VB&–æ'’4„Ó#SbæB7V66W76gVÆÇ’&VæFW&VBö76W'FVB&–Ö'’æB&W7F÷&R6öæf–w2v—F‚GVÖ×’6V7&WBfÇVW2v—F††VÆC²æòFö6¶W"Væv–æR÷"6öçF–æW'2vW&RW6VBâ÷7Fw&U5ÂW†V7WF–öâÂrÖ&6¶VBv÷&¶fÆ÷r6ö×F–&–Æ—G’ÂÖVÖ÷'’÷&W77W&RÂ†÷7BÖ÷VçB&V†f–÷"æB&W7F÷&R&VÖ–â&VÆV6RÔtòÖV7W&VÖVçG2à
+# CURRENT_STATE
+
+Status: EVIDENCE â€” operational/current-state record; not normative contract authority.
+Applies to: repository-wide operational and campaign state tracking.
+Supersedes: `docs/CURRENT_STATE.md` at canonical main `a45a8644e05df2584a2b75f2a3b47446811ae984`.
+Last updated: 2026-11-28
+Owner: BabyPark
+Source of truth for operational facts: production runtime + verified repository evidence.
+
+## 2026-11-06 â€” PR #166 compact-viewport launcher candidate (NOT DEPLOYED)
+
+The owner approved a 64px mobile trigger / 64px pill height and 28px trigger
+icons, plus lower positioning at viewport height <=639px in either orientation.
+At height >=640px the original bottom offsets return; right offsets, text,
+typography, JS, channels, Callback dimensions and `--bp-compact-bottom` remain
+unchanged. This replaces the incomplete <=450px landscape exception behind
+the independent B001 clipping finding at451px and in low portrait windows.
+
+Source/decision evidence is
+`docs/CONTACT_LAUNCHER_SIZE_LOCALE_V1_OPTIONS_20261106.md`; maintained regressions
+include low desktop, portrait,639/640 boundaries and both motion preferences.
+Exact final HEAD/tree, immutable check results, traceability and independent
+STANDARD review belong to the campaign evidence bundle after source freeze.
+This entry is candidate state, not a merge or production claim. Draft PR #166
+still needs completed exact-basis closure and separate owner merge approval;
+production deployment and its device/backup/rollback checks are separate.
+No production files, Chatwoot settings or customer data were changed here.
+
+## 2026-10-26 â€” Callback V12 R2 correction candidate (Draft PR #154, NOT CLOSED)
+
+Starting reviewed source: HEAD `dd6aa6577e66117c0fb6b95e2f2f60a9969fe06d`,
+TREE `8c6a4ec6b2c9ecbba726c49429bfef2ecbb2f635`, BASE canonical main
+`1d5d8c00b7fdcdb54f37418ea60931c4292fd600`. This correction is not a
+deployed source or a claim of future merge identity. Its final committed
+HEAD/TREE, manifest and verification results belong in the PR evidence.
+
+V12 optional preferred name allows Unicode letters/combining marks, spaces,
+apostrophes and hyphens; **digits are removed on input and before POST**.
+The cap is 80 UTF-16 units with a remaining counter. It does not mutate
+Contact.name. Comment remains capped at 500 units. B1 correction preserves
+the national prefix 380 on plain-typed mid-caret/Backspace/range edits while
+retaining full Ukrainian source typing and wrong-recipient guards.
+
+Five previews were confirmed present by the owner's independent read-only
+production filesystem check, PR #154 comment #6423267053:
+`preview-callback-v11-5c6586d9`,
+`preview-callback-v1-4432d4a895546c29ce630503675da359`,
+`preview-callback-visual-approved-20261026`,
+`preview-callback-visual-chatwoot-font-20261026`, and
+`preview-callback-visual-chatwoot-emblem-20261026`.
+The emblem preview is the approved **visual reference**, not production
+send-path proof. Exact paths, observed SHA-256, provenance and guarded future
+cleanup/recovery strategy are in `docs/INFRASTRUCTURE_REGISTRY.md`.
+The c87e6b3c V1 preview below is historical, not the latest V12 source.
+All five folders remain retained; no cleanup/deletion or new deployment was
+performed. The same evidence confirms active live L1 JS/CSS unchanged.
+
+Next step: new exact-basis focused/root/native-browser evidence and independent
+HEAVY R1, followed only after ZERO BLOCKERS by separate context-isolated R2.
+Â§6 privacy/security and cutover rows remain open; the owner-frozen stock Chatwoot routing does not require new alerting or a second full-server restore
+unless supported by new evidence or an applicable frozen non-goal. No such
+proof is inferred from visual approval. No merge, production deploy or real
+Chatwoot POST is authorized by this correction.
+
+## Historical 2026-10-25 â€” Callback V1 preview amendment (superseded by V12 above)
+
+The user confirmed the real two-line callback note, human message title and native `callback` label in Chatwoot, then asked about name digits and hidden textarea limits. Verified stock Chatwoot 4.18.0 Widget pre-chat `fullName` is a normal text field with no letters-only regex; Contact.name model also does not require letters-only. At that historical stage the optional preferred name accepted digits/nicknames; V12 supersedes that rule as recorded above, still without a Contact identity mutation. Stock Chatwoot Message model maximum is 150,000 characters, whereas BabyPark Callback already had a distinct 500-unit native HTML maxlength and submit guard. The Draft PR now shows a neutral Chatwoot `slate-11` counter under that same 500-limited textarea, with no runtime package. Earlier 14a79539 real-signed Widget POSTs remain historical proof for that exact source and are NOT full end-to-end proof for the refreshed counter source. **Historical testing-only preview source** was JS/CSS from `c87e6b3c3e872d2fda23ef4e41140f1e64a4be96`, with verified served JS SHA256 `f46526e052bfbea0ff03c054f702246ef078e3c5f5360b6c045e9b694a688ba3`, CSS `7b2e9f96cd1a08f47faa7a3a51202ba58fc98ca22dd811d1e95c6ee8e2ec4b52`, same unlinked preview folder recorded in `docs/INFRASTRUCTURE_REGISTRY.md`. This was not a public L1 change or an approval to merge/deploy. The new implementation code/JS/CSS had full immutable tests on its exact `c87e6b3c` tree (root 1239+13+13, focused 47, all PASS), but adding the latest inventory/current-state docs afterward changes the overall PR HEAD; a release gate must re-pin and repeat as dictated by the git Agreement and freeze a fresh exact manifest. Independent R1/R2 ZERO and separate owner production GO are still missing.
+
+## 2026-10-25 â€” Callback V1 temporary live-origin staging (supersedes 24 Oct snapshot below)
+
+**Status: STAGING VERIFIED, NOT CUSTOMER ACTIVATED.** Owner authorized creating a temporary same-origin test page and a second stock Chatwoot automation on 2026-10-25; this is not explicit GO to merge PR #154 or turn on Callback in the public L1 launcher. Existing public L1 JS/CSS/config remain byte-identical to SHA256 `b763b3deeffddc42cc88b2d6589b500673a933685d24c224ef7eda8afbdc4f17` / `133c212c33302a3e172a703fa429ac1b906b6e14f7c7ab76d1eea21d99718240` / `2d31018517b2d15fc0073131bf91c806364c254ad766de7f636d017df761f078`. Homepage returns 200. Historical deleted previews remain 404. **The main site's Callback channel is OFF.**
+
+**Chatwoot v4.18.0 account #1 native automation:** rule #1 remains ACTIVE (`message_created` incoming content contains `BABYPARK_CALLBACK_V1` â†’ sole `add_label callback`). A second owner-authorized rule **#2** is now ACTIVE, named `BabyPark â€” Callback (friendly confirmation V1, staging)`: incoming content contains the **actual newline** string `Ğ’Ğ¸ Ğ·Ğ°Ğ¼Ğ¾Ğ²Ğ¸Ğ»Ğ¸ Ğ´Ğ·Ğ²Ñ–Ğ½Ğ¾Ğº\nĞ—Ğ²Ğ¾Ñ€Ğ¾Ñ‚Ğ½Ğ¸Ğ¹ Ğ´Ğ·Ğ²Ñ–Ğ½Ğ¾Ğº: ` â†’ sole `add_label callback`, no team/inbox/agent criteria, no execution delay. Legacy rule and Business Hours/auto-reply/Unassigned queue are unchanged. A rule fixture in the Draft PR is not itself a live installation; #2 was separately installed and verified by stock Chatwoot Rails model on the host.
+
+**Real browser and Chatwoot evidence:** from isolated Chromium at an owner-approved unlinked test page on the `babypark.ua` origin, exact candidate JS/CSS at PR #154 HEAD `14a7953931ae4a6e8f2f65255741b74555406006` (TREE `ce25ae2900672aa9028d1dd7b3420085f6edf6a7`), each new/open/resolved signed Widget POST returned HTTP 200, positive message/conversation IDs, one DevTools-exposed `Access-Control-Allow-Origin: https://babypark.ua`, successful UI and no page errors. Verified in DB: new message #140 / conversation #44; subsequent open message #141 / same conversation #44 with deliberately cleared synthetic label re-applied; after native test-only status `resolved` and another test-only label clear, message #148 / same conversation #44 re-applied `callback` and reopened the conversation. Independent earlier new message #139 / conversation #43 proved phone custom attribute on newly created conversation; optional name remained message-only, `Contact.name` not replaced. All tests used solely intentionally fictitious data with an explicit `Ğ½Ğµ Ğ´Ğ·Ğ²Ğ¾Ğ½Ğ¸Ñ‚Ğ¸` note. Temporary Chromium visitor profiles were deleted after tests. HTTP/2 browser DevTools showed one visible ACAO key without the raw wire block. A subsequent **actual authenticated synthetic HTTP/1.1 POST** to the same Widget endpoint (message #150 / conversation #45, using a fresh stock SDK visitor JWT in memory, deleted after the test) returned HTTP 200, positive IDs and **exactly one raw `Access-Control-Allow-Origin` header** with value `https://babypark.ua` (counted from HTTP client's unmerged `rawHeaders`). The Nginx one-writer rule and absent Rails `ENABLE_API_CORS` must still be retested after an upgrade.
+
+**Pending before general rollout:** freeze updated exact HEAD/tree/base/manifest; independent exhaustive R1 then context-isolated R2 ZERO BLOCKERS, final evidence bundle and separate owner exact-go for merge and Drupal deployment, detailed post-release server documentation and future Chatwoot upgrade smoke. WARN/ERROR customer PII residual/privacy acceptance and final user-device verification remain release inputs. Do not change native Chatwoot rule #1, rule #2, global Business Hours or site config without separate explicit approval; remove the current temporary preview folder after owner test and record the cleanup. Operator instruction update is deferred until the owner supplies the actual published instruction.
+
+## 2026-10-24 â€” Callback V1 release preparation (real operational status)
+
+This is an operational snapshot, **not** an amendment to the authoritative Agreement or permission to merge/deploy. BabyPark Website launcher **L1 already runs on public Drupal** under the active `babypark2` theme since 2026-10-22, regardless of its unmerged Draft PR #142 status (see production evidence in Draft PR #148 and the infrastructure registry). Website chat, Telegram, Viber and phone are active; WhatsApp remains off. **The callback form is NOT active for customers**. Desired call time, business-hours rules and reminders remain future Callback V2 requirements. Channel expansion and native Assignment Policy priorities are later distinct work.
+
+Chatwoot 4.18.0 production account has a native `callback` label and exactly one active account-scoped `message_created` automation: incoming message content containing `BABYPARK_CALLBACK_V1` â†’ `add_label callback`, no fixed team, inbox or assignee. Existing sellers handle Callback through the **same normal Inbox/Unassigned pool** as ordinary messages. Verified owner Widget message #131 in conversation #42 was marked `callback` and visible to an agent; this verifies the ordinary Chat Widget path, **not** the unpublished L2 form's POST/custom_attributes/ACK. Narrow Nginx CORS preflight is live for `babypark.ua` and `www.babypark.ua`; neither successful real L2 form submission nor WARN/ERROR PII safety was signed off. The site currently serves previous L1 JS/CSS.
+
+Owner-approved production log control: Web/Worker `LOG_LEVEL=warn` in shared `.env` and both external systemd unit drop-ins, effective Rails and ActiveJob logger level 2. This suppresses routine INFO parameters/job-argument entries; it does not scrub old logs or error-path message data. See `docs/INFRASTRUCTURE_REGISTRY.md` for object paths and rollback. Draft **release PR #154** is the sole combined launch candidate on current canonical main; it must pass Agreement Â§7.0a manifest and HEAVY R1/R2 and exact-basis owner approval before merge/publication. The owner's staged production settings are not proof of an active Callback form.
+
+## Current campaign/navigation snapshot (2026-10-23)
+
+This top section is the current campaign/navigation snapshot. Exact implementation and merge truth remains canonical Git; normative process/governance authority remains `docs/AI_WORKING_AGREEMENT.md`. Runtime facts that are not restated here must be freshly verified from their authoritative runtime/source before use.
+
+### Current bounded campaign: AI Seller PoC-0 â€” PR #149 (proposal, not merged)
+
+- **Repository authority:** only `Stanislavikus/babypark-integration` canonical main and `docs/AI_WORKING_AGREEMENT.md`. PR #149 is a separate HEAVY docs-only proposal to reopen precisely the offline AI Seller PoC-0 research exception under Agreement Â§10; while unmerged it **authorizes nothing**.
+- **State if PR #149 merges after independent exact-tree HEAVY R1/R2, a new immutable final-gate bundle, and explicit owner approval:** its single bounded `AI_SELLER_POC0_SCOPE_CHANGE.md` becomes canonical scope authority for this research, **not** a deployed or activated experiment.
+- **Next intended PoC-0 step after a separately approved merge:** finish Fit-note SHA-bound EB0â€“EB6, owner OD-1â€“OD-10 including OD-3 cohort authorization, EB3 E22 verification, non-production provider key with enforceable OD-6 spend cap, exact input/token measures, live n8n configuration, and then obtain a distinct SHA-bound owner GO before any paid model call. No customer-facing Chatwoot path or production deployment is authorized by these docs.
+- **Unchanged production state:** PR #149 contains no runtime code, production deployment, verified live provider configuration or paid model run. Parallel C6 runtime/recovery work remains governed by its separate committed contracts and permissions.
+
+### Prior C6-B1 navigation snapshot (recorded 2026-10-10; historical, not current PoC activation)
+
+State expected after successful merge of C6-B1 PR #118:
+
+- C1 / C2a / C2b / C2c / C3 / C4 / C5: merged.
+- C5 deterministic renderer implementation: merged via PR #113; intentionally unconnected/not deployed until downstream C6 wiring/authorization is implemented.
+- C6 Stage 0 contract: merged.
+- C6-P1 durable state-store implementation: merged.
+- C6-P1H1 deferred-parent historical-cut hardening: merged via PR #119 after HEAVY R1 + isolated R2 both reported ZERO BLOCKERS on one exact controlling manifest basis.
+- Review-only PR #120: closed without merge after isolated R2; historical review transport only.
+- Risk-proportional closure process/runbook/templates: merged via PR #121.
+- Agreed stale C5 branch hygiene: completed and independently confirmed after fresh fetch/prune.
+- C6-B1 durable backup/recovery profile: repository implementation provided by PR #118; it reuses the existing generic encrypted SQLite backup core, adds First Line semantic restore verification plus thin backup/restore CLI, adds zero runtime dependencies and zero durable systems, performs no production write, and is not a production deployment/activation.
+- C6-B1 recovery verification includes the C6-P1H1/#119 semantic-corruption class: SQLite integrity alone is insufficient; forged deferred-parent history must fail the First Line semantic verifier.
+- Existing Knowledge recovery regression remains part of the counted recovery verification surface.
+
+Next intended sequence after successful C6-B1 merge:
+
+1. Run C6-B2 as a separate operational stage: refresh its Â§1â€“Â§3 gate, bind owner-approved RPO/RTO and recovery-key custody/source plus a specific off-host target, reverify the complete then-current production/runtime topology, create/configure the first production v4 recovery path only under explicit deployment authority, and prove an independent-host scratch restore.
+2. Only after the recovery prerequisites required by the frozen design are proven, continue the C6 runtime sequence: relay/S1 -> S2 -> POST/reconciliation -> HUMAN -> scheduler/liveness/operator attention -> C25.
+3. Keep customer-facing First Line activation blocked until its own campaign binds/proves provider-side canonical-`main` protection and the procedural structure validator as an actually required check.
+
+### Carried-forward C6 Runtime defect-sweep item
+
+The future C6 Runtime / relay campaign must explicitly challenge every production path that can reach `markActionUncertain`.
+
+C6-P1H1 review found no non-test production caller on its reviewed tree, so this was non-blocking for PR #119. That fact is not a future authorization assumption. Once relay/reconciliation code introduces a production caller, the bounded campaign must prove that the path reaches `markActionUncertain` only through a state-store flow that has already re-attested the applicable deferred/semantic topology, and that no UNCERTAIN transition can create a send/retry/reconciliation bypass around the frozen SENDING no-retry and fail-closed invariants.
+
+Future campaign disposition:
+- `FIXED` with concrete caller/path tests; or
+- `NOT APPLICABLE` with exact production call-graph evidence.
+
+The item may not be silently dropped.
+
+### Carried-forward pre-activation operational readiness items
+
+This EVIDENCE file is not normative governance authority. It carries the owner's required readiness items forward so the future customer-facing First Line activation campaign cannot lose them.
+
+That activation campaign must include the following checks in its own frozen manifest/traceability before operational go-live:
+
+- provider-side protection for canonical `main` is active and compatible with the Agreement's exact-base/result merge discipline;
+- the procedural structure validator is installed as an actually required check, not merely advisory;
+- all other Agreement/design activation evidence remains required.
+
+Once carried into the activation campaign, an unproven applicable item blocks operational go-live. If making any item normative requires a governance change or conflicts with the Agreement, HALT for an Agreement amendment rather than treating this EVIDENCE file as governance.
+
+## Historical/background operational snapshots
+
+Everything below this heading is retained as historical/background evidence from earlier bounded slices. Phrases such as â€œcurrentâ€, â€œnextâ€, or â€œactiveâ€ inside those older sections describe their original snapshot time and do not override the top current campaign/navigation snapshot. Any runtime fact needed for a present decision must be re-verified from its authoritative source.
+
+## AI First Line Slice A state (2026-10-02)
+
+Status: PRODUCTION ACCEPTED / CLOSED
+
+Frozen v0.6 design authority is consolidated in the normative design/acceptance documents:
+- docs/AI_FIRST_LINE_DESIGN.md;
+- docs/AI_FIRST_LINE_ACCEPTANCE.md.
+
+There are no normative v0.6 delta files.
+
+Slice A implementation issue #53 is CLOSED.
+Repository implementation is complete through A8 and all production deployment gates are complete.
+Current implementation issue is #69: Slice B â€” Catalog factual/query contracts.
+
+Delivered foundation:
+- canonical BabyPark physical-store identity in IdentityStore schema v2;
+- reviewed provider xrefs and mapper-v3 fail-closed canonical-store boundary;
+- independent Link A canonical-store verification;
+- immutable knowledge.sqlite revision/event ledger with canonical hashing;
+- deterministic publication state machine and CommercePolicy exception semantics;
+- operational store resolver with Europe/Kyiv civil-day rules;
+- direct ai.babypark.ua control plane with Cloudflare Access JWT verification, stable actor mapping and BabyPark-owned RBAC;
+- encrypted durable Knowledge recovery with signed manifest and semantic scratch-restore verification.
+
+## Production canonical-store cutover
+
+Production IdentityStore:
+- schema: v2;
+- identity revision: 65506;
+- SQLite integrity: ok.
+
+Reviewed current Drupal store mappings:
+- Drupal 1575 -> store_a939ba30-11cb-4a08-b71a-7b7947d44747;
+- Drupal 747 -> store_83cff1ad-fb41-4ec9-aeb1-7c4b184d084c.
+
+Replacement FULL:
+- CURRENT generation: g_bcd3c2836b25ab4252f8f5510c769f260e0597092fea8aff;
+- PREVIOUS generation: g_3f82b2487806f6caaea95ad9aca94552f2eeb39844a2de87;
+- run_id: 79c1d873_0b68_4ac0_94e0_d4a62c573e04;
+- run_digest: 644de366d5f7c2b843daaf4568e4fd0e3bbae1a981469b46310f10f078a5d2ca;
+- final_seq: 176;
+- source spool manifest SHA-256: c18bbb1740e7722f2c0f0138b37bf162dbedd1874b481cdde505bd4fa3491935;
+- published identity revision: 65506.
+
+Independent production Link A after cutover:
+- PASS;
+- mismatch_count = 0;
+- FTS probes = 48/48 PASS;
+- generation manifest SHA-256: ba157e2cdc2b01b3ba692ba0a9ef20d17790d2528cc3b0af74969a3b2fb53335.
+
+Recovery coverage exists both before and after the v1->v2 identity migration; the retained v1 cutover backup is explicit rollback evidence, not cleanup material.
+
+## Production Knowledge Authority
+
+Public origin: https://ai.babypark.ua
+
+Runtime:
+- babypark-knowledge.service enabled + active;
+- listener 127.0.0.1:3210 only;
+- production database /var/lib/babypark-integration/knowledge.sqlite;
+- current production bootstrap ledger is valid and intentionally empty: 0 revisions / 0 events.
+
+Cloudflare Access:
+- team domain: babypark.cloudflareaccess.com;
+- application: BabyPark AI Knowledge;
+- destination: ai.babypark.ua;
+- policy: Allow BabyPark AI Admins;
+- policy rule: exact approved email identities;
+- current verified actor mapping: approved Cloudflare identity -> actor_stanislav.
+
+End-to-end production proof:
+- unauthenticated public request is redirected by Cloudflare Access;
+- authenticated browser reaches Knowledge UI and is identified as actor_stanislav;
+- origin independently validates Cloudflare JWT signature/issuer/audience/expiry;
+- direct-origin HTTPS without JWT returns HTTP 401 ACCESS_JWT_MISSING;
+- external /health returns 404;
+- signing JWK refresh is automatic from the team Access certs endpoint.
+
+Production Knowledge recovery proof:
+- real production database encrypted with AES-256-GCM;
+- encrypted artifact copied off-host to server2181.babypark.ua;
+- data key stored locally and an independently held wrapped recovery key is used off-host;
+- off-host scratch restore PASS;
+- SQLite integrity = ok;
+- ciphertext SHA-256: 72ce2db14c2b14afb84b93fc0e8a5fc6f1f7db1a840fd2eb6237194824b9ec62;
+- restored plaintext SHA-256: c74864a4cc12744d6572724ab1f4a43b76ad2b52d33bd4dfa1eb24800ed55f7e;
+- semantic evidence SHA-256: 94344d926936e457997ca587ad2d6afbc827fb85c7fcb99b9e9d2252008dac80.
+
+Slice A production gates are therefore complete. Store-scoped Knowledge may now use canonical BabyPark store_id values. No provider-native Drupal/Magento store identifier is allowed as Knowledge authority.
+
+Deferred Slice E Seller Assist remains frozen in the v0.6 design. Future BabyPark AI HUB direction is documented separately in docs/AI_HUB_DIRECTION.md and does not expand Slice B scope.
+
+Next implementation slice: Slice B â€” Catalog factual/query contracts.
+
+## AI First Line Slice B state (2026-10-02)
+
+Implementation issue: #69.
+
+### B1 â€” price and variant factual contracts
+
+Status: MERGED / repository contract; no new production service release required yet.
+
+PR #70 merged at:
+`1e49421493edf49670de7104de200fbc0c9b7d5b`.
+
+Delivered:
+- product current-price single/range/not-in-stock facts;
+- fail-closed offer-hole / zero-price / mixed-currency handling;
+- safe-integer/current-currency validation;
+- available-now variant list with explicit label completeness;
+- internal/debug option-ID suppression;
+- deterministic variant price list;
+- relevant-layer freshness gating on commercial authority only.
+
+Contract:
+`docs/CATALOG_FACTUAL_CONTRACTS.md`.
+
+Read-only evidence against CURRENT generation
+`g_bcd3c2836b25ab4252f8f5510c769f260e0597092fea8aff`:
+- active IN_STOCK variants: 8,673;
+- missing offer/currency: 0;
+- zero current price: 0;
+- all current-price cohort currency: UAH;
+- mixed-currency products: 0;
+- displayable option-label variants: 7,486;
+- no displayable option label: 1,187.
+
+### B2 â€” deterministic category/brand/money/store resolvers
+
+Status: MERGED / repository contract; no new production service release required yet.
+
+PR #71 merged at:
+`f4b36e59ae29c9107ff9583017f6429b3f3afd4f`.
+
+Delivered:
+- exact current-generation Catalog dictionary lookup by reviewed canonical IDs;
+- immutable approval-required `VOCABULARY_ENTRY` schema in Knowledge;
+- category resolver with explicit `NODE_ONLY | INCLUDE_DESCENDANTS`;
+- brand resolver;
+- active canonical store resolver;
+- deterministic UAH money parser;
+- 0/1/many closed-world result semantics;
+- invalid current Vocabulary target fails closed rather than silently dropping a constraint;
+- all used Vocabulary revision IDs preserved for provenance;
+- `KNOWLEDGE_RESOLVER_CONTRACT_VERSION = 1`;
+- canonical semantic v1 golden resolver fixture covering phrase/money plus
+  category/brand/store RESOLVED/AMBIGUOUS/NOT_FOUND/INVALID_AUTHORITY outcomes;
+- resolver identity is not poisoned by unrelated commercial/stock stale or
+  reconcile/full flags; those remain gates for the later factual consumer.
+
+Contract:
+`docs/CATALOG_RESOLVERS.md`.
+
+No Vocabulary revisions have been inserted into the production bootstrap
+`knowledge.sqlite` as part of B2. Production remains 0 revisions / 0 events until
+reviewed business content is explicitly published.
+
+B1/B2 do not create customer-facing Chatwoot messages and do not invoke an LLM.
+
+### B3 â€” objective matched-cohort search
+
+Status: MERGED / repository contract; no new production service release required yet.
+
+PR #72 merged at:
+`9ced1e0588e84a55da9b055ae76a233651e993e8`.
+
+Delivered:
+- dedicated `searchObjectiveProducts(...)` contract; no reuse of broad
+  `searchProducts()` as factual shortlist authority;
+- exact category/brand anchor semantics and explicit category match mode;
+- same-cohort membership and price presentation;
+- exact-store cohort requires an explicit row for every anchored active IN_STOCK
+  variant; qty=0 is confirmed exclusion, qty>0 participates, missing row fails
+  the whole store-filtered result closed;
+- commercial + stock freshness gates, with stock freshness authoritative at the
+  layer level in v1;
+- fail-closed offer-hole, zero-price and mixed-currency handling;
+- no UAH/non-UAH numeric comparison or invented currency conversion;
+- deterministic price/product ordering and total count before display limit;
+- matched-cohort image safety and sanitized variant-label completeness;
+- `all_available_variants_match_filters` defined against active + IN_STOCK
+  purchasable variants only; non-purchasable lifecycle variants are outside its
+  denominator.
+
+Contract:
+`docs/CATALOG_OBJECTIVE_SEARCH.md`.
+
+B3 is query-layer/repository work only. It creates no customer-facing Chatwoot
+message, constructs no decision_context_id or handoff note, and invokes no LLM.
+
+The frozen downstream Slice D contract requires HUMAN / CATALOG_STOCK_STALE
+private notes to retain independently authoritative confirmed facts when
+available, while never representing failed exact-store B3 membership as a
+confirmed partial shortlist.
+
+### B4 â€” specific-store stock + ProductPresentation
+
+Status: MERGED / repository contract; no new production service release required yet.
+
+PR #73 merged at:
+`d971c53a4fdc42251c85c8901cf847afbc36f174`.
+
+Delivered:
+- `getStoreStockFact(...)` with canonical product/variant/store authority only;
+- exact variant or deterministic single active IN_STOCK variant resolution;
+- `STORE_STOCK` boolean fact without exposing quantity;
+- explicit missing exact-store row => `CATALOG_STOCK_STALE`;
+- deterministic `AMBIGUOUS_VARIANT` clarification only when all labels are safe
+  and unique;
+- unsafe/missing/duplicate-equivalent labels =>
+  `PRODUCT_VARIANT_NOT_RESOLVABLE`;
+- neutral `bp.catalog.product-presentation/1` model with bounded image fallback;
+- no renderer, Chatwoot message, LLM call or clarification-attempt state.
+
+Contract:
+`docs/CATALOG_STORE_STOCK.md`.
+
+### Slice B final closeout
+
+Status: COMPLETE / repository contract.
+
+Closeout adds the missing frozen C60 machine boundary:
+`CATALOG_IDENTITY_COLLISION` for a supposedly canonical product selector that
+resolves to multiple internal product identities, without exposing candidates.
+
+Final acceptance ownership and Definition-of-Done evidence:
+`docs/AI_FIRST_LINE_SLICE_B_CLOSEOUT.md`.
+
+Slice B is complete.
+
+Slice C umbrella issue: #75.
+
+C1 â€” durable logical episode state is merged via PR #76.
+Its schema-v1 implementation remains reviewed pre-production evidence:
+- separate `episode.sqlite`;
+- one active episode/conversation;
+- strict canonical IDs and strict Chatwoot integer IDs;
+- optimistic stale-writer protection;
+- committed-snapshot public reads and explicit SQLite busy timeout;
+- no routine raw customer body or dynamic factual authority persistence.
+
+C2 architecture is now frozen as **Event Ledger v0.7** before production activation.
+Because C1 was never deployed as the live First Line runtime, C2a makes a clean
+schema-v2 cut rather than preserving the C1 consumed-message watermark as runtime
+authority.
+
+Frozen v0.7 runtime boundary:
+- `copilot.sqlite` remains disposable delivery/job/lease/reconciler state;
+- `episode.sqlite v2` becomes durable semantic truth;
+- each provider conversation maps to a BabyPark conversation stream;
+- immutable local `event_seq` is BabyPark accepted-event order;
+- Chatwoot `source_message_id` is source identity only, never commit chronology;
+- unique source-event existence is the only duplicate/replay test;
+- scan cursors/highwaters are optimization hints only;
+- newly accepted events increment `stream_revision`;
+- unknown public Chatwoot rows are default-deny;
+- immediately before a public AI side effect, one whole-conversation Chatwoot
+  statement snapshot (`after=0,before=2147483648,filter_internal_messages=true`)
+  must return fewer than 1000 rows, ingest unseen events, prove covered messages
+  still valid and leave the prepared stream revision unchanged;
+- exactly 1000 rows => `HISTORY_UNPROVABLE` => no AI POST;
+- durable `public_actions` outbox is owned by an independent relay;
+- one live public action per stream plus permanent
+  `UNIQUE(stream_id, prepared_stream_revision)` prevents duplicate sends;
+- CLARIFY reservation is durable before send; SENDING/UNCERTAIN blocks a second action;
+- uncertain POST outcome is never blindly retried and fails open to HUMAN;
+- no CDC/WAL, third database or Chatwoot core patch is required for Website First Line v1.
+
+Website First Line implementation status:
+- C2a/C2b/C2c are merged and retain their frozen exact-read/authority contracts;
+- C3 â€” ObjectiveConstraintLatch is complete and merged;
+- the frozen v0.7 C4 contract from PR #100 is merged into the normative
+  `AI_FIRST_LINE_DESIGN.md` / `AI_FIRST_LINE_ACCEPTANCE.md`;
+- the C4 production-runtime campaign (#107) implements the required durable
+  CATEGORY pair `(category_id,category_match_mode)`, deterministic sealed
+  DecisionBasis composition/kernel, strict typed Knowledge/Catalog authority
+  adapters, customer-visible safety projection and restart/provenance-bound
+  clarification continuation;
+- the production implementation choice is bound to alternatives-scan SHA-256
+  `3b2f4445d2412a20546ac31a1ad98f30b4d2d25a0fd50f368b4f8790a95035c2`
+  with owner BUILD approval;
+- property/state-space verification uses owner-approved test-only
+  `fast-check 4.10.2`, fit SHA-256
+  `5797e655dadd86d8e72f5435a215171ad7be5713a0110655e97a1dc979e9bf60`,
+  with checked-in deterministic seeds/run counts;
+- C4 does not persist raw/normalized customer text or dynamic price/stock/policy
+  payloads; `episode.sqlite` stores only the frozen durable semantic
+  IDs/selections/provenance/action state;
+- C5 renderer execution and C6 Chatwoot PublicActionRelay/send-time execution are
+  still separate later slices. C4 T/U tests prove compatibility only and do not
+  claim those downstream runtimes exist;
+- frozen C25 dependent follow-up ("Ğ”Ğ°, Ğ¿Ğ¾ĞºĞ°Ğ¶Ğ¸Ñ‚Ğµ Ñ‚Ğ¾Ñ‡Ğ½Ñ‹Ğµ Ñ†ĞµĞ½Ñ‹ Ğ²Ğ°Ñ€Ğ¸Ğ°Ğ½Ñ‚Ğ¾Ğ²" after a
+  prior product price answer) remains a C6 routing/integration prerequisite:
+  C4 owns the VARIANT_PRICE_LIST mapper, but PR #107 does not claim ordinary
+  ANSWER-to-follow-up episode routing or durable prepared-answer wiring;
+- this C4 repository campaign does not deploy/activate customer-facing AI,
+  attach an AgentBot, mutate Chatwoot production, or send a customer message.
+
+Current bounded implementation slice:
+**C4 â€” deterministic decision engine production runtime**.
+
+The implementation is still subject to the repository Agreement's final immutable
+verification manifest, exhaustive HEAVY review closure, final-gate bundle and
+fresh owner merge approval. This current-state evidence does not itself authorize
+merge or production activation.
+
+## D2b acceptance status (2026-09-30)
+
+Link A PR #37 merged at `c89fd25a6fac2f48d025527531b9601bdf817d22` and
+Link B PR #38 merged at `ca8b748aa8e845403debf31b6133b08d0e59e640`.
+The first controlled production FULL is complete. Its operational truth snapshot is:
+- CURRENT generation: `g_3f82b2487806f6caaea95ad9aca94552f2eeb39844a2de87`;
+- source epoch: `drupal-prod-v1`;
+- accepted run: `d946fe5d_e1e6_4cc0_88a2_1cde031a81d1`;
+- run digest: `43306e8b47ab9ad618376f168f552b2a24f79e98a292098ba9301a583479ccc6`;
+- final sequence: `176`;
+- production spool manifest SHA-256:
+  `c18bbb1740e7722f2c0f0138b37bf162dbedd1874b481cdde505bd4fa3491935`.
+
+These exact documentation values are an operational truth snapshot, not a new
+authority. The sealed generation `catalog_meta.manifest_json` and its SHA-256 remain
+the machine authority for generation, source, accepted run, digest, final sequence,
+and spool provenance.
+
+Current accepted entity counts are:
+- products: 16,245;
+- variants: 49,257;
+- categories: 92;
+- brands: 821;
+- images: 136,241;
+- offers: 8,673;
+- store-stock rows: 14,364;
+- localized product-text rows: 32,311;
+- attributes / attribute definitions: 0 (valid optional domains).
+
+Post-FULL local recovery coverage is `COVERED`. Production Link A is `PASS`, and the
+independent Link B is `PASS`, both against the accepted generation and frozen spool.
+
+The first-FULL acceptance tail is now **CLOSED / ACCEPTED**:
+- covering recovery set:
+  `set-20260930T181032Z-d5f1cd5906a4a838`;
+- encrypted off-host recovery copy: PASS;
+- scratch restore from that off-host ciphertext on a separate host: PASS;
+- SEALED technical acceptance package: PASS;
+- explicit BabyPark owner acceptance: ACCEPTED;
+- immutable owner-acceptance record SHA-256:
+  `47d55de9d653fff14302bd15f22a9193ebdaa848172072c0902bd1de6707b1f4`.
+
+The first owner-authorized production canonical downstream snapshot is also complete:
+- snapshot ID:
+  `full-g3f82b248-d946fe5d-20260930T2128Z`;
+- generation:
+  `g_3f82b2487806f6caaea95ad9aca94552f2eeb39844a2de87`;
+- snapshot manifest SHA-256:
+  `6dac402a0f423cf2b77d82114c262df5565855233c78252718fd5d74f32b8883`;
+- source generation manifest SHA-256:
+  `067cb115aff02ef7e53cdefa405e7f8cc29b1087f94000aad9bd7f5504123a19`;
+- total canonical records: 274,231;
+- artifact bytes: 220,908,827;
+- export: 13.16 s wall, max RSS 112,332 KiB, swap 0;
+- independent verifier: PASS, 2.55 s wall, max RSS 96,580 KiB, swap 0.
+
+The snapshot exporter/verifier ran from a separate immutable release at commit
+`3076b03c508eb4c4517579aaea70c1ae6dfd5832`, tree
+`5846bb45d8e24d2f1d6695e1b9737432018dfadc`. The operation did not switch the
+running CatalogService release and did not change CURRENT.
+
+## Viber gateway
+
+Production release:
+`/opt/babypark-integration/releases/20260924-1809c564`
+
+Current symlink:
+`/opt/babypark-integration/current`
+
+Production code:
+`/opt/babypark-integration/current/src/gateway/index.mjs`
+
+Systemd:
+`babypark-integration-v2.service`
+
+Boot state:
+- v2: enabled + active
+- legacy `babypark-integration.service`: disabled + inactive, retained for manual rollback
+
+Data:
+`/var/lib/babypark-integration/bridge.sqlite`
+
+Bridge schema:
+`PRAGMA user_version = 2`
+
+Environment:
+`/etc/babypark-integration.env`
+(secret values are NOT in Git)
+
+Local listener:
+`127.0.0.1:3102`
+
+Health:
+`GET /health`
+
+Public routes:
+- `POST /api/viber/webhook`
+- `POST /api/chatwoot/viber`
+
+Nginx routes both public endpoints to port 3102.
+
+Safe public-route verification:
+- 2026-09-24: invalid Viber signature -> HTTP 401
+- 2026-09-24: invalid Chatwoot signature -> HTTP 401
+- 2026-09-26 after CatalogService deployment: both invalid-signature checks still -> HTTP 401
+- gateway process was not restarted during CatalogService deployment
+- `/opt/babypark-integration/current` remained on the 20260924 Viber release
+
+Production bridge integrity after migration:
+`PRAGMA integrity_check = ok`
+
+Current row-count baseline immediately after cutover:
+- sessions: 1
+- processed_viber: 1
+- processed_chatwoot: 2
+- outgoing_viber: 1
+- session_recovery_issues: 0
+
+## CatalogService production
+
+D1 deployment completed on 2026-09-26. Canonical-store runtime cutover completed on 2026-10-02.
+
+Current production runtime source:
+- commit: e63a4dfc158ad23ec9de09252e5af3f8bc96eb10;
+- current immutable release: /opt/babypark-integration/releases/20261002T1038Z-e63a4dfc;
+- release symlink: /opt/babypark-integration/catalog-current.
+
+Systemd: babypark-catalog-ingest.service
+
+Runtime state:
+- enabled + active;
+- service identity: babypark-catalog;
+- local listener: 127.0.0.1:8081;
+- CATALOG_INGEST_ENABLED=true.
+
+Durable state:
+- parent: /var/lib/babypark-catalog;
+- owner: babypark-catalog:babypark-catalog;
+- mode: 0700;
+- identity: /var/lib/babypark-catalog/identity.sqlite;
+- replay: /var/lib/babypark-catalog/replay.sqlite;
+- catalog generations: /var/lib/babypark-catalog/catalog;
+- recovery sets: /var/lib/babypark-catalog/backup.
+
+IdentityStore:
+- schema v2;
+- revision 65506;
+- integrity ok;
+- Drupal 1575 -> store_a939ba30-11cb-4a08-b71a-7b7947d44747;
+- Drupal 747 -> store_83cff1ad-fb41-4ec9-aeb1-7c4b184d084c.
+
+Current publication authority:
+- CURRENT: g_bcd3c2836b25ab4252f8f5510c769f260e0597092fea8aff;
+- PREVIOUS: g_3f82b2487806f6caaea95ad9aca94552f2eeb39844a2de87;
+- accepted run: 79c1d873_0b68_4ac0_94e0_d4a62c573e04;
+- run digest: 644de366d5f7c2b843daaf4568e4fd0e3bbae1a981469b46310f10f078a5d2ca;
+- final sequence: 176;
+- published identity revision: 65506;
+- source epoch: drupal-prod-v1;
+- source spool manifest SHA-256: c18bbb1740e7722f2c0f0138b37bf162dbedd1874b481cdde505bd4fa3491935.
+
+Independent production Link A after canonical-store cutover:
+- status PASS;
+- mismatch_count 0;
+- 48/48 FTS probes PASS;
+- generation manifest SHA-256 ba157e2cdc2b01b3ba692ba0a9ef20d17790d2528cc3b0af74969a3b2fb53335.
+
+Recovery:
+- authority CURRENT;
+- replay schema 7;
+- published/live identity revision 65506;
+- current post-replacement covering recovery set: set-20261002T110643Z-5714da413a810602;
+- coverage COVERED;
+- pre-cutover v1 and post-migration v2 recovery roots are retained as explicit rollback evidence.
+
+Environment: /etc/babypark-catalog-ingest.env
+- owner root:root;
+- mode 0600;
+- secret values are NOT in Git.
+
+Public Catalog ingress on https://chat.babypark.ua:
+- /api/catalog/ingest/v1/full;
+- /api/catalog/ingest/v1/state.
+
+Ingress controls remain:
+- Nginx exact locations only;
+- source allowlist: Drupal outbound IP 77.83.102.249;
+- BP1 authentication mandatory;
+- Catalog /health is not exposed by a Catalog-specific public route;
+- public https://chat.babypark.ua/health remains Chatwoot.
+
+Canonical physical store_id is now the production Catalog authority. Provider-native Drupal IDs and future Magento source_code values are adapter/xref identifiers only.
+
+## Rollback assets
+
+Legacy Viber runtime remains:
+`/opt/babypark-integration/index.mjs`
+
+Legacy Viber unit remains installed:
+`babypark-integration.service`
+
+Pre-v2 standalone bridge backup:
+`/var/backups/babypark-integration/bridge.pre-v2.20260924T062925Z.sqlite`
+
+Backup SHA-256:
+`d3f63edc60bdaa2a1af6f3b4cdeba3c17924be47293923b9d8efbd52136f7509`
+
+Pre-v2 Nginx snapshot:
+`/var/backups/babypark-integration/nginx_chatwoot.pre-v2.20260924T062925Z.conf`
+
+D1 pre-Catalog-ingress Nginx snapshot:
+`/etc/nginx/sites-available/nginx_chatwoot.conf.bak.20260926T205920Z`
+
+Normal Viber rollback does NOT restore the old database backup after v2 has accepted traffic.
+The additive schema is intentionally compatible with the retained legacy gateway.
+
+Catalog application rollback and catalog data/recovery rollback are separate operations.
+The accepted CURRENT generation, recovery evidence and derived snapshot artifacts are
+preserved under explicit operator control; no age-only cleanup is authorized.
+
+## Drupal exporter production preflight
+
+D2a/D2a.1 plus D2b exporter slice 1 code is deployed on the Drupal production host
+as an isolated, non-scheduled exporter. It is not a daemon and does not write Drupal
+data.
+
+Web-origin protection changed during the 2026-09-28 preflight investigation:
+- the Cloudflare wildcard `*.babypark.ua` was disabled by renaming the DNS record to
+  `wildcard-disabled-20260928`; exact service records remain unchanged;
+- existing static `jpg/jpeg/png/gif/webp/svg/ico/css/js/woff/woff2/ttf/eot` files are
+  now served directly by Nginx, with missing files falling back to Apache/Drupal so
+  image-style generation remains intact;
+- Nginx vhost backups:
+  `/etc/nginx/sites-available/babypark.ua.conf.bak.static-direct.20260928T193301Z`
+  and
+  `/etc/nginx/sites-available/ssl.babypark.ua.conf.bak.static-direct.20260928T193301Z`;
+- verification proved existing JS/JPG requests no longer hit Apache while a missing
+  JPG still reaches the Drupal fallback.
+
+Current exporter release:
+`/opt/babypark-exporter/releases/20260928T195344Z-8c78bd5`
+
+Production source:
+`8c78bd51a7b73a0a29209d5f6c43f6f13ad09bc3`
+(PR #31 merge; tree `ff6a1578cc53fc22a16644e32accf8ad6d085334`)
+
+Current exporter symlink:
+`/opt/babypark-exporter/current`
+
+Runtime:
+- dedicated OS identity: `babypark-exporter`
+- private state: `/var/lib/babypark-exporter` mode `0700`
+- dedicated MariaDB principal: `babypark_exporter@127.0.0.1`
+- database grant: `SELECT` on `babypark_ua.*` only
+- production exporter runtime is pinned Node `24.21.0` LTS at
+  `/opt/babypark-exporter/runtime/node-v24.21.0/bin/node`;
+- the pinned archive SHA-256 was verified against the official Node release checksum,
+  and the installed runtime passed `node:sqlite`/FTS5 probing;
+- legacy side Node `22.23.2` remains installed but is no longer production execution
+  authority;
+- system `/usr/bin/node` remains unchanged at v20.20.2
+
+D2a.1 historical merge/deployment source:
+`712f09cd390df71821b1315c47fac30a620a4636`
+
+D2a.1 established:
+- FULL record schema v2;
+- variant-level `commercial_availability`;
+- optional price-only offer;
+- trusted-price policy;
+- snapshot currency precision;
+- deterministic degraded-source warnings.
+
+Second production preflight:
+- 2026-09-27
+- duration: about 2m58s
+- mode: `preflight`
+- result: `ok=false`, as expected while reviewed SKU collisions remain
+- blocker rows: 43
+  - 3 `SKU_COLLISION_CROSS_PRODUCT`
+  - 20 `SKU_COLLISION_WITHIN_PRODUCT`
+  - 20 secondary `FULL_RECORD_INVALID` duplicate-SKU diagnostics for those same
+    within-product collisions
+- unique collision decisions requiring review: 23
+- warning_count: 78
+- no `.ready` spool
+- no Catalog HTTP
+- no FULL
+- no Drupal writes
+- live site remained operational during the run
+
+D2b Slice 1 candidate preflight after PR #30 merge:
+- candidate commit: `a251275b4ccd0019cf5d22bdbbd2eb027555430e`;
+- executed against live Drupal without switching `current` and without FULL;
+- result: `ok=true`, zero hard blockers;
+- current residual anomaly: only `80401mc02`;
+- quarantined source product groups: `118670`, `12605`;
+- historical Joolz `511000` collision no longer appears in the current collision report;
+- warning count/classification remained the established 78-warning baseline;
+- the successful run proved the existing side Node 22.23.2 has `node:sqlite` + FTS5,
+  while system Node 20 cannot import the new exporter;
+- observed runtime was materially longer than the old D2a preflight, so PR #31 adds
+  pinned Node 24.21.0 plus stage timing diagnostics before cutover;
+- at this candidate-proof point, the production exporter symlink still remained on
+  the previous release.
+
+PR #31 production hardening and cutover completed on 2026-09-28:
+- PR #31 merged as
+  `8c78bd51a7b73a0a29209d5f6c43f6f13ad09bc3`;
+- exact merge tree equals the reviewed PR-head tree:
+  `ff6a1578cc53fc22a16644e32accf8ad6d085334`;
+- immutable production release:
+  `/opt/babypark-exporter/releases/20260928T195344Z-8c78bd5`;
+- pre-cutover and post-switch production preflights both returned `ok=true`;
+- each had zero hard blockers, warning_count 78, anomaly_count 1,
+  quarantined_product_count 2 and prepared_chunk_count 175;
+- post-switch `current` remained on the new immutable release before/after the proof;
+- no `.ready` spool, Catalog HTTP, FULL or Drupal write occurred;
+- post-switch stage timings: snapshot extract about 10.3s, canonical build about
+  41.0s, chunk preparation about 126.8s, total about 183.5s;
+- measured post-switch envelope: peak RSS about 650 MiB, peak temporary scratch about
+  170 MiB, peak building spool about 537 MiB, minimum free disk about 10.57 GiB;
+- successful cleanup left no exporter `.building` or chunk-scratch directory.
+
+Collision review state:
+- 21 of 23 unique collisions have sufficient technical evidence and are approved
+  as legacy migration mappings;
+- durable evidence ledger:
+  `docs/DRUPAL_LEGACY_COLLISION_REVIEW_20260927.md`;
+- `config/drupal/legacy-sku-collisions.yaml` contains exactly those 21 mappings;
+- `511000` and `80401mc02` remain intentionally unmapped pending
+  business/source-process investigation and are handled by anomaly quarantine.
+
+Default-promotion safety fix:
+- PR #19 merged to main;
+- main merge commit: `b21edcf101116eea3ad93b53430f944725029833`;
+- the fix is now included transitively in the current production exporter release
+  `8c78bd51a7b73a0a29209d5f6c43f6f13ad09bc3`;
+- no intermediate production cutover was made solely for this fix.
+
+Current collision findings are migration evidence, not universal future identity
+rules. Durable future architecture lives in:
+
+`docs/CATALOG_IDENTITY_ANOMALY_MANAGEMENT.md`
+
+## Catalog Anomaly Runtime v1
+
+Status: **MERGED / EXPORTER QUARANTINE INTEGRATION DEPLOYED / PERSISTENT CATALOG ANOMALY STORE NOT DEPLOYED**
+Implementation source: `main`, PR #26 merge `eb70c08c8917550bfe2666d85b845328e38b02a4`
+Design contract: `docs/CATALOG_ANOMALY_RUNTIME_V1.md`
+
+What landed in repository code (not production):
+- provider-neutral anomaly core under `src/catalog/anomaly/` with separate
+  `AnomalyStore` SQLite schema v1;
+- machine-readable publication policy:
+  `config/catalog-anomalies/publication-policy.yaml`;
+- Drupal exporter integration:
+  reviewed legacy mappings first, residual SKU collisions become anomaly
+  observations, whole-product quarantine and deterministic `anomaly-report.json`;
+  PR #26 originally emitted `bp.drupal-exporter.spool/2`, while current D2b
+  implementation slice 1 upgrades the repository exporter to transportable
+  `bp.drupal-exporter.spool/3`;
+- local/test operator CLI: `npm run catalog:anomaly-ops -- ...`.
+
+Explicit non-actions in this slice:
+- no production deploy;
+- no production `anomalies.sqlite`;
+- no production quarantine activation;
+- no FULL send;
+- no D2b transport binding;
+- no mutation of integration-host `identity.sqlite`;
+- no permanent mappings for `511000` or `80401mc02`;
+- the production collision config contains only the 21 reviewed legacy migration mappings.
+
+Production Drupal exporter is now:
+`/opt/babypark-exporter/releases/20260928T195344Z-8c78bd5`
+
+The exporter-side anomaly quarantine/publication-policy integration is therefore
+deployed for future controlled batch runs. Persistent Catalog `anomalies.sqlite`
+runtime/application work remains not deployed.
+
+Regression proof from sanitized 2026-09-27 collision fixtures remains:
+- 21 reviewed test mappings resolve first;
+- fixture data leaves `511000` and `80401mc02` as 2 cross-product anomalies;
+- both quarantine all fixture colliding source products;
+- unrelated products continue into canonical chunks.
+
+That fixture is historical regression evidence, not a claim that live Drupal remains
+unchanged. A read-only live-source probe on 2026-09-28 found source group/node
+`139026` absent; current `511000` rows belong only to product group `79252`.
+`80401mc02` still appears under groups `12605` and `118670`.
+
+The accepted first controlled FULL cryptographically bound its anomaly report and
+behavior-affecting publication-policy authority through the signed D2b publication
+evidence. Persistent production `anomalies.sqlite` remains a separate later capability
+and still requires its own backup/restore slice before deployment.
+
+Current operational state:
+- exporter/runtime hardening and the D2b producer/sender path have completed the first
+  controlled production FULL;
+- the accepted generation intentionally excludes the residual live anomaly
+  `80401mc02` through quarantine; source groups `118670`/`12605` remain the
+  current known incident scope from the accepted source evidence;
+- receiver authority/recovery, sender/control, Link A and Link B have all been exercised
+  on the accepted production run;
+- the acceptance tail and first canonical downstream snapshot are closed/verified;
+- persistent anomaly application/Requires Attention and reviewed identity-resolution
+  application remain separate later work.
+
+Product Identity Resolution v1 is already frozen/merged. Its two original cases
+remain historical acceptance fixtures, while the current live incident set is
+re-established by candidate preflight.
+
+Requires Attention/application remains a separate later track and is not a safety
+prerequisite for exporter candidate preflight or the remaining D2b implementation.
+
+## Catalog / AI next state
+
+No customer-facing AI catalog answering is active.
+
+### Website AgentBot safety foundation (repository only)
+
+Issue #49 adds a non-public lab-only AgentBot ingress, ID-only durable delivery/job
+queue, authoritative ownership worker, AgentBot-authenticated handoff client,
+independent deadline reconciler and SafeFetch/retry certification seams. The worker
+is intentionally publicly silent and successful work ends as
+`accepted_no_public_action`; there is no LLM, RAG, prompt, or Chatwoot message-create
+path. See `docs/AGENTBOT_SAFETY_FOUNDATION.md`.
+
+This code is **not deployed**. It is not imported by the production gateway, no
+Nginx/systemd route was added, and no AgentBot is attached to Website inbox `2`.
+`copilot_jobs` and `ai_trace_metadata` therefore remain **PLANNED** in storage policy.
+Real Chatwoot 4.17.1 lab certification remains a post-merge activity requiring
+explicit BabyPark authorization and a dedicated non-production inbox/bot.
+
+Two independent tracks are active:
+
+1. **Operational ingestion / downstream boundary**
+   - the first controlled Drupal FULL is accepted as CURRENT;
+   - production Link A and independent Link B are both PASS;
+   - encrypted off-host recovery, separate scratch restore, SEALED evidence and
+     explicit owner acceptance are complete;
+   - the first generation-bound canonical downstream snapshot is independently
+     verified and available as the provider-neutral consumer boundary;
+   - further consumers must use the verified snapshot/Catalog boundary rather than
+     live Drupal or Catalog SQLite internals.
+
+2. **Identity-resolution application (later)**
+   - frozen design: `docs/PRODUCT_IDENTITY_RESOLUTION_V1.md`;
+   - keep both historical identifiers unmapped unless a separately reviewed
+     resolution is approved;
+   - current source absence of a historical card is evidence, not an implicit legacy
+     mapping or permanent identity decision;
+   - do not pull Requires Attention/application work back into the first-FULL
+     critical path.
+
+No identity-resolution application is authorized by this exporter slice.
+
+Previously frozen exporter-side design items are now implemented and deployed:
+
+Before the first production FULL, BabyPark must reach one explicitly reviewed safe
+state:
+- either all remaining legacy collisions are resolved by approved migration
+  mappings; or
+- unresolved entities are handled by an implemented/tested anomaly quarantine
+  contract that makes their exclusion/handling explicit and auditable.
+
+No untracked ambiguity may silently enter the first canonical generation.
+
+That first-FULL gate is now closed:
+- immutable exporter/runtime release remains production `current`;
+- the controlled production FULL completed and published one CURRENT generation;
+- receiver authority/recovery and sender/control paths were exercised in production;
+- Link A and Link B both passed against the accepted generation/frozen source evidence;
+- the off-host restore and owner-acceptance tail is closed;
+- the first verified canonical downstream snapshot has been produced without changing
+  CURRENT.
+
+Two mandatory future research/design gates exist before customer-facing AI catalog
+answers are production-ready:
+
+1. **Catalog Identity & Anomaly Management**
+   - provider-neutral identity model;
+   - duplicate/conflicting identifier detection;
+   - safe runtime behavior;
+   - durable anomaly incidents;
+   - notifications/handoff;
+   - human resolution;
+   - reviewed prevention rules;
+   - future Data Quality / Requires Attention SaaS UI.
+   - source of truth:
+     `docs/CATALOG_IDENTITY_ANOMALY_MANAGEMENT.md`
+
+2. **Product Presentation Projection**
+   - provider-neutral reusable product cards/templates;
+   - preview images;
+   - trusted price;
+   - availability;
+   - channel rendering;
+   - caching/CDN behavior;
+   - answer/visual quality;
+   - click/select likelihood;
+   - latency and total delivery/model/channel cost.
+   - overview:
+     `docs/SYSTEM_MAP.md`
+
+Identity/anomaly resolution logically precedes product presentation: an ambiguous
+identity set must not become a polished AI recommendation/card.
+
+Neither future architecture should be hidden only in an LLM prompt. Deterministic
+business policy belongs in structured/versioned configuration and ultimately the
+SaaS UI; Chatwoot/email are operational surfaces rather than the policy source of
+truth.
+
+Agreed anomaly governance is already indexed from:
+- `config/catalog-anomalies/README.md`
+- `config/catalog-anomalies/POLICY_CATALOG.md`
+- `docs/CATALOG_ANOMALY_RUNTIME_V1.md`
+
+These governance files are indexed in Git. The production exporter now loads the
+reviewed publication/collision authority during controlled batch runs; persistent
+Catalog anomaly-store/application runtime remains a later deployment.
+
+The two identifiers `511000` and `80401mc02` remain intentionally unmapped in
+configuration and useful historical acceptance cases. They are no longer both live
+duplicate incidents: the 2026-09-28 read-only source probe found the former Joolz
+duplicate group `139026` absent, while the accepted first-FULL source evidence retains
+`80401mc02` as the residual quarantined incident under groups `118670`/`12605`.
+
+Current design slice:
+- `docs/PRODUCT_IDENTITY_RESOLUTION_V1.md`;
+- Joolz `511000`: acceptance case for a candidate same-product resolution where
+  useful content, category and URL facts are split across legacy cards;
+- Bugaboo `80401mc02`: acceptance case for a candidate same-product resolution
+  involving multiple suppliers and case-variant source articles;
+- product/variant identity, root cause, identifier exception and action plan are
+  separate structured decisions;
+- approval binds exact material evidence and collider/source-entity set;
+- AI may propose; until authenticated admin approval exists, reviewed digest-bound
+  registry changes are the durable authority.
+
+No production deployment or FULL is part of this design slice.
+
+## D2b / first controlled FULL
+
+Status: **PRODUCTION FULL ACCEPTED / RECOVERY + LINK A + LINK B PASS / OWNER ACCEPTED / CANONICAL SNAPSHOT VERIFIED**
+
+Design source:
+`docs/DRUPAL_EXPORT_D2B.md`
+
+Historical pre-FULL research after Product Identity Resolution v1 identified four
+material gates on the critical ingestion path; all four were subsequently closed for
+the accepted first production FULL:
+
+1. before the D2b cutover, production CatalogService was on FULL record v1 /
+   catalog schema 5 / production mapper 1, while the candidate exporter emitted FULL
+   record v2 and required catalog schema 6 / mapper 2; receiver compatibility therefore
+   had to be deployed with the planned cutover;
+2. exporter payload spool lifecycle had been represented in repository storage policy
+   by dedicated transient `exporter_ready_spools` and `catalog_link_a_staging`
+   objects before their production activation;
+3. sender retry durability had been implemented by PR #35:
+   `bp.drupal-d2b.run-state/1` freezes one run ID plus exact header/chunk/trailer
+   semantics across restart, and one cross-process sender lock owns each ready spool;
+4. the BOOTSTRAP config-state recovery gap had been corrected by PR #33: verified
+   recovery sets derive the snapshot config-state digest and live BOOTSTRAP
+   admission/state revalidates it; production CatalogService stayed on the previous
+   release until the planned D2b cutover.
+
+Current production capability facts:
+- CatalogService host supports `node:sqlite` and SQLite FTS5;
+- CatalogService is `CURRENT`, `/health` is green, ingest is enabled and there are
+  no current health blockers;
+- current service has no systemd `MemoryMax`/`MemoryHigh` envelope;
+- catalog Nginx `proxy_read_timeout` is 300 seconds;
+- the production FULL, certification/seal/publication and post-ACK acceptance path
+  have completed successfully for the accepted generation.
+
+Receiver implementation status:
+- PR #33 merged at `54763804fbceb34ab107d94d44bdf993b59d3152`;
+- structural historical `bp.catalog.run-header/1` parsing is retained;
+- new production FULL admission requires exact `bp.catalog.run-header/2`;
+- signed `bp.catalog.publication-authority/1` is validated against the exact two-key
+  IdentityStore config map before NEW seq0 durable admission and on v2 seq0 retry;
+- config hash mutation and decisive seq0 admission share
+  `CatalogPublicationLock`, closing the cross-process config/admission race;
+- accepted generation manifests bind the exact authority recovered from durable seq0,
+  including seal/recovery/publication tamper checks;
+- BOOTSTRAP recovery coverage binds snapshot/live config-state digest and cached
+  coverage is invalidated live; CURRENT recovery semantics remain unchanged;
+- explicit D2b HTTP authority/config/version errors are non-500;
+- no ReplayStore, recovery-set, Catalog DB or IdentityStore schema bump was required;
+- this receiver support is deployed in the current production CatalogService release
+  and was exercised by the accepted first FULL.
+
+Frozen direction used for the completed first-FULL campaign (historical design record):
+- keep BP1 transport v1 and existing `/api/catalog/ingest/v1/full` route;
+- introduce exact signed `bp.catalog.run-header/2` with
+  `bp.catalog.publication-authority/1`;
+- preserve existing D2a `bp.drupal-exporter.spool/2` semantics and introduce
+  D2b-transportable `bp.drupal-exporter.spool/3` with producer provenance and
+  `source-acceptance.json` hash binding;
+- publication authority uses a versioned `config_digests` map, spool/anomaly hashes,
+  source contract versions, `native_identity_scheme`, producer commit and release
+  provenance digest;
+- CatalogService compares the signed config map to exact current `config_state` before
+  accepting seq0; while catalog authority is BOOTSTRAP, recovery gate also revalidates
+  the covering-vs-live config-state digest on every ingest admission/`/state` blocker
+  computation; CURRENT recovery semantics are intentionally unchanged in D2b;
+- D2a keeps the no-HTTP invariant; D2b is a separate sender/control module with atomic
+  run-state and an exclusive per-spool sender lock;
+- accepted authority is preserved in generation manifest extra plus a small producer
+  acceptance-audit package;
+- full-scale rehearsal runs on a disposable dedicated production-class VM after D2b
+  implementation, with predeclared 30s nonfinal / 180s final gates, failure drills and
+  the complete Link A staging/exhaustive verifier under a separate 512/384 MiB
+  low-priority transient-unit envelope;
+- production Link A uses the same or stricter rehearsed bounded-memory transient-unit
+  envelope on the CatalogService host and is safely abortable/read-only;
+- rehearsal spool is never reused as production: after final release freeze, production
+  builds a fresh spool from the same immutable producer/sender commit and starts seq0
+  within 30 minutes of the snapshot watermark;
+- heavy spool data remains available through ACK/state, Link A and owner accept/reset
+  decision; CatalogService Link A staging is a separate transient storage-policy
+  object;
+- acceptance is two-link: exhaustive spool-to-catalog plus independent retained
+  source-snapshot-to-spool evidence; live Drupal is only rechecked when unchanged
+  status can be proven by source markers;
+- one production CatalogService cutover occurs only after rehearsal;
+- off-host identity/recovery copy + restore drill and two-link acceptance are gates
+  before Seller AI/catalog consumers are enabled.
+
+Implementation slice 1 now changes repository exporter/storage-policy code only:
+- exporter writes exact `bp.drupal-exporter.spool/3` with producer release provenance
+  and `source-acceptance.json` hashes;
+- production source-acceptance evidence is gathered by separate targeted SELECTs inside
+  the same repeatable-read snapshot transaction, with exact catalog-vocabulary
+  taxonomy/hierarchy, provider brand terms and NFC-correct streamed stock matching;
+- reviewed acceptance cases are bounded to 128 product-group IDs;
+- preflight/spool fail closed on explicit existing temp/spool/MariaDB directory
+  free-space gates;
+- immutable `RELEASE.json` creation/validation is canonical and rejects dirty or
+  non-normal Git index state plus source-tree output paths;
+- ready-spool and future CatalogService Link A staging are required transient storage
+  classes with frozen private `0700/0600` permissions;
+- production storage ownership is recorded as
+  `babypark-exporter:babypark-exporter`.
+
+The original first-FULL critical path is complete. Rehearsal hardening, production
+CatalogService cutover, the controlled FULL, post-ACK two-link acceptance, off-host
+recovery/restore and owner acceptance have all been completed. Future ingestion runs
+are separate owner/operator decisions and must preserve the accepted authority and
+recovery invariants.
+
+Repository receiver support for run-header/2, publication-authority validation,
+accepted-generation authority binding and BOOTSTRAP recovery correction was merged by
+PR #33. Repository sender/control support with exact durable run-state, exclusive
+per-spool ownership, bounded retry/resume and authenticated BP1 transport was merged
+by PR #35. These capabilities were subsequently deployed/exercised for the accepted
+first production FULL; their original PR-level non-production claims below remain
+historical closure evidence for those individual PRs.
+
+Production exporter cutover remains at
+`/opt/babypark-exporter/releases/20260928T195344Z-8c78bd5`
+(commit `8c78bd51a7b73a0a29209d5f6c43f6f13ad09bc3`). Both pre-cutover and
+post-switch preflight passed with the established live-source baseline. A later
+owner-authorized D2b producer/sender release sent the accepted first FULL; CatalogService
+is now CURRENT at generation
+`g_3f82b2487806f6caaea95ad9aca94552f2eeb39844a2de87`.
+
+PR #33 receiver closure evidence:
+- reviewed PR HEAD `43974f1105bf11276dbe24cdf7e73b8590358cd0`,
+  tree `eda43ffc34acdaee30d068c80db1be0a13a08b4d`;
+- merge commit `54763804fbceb34ab107d94d44bdf993b59d3152`;
+- independent exact crash-window reproduction proves config A -> pending seq0 ->
+  config B -> exact retry now fails `CONFIG_AUTHORITY_MISMATCH` before builder/stage;
+- root unit 330/330, focused correction 75/75, legacy 13/13, refactor 13/13,
+  exporter 181/181 and storage-policy validation all passed on the reviewed tree;
+- no production deployment, CatalogService mutation or FULL occurred as part of PR #33.
+
+PR #35 sender/control closure evidence:
+- reviewed PR HEAD `b7fa3f7816d6b3529775305b8e5a7bd59c649e39`,
+  tree `ae9b176dfb267adc5c58cf46dc43770714f41e44`;
+- merge commit `46cc19e3389efdf202be6ad8aed21c05c45c693a`;
+- exact spool/3 verification reuses FULL decoding/record validation before network;
+- durable `bp.drupal-d2b.run-state/1` freezes run/header/chunk/trailer evidence;
+- `bp.drupal-d2b.sender-lock/1` fails closed on malformed owner evidence and requires
+  explicit stale-lock breaking only after dead ownership is proven;
+- redirects are non-retryable `D2B_REDIRECT_REJECTED`; valid CatalogService terminal
+  errors preserve remote `code/action/request_id` through `D2B_CATALOG_ERROR`;
+- focused sender/storage 62/62, isolated real SIGKILL 10/10, root unit 377/377,
+  legacy 13/13, refactor 13/13, exporter 181/181 and storage-policy validation
+  21 objects / 6 durable all passed on the reviewed tree;
+- no production deployment, production spool, CatalogService mutation, FULL, Link A
+  or acceptance package occurred as part of PR #35.
+
+## n8n 2.49.8 co-host implementation package â€” not deployed
+
+As of 2026-11-28, Draft PR #173 at its stated SQLite package parent is being updated in a bounded package for the owner's selected official PostgreSQL architecture. The candidate uses official n8n 2.49.8 and PostgreSQL 16.16 images pinned by digest, independent PostgreSQL PGDATA and n8n user state, a separate key, loopback-only editor, an internal-only Compose bridge, and registered durable and tmpfs paths. The current 4-GiB host remains the target; capacity is UNVERIFIED until the separately authorized release test measures the concurrent n8n and PostgreSQL peaks and Chatwoot health.
+
+The prior SHA-bound `integrate` referred to the superseded SQLite fit and alternatives scan. The current PostgreSQL fit note is SHA-256 `c5ea7d2ae4bdebabeedb624bc88dc785d7775dda32bf9106ddc3b1b3ed8acb38`; the current alternatives scan is SHA-256 `c8864ef6fd4a1cf567124b798eca1ce751c355c73a6f4886f6a10e30ab348c25`. Both await a new exact-SHA `integrate` rebind before implementation acceptance. No session-only SQLite exception or n8n source change is included. The SQLite `busy_timeout` finding remains in a non-normative historical evidence note. The SQLite workflow import (22 + 6 nodes) is not repeated; only a later separately authorized PostgreSQL compatibility check may import the same exact definitions once and must verify both remain OFF.
+
+The candidate package adds independent PostgreSQL backup/restore with the matching n8n encryption-key file and one synthetic credential check, explicit Docker CLI pinning to `/var/run/docker.sock`, context override failure checks, and dated official support/activity evidence for the alternatives. Static implementation tests and independent HEAVY acceptance are required before the owner is asked for a separate `release GO`. The release test must measure actual PostgreSQL and n8n resource use on the existing host. This package does not install Docker, create production paths, start a container, change Chatwoot/Viber, merge the PR, or authorize buyer data, real credentials, public endpoints or workflow activation.
+
+No Docker package, n8n or PostgreSQL container, n8n host path, systemd unit, backup, key, credential, or workflow has been created on `chatwoot-fra1-01`. Chatwoot 4.20.1 and Viber remain untouched. The existing approved 22-node and 6-node import is historical SQLite evidence only and is not repeated in this campaign.
+
+Preflight candidate verification after the PostgreSQL package corrections: focused n8n/storage tests 62/62; `npm test` passed storage validation (37 objects / 31 planned / 12 durable), unit (1,322/1,322), legacy characterization (13/13), and refactor characterization (13/13). Systemd unit syntax passed `systemd-analyze verify` in an inert temporary root. Official Docker Compose v5.8.1 rendered and validated both primary and restore configurations without a Docker Engine; the separate immutable final-gate manifest will bind fresh reruns to the final exact tree. PostgreSQL execution, PG-backed workflow compatibility, memory/pressure, host mount behavior and restore remain release-GO measurements.

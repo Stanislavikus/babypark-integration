@@ -312,7 +312,7 @@ For future automation, this registry should become machine-readable in addition 
 
 ## 2026-11-27 — proposed n8n 2.49.8 co-host package (not deployed)
 
-Source: owner-authorized implementation scope in Draft PR #173; approved fit note SHA-256 `d63c784e58cd5e948119b0c63d9c35a0d4500d59c7fb4560211546d862860556`. This is a planned inventory only. No listed object currently exists on `chatwoot-fra1-01`; no production Docker or n8n installation is implied.
+Source: owner-authorized implementation scope in Draft PR #173; current PostgreSQL fit note SHA-256 `c5ea7d2ae4bdebabeedb624bc88dc785d7775dda32bf9106ddc3b1b3ed8acb38`; current alternatives scan SHA-256 `c8864ef6fd4a1cf567124b798eca1ce751c355c73a6f4886f6a10e30ab348c25`. Both are pending the owner's exact `integrate` rebind. This is a planned inventory only. No listed object currently exists on `chatwoot-fra1-01`; no production Docker or n8n installation is implied.
 
 | Storage-policy ID | Planned path | Owner / purpose | State |
 | --- | --- | --- | --- |
