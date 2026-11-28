@@ -5,7 +5,7 @@ Applies to: one inactive n8n 2.49.8 instance on `chatwoot-fra1-01` beside Chatwo
 Supersedes: fit note SHA-256 `d63c784e58cd5e948119b0c63d9c35a0d4500d59c7fb4560211546d862860556` and its SQLite backend assumptions, only to the extent needed to implement the owner-selected official PostgreSQL architecture; earlier successful workflow import and host observations remain historical evidence.
 Canonical governance: `Stanislavikus/babypark-integration` main `2ae02a0ea8898f5d5b341fca6ed230a34fecce58`; Agreement blob `e2d64856e85716d5c55e724e1babce441ae348ba`.
 Campaign starting point: Draft PR #173 at HEAD `c24a66b1034366d529820df66ff7c37c010a248b`, tree `dd0df9b8a4a823fd1c2f7a1b03d33a3a8ed0aee3`, base canonical main above.
-Alternatives scan: `docs/N8N_COHOST_OPTIONS_SCAN_20261127.md`, UTF-8/LF/final-newline SHA-256 `c8864ef6fd4a1cf567124b798eca1ce751c355c73a6f4886f6a10e30ab348c25`.
+Alternatives scan: `docs/N8N_COHOST_OPTIONS_SCAN_20261127.md`, UTF-8/LF/final-newline SHA-256 `be27d1b313e72d655017c11726b27e598f92cfb97ee2753dcc29a303781181af`.
 Risk classification: HEAVY under Agreement §§7.0 and 13. This fit does not authorize merge, production installation, boot enablement, or customer traffic.
 
 ## Decision and capacity status
@@ -34,7 +34,7 @@ n8n uses Sustainable Use License v1.0. BabyPark accepts internal company use; cu
 | Requirement | Selected official configuration | Evidence and acceptance boundary |
 |---|---|---|
 | Existing host | Existing 2-vCPU / 4-GiB Chatwoot host; no new VM or resize | Historical samples inform baseline only. Actual combined PostgreSQL+n8n peak and effect on Chatwoot remain release measurements. |
-| Database | Official PostgreSQL 16.16, digest-pinned, independent PGDATA at `/var/lib/babypark-n8n/postgres`; n8n connects only to Compose service `postgres` | Upstream n8n supports PostgreSQL 16 as its compatibility major. PostgreSQL 16.16 is supported through 2028-11-09. Never attach to Chatwoot database/cluster. |
+| Database | Official PostgreSQL 16.16, PostgreSQL License, digest-pinned, independent PGDATA at `/var/lib/babypark-n8n/postgres`; n8n connects only to Compose service `postgres` | PostgreSQL License permits commercial use without a fee. Upstream n8n supports PostgreSQL 16 as its compatibility major. PostgreSQL 16.16 is supported through 2028-11-09 and has an official security-support/reporting channel. Never attach to Chatwoot database/cluster. |
 | n8n user state and secrets | Separate `/var/lib/babypark-n8n/user`; root-only `/etc/babypark-n8n/n8n.env` with independent `N8N_ENCRYPTION_KEY` and `POSTGRES_PASSWORD` | Secret values are generated on target, distinct 64-hex values, mode `0600`; no values in Git or output. Unit validates both and fails if equal or malformed. |
 | Backup/restore | Independent PostgreSQL custom-format logical dump, complete n8n user-folder archive and exact matching environment/key file; separate PGDATA and user restore paths | SHA-256 manifest covers all three files. Same pinned images, empty scratch paths, one synthetic credential, matching key, dummy decryptability check without printing values. Off-host DR is not claimed until a protected owner-approved destination exists. |
 | Resource bounds | n8n: 1,200 MiB / 1 CPU; PostgreSQL: 512 MiB / 0.5 CPU; swap disabled for both | Actual `memory.current`, `memory.peak`, `memory.events`, host MemAvailable, PSI, swap-in/out, CPU/I/O, PostgreSQL health and Chatwoot TTFB are required during all first-start phases. The owner-approved 1-GiB MemAvailable floor is a stop condition. |
@@ -66,7 +66,7 @@ After successful authorized installation, publish the full accepted operator run
 The next owner action requested is one exact `integrate` rebind covering:
 
 - this fit note's exact SHA-256;
-- alternatives scan SHA-256 `c8864ef6fd4a1cf567124b798eca1ce751c355c73a6f4886f6a10e30ab348c25`;
+- alternatives scan SHA-256 `be27d1b313e72d655017c11726b27e598f92cfb97ee2753dcc29a303781181af`;
 - n8n 2.49.8 and PostgreSQL 16.16 exact official image digests above;
 - internal-only SUL v1.0 use, no customer editor/hosting;
 - 4-GiB target with capacity measured at separate release GO;

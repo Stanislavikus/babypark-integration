@@ -260,6 +260,45 @@ test('alternatives scan records dated official activity, support and license evi
   assert.match(optionsScan, /Community core is MIT-licensed/);
   assert.match(optionsScan, /Official product-update page lists a 2026-09-24 update/);
   assert.match(optionsScan, /PostgreSQL 16 as a supported compatibility major/);
+  assert.match(optionsScan, /PostgreSQL License permits use for any purpose without a fee/);
+  assert.match(optionsScan, /PostgreSQL security information is at/);
+  assert.match(optionsScan, /Official PostgreSQL 16\.16 database component/);
+});
+
+test('alternatives scan scores each serious candidate on every frozen R1-R6 area', () => {
+  const start = optionsScan.indexOf('## Requirement-area fit matrix');
+  const end = optionsScan.indexOf('\n## Candidate support and current activity evidence', start);
+  assert.ok(start >= 0 && end > start, 'candidate requirement matrix is present');
+  const matrix = optionsScan.slice(start, end);
+  const candidates = new Map();
+  for (const line of matrix.split('\n').filter(row => row.startsWith('|'))) {
+    const fields = line.split('|').slice(1, -1).map(value => value.trim());
+    if (fields[0] === 'Candidate' || fields[0].startsWith('---')) continue;
+    assert.equal(fields.length, 4, line);
+    assert.match(fields[1], /^R[1-6]$/);
+    assert.match(fields[2], /^(PASS|PARTIAL|FAIL)$/);
+    const areas = candidates.get(fields[0]) ?? new Set();
+    assert.equal(areas.has(fields[1]), false, `duplicate ${fields[1]} for ${fields[0]}`);
+    areas.add(fields[1]);
+    candidates.set(fields[0], areas);
+  }
+  assert.equal(candidates.size, 6);
+  for (const [candidate, areas] of candidates) {
+    assert.deepEqual([...areas].sort(), ['R1', 'R2', 'R3', 'R4', 'R5', 'R6'], candidate);
+  }
+  assert.match(matrix, /Official n8n 2\.49\.8 \+ PostgreSQL 16\.16/);
+  assert.match(optionsScan, /PostgreSQL 16\.16 database component, PostgreSQL License/);
+});
+
+test('implementation traceability uses only the Agreement section 6 status vocabulary', () => {
+  const rows = traceability.split('\n').filter(line => line.startsWith('|'));
+  assert.ok(rows.length > 3);
+  for (const row of rows.slice(2)) {
+    const fields = row.split('|').slice(1, -1).map(value => value.trim());
+    assert.equal(fields.length, 6, row);
+    assert.match(fields[5], /^(DONE|IN PROGRESS|DEFERRED)$/, row);
+  }
+  assert.match(traceability, /All `DEFERRED` rows are outside this implementation-only PR/);
 });
 
 test('synthetic external-egress check passes only for an explicit no-route result', () => {
@@ -741,6 +780,10 @@ test('restore checks only the synthetic credential through the registered tmpfs'
 
 test('resource capture fails closed on missing, failed, stopped, and OOM samples', () => {
   const functionSource = capturePhaseFunction();
+  const resourceSetup = blockContaining('resource_log="/var/backups/babypark-n8n/resource-trial-');
+  assert.ok(resourceSetup.includes('capture_phase() {'));
+  assert.doesNotMatch(resourceSetup, /^capture_phase\s+before-image-pull\s*$/m);
+  assert.match(runbook, /using `capture_phase before-image-pull primary absent` and `capture_phase after-image-pull primary absent`/);
   assert.doesNotMatch(functionSource, /\|\|\s*true/);
   assert.ok(functionSource.includes('${compose_args[@]}" ps --all --quiet'));
   assert.match(functionSource, /State\.Status\}\} \{\{\.State\.Pid\}\} \{\{\.State\.OOMKilled\}\}/);
