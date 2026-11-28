@@ -6,7 +6,7 @@ Supersedes: none.
 Risk classification: **HEAVY** under Agreement §7.0. The package introduces a separately managed runtime, independent PostgreSQL, n8n user state and secret material, a host `tmpfs,noswap` mount gate, and independent recovery behavior.
 Campaign base: `2ae02a0ea8898f5d5b341fca6ed230a34fecce58`.
 Governance tuple: canonical `Stanislavikus/babypark-integration` → main `2ae02a0ea8898f5d5b341fca6ed230a34fecce58` → Agreement blob `e2d64856e85716d5c55e724e1babce441ae348ba`.
-Owner direction: official PostgreSQL 16.16 selected; SUL v1.0 remains accepted for internal BabyPark use. The new fit-note and alternatives-scan digests must receive an exact `integrate` rebind before implementation acceptance; merge and production installation still require separate release GO.
+Owner direction: official PostgreSQL 16.16 selected; SUL v1.0 remains accepted for internal BabyPark use. Current fit-note SHA-256 `c5ea7d2ae4bdebabeedb624bc88dc785d7775dda32bf9106ddc3b1b3ed8acb38`; current alternatives-scan SHA-256 `c8864ef6fd4a1cf567124b798eca1ce751c355c73a6f4886f6a10e30ab348c25`. Both await the owner's exact `integrate` rebind before implementation acceptance; merge and production installation still require separate release GO.
 
 ## Requirement matrix
 
