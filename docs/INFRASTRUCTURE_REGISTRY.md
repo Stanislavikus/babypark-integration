@@ -309,3 +309,23 @@ Before changing any object in this registry:
 7. never put secrets into Git.
 
 For future automation, this registry should become machine-readable in addition to this human document, but the first implementation must preserve the same explicit ownership and authority boundaries.
+
+## 2026-11-27 — proposed n8n 2.49.8 co-host package (not deployed)
+
+Source: owner-authorized implementation scope in Draft PR #173; approved fit note SHA-256 `d63c784e58cd5e948119b0c63d9c35a0d4500d59c7fb4560211546d862860556`. This is a planned inventory only. No listed object currently exists on `chatwoot-fra1-01`; no production Docker or n8n installation is implied.
+
+| Storage-policy ID | Planned path | Owner / purpose | State |
+| --- | --- | --- | --- |
+| `n8n_compose_project` | `/opt/babypark-n8n` | `root:root`; non-secret Compose release files | PLANNED |
+| `n8n_systemd_units` | `/etc/systemd/system/babypark-n8n.service` and escaped runtime `.mount` unit | `root:root`; n8n lifecycle and mount guard | PLANNED |
+| `n8n_state_root` | `/var/lib/babypark-n8n` | `root:root`, mode `0755`; empty namespace for separately registered user and restore directories | PLANNED |
+| `n8n_user_state` | `/var/lib/babypark-n8n/user` | UID/GID 1000; SQLite and independent n8n user folder | PLANNED |
+| `n8n_sqlite_sidecars` | `/var/lib/babypark-n8n/user/database.sqlite-{wal,shm}` | SQLite-managed sidecars | PLANNED |
+| `n8n_runtime_tmpfs` | `/run/babypark-n8n-runtime` | UID/GID 1000; 128-MiB `tmpfs,noswap` execution/event data | PLANNED |
+| `n8n_runtime_key` | `/etc/babypark-n8n/n8n.env` | `root:root`; separate `N8N_ENCRYPTION_KEY` | PLANNED |
+| `n8n_local_backups` | `/var/backups/babypark-n8n` | `root:root`; seven local verified generations, matching key/config | PLANNED |
+| `n8n_restore_scratch` | `/var/lib/babypark-n8n/restore-test` | UID/GID 1000; disposable dummy-credential restore on loopback port 5679 | PLANNED |
+| `n8n_docker_layers` | `/var/lib/docker` | `root:root`; Docker image metadata and container metadata, which can contain the encryption key; verify file modes and approved rootful socket users before start | PLANNED |
+| `n8n_containerd_layers` | `/var/lib/containerd` | `root:root`; image content/snapshots when Docker's containerd image store is active; never prune shared data as n8n rollback | PLANNED |
+
+Docker daemon access is root-equivalent, and container metadata may contain the environment-delivered encryption key. Verify the actual data root, containerd image-store path when enabled, metadata file owner/mode, socket owner/group, no world access, and approved effective socket membership including primary-GID accounts before creating the container. Do not blanket-change permissions on the shared Docker root or socket. No key value, live endpoint, external backup destination or n8n object identity has been created. After an authorized successful production launch, record observed IDs, installed package/image identities, backups and exact permissions in a new evidence update.

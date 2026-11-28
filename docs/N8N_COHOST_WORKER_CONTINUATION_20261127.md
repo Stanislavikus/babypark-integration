@@ -1,6 +1,8 @@
 # BabyPark n8n — Worker continuation: prove 4 GiB co-location before requesting resize
 
 Status: EVIDENCE / bounded task — NON-NORMATIVE, no production deployment permission.
+Applies to: bounded implementation and release-gate preparation for inactive n8n 2.49.8 on `chatwoot-fra1-01`.
+Supersedes: none.
 Date: 2026-11-27. Repository: only `Stanislavikus/babypark-integration`.
 Owner decision: **keep the existing 4 GiB Chatwoot host for now; prove an actual insufficient headroom before proposing a shared-host RAM increase. n8n must co-locate with Chatwoot; never propose a separate n8n production VM.**
 

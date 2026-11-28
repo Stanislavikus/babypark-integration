@@ -1,0 +1,16 @@
+services:
+  n8n:
+    ports: !override
+      - target: 5678
+        published: "5679"
+        host_ip: 127.0.0.1
+        protocol: tcp
+    environment:
+      N8N_STORAGE_PATH: /vol/restore-test/storage
+      N8N_EVENTBUS_LOGWRITER_LOGFULLPATH: /vol/restore-test/events/n8nEventLog.log
+    volumes:
+      - type: bind
+        source: /var/lib/babypark-n8n/restore-test
+        target: /home/node/.n8n
+        bind:
+          create_host_path: false

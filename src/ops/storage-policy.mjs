@@ -33,6 +33,17 @@ const REQUIRED_IDS = Object.freeze([
   'catalog_link_a_staging',
   'exporter_releases',
   'operations_packages',
+  'n8n_compose_project',
+  'n8n_systemd_units',
+  'n8n_state_root',
+  'n8n_user_state',
+  'n8n_sqlite_sidecars',
+  'n8n_runtime_tmpfs',
+  'n8n_runtime_key',
+  'n8n_local_backups',
+  'n8n_restore_scratch',
+  'n8n_docker_layers',
+  'n8n_containerd_layers',
 ]);
 
 const STATUS = new Set([
@@ -52,6 +63,8 @@ const PRIVATE_PAYLOAD_IDS = new Set([
   'exporter_ready_spools',
   'catalog_downstream_snapshots',
   'catalog_link_a_staging',
+  'n8n_runtime_key',
+  'n8n_local_backups',
 ]);
 
 const DRUPAL_WEBROOT = path.resolve(
@@ -240,6 +253,31 @@ function validatePrivatePayloadPermissions(entry) {
   }
 }
 
+function validateDockerAccessBoundary(entry) {
+  if (entry.id !== 'n8n_docker_layers') return;
+  const access = entry.access_control;
+  if (!access || typeof access !== 'object') {
+    fail(
+      'STORAGE_POLICY_ACCESS_CONTROL_MISSING',
+      'n8n Docker metadata requires an explicit host and daemon access boundary',
+      { id: entry.id }
+    );
+  }
+  for (const field of ['filesystem', 'daemon']) {
+    requireText(access, field, entry.id);
+  }
+  if (
+    !access.filesystem.includes('do not chmod or chown the shared Docker root') ||
+    !access.daemon.includes('root-equivalent')
+  ) {
+    fail(
+      'STORAGE_POLICY_ACCESS_CONTROL_INVALID',
+      'n8n Docker metadata boundary must protect shared Docker state and identify root-equivalent socket access',
+      { id: entry.id }
+    );
+  }
+}
+
 function validateDrupalIsolation(entry) {
   if (entry.host_role !== 'drupal') return;
 
@@ -317,6 +355,7 @@ function validateEntry(entry, seen) {
   validateCleanup(entry);
   validateBackup(entry);
   validatePrivatePayloadPermissions(entry);
+  validateDockerAccessBoundary(entry);
   validateDrupalIsolation(entry);
 }
 

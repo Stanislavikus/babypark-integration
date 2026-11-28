@@ -3,7 +3,7 @@
 Status: EVIDENCE — operational/current-state record; not normative contract authority.
 Applies to: repository-wide operational and campaign state tracking.
 Supersedes: `docs/CURRENT_STATE.md` at canonical main `a45a8644e05df2584a2b75f2a3b47446811ae984`.
-Last updated: 2026-11-06
+Last updated: 2026-11-28
 Owner: BabyPark
 Source of truth for operational facts: production runtime + verified repository evidence.
 
@@ -1146,3 +1146,15 @@ PR #35 sender/control closure evidence:
   21 objects / 6 durable all passed on the reviewed tree;
 - no production deployment, production spool, CatalogService mutation, FULL, Link A
   or acceptance package occurred as part of PR #35.
+
+## n8n 2.49.8 co-host implementation package — not deployed
+
+As of 2026-11-28, Draft PR #173 is being prepared with the official n8n 2.49.8 digest, an isolated Compose project, loopback-only access, registered state/key/backup/runtime paths, a verified host tmpfs startup guard, and backup/restore/Hetzner instructions. Docker Compose CLI 5.8.1 or newer is required by the tested long-bind and restore-overlay rendering. New storage-policy entries remain PLANNED.
+
+An exact-source review of official n8n tag n8n@2.49.8 found that the supported SQLite configuration does not set PRAGMA busy_timeout and exposes no supported environment setting for it. This conflicts with Agreement §5 and leaves the implementation unaccepted. The approved fit note and alternatives scan remain unchanged at the owner-approved SHA-256 values. The owner must resolve the conflict through an exact session-bound Agreement §5 amendment and frozen concurrency protocol, or select a supported backend and rebind a materially revised fit before the campaign can close.
+
+Static validation on the current candidate passed: root npm test 1,317/1,317; legacy 13/13; refactor 13/13; storage validation 35 objects / 29 planned; official Compose 5.8.1 renders both primary and restore configurations; systemd syntax is verified in an inert root. Independent HEAVY review closure remains open while the SQLite contract blocker remains unresolved.
+
+No Docker package, n8n container, n8n host path, systemd unit, backup, key, credential, or workflow has been created on chatwoot-fra1-01. Chatwoot 4.20.1 and Viber remain untouched. The approved 22-node and 6-node workflow import is not repeated or included in this implementation change. No workflow activation, public endpoint, real credential, buyer message, merge, or production installation is authorized by this state record.
+
+The Compose cap of 1,200 MiB is a limit, not an observed memory peak. Actual n8n 2.49.8 memory/OOM/host-reserve evidence, exact-version execution-data persistence checks, tmpfs positive/negative startup tests, and clean SQLite + key + dummy-credential restore remain separate release gates. The 4-GiB host remains the selected target; this package does not assert a capacity GO.
