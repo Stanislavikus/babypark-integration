@@ -18,18 +18,19 @@ The campaign is one docs change on branch
 `2ae02a0ea8898f5d5b341fca6ed230a34fecce58`. Exact HEAD and tree are the git
 commit that contains this snapshot. Do not treat any future merge SHA as known.
 
-The latest proposal adds §1.5 STOCK-OPS-60: first installation, native
-relocation/migration, stock workflow import and ordinary vendor upgrades are
-one operations job targeting at most 60 minutes end-to-end elapsed time when
-required access and host resources are available. This objective counts backup,
-official install/move/update commands, a focused functional check and a short
-existing handbook note. It forbids moving the same work into an unbounded
-research/preflight campaign, a new custom-code project, or repeated HEAVY,
-two-pass ZERO-BLOCKER or vendor-security testing. A concrete missing operator
-dependency is addressed through the shortest official remedy without claiming
-an unobserved PASS, bypassing required controls or disturbing Chatwoot/Viber.
-Historical n8n worker tasks are non-normative evidence after merger and cannot
-reopen the already accepted 22+6 offline workflow import merely for research.
+The latest proposal adds §1.5 STOCK-OPS: installation, native
+relocation/migration, vendor-native workflow import and ordinary vendor
+upgrades are routine operator actions, equivalent to using the product's
+documented "Update" control or supported CLI. There is no artificial duration
+limit or separate "development after a deadline" classification.
+The operator uses the official commands, existing recoverable backup/key,
+required configuration and a short check of already accepted functions.
+Historical n8n worker tasks, alternatives scans, synthetic retention matrices,
+HEAVY/two-pass ZERO-BLOCKER checks and repeated 22+6 import trials cannot
+become new prerequisites for an unchanged vendor action.
+A concrete missing access/resource/backup is solved with a supported operator
+step, not a new custom-code/architecture-research campaign. Actual required
+protections remain; do not claim a false PASS or disturb Chatwoot/Viber.
 
 The proposal records the owner's stock-product rule: study official functions
 and terms of use; do not security-test vendor products; install a suitable
